@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 // import { Virtuoso } from 'react-virtuoso' // Removed Virtuoso
 import { useMemoryStore } from '../stores/useMemoryStore'
@@ -25,7 +25,7 @@ import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { ConnectionSuggestion } from '../components/ConnectionSuggestion'
 import { PremiumTabs } from '../components/ui/premium-tabs'
 import { SkeletonCard } from '../components/ui/skeleton-card'
-import { Brain, Zap, ArrowLeft, CloudOff, Search, Lightbulb, Leaf, Code, Palette, Heart, BookOpen, Users } from 'lucide-react'
+import { Brain, Zap, ArrowLeft, CloudOff, Search, X, Tag, Lightbulb, Leaf, Code, Palette, Heart, BookOpen, Users } from 'lucide-react'
 import { BrandName } from '../components/BrandName'
 import { SubtleBackground } from '../components/SubtleBackground'
 // import { FocusableList, FocusableItem } from '../components/FocusableList' // Removed for masonry
@@ -54,12 +54,14 @@ function MasonryGrid({
   memories,
   onEdit,
   onDelete,
-  renderExtra
+  renderExtra,
+  connectionCounts
 }: {
   memories: Memory[],
   onEdit: (m: Memory) => void,
   onDelete: (m: Memory) => void,
-  renderExtra?: (m: Memory) => React.ReactNode
+  renderExtra?: (m: Memory) => React.ReactNode,
+  connectionCounts?: Record<string, number>
 }) {
   const [columns, setColumns] = useState(2)
 
@@ -94,14 +96,23 @@ function MasonryGrid({
       {distributedColumns.map((colMemories, colIndex) => (
         <div key={colIndex} className="flex-1 flex flex-col gap-4 min-w-0">
           {colMemories.map((memory, index) => (
-            <div key={memory.id || `memory-${colIndex}-${index}`} className="w-full">
+            <motion.div
+              key={memory.id || `memory-${colIndex}-${index}`}
+              className="w-full"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97 }}
+              transition={{ duration: 0.18, delay: index * 0.03 }}
+              layout
+            >
               <MemoryCard
                 memory={memory}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                connectionCount={connectionCounts?.[memory.id]}
               />
               {renderExtra && renderExtra(memory)}
-            </div>
+            </motion.div>
           ))}
         </div>
       ))}
@@ -129,6 +140,11 @@ export function MemoriesPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedMemoryForModal, setSelectedMemoryForModal] = useState<Memory | null>(null) // State for the detail modal
   const [showDetailModal, setShowDetailModal] = useState(false) // State to open/close the detail modal
+
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState('')
+  const [activeTags, setActiveTags] = useState<string[]>([])
+  const [dismissedResurface, setDismissedResurface] = useState(false)
 
   // Effect to handle deep linking via ID
   useEffect(() => {
@@ -438,10 +454,51 @@ export function MemoriesPage() {
     }
   }
 
+  // All unique tags from all memories
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>()
+    memories.forEach(m => m.tags?.forEach(t => tagSet.add(t)))
+    return Array.from(tagSet).sort()
+  }, [memories])
+
+  // Pick one random memory that's 30+ days old for "Resurface" section
+  // Stabilised so it doesn't re-pick on every render — only when the total count changes
+  const resurfacedMemory = useMemo(() => {
+    const oldMemories = memories.filter(m => {
+      const age = (Date.now() - new Date(m.created_at).getTime()) / 86400000
+      return age >= 30
+    })
+    if (oldMemories.length === 0) return null
+    return oldMemories[Math.floor(Math.random() * oldMemories.length)]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [memories.length]) // Only recompute when memories count changes
+
   // Memoize displayMemories to prevent recalculation on every render
-  const displayMemories = useMemo(() => {
+  const baseMemories = useMemo(() => {
     return view === 'all' ? memories : resurfacing
   }, [view, memories, resurfacing])
+
+  // Apply search and tag filters
+  const displayMemories = useMemo(() => {
+    let filtered = baseMemories
+    const q = searchQuery.trim().toLowerCase()
+    if (q) {
+      filtered = filtered.filter(m => {
+        const inTitle = m.title?.toLowerCase().includes(q)
+        const inBody = m.body?.toLowerCase().includes(q)
+        const inTags = m.tags?.some(t => t.toLowerCase().includes(q))
+        return inTitle || inBody || inTags
+      })
+    }
+    if (activeTags.length > 0) {
+      filtered = filtered.filter(m =>
+        activeTags.every(tag => m.tags?.includes(tag))
+      )
+    }
+    return filtered
+  }, [baseMemories, searchQuery, activeTags])
+
+  const isFiltered = searchQuery.trim().length > 0 || activeTags.length > 0
 
   const isLoading = view === 'all' ? loading : loadingResurfacing
 
@@ -501,11 +558,95 @@ export function MemoriesPage() {
             overflowX: 'hidden'
           }}>
             {/* Title Section */}
-            <div className="mb-6">
+            <div className="mb-4">
               <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
                 Your <span style={{ color: 'var(--premium-blue)' }}>thoughts</span>
               </h2>
             </div>
+
+            {/* Search Bar — only shown on 'all' view */}
+            {view === 'all' && (
+              <div className="mb-4 space-y-3">
+                {/* Search input */}
+                <div className="relative">
+                  <Search
+                    className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none"
+                    style={{ color: 'rgba(255,255,255,0.35)' }}
+                  />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="Search thoughts..."
+                    className="w-full pl-9 pr-9 py-2.5 rounded-xl text-sm outline-none transition-all"
+                    style={{
+                      background: 'rgba(255,255,255,0.05)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      color: 'rgba(255,255,255,0.85)',
+                      caretColor: 'var(--premium-blue)',
+                    }}
+                    onFocus={e => { e.currentTarget.style.borderColor = 'rgba(59,130,246,0.4)' }}
+                    onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)' }}
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-full transition-colors hover:bg-white/10"
+                      style={{ color: 'rgba(255,255,255,0.4)' }}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Result count */}
+                {isFiltered && (
+                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    {displayMemories.length} of {memories.length} thought{memories.length !== 1 ? 's' : ''}
+                  </p>
+                )}
+
+                {/* Tag pills — horizontal scroll */}
+                {allTags.length > 0 && (
+                  <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
+                    {allTags.map(tag => {
+                      const isActive = activeTags.includes(tag)
+                      return (
+                        <button
+                          key={tag}
+                          onClick={() => setActiveTags(prev =>
+                            isActive ? prev.filter(t => t !== tag) : [...prev, tag]
+                          )}
+                          className="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-all"
+                          style={{
+                            background: isActive ? 'rgba(59,130,246,0.25)' : 'rgba(255,255,255,0.05)',
+                            border: isActive ? '1px solid rgba(59,130,246,0.5)' : '1px solid rgba(255,255,255,0.08)',
+                            color: isActive ? 'rgba(147,197,253,1)' : 'rgba(255,255,255,0.5)',
+                          }}
+                        >
+                          <Tag className="h-2.5 w-2.5" />
+                          {tag}
+                        </button>
+                      )
+                    })}
+                    {activeTags.length > 0 && (
+                      <button
+                        onClick={() => setActiveTags([])}
+                        className="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-all"
+                        style={{
+                          background: 'rgba(239,68,68,0.1)',
+                          border: '1px solid rgba(239,68,68,0.2)',
+                          color: 'rgba(252,165,165,0.8)',
+                        }}
+                      >
+                        <X className="h-2.5 w-2.5" />
+                        Clear filters
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Inner Content */}
             <div>
@@ -608,7 +749,36 @@ export function MemoriesPage() {
                 <GlassCard isInteractive={false} className="mb-8">
                   <div className="py-16">
                     <div className="max-w-2xl mx-auto text-center space-y-8">
-                      {view === 'all' ? (
+                      {view === 'all' && isFiltered ? (
+                        /* Search returned no results */
+                        <>
+                          <div className="inline-flex items-center justify-center mb-4">
+                            <Search className="h-16 w-16" style={{ color: 'rgba(255,255,255,0.2)' }} />
+                          </div>
+                          <div>
+                            <h3 className="text-2xl font-bold mb-3 premium-text-platinum">
+                              No thoughts match
+                              {searchQuery ? ` "${searchQuery}"` : ' your filters'}
+                            </h3>
+                            <p className="text-lg mb-6" style={{ color: 'var(--premium-text-secondary)' }}>
+                              Try different keywords or clear your filters to see all thoughts.
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => { setSearchQuery(''); setActiveTags([]) }}
+                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all"
+                            style={{
+                              background: 'rgba(59,130,246,0.15)',
+                              border: '1px solid rgba(59,130,246,0.3)',
+                              color: 'rgba(147,197,253,1)',
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                            Clear search
+                          </button>
+                        </>
+                      ) : view === 'all' ? (
+                        /* No memories at all */
                         <>
                           <div className="inline-flex items-center justify-center mb-4">
                             <Brain className="h-16 w-16" style={{ color: 'var(--premium-blue)' }} />
@@ -771,7 +941,70 @@ export function MemoriesPage() {
 
                   {/* Recent memories view - Google Keep Style Masonry (Across then Down) */}
                   {memoryView === 'recent' && (
-                    <MasonryGrid memories={displayMemories} onEdit={handleOpenDetail} onDelete={handleDelete} />
+                    <>
+                      {/* Resurface a thought — one random memory 30+ days old */}
+                      <AnimatePresence>
+                        {!dismissedResurface && resurfacedMemory && !isFiltered && (
+                          <motion.div
+                            key="resurface"
+                            initial={{ opacity: 0, y: -12 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.97 }}
+                            transition={{ duration: 0.25 }}
+                            className="mb-6 rounded-xl p-4"
+                            style={{
+                              background: 'rgba(251,191,36,0.05)',
+                              border: '1px solid rgba(251,191,36,0.25)',
+                            }}
+                          >
+                            <div className="flex items-start justify-between gap-3 mb-3">
+                              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(251,191,36,0.7)' }}>
+                                A thought from {Math.floor((Date.now() - new Date(resurfacedMemory.created_at).getTime()) / 86400000)} days ago...
+                              </p>
+                              <button
+                                onClick={() => setDismissedResurface(true)}
+                                className="flex-shrink-0 h-5 w-5 flex items-center justify-center rounded-full transition-colors hover:bg-white/10"
+                                style={{ color: 'rgba(255,255,255,0.3)' }}
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                            <h4 className="font-semibold text-sm mb-1" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                              {resurfacedMemory.title}
+                            </h4>
+                            <p className="text-sm line-clamp-3 mb-4" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                              {resurfacedMemory.body}
+                            </p>
+                            <div className="flex items-center gap-3">
+                              <button
+                                onClick={() => setDismissedResurface(true)}
+                                className="text-xs px-3 py-1.5 rounded-lg transition-colors"
+                                style={{
+                                  background: 'rgba(255,255,255,0.05)',
+                                  border: '1px solid rgba(255,255,255,0.08)',
+                                  color: 'rgba(255,255,255,0.4)',
+                                }}
+                              >
+                                Dismiss
+                              </button>
+                              <button
+                                onClick={() => handleOpenDetail(resurfacedMemory)}
+                                className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
+                                style={{
+                                  background: 'rgba(251,191,36,0.15)',
+                                  border: '1px solid rgba(251,191,36,0.3)',
+                                  color: 'rgba(251,191,36,0.9)',
+                                }}
+                              >
+                                Connect to today
+                              </button>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      <MasonryGrid memories={displayMemories} onEdit={handleOpenDetail} onDelete={handleDelete} />
+                    </>
                   )}
                 </>
               )}

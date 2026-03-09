@@ -1,6 +1,6 @@
 import React, { useState, memo, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MoreVertical, Edit, Trash2, Copy, Share2, Calendar, Sparkles } from 'lucide-react'
+import { MoreVertical, Edit, Trash2, Copy, Share2, Calendar, Sparkles, Link2 } from 'lucide-react'
 import { CardHeader, CardTitle, CardDescription } from './ui/card'
 import { Button } from './ui/button'
 import type { Memory, BridgeWithMemories } from '../types'
@@ -12,6 +12,14 @@ import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { MemoryDetailModal } from './memories/MemoryDetailModal'
 import { useConfirmDialog } from './ui/confirm-dialog'
 import { motion } from 'framer-motion'
+
+// Memory type badge config
+const MEMORY_TYPE_CONFIG = {
+  foundational: { emoji: '🏛', label: 'Foundational', color: 'rgba(251,191,36,0.15)', border: 'rgba(251,191,36,0.3)', text: 'rgba(251,191,36,0.9)' },
+  insight: { emoji: '💡', label: 'Insight', color: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.3)', text: 'rgba(96,165,250,0.9)' },
+  event: { emoji: '📅', label: 'Event', color: 'rgba(139,92,246,0.15)', border: 'rgba(139,92,246,0.3)', text: 'rgba(167,139,250,0.9)' },
+  'quick-note': { emoji: '⚡', label: 'Quick Note', color: 'rgba(148,163,184,0.1)', border: 'rgba(148,163,184,0.2)', text: 'rgba(148,163,184,0.8)' },
+} as const
 
 // Module-level cache for bridges remains, but will be managed by MemoryDetailModal
 const bridgesCache = new Map<string, { bridges: BridgeWithMemories[]; timestamp: number }>()
@@ -40,11 +48,12 @@ interface MemoryCardProps {
   memory: Memory
   onEdit?: (memory: Memory) => void
   onDelete?: (memory: Memory) => void
+  connectionCount?: number
 }
 
 import { OptimizedImage } from './ui/optimized-image'
 
-export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
+export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, connectionCount }: MemoryCardProps) {
   const navigate = useNavigate()
   const [showContextMenu, setShowContextMenu] = useState(false)
   const [showDetailModal, setShowDetailModal] = useState(false)
@@ -224,6 +233,38 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
             </Button>
           </div>
         </CardHeader>
+
+        {/* Memory type badge + connection count */}
+        {(memory.memory_type || (connectionCount !== undefined && connectionCount > 0)) && (
+          <div className="flex items-center gap-2 mb-2">
+            {memory.memory_type && MEMORY_TYPE_CONFIG[memory.memory_type] && (
+              <span
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium"
+                style={{
+                  backgroundColor: MEMORY_TYPE_CONFIG[memory.memory_type].color,
+                  border: `1px solid ${MEMORY_TYPE_CONFIG[memory.memory_type].border}`,
+                  color: MEMORY_TYPE_CONFIG[memory.memory_type].text,
+                }}
+              >
+                <span>{MEMORY_TYPE_CONFIG[memory.memory_type].emoji}</span>
+                {MEMORY_TYPE_CONFIG[memory.memory_type].label}
+              </span>
+            )}
+            {connectionCount !== undefined && connectionCount > 0 && (
+              <span
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium"
+                style={{
+                  backgroundColor: 'rgba(52,211,153,0.1)',
+                  border: '1px solid rgba(52,211,153,0.2)',
+                  color: 'rgba(52,211,153,0.8)',
+                }}
+              >
+                <Link2 className="w-2.5 h-2.5" />
+                {connectionCount}
+              </span>
+            )}
+          </div>
+        )}
 
         <p className="text-sm leading-relaxed line-clamp-6 mb-3" style={{
           color: 'var(--premium-text-secondary)'
