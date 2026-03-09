@@ -227,7 +227,7 @@ export const useListStore = create<ListStore>()(
                 }
 
                 try {
-                    const response = await fetch(`/api/list-items?listId=${listId}`)
+                    const response = await fetch(`/api/lists?scope=items&listId=${listId}`)
                     if (!response.ok) throw new Error('Failed to fetch items')
                     const data = await response.json()
 
@@ -336,7 +336,7 @@ export const useListStore = create<ListStore>()(
                 }
 
                 try {
-                    const response = await fetch(`/api/list-items?listId=${input.list_id}`, {
+                    const response = await fetch(`/api/lists?scope=items&listId=${input.list_id}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ content: input.content })
@@ -420,7 +420,7 @@ export const useListStore = create<ListStore>()(
 
                 // Update via API when online
                 try {
-                    const response = await fetch(`/api/list-items?id=${itemId}`, {
+                    const response = await fetch(`/api/lists?scope=items&id=${itemId}`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ metadata })
@@ -476,7 +476,7 @@ export const useListStore = create<ListStore>()(
                 }
 
                 try {
-                    const response = await fetch(`/api/list-items?id=${itemId}`, {
+                    const response = await fetch(`/api/lists?scope=items&id=${itemId}`, {
                         method: 'DELETE'
                     })
 
@@ -551,7 +551,7 @@ export const useListStore = create<ListStore>()(
                 }
 
                 try {
-                    const response = await fetch(`/api/list-items?resource=reorder&listId=${listId}`, {
+                    const response = await fetch(`/api/lists?scope=items&resource=reorder&listId=${listId}`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ itemIds })

@@ -39,7 +39,7 @@ export function SettingsPage() {
   const handleRegenerateConnections = async () => {
     setRegenerating(true)
     try {
-      const response = await fetch('/api/admin/regenerate-connections', {
+      const response = await fetch('/api/connections?resource=regenerate', {
         method: 'POST'
       })
 
