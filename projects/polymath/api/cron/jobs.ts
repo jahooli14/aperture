@@ -279,6 +279,76 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       return res.status(200).json(results)
 
+    } else if (job === 'link-all') {
+      // Re-link all items using the AI linker
+      // Processes items that haven't been linked recently
+      // POST /api/cron/jobs?job=link-all to trigger manually
+      console.log('[cron/jobs/link-all] Starting full AI re-linking pass...')
+
+      const results: any = {
+        success: true,
+        job: 'link-all',
+        timestamp: new Date().toISOString(),
+        processed: 0,
+        autoLinked: 0,
+        suggestions: 0
+      }
+
+      // Fetch all items with embeddings (limit per type to avoid timeouts)
+      const [memoriesRes, projectsRes, articlesRes] = await Promise.all([
+        supabase.from('memories').select('id, title, body, embedding').not('embedding', 'is', null).limit(50),
+        supabase.from('projects').select('id, title, description, embedding').eq('user_id', userId).not('embedding', 'is', null).limit(30),
+        supabase.from('reading_queue').select('id, title, excerpt, embedding').eq('user_id', userId).not('embedding', 'is', null).limit(30)
+      ])
+
+      const allItems = [
+        ...(memoriesRes.data || []).map(m => ({
+          id: m.id, type: 'thought' as const,
+          content: [m.title, m.body].filter(Boolean).join('. ').slice(0, 500),
+          embedding: m.embedding
+        })),
+        ...(projectsRes.data || []).map(p => ({
+          id: p.id, type: 'project' as const,
+          content: [p.title, p.description].filter(Boolean).join('. ').slice(0, 500),
+          embedding: p.embedding
+        })),
+        ...(articlesRes.data || []).map(a => ({
+          id: a.id, type: 'article' as const,
+          content: [a.title, a.excerpt].filter(Boolean).join('. ').slice(0, 500),
+          embedding: a.embedding
+        }))
+      ]
+
+      console.log(`[cron/jobs/link-all] Processing ${allItems.length} items...`)
+
+      for (const item of allItems) {
+        try {
+          const baseUrl = process.env.VITE_APP_URL || 'http://localhost:3000'
+          const linkRes = await fetch(`${baseUrl}/api/ai-linker`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              itemId: item.id,
+              itemType: item.type,
+              content: item.content,
+              embedding: item.embedding
+            })
+          })
+
+          if (linkRes.ok) {
+            const data = await linkRes.json()
+            results.processed++
+            results.autoLinked += data.autoLinked || 0
+            results.suggestions += data.suggestions || 0
+          }
+        } catch (error) {
+          console.error(`[cron/jobs/link-all] Failed to link ${item.type}:${item.id}:`, error)
+        }
+      }
+
+      console.log(`[cron/jobs/link-all] Done: ${results.processed} processed, ${results.autoLinked} auto-linked, ${results.suggestions} suggested`)
+      return res.status(200).json(results)
+
     } else if (job === 'synthesis') {
       const userId = getUserId()
       const mode = req.query.mode as string | undefined
@@ -463,7 +533,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })
 
     } else {
-      return res.status(400).json({ error: `Unknown job: ${job}. Use ?job=daily, ?job=synthesis, ?job=strengthen, ?job=process_stuck, ?job=process-memories, or ?job=send-reminders` })
+      return res.status(400).json({ error: `Unknown job: ${job}. Use ?job=daily, ?job=link-all, ?job=synthesis, ?job=strengthen, ?job=process_stuck, ?job=process-memories, or ?job=send-reminders` })
     }
 
   } catch (error) {
