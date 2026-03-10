@@ -336,7 +336,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           })
 
           if (linkRes.ok) {
-            const data = await linkRes.json()
+            const data = await linkRes.json() as { autoLinked?: number; suggestions?: number }
             results.processed++
             results.autoLinked += data.autoLinked || 0
             results.suggestions += data.suggestions || 0
