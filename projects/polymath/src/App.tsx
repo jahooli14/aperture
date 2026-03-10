@@ -280,7 +280,7 @@ export default function App() {
             {/* Steering Card - Shows live mind steering after extraction completes */}
             <SteeringCard />
 
-            <div className="min-h-screen flex flex-col">
+            <div className="min-h-screen flex flex-col overflow-x-hidden">
               <OfflineIndicator />
               <PWAInstallBanner />
 

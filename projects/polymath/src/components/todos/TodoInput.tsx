@@ -139,8 +139,8 @@ export function TodoInput({
         background: 'var(--premium-surface-2)',
         backdropFilter: 'blur(20px)',
         boxShadow: focused
-          ? 'inset 0 0 0 1.5px rgba(99,179,237,0.55), 0 4px 24px rgba(0,0,0,0.35)'
-          : 'inset 0 0 0 1px rgba(255,255,255,0.08), 0 2px 8px rgba(0,0,0,0.2)',
+          ? '0 4px 24px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.12)'
+          : '0 2px 8px rgba(0,0,0,0.2), inset 0 0 0 1px rgba(255,255,255,0.06)',
       }}
     >
       {/* Hint — shown when focused+empty */}
@@ -271,12 +271,10 @@ export function TodoInput({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.7 }}
               transition={{ duration: 0.15 }}
-              className={cn(
-                'flex-shrink-0 h-[20px] w-[20px] rounded-[6px] border-2 transition-all duration-200',
-                hasText
-                  ? 'border-blue-400/70'
-                  : 'border-white/20'
-              )}
+              className="flex-shrink-0 h-[20px] w-[20px] rounded-full transition-all duration-200"
+              style={{
+                border: hasText ? '1.5px solid rgba(147,197,253,0.5)' : '1.5px solid rgba(255,255,255,0.15)',
+              }}
             />
           )}
         </AnimatePresence>

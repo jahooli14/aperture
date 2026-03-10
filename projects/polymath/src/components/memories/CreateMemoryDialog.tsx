@@ -111,6 +111,58 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
     })
   }
 
+  // Google Keep-style keyboard handling: auto-continue bullets on Enter
+  const handleBodyKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key !== 'Enter' || e.shiftKey) return
+
+    const el = e.currentTarget
+    const { selectionStart } = el
+    const lines = body.slice(0, selectionStart).split('\n')
+    const currentLine = lines[lines.length - 1]
+
+    // Match bullet patterns: "- ", "• ", "* ", "[] ", "[x] ", numbered "1. " etc.
+    const bulletMatch = currentLine.match(/^(\s*)([-•*]|\[\s?\]|\[x\]|\d+\.)\s/)
+    if (!bulletMatch) return
+
+    const [, indent, bullet] = bulletMatch
+
+    // If the current line is ONLY the bullet (empty content), remove the bullet instead
+    const contentAfterBullet = currentLine.slice(bulletMatch[0].length).trim()
+    if (!contentAfterBullet) {
+      e.preventDefault()
+      const lineStart = body.lastIndexOf('\n', selectionStart - 1) + 1
+      const newBody = body.slice(0, lineStart) + '\n' + body.slice(selectionStart)
+      setBody(newBody)
+      requestAnimationFrame(() => {
+        el.selectionStart = el.selectionEnd = lineStart + 1
+        el.style.height = 'auto'
+        el.style.height = Math.max(120, el.scrollHeight) + 'px'
+      })
+      return
+    }
+
+    e.preventDefault()
+
+    // Auto-increment numbered lists
+    let nextBullet = bullet
+    const numMatch = bullet.match(/^(\d+)\./)
+    if (numMatch) {
+      nextBullet = `${parseInt(numMatch[1]) + 1}.`
+    }
+    // Convert [x] to [] for next item
+    if (bullet === '[x]') nextBullet = '[]'
+
+    const insertion = `\n${indent}${nextBullet} `
+    const newBody = body.slice(0, selectionStart) + insertion + body.slice(selectionStart)
+    setBody(newBody)
+    requestAnimationFrame(() => {
+      const newPos = selectionStart + insertion.length
+      el.selectionStart = el.selectionEnd = newPos
+      el.style.height = 'auto'
+      el.style.height = Math.max(120, el.scrollHeight) + 'px'
+    })
+  }
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setSelectedFiles(prev => [...prev, ...Array.from(e.target.files || [])])
@@ -289,9 +341,10 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
               <textarea
                 ref={bodyRef}
                 id="body"
-                placeholder="What's on your mind?"
+                placeholder="What's on your mind?&#10;&#10;Start with - or • for bullet lists"
                 value={body}
                 onChange={handleBodyChange}
+                onKeyDown={handleBodyKeyDown}
                 onFocus={(e) => { setBodyFocused(true); handleInputFocus(e) }}
                 onBlur={() => setBodyFocused(false)}
                 required

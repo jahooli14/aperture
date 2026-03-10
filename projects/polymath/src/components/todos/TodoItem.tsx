@@ -210,22 +210,21 @@ export function TodoItem({
             style={{ padding: 11, margin: -11, marginTop: -9, paddingTop: 9 }}
             aria-label={todo.done ? 'Mark incomplete' : 'Mark complete'}
           >
-            <div className={cn(
-              'h-[20px] w-[20px] rounded-[6px] flex items-center justify-center transition-all duration-200 border-2',
-              (todo.done || completing)
-                ? 'bg-emerald-500 border-emerald-500'
-                : isOverdue
-                  ? 'border-red-400/55 hover:border-red-400/80'
-                  : isInProgress
-                    ? 'border-orange-400/60 hover:border-orange-400/85'
-                    : priorityCfg
-                      ? ''
-                      : 'border-white/22 hover:border-white/50'
-            )}
-            style={priorityCfg && !todo.done && !completing && !isOverdue && !isInProgress
-              ? { borderColor: priorityCfg.dot, opacity: 0.6 }
-              : undefined
-            }
+            <div
+              className="h-[20px] w-[20px] rounded-full flex items-center justify-center transition-all duration-200"
+              style={{
+                border: (todo.done || completing)
+                  ? '1.5px solid rgb(16,185,129)'
+                  : isOverdue
+                    ? '1.5px solid rgba(248,113,113,0.55)'
+                    : isInProgress
+                      ? '1.5px solid rgba(251,146,60,0.6)'
+                      : priorityCfg
+                        ? `1.5px solid ${priorityCfg.dot}`
+                        : '1.5px solid rgba(255,255,255,0.18)',
+                background: (todo.done || completing) ? 'rgb(16,185,129)' : 'transparent',
+                opacity: priorityCfg && !todo.done && !completing && !isOverdue && !isInProgress ? 0.7 : 1,
+              }}
             >
               <AnimatePresence>
                 {(todo.done || completing) && (
