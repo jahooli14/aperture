@@ -58,7 +58,7 @@ async function runLinker(
   processing.add(key)
 
   try {
-    const res = await fetch('/api/ai-linker', {
+    const res = await fetch('/api/connections?action=link', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ itemId, itemType, content })
