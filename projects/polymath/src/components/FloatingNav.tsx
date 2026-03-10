@@ -9,12 +9,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Home,
   Brain,
-  FileText,
-  Mic,
-  MoreHorizontal,
   CheckSquare,
   BookOpen,
   Briefcase,
+  List,
 } from 'lucide-react'
 import { VoiceFAB } from './VoiceFAB'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
@@ -45,10 +43,11 @@ interface NavOption {
   color: keyof typeof SCHEMA_COLORS
 }
 
-// Core navigation: 5 primary sections (Lists accessible from Home)
+// All 6 nav sections — icon-only layout with active label
 const NAV_OPTIONS: NavOption[] = [
   { id: 'home',     label: 'Home',     icon: Home,         path: '/',         action: 'navigate', color: 'home' },
   { id: 'todos',    label: 'Todos',    icon: CheckSquare,  path: '/todos',    action: 'navigate', color: 'todos' },
+  { id: 'lists',    label: 'Lists',    icon: List,         path: '/lists',    action: 'navigate', color: 'lists' },
   { id: 'projects', label: 'Projects', icon: Briefcase,    path: '/projects', action: 'navigate', color: 'projects' },
   { id: 'reading',  label: 'Reading',  icon: BookOpen,     path: '/reading',  action: 'navigate', color: 'reading' },
   { id: 'thoughts', label: 'Thoughts', icon: Brain,        path: '/memories', action: 'navigate', color: 'thoughts' },
@@ -334,10 +333,11 @@ export function FloatingNav() {
       >
         <div className="mx-auto max-w-2xl px-2 sm:px-4">
           <div
-            className="premium-glass flex items-center justify-between gap-1 px-2 py-3"
+            className="premium-glass flex items-center justify-between gap-0"
             style={{
               borderRadius: 'var(--premium-radius-2xl)',
-              backgroundColor: 'var(--premium-bg-2)'
+              backgroundColor: 'var(--premium-bg-2)',
+              padding: '4px 6px',
             }}
           >
             {NAV_OPTIONS.map((option) => {
@@ -356,37 +356,44 @@ export function FloatingNav() {
                 <motion.button
                   key={option.id}
                   onClick={() => handleNavClick(option)}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.9 }}
-                  // TODO: Add Capacitor Haptics here when plugin is available:
-                  // onTouchStart={() => Haptics.impact({ style: ImpactStyle.Light })}
-                  className="flex flex-col items-center justify-center gap-1 px-1 sm:px-3 py-2 rounded-xl transition-all relative min-w-0"
-                  style={{ flex: '1 1 0px' }}
+                  whileTap={{ scale: 0.85 }}
+                  className="flex flex-col items-center justify-center relative min-w-0"
+                  style={{
+                    flex: '1 1 0px',
+                    paddingTop: '6px',
+                    paddingBottom: active ? '2px' : '6px',
+                    gap: active ? '3px' : '0px',
+                  }}
                 >
-                  {/* Active Background: gradient glow from bottom */}
+                  {/* Active pill indicator */}
                   {active && (
                     <motion.div
                       layoutId="floatingNavActiveTab"
                       className="absolute inset-0 rounded-xl"
                       style={{
                         background: `linear-gradient(to top, ${colors.glow}, transparent)`,
-                        border: `1px solid ${colors.primary}40`,
-                        boxShadow: `0 0 12px 0 ${colors.glow}`
+                        border: `1px solid ${colors.primary}30`,
                       }}
-                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 35 }}
                     />
                   )}
 
                   {/* Icon + badge wrapper */}
                   <div className="relative z-10">
-                    <Icon
-                      className="w-6 h-6"
-                      style={{
-                        color: active ? colors.primary : 'var(--premium-platinum)',
-                        transition: 'color 200ms',
-                        filter: active ? `drop-shadow(0 0 6px ${colors.glow})` : 'none'
-                      }}
-                    />
+                    <motion.div
+                      animate={{ scale: active ? 1.12 : 1 }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                    >
+                      <Icon
+                        style={{
+                          width: '22px',
+                          height: '22px',
+                          color: active ? colors.primary : 'rgba(255,255,255,0.38)',
+                          transition: 'color 200ms',
+                          filter: active ? `drop-shadow(0 0 5px ${colors.glow})` : 'none'
+                        }}
+                      />
+                    </motion.div>
 
                     {/* Count badge (overdue todos) */}
                     {badge !== null && (
@@ -415,20 +422,27 @@ export function FloatingNav() {
                     )}
                   </div>
 
-                  {/* Label — scales up slightly when active */}
-                  <motion.span
-                    className="relative z-10 text-xs font-medium"
-                    animate={{ scale: active ? 1.08 : 1 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                    style={{
-                      color: active ? colors.primary : 'var(--premium-text-tertiary)',
-                      fontSize: 'var(--premium-text-body-xs)',
-                      letterSpacing: 'var(--premium-tracking-wide)',
-                      transition: 'color 200ms'
-                    }}
-                  >
-                    {option.label}
-                  </motion.span>
+                  {/* Label — only visible for active tab, slides in */}
+                  <AnimatePresence>
+                    {active && (
+                      <motion.span
+                        key={option.id + '-label'}
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        transition={{ duration: 0.15 }}
+                        className="relative z-10 font-semibold"
+                        style={{
+                          color: colors.primary,
+                          fontSize: '10px',
+                          letterSpacing: '0.04em',
+                          lineHeight: 1,
+                        }}
+                      >
+                        {option.label}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
                 </motion.button>
               )
             })}
