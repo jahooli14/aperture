@@ -133,14 +133,11 @@ export function TodoInput({
 
   return (
     <div
-      className="rounded-2xl transition-all duration-200"
+      className="rounded-sm transition-all duration-200"
       style={{
-        // Use the established surface-2 color — visible, inviting, not a ghost
-        background: 'var(--premium-surface-2)',
-        backdropFilter: 'blur(20px)',
-        boxShadow: focused
-          ? '0 4px 24px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.12)'
-          : '0 2px 8px rgba(0,0,0,0.2), inset 0 0 0 1px rgba(255,255,255,0.06)',
+        background: '#111113',
+        border: focused ? '2px solid rgba(255,255,255,0.28)' : '2px solid rgba(255,255,255,0.12)',
+        boxShadow: focused ? '4px 4px 0 rgba(0,0,0,0.8)' : '3px 3px 0 rgba(0,0,0,0.6)',
       }}
     >
       {/* Hint — shown when focused+empty */}
@@ -255,7 +252,7 @@ export function TodoInput({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.7 }}
               transition={{ duration: 0.15, ease: [0.25, 0.1, 0.25, 1] }}
-              className="flex-shrink-0 h-[20px] w-[20px] flex items-center justify-center rounded-[6px] text-[13px] leading-none select-none"
+              className="flex-shrink-0 h-[20px] w-[20px] flex items-center justify-center rounded-sm text-[13px] leading-none select-none"
               style={{
                 background: typeMeta.color.replace('0.8)', '0.15)'),
                 boxShadow: `0 0 0 1.5px ${typeMeta.color}`,
@@ -271,9 +268,9 @@ export function TodoInput({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.7 }}
               transition={{ duration: 0.15 }}
-              className="flex-shrink-0 h-[20px] w-[20px] rounded-full transition-all duration-200"
+              className="flex-shrink-0 h-[18px] w-[18px] rounded-sm transition-all duration-200"
               style={{
-                border: hasText ? '1.5px solid rgba(147,197,253,0.5)' : '1.5px solid rgba(255,255,255,0.15)',
+                border: hasText ? '2px solid rgba(147,197,253,0.6)' : '2px solid rgba(255,255,255,0.2)',
               }}
             />
           )}
@@ -307,11 +304,11 @@ export function TodoInput({
               animate={{ opacity: 1, scale: 1, x: 0 }}
               exit={{ opacity: 0, scale: 0.85, x: 4 }}
               transition={{ duration: 0.15, ease: [0.25, 0.1, 0.25, 1] }}
-              className="flex-shrink-0 px-2 py-0.5 rounded-full text-[11px] font-medium select-none"
+              className="flex-shrink-0 px-2 py-0.5 rounded-sm text-[10px] font-black uppercase tracking-wide select-none"
               style={{
                 color: typeMeta.color,
-                background: typeMeta.color.replace('0.8)', '0.12)'),
-                boxShadow: `inset 0 0 0 1px ${typeMeta.color.replace('0.8)', '0.25)')}`,
+                background: typeMeta.color.replace('0.8)', '0.1)'),
+                border: `1.5px solid ${typeMeta.color.replace('0.8)', '0.35)')}`,
               }}
             >
               {typeMeta.icon} {typeMeta.label}
@@ -328,11 +325,12 @@ export function TodoInput({
               exit={{ opacity: 0, scale: 0.85 }}
               transition={{ duration: 0.1 }}
               onClick={handleSubmit}
-              className="flex-shrink-0 px-2.5 py-1 rounded-lg text-[12px] font-medium transition-all active:scale-95"
+              className="flex-shrink-0 px-2.5 py-1 rounded-sm text-[11px] font-black uppercase tracking-wide transition-all active:scale-95"
               style={{
-                color: 'rgba(147,197,253,0.8)',
-                background: 'rgba(59,130,246,0.12)',
-                boxShadow: 'inset 0 0 0 1px rgba(99,179,237,0.2)',
+                color: 'rgba(147,197,253,0.9)',
+                background: 'rgba(59,130,246,0.1)',
+                border: '2px solid rgba(99,179,237,0.35)',
+                boxShadow: '2px 2px 0 rgba(0,0,0,0.5)',
               }}
             >
               Return
@@ -345,11 +343,12 @@ export function TodoInput({
               exit={{ opacity: 0, scale: 0.85 }}
               transition={{ duration: 0.1 }}
               onClick={handleSubmit}
-              className="flex-shrink-0 px-2.5 py-1 rounded-lg text-[12px] font-medium transition-all active:scale-95"
+              className="flex-shrink-0 px-2.5 py-1 rounded-sm text-[11px] font-black transition-all active:scale-95"
               style={{
                 color: typeMeta.color,
-                background: typeMeta.color.replace('0.8)', '0.12)'),
-                boxShadow: `inset 0 0 0 1px ${typeMeta.color.replace('0.8)', '0.25)')}`,
+                background: typeMeta.color.replace('0.8)', '0.1)'),
+                border: `2px solid ${typeMeta.color.replace('0.8)', '0.4)')}`,
+                boxShadow: '2px 2px 0 rgba(0,0,0,0.5)',
               }}
             >
               ↵
@@ -372,7 +371,7 @@ function Chip({
   children: React.ReactNode
 }) {
   return (
-    <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium', color, bg)}>
+    <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase tracking-wide', color, bg)}>
       {icon}
       {children}
     </span>
