@@ -34,7 +34,7 @@ interface MemoryStore {
   removeOptimisticMemory: (tempId: string) => void
 }
 
-/** Poll for processing completion to show extraction summary */
+/** Poll for processing completion to show extraction summary, then steer */
 async function pollProcessing(memoryId: string) {
   for (let i = 0; i < 6; i++) {
     await new Promise(r => setTimeout(r, 3000)) // Check every 3s
@@ -54,6 +54,24 @@ async function pollProcessing(memoryId: string) {
               connections: 0
             }
           }))
+
+          // Fire steering after a short delay so ExtractionSummary shows first
+          setTimeout(async () => {
+            try {
+              const steerRes = await fetch('/api/steer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ memory_id: memoryId }),
+              })
+              if (steerRes.ok) {
+                const steering = await steerRes.json()
+                window.dispatchEvent(new CustomEvent('memory-steered', { detail: steering }))
+              }
+            } catch {
+              // Non-critical, silently fail
+            }
+          }, 4500) // After ExtractionSummary auto-dismisses (4s)
+
           return
         }
       }

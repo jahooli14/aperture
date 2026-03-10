@@ -27,7 +27,7 @@ const SCHEMA_COLORS = {
   home: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
   thoughts: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
   projects: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
-  reading: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
+  reading: { primary: 'rgba(34, 211, 238, 0.9)', glow: 'rgba(34, 211, 238, 0.3)' },
   timeline: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
   context: { primary: '#a855f7', glow: 'rgba(168, 85, 247, 0.4)' },
   lists: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
@@ -146,6 +146,10 @@ export function FloatingNav() {
   }
 
   const isActive = (option: NavOption): boolean => {
+    if (option.id === 'reading') {
+      // Active on /reading list page but not on individual article reader (/reading/:id)
+      return location.pathname === '/reading'
+    }
     return location.pathname === option.path
   }
 

@@ -232,17 +232,18 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
     try {
       const imageUrls = await uploadImages()
 
-      const effectiveTitle = formData.title.trim() || body.trim().substring(0, 60) || 'Quick thought'
+      // Only send title if user explicitly typed one — AI will generate it otherwise
+      const userTitle = formData.title.trim() || undefined
 
       const memoryData = {
-        title: effectiveTitle,
+        ...(userTitle && { title: userTitle }),
         body: body.trim(),
         tags: tags.length > 0 ? tags : undefined,
         memory_type: formData.memory_type || undefined,
         image_urls: imageUrls.length > 0 ? imageUrls : undefined,
       }
 
-      const savedTitle = effectiveTitle
+      const savedTitle = userTitle || body.trim().substring(0, 60) || 'Quick thought'
 
       // Close dialog immediately for better UX
       resetForm()

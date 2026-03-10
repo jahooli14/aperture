@@ -9,6 +9,7 @@ import { Card, CardContent } from '../components/ui/card'
 import { Clock, TrendingUp, Calendar, Zap, WifiOff } from 'lucide-react'
 import type { CognitivePattern, TimelinePattern } from '../types'
 import { readingDb } from '../lib/db'
+import { SubtleBackground } from '../components/SubtleBackground'
 
 export function TimelinePage() {
   const [patterns, setPatterns] = useState<CognitivePattern[]>([])
@@ -104,7 +105,8 @@ export function TimelinePage() {
   }
 
   return (
-    <div className="min-h-screen py-12" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
+    <div className="min-h-screen py-12 relative" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
+      <SubtleBackground />
       {/* Header */}
       <div className="max-w-6xl mx-auto px-4 mb-12">
         <div className="text-center">
