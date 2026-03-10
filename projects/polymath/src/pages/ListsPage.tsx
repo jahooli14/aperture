@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react'
-import { Reorder, motion } from 'framer-motion'
+import React, { useEffect, useState, useRef } from 'react'
+import { Reorder, motion, AnimatePresence } from 'framer-motion'
 import { Plus, Film, Music, Monitor, Book, MapPin, Gamepad2, Box, Calendar, Quote, Trash2, GripVertical, ListOrdered, Check } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useListStore } from '../stores/useListStore'
 import { Button } from '../components/ui/button'
 import { CreateListDialog } from '../components/lists/CreateListDialog'
+import { QuickAddSheet } from '../components/lists/QuickAddSheet'
 import { OptimizedImage } from '../components/ui/optimized-image'
-import type { ListType } from '../types'
+import type { ListType, List } from '../types'
 
 const ListIcon = ({ type, className, style }: { type: ListType, className?: string, style?: React.CSSProperties }) => {
     switch (type) {
@@ -31,7 +32,7 @@ const ListColor = (type: ListType) => {
         case 'book': return '245, 158, 11' // Amber
         case 'place': return '16, 185, 129' // Emerald
         case 'game': return '139, 92, 246' // Violet
-        case 'quote': return '167, 139, 250' // Violet for quotes
+        case 'quote': return '167, 139, 250' // Violet-light
         case 'event': return '251, 146, 60' // Orange
         case 'software': return '34, 211, 238' // Cyan
         default: return '148, 163, 184' // Slate
@@ -53,6 +54,22 @@ const ListGradient = (type: ListType) => {
     }
 }
 
+// Returns true if the list had an item added within the last 3 days
+const isRecentlyUpdated = (list: List) => {
+    const threeDaysAgo = Date.now() - 3 * 24 * 60 * 60 * 1000
+    return new Date(list.updated_at).getTime() > threeDaysAgo
+}
+
+// Inspirational empty state example collections
+const EXAMPLE_COLLECTIONS = [
+    { type: 'film' as ListType, label: 'Films to Watch', desc: 'Your personal cinema queue' },
+    { type: 'book' as ListType, label: 'Reading List', desc: 'Books to devour this year' },
+    { type: 'music' as ListType, label: 'Albums', desc: 'Music that moves you' },
+    { type: 'place' as ListType, label: 'Places to Visit', desc: 'Your world-shaped bucket list' },
+    { type: 'quote' as ListType, label: 'Phrases', desc: 'Words that live rent-free' },
+    { type: 'game' as ListType, label: 'Games', desc: 'Adventures waiting to be had' },
+]
+
 export default function ListsPage() {
     const navigate = useNavigate()
     const { lists, fetchLists, reorderLists, loading } = useListStore()
@@ -61,6 +78,13 @@ export default function ListsPage() {
     const [quoteCovers, setQuoteCovers] = useState<Record<string, string>>({})
     const [initialLoad, setInitialLoad] = useState(true)
     const [isReordering, setIsReordering] = useState(false)
+
+    // Quick-add sheet state
+    const [quickAddList, setQuickAddList] = useState<List | null>(null)
+
+    // Long-press detection
+    const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const longPressActivated = useRef(false)
 
     useEffect(() => {
         fetchLists().finally(() => setInitialLoad(false))
@@ -186,6 +210,35 @@ export default function ListsPage() {
         reorderLists(newOrder.map(l => l.id))
     }
 
+    // Long press handlers for quick add
+    const handlePointerDown = (list: List) => (e: React.PointerEvent) => {
+        if (isReordering) return
+        longPressActivated.current = false
+        longPressTimer.current = setTimeout(() => {
+            longPressActivated.current = true
+            setQuickAddList(list)
+        }, 500)
+    }
+
+    const handlePointerUp = () => {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current)
+            longPressTimer.current = null
+        }
+    }
+
+    const handlePointerCancel = () => {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current)
+            longPressTimer.current = null
+        }
+    }
+
+    const handleCardClick = (list: List) => {
+        if (longPressActivated.current) return
+        navigate(`/lists/${list.id}`)
+    }
+
     return (
         <div className="min-h-screen pb-32 pt-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto aperture-shelf overflow-hidden">
             <div className="flex items-center justify-between mb-8">
@@ -240,23 +293,73 @@ export default function ListsPage() {
                 </div>
             )}
 
-            {/* Empty State - Show helpful message when no lists */}
+            {/* Enhanced Empty State */}
             {!loading && lists.length === 0 && !initialLoad && (
-                <div className="text-center py-16 px-4">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-sky-400/10 mb-6">
-                        <Box className="h-8 w-8 text-sky-400" />
+                <div className="pt-4 pb-20">
+                    {/* Hero empty state */}
+                    <div className="text-center py-10 px-4 mb-10">
+                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-sky-400/10 mb-6"
+                            style={{ boxShadow: 'inset 0 0 0 1px rgba(56,189,248,0.15)' }}>
+                            <Box className="h-8 w-8 text-sky-400" />
+                        </div>
+                        <h3 className="text-xl font-black uppercase tracking-tight text-white mb-2">Your trophy cabinet awaits</h3>
+                        <p className="text-sm text-zinc-400 mb-8 max-w-xs mx-auto leading-relaxed">
+                            Every great collection starts with one item. What are you keeping track of?
+                        </p>
+                        <Button
+                            onClick={() => setCreateOpen(true)}
+                            className="h-11 px-6 rounded-full border border-white/10 hover:bg-white/5 bg-transparent text-white font-bold uppercase tracking-widest text-xs"
+                        >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Create First Collection
+                        </Button>
                     </div>
-                    <h3 className="text-xl font-bold text-white mb-2">No collections yet</h3>
-                    <p className="text-zinc-400 mb-6 max-w-md mx-auto">
-                        Create your first collection to start organizing movies, books, places, or anything you want to track.
-                    </p>
-                    <Button
-                        onClick={() => setCreateOpen(true)}
-                        className="h-10 px-6 rounded-full border border-white/10 hover:bg-white/5 bg-transparent text-white"
-                    >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Create Collection
-                    </Button>
+
+                    {/* Example collections grid */}
+                    <div>
+                        <p className="text-[9px] font-black uppercase tracking-[0.25em] text-zinc-600 mb-4 text-center">
+                            Some ideas to get you started
+                        </p>
+                        <div className="flex flex-wrap gap-3">
+                            {EXAMPLE_COLLECTIONS.map((example) => {
+                                const rgb = ListColor(example.type)
+                                return (
+                                    <button
+                                        key={example.type}
+                                        onClick={() => setCreateOpen(true)}
+                                        className="group relative overflow-hidden rounded-2xl cursor-pointer flex-shrink-0 text-left"
+                                        style={{
+                                            width: 'calc(50% - 6px)',
+                                            boxShadow: `inset 0 0 0 1px rgba(${rgb}, 0.12), 0 4px 12px rgba(0,0,0,0.25)`
+                                        }}
+                                    >
+                                        <div className="aspect-[3/4] relative overflow-hidden bg-zinc-950/80">
+                                            <div className={`absolute inset-0 bg-gradient-to-br ${ListGradient(example.type)} opacity-25`} />
+                                            {/* Background icon */}
+                                            <div className="absolute inset-0 flex items-center justify-center opacity-[0.04] scale-150">
+                                                <ListIcon type={example.type} className="h-48 w-48" style={{ color: `rgb(${rgb})` }} />
+                                            </div>
+                                            {/* Center icon */}
+                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                <div className="p-6 rounded-full bg-white/[0.04]"
+                                                    style={{ boxShadow: `inset 0 0 0 1px rgba(${rgb}, 0.2)` }}>
+                                                    <ListIcon type={example.type} className="h-8 w-8" style={{ color: `rgb(${rgb})` }} />
+                                                </div>
+                                            </div>
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-70" />
+                                        </div>
+                                        {/* Text overlay */}
+                                        <div className="absolute inset-0 p-3 flex flex-col justify-end">
+                                            <p className="text-[8px] font-black uppercase tracking-wider mb-0.5"
+                                                style={{ color: `rgb(${rgb})` }}>{example.type}</p>
+                                            <h4 className="text-xs font-black text-white uppercase tracking-tight leading-tight">{example.label}</h4>
+                                            <p className="text-[8px] text-white/30 mt-0.5">{example.desc}</p>
+                                        </div>
+                                    </button>
+                                )
+                            })}
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -272,6 +375,7 @@ export default function ListsPage() {
                     const rgb = ListColor(list.type)
                     const coverImage = listCovers[list.id]
                     const quoteCover = quoteCovers[list.id]
+                    const recentlyUpdated = isRecentlyUpdated(list)
 
                     return (
                         <Reorder.Item
@@ -311,6 +415,10 @@ export default function ListsPage() {
                                     <h3 className="text-sm font-black text-white uppercase tracking-tight truncate">
                                         {list.title}
                                     </h3>
+                                    {recentlyUpdated && (
+                                        <span className="h-1.5 w-1.5 rounded-full flex-shrink-0"
+                                            style={{ backgroundColor: `rgb(${rgb})` }} />
+                                    )}
                                 </div>
                                 <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest">
                                     {list.item_count || 0} ITEMS
@@ -329,13 +437,18 @@ export default function ListsPage() {
                     const rgb = ListColor(list.type)
                     const coverImage = listCovers[list.id]
                     const quoteCover = quoteCovers[list.id]
+                    const recentlyUpdated = isRecentlyUpdated(list)
+                    const itemCount = list.item_count || 0
 
                     return (
                         <motion.div
                             key={list.id}
                             layoutId={list.id}
-                            onClick={() => navigate(`/lists/${list.id}`)}
-                            className="group relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 bg-zinc-900/40 flex-shrink-0"
+                            onClick={() => handleCardClick(list)}
+                            onPointerDown={handlePointerDown(list)}
+                            onPointerUp={handlePointerUp}
+                            onPointerCancel={handlePointerCancel}
+                            className="group relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 bg-zinc-900/40 flex-shrink-0 select-none"
                             style={{ width: 'calc(50% - 6px)', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.05), 0 4px 12px rgba(0,0,0,0.3)' }}
                             whileHover={{ y: -2 }}
                         >
@@ -375,7 +488,7 @@ export default function ListsPage() {
                                         </div>
                                     </div>
                                 ) : (
-                                    // Empty list fallback - simplified for performance
+                                    // Empty list fallback
                                     <div className="w-full h-full flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-zinc-950 via-zinc-900 to-black">
                                         {/* Single gradient background */}
                                         <div className={`absolute inset-0 bg-gradient-to-br ${ListGradient(list.type)} opacity-30`} />
@@ -415,7 +528,19 @@ export default function ListsPage() {
                                             {list.type}
                                         </span>
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1.5">
+                                        {/* Quick add button */}
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                setQuickAddList(list)
+                                            }}
+                                            className="h-6 w-6 flex items-center justify-center rounded-lg backdrop-blur-md bg-black/40 text-white/50 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                                            style={{ boxShadow: `inset 0 0 0 1px rgba(${rgb}, 0.25)` }}
+                                            title="Quick add"
+                                        >
+                                            <Plus className="h-3 w-3" />
+                                        </button>
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation()
@@ -435,13 +560,27 @@ export default function ListsPage() {
                                 </div>
 
                                 <div className="space-y-1">
-                                    <h3 className="text-xs font-black text-white uppercase tracking-tight drop-shadow-md leading-tight group-hover:text-sky-400 transition-colors">
-                                        {list.title}
-                                    </h3>
+                                    <div className="flex items-center gap-1.5">
+                                        <h3 className="text-xs font-black text-white uppercase tracking-tight drop-shadow-md leading-tight group-hover:text-sky-400 transition-colors">
+                                            {list.title}
+                                        </h3>
+                                        {/* Recently updated dot */}
+                                        {recentlyUpdated && (
+                                            <span
+                                                className="h-1.5 w-1.5 rounded-full flex-shrink-0"
+                                                style={{ backgroundColor: `rgb(${rgb})`, boxShadow: `0 0 4px rgb(${rgb})` }}
+                                                title="Recently updated"
+                                            />
+                                        )}
+                                    </div>
                                     <div className="flex items-center justify-between">
-                                        <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest">
-                                            {list.item_count || 0} ITEMS
-                                        </p>
+                                        {/* Item count badge */}
+                                        <div className="flex items-center gap-1">
+                                            <span className="text-[9px] font-black uppercase tracking-widest"
+                                                style={{ color: itemCount > 0 ? `rgba(${rgb}, 0.7)` : 'rgba(255,255,255,0.25)' }}>
+                                                {itemCount > 0 ? `${itemCount} ${itemCount === 1 ? 'item' : 'items'}` : 'empty'}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -451,7 +590,24 @@ export default function ListsPage() {
                 </div>
             )}
 
+            {/* Long press hint - only show when there are lists and not reordering */}
+            {lists.length > 0 && !isReordering && (
+                <p className="text-center text-[9px] font-bold uppercase tracking-widest text-zinc-700 pb-4">
+                    Hold card to quick-add
+                </p>
+            )}
+
             <CreateListDialog open={createOpen} onOpenChange={setCreateOpen} />
+
+            {/* Quick Add Sheet */}
+            {quickAddList && (
+                <QuickAddSheet
+                    list={quickAddList}
+                    isOpen={!!quickAddList}
+                    onClose={() => setQuickAddList(null)}
+                    listRgb={ListColor(quickAddList.type)}
+                />
+            )}
         </div>
     )
 }

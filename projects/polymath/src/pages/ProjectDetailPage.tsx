@@ -28,6 +28,7 @@ import { supabase } from '../lib/supabase'
 import { useMemoryStore } from '../stores/useMemoryStore'
 
 import { useContextEngineStore } from '../stores/useContextEngineStore'
+import { SubtleBackground } from '../components/SubtleBackground'
 
 interface ProjectNote {
   id: string
@@ -559,7 +560,8 @@ export function ProjectDetailPage() {
   }
 
   return (
-    <div className="min-h-screen pb-24" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
+    <div className="min-h-screen pb-24 relative" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
+      <SubtleBackground />
       {/* Sticky Header */}
       <div className="premium-glass-strong sticky top-0 z-40">
         {/* Sync Progress Indicator */}

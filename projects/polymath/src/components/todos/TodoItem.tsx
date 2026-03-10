@@ -2,17 +2,15 @@
  * TodoItem - Single row in any todo view.
  *
  * Visual design:
- *   - Uses --premium-surface-1 (#141f32) as card background — real elevation
- *     against the #0f1829 base, not an invisible rgba hack
- *   - Priority is expressed through left border weight and color
- *   - Completion: green flash (done = emerald, not blue), 2s linger, rightward exit
- *   - Stale inbox items surface their age quietly (crow insight)
+ *   - Priority expressed as colored pill badge + left border + card tint
+ *   - Area shown as a colored pill, not plain faint text
+ *   - Estimated time shown as a distinct chip
+ *   - In-progress: amber glow card, pulsing dot, left border
+ *   - Completion: emerald flash (done = green), 2s linger, rightward exit
  *
  * Behavioral UX:
- *   - Zeigarnik Effect: "Start" button creates an explicit open loop commitment.
- *     In-progress state is visible in the list — cognitive tension drives return.
- *   - Amber left border + animated pulse when in progress (vs priority colors)
- *     makes active commitment immediately legible in the task list.
+ *   - Zeigarnik Effect: "Start" creates a visible open loop commitment
+ *   - Crow insight: stale inbox items show their age quietly
  */
 
 import { useState, useRef } from 'react'
@@ -37,16 +35,33 @@ interface TodoItemProps {
   areaName?: string
 }
 
-// Priority border: left border only — color + weight signal urgency
-// In-progress state overrides priority border with amber (active commitment signal)
-function getPriorityStyle(priority: number, done: boolean, isInProgress: boolean): React.CSSProperties {
-  if (done) return {}
-  if (isInProgress) return { borderLeft: '3px solid rgba(251,146,60,0.8)' }
-  if (priority === 3) return { borderLeft: '3px solid rgba(248,113,113,0.75)' }
-  if (priority === 2) return { borderLeft: '2px solid rgba(251,191,36,0.65)' }
-  if (priority === 1) return { borderLeft: '2px solid rgba(96,165,250,0.5)' }
-  return { borderLeft: '1px solid rgba(255,255,255,0.065)' }
-}
+// Priority config — color, label, border, card tint
+const PRIORITY_CONFIG = {
+  3: {
+    label: 'Urgent',
+    dot: 'rgba(248,113,113,1)',
+    border: '3px solid rgba(248,113,113,0.7)',
+    cardTint: 'rgba(239,68,68,0.07)',
+    chipBg: 'rgba(239,68,68,0.15)',
+    chipColor: 'rgba(252,165,165,0.95)',
+  },
+  2: {
+    label: 'High',
+    dot: 'rgba(251,191,36,1)',
+    border: '2.5px solid rgba(251,191,36,0.65)',
+    cardTint: 'rgba(251,191,36,0.06)',
+    chipBg: 'rgba(251,191,36,0.14)',
+    chipColor: 'rgba(253,224,71,0.95)',
+  },
+  1: {
+    label: 'Low',
+    dot: 'rgba(96,165,250,1)',
+    border: '2px solid rgba(96,165,250,0.5)',
+    cardTint: 'rgba(59,130,246,0.05)',
+    chipBg: 'rgba(59,130,246,0.12)',
+    chipColor: 'rgba(147,197,253,0.9)',
+  },
+} as const
 
 export function TodoItem({
   todo,
@@ -79,7 +94,7 @@ export function TodoItem({
       ))
     : 0
 
-  // Crow insight: quietly remember how long a task has been sitting
+  // Crow insight: quietly surface how long a task has been sitting
   const daysSinceCreated = todo.created_at
     ? Math.floor((Date.now() - new Date(todo.created_at).getTime()) / 86400000)
     : 0
@@ -87,20 +102,15 @@ export function TodoItem({
     !todo.tags.includes('someday') && daysSinceCreated >= 3
 
   const handleToggle = async () => {
-    if (completing) return  // guard against double-tap during linger
+    if (completing) return
     if (todo.done) {
       onToggle(todo.id)
       return
     }
 
-    // Phase 1: immediate visual — it's done
     setCompleting(true)
     setCompletingFlash(true)
-
-    // Flash: emerald tint fades after 600ms (completion = green = success)
     setTimeout(() => setCompletingFlash(false), 600)
-
-    // Phase 2: linger 2s so the completion registers, then exit
     await new Promise(r => setTimeout(r, 2000))
     onToggle(todo.id)
     setCompleting(false)
@@ -131,23 +141,30 @@ export function TodoItem({
 
   const handleStartToggle = (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (isInProgress) {
-      onUnstart(todo.id)
-    } else {
-      onStart(todo.id)
-    }
+    if (isInProgress) onUnstart(todo.id)
+    else onStart(todo.id)
   }
 
-  // Compose background + border together
+  const priorityCfg = PRIORITY_CONFIG[todo.priority as keyof typeof PRIORITY_CONFIG]
+
+  // Card background: completing flash > done state > in-progress > priority tint > default
   const itemBackground = completingFlash
-    ? 'rgba(16,185,129,0.12)'   // emerald flash on completion
+    ? 'rgba(16,185,129,0.14)'
     : todo.done
       ? 'transparent'
       : isInProgress
-        ? 'rgba(251,146,60,0.06)'  // amber tint when in progress
-        : 'var(--premium-surface-1)'  // #141f32 — proper elevation
+        ? 'rgba(251,146,60,0.09)'
+        : priorityCfg
+          ? priorityCfg.cardTint
+          : 'rgba(24,24,27,0.55)'  // zinc-900 glass — matches home/lists cards
 
-  const priorityStyle = getPriorityStyle(todo.priority, todo.done, isInProgress)
+  const borderLeft = todo.done || completing
+    ? '1px solid rgba(255,255,255,0.07)'
+    : isInProgress
+      ? '3px solid rgba(251,146,60,0.85)'
+      : priorityCfg
+        ? priorityCfg.border
+        : '1px solid rgba(255,255,255,0.07)'
 
   return (
     <motion.div
@@ -157,7 +174,6 @@ export function TodoItem({
         opacity: completing ? 0.62 : todo.done ? 0.45 : 1,
         y: 0,
       }}
-      // Slides right on exit — the task goes somewhere, it doesn't just vanish
       exit={{
         opacity: 0,
         x: 52,
@@ -165,13 +181,12 @@ export function TodoItem({
         marginBottom: 0,
         transition: { duration: 0.32, ease: [0.4, 0, 1, 1] },
       }}
-      // Subtle hover lift on desktop
       whileHover={!todo.done && !completing ? { y: -1 } : undefined}
       transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
     >
       <SwipeableCard
-        leftAction={{ ...SwipeActions.delete(handleToggle), icon: <Check className="h-5 w-5 text-white" />, color: 'bg-emerald-600', label: 'Complete' }}
-        rightAction={SwipeActions.delete(() => onDelete(todo.id))}
+        leftAction={SwipeActions.delete(() => onDelete(todo.id))}
+        rightAction={{ icon: <Check className="h-5 w-5 text-white" />, color: 'bg-emerald-600', label: 'Complete', threshold: 100, onAction: handleToggle }}
         className="rounded-xl"
       >
         <div
@@ -181,14 +196,14 @@ export function TodoItem({
           )}
           style={{
             background: itemBackground,
-            borderTop: '1px solid rgba(255,255,255,0.055)',
-            borderRight: '1px solid rgba(255,255,255,0.055)',
-            borderBottom: '1px solid rgba(255,255,255,0.04)',
-            ...priorityStyle,
-            boxShadow: todo.done ? 'none' : '0 1px 3px rgba(0,0,0,0.3), 0 2px 10px rgba(0,0,0,0.15)',
+            borderTop: '1px solid rgba(255,255,255,0.07)',
+            borderRight: '1px solid rgba(255,255,255,0.07)',
+            borderBottom: '1px solid rgba(255,255,255,0.03)',
+            borderLeft: borderLeft ?? '1px solid rgba(255,255,255,0.07)',
+            boxShadow: todo.done ? 'none' : '0 1px 3px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.2)',
           }}
         >
-          {/* Checkbox — 44×44 touch target via padding */}
+          {/* Checkbox — 44×44 touch target */}
           <button
             onClick={handleToggle}
             className="flex-shrink-0 flex items-center justify-center"
@@ -204,8 +219,11 @@ export function TodoItem({
                     ? '1.5px solid rgba(248,113,113,0.55)'
                     : isInProgress
                       ? '1.5px solid rgba(251,146,60,0.6)'
-                      : '1.5px solid rgba(255,255,255,0.18)',
+                      : priorityCfg
+                        ? `1.5px solid ${priorityCfg.dot}`
+                        : '1.5px solid rgba(255,255,255,0.18)',
                 background: (todo.done || completing) ? 'rgb(16,185,129)' : 'transparent',
+                opacity: priorityCfg && !todo.done && !completing && !isOverdue && !isInProgress ? 0.7 : 1,
               }}
             >
               <AnimatePresence>
@@ -249,72 +267,119 @@ export function TodoItem({
                 className="text-[15px] cursor-text leading-snug"
                 style={{
                   color: (todo.done || completing)
-                    ? 'rgba(255,255,255,0.3)'
+                    ? 'rgba(255,255,255,0.45)'
                     : 'var(--premium-text-primary)',
                   textDecoration: (todo.done || completing) ? 'line-through' : 'none',
-                  textDecorationColor: 'rgba(255,255,255,0.25)',
+                  textDecorationColor: 'rgba(255,255,255,0.30)',
                 }}
               >
                 {todo.text}
               </p>
             )}
 
-            {/* Metadata — only on active items */}
+            {/* Metadata chips row — only on active items */}
             {!todo.done && !completing && !editing && (
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1.5">
+              <div className="flex flex-wrap items-center gap-1.5 mt-2">
 
-                {/* Zeigarnik: in-progress badge — the visible open loop */}
+                {/* Priority pill */}
+                {priorityCfg && !isInProgress && (
+                  <span
+                    className="flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                    style={{ background: priorityCfg.chipBg, color: priorityCfg.chipColor }}
+                  >
+                    <span
+                      className="h-1.5 w-1.5 rounded-full flex-shrink-0"
+                      style={{ background: priorityCfg.dot }}
+                    />
+                    {priorityCfg.label}
+                  </span>
+                )}
+
+                {/* In-progress badge */}
                 {isInProgress && (
-                  <span className="flex items-center gap-1 text-[11px] font-medium" style={{ color: 'rgba(251,146,60,0.85)' }}>
-                    <span className="h-1.5 w-1.5 rounded-full bg-orange-400/70 animate-pulse" />
+                  <span
+                    className="flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                    style={{ background: 'rgba(251,146,60,0.15)', color: 'rgba(251,146,60,0.95)' }}
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full bg-orange-400 animate-pulse flex-shrink-0" />
                     In progress
                   </span>
                 )}
 
+                {/* Overdue badge */}
                 {isOverdue && (
-                  <span className="flex items-center gap-1 text-[11px] font-medium" style={{ color: 'rgba(248,113,113,0.85)' }}>
-                    <AlertCircle className="h-3 w-3" />
-                    {daysOverdue === 1 ? '1 day overdue' : `${daysOverdue} days overdue`}
+                  <span
+                    className="flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                    style={{ background: 'rgba(239,68,68,0.14)', color: 'rgba(252,165,165,0.95)' }}
+                  >
+                    <AlertCircle className="h-3 w-3 flex-shrink-0" />
+                    {daysOverdue === 1 ? '1d overdue' : `${daysOverdue}d overdue`}
                   </span>
                 )}
+
+                {/* Deadline */}
                 {todo.deadline_date && !isOverdue && showDate && (
-                  <span className="flex items-center gap-1 text-[11px]" style={{ color: 'rgba(255,255,255,0.32)' }}>
+                  <span className="flex items-center gap-1 text-[11px]" style={{ color: 'rgba(248,113,113,0.7)' }}>
                     <AlertCircle className="h-3 w-3" />
                     Due {describeDate(todo.deadline_date)}
                   </span>
                 )}
+
+                {/* Scheduled date */}
                 {todo.scheduled_date && showDate && (
-                  <span className="flex items-center gap-1 text-[11px]" style={{ color: 'rgba(255,255,255,0.32)' }}>
+                  <span className="flex items-center gap-1 text-[11px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
                     <Calendar className="h-3 w-3" />
                     {describeDate(todo.scheduled_date)}
                   </span>
                 )}
+
+                {/* Scheduled time */}
                 {todo.scheduled_time && (
-                  <span className="flex items-center gap-1 text-[11px]" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                    <Clock className="h-3 w-3" />
+                  <span
+                    className="flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-md"
+                    style={{ background: 'rgba(99,179,237,0.1)', color: 'rgba(147,197,253,0.85)' }}
+                  >
+                    <Clock className="h-2.5 w-2.5" />
                     {describeTime(todo.scheduled_time)}
                   </span>
                 )}
+
+                {/* Area chip */}
                 {showArea && areaName && (
-                  <span className="text-[11px]" style={{ color: 'rgba(251,191,36,0.6)' }}>{areaName}</span>
+                  <span
+                    className="text-[11px] font-medium px-1.5 py-0.5 rounded-md"
+                    style={{ background: 'rgba(251,191,36,0.12)', color: 'rgba(253,224,71,0.8)' }}
+                  >
+                    {areaName}
+                  </span>
                 )}
+
+                {/* Tags */}
                 {todo.tags.filter(t => t !== 'someday').map(tag => (
-                  <span key={tag} className="flex items-center gap-0.5 text-[11px]" style={{ color: 'rgba(52,211,153,0.6)' }}>
+                  <span key={tag} className="flex items-center gap-0.5 text-[11px] px-1.5 py-0.5 rounded-md"
+                    style={{ background: 'rgba(52,211,153,0.1)', color: 'rgba(52,211,153,0.8)' }}
+                  >
                     <Tag className="h-2.5 w-2.5" />
                     {tag}
                   </span>
                 ))}
+
+                {/* Estimated time chip */}
                 {todo.estimated_minutes && (
-                  <span className="flex items-center gap-1 text-[11px]" style={{ color: 'rgba(255,255,255,0.22)' }}>
-                    <Clock className="h-3 w-3" />
+                  <span
+                    className="flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-md ml-auto"
+                    style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}
+                  >
+                    <Clock className="h-2.5 w-2.5" />
                     {formatMinutes(todo.estimated_minutes)}
                   </span>
                 )}
-                {/* Crow insight: age of stale inbox items */}
-                {isStale && (
+
+                {/* Crow insight: stale age indicator */}
+                {isStale && !todo.estimated_minutes && (
                   <span
                     className="text-[11px] ml-auto"
-                    style={{ color: 'rgba(255,255,255,0.2)' }}
+                    style={{ color: 'rgba(255,255,255,0.35)' }}
                     title={`Added ${daysSinceCreated} days ago`}
                   >
                     {daysSinceCreated}d
@@ -325,24 +390,23 @@ export function TodoItem({
 
             {/* Notes */}
             {todo.notes && !editing && !completing && (
-              <p className="mt-1.5 text-[12px] leading-snug line-clamp-2" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              <p className="mt-1.5 text-[12px] leading-snug line-clamp-2" style={{ color: 'rgba(255,255,255,0.45)' }}>
                 {todo.notes}
               </p>
             )}
           </div>
 
-          {/* Actions column: Start/Stop + Delete */}
+          {/* Actions: Start/Stop + Delete */}
           {!todo.done && !completing && (
             <div className="flex-shrink-0 flex flex-col items-end gap-1">
-              {/* Start/Stop — Zeigarnik commitment device */}
               <button
                 onClick={handleStartToggle}
                 className="h-7 w-7 flex items-center justify-center rounded-lg transition-all"
                 style={isInProgress ? {
-                  color: 'rgba(251,146,60,0.8)',
-                  background: 'rgba(251,146,60,0.1)',
+                  color: 'rgba(251,146,60,0.9)',
+                  background: 'rgba(251,146,60,0.14)',
                 } : {
-                  color: 'rgba(255,255,255,0.2)',
+                  color: 'rgba(255,255,255,0.35)',
                 }}
                 aria-label={isInProgress ? 'Stop working on this' : 'Start working on this'}
                 title={isInProgress ? 'Stop' : 'Start'}
@@ -353,11 +417,10 @@ export function TodoItem({
                 }
               </button>
 
-              {/* Delete — subtle until pressed */}
               <button
                 onClick={() => onDelete(todo.id)}
                 className="h-7 w-7 flex items-center justify-center rounded-lg transition-all"
-                style={{ color: 'rgba(255,255,255,0.18)' }}
+                style={{ color: 'rgba(255,255,255,0.30)' }}
                 aria-label="Delete todo"
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -365,12 +428,12 @@ export function TodoItem({
             </div>
           )}
 
-          {/* Completed state: just delete (no start button needed) */}
+          {/* Completed: just delete */}
           {(todo.done || completing) && (
             <button
               onClick={() => onDelete(todo.id)}
               className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-lg transition-all"
-              style={{ color: 'rgba(255,255,255,0.22)', opacity: 0.7 }}
+              style={{ color: 'rgba(255,255,255,0.35)', opacity: 0.7 }}
               aria-label="Delete todo"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -402,19 +465,19 @@ export function LogbookItem({ todo, onUndo }: { todo: Todo; onUndo: (id: string)
       </div>
       <span
         className="flex-1 text-[15px] truncate"
-        style={{ textDecoration: 'line-through', color: 'rgba(255,255,255,0.45)', textDecorationColor: 'rgba(255,255,255,0.2)' }}
+        style={{ textDecoration: 'line-through', color: 'rgba(255,255,255,0.65)', textDecorationColor: 'rgba(255,255,255,0.30)' }}
       >
         {todo.text}
       </span>
       {completedAt && (
-        <span className="text-[11px] flex-shrink-0" style={{ color: 'rgba(255,255,255,0.2)' }}>
+        <span className="text-[11px] flex-shrink-0" style={{ color: 'rgba(255,255,255,0.45)' }}>
           {completedAt}
         </span>
       )}
       <button
         onClick={() => onUndo(todo.id)}
         className="text-[11px] flex-shrink-0 ml-1 transition-colors"
-        style={{ color: 'rgba(255,255,255,0.2)' }}
+        style={{ color: 'rgba(255,255,255,0.40)' }}
       >
         Undo
       </button>

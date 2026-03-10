@@ -290,10 +290,12 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
 
   console.log('[handleCapture] Starting capture processing', { hasProvidedTitle: !!providedTitle })
 
-  // If title is provided (manual entry), use it directly
-  let parsedTitle = providedTitle || '' // Start empty, will populate below
-  let parsedBullets = [text]
-  const isManualEntry = !!providedTitle
+  // Detect input type: voice sends transcript field, manual text sends body field
+  const isVoice = !!transcript
+  const isManualEntry = !isVoice
+
+  let parsedTitle = ''
+  let parsedBullets: string[] = [text]
 
   // Helper function to check if title is too similar to original text (verbatim)
   // Only rejects titles that are a literal substring of the transcript's opening words
@@ -307,7 +309,7 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
     const firstWords = normalizedOriginal.split(/\s+/).slice(0, 20).join(' ')
     const titleAsString = normalizedTitle.split(/\s+/).join(' ')
 
-    if (firstWords.includes(titleAsString) && titleAsString.length > 12) {
+    if (firstWords.includes(titleAsString) && titleAsString.split(/\s+/).length >= 2) {
       return true
     }
 
@@ -335,9 +337,8 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
     return words.slice(midStart, midEnd).join(' ')
   }
 
-  // Only run AI title parsing for voice captures (not manual entries with provided title)
-  if (!isManualEntry) {
-    try {
+  // Run AI title + bullet generation for both voice and manual text entries
+  try {
       console.log('[handleCapture] Starting Gemini title generation...')
 
       // Validate API key
@@ -428,35 +429,33 @@ Remember: BE CREATIVE. SUMMARIZE. DO NOT COPY THE BEGINNING OF THE TEXT.`
           if (isVerbatimTitle(parsed.title, text)) {
             console.warn('[handleCapture] ⚠️ Gemini returned verbatim title, rejecting:', parsed.title)
             console.log('[handleCapture] Using smart fallback instead')
-            parsedTitle = createFallbackTitle(text)
+            parsedTitle = (isManualEntry && providedTitle) ? providedTitle : createFallbackTitle(text)
           } else {
-            parsedTitle = parsed.title
+            // For manual entries: respect user-provided title if they explicitly typed one
+            parsedTitle = (isManualEntry && providedTitle) ? providedTitle : parsed.title
             parsedBullets = parsed.bullets
             console.log('[handleCapture] ✅ Successfully generated summary title:', parsedTitle)
           }
         } else {
           console.warn('[handleCapture] Gemini response missing title or bullets')
-          parsedTitle = createFallbackTitle(text)
+          parsedTitle = (isManualEntry && providedTitle) ? providedTitle : createFallbackTitle(text)
         }
       } catch (parseError) {
         console.error('[handleCapture] Failed to parse Gemini JSON response:', parseError)
         console.error('[handleCapture] Raw response was:', jsonText)
-        parsedTitle = createFallbackTitle(text)
+        parsedTitle = (isManualEntry && providedTitle) ? providedTitle : createFallbackTitle(text)
       }
 
     } catch (geminiError) {
       console.error('[handleCapture] Gemini API error:', geminiError)
       console.error('[handleCapture] Error details:', geminiError instanceof Error ? geminiError.message : String(geminiError))
-      parsedTitle = createFallbackTitle(text)
+      parsedTitle = (isManualEntry && providedTitle) ? providedTitle : createFallbackTitle(text)
     }
-  } else {
-    console.log('[handleCapture] Manual entry - skipping AI title parsing')
-  }
 
   // Final safety check: ensure we have a title
   if (!parsedTitle || parsedTitle.trim() === '') {
     console.warn('[handleCapture] No title generated, using fallback')
-    parsedTitle = createFallbackTitle(text)
+    parsedTitle = (isManualEntry && providedTitle) ? providedTitle : createFallbackTitle(text)
   }
 
   console.log('[handleCapture] Final title:', parsedTitle)
@@ -464,8 +463,10 @@ Remember: BE CREATIVE. SUMMARIZE. DO NOT COPY THE BEGINNING OF THE TEXT.`
   // Always create memory with raw transcript
   try {
     const now = new Date().toISOString()
-    // For manual entries, use body directly; for voice, join bullets
-    const memoryBody = isManualEntry ? text : (Array.isArray(parsedBullets) ? parsedBullets.join('\n\n') : text)
+    // Voice → prose (raw transcript); text → bullets (AI-generated bullet points)
+    const memoryBody = isVoice
+      ? text
+      : parsedBullets.map((b: string) => `• ${b}`).join('\n')
 
     // Generate unique ID with timestamp + random component to prevent collisions on retry
     const uniqueId = isManualEntry

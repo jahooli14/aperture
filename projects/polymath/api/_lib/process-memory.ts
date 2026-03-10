@@ -42,8 +42,10 @@ export async function processMemory(memoryId: string): Promise<void> {
       .select('id, title, description')
       .eq('status', 'active')
 
+    // Preserve format: voice has orig_transcript (→ prose), manual text does not (→ bullets)
+    const bodyFormat: 'prose' | 'bullets' = memory.orig_transcript ? 'prose' : 'bullets'
     logger.info({ memory_id: memoryId }, '🔄 Extracting metadata...')
-    const metadata = await extractMetadata(memory.title, memory.body, projects || [])
+    const metadata = await extractMetadata(memory.title, memory.orig_transcript || memory.body, projects || [], bodyFormat)
     logger.info({ memory_id: memoryId, summary_title: metadata.summary_title, triage: metadata.triage?.category }, '✅ Metadata extracted')
 
     // 3. Generate embedding for the processed memory content
@@ -169,8 +171,8 @@ export async function processMemory(memoryId: string): Promise<void> {
 /**
  * Extract metadata using Gemini (rationalized to avoid duplication)
  */
-async function extractMetadata(title: string, body: string, projects: any[]): Promise<ExtractedMetadata> {
-  const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT }) // Consistent model usage
+async function extractMetadata(title: string, body: string, projects: any[], bodyFormat: 'prose' | 'bullets' = 'prose'): Promise<ExtractedMetadata> {
+  const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT, generationConfig: { responseMimeType: 'application/json' } })
 
   const projectList = projects.map(p => `- ${p.title} (ID: ${p.id}): ${p.description}`).join('\n')
 
@@ -206,7 +208,7 @@ TASK:
 Return JSON:
 {
   "summary_title": "SHORT SUMMARIZED title - NOT verbatim",
-  "insightful_body": "The cleaned-up content in first person, natural prose",
+  "insightful_body": "${bodyFormat === 'bullets' ? 'The key points as concise bullet points, each line starting with •' : 'The cleaned-up content in first person, natural prose'}",
   "memory_type": "foundational|event|insight",
   "entities": {
     "people": ["actual names mentioned"],
