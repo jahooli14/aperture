@@ -276,7 +276,7 @@ export default function App() {
             {/* Extraction Summary - Shows AI processing results after memory creation */}
             <ExtractionSummary />
 
-            <div className="min-h-screen flex flex-col">
+            <div className="min-h-screen flex flex-col overflow-x-hidden">
               <OfflineIndicator />
               <PWAInstallBanner />
 
