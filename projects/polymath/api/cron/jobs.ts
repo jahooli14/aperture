@@ -324,7 +324,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       for (const item of allItems) {
         try {
           const baseUrl = process.env.VITE_APP_URL || 'http://localhost:3000'
-          const linkRes = await fetch(`${baseUrl}/api/ai-linker`, {
+          const linkRes = await fetch(`${baseUrl}/api/connections?action=link`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
