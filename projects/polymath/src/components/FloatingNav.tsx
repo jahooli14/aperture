@@ -15,6 +15,7 @@ import {
   MoreHorizontal,
   AlignLeft,
   CheckSquare,
+  BookOpen,
 } from 'lucide-react'
 import { VoiceFAB } from './VoiceFAB'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
@@ -51,6 +52,7 @@ const NAV_OPTIONS: NavOption[] = [
   { id: 'todos',    label: 'Todos',    icon: CheckSquare,  path: '/todos',    action: 'navigate', color: 'todos' },
   { id: 'projects', label: 'Projects', icon: Layers,       path: '/projects', action: 'navigate', color: 'projects' },
   { id: 'lists',    label: 'Lists',    icon: AlignLeft,    path: '/lists',    action: 'navigate', color: 'lists' },
+  { id: 'reading',  label: 'Reading',  icon: BookOpen,     path: '/reading',  action: 'navigate', color: 'reading' },
   { id: 'thoughts', label: 'Thoughts', icon: Brain,        path: '/memories', action: 'navigate', color: 'thoughts' },
 ]
 
