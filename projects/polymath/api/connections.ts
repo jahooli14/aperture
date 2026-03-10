@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getUserId } from './_lib/auth.js'
 import { updateItemConnections } from './_lib/connection-logic.js' // New import
-import { cosineSimilarity } from './_lib/gemini-embeddings.js' // Ensure this import is present
+import { cosineSimilarity, generateEmbedding } from './_lib/gemini-embeddings.js'
 import { MODELS } from './_lib/models.js'
 import { maintainEmbeddings } from './_lib/embeddings-maintenance.js'
 
@@ -556,6 +556,126 @@ What is the non-obvious link?`
       } catch (error) {
         console.error('[connections] regenerate error:', error)
         return res.status(500).json({ error: 'Failed to regenerate connections', details: error instanceof Error ? error.message : 'Unknown error' })
+      }
+    }
+
+    // Universal AI Linker - finds connections across ALL entity types with Gemini reasoning
+    // POST /api/connections?action=link
+    // Body: { itemId, itemType, content?, embedding? }
+    if (action === 'link') {
+      const { itemId, itemType, content, embedding: providedEmbedding } = req.body
+
+      if (!itemId || !itemType) {
+        return res.status(400).json({ error: 'itemId and itemType required' })
+      }
+
+      const AUTO_LINK_THRESHOLD = 0.82
+      const SUGGESTION_THRESHOLD = 0.52
+      const MAX_CANDIDATES = 8
+
+      try {
+        let embedding: number[] = providedEmbedding
+        if (!embedding) {
+          if (!content) return res.status(400).json({ error: 'content or embedding required' })
+          embedding = await generateEmbedding(content)
+        }
+
+        interface Candidate { id: string; type: string; title: string; content: string; similarity: number }
+        const candidates: Candidate[] = []
+
+        const [memoriesRes, projectsRes, articlesRes, listItemsRes] = await Promise.all([
+          itemType !== 'thought' ? supabase.from('memories').select('id, title, body, embedding').eq('user_id', userId).neq('id', itemId).not('embedding', 'is', null).limit(100) : Promise.resolve({ data: [] }),
+          itemType !== 'project' ? supabase.from('projects').select('id, title, description, embedding').eq('user_id', userId).neq('id', itemId).not('embedding', 'is', null).limit(100) : Promise.resolve({ data: [] }),
+          itemType !== 'article' ? supabase.from('reading_queue').select('id, title, excerpt, embedding').eq('user_id', userId).neq('id', itemId).not('embedding', 'is', null).limit(100) : Promise.resolve({ data: [] }),
+          itemType !== 'list_item' ? supabase.from('list_items').select('id, content, metadata, embedding').eq('user_id', userId).neq('id', itemId).not('embedding', 'is', null).limit(100) : Promise.resolve({ data: [] }),
+        ])
+
+        for (const m of (memoriesRes.data || []) as any[]) {
+          if (!m.embedding) continue
+          const sim = cosineSimilarity(embedding, m.embedding)
+          if (sim >= SUGGESTION_THRESHOLD) candidates.push({ id: m.id, type: 'thought', title: m.title || m.body?.slice(0, 60) || 'Untitled', content: m.body?.slice(0, 300) || '', similarity: sim })
+        }
+        for (const p of (projectsRes.data || []) as any[]) {
+          if (!p.embedding) continue
+          const sim = cosineSimilarity(embedding, p.embedding)
+          if (sim >= SUGGESTION_THRESHOLD) candidates.push({ id: p.id, type: 'project', title: p.title || 'Untitled', content: p.description?.slice(0, 300) || '', similarity: sim })
+        }
+        for (const a of (articlesRes.data || []) as any[]) {
+          if (!a.embedding) continue
+          const sim = cosineSimilarity(embedding, a.embedding)
+          if (sim >= SUGGESTION_THRESHOLD) candidates.push({ id: a.id, type: 'article', title: a.title || 'Untitled', content: a.excerpt?.slice(0, 300) || '', similarity: sim })
+        }
+        for (const li of (listItemsRes.data || []) as any[]) {
+          if (!li.embedding) continue
+          const sim = cosineSimilarity(embedding, li.embedding)
+          if (sim >= SUGGESTION_THRESHOLD) candidates.push({ id: li.id, type: 'list_item', title: li.content || li.metadata?.title || 'Untitled', content: li.metadata?.description || '', similarity: sim })
+        }
+
+        candidates.sort((a, b) => b.similarity - a.similarity)
+        const top = candidates.slice(0, MAX_CANDIDATES)
+
+        if (top.length === 0) {
+          return res.status(200).json({ connections: [], autoLinked: 0, suggestions: 0 })
+        }
+
+        // Generate AI reasoning for each candidate
+        const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
+        const sourceLabel = content?.slice(0, 200) || `${itemType} ${itemId}`
+        const candidateList = top.map((c, i) => `${i + 1}. [${c.type}] "${c.title}": ${c.content}`).join('\n')
+        const prompt = `You are a knowledge graph AI. Given a source item and ${top.length} candidates, explain WHY each connects to the source in one specific sentence. Also pick the best connection type.
+
+SOURCE (${itemType}): "${sourceLabel}"
+
+CANDIDATES:
+${candidateList}
+
+Return ONLY a JSON array with exactly ${top.length} objects in the same order:
+[{"reason": "...", "type": "relates_to|inspired_by|evolves_from|reading_flow"}]
+
+Be specific: mention actual shared concepts. Do not say "both are about X".`
+
+        let reasonings: Array<{ reason: string; type: string }> = []
+        try {
+          const result = await model.generateContent(prompt)
+          const text = result.response.text()
+          const match = text.match(/\[[\s\S]*?\]/)
+          if (match) reasonings = JSON.parse(match[0])
+        } catch {
+          reasonings = top.map(c => ({ reason: `${Math.round(c.similarity * 100)}% semantic overlap`, type: 'relates_to' }))
+        }
+
+        const normSourceType = itemType === 'memory' ? 'thought' : itemType
+        const autoLinkedIds: string[] = []
+        const suggestedIds: string[] = []
+
+        for (let i = 0; i < top.length; i++) {
+          const c = top[i]
+          const r = reasonings[i] || { reason: 'Semantically related', type: 'relates_to' }
+
+          const { data: existing } = await supabase.from('connections').select('id').eq('user_id', userId)
+            .or(`and(source_type.eq.${normSourceType},source_id.eq.${itemId},target_type.eq.${c.type},target_id.eq.${c.id}),and(source_type.eq.${c.type},source_id.eq.${c.id},target_type.eq.${normSourceType},target_id.eq.${itemId})`)
+            .maybeSingle()
+          if (existing) continue
+
+          const isTodo = normSourceType === 'todo'
+          if (!isTodo && c.similarity >= AUTO_LINK_THRESHOLD) {
+            await supabase.from('connections').insert({ user_id: userId, source_type: normSourceType, source_id: itemId, target_type: c.type, target_id: c.id, connection_type: r.type || 'relates_to', created_by: 'ai', ai_reasoning: r.reason })
+            autoLinkedIds.push(c.id)
+          } else {
+            await supabase.from('connection_suggestions').insert({ user_id: userId, from_item_type: normSourceType, from_item_id: itemId, to_item_type: c.type, to_item_id: c.id, reasoning: r.reason, confidence: c.similarity, status: 'pending' })
+            suggestedIds.push(c.id)
+          }
+        }
+
+        return res.status(200).json({
+          connections: top.map((c, i) => ({ id: c.id, type: c.type, title: c.title, similarity: c.similarity, reasoning: reasonings[i]?.reason || '', connectionType: reasonings[i]?.type || 'relates_to', autoLinked: autoLinkedIds.includes(c.id) })),
+          autoLinked: autoLinkedIds.length,
+          suggestions: suggestedIds.length
+        })
+
+      } catch (error) {
+        console.error('[connections/link] Error:', error)
+        return res.status(500).json({ error: 'Failed to link item', details: error instanceof Error ? error.message : 'Unknown error' })
       }
     }
 
