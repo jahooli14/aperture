@@ -14,6 +14,7 @@ import { ExtractionSummary } from './components/memories/ExtractionSummary'
 import { SteeringCard } from './components/memories/SteeringCard'
 import { ContextSidebar } from './components/context/ContextSidebar'
 import { FocusSession } from './components/power-hour/FocusSession'
+import { ConnectionPulse } from './components/ConnectionPulse'
 import { Loader2 } from 'lucide-react'
 import { App as CapacitorApp } from '@capacitor/app'
 import { StatusBar, Style } from '@capacitor/status-bar'
@@ -321,6 +322,9 @@ export default function App() {
 
               {/* Focus Session Overlay (Zen Mode) */}
               <FocusSession />
+
+              {/* Connection Pulse - Live AI linking notifications */}
+              <ConnectionPulse />
 
               {/* Debug Panel - Shows console logs on screen */}
               <DebugPanel />
