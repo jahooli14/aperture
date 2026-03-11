@@ -254,12 +254,12 @@ export default function ListsPage() {
                             onClick={() => setIsReordering(!isReordering)}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all ${
                                 isReordering
-                                    ? 'bg-sky-500 text-white'
-                                    : 'text-white hover:bg-white/5'
+                                    ? 'bg-sky-500 text-white rounded-sm'
+                                    : 'text-white hover:bg-white/5 rounded-sm'
                             }`}
                             style={isReordering
-                                ? { boxShadow: 'inset 0 0 0 1px rgba(125,211,252,0.5)' }
-                                : { boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1)' }
+                                ? { border: '2px solid rgba(125,211,252,0.5)' }
+                                : { border: '2px solid rgba(255,255,255,0.1)' }
                             }
                         >
                             {isReordering ? <Check className="h-3 w-3" /> : <ListOrdered className="h-3 w-3" />}
@@ -270,8 +270,8 @@ export default function ListsPage() {
                     )}
                     <Button
                         onClick={() => setCreateOpen(true)}
-                        className="h-10 w-10 p-0 rounded-full hover:bg-white/5 bg-transparent text-white"
-                        style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1)' }}
+                        className="h-10 w-10 p-0 rounded-sm hover:bg-white/5 bg-transparent text-white"
+                        style={{ border: '2px solid rgba(255,255,255,0.1)' }}
                     >
                         <Plus className="h-4 w-4" />
                     </Button>
@@ -522,7 +522,7 @@ export default function ListsPage() {
                             {/* Overlay Content */}
                             <div className="absolute inset-0 p-3 flex flex-col justify-between">
                                 <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg backdrop-blur-md bg-black/40" style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1)' }}>
+                                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-sm bg-black/60" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
                                         <ListIcon type={list.type} className="h-3 w-3" style={{ color: `rgb(${rgb})` }} />
                                         <span className="text-[8px] font-black uppercase tracking-wider text-white">
                                             {list.type}
@@ -535,7 +535,7 @@ export default function ListsPage() {
                                                 e.stopPropagation()
                                                 setQuickAddList(list)
                                             }}
-                                            className="h-6 w-6 flex items-center justify-center rounded-lg backdrop-blur-md bg-black/40 text-white/50 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                                            className="h-6 w-6 flex items-center justify-center rounded-sm bg-black/60 text-white/50 hover:text-white transition-all opacity-0 group-hover:opacity-100"
                                             style={{ boxShadow: `inset 0 0 0 1px rgba(${rgb}, 0.25)` }}
                                             title="Quick add"
                                         >
@@ -548,7 +548,7 @@ export default function ListsPage() {
                                                     useListStore.getState().deleteList(list.id)
                                                 }
                                             }}
-                                            className="h-6 w-6 flex items-center justify-center rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500/40 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
+                                            className="h-6 w-6 flex items-center justify-center rounded-sm bg-red-500/10 hover:bg-red-500/20 text-red-500/40 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
                                             style={{ boxShadow: 'inset 0 0 0 1px rgba(239,68,68,0.15)' }}
                                         >
                                             <Trash2 className="h-3 w-3" />

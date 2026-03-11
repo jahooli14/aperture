@@ -826,9 +826,9 @@ export function HomePage() {
 
       {/* Fixed Header Bar - Brand & Search */}
       <div
-        className="fixed top-0 left-0 right-0 z-40 border-b border-white/5 backdrop-blur-md"
+        className="fixed top-0 left-0 right-0 z-40 border-b-2 border-white/10"
         style={{
-          backgroundColor: 'rgba(15, 24, 41, 0.7)'
+          backgroundColor: '#0a0f1a'
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
@@ -840,7 +840,7 @@ export function HomePage() {
           </h1>
           <button
             onClick={() => navigate('/search')}
-            className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
+            className="h-10 w-10 rounded-sm flex items-center justify-center transition-all hover:bg-white/5"
             style={{
               color: 'var(--brand-secondary)'
             }}
@@ -868,7 +868,7 @@ export function HomePage() {
               }}>
                 <button
                   onClick={() => setShowOnboardingBanner(false)}
-                  className="absolute top-3 right-3 h-8 w-8 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors"
+                  className="absolute top-3 right-3 h-8 w-8 rounded-sm hover:bg-white/10 flex items-center justify-center transition-colors"
                   style={{ color: 'var(--premium-text-tertiary)' }}
                 >
                   <X className="h-4 w-4" />
@@ -884,11 +884,12 @@ export function HomePage() {
                     </p>
                     <Link
                       to="/onboarding"
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all hover:opacity-90"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-sm font-medium transition-all hover:opacity-90"
                       style={{
                         backgroundColor: 'rgba(6, 182, 212, 0.6)',
                         color: 'rgba(255, 255, 255, 0.95)',
-                        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+                        border: '2px solid rgba(6,182,212,0.4)',
+                        boxShadow: '3px 3px 0 rgba(0,0,0,0.4)'
                       }}
                     >
                       Complete Now
@@ -926,8 +927,8 @@ export function HomePage() {
                 e.stopPropagation()
                 window.dispatchEvent(new CustomEvent('openVoiceCapture'))
               }}
-              className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
-              style={{ background: 'var(--brand-glass-bg)', border: '1px solid rgba(255,255,255,0.05)' }}
+              className="flex-1 h-14 rounded-sm flex items-center justify-center transition-all hover:bg-white/5"
+              style={{ background: 'var(--brand-glass-bg)', border: '2px solid rgba(255,255,255,0.1)', boxShadow: '3px 3px 0 rgba(0,0,0,0.5)' }}
               title="Voice Note"
             >
               <Mic className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
@@ -936,8 +937,8 @@ export function HomePage() {
             {/* Written Thought */}
             <button
               onClick={() => setCreateThoughtOpen(true)}
-              className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
-              style={{ background: 'var(--brand-glass-bg)', border: '1px solid rgba(255,255,255,0.05)' }}
+              className="flex-1 h-14 rounded-sm flex items-center justify-center transition-all hover:bg-white/5"
+              style={{ background: 'var(--brand-glass-bg)', border: '2px solid rgba(255,255,255,0.1)', boxShadow: '3px 3px 0 rgba(0,0,0,0.5)' }}
               title="Thought"
             >
               <Brain className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
@@ -946,8 +947,8 @@ export function HomePage() {
             {/* Article */}
             <button
               onClick={() => setSaveArticleOpen(true)}
-              className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
-              style={{ background: 'var(--brand-glass-bg)', border: '1px solid rgba(255,255,255,0.05)' }}
+              className="flex-1 h-14 rounded-sm flex items-center justify-center transition-all hover:bg-white/5"
+              style={{ background: 'var(--brand-glass-bg)', border: '2px solid rgba(255,255,255,0.1)', boxShadow: '3px 3px 0 rgba(0,0,0,0.5)' }}
               title="Article"
             >
               <FileText className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
@@ -956,8 +957,8 @@ export function HomePage() {
             {/* Project */}
             <button
               onClick={() => setCreateProjectOpen(true)}
-              className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
-              style={{ background: 'var(--brand-glass-bg)', border: '1px solid rgba(255,255,255,0.05)' }}
+              className="flex-1 h-14 rounded-sm flex items-center justify-center transition-all hover:bg-white/5"
+              style={{ background: 'var(--brand-glass-bg)', border: '2px solid rgba(255,255,255,0.1)', boxShadow: '3px 3px 0 rgba(0,0,0,0.5)' }}
               title="Project"
             >
               <Layers className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
@@ -1111,7 +1112,7 @@ export function HomePage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1 bg-white/5 border border-white/10">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-sm flex items-center justify-center mt-1 bg-white/5 border-2 border-white/10">
                     <Moon className="h-5 w-5 text-slate-400" />
                   </div>
                   <div>
@@ -1138,7 +1139,7 @@ export function HomePage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1 bg-white/5 border border-white/10">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-sm flex items-center justify-center mt-1 bg-white/5 border-2 border-white/10">
                     <Wind className="h-5 w-5 text-slate-400" />
                   </div>
                   <div>
@@ -1165,7 +1166,7 @@ export function HomePage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1 bg-white/5 border border-white/10">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-sm flex items-center justify-center mt-1 bg-white/5 border-2 border-white/10">
                     <Lightbulb className="h-5 w-5 text-slate-400" />
                   </div>
                   <div>
@@ -1192,7 +1193,7 @@ export function HomePage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1 bg-white/5 border border-white/10">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-sm flex items-center justify-center mt-1 bg-white/5 border-2 border-white/10">
                     <TrendingUp className="h-5 w-5 text-slate-400" />
                   </div>
                   <div>
@@ -1211,7 +1212,7 @@ export function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 flex justify-center">
           <Link
             to="/settings"
-            className="flex items-center gap-2 px-6 py-3 rounded-xl transition-all border border-white/5 hover:bg-white/5 aperture-card text-sm font-medium"
+            className="flex items-center gap-2 px-6 py-3 rounded-sm transition-all border-2 border-white/10 hover:bg-white/5 aperture-card text-sm font-medium"
             style={{
               boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
             }}
