@@ -25,7 +25,7 @@ import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { ConnectionSuggestion } from '../components/ConnectionSuggestion'
 import { PremiumTabs } from '../components/ui/premium-tabs'
 import { SkeletonCard } from '../components/ui/skeleton-card'
-import { Brain, Zap, ArrowLeft, CloudOff, Search, X, Tag, Lightbulb, Leaf, Code, Palette, Heart, BookOpen, Users } from 'lucide-react'
+import { Brain, Zap, ArrowLeft, CloudOff, Search, X, Tag, Lightbulb, Leaf, Code, Palette, Heart, BookOpen, Users, Pin } from 'lucide-react'
 import { BrandName } from '../components/BrandName'
 import { SubtleBackground } from '../components/SubtleBackground'
 // import { FocusableList, FocusableItem } from '../components/FocusableList' // Removed for masonry
@@ -497,6 +497,11 @@ export function MemoriesPage() {
     }
     return filtered
   }, [baseMemories, searchQuery, activeTags])
+
+  // Pinned thoughts — shown as a horizontal row above the main grid
+  const pinnedMemories = useMemo(() => {
+    return memories.filter(m => m.is_pinned)
+  }, [memories])
 
   const isFiltered = searchQuery.trim().length > 0 || activeTags.length > 0
 
@@ -997,6 +1002,41 @@ export function MemoriesPage() {
                           </motion.div>
                         )}
                       </AnimatePresence>
+
+                      {/* Pinned Thoughts Section */}
+                      {pinnedMemories.length > 0 && !searchQuery && activeTags.length === 0 && (
+                        <div className="mb-6">
+                          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--premium-text-secondary)' }}>
+                            <Pin className="w-3.5 h-3.5 text-amber-400" style={{ fill: 'currentColor' }} />
+                            Pinned
+                          </h3>
+                          <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+                            {pinnedMemories.map((memory) => (
+                              <motion.div
+                                key={memory.id}
+                                onClick={() => handleOpenDetail(memory)}
+                                whileHover={{ y: -2 }}
+                                className="flex-shrink-0 w-56 rounded-xl p-3 cursor-pointer transition-all"
+                                style={{
+                                  background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)',
+                                  boxShadow: 'inset 0 0 0 1px rgba(251,191,36,0.2), 0 4px 12px rgba(0,0,0,0.2)',
+                                  borderTop: '2px solid rgba(251,191,36,0.4)',
+                                }}
+                              >
+                                <h4 className="text-sm font-semibold truncate mb-1" style={{ color: 'var(--premium-text-primary)' }}>
+                                  {memory.title}
+                                </h4>
+                                <p className="text-xs line-clamp-2 leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
+                                  {memory.body}
+                                </p>
+                                <span className="text-[10px] mt-2 block" style={{ color: 'var(--premium-text-tertiary)' }}>
+                                  {new Date(memory.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                </span>
+                              </motion.div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       <MasonryGrid memories={displayMemories} onEdit={handleOpenDetail} onDelete={handleDelete} />
                     </>

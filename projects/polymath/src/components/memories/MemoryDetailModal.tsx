@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Brain, Calendar, Edit, Trash2, Copy, Share2, Link2, Plus } from 'lucide-react'
+import { X, Brain, Calendar, Edit, Trash2, Copy, Share2, Link2, Plus, Pin, CheckSquare } from 'lucide-react'
 import { format } from 'date-fns'
 import type { Memory, BridgeWithMemories } from '../../types'
 import { useMemoryStore } from '../../stores/useMemoryStore'
@@ -15,6 +15,8 @@ import { SmartActionDot } from '../SmartActionDot'
 import { CACHE_TTL } from '../../lib/cacheConfig'
 
 import { useContextEngineStore } from '../../stores/useContextEngineStore'
+import { useTodoStore } from '../../stores/useTodoStore'
+import type { InsightResult } from '../../../api/insight'
 
 interface MemoryDetailModalProps {
   memory: Memory | null
@@ -26,14 +28,45 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
   const { addToast } = useToast()
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
   const deleteMemory = useMemoryStore((state) => state.deleteMemory)
+  const pinMemory = useMemoryStore((state) => state.pinMemory)
+  const unpinMemory = useMemoryStore((state) => state.unpinMemory)
   const fetchBridgesForMemory = useMemoryStore((state) => state.fetchBridgesForMemory)
   const { setContext, toggleSidebar } = useContextEngineStore()
+
+  const addTodo = useTodoStore((state) => state.addTodo)
 
   const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
   const [bridgesFetched, setBridgesFetched] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [connectionCount, setConnectionCount] = useState(0);
   const [isLoadingConnections, setIsLoadingConnections] = useState(true);
+  const [insight, setInsight] = useState<InsightResult | null>(null);
+
+  // Fetch contextual insight when modal opens
+  useEffect(() => {
+    if (!memory || !isOpen) { setInsight(null); return }
+    if (memory.id.startsWith('temp_')) return
+
+    fetch(`/api/insight?id=${memory.id}&type=thought`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setInsight(data) })
+      .catch(() => {})
+  }, [memory?.id, isOpen])
+
+  const handleCreateTodo = useCallback(async () => {
+    if (!memory) return
+    await addTodo({
+      text: memory.title,
+      source_memory_id: memory.id,
+      tags: ['from-thought'],
+    })
+    haptic.success()
+    addToast({
+      title: 'Todo created',
+      description: `"${memory.title}" added to inbox`,
+      variant: 'success',
+    })
+  }, [memory, addTodo, addToast])
 
   // Module-level cache to prevent refetching bridges
   const bridgesCache = useMemo(() => new Map<string, { bridges: BridgeWithMemories[]; timestamp: number }>(), []);
@@ -191,7 +224,7 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
                 <h2 className="text-2xl font-bold premium-text-platinum leading-tight">
                   {memory.title}
                 </h2>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   {/* AI Analysis Dot (Interactive, Cyan) */}
                   <button
                     onClick={handleAnalyze}
@@ -202,6 +235,27 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
                     }}
                     title="Analyze with AI"
                   />
+
+                  {/* Pin toggle */}
+                  <button
+                    onClick={() => {
+                      if (memory.is_pinned) {
+                        unpinMemory(memory.id)
+                      } else {
+                        pinMemory(memory.id)
+                        haptic.success()
+                      }
+                    }}
+                    className={`p-2 rounded-full transition-colors ${
+                      memory.is_pinned
+                        ? 'text-amber-400 hover:bg-amber-500/10'
+                        : 'hover:bg-white/10'
+                    }`}
+                    style={memory.is_pinned ? undefined : { color: 'var(--premium-text-tertiary)' }}
+                    title={memory.is_pinned ? 'Unpin' : 'Pin'}
+                  >
+                    <Pin className="h-5 w-5" style={memory.is_pinned ? { fill: 'currentColor' } : undefined} />
+                  </button>
 
                   <button
                     onClick={() => setEditDialogOpen(true)}
@@ -221,6 +275,34 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
                   </button>
                 </div>
               </div>
+
+              {/* AI Insight Banner */}
+              {insight && (
+                <div
+                  className="flex items-start gap-2.5 mb-4 px-3 py-2.5 rounded-xl"
+                  style={{
+                    background: 'rgba(99,102,241,0.06)',
+                    border: '1px solid rgba(99,102,241,0.12)',
+                  }}
+                >
+                  <Brain className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" style={{ color: 'rgba(129,140,248,0.7)' }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                      {insight.insight}
+                    </p>
+                  </div>
+                  {insight.suggested_action?.type === 'create_todo' && (
+                    <button
+                      onClick={handleCreateTodo}
+                      className="flex-shrink-0 flex items-center gap-1 text-[10px] font-medium px-2 py-1 rounded-lg transition-colors hover:bg-white/10"
+                      style={{ color: 'rgba(6,182,212,0.8)' }}
+                    >
+                      <CheckSquare className="h-3 w-3" />
+                      Todo
+                    </button>
+                  )}
+                </div>
+              )}
 
               <div className="prose prose-invert prose-sm max-w-none mb-6">
                 <p className="leading-relaxed text-base" style={{ color: 'var(--premium-text-primary)' }}>

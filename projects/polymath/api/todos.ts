@@ -116,6 +116,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .single()
 
       if (error) throw error
+
+      // Sync: if completing a todo with project_id, mark matching project task done too
+      if (data.done && data.project_id) {
+        try {
+          const { data: project } = await supabase
+            .from('projects')
+            .select('metadata')
+            .eq('id', data.project_id)
+            .single()
+
+          if (project?.metadata?.tasks) {
+            const todoText = data.text.toLowerCase().trim()
+            const updatedTasks = project.metadata.tasks.map((task: any) => {
+              if (!task.done && task.text.toLowerCase().trim() === todoText) {
+                return { ...task, done: true, completed_at: new Date().toISOString() }
+              }
+              return task
+            })
+            await supabase
+              .from('projects')
+              .update({ metadata: { ...project.metadata, tasks: updatedTasks } })
+              .eq('id', data.project_id)
+          }
+        } catch (syncErr) {
+          // Best-effort sync — don't fail the todo update
+          console.warn('[todos] Project task sync failed:', syncErr)
+        }
+      }
+
       return res.status(200).json(data)
     }
 
