@@ -316,8 +316,8 @@ export function TodosPage() {
                 <div className="flex items-center gap-2 pb-0.5">
                   {overdueCount > 0 && (
                     <span
-                      className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
-                      style={{ background: 'rgba(239,68,68,0.12)', color: 'rgba(252,165,165,0.8)' }}
+                      className="text-[10px] font-black px-2 py-0.5 rounded-sm uppercase tracking-wide"
+                      style={{ background: 'rgba(239,68,68,0.15)', color: 'rgb(252,165,165)', border: '1px solid rgba(248,113,113,0.3)' }}
                     >
                       {overdueCount} overdue
                     </span>
@@ -337,18 +337,18 @@ export function TodosPage() {
                 </p>
               )}
 
-              {/* Progress bar — endowed progress: never truly 0% when there are tasks */}
+              {/* Progress bar — neobrutalist: rectangular, 6px tall, hard edges */}
               {totalTodayItems > 0 && (
                 <div
-                  className="w-full h-[3px] rounded-full overflow-hidden"
-                  style={{ background: 'rgba(255,255,255,0.06)' }}
+                  className="w-full h-[6px] overflow-hidden"
+                  style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }}
                 >
                   <motion.div
-                    className="h-full rounded-full"
+                    className="h-full"
                     style={{
                       background: completedToday === totalTodayItems
-                        ? 'rgba(52,211,153,0.6)'
-                        : 'rgba(59,130,246,0.5)',
+                        ? 'rgb(52,211,153)'
+                        : 'rgb(99,179,237)',
                     }}
                     initial={{ width: 0 }}
                     animate={{ width: `${progressPct}%` }}
@@ -357,40 +357,47 @@ export function TodosPage() {
                 </div>
               )}
 
-              {/* Focus mode button — only when there are tasks */}
+              {/* Focus / Review buttons — neobrutalist: rectangular, thick border, hard shadow */}
               {todayActive > 0 && (
-                <div className="mt-3 flex items-center gap-2">
+                <div className="mt-3 flex items-center gap-2 flex-wrap">
                   <button
                     onClick={() => setFocusMode(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-semibold transition-all"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-[11px] font-black uppercase tracking-wider transition-all active:scale-95"
                     style={{
-                      background: 'rgba(139,92,246,0.12)',
-                      color: 'rgba(196,181,253,0.85)',
-                      border: '1px solid rgba(139,92,246,0.25)',
+                      background: 'rgba(139,92,246,0.1)',
+                      color: 'rgba(196,181,253,0.9)',
+                      border: '2px solid rgba(139,92,246,0.45)',
+                      boxShadow: '2px 2px 0 rgba(139,92,246,0.2)',
                     }}
                   >
                     <Focus className="h-3 w-3" />
-                    Focus mode
+                    Focus
                   </button>
                   <button
                     onClick={() => setShowReview(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-semibold transition-all"
-                    style={{
-                      background: hour < 12 ? 'rgba(251,191,36,0.10)' : 'rgba(139,92,246,0.10)',
-                      color: hour < 12 ? 'rgba(251,191,36,0.85)' : 'rgba(196,181,253,0.85)',
-                      border: `1px solid ${hour < 12 ? 'rgba(251,191,36,0.2)' : 'rgba(139,92,246,0.2)'}`,
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-[11px] font-black uppercase tracking-wider transition-all active:scale-95"
+                    style={hour < 12 ? {
+                      background: 'rgba(251,191,36,0.08)',
+                      color: 'rgba(253,224,71,0.9)',
+                      border: '2px solid rgba(251,191,36,0.4)',
+                      boxShadow: '2px 2px 0 rgba(251,191,36,0.15)',
+                    } : {
+                      background: 'rgba(139,92,246,0.08)',
+                      color: 'rgba(196,181,253,0.9)',
+                      border: '2px solid rgba(139,92,246,0.35)',
+                      boxShadow: '2px 2px 0 rgba(139,92,246,0.15)',
                     }}
                   >
                     {hour < 12 ? <Sun className="h-3 w-3" /> : <Moon className="h-3 w-3" />}
-                    {hour < 12 ? 'Morning review' : 'Evening review'}
+                    {hour < 12 ? 'Morning' : 'Evening'}
                   </button>
                   {inProgressIds.filter(id => todayTodos.some(t => t.id === id)).length > 0 && (
                     <span
                       className="flex items-center gap-1 text-[11px]"
                       style={{ color: 'rgba(251,146,60,0.65)' }}
                     >
-                      <span className="h-1.5 w-1.5 rounded-full bg-orange-400/70 animate-pulse" />
-                      {inProgressIds.filter(id => todayTodos.some(t => t.id === id)).length} in progress
+                      <span className="h-1.5 w-1.5 bg-orange-400/70 animate-pulse" />
+                      {inProgressIds.filter(id => todayTodos.some(t => t.id === id)).length} working
                     </span>
                   )}
                 </div>
@@ -414,9 +421,9 @@ export function TodosPage() {
           )}
         </div>
 
-        {/* View tabs */}
+        {/* View tabs — neobrutalist: rectangular, thick underline active */}
         <div className="px-4 max-w-3xl mx-auto w-full">
-          <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-3">
+          <div className="flex gap-0 overflow-x-auto scrollbar-hide pb-0 border-b border-white/10">
             {VIEWS.map(v => {
               const Icon = v.icon
               const count = counts[v.id]
@@ -426,35 +433,30 @@ export function TodosPage() {
                 <button
                   key={v.id}
                   onClick={() => setActiveView(v.id)}
-                  className="relative flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-semibold transition-all duration-200"
+                  className="relative flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 text-[13px] font-bold transition-all duration-150 uppercase tracking-wide"
                   style={isActive ? {
-                    background: 'rgba(255,255,255,0.1)',
                     color: 'rgba(255,255,255,0.95)',
-                    boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.12)',
+                    borderBottom: '2px solid rgba(255,255,255,0.8)',
+                    marginBottom: '-1px',
                   } : {
-                    background: 'transparent',
-                    color: 'rgba(255,255,255,0.42)',
+                    color: 'rgba(255,255,255,0.38)',
+                    borderBottom: '2px solid transparent',
+                    marginBottom: '-1px',
                   }}
                 >
-                  {isActive && (
-                    <motion.div
-                      layoutId="tabActiveIndicator"
-                      className="absolute inset-0 rounded-full"
-                      style={{ background: 'rgba(255,255,255,0.08)' }}
-                      transition={{ type: 'spring', stiffness: 500, damping: 40 }}
-                    />
-                  )}
-                  <Icon className="relative h-3.5 w-3.5 flex-shrink-0" />
-                  <span className="relative">{v.label}</span>
+                  <Icon className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span>{v.label}</span>
                   {count > 0 && (
                     <span
-                      className="relative text-[11px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center"
+                      className="text-[10px] font-black px-1.5 py-0.5 rounded-sm min-w-[20px] text-center"
                       style={isActive ? {
-                        background: 'rgba(255,255,255,0.15)',
+                        background: 'rgba(255,255,255,0.18)',
                         color: 'rgba(255,255,255,0.9)',
+                        border: '1px solid rgba(255,255,255,0.15)',
                       } : {
                         background: 'rgba(255,255,255,0.07)',
                         color: 'rgba(255,255,255,0.3)',
+                        border: '1px solid transparent',
                       }}
                     >
                       {count}
@@ -480,7 +482,7 @@ export function TodosPage() {
             </div>
           )}
 
-          {/* Routing feedback — where did the todo go? */}
+          {/* Routing feedback — neobrutalist: thick border, hard shadow */}
           <AnimatePresence>
             {addedFeedback && (
               <motion.button
@@ -492,13 +494,14 @@ export function TodosPage() {
                   setActiveView(addedFeedback.view)
                   setAddedFeedback(null)
                 }}
-                className="w-full flex items-center justify-between mb-3 px-3.5 py-2.5 rounded-xl text-left"
+                className="w-full flex items-center justify-between mb-3 px-3.5 py-2.5 rounded-sm text-left"
                 style={{
                   background: 'rgba(59,130,246,0.08)',
-                  boxShadow: 'inset 0 0 0 1px rgba(99,179,237,0.18)',
+                  border: '2px solid rgba(99,179,237,0.3)',
+                  boxShadow: '3px 3px 0 rgba(99,179,237,0.1)',
                 }}
               >
-                <span className="text-[13px] font-medium" style={{ color: 'rgba(147,197,253,0.8)' }}>
+                <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: 'rgba(147,197,253,0.85)' }}>
                   Added to {addedFeedback.label}
                 </span>
                 <ArrowRight className="h-3.5 w-3.5" style={{ color: 'rgba(147,197,253,0.55)' }} />
@@ -553,15 +556,15 @@ export function TodosPage() {
               {[1, 2, 3].map(i => (
                 <div
                   key={i}
-                  className="flex items-center gap-3.5 px-4 py-3.5 rounded-xl animate-pulse"
+                  className="flex items-center gap-3.5 px-4 py-3.5 rounded animate-pulse"
                   style={{
-                    background: 'var(--premium-surface-1)',
-                    border: '1px solid rgba(255,255,255,0.055)',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+                    background: '#111113',
+                    border: '1.5px solid rgba(255,255,255,0.1)',
+                    boxShadow: '3px 3px 0 rgba(0,0,0,0.6)',
                   }}
                 >
-                  <div className="flex-shrink-0 h-[20px] w-[20px] rounded-[6px]" style={{ background: 'rgba(255,255,255,0.08)' }} />
-                  <div className="h-[14px] rounded-lg" style={{ width: `${45 + i * 15}%`, background: 'rgba(255,255,255,0.06)' }} />
+                  <div className="flex-shrink-0 h-[18px] w-[18px] rounded-sm" style={{ background: 'rgba(255,255,255,0.08)', border: '2px solid rgba(255,255,255,0.12)' }} />
+                  <div className="h-[13px] rounded-sm" style={{ width: `${45 + i * 15}%`, background: 'rgba(255,255,255,0.06)' }} />
                 </div>
               ))}
             </div>
@@ -712,14 +715,21 @@ function TodayView({
     <div className={label ? 'mb-8' : ''}>
       {label && (
         <div className="flex items-center gap-2.5 mb-3">
+          <div
+            className="w-1 h-4 flex-shrink-0"
+            style={{ background: isOverdueSection ? 'rgb(248,113,113)' : 'rgba(255,255,255,0.4)' }}
+          />
           <span
-            className="text-[11px] font-semibold uppercase tracking-[0.06em]"
-            style={{ color: isOverdueSection ? 'rgba(248,113,113,0.85)' : 'rgba(255,255,255,0.50)' }}
+            className="text-[10px] font-black uppercase tracking-widest"
+            style={{ color: isOverdueSection ? 'rgba(248,113,113,0.9)' : 'rgba(255,255,255,0.55)' }}
           >
             {label}
           </span>
           <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
-          <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.35)' }}>{items.length}</span>
+          <span
+            className="text-[10px] font-bold px-1.5 py-0.5 rounded-sm"
+            style={{ color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}
+          >{items.length}</span>
         </div>
       )}
       <div className="space-y-2">
@@ -786,25 +796,26 @@ function TodayView({
       {tomorrowItems.length > 0 && (
         <div className="mt-8">
           <div className="flex items-center gap-2.5 mb-3">
+            <div className="w-1 h-4 flex-shrink-0" style={{ background: 'rgba(255,255,255,0.25)' }} />
             <span
-              className="text-[11px] font-semibold uppercase tracking-[0.06em]"
+              className="text-[10px] font-black uppercase tracking-widest"
               style={{ color: 'rgba(255,255,255,0.45)' }}
             >
-              Tomorrow
+              Tomorrow · {tomorrowDayName}
             </span>
             <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
-            <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.30)' }}>{tomorrowItems.length}</span>
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-sm" style={{ color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>{tomorrowItems.length}</span>
           </div>
           <div className="space-y-1.5" style={{ opacity: 0.45 }}>
             {tomorrowItems.slice(0, 3).map(t => (
               <div
                 key={t.id}
-                className="flex items-center gap-3.5 px-4 py-2.5 rounded-xl"
-                style={{ background: 'var(--premium-surface-1)', border: '1px solid rgba(255,255,255,0.04)' }}
+                className="flex items-center gap-3.5 px-4 py-2.5 rounded"
+                style={{ background: '#111113', border: '1.5px solid rgba(255,255,255,0.08)' }}
               >
                 <div
-                  className="flex-shrink-0 h-[16px] w-[16px] rounded-[5px]"
-                  style={{ border: '1.5px solid rgba(255,255,255,0.15)' }}
+                  className="flex-shrink-0 h-[16px] w-[16px] rounded-sm"
+                  style={{ border: '2px solid rgba(255,255,255,0.18)' }}
                 />
                 <span className="flex-1 text-[14px] truncate" style={{ color: 'rgba(255,255,255,0.5)' }}>
                   {t.text}
@@ -841,28 +852,29 @@ function QuickWinsSection({
     <motion.div
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mb-5 px-3.5 py-3 rounded-2xl"
+      className="mb-5 px-3.5 py-3 rounded-sm"
       style={{
         background: 'rgba(251,191,36,0.05)',
-        border: '1px solid rgba(251,191,36,0.15)',
+        border: '2px solid rgba(251,191,36,0.35)',
+        boxShadow: '3px 3px 0 rgba(251,191,36,0.1)',
       }}
     >
       <div className="flex items-center gap-2 mb-3">
         <div
-          className="h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0"
-          style={{ background: 'rgba(251,191,36,0.18)' }}
+          className="h-5 w-5 rounded-sm flex items-center justify-center flex-shrink-0"
+          style={{ background: 'rgba(251,191,36,0.2)', border: '1px solid rgba(251,191,36,0.35)' }}
         >
-          <Zap className="h-2.5 w-2.5" style={{ color: 'rgba(251,191,36,0.9)' }} />
+          <Zap className="h-2.5 w-2.5" style={{ color: 'rgb(251,191,36)' }} />
         </div>
         <span
-          className="text-[11px] font-bold uppercase tracking-[0.08em]"
-          style={{ color: 'rgba(251,191,36,0.7)' }}
+          className="text-[10px] font-black uppercase tracking-widest"
+          style={{ color: 'rgba(253,224,71,0.85)' }}
         >
           Quick wins · under 5 min
         </span>
         <span
-          className="ml-auto text-[11px] font-semibold px-1.5 py-0.5 rounded-full"
-          style={{ background: 'rgba(251,191,36,0.15)', color: 'rgba(253,224,71,0.8)' }}
+          className="ml-auto text-[10px] font-black px-1.5 py-0.5 rounded-sm"
+          style={{ background: 'rgba(251,191,36,0.18)', color: 'rgb(253,224,71)', border: '1px solid rgba(251,191,36,0.3)' }}
         >
           {todos.length}
         </span>
@@ -878,18 +890,19 @@ function QuickWinsSection({
               exit={{ opacity: 0, scale: 0.85, transition: { duration: 0.15 } }}
               onClick={() => onToggle(todo.id)}
               whileTap={{ scale: 0.95 }}
-              className="flex-shrink-0 flex items-center gap-2 px-3.5 py-2.5 rounded-2xl text-left"
+              className="flex-shrink-0 flex items-center gap-2 px-3.5 py-2.5 rounded-sm text-left"
               style={{
                 background: inProgressIds.includes(todo.id)
-                  ? 'rgba(251,146,60,0.14)'
-                  : 'rgba(251,191,36,0.09)',
-                border: `1px solid ${inProgressIds.includes(todo.id) ? 'rgba(251,146,60,0.35)' : 'rgba(251,191,36,0.25)'}`,
+                  ? 'rgba(251,146,60,0.12)'
+                  : 'rgba(251,191,36,0.08)',
+                border: `2px solid ${inProgressIds.includes(todo.id) ? 'rgba(251,146,60,0.5)' : 'rgba(251,191,36,0.35)'}`,
+                boxShadow: `2px 2px 0 ${inProgressIds.includes(todo.id) ? 'rgba(251,146,60,0.15)' : 'rgba(251,191,36,0.1)'}`,
                 maxWidth: 220,
               }}
             >
               <div
-                className="flex-shrink-0 h-[16px] w-[16px] rounded-[5px] border-2"
-                style={{ borderColor: inProgressIds.includes(todo.id) ? 'rgba(251,146,60,0.6)' : 'rgba(251,191,36,0.5)' }}
+                className="flex-shrink-0 h-[16px] w-[16px] rounded-sm"
+                style={{ border: `2px solid ${inProgressIds.includes(todo.id) ? 'rgba(251,146,60,0.7)' : 'rgba(251,191,36,0.6)'}` }}
               />
               <span
                 className="text-[13px] font-medium truncate"
@@ -928,13 +941,16 @@ function MorningBanner({ unscheduledCount }: { unscheduledCount: number }) {
       className="overflow-hidden mb-4"
     >
       <div
-        className="flex items-start gap-3 px-3.5 py-3 rounded-xl"
+        className="flex items-start gap-3 px-3.5 py-3 rounded-sm"
         style={{
-          background: 'rgba(99,179,237,0.07)',
-          border: '1px solid rgba(99,179,237,0.18)',
+          background: 'rgba(99,179,237,0.06)',
+          borderLeft: '4px solid rgba(99,179,237,0.6)',
+          border: '1.5px solid rgba(99,179,237,0.2)',
+          borderLeft: '4px solid rgba(99,179,237,0.6)',
+          boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
         }}
       >
-        <Sun className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: 'rgba(251,191,36,0.7)' }} />
+        <Sun className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: 'rgba(251,191,36,0.8)' }} />
         <div className="flex-1 min-w-0">
           <p className="text-[13px] font-semibold mb-0.5" style={{ color: 'rgba(255,255,255,0.75)' }}>
             Plan your morning
@@ -971,10 +987,12 @@ function EveningCaptureBanner({ tomorrowDayName }: { tomorrowDayName: string }) 
       className="overflow-hidden mt-6"
     >
       <div
-        className="flex items-start gap-3 px-3.5 py-3 rounded-xl"
+        className="flex items-start gap-3 px-3.5 py-3 rounded-sm"
         style={{
-          background: 'rgba(139,92,246,0.06)',
-          border: '1px solid rgba(139,92,246,0.18)',
+          background: 'rgba(139,92,246,0.05)',
+          border: '1.5px solid rgba(139,92,246,0.25)',
+          borderLeft: '4px solid rgba(139,92,246,0.6)',
+          boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
         }}
       >
         <CalendarDays className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: 'rgba(196,181,253,0.6)' }} />
@@ -1017,11 +1035,12 @@ function UpcomingView({
         return (
           <div key={dateKey}>
             <div className="flex items-center gap-2.5 mb-3">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'rgba(255,255,255,0.50)' }}>
+              <div className="w-1 h-4 flex-shrink-0" style={{ background: 'rgba(255,255,255,0.35)' }} />
+              <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.55)' }}>
                 {label}
               </span>
               <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
-              <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.35)' }}>{groups[dateKey].length}</span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-sm" style={{ color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>{groups[dateKey].length}</span>
             </div>
             <div className="space-y-2">
               <AnimatePresence mode="popLayout">
@@ -1074,11 +1093,12 @@ function LogbookView({
         return (
           <div key={dateKey}>
             <div className="flex items-center gap-2.5 mb-2">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'rgba(255,255,255,0.45)' }}>
+              <div className="w-1 h-4 flex-shrink-0" style={{ background: 'rgba(255,255,255,0.25)' }} />
+              <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.45)' }}>
                 {label}
               </span>
               <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
-              <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.30)' }}>{groups[dateKey].length}</span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-sm" style={{ color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>{groups[dateKey].length}</span>
             </div>
             <div className="space-y-px">
               {groups[dateKey].map(todo => (
@@ -1112,16 +1132,17 @@ function EmptyState({ view }: { view: TodoView }) {
       className="flex flex-col items-center justify-center py-24 text-center"
     >
       <div
-        className="h-14 w-14 rounded-3xl flex items-center justify-center mb-5"
+        className="h-14 w-14 rounded-sm flex items-center justify-center mb-5"
         style={{
           background: 'rgba(59,130,246,0.07)',
-          boxShadow: 'inset 0 0 0 1px rgba(99,179,237,0.10)',
+          border: '2px solid rgba(99,179,237,0.2)',
+          boxShadow: '3px 3px 0 rgba(0,0,0,0.6)',
         }}
       >
-        <Icon className="h-6 w-6" style={{ color: 'rgba(147,197,253,0.4)' }} />
+        <Icon className="h-6 w-6" style={{ color: 'rgba(147,197,253,0.5)' }} />
       </div>
-      <p className="font-semibold mb-1.5" style={{ color: 'rgba(255,255,255,0.5)' }}>{headline}</p>
-      <p className="text-[13px] max-w-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.45)' }}>{sub}</p>
+      <p className="font-black uppercase tracking-wider text-[13px] mb-1.5" style={{ color: 'rgba(255,255,255,0.55)' }}>{headline}</p>
+      <p className="text-[13px] max-w-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.4)' }}>{sub}</p>
     </motion.div>
   )
 }
