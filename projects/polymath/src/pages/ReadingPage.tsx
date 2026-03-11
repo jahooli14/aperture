@@ -741,8 +741,10 @@ export function ReadingPage() {
     <>
       <SubtleBackground />
       {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md" style={{
-        backgroundColor: 'rgba(15, 24, 41, 0.7)'
+      <div className="fixed top-0 left-0 right-0 z-40" style={{
+        backgroundColor: '#0a0f1a',
+        borderBottom: '2px solid rgba(255,255,255,0.1)',
+        boxShadow: '0 4px 0 rgba(0,0,0,0.6)',
       }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-3 pb-2 flex flex-col gap-2">
           {/* Top row: icon + filter tabs + search */}
@@ -764,8 +766,8 @@ export function ReadingPage() {
 
             <button
               onClick={() => navigate('/search')}
-              className="h-9 w-9 rounded-xl flex items-center justify-center transition-all hover:bg-white/5 flex-shrink-0"
-              style={{ color: 'var(--premium-blue)' }}
+              className="h-9 w-9 rounded-sm flex items-center justify-center transition-all flex-shrink-0"
+              style={{ color: 'rgba(34,211,238,0.8)', border: '2px solid rgba(34,211,238,0.25)', boxShadow: '2px 2px 0 rgba(0,0,0,0.5)' }}
               title="Search everything"
             >
               <Search className="h-4 w-4" />
@@ -775,12 +777,11 @@ export function ReadingPage() {
           {/* Inline URL save bar */}
           <form onSubmit={handleInlineSave} className="flex items-center gap-2 pb-1">
             <div
-              className="flex items-center gap-2 flex-1 rounded-xl px-3 h-10 transition-all duration-200"
+              className="flex items-center gap-2 flex-1 rounded-sm px-3 h-10 transition-all duration-200"
               style={{
-                backgroundColor: inlineUrlFocused ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.04)',
-                boxShadow: inlineUrlFocused
-                  ? 'inset 0 0 0 1.5px rgba(34,211,238,0.4)'
-                  : 'inset 0 0 0 1px rgba(255,255,255,0.08)',
+                backgroundColor: '#111113',
+                border: inlineUrlFocused ? '2px solid rgba(34,211,238,0.5)' : '2px solid rgba(255,255,255,0.12)',
+                boxShadow: inlineUrlFocused ? '3px 3px 0 rgba(34,211,238,0.1)' : '3px 3px 0 rgba(0,0,0,0.6)',
               }}
             >
               <LinkIcon className="h-4 w-4 flex-shrink-0" style={{ color: inlineUrlFocused ? 'rgba(34,211,238,0.8)' : 'rgba(255,255,255,0.25)' }} />
@@ -809,11 +810,12 @@ export function ReadingPage() {
             <button
               type="submit"
               disabled={inlineSaving || !inlineUrl.trim()}
-              className="h-10 px-4 rounded-xl text-sm font-semibold flex-shrink-0 flex items-center gap-1.5 transition-all disabled:opacity-40"
+              className="h-10 px-4 rounded-sm text-[11px] font-black uppercase tracking-wide flex-shrink-0 flex items-center gap-1.5 transition-all disabled:opacity-40"
               style={{
-                backgroundColor: 'rgba(34, 211, 238, 0.15)',
-                color: 'rgba(34, 211, 238, 0.9)',
-                border: '1px solid rgba(34, 211, 238, 0.3)',
+                backgroundColor: 'rgba(34, 211, 238, 0.1)',
+                color: 'rgba(34, 211, 238, 0.95)',
+                border: '2px solid rgba(34, 211, 238, 0.4)',
+                boxShadow: '3px 3px 0 rgba(0,0,0,0.6)',
               }}
             >
               {inlineSaving ? (
@@ -838,12 +840,11 @@ export function ReadingPage() {
               {Array.from(processingArticles.entries()).map(([articleId, { status, url }]) => (
                 <div
                   key={articleId}
-                  className="premium-glass rounded-xl p-4 mb-2 flex items-center gap-3"
+                  className="rounded-sm p-4 mb-2 flex items-center gap-3"
                   style={{
-                    backgroundColor: 'rgba(30, 41, 59, 0.95)',
-                    boxShadow: status === 'retrying'
-                      ? 'inset 0 0 0 1px rgba(251,191,36,0.4)'
-                      : 'inset 0 0 0 1px rgba(99,179,237,0.4)',
+                    backgroundColor: '#111113',
+                    border: `2px solid ${status === 'retrying' ? 'rgba(251,191,36,0.5)' : 'rgba(99,179,237,0.5)'}`,
+                    boxShadow: `3px 3px 0 ${status === 'retrying' ? 'rgba(251,191,36,0.15)' : 'rgba(0,0,0,0.7)'}`,
                   }}
                 >
                   {status === 'retrying' ? (
@@ -883,8 +884,8 @@ export function ReadingPage() {
                         variant: 'default',
                       })
                     }}
-                    className="text-xs px-3 py-1 rounded-lg hover:bg-white/5 transition-colors"
-                    style={{ color: 'var(--premium-text-tertiary)' }}
+                    className="text-[10px] font-black uppercase tracking-wide px-3 py-1 rounded-sm transition-colors"
+                    style={{ color: 'rgba(255,255,255,0.45)', border: '1.5px solid rgba(255,255,255,0.12)' }}
                   >
                     Cancel
                   </button>
@@ -906,18 +907,20 @@ export function ReadingPage() {
               style={{ marginTop: processingArticles.size > 0 ? `${processingArticles.size * 72}px` : '0' }}
             >
               <div
-                className="rounded-xl p-4"
+                className="rounded-sm p-4"
                 style={{
-                  background: 'linear-gradient(135deg, rgba(34,211,238,0.08) 0%, rgba(34,211,238,0.03) 100%)',
-                  border: '1px solid rgba(34,211,238,0.2)',
+                  background: '#111113',
+                  border: '1.5px solid rgba(34,211,238,0.2)',
+                  borderLeft: '4px solid rgba(34,211,238,0.7)',
+                  boxShadow: '3px 3px 0 rgba(0,0,0,0.7)',
                 }}
               >
                 <div className="flex items-center gap-2 mb-3">
                   <Play className="h-4 w-4 fill-current" style={{ color: 'rgba(34,211,238,0.8)' }} />
-                  <span className="text-sm font-semibold" style={{ color: 'rgba(34,211,238,0.9)' }}>
+                  <span className="text-[11px] font-black uppercase tracking-widest" style={{ color: 'rgba(34,211,238,0.9)' }}>
                     Continue Reading
                   </span>
-                  <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(34,211,238,0.15)', color: 'rgba(34,211,238,0.7)' }}>
+                  <span className="text-[10px] font-black px-1.5 py-0.5 rounded-sm" style={{ background: 'rgba(34,211,238,0.15)', color: 'rgba(34,211,238,0.8)', border: '1px solid rgba(34,211,238,0.25)' }}>
                     {continueReadingArticles.length}
                   </span>
                 </div>
@@ -926,8 +929,8 @@ export function ReadingPage() {
                     <button
                       key={article.id}
                       onClick={() => navigate(`/reading/${article.id}`)}
-                      className="flex items-center gap-3 w-full text-left rounded-lg p-2.5 transition-all hover:bg-white/5 group"
-                      style={{ border: '1px solid rgba(255,255,255,0.06)' }}
+                      className="flex items-center gap-3 w-full text-left rounded-sm p-2.5 transition-all group"
+                      style={{ border: '1.5px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}
                     >
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate" style={{ color: 'rgba(255,255,255,0.85)' }}>
@@ -958,37 +961,36 @@ export function ReadingPage() {
 
         {/* Content - Outer Card Structure */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 pt-2" style={{ marginTop: continueReadingArticles.length > 0 && activeTab !== 'reading' ? '0' : (processingArticles.size > 0 ? `${processingArticles.size * 72}px` : '0') }}>
-          <div className="p-6 rounded-xl backdrop-blur-xl mb-6" style={{
-            background: 'var(--premium-bg-2)',
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+          <div className="p-5 rounded-sm mb-6" style={{
+            background: '#0d0f14',
+            border: '2px solid rgba(255,255,255,0.1)',
+            boxShadow: '4px 4px 0 rgba(0,0,0,0.8)',
           }}>
             {/* Title Section */}
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
-                {activeTab === 'updates' ? (
-                  <>Your <span style={{ color: 'var(--premium-blue)' }}>news feeds</span></>
-                ) : activeTab === 'archived' ? (
-                  <>Your reading <span style={{ color: 'var(--premium-blue)' }}>archive</span></>
-                ) : activeTab === 'reading' ? (
-                  <>Currently <span style={{ color: 'rgba(34,211,238,0.9)' }}>in progress</span></>
-                ) : activeTab === 'unread' ? (
-                  <>Unread <span style={{ color: 'rgba(34,211,238,0.9)' }}>articles</span></>
-                ) : (
-                  <>Your <span style={{ color: 'rgba(34,211,238,0.9)' }}>reading queue</span></>
-                )}
-              </h2>
+            <div className="mb-5 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-1 h-5 flex-shrink-0" style={{ background: 'rgba(34,211,238,0.7)' }} />
+                <h2 className="text-[13px] font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.75)' }}>
+                  {activeTab === 'updates' ? 'News feeds' :
+                   activeTab === 'archived' ? 'Archive' :
+                   activeTab === 'reading' ? 'In progress' :
+                   activeTab === 'unread' ? 'Unread' :
+                   'Reading queue'}
+                </h2>
+              </div>
 
               {activeTab === 'updates' && (
                 <button
                   onClick={() => navigate('/rss')}
-                  className="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-white/5 flex items-center gap-2"
+                  className="px-3 py-1.5 rounded-sm text-[10px] font-black uppercase tracking-wide transition-all flex items-center gap-1.5"
                   style={{
-                    color: 'var(--premium-text-secondary)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)'
+                    color: 'rgba(255,255,255,0.6)',
+                    border: '2px solid rgba(255,255,255,0.15)',
+                    boxShadow: '2px 2px 0 rgba(0,0,0,0.5)',
                   }}
                 >
-                  <Rss className="h-4 w-4" />
-                  Auto-import
+                  <Rss className="h-3.5 w-3.5" />
+                  Manage feeds
                 </button>
               )}
             </div>
@@ -1080,7 +1082,7 @@ export function ReadingPage() {
                           <div className="flex flex-col items-center gap-3">
                             <div className="flex flex-wrap justify-center gap-2 text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>
                               {['blog posts', 'essays', 'research papers', 'news articles', 'tutorials'].map(example => (
-                                <span key={example} className="px-2 py-1 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                <span key={example} className="px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wide" style={{ background: '#111113', border: '1.5px solid rgba(255,255,255,0.12)', boxShadow: '2px 2px 0 rgba(0,0,0,0.5)', color: 'rgba(255,255,255,0.4)' }}>
                                   {example}
                                 </span>
                               ))}
@@ -1115,9 +1117,11 @@ export function ReadingPage() {
                                 >
                                   {bulkSelection.isSelectionMode && (
                                     <div
-                                      className="absolute top-4 left-4 z-10 w-6 h-6 rounded-full flex items-center justify-center transition-all"
+                                      className="absolute top-4 left-4 z-10 w-6 h-6 rounded-sm flex items-center justify-center transition-all"
                                       style={{
-                                        backgroundColor: isSelected ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.05)',
+                                        backgroundColor: isSelected ? 'rgba(59,130,246,0.9)' : '#111113',
+                                        border: isSelected ? '2px solid rgb(96,165,250)' : '2px solid rgba(255,255,255,0.2)',
+                                        boxShadow: '2px 2px 0 rgba(0,0,0,0.6)',
                                         pointerEvents: 'auto'
                                       }}
                                     >
