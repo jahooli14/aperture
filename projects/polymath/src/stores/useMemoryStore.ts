@@ -32,6 +32,8 @@ interface MemoryStore {
   addOptimisticMemory: (transcript: string) => string
   replaceOptimisticMemory: (tempId: string, realMemory: Memory) => void
   removeOptimisticMemory: (tempId: string) => void
+  pinMemory: (id: string) => Promise<void>
+  unpinMemory: (id: string) => Promise<void>
 }
 
 /** Poll for processing completion to show extraction summary, then steer */
@@ -706,5 +708,55 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
         ? state.memories.filter((m) => m.id !== tempId)
         : [],
     }))
+  },
+
+  pinMemory: async (id: string) => {
+    // Optimistic update
+    set((state) => ({
+      memories: state.memories.map((m) =>
+        m.id === id ? { ...m, is_pinned: true } : m
+      ),
+    }))
+
+    try {
+      await fetch(`/api/memories?id=${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, is_pinned: true }),
+      })
+    } catch (error) {
+      // Revert on failure
+      set((state) => ({
+        memories: state.memories.map((m) =>
+          m.id === id ? { ...m, is_pinned: false } : m
+        ),
+      }))
+      console.error('[MemoryStore] Pin failed:', error)
+    }
+  },
+
+  unpinMemory: async (id: string) => {
+    // Optimistic update
+    set((state) => ({
+      memories: state.memories.map((m) =>
+        m.id === id ? { ...m, is_pinned: false } : m
+      ),
+    }))
+
+    try {
+      await fetch(`/api/memories?id=${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, is_pinned: false }),
+      })
+    } catch (error) {
+      // Revert on failure
+      set((state) => ({
+        memories: state.memories.map((m) =>
+          m.id === id ? { ...m, is_pinned: true } : m
+        ),
+      }))
+      console.error('[MemoryStore] Unpin failed:', error)
+    }
   },
 }))

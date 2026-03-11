@@ -13,14 +13,16 @@
  *   - Crow insight: stale inbox items show their age quietly
  */
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Check, Calendar, Tag, Clock, AlertCircle, Trash2, Play, Square } from 'lucide-react'
+import { Check, Calendar, Tag, Clock, AlertCircle, Trash2, Play, Square, FolderKanban, Brain } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { parseTodo, describeDate, describeTime, formatMinutes } from '../../lib/todoNLP'
 import type { Todo } from '../../stores/useTodoStore'
 import { handleInputFocus } from '../../utils/keyboard'
 import { SwipeableCard, SwipeActions } from '../SwipeableCard'
+import { useProjectStore } from '../../stores/useProjectStore'
+import { useMemoryStore } from '../../stores/useMemoryStore'
 
 interface TodoItemProps {
   todo: Todo
@@ -80,6 +82,22 @@ export function TodoItem({
   const [completing, setCompleting] = useState(false)
   const [completingFlash, setCompletingFlash] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Resolve project name for context badge
+  const projects = useProjectStore(state => state.projects)
+  const projectName = useMemo(() => {
+    if (!todo.project_id) return null
+    return projects.find(p => p.id === todo.project_id)?.title ?? null
+  }, [todo.project_id, projects])
+
+  // Resolve source memory title for "from thought" indicator
+  const memories = useMemoryStore(state => state.memories)
+  const sourceMemoryTitle = useMemo(() => {
+    if (!todo.source_memory_id) return null
+    return memories.find(m => m.id === todo.source_memory_id)?.title ?? null
+  }, [todo.source_memory_id, memories])
+
+  const isAiGenerated = todo.tags?.includes('ai-suggested') || todo.tags?.includes('triage')
 
   const today = new Date().toISOString().split('T')[0]
   const overdueDate =
@@ -393,6 +411,39 @@ export function TodoItem({
               <p className="mt-1.5 text-[12px] leading-snug line-clamp-2" style={{ color: 'rgba(255,255,255,0.45)' }}>
                 {todo.notes}
               </p>
+            )}
+
+            {/* Context indicators — project badge, source thought, AI label */}
+            {!editing && !completing && (projectName || sourceMemoryTitle || isAiGenerated) && (
+              <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                {projectName && (
+                  <span
+                    className="flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-md"
+                    style={{ background: 'rgba(139,92,246,0.1)', color: 'rgba(167,139,250,0.8)' }}
+                  >
+                    <FolderKanban className="h-2.5 w-2.5" />
+                    {projectName}
+                  </span>
+                )}
+                {sourceMemoryTitle && (
+                  <span
+                    className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md truncate max-w-[200px]"
+                    style={{ background: 'rgba(6,182,212,0.08)', color: 'rgba(6,182,212,0.7)' }}
+                    title={`From thought: ${sourceMemoryTitle}`}
+                  >
+                    <Brain className="h-2.5 w-2.5 flex-shrink-0" />
+                    {sourceMemoryTitle}
+                  </span>
+                )}
+                {isAiGenerated && !sourceMemoryTitle && (
+                  <span
+                    className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
+                    style={{ background: 'rgba(99,102,241,0.1)', color: 'rgba(129,140,248,0.7)' }}
+                  >
+                    AI suggested
+                  </span>
+                )}
+              </div>
             )}
           </div>
 

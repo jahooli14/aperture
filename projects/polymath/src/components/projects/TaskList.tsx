@@ -3,10 +3,11 @@
  * Checklist for project tasks with inline add/edit/delete
  */
 
-import { useState } from 'react'
-import { Plus, Trash2, Check, GripVertical, ChevronDown, ChevronRight, Zap } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Plus, Trash2, Check, GripVertical, ChevronDown, ChevronRight, Zap, ListTodo } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { handleInputFocus } from '../../utils/keyboard'
+import { useTodoStore, selectByProject } from '../../stores/useTodoStore'
 
 export interface Task {
   id: string
@@ -34,9 +35,10 @@ interface TaskListProps {
   tasks: Task[]
   highlightedTasks?: any[]
   onUpdate: (tasks: Task[]) => void
+  projectId?: string
 }
 
-export function TaskList({ tasks, highlightedTasks = [], onUpdate }: TaskListProps) {
+export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: TaskListProps) {
   const [newTaskText, setNewTaskText] = useState('')
   const [isAdding, setIsAdding] = useState(false)
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null)
@@ -451,6 +453,9 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate }: TaskListPro
         </button>
       )}
 
+      {/* Linked Todos from the Todo system */}
+      {projectId && <LinkedTodos projectId={projectId} />}
+
       {/* Empty State */}
       {tasks.length === 0 && !isAdding && (
         <div className="text-center py-8" style={{ color: 'var(--premium-text-tertiary)' }}>
@@ -458,6 +463,66 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate }: TaskListPro
           <p className="text-xs mt-1">Break down your project into steps</p>
         </div>
       )}
+    </div>
+  )
+}
+
+/**
+ * Linked Todos — shows todos with this project_id from the todo store.
+ * Completing here syncs with the main todo system.
+ */
+function LinkedTodos({ projectId }: { projectId: string }) {
+  const todos = useTodoStore(state => state.todos)
+  const toggleTodo = useTodoStore(state => state.toggleTodo)
+  const fetchTodos = useTodoStore(state => state.fetchTodos)
+  const linkedTodos = selectByProject(todos, projectId)
+
+  // Ensure todos are loaded
+  useEffect(() => {
+    if (todos.length === 0) fetchTodos()
+  }, [todos.length, fetchTodos])
+
+  if (linkedTodos.length === 0) return null
+
+  const activeTodos = linkedTodos.filter(t => !t.done)
+  const doneTodos = linkedTodos.filter(t => t.done)
+
+  return (
+    <div className="mt-4 pt-4 border-t border-white/5">
+      <div className="flex items-center gap-2 mb-3">
+        <ListTodo className="h-3.5 w-3.5" style={{ color: 'var(--premium-blue)' }} />
+        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--premium-text-tertiary)' }}>
+          Linked Todos
+        </span>
+        <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(59,130,246,0.1)', color: 'rgba(96,165,250,0.8)' }}>
+          {activeTodos.length}
+        </span>
+      </div>
+      <div className="space-y-1.5">
+        {activeTodos.map(todo => (
+          <div key={todo.id} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-white/[0.03] transition-colors">
+            <button
+              onClick={() => toggleTodo(todo.id)}
+              className="flex-shrink-0 h-5 w-5 rounded-md flex items-center justify-center border-2 border-white/20 bg-black/20 transition-all hover:border-blue-500/50"
+            >
+              {todo.done && <Check className="h-3 w-3 text-white" />}
+            </button>
+            <span className="text-sm" style={{ color: 'var(--premium-text-primary)' }}>
+              {todo.text}
+            </span>
+            {todo.source_memory_id && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full ml-auto" style={{ backgroundColor: 'rgba(6,182,212,0.1)', color: 'rgba(6,182,212,0.7)' }}>
+                from thought
+              </span>
+            )}
+          </div>
+        ))}
+        {doneTodos.length > 0 && (
+          <p className="text-[10px] pt-1" style={{ color: 'var(--premium-text-tertiary)' }}>
+            {doneTodos.length} completed
+          </p>
+        )}
+      </div>
     </div>
   )
 }

@@ -1480,9 +1480,26 @@ async function handleUpdate(memoryId: string, req: VercelRequest, res: VercelRes
     return res.status(400).json({ error: 'Memory ID required' })
   }
 
-  const { title, body, tags, memory_type, image_urls } = req.body
+  const { title, body, tags, memory_type, image_urls, is_pinned } = req.body
 
   try {
+    // Pin/unpin is a lightweight metadata update — no reprocessing needed
+    if (is_pinned !== undefined && title === undefined && body === undefined) {
+      const { data: memory, error } = await supabase
+        .from('memories')
+        .update({ is_pinned })
+        .eq('id', memoryId)
+        .select()
+        .single()
+
+      if (error) {
+        console.error('[handleUpdate] Pin update error:', error)
+        return res.status(500).json({ error: 'Failed to update pin state', details: error.message })
+      }
+
+      return res.status(200).json({ success: true, memory })
+    }
+
     const updateData: any = {
       processed: false, // Trigger reprocessing
       processed_at: null
@@ -1493,6 +1510,7 @@ async function handleUpdate(memoryId: string, req: VercelRequest, res: VercelRes
     if (tags !== undefined) updateData.tags = tags
     if (memory_type !== undefined) updateData.memory_type = memory_type
     if (image_urls !== undefined) updateData.image_urls = image_urls
+    if (is_pinned !== undefined) updateData.is_pinned = is_pinned
 
     const { data: memory, error } = await supabase
       .from('memories')

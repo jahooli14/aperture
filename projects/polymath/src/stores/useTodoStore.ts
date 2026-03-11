@@ -440,3 +440,14 @@ export function selectLogbook(todos: Todo[]): Todo[] {
       return dateB.localeCompare(dateA)
     })
 }
+
+export function selectByProject(todos: Todo[], projectId: string): Todo[] {
+  return todos.filter(x =>
+    !x.deleted_at &&
+    x.project_id === projectId
+  ).sort((a, b) => {
+    // Active first, then completed
+    if (a.done !== b.done) return a.done ? 1 : -1
+    return a.sort_order - b.sort_order
+  })
+}
