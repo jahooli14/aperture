@@ -26,11 +26,15 @@ export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProp
 
   return (
     <div
-      className={`group block rounded-xl backdrop-blur-xl transition-all duration-300 break-inside-avoid border cursor-pointer relative mb-2 overflow-hidden ${expanded ? 'bg-white/5 border-blue-500/30' : 'bg-transparent border-white/5 hover:bg-white/[0.02]'
-        }`}
+      className="group block rounded-sm transition-all duration-200 break-inside-avoid cursor-pointer relative mb-2 overflow-hidden"
       onClick={() => setExpanded(!expanded)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      style={{
+        background: expanded ? '#111113' : 'transparent',
+        border: expanded ? '2px solid rgba(59,130,246,0.4)' : '2px solid rgba(255,255,255,0.08)',
+        boxShadow: expanded ? '3px 3px 0 rgba(59,130,246,0.1)' : '3px 3px 0 rgba(0,0,0,0.6)',
+      }}
     >
       <style>{`
         .rss-content {
@@ -89,7 +93,8 @@ export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProp
                 e.stopPropagation()
                 onSave()
               }}
-              className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-white transition-all duration-300"
+              className="p-1.5 rounded-sm text-blue-400 transition-all duration-200"
+              style={{ background: 'rgba(59,130,246,0.12)', border: '1.5px solid rgba(59,130,246,0.3)', boxShadow: '2px 2px 0 rgba(0,0,0,0.5)' }}
               title="Save to Read Later"
             >
               <BookmarkPlus className="h-3.5 w-3.5" />
@@ -100,7 +105,8 @@ export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProp
                   e.stopPropagation()
                   onDismiss()
                 }}
-                className="p-1.5 rounded-lg hover:bg-white/10 text-zinc-500 hover:text-red-400 transition-all duration-300"
+                className="p-1.5 rounded-sm transition-all duration-200"
+                style={{ color: 'rgba(255,255,255,0.35)', border: '1.5px solid rgba(255,255,255,0.1)' }}
                 title="Dismiss"
               >
                 <X className="h-3.5 w-3.5" />
