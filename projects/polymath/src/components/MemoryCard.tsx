@@ -15,10 +15,10 @@ import { motion } from 'framer-motion'
 
 // Memory type badge config
 const MEMORY_TYPE_CONFIG = {
-  foundational: { emoji: '🏛', label: 'Foundational', color: 'rgba(251,191,36,0.15)', border: 'rgba(251,191,36,0.3)', text: 'rgba(251,191,36,0.9)' },
-  insight: { emoji: '💡', label: 'Insight', color: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.3)', text: 'rgba(96,165,250,0.9)' },
-  event: { emoji: '📅', label: 'Event', color: 'rgba(139,92,246,0.15)', border: 'rgba(139,92,246,0.3)', text: 'rgba(167,139,250,0.9)' },
-  'quick-note': { emoji: '⚡', label: 'Quick Note', color: 'rgba(148,163,184,0.1)', border: 'rgba(148,163,184,0.2)', text: 'rgba(148,163,184,0.8)' },
+  foundational: { emoji: '🏛', label: 'FOUNDATIONAL', color: 'rgba(251,191,36,0.12)', border: '1.5px solid rgba(251,191,36,0.4)', text: 'rgba(251,191,36,0.9)' },
+  insight: { emoji: '💡', label: 'INSIGHT', color: 'rgba(59,130,246,0.12)', border: '1.5px solid rgba(59,130,246,0.4)', text: 'rgba(96,165,250,0.9)' },
+  event: { emoji: '📅', label: 'EVENT', color: 'rgba(139,92,246,0.12)', border: '1.5px solid rgba(139,92,246,0.4)', text: 'rgba(167,139,250,0.9)' },
+  'quick-note': { emoji: '⚡', label: 'NOTE', color: 'rgba(148,163,184,0.08)', border: '1.5px solid rgba(148,163,184,0.25)', text: 'rgba(148,163,184,0.8)' },
 } as const
 
 // Module-level cache for bridges remains, but will be managed by MemoryDetailModal
@@ -172,20 +172,11 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
 
       <motion.div
         onClick={() => setShowDetailModal(true)}
-        whileHover={{
-          y: -2,
-          boxShadow: isOfflinePending
-            ? 'inset 0 0 0 1px rgba(255,255,255,0.15), 0 12px 32px rgba(0,0,0,0.4)'
-            : 'inset 0 0 0 1px rgba(255,255,255,0.2), 0 12px 32px rgba(0,0,0,0.4)',
-        }}
-        className="group block rounded-xl backdrop-blur-xl transition-all duration-300 break-inside-avoid p-4 cursor-pointer relative"
+        className="group block rounded-sm transition-all duration-200 break-inside-avoid p-4 cursor-pointer relative"
         style={{
-          background: isOfflinePending
-            ? 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.005) 100%)'
-            : 'linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)',
-          boxShadow: isOfflinePending
-            ? 'inset 0 0 0 1px rgba(255,255,255,0.07), 0 4px 12px rgba(0,0,0,0.2)'
-            : 'inset 0 0 0 1px rgba(255,255,255,0.1), 0 4px 12px rgba(0,0,0,0.2)',
+          background: '#111113',
+          border: isOfflinePending ? '2px solid rgba(255,255,255,0.07)' : '2px solid rgba(255,255,255,0.1)',
+          boxShadow: '3px 3px 0 rgba(0,0,0,0.8)',
           opacity: isOfflinePending ? 0.6 : 1
         }}
       >
@@ -202,7 +193,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
                 e.stopPropagation()
                 navigate(`/search?similar=${memory.id}`)
               }}
-              className="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-gray-300 transition-all"
+              className="p-1.5 rounded-sm hover:bg-white/10 text-gray-500 hover:text-gray-300 transition-all"
               title="Find similar"
             >
               <Sparkles className="w-3.5 h-3.5" />
@@ -239,10 +230,10 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
           <div className="flex items-center gap-2 mb-2">
             {memory.memory_type && MEMORY_TYPE_CONFIG[memory.memory_type] && (
               <span
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-black uppercase tracking-wide"
                 style={{
                   backgroundColor: MEMORY_TYPE_CONFIG[memory.memory_type].color,
-                  border: `1px solid ${MEMORY_TYPE_CONFIG[memory.memory_type].border}`,
+                  border: MEMORY_TYPE_CONFIG[memory.memory_type].border,
                   color: MEMORY_TYPE_CONFIG[memory.memory_type].text,
                 }}
               >
@@ -252,10 +243,10 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
             )}
             {connectionCount !== undefined && connectionCount > 0 && (
               <span
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-black uppercase tracking-wide"
                 style={{
                   backgroundColor: 'rgba(52,211,153,0.1)',
-                  border: '1px solid rgba(52,211,153,0.2)',
+                  border: '1.5px solid rgba(52,211,153,0.3)',
                   color: 'rgba(52,211,153,0.8)',
                 }}
               >
@@ -274,7 +265,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
 
         {/* Attached Images */}
         {memory.image_urls && memory.image_urls.length > 0 && (
-          <div className="mb-3 grid grid-cols-2 gap-1 rounded-lg overflow-hidden h-24 relative">
+          <div className="mb-3 grid grid-cols-2 gap-1 rounded-sm overflow-hidden h-24 relative">
             {memory.image_urls.slice(0, 2).map((url, i) => (
               <div key={url} className={`relative ${memory.image_urls!.length === 1 ? 'col-span-2' : ''} h-full`}>
                 <OptimizedImage
@@ -293,9 +284,9 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
           </div>
         )}
 
-        <div className="flex items-center justify-between gap-2 text-xs pt-3 mt-3 border-t" style={{
+        <div className="flex items-center justify-between gap-2 text-[10px] pt-3 mt-3 border-t font-semibold uppercase tracking-wider" style={{
           color: 'var(--premium-text-tertiary)',
-          borderColor: 'rgba(255, 255, 255, 0.1)'
+          borderColor: 'rgba(255, 255, 255, 0.08)'
         }}>
           <div className="flex items-center gap-2 shrink-0">
             <Calendar className="h-3 w-3" />
@@ -307,9 +298,10 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
               {memory.tags.slice(0, 2).map((tag) => (
                 <span
                   key={tag}
-                  className="px-2 py-0.5 text-[10px] font-medium rounded-full whitespace-nowrap"
+                  className="px-2 py-0.5 text-[10px] font-bold rounded-sm uppercase tracking-wide whitespace-nowrap"
                   style={{
-                    backgroundColor: 'rgba(148, 163, 184, 0.1)',
+                    backgroundColor: 'rgba(148,163,184,0.08)',
+                    border: '1px solid rgba(148,163,184,0.2)',
                     color: '#94a3b8'
                   }}
                 >

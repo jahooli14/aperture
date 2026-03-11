@@ -311,9 +311,9 @@ export function SearchPage() {
 
       {/* Fixed Header Bar */}
       <div
-        className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md"
+        className="fixed top-0 left-0 right-0 z-40 border-b-2 border-white/10"
         style={{
-          backgroundColor: 'rgba(15, 24, 41, 0.7)'
+          backgroundColor: '#0a0f1a'
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
@@ -334,9 +334,10 @@ export function SearchPage() {
       <div className="min-h-screen pb-24" style={{ paddingTop: '5.5rem' }}>
         {/* Header Section */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-          <div className="p-6 rounded-xl backdrop-blur-xl" style={{
+          <div className="p-6 rounded-sm" style={{
             background: 'var(--premium-bg-2)',
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+            border: '2px solid rgba(255,255,255,0.08)',
+            boxShadow: '4px 4px 0 rgba(0,0,0,0.5)'
           }}>
             <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
               Search <span style={{ color: 'var(--premium-blue)' }}>everything</span>
@@ -350,9 +351,10 @@ export function SearchPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
           {/* Search Input */}
-          <div className="p-4 rounded-xl backdrop-blur-xl mb-6" style={{
+          <div className="p-4 rounded-sm mb-6" style={{
             background: 'var(--premium-bg-2)',
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+            border: '2px solid rgba(255,255,255,0.08)',
+            boxShadow: '4px 4px 0 rgba(0,0,0,0.5)'
           }}>
             <form onSubmit={handleTextSearch} className="flex gap-2">
               <div className="flex-1 relative">
@@ -367,11 +369,10 @@ export function SearchPage() {
                   onFocus={(e) => { setSearchFocused(true); handleInputFocus(e) }}
                   onBlur={() => setSearchFocused(false)}
                   placeholder="Search your knowledge..."
-                  className="w-full h-12 pl-12 pr-4 rounded-xl border text-base focus:outline-none transition-all duration-200"
+                  className="w-full h-12 pl-12 pr-4 rounded-sm border-2 text-base focus:outline-none transition-all duration-200"
                   style={{
                     background: 'var(--premium-bg-3)',
-                    borderColor: searchFocused ? 'rgba(59, 130, 246, 0.5)' : 'rgba(59, 130, 246, 0.2)',
-                    boxShadow: searchFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
+                    borderColor: searchFocused ? 'rgba(59, 130, 246, 0.6)' : 'rgba(59, 130, 246, 0.2)',
                     color: 'var(--premium-text-primary)',
                   }}
                 />
@@ -380,7 +381,7 @@ export function SearchPage() {
               <button
                 type="button"
                 onClick={() => setShowVoiceSearch(v => !v)}
-                className="h-12 w-12 flex-shrink-0 rounded-xl flex items-center justify-center transition-all active:scale-95"
+                className="h-12 w-12 flex-shrink-0 rounded-sm flex items-center justify-center transition-all active:scale-95"
                 style={{
                   background: showVoiceSearch ? 'rgba(59,130,246,0.2)' : 'var(--premium-bg-3)',
                   border: `1px solid ${showVoiceSearch ? 'rgba(59,130,246,0.4)' : 'rgba(59,130,246,0.2)'}`,
@@ -415,7 +416,7 @@ export function SearchPage() {
             <div className="flex items-center gap-2 mt-3">
               <button
                 onClick={() => { setSearchMode('text'); if (query.trim().length >= 2) performSearch(query.trim()) }}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all active:scale-95 ${
+                className={`px-4 py-2 rounded-sm text-sm font-medium transition-all active:scale-95 ${
                   searchMode === 'text' ? 'bg-white/10 text-white' : 'text-gray-500'
                 }`}
               >
@@ -423,7 +424,7 @@ export function SearchPage() {
               </button>
               <button
                 onClick={() => { setSearchMode('semantic'); if (query.trim().length >= 2) performSearch(query.trim()) }}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all active:scale-95 ${
+                className={`px-4 py-2 rounded-sm text-sm font-medium transition-all active:scale-95 ${
                   searchMode === 'semantic' ? 'bg-blue-500/20 text-blue-400' : 'text-gray-500'
                 }`}
               >
@@ -434,9 +435,10 @@ export function SearchPage() {
 
           {/* Results */}
           {loading && (
-            <div className="p-6 rounded-xl backdrop-blur-xl" style={{
+            <div className="p-6 rounded-sm" style={{
               background: 'var(--premium-bg-2)',
-              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+              border: '2px solid rgba(255,255,255,0.08)',
+              boxShadow: '4px 4px 0 rgba(0,0,0,0.5)'
             }}>
               <div className="text-center py-20">
                 <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" style={{ color: 'var(--premium-blue)' }} />
@@ -448,9 +450,10 @@ export function SearchPage() {
           {!loading && results && (
             <>
               {/* Results Summary */}
-              <div className="p-6 rounded-xl backdrop-blur-xl mb-6" style={{
+              <div className="p-6 rounded-sm mb-6" style={{
                 background: 'var(--premium-bg-2)',
-                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+                border: '2px solid rgba(255,255,255,0.08)',
+                boxShadow: '4px 4px 0 rgba(0,0,0,0.5)'
               }}>
                 <h2 className="text-xl font-semibold mb-2 premium-text-platinum">
                   {results.total} {results.total === 1 ? 'result' : 'results'} for "{results.query}"
@@ -487,10 +490,11 @@ export function SearchPage() {
                       transition={{ delay: index * 0.05 }}
                       whileTap={{ scale: 0.98, backgroundColor: 'var(--premium-bg-3)' }}
                       onClick={() => navigateToResult(result)}
-                      className="p-5 rounded-xl backdrop-blur-xl cursor-pointer"
+                      className="p-5 rounded-sm cursor-pointer"
                       style={{
                         background: 'var(--premium-bg-2)',
-                        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+                        border: '2px solid rgba(255,255,255,0.08)',
+                        boxShadow: '4px 4px 0 rgba(0,0,0,0.5)'
                       }}
                     >
                       <div className="flex items-start justify-between gap-4">
@@ -499,7 +503,7 @@ export function SearchPage() {
                           <div className="flex items-center gap-2 mb-2">
                             {getResultIcon(result.type)}
                             <span
-                              className="text-xs font-medium px-2 py-1 rounded-full capitalize"
+                              className="text-xs font-medium px-2 py-1 rounded-sm capitalize"
                               style={{ backgroundColor: getResultBadgeColor(result.type) }}
                             >
                               {result.type}
@@ -524,7 +528,7 @@ export function SearchPage() {
                               {result.tags.slice(0, 3).map((tag, i) => (
                                 <span
                                   key={i}
-                                  className="text-xs px-2 py-0.5 rounded-full"
+                                  className="text-xs px-2 py-0.5 rounded-sm"
                                   style={{
                                     backgroundColor: 'rgba(59, 130, 246, 0.1)',
                                     color: 'var(--premium-blue)'

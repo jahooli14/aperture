@@ -177,8 +177,8 @@ export function ProjectsPage() {
       <SubtleBackground />
       <div className="min-h-screen">
         {/* Header */}
-        <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md" style={{
-          backgroundColor: 'rgba(15, 24, 41, 0.7)'
+        <div className="fixed top-0 left-0 right-0 z-40 border-b-2 border-white/10" style={{
+          backgroundColor: '#0a0f1a'
         }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
             <div className="flex items-center" style={{
@@ -207,7 +207,7 @@ export function ProjectsPage() {
               <CreateProjectDialog />
               <button
                 onClick={() => navigate('/search')}
-                className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
+                className="h-10 w-10 rounded-sm flex items-center justify-center transition-all hover:bg-white/5"
                 style={{
                   color: 'var(--premium-blue)'
                 }}
@@ -230,9 +230,10 @@ export function ProjectsPage() {
           {/* Controls */}
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 pt-2">
             {/* Outer Card Structure */}
-            <div className="p-6 rounded-xl backdrop-blur-xl mb-6" style={{
+            <div className="p-6 rounded-sm mb-6" style={{
               background: 'var(--premium-bg-2)',
-              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+              border: '2px solid rgba(255,255,255,0.08)',
+              boxShadow: '4px 4px 0 rgba(0,0,0,0.5)'
             }}>
               {/* Title Section */}
               <div className="mb-6">
@@ -252,7 +253,7 @@ export function ProjectsPage() {
                       placeholder="Search projects..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border transition-all focus:outline-none"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-sm border-2 transition-all focus:outline-none"
                       style={{
                         backgroundColor: 'rgba(255, 255, 255, 0.03)',
                         borderColor: searchQuery ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.1)',
@@ -279,7 +280,7 @@ export function ProjectsPage() {
                         variant={selectedTags.includes(tag) ? 'default' : 'outline'}
                         onClick={() => toggleTag(tag)}
                         size="sm"
-                        className="whitespace-nowrap px-3 py-1 rounded-full font-medium transition-all text-xs"
+                        className="whitespace-nowrap px-3 py-1 rounded-sm font-medium transition-all text-xs"
                         style={{
                           backgroundColor: selectedTags.includes(tag) ? 'var(--premium-bg-3)' : 'transparent',
                           color: selectedTags.includes(tag) ? 'var(--premium-blue)' : 'var(--premium-text-secondary)'
