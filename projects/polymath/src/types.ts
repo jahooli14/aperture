@@ -21,9 +21,10 @@ export interface Entities {
 }
 
 export interface TriageInfo {
-  category: 'task_update' | 'new_thought' | 'reading_lead' | 'new_project_idea'
+  category: 'task_update' | 'new_thought' | 'reading_lead' | 'new_project_idea' | 'action_item'
   project_id?: string
   confidence: number
+  suggested_todo_text?: string
 }
 
 export interface SourceReference {
@@ -65,6 +66,9 @@ export interface Memory {
 
   // Attachments
   image_urls: string[] | null
+
+  // Quick access
+  is_pinned?: boolean
 }
 
 // ============================================================================

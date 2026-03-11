@@ -1058,6 +1058,7 @@ export function ProjectDetailPage() {
                     ))
                   ) || []}
                   highlightedTasks={location.state?.powerHourTasks || []}
+                  projectId={project.id}
                   onUpdate={async (tasks) => {
                     if (!project) return
                     console.log('[ProjectDetail] Task update triggered')
