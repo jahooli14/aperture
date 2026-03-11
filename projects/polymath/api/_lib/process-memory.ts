@@ -97,12 +97,14 @@ export async function processMemory(memoryId: string): Promise<void> {
     await updateItemConnections(memoryId, 'thought', embedding, userId)
     logger.info({ memory_id: memoryId }, '✅ Connections processed')
 
-    // 7. Act on Triage
+    // 7. Act on Triage — create todos and/or route to appropriate systems
     if (metadata.triage) {
-      const { category, project_id } = metadata.triage
+      const { category, project_id, suggested_todo_text, confidence } = metadata.triage
+      const todoText = suggested_todo_text || metadata.summary_title
+
       if (category === 'task_update' && project_id) {
         logger.info({ project_id }, '🔄 Adding task to project from triage...')
-        // Fetch project to get current tasks
+        // Add to project metadata.tasks (backward compat)
         const { data: project } = await supabase
           .from('projects')
           .select('metadata')
@@ -113,7 +115,7 @@ export async function processMemory(memoryId: string): Promise<void> {
           const currentTasks = project.metadata?.tasks || []
           const newTask = {
             id: crypto.randomUUID(),
-            text: metadata.summary_title,
+            text: todoText,
             done: false,
             created_at: new Date().toISOString(),
             order: currentTasks.length
@@ -128,6 +130,16 @@ export async function processMemory(memoryId: string): Promise<void> {
             .eq('id', project_id)
           logger.info({ project_id }, '✅ Task added to project')
         }
+
+        // Also create a real todo linked to both the memory and the project
+        await createTodoFromTriage(userId, todoText, memoryId, project_id, 'triage')
+      } else if (category === 'task_update') {
+        // Task update without a project — create a standalone todo
+        await createTodoFromTriage(userId, todoText, memoryId, undefined, 'triage')
+      } else if (category === 'action_item' && (confidence ?? 0) >= 0.7) {
+        // Clear action detected — create a todo in inbox
+        logger.info({ memory_id: memoryId }, '🔄 Creating todo from action_item triage...')
+        await createTodoFromTriage(userId, todoText, memoryId, undefined, 'ai')
       } else if (category === 'reading_lead') {
         logger.info('🔄 Adding to reading queue from triage...')
         await supabase
@@ -140,6 +152,9 @@ export async function processMemory(memoryId: string): Promise<void> {
             url: metadata.entities?.topics?.[0] || 'thought://' + memoryId // Pseudo-URL
           })
         logger.info('✅ Added to reading queue')
+
+        // Also create a "Read" todo so it doesn't die in the queue
+        await createTodoFromTriage(userId, `Read: ${metadata.summary_title}`, memoryId, undefined, 'ai')
       }
     }
 
@@ -219,8 +234,15 @@ Return JSON:
   "themes": ["1-3 from: career/health/creativity/relationships/learning/family"],
   "tags": ["3-5 specific tags like 'philosophy', 'biology', 'curiosity', 'nature'. Avoid generic words like 'thought', 'note', 'voice'"],
   "emotional_tone": "brief phrase describing the mood",
-  "triage": {"category": "task_update|new_thought|reading_lead", "project_id": "uuid or null", "confidence": 0.0-1.0}
+  "triage": {"category": "task_update|new_thought|reading_lead|action_item", "project_id": "uuid or null", "confidence": 0.0-1.0, "suggested_todo_text": "A specific actionable next step phrased as a todo (e.g. 'Research Kubernetes deployment strategies') or null"}
 }
+
+TRIAGE RULES:
+- task_update: Directly relates to an active project above. Set project_id.
+- action_item: Contains a clear "I should...", "I need to...", "I want to..." that isn't about a specific project. Always provide suggested_todo_text.
+- reading_lead: Mentions something to read, watch, or research.
+- new_thought: General musing, reflection, or observation — no clear action.
+- For task_update and action_item, suggested_todo_text MUST be a concrete next step, not a summary.
 
 Return only valid JSON.`
 
@@ -370,5 +392,40 @@ async function storeCapabilities(memoryId: string, skills: string[], memoryTitle
     } catch (error) {
       logger.warn({ skill: skillName, error }, 'Error processing capability')
     }
+  }
+}
+
+/**
+ * Create a todo from memory triage — bridges the knowledge graph to the action layer.
+ * Source tracks whether it was AI-generated or from triage routing.
+ */
+async function createTodoFromTriage(
+  userId: string,
+  text: string,
+  sourceMemoryId: string,
+  projectId?: string,
+  source: 'ai' | 'triage' = 'triage'
+): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('todos')
+      .insert({
+        user_id: userId,
+        text,
+        done: false,
+        tags: [source === 'ai' ? 'ai-suggested' : 'triage'],
+        priority: 0,
+        sort_order: 0,
+        source_memory_id: sourceMemoryId,
+        project_id: projectId ?? null,
+      })
+
+    if (error) {
+      logger.warn({ error, text }, 'Failed to create todo from triage')
+    } else {
+      logger.info({ text, source, project_id: projectId }, '✅ Todo created from triage')
+    }
+  } catch (error) {
+    logger.warn({ error, text }, 'Error creating todo from triage')
   }
 }

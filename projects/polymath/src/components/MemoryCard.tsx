@@ -1,6 +1,6 @@
-import React, { useState, memo, useCallback, useMemo } from 'react'
+import React, { useState, memo, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MoreVertical, Edit, Trash2, Copy, Share2, Calendar, Sparkles, Link2 } from 'lucide-react'
+import { MoreVertical, Edit, Trash2, Copy, Share2, Calendar, Sparkles, Link2, Pin, Maximize2, CheckSquare } from 'lucide-react'
 import { CardHeader, CardTitle, CardDescription } from './ui/card'
 import { Button } from './ui/button'
 import type { Memory, BridgeWithMemories } from '../types'
@@ -11,7 +11,7 @@ import { ContextMenu, type ContextMenuItem } from './ui/context-menu'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { MemoryDetailModal } from './memories/MemoryDetailModal'
 import { useConfirmDialog } from './ui/confirm-dialog'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 
 // Memory type badge config
 const MEMORY_TYPE_CONFIG = {
@@ -57,9 +57,38 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
   const navigate = useNavigate()
   const [showContextMenu, setShowContextMenu] = useState(false)
   const [showDetailModal, setShowDetailModal] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+
+  // Long-press detection: hold > 400ms opens full modal
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const didLongPress = useRef(false)
+
+  const handlePointerDown = useCallback(() => {
+    didLongPress.current = false
+    longPressTimer.current = setTimeout(() => {
+      didLongPress.current = true
+      haptic.medium()
+      setShowDetailModal(true)
+    }, 400)
+  }, [])
+
+  const handlePointerUp = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+  }, [])
+
+  const handleCardClick = useCallback(() => {
+    // If long press already fired, don't also toggle expand
+    if (didLongPress.current) return
+    setExpanded(prev => !prev)
+  }, [])
 
   const { setContext, toggleSidebar } = useContextEngineStore()
   const deleteMemory = useMemoryStore((state) => state.deleteMemory)
+  const pinMemory = useMemoryStore((state) => state.pinMemory)
+  const unpinMemory = useMemoryStore((state) => state.unpinMemory)
   const { addToast } = useToast()
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
 
@@ -90,6 +119,17 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
       handleCopyText()
     }
   }, [memory.title, memory.body, handleCopyText])
+
+  const handleTogglePin = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    if (memory.is_pinned) {
+      unpinMemory(memory.id)
+    } else {
+      pinMemory(memory.id)
+      haptic.success()
+    }
+  }, [memory.id, memory.is_pinned, pinMemory, unpinMemory])
 
   const handleAnalyze = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -171,12 +211,22 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
       />
 
       <motion.div
-        onClick={() => setShowDetailModal(true)}
+        layout
+        onClick={handleCardClick}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
         className="group block rounded-sm transition-all duration-200 break-inside-avoid p-4 cursor-pointer relative"
         style={{
           background: '#111113',
-          border: isOfflinePending ? '2px solid rgba(255,255,255,0.07)' : '2px solid rgba(255,255,255,0.1)',
-          boxShadow: '3px 3px 0 rgba(0,0,0,0.8)',
+          border: isOfflinePending
+            ? '2px solid rgba(255,255,255,0.07)'
+            : memory.is_pinned
+              ? '2px solid rgba(251,191,36,0.4)'
+              : '2px solid rgba(255,255,255,0.1)',
+          boxShadow: memory.is_pinned
+            ? '3px 3px 0 rgba(251,191,36,0.2)'
+            : '3px 3px 0 rgba(0,0,0,0.8)',
           opacity: isOfflinePending ? 0.6 : 1
         }}
       >
@@ -187,6 +237,19 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
             {memory.title}
           </h3>
           <div className="flex items-center gap-1">
+            {/* Pin Button */}
+            <button
+              onClick={handleTogglePin}
+              className={`p-1.5 rounded-lg transition-all ${
+                memory.is_pinned
+                  ? 'text-amber-400 hover:bg-amber-500/10'
+                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/10 opacity-0 group-hover:opacity-100'
+              }`}
+              title={memory.is_pinned ? 'Unpin' : 'Pin'}
+            >
+              <Pin className="w-3.5 h-3.5" style={memory.is_pinned ? { fill: 'currentColor' } : undefined} />
+            </button>
+
             {/* Find Similar Button */}
             <button
               onClick={(e) => {
@@ -257,11 +320,13 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
           </div>
         )}
 
-        <p className="text-sm leading-relaxed line-clamp-6 mb-3" style={{
-          color: 'var(--premium-text-secondary)'
-        }}>
+        <motion.p
+          layout="position"
+          className={`text-sm leading-relaxed mb-3 ${expanded ? '' : 'line-clamp-6'}`}
+          style={{ color: 'var(--premium-text-secondary)' }}
+        >
           {memory.body}
-        </p>
+        </motion.p>
 
         {/* Attached Images */}
         {memory.image_urls && memory.image_urls.length > 0 && (
@@ -284,6 +349,87 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
           </div>
         )}
 
+        {/* Expanded: show all tags + themes + quick actions */}
+        <AnimatePresence>
+          {expanded && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              {/* Themes */}
+              {memory.themes && memory.themes.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {memory.themes.map((theme) => (
+                    <span
+                      key={theme}
+                      className="px-2 py-0.5 text-[10px] font-medium rounded-sm uppercase tracking-wide"
+                      style={{
+                        backgroundColor: 'rgba(139,92,246,0.1)',
+                        border: '1px solid rgba(139,92,246,0.2)',
+                        color: 'rgba(167,139,250,0.8)',
+                      }}
+                    >
+                      {theme}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* All tags when expanded */}
+              {memory.tags && memory.tags.length > 2 && (
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {memory.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-2 py-0.5 text-[10px] font-bold rounded-sm uppercase tracking-wide whitespace-nowrap"
+                      style={{
+                        backgroundColor: 'rgba(148,163,184,0.08)',
+                        border: '1px solid rgba(148,163,184,0.2)',
+                        color: '#94a3b8'
+                      }}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Quick actions row */}
+              <div className="flex items-center gap-2 mb-2">
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowDetailModal(true) }}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-sm transition-colors hover:bg-white/10"
+                  style={{ color: 'var(--premium-text-secondary)' }}
+                >
+                  <Maximize2 className="w-3 h-3" />
+                  Open
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleCopyText() }}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-sm transition-colors hover:bg-white/10"
+                  style={{ color: 'var(--premium-text-secondary)' }}
+                >
+                  <Copy className="w-3 h-3" />
+                  Copy
+                </button>
+                <button
+                  onClick={handleTogglePin}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-sm transition-colors hover:bg-white/10 ${
+                    memory.is_pinned ? 'text-amber-400' : ''
+                  }`}
+                  style={memory.is_pinned ? undefined : { color: 'var(--premium-text-secondary)' }}
+                >
+                  <Pin className="w-3 h-3" style={memory.is_pinned ? { fill: 'currentColor' } : undefined} />
+                  {memory.is_pinned ? 'Unpin' : 'Pin'}
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div className="flex items-center justify-between gap-2 text-[10px] pt-3 mt-3 border-t font-semibold uppercase tracking-wider" style={{
           color: 'var(--premium-text-tertiary)',
           borderColor: 'rgba(255, 255, 255, 0.08)'
@@ -293,7 +439,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
             <span>{new Date(memory.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
           </div>
 
-          {memory.tags && memory.tags.length > 0 && (
+          {!expanded && memory.tags && memory.tags.length > 0 && (
             <div className="flex items-center gap-1.5 overflow-hidden justify-end min-w-0">
               {memory.tags.slice(0, 2).map((tag) => (
                 <span

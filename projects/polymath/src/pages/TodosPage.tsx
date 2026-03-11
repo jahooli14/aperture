@@ -50,6 +50,7 @@ import { useStreakStore } from '../hooks/useStreakStore'
 import { useTodoNotifications } from '../hooks/useTodoNotifications'
 import { TodoInput } from '../components/todos/TodoInput'
 import { TodoItem, LogbookItem } from '../components/todos/TodoItem'
+import { TodoBrief } from '../components/todos/TodoBrief'
 import { FocusMode } from '../components/todos/FocusMode'
 import { DailyReview } from '../components/review/DailyReview'
 import { parseTodo, describeDate, formatMinutes } from '../lib/todoNLP'
@@ -755,6 +756,9 @@ function TodayView({
 
   return (
     <div>
+      {/* AI Daily Brief — proposed day plan with reasoning */}
+      <TodoBrief />
+
       {/* Implementation Intentions: morning planning banner */}
       <AnimatePresence>
         {showMorningBanner && (
