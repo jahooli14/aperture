@@ -279,7 +279,7 @@ Return only valid JSON.`
  */
 async function generateEmbedding(text: string): Promise<number[]> {
   const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_EMBEDDING })
-  const result = await model.embedContent({ content: { parts: [{ text }] }, outputDimensionality: MODELS.DEFAULT_EMBEDDING_DIMS })
+  const result = await model.embedContent({ content: { role: 'user', parts: [{ text }] }, outputDimensionality: MODELS.DEFAULT_EMBEDDING_DIMS })
   return result.embedding.values
 }
 
