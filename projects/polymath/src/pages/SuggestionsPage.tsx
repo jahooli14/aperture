@@ -208,7 +208,7 @@ export function SuggestionsPage() {
       {/* Background elements */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-0 right-0 h-96 opacity-10" style={{
-          background: 'radial-gradient(ellipse at top, var(--premium-blue), transparent 70%)'
+          background: 'radial-gradient(ellipse at top, var(--brand-primary), transparent 70%)'
         }} />
       </div>
 
@@ -259,7 +259,7 @@ export function SuggestionsPage() {
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                 synthesisMode === mode.id
                   ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                  : 'bg-[rgba(255,255,255,0.05)] text-[var(--brand-text-secondary)] border border-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.1)]'
+                  : 'bg-[var(--glass-surface)] text-[var(--brand-text-secondary)] border border-[var(--glass-surface-hover)] hover:bg-[rgba(255,255,255,0.1)]'
               }`}
             >
               <mode.icon className="w-3 h-3" />
@@ -277,7 +277,7 @@ export function SuggestionsPage() {
               exit={{ opacity: 0, height: 0 }}
               className="mb-8"
             >
-              <div className="h-1.5 w-full bg-[rgba(255,255,255,0.05)] rounded-full overflow-hidden border border-[rgba(255,255,255,0.08)]">
+              <div className="h-1.5 w-full bg-[var(--glass-surface)] rounded-full overflow-hidden border border-[var(--glass-surface-hover)]">
                 <motion.div 
                   className="h-full bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]"
                   style={{ width: `${progress}%` }}
@@ -316,7 +316,7 @@ export function SuggestionsPage() {
                 className="relative"
               >
                 <div className="absolute -inset-1 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-blue-600/20 rounded-[2rem] blur-xl opacity-50" />
-                <Card className="relative bg-slate-900/80 border-[rgba(255,255,255,0.08)] backdrop-blur-xl rounded-[2rem] overflow-hidden shadow-2xl">
+                <Card className="relative bg-slate-900/80 border-[var(--glass-surface-hover)] backdrop-blur-xl rounded-[2rem] overflow-hidden shadow-2xl">
                   <CardContent className="p-8 md:p-12">
                     {/* Top Meta */}
                     <div className="flex items-center gap-3 mb-6">
@@ -338,7 +338,7 @@ export function SuggestionsPage() {
 
                     {/* Reasoning Section */}
                     {currentSuggestion.synthesis_reasoning && (
-                      <div className="p-6 rounded-2xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.08)] mb-8">
+                      <div className="p-6 rounded-2xl bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] mb-8">
                         <div className="flex items-center gap-2 mb-3">
                           <Brain className="h-4 w-4 text-purple-400" />
                           <span className="text-sm font-bold text-purple-300 uppercase tracking-wide">AI Rationale</span>
@@ -351,15 +351,15 @@ export function SuggestionsPage() {
 
                     {/* Stats Grid */}
                     <div className="grid grid-cols-3 gap-4 mb-8">
-                      <div className="p-4 rounded-xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.05)] text-center">
+                      <div className="p-4 rounded-xl bg-[var(--glass-surface)] border border-[var(--glass-surface)] text-center">
                         <div className="text-[10px] uppercase tracking-widest text-[var(--brand-text-muted)] mb-1 font-bold">Novelty</div>
                         <div className="text-lg font-bold text-blue-400">{Math.round(currentSuggestion.novelty_score * 100)}%</div>
                       </div>
-                      <div className="p-4 rounded-xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.05)] text-center">
+                      <div className="p-4 rounded-xl bg-[var(--glass-surface)] border border-[var(--glass-surface)] text-center">
                         <div className="text-[10px] uppercase tracking-widest text-[var(--brand-text-muted)] mb-1 font-bold">Feasibility</div>
                         <div className="text-lg font-bold text-emerald-400">{Math.round(currentSuggestion.feasibility_score * 100)}%</div>
                       </div>
-                      <div className="p-4 rounded-xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.05)] text-center">
+                      <div className="p-4 rounded-xl bg-[var(--glass-surface)] border border-[var(--glass-surface)] text-center">
                         <div className="text-[10px] uppercase tracking-widest text-[var(--brand-text-muted)] mb-1 font-bold">Interest</div>
                         <div className="text-lg font-bold text-purple-400">{Math.round(currentSuggestion.interest_score * 100)}%</div>
                       </div>
@@ -369,7 +369,7 @@ export function SuggestionsPage() {
                     {currentSuggestion.capabilities && currentSuggestion.capabilities.length > 0 && (
                       <div className="flex flex-wrap gap-2 mb-12">
                         {currentSuggestion.capabilities.map(cap => (
-                          <span key={cap.id} className="px-3 py-1.5 rounded-lg bg-slate-800 border border-[rgba(255,255,255,0.05)] text-xs font-semibold text-[var(--brand-text-secondary)]">
+                          <span key={cap.id} className="px-3 py-1.5 rounded-lg bg-slate-800 border border-[var(--glass-surface)] text-xs font-semibold text-[var(--brand-text-secondary)]">
                             {cap.name}
                           </span>
                         ))}
@@ -380,7 +380,7 @@ export function SuggestionsPage() {
                     <div className="grid grid-cols-3 gap-4">
                       <button
                         onClick={() => handleAction('no')}
-                        className="group flex flex-col items-center gap-3 p-4 rounded-2xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.05)] hover:bg-red-500/10 hover:border-red-500/30 transition-all"
+                        className="group flex flex-col items-center gap-3 p-4 rounded-2xl bg-[var(--glass-surface)] border border-[var(--glass-surface)] hover:bg-red-500/10 hover:border-red-500/30 transition-all"
                       >
                         <div className="h-12 w-12 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-red-500 group-hover:text-[var(--brand-text-primary)] transition-all">
                           <X className="h-6 w-6" />
@@ -390,7 +390,7 @@ export function SuggestionsPage() {
 
                       <button
                         onClick={() => handleAction('later')}
-                        className="group flex flex-col items-center gap-3 p-4 rounded-2xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.05)] hover:bg-amber-500/10 hover:border-amber-500/30 transition-all"
+                        className="group flex flex-col items-center gap-3 p-4 rounded-2xl bg-[var(--glass-surface)] border border-[var(--glass-surface)] hover:bg-amber-500/10 hover:border-amber-500/30 transition-all"
                       >
                         <div className="h-12 w-12 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-amber-500 group-hover:text-[var(--brand-text-primary)] transition-all">
                           <Clock className="h-6 w-6" />
@@ -418,11 +418,11 @@ export function SuggestionsPage() {
               <button
                 onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
                 disabled={currentIndex === 0}
-                className="h-12 w-12 rounded-full border border-[rgba(255,255,255,0.08)] flex items-center justify-center text-[var(--brand-text-secondary)] hover:bg-[rgba(255,255,255,0.05)] disabled:opacity-20 transition-all"
+                className="h-12 w-12 rounded-full border border-[var(--glass-surface-hover)] flex items-center justify-center text-[var(--brand-text-secondary)] hover:bg-[var(--glass-surface)] disabled:opacity-20 transition-all"
               >
                 <ChevronLeft className="h-6 w-6" />
               </button>
-              <div className="h-1 w-24 bg-[rgba(255,255,255,0.05)] rounded-full overflow-hidden">
+              <div className="h-1 w-24 bg-[var(--glass-surface)] rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-blue-500/50 transition-all duration-300"
                   style={{ width: `${((currentIndex + 1) / pendingSuggestions.length) * 100}%` }}
@@ -431,7 +431,7 @@ export function SuggestionsPage() {
               <button
                 onClick={() => setCurrentIndex(prev => Math.min(pendingSuggestions.length - 1, prev + 1))}
                 disabled={currentIndex === pendingSuggestions.length - 1}
-                className="h-12 w-12 rounded-full border border-[rgba(255,255,255,0.08)] flex items-center justify-center text-[var(--brand-text-secondary)] hover:bg-[rgba(255,255,255,0.05)] disabled:opacity-20 transition-all"
+                className="h-12 w-12 rounded-full border border-[var(--glass-surface-hover)] flex items-center justify-center text-[var(--brand-text-secondary)] hover:bg-[var(--glass-surface)] disabled:opacity-20 transition-all"
               >
                 <ChevronRight className="h-6 w-6" />
               </button>
@@ -475,7 +475,7 @@ export function SuggestionsPage() {
                       "px-3 py-1.5 rounded-full text-xs font-medium transition-all border",
                       rationale === option 
                         ? "bg-blue-600/20 border-blue-500 text-blue-400" 
-                        : "bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.08)] text-[var(--brand-text-secondary)] hover:bg-[rgba(255,255,255,0.1)]"
+                        : "bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] text-[var(--brand-text-secondary)] hover:bg-[rgba(255,255,255,0.1)]"
                     )}
                   >
                     {option}

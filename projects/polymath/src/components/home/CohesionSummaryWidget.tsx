@@ -40,7 +40,7 @@ export function CohesionSummaryWidget() {
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-        <div className="animate-pulse bg-[rgba(255,255,255,0.05)] rounded-2xl h-32 border border-[rgba(255,255,255,0.08)]" />
+        <div className="animate-pulse bg-[var(--glass-surface)] rounded-2xl h-32 border border-[var(--glass-surface-hover)]" />
       </div>
     );
   }
@@ -52,7 +52,7 @@ export function CohesionSummaryWidget() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-3xl p-8 border border-[rgba(255,255,255,0.08)] backdrop-blur-3xl bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-transparent"
+        className="relative overflow-hidden rounded-3xl p-8 border border-[var(--glass-surface-hover)] backdrop-blur-3xl bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-transparent"
       >
         <div className="absolute top-0 right-0 p-4 opacity-20">
           <Sparkles className="h-12 w-12 text-indigo-400" />
@@ -75,7 +75,7 @@ export function CohesionSummaryWidget() {
               <Link
                 key={idx}
                 to={flow.action_url}
-                className="group flex items-center gap-4 p-4 rounded-2xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.05)] hover:border-indigo-500/30 hover:bg-[rgba(255,255,255,0.1)] transition-all duration-300"
+                className="group flex items-center gap-4 p-4 rounded-2xl bg-[var(--glass-surface)] border border-[var(--glass-surface)] hover:border-indigo-500/30 hover:bg-[rgba(255,255,255,0.1)] transition-all duration-300"
               >
                 <div className="h-10 w-10 flex-shrink-0 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform">
                   {flow.icon === 'zap' && <Zap className="h-5 w-5" />}

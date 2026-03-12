@@ -67,7 +67,7 @@ export function PWAInstallBanner() {
           <button
             onClick={handleDismiss}
             className="absolute top-3 right-3 p-1 rounded-lg hover:bg-[rgba(255,255,255,0.1)] transition-colors"
-            style={{ color: 'var(--premium-text-tertiary)' }}
+            style={{ color: 'var(--brand-text-muted)' }}
           >
             <X className="h-4 w-4" />
           </button>
@@ -77,17 +77,17 @@ export function PWAInstallBanner() {
             <div
               className="flex-shrink-0 h-12 w-12 rounded-xl flex items-center justify-center"
               style={{
-                background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))'
+                background: 'linear-gradient(135deg, var(--brand-primary), var(--premium-indigo))'
               }}
             >
               <Smartphone className="h-6 w-6 text-[var(--brand-text-primary)]" />
             </div>
 
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-bold mb-1" style={{ color: 'var(--premium-text-primary)' }}>
+              <h3 className="text-lg font-bold mb-1" style={{ color: 'var(--brand-text-primary)' }}>
                 Install Aperture
               </h3>
-              <p className="text-sm leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
+              <p className="text-sm leading-relaxed" style={{ color: 'var(--brand-text-secondary)' }}>
                 Install on your device for a faster, app-like experience with offline support
               </p>
             </div>
@@ -101,8 +101,8 @@ export function PWAInstallBanner() {
               'Home screen shortcut',
               'No browser chrome'
             ].map((feature, index) => (
-              <div key={index} className="flex items-center gap-2 text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
-                <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: 'var(--premium-blue)' }} />
+              <div key={index} className="flex items-center gap-2 text-sm" style={{ color: 'var(--brand-text-secondary)' }}>
+                <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: 'var(--brand-primary)' }} />
                 {feature}
               </div>
             ))}
@@ -115,7 +115,7 @@ export function PWAInstallBanner() {
               className="flex-1 px-4 py-2.5 rounded-xl font-medium border transition-all"
               style={{
                 borderColor: 'rgba(255, 255, 255, 0.1)',
-                color: 'var(--premium-text-secondary)'
+                color: 'var(--brand-text-secondary)'
               }}
             >
               Not now
@@ -124,7 +124,7 @@ export function PWAInstallBanner() {
               onClick={handleInstall}
               className="flex-1 px-4 py-2.5 rounded-xl font-medium flex items-center justify-center gap-2 transition-all"
               style={{
-                background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
+                background: 'linear-gradient(135deg, var(--brand-primary), var(--premium-indigo))',
                 color: 'white',
                 boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
               }}

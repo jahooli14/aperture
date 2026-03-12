@@ -1,11 +1,9 @@
-# Unified Aperture Modern Theme tailwind integration
-# This script will read theme.css and inject its variables into tailwind.config.js
-# and clean up components to use standardized classes.
+# Unified Aperture Modern Theme standardization script
 import os
 import re
 
 tailwind_content = """/** @type {import('tailwindcss').Config} */
-export default {
+module.exports = {
   darkMode: ["class"],
   content: [
     './index.html',
@@ -26,17 +24,21 @@ export default {
         'space-12': '96px',
       },
       borderRadius: {
-        lg: 'var(--brand-radius, var(--radius))',
-        md: 'calc(var(--brand-radius, var(--radius)) - 2px)',
-        sm: 'calc(var(--brand-radius, var(--radius)) - 4px)'
+        '2xl': 'var(--brand-radius-lg)',
+        xl: 'var(--brand-radius)',
+        lg: 'var(--brand-radius-sm)',
+        md: 'calc(var(--brand-radius-sm) - 2px)',
+        sm: 'calc(var(--brand-radius-sm) - 4px)'
       },
       colors: {
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         brand: {
-          primary: 'var(--brand-primary)',
+          primary: 'rgb(var(--brand-primary-rgb))',
           bg: 'var(--brand-bg)',
           glass: 'var(--brand-glass-bg)',
+          surface: 'var(--glass-surface)',
+          border: 'var(--glass-border)',
         },
         'brand-text': {
           primary: 'var(--brand-text-primary)',
@@ -95,23 +97,48 @@ with open('/Users/danielcroome-horgan/Aperture/projects/polymath/tailwind.config
 
 src_dir = '/Users/danielcroome-horgan/Aperture/projects/polymath/src'
 
-def process_colors(filepath):
+def process_content(filepath):
     with open(filepath, 'r') as f:
         content = f.read()
 
     original_content = content
     
-    # Text colors
+    # 0. Suffix Standardization
+    content = content.replace('-raw', '-rgb')
+    
+    # 1. Standardize Rounding
+    content = re.sub(r'(?<![-])rounded-sm(?![-\w])', 'rounded-lg', content)
+    content = re.sub(r'(?<![-])rounded(?![-\w])', 'rounded-xl', content)
+    
+    # 2. Hardcoded RGBA Surfaces (Common opacities)
+    # 0.02 - 0.04 -> subtle
+    content = re.sub(r'rgba\(255,\s*255,\s*255,\s*0\.0[2-4]\)', 'var(--glass-surface)', content)
+    # 0.05 - 0.07 -> standard surface
+    content = re.sub(r'rgba\(255,\s*255,\s*255,\s*0\.0[5-7]\)', 'var(--glass-surface)', content)
+    # 0.08 - 0.12 -> hover/active
+    content = re.sub(r'rgba\(255,\s*255,\s*255,\s*0\.(08|09|1[0-2])\)', 'var(--glass-surface-hover)', content)
+    
+    # 3. Tailwind Glass Classes
+    content = re.sub(r'bg-white/5|bg-white/\[0\.05\]|bg-white/\[0\.06\]', 'bg-brand-surface', content)
+    content = re.sub(r'bg-white/10|bg-white/\[0\.1\]|bg-white/\[0\.08\]', 'bg-brand-surface/80', content) 
+    content = re.sub(r'border-white/10|border-white/5|border-white/\[0\.08\]|border-white/\[0\.1\]', 'border-brand-border', content)
+    
+    # 4. Global Variable Migration (Premium -> Brand) with Optional Fallback
+    content = re.sub(r'var\(--premium-text-primary[^)]*\)', 'var(--brand-text-primary)', content)
+    content = re.sub(r'var\(--premium-text-secondary[^)]*\)', 'var(--brand-text-secondary)', content)
+    content = re.sub(r'var\(--premium-text-tertiary[^)]*\)', 'var(--brand-text-muted)', content)
+    content = re.sub(r'var\(--premium-blue[^)]*\)', 'var(--brand-primary)', content)
+    content = re.sub(r'var\(--premium-surface-base[^)]*\)', 'var(--brand-bg)', content)
+    content = re.sub(r'var\(--premium-bg-2[^)]*\)', 'var(--brand-glass-bg)', content)
+    content = re.sub(r'var\(--premium-bg-3[^)]*\)', 'var(--glass-surface)', content)
+    
+    # 5. Tailwind Color Mappings
     content = re.sub(r'text-slate-200|text-white|text-gray-100|text-gray-50', 'text-brand-text-primary', content)
     content = re.sub(r'text-slate-300|text-slate-400|text-gray-300|text-gray-400', 'text-brand-text-secondary', content)
     content = re.sub(r'text-slate-500|text-gray-500|text-neutral-500', 'text-brand-text-muted', content)
     
-    # Bg / Border colors common in dark mode
-    content = re.sub(r'border-white/10|border-white/5|border-slate-800', 'border-[rgba(255,255,255,0.08)]', content)
-    content = re.sub(r'bg-white/5|bg-white/10|bg-slate-800/50|bg-slate-900/50', 'bg-brand-glass', content)
-    
-    # Primary brand coloring mappings
     content = re.sub(r'text-blue-500|text-cyan-400|text-cyan-500', 'text-brand-primary', content)
+    content = re.sub(r'bg-\[#0f1[78]29\]|bg-gray-900', 'bg-brand-bg', content)
     
     if content != original_content:
         with open(filepath, 'w') as f:
@@ -123,7 +150,7 @@ modified_count = 0
 for root, _, files in os.walk(src_dir):
     for file in files:
         if file.endswith(('.tsx', '.ts', '.jsx', '.js')):
-            if process_colors(os.path.join(root, file)):
+            if process_content(os.path.join(root, file)):
                 modified_count += 1
 
-print(f"Standardized colors in {modified_count} components.")
+print(f"Standardized design language in {modified_count} components.")

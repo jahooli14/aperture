@@ -56,18 +56,18 @@ export function PinOverlay() {
         style={{
           bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)',
           borderColor: 'rgba(255, 255, 255, 0.1)',
-          backgroundColor: 'var(--premium-surface-base)'
+          backgroundColor: 'var(--brand-bg)'
         }}
       >
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <span className="text-xs font-semibold px-2 py-1 rounded-full" style={{
               backgroundColor: 'rgba(59, 130, 246, 0.2)',
-              color: 'var(--premium-blue)'
+              color: 'var(--brand-primary)'
             }}>
               Pinned
             </span>
-            <h3 className="font-semibold truncate" style={{ color: 'var(--premium-text-primary)' }}>
+            <h3 className="font-semibold truncate" style={{ color: 'var(--brand-text-primary)' }}>
               {pinnedItem?.title}
             </h3>
           </div>
@@ -77,7 +77,7 @@ export function PinOverlay() {
               unpinItem()
             }}
             className="h-8 w-8 rounded-lg flex items-center justify-center transition-colors hover:bg-[rgba(255,255,255,0.1)]"
-            style={{ color: 'var(--premium-text-secondary)' }}
+            style={{ color: 'var(--brand-text-secondary)' }}
             title="Unpin"
           >
             <X className="h-4 w-4" />
@@ -100,7 +100,7 @@ export function PinOverlay() {
           top: viewState === 'maximized' ? '5%' : '50%',
           bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)',
           borderColor: 'rgba(255, 255, 255, 0.1)',
-          backgroundColor: 'var(--premium-surface-base)',
+          backgroundColor: 'var(--brand-bg)',
           overscrollBehavior: 'contain'
         }}
       >
@@ -111,16 +111,16 @@ export function PinOverlay() {
           dragElastic={0.2}
           onDragEnd={handleDragEnd}
           className="flex items-center justify-between px-4 py-3 border-b cursor-grab active:cursor-grabbing"
-          style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }}
+          style={{ borderColor: 'var(--glass-surface)' }}
         >
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <span className="text-xs font-semibold px-2 py-1 rounded-full" style={{
               backgroundColor: 'rgba(59, 130, 246, 0.2)',
-              color: 'var(--premium-blue)'
+              color: 'var(--brand-primary)'
             }}>
               Pinned
             </span>
-            <h3 className="font-semibold truncate" style={{ color: 'var(--premium-text-primary)' }}>
+            <h3 className="font-semibold truncate" style={{ color: 'var(--brand-text-primary)' }}>
               {pinnedItem?.title}
             </h3>
           </div>
@@ -129,7 +129,7 @@ export function PinOverlay() {
             <button
               onClick={unpinItem}
               className="h-8 w-8 rounded-lg flex items-center justify-center transition-colors hover:bg-[rgba(255,255,255,0.1)]"
-              style={{ color: 'var(--premium-text-secondary)' }}
+              style={{ color: 'var(--brand-text-secondary)' }}
               title="Unpin"
             >
               <X className="h-4 w-4" />

@@ -93,7 +93,7 @@ export function SmartSuggestionWidget() {
     switch (type) {
       case 'project':
         return {
-          primary: 'var(--premium-blue)',
+          primary: 'var(--brand-primary)',
           bg: 'rgba(59, 130, 246, 0.15)',
           border: 'rgba(59, 130, 246, 0.3)'
         }
@@ -111,8 +111,8 @@ export function SmartSuggestionWidget() {
         }
       case 'rest':
         return {
-          primary: 'var(--premium-text-tertiary)',
-          bg: 'rgba(255, 255, 255, 0.05)',
+          primary: 'var(--brand-text-muted)',
+          bg: 'var(--glass-surface)',
           border: 'rgba(255, 255, 255, 0.1)'
         }
       default:
@@ -127,13 +127,13 @@ export function SmartSuggestionWidget() {
   const getEnergyColor = (level?: string) => {
     switch (level) {
       case 'high':
-        return 'var(--premium-blue)'
+        return 'var(--brand-primary)'
       case 'moderate':
         return 'var(--premium-amber)'
       case 'low':
         return 'var(--premium-emerald)'
       default:
-        return 'var(--premium-text-tertiary)'
+        return 'var(--brand-text-muted)'
     }
   }
 
@@ -141,8 +141,8 @@ export function SmartSuggestionWidget() {
     return (
       <div className="premium-card p-8">
         <div className="flex flex-col items-center justify-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--premium-blue)' }} />
-          <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
+          <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--brand-primary)' }} />
+          <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>
             Analyzing your context...
           </p>
         </div>
@@ -175,20 +175,20 @@ export function SmartSuggestionWidget() {
               >
                 {getTypeIcon(suggestion.type)}
               </div>
-              <h3 className="text-lg font-bold" style={{ color: 'var(--premium-text-primary)' }}>
+              <h3 className="text-lg font-bold" style={{ color: 'var(--brand-text-primary)' }}>
                 What should I do right now?
               </h3>
             </div>
             <button
               onClick={handleRefresh}
-              className="p-2 rounded-lg hover:bg-[rgba(255,255,255,0.05)] transition-colors"
-              style={{ color: 'var(--premium-text-tertiary)' }}
+              className="p-2 rounded-lg hover:bg-[var(--glass-surface)] transition-colors"
+              style={{ color: 'var(--brand-text-muted)' }}
               title="Refresh suggestion"
             >
               <RefreshCw className="h-4 w-4" />
             </button>
           </div>
-          <p className="text-sm leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
+          <p className="text-sm leading-relaxed" style={{ color: 'var(--brand-text-secondary)' }}>
             {suggestion.reasoning}
           </p>
         </div>
@@ -196,14 +196,14 @@ export function SmartSuggestionWidget() {
         {/* Main Action */}
         <div
           onClick={() => suggestion.type !== 'rest' && handleSuggestionClick(suggestion)}
-          className={`p-5 ${suggestion.type !== 'rest' ? 'cursor-pointer hover:bg-[rgba(255,255,255,0.05)] transition-all' : ''}`}
+          className={`p-5 ${suggestion.type !== 'rest' ? 'cursor-pointer hover:bg-[var(--glass-surface)] transition-all' : ''}`}
         >
           <div className="flex items-start gap-4">
             <div className="flex-1 min-w-0">
               <h4 className="text-xl font-bold mb-2 premium-text-platinum">
                 {suggestion.title}
               </h4>
-              <p className="text-base leading-relaxed mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
+              <p className="text-base leading-relaxed mb-4" style={{ color: 'var(--brand-text-secondary)' }}>
                 {suggestion.description}
               </p>
 
@@ -218,7 +218,7 @@ export function SmartSuggestionWidget() {
                   </div>
                 )}
                 {suggestion.energyLevel && suggestion.energyLevel !== 'none' && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full" style={{ backgroundColor: 'var(--glass-surface)' }}>
                     <Battery className="h-4 w-4" style={{ color: getEnergyColor(suggestion.energyLevel) }} />
                     <span className="text-sm font-medium capitalize" style={{ color: getEnergyColor(suggestion.energyLevel) }}>
                       {suggestion.energyLevel} energy
@@ -245,8 +245,8 @@ export function SmartSuggestionWidget() {
               }}
               className="w-full text-sm font-medium py-2 rounded-lg transition-colors"
               style={{
-                color: 'var(--premium-text-tertiary)',
-                backgroundColor: 'rgba(255, 255, 255, 0.02)'
+                color: 'var(--brand-text-muted)',
+                backgroundColor: 'var(--glass-surface)'
               }}
             >
               {showAlternatives ? 'Hide' : 'Show'} other options ({alternatives.length})
@@ -273,7 +273,7 @@ export function SmartSuggestionWidget() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
                   onClick={() => alt.type !== 'rest' && handleSuggestionClick(alt)}
-                  className={`premium-card p-4 ${alt.type !== 'rest' ? 'cursor-pointer hover:bg-[rgba(255,255,255,0.05)] transition-all' : ''}`}
+                  className={`premium-card p-4 ${alt.type !== 'rest' ? 'cursor-pointer hover:bg-[var(--glass-surface)] transition-all' : ''}`}
                   style={{ borderColor: altColors.border }}
                 >
                   <div className="flex items-start gap-3">
@@ -284,15 +284,15 @@ export function SmartSuggestionWidget() {
                       {getTypeIcon(alt.type)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h5 className="font-bold mb-1" style={{ color: 'var(--premium-text-primary)' }}>
+                      <h5 className="font-bold mb-1" style={{ color: 'var(--brand-text-primary)' }}>
                         {alt.title}
                       </h5>
-                      <p className="text-sm line-clamp-2" style={{ color: 'var(--premium-text-secondary)' }}>
+                      <p className="text-sm line-clamp-2" style={{ color: 'var(--brand-text-secondary)' }}>
                         {alt.description}
                       </p>
                       <div className="flex gap-2 mt-2">
                         {alt.estimatedTime && (
-                          <span className="text-xs flex items-center gap-1" style={{ color: 'var(--premium-text-tertiary)' }}>
+                          <span className="text-xs flex items-center gap-1" style={{ color: 'var(--brand-text-muted)' }}>
                             <Clock className="h-3 w-3" />
                             {alt.estimatedTime}m
                           </span>

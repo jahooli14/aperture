@@ -93,13 +93,13 @@ export function PromptModal({
         <button
           onClick={handleSkip}
           className="p-2 rounded-full transition-colors active:bg-[rgba(255,255,255,0.1)]"
-          style={{ color: 'var(--premium-text-secondary)' }}
+          style={{ color: 'var(--brand-text-secondary)' }}
           disabled={submitting}
         >
           <X className="h-5 w-5" />
         </button>
         {promptNumber && totalPrompts && (
-          <span className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
+          <span className="text-sm" style={{ color: 'var(--brand-text-muted)' }}>
             {promptNumber}/{totalPrompts}
           </span>
         )}
@@ -107,15 +107,15 @@ export function PromptModal({
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4 pb-48">
-        <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--premium-text-primary)' }}>{prompt.prompt_text}</h2>
+        <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--brand-text-primary)' }}>{prompt.prompt_text}</h2>
         {prompt.prompt_description && (
-          <p className="text-sm mb-6" style={{ color: 'var(--premium-text-secondary)' }}>{prompt.prompt_description}</p>
+          <p className="text-sm mb-6" style={{ color: 'var(--brand-text-secondary)' }}>{prompt.prompt_description}</p>
         )}
 
         <div className="space-y-3">
           {bullets.map((bullet, index) => (
-            <div key={index} className="p-3 rounded-lg flex gap-3 items-start" style={{ backgroundColor: 'var(--premium-bg-2)' }}>
-              <span className="pt-3" style={{ color: 'var(--premium-text-tertiary)' }}>•</span>
+            <div key={index} className="p-3 rounded-lg flex gap-3 items-start" style={{ backgroundColor: 'var(--brand-glass-bg)' }}>
+              <span className="pt-3" style={{ color: 'var(--brand-text-muted)' }}>•</span>
               <Textarea
                 value={bullet}
                 onChange={(e) => handleBulletChange(index, e.target.value)}
@@ -128,7 +128,7 @@ export function PromptModal({
                 <button
                   onClick={() => handleRemoveBullet(index)}
                   className="p-2 rounded-full transition-colors mt-2 active:bg-[rgba(255,255,255,0.1)]"
-                  style={{ color: 'var(--premium-text-tertiary)' }}
+                  style={{ color: 'var(--brand-text-muted)' }}
                   disabled={submitting}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -142,7 +142,7 @@ export function PromptModal({
           <button
             onClick={handleAddBullet}
             className="flex items-center gap-2 text-sm font-medium active:opacity-70 touch-manipulation"
-            style={{ color: 'var(--premium-blue)' }}
+            style={{ color: 'var(--brand-primary)' }}
             disabled={submitting}
           >
             <Plus className="h-4 w-4" />
@@ -151,10 +151,10 @@ export function PromptModal({
         </div>
 
         <div className="mt-6 p-4 rounded-lg" style={{
-          backgroundColor: 'var(--premium-bg-3)',
+          backgroundColor: 'var(--glass-surface)',
           border: 'none'
         }}>
-          <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
+          <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>
             💡 <strong>Be specific!</strong> AI can't suggest great projects from vague responses.
             Add concrete details, names, feelings, and examples.
           </p>
@@ -162,7 +162,7 @@ export function PromptModal({
 
         {error && (
           <div className="mt-6 p-4 rounded-lg" style={{
-            backgroundColor: 'var(--premium-bg-3)',
+            backgroundColor: 'var(--glass-surface)',
             border: 'none'
           }}>
             <p className="text-sm" style={{ color: '#ef4444' }}>{error}</p>
@@ -173,7 +173,7 @@ export function PromptModal({
       {/* Sticky Footer */}
       <div className="fixed left-0 right-0 p-4 shadow-lg" style={{
         bottom: '80px',
-        backgroundColor: 'var(--premium-bg-2)',
+        backgroundColor: 'var(--brand-glass-bg)',
         borderTop: '1px solid rgba(255, 255, 255, 0.1)',
         zIndex: 60
       }}>
@@ -182,7 +182,7 @@ export function PromptModal({
           disabled={submitting}
           className="w-full py-6 text-lg"
           style={{
-            background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
+            background: 'linear-gradient(135deg, var(--brand-primary), var(--premium-indigo))',
             color: 'white'
           }}
         >
@@ -191,7 +191,7 @@ export function PromptModal({
         <button
           onClick={handleSkip}
           className="w-full py-3 text-sm mt-2 active:opacity-70 touch-manipulation"
-          style={{ color: 'var(--premium-text-tertiary)' }}
+          style={{ color: 'var(--brand-text-muted)' }}
           disabled={submitting}
         >
           Skip for now

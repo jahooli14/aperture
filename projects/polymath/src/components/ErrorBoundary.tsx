@@ -67,7 +67,7 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <div
           className="min-h-screen flex items-center justify-center p-4"
-          style={{ backgroundColor: 'var(--premium-surface-base)' }}
+          style={{ backgroundColor: 'var(--brand-bg)' }}
         >
           <div
             className="max-w-md w-full premium-card p-8 text-center"
@@ -86,14 +86,14 @@ export class ErrorBoundary extends Component<Props, State> {
 
             <h2
               className="text-2xl font-bold mb-3"
-              style={{ color: 'var(--premium-text-primary)' }}
+              style={{ color: 'var(--brand-text-primary)' }}
             >
               Something went wrong
             </h2>
 
             <p
               className="mb-6 text-sm"
-              style={{ color: 'var(--premium-text-secondary)' }}
+              style={{ color: 'var(--brand-text-secondary)' }}
             >
               We've encountered an unexpected error. Please refresh the page to continue.
             </p>
@@ -141,7 +141,7 @@ export class ErrorBoundary extends Component<Props, State> {
               onClick={this.handleReset}
               className="premium-glass px-6 py-3 rounded-lg font-medium transition-all hover:bg-[rgba(255,255,255,0.1)]"
               style={{
-                color: 'var(--premium-blue)'
+                color: 'var(--brand-primary)'
               }}
             >
               Reload Page

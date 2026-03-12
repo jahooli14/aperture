@@ -51,15 +51,15 @@ import { useBedtimeNotifications } from './hooks/useBedtimeNotifications'
 
 function PageLoader() {
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--brand-bg)' }}>
       <div className="w-full max-w-7xl px-4">
         <div className="shimmer h-12 w-64 mx-auto rounded-lg mb-8"></div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <div key={i} className="premium-card p-6 space-y-4">
-              <div className="shimmer h-6 w-3/4 rounded"></div>
-              <div className="shimmer h-4 w-full rounded"></div>
-              <div className="shimmer h-4 w-5/6 rounded"></div>
+              <div className="shimmer h-6 w-3/4 rounded-xl"></div>
+              <div className="shimmer h-4 w-full rounded-xl"></div>
+              <div className="shimmer h-4 w-5/6 rounded-xl"></div>
               <div className="flex gap-2">
                 <div className="shimmer h-6 w-16 rounded-full"></div>
                 <div className="shimmer h-6 w-20 rounded-full"></div>
@@ -112,7 +112,7 @@ function ShareTargetFallback() {
   }, [navigate, location])
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-[#0f1729]">
+    <div className="flex items-center justify-center min-h-screen bg-brand-bg">
       <div className="text-center">
         <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-[var(--brand-primary)]" />
         <p className="text-[var(--brand-text-secondary)] font-medium">Saving article...</p>

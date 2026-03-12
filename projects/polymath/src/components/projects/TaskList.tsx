@@ -177,7 +177,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
             Task Checklist
           </h3>
           {totalCount > 0 && (
-            <p className="text-xs mt-0.5" style={{ color: 'var(--premium-text-tertiary)' }}>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--brand-text-muted)' }}>
               {completedCount} of {totalCount} completed
             </p>
           )}
@@ -199,11 +199,11 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
               onDragOver={(e) => handleDragOver(e, task.id)}
               onDragEnd={handleDragEnd}
               className={cn(
-                "group relative flex items-center gap-3 p-3.5 rounded-xl transition-all cursor-move border border-[rgba(255,255,255,0.05)]",
+                "group relative flex items-center gap-3 p-3.5 rounded-xl transition-all cursor-move border border-[var(--glass-surface)]",
                 isHighlighted
                   ? "border-blue-500/40 bg-blue-500/10 shadow-[0_0_20px_rgba(59,130,246,0.1)]"
                   : isNextTask
-                    ? "bg-white/[0.05] border-[rgba(255,255,255,0.08)]"
+                    ? "bg-brand-surface border-[var(--glass-surface-hover)]"
                     : "hover:bg-white/[0.02]"
               )}
               style={{
@@ -230,7 +230,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
               <button
                 onClick={() => handleToggleTask(task.id)}
                 className={cn(
-                  "flex-shrink-0 h-6 w-6 rounded-sm flex items-center justify-center transition-all border-2",
+                  "flex-shrink-0 h-6 w-6 rounded-lg flex items-center justify-center transition-all border-2",
                   isHighlighted ? "border-blue-500/50 bg-blue-500/5" : "border-white/20 bg-black/20"
                 )}
               >
@@ -249,7 +249,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                       if (e.key === 'Enter') handleEditSave(task.id)
                       if (e.key === 'Escape') handleEditCancel()
                     }}
-                    className="w-full px-2 py-1 text-sm rounded bg-[rgba(255,255,255,0.1)] outline-none ring-1 ring-blue-500/50"
+                    className="w-full px-2 py-1 text-sm rounded-xl bg-[rgba(255,255,255,0.1)] outline-none ring-1 ring-blue-500/50"
                     style={{ color: 'white' }}
                     autoFocus
                   />
@@ -272,10 +272,10 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                           handleEstimateChange(task.id, task.estimated_minutes)
                         }}
                         className={cn(
-                          "text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded transition-colors",
+                          "text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-xl transition-colors",
                           task.estimated_minutes
                             ? "bg-[rgba(255,255,255,0.1)] text-[var(--brand-text-primary)]/70 hover:bg-white/20"
-                            : "bg-[rgba(255,255,255,0.05)] text-[var(--brand-text-primary)]/30 hover:bg-[rgba(255,255,255,0.1)]"
+                            : "bg-[var(--glass-surface)] text-[var(--brand-text-primary)]/30 hover:bg-[rgba(255,255,255,0.1)]"
                         )}
                       >
                         {task.estimated_minutes ? `${task.estimated_minutes}m` : '15m'}
@@ -314,8 +314,8 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
           <div className="mt-3">
             <button
               onClick={() => setShowCompleted(!showCompleted)}
-              className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-[rgba(255,255,255,0.05)] transition-colors text-sm"
-              style={{ color: 'var(--premium-text-tertiary)' }}
+              className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-[var(--glass-surface)] transition-colors text-sm"
+              style={{ color: 'var(--brand-text-muted)' }}
             >
               {showCompleted ? (
                 <ChevronDown className="h-4 w-4" />
@@ -332,18 +332,18 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                 {completedTasks.map((task) => (
                   <div
                     key={task.id}
-                    className="group flex items-center gap-2 p-2.5 rounded-sm transition-all"
+                    className="group flex items-center gap-2 p-2.5 rounded-lg transition-all"
                     style={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.02)'
+                      backgroundColor: 'var(--glass-surface)'
                     }}
                   >
                     {/* Checkbox */}
                     <button
                       onClick={() => handleToggleTask(task.id)}
-                      className="flex-shrink-0 h-5 w-5 rounded flex items-center justify-center transition-all"
+                      className="flex-shrink-0 h-5 w-5 rounded-xl flex items-center justify-center transition-all"
                       style={{
-                        backgroundColor: 'var(--premium-blue)',
-                        border: '2px solid var(--premium-blue)'
+                        backgroundColor: 'var(--brand-primary)',
+                        border: '2px solid var(--brand-primary)'
                       }}
                     >
                       <Check className="h-3 w-3 text-[var(--brand-text-primary)]" />
@@ -360,15 +360,15 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                           if (e.key === 'Enter') handleEditSave(task.id)
                           if (e.key === 'Escape') handleEditCancel()
                         }}
-                        className="flex-1 px-2 py-1 text-sm rounded focus:outline-none focus:ring-2 bg-[rgba(255,255,255,0.1)]"
-                        style={{ color: 'var(--premium-text-primary)' }}
+                        className="flex-1 px-2 py-1 text-sm rounded-xl focus:outline-none focus:ring-2 bg-[rgba(255,255,255,0.1)]"
+                        style={{ color: 'var(--brand-text-primary)' }}
                         autoFocus
                       />
                     ) : (
                       <span
                         className="flex-1 text-sm line-through cursor-text hover:opacity-70 transition-opacity"
                         onClick={() => handleEditStart(task.id, task.text)}
-                        style={{ color: 'var(--premium-text-tertiary)' }}
+                        style={{ color: 'var(--brand-text-muted)' }}
                       >
                         {task.text}
                       </span>
@@ -378,7 +378,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                     <button
                       onClick={() => handleDeleteTask(task.id)}
                       className="flex-shrink-0 h-7 w-7 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-all"
-                      style={{ color: 'var(--premium-text-tertiary)' }}
+                      style={{ color: 'var(--brand-text-muted)' }}
                       aria-label="Delete task"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -408,9 +408,9 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
             }}
             placeholder="Task description..."
             autoFocus
-            className="flex-1 px-3 py-2 text-sm rounded-sm focus:outline-none focus:ring-2 premium-glass"
+            className="flex-1 px-3 py-2 text-sm rounded-lg focus:outline-none focus:ring-2 premium-glass"
             style={{
-              color: 'var(--premium-text-primary)'
+              color: 'var(--brand-text-primary)'
             }}
           />
           <button
@@ -422,7 +422,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
               border: '1.5px solid rgba(59,130,246,0.4)',
               borderRadius: '4px',
               boxShadow: '2px 2px 0 rgba(0,0,0,0.4)',
-              color: 'var(--premium-blue)',
+              color: 'var(--brand-primary)',
             }}
           >
             Add
@@ -432,9 +432,9 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
               setIsAdding(false)
               setNewTaskText('')
             }}
-            className="px-4 py-2 text-sm font-medium transition-all rounded-sm"
+            className="px-4 py-2 text-sm font-medium transition-all rounded-lg"
             style={{
-              color: 'var(--premium-text-primary)'
+              color: 'var(--brand-text-primary)'
             }}
           >
             Cancel
@@ -443,8 +443,8 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
       ) : (
         <button
           onClick={() => setIsAdding(true)}
-          className="mt-3 flex items-center gap-2 text-sm font-medium transition-colors w-full p-2 rounded-lg hover:bg-[rgba(255,255,255,0.05)]"
-          style={{ color: 'var(--premium-blue)' }}
+          className="mt-3 flex items-center gap-2 text-sm font-medium transition-colors w-full p-2 rounded-lg hover:bg-[var(--glass-surface)]"
+          style={{ color: 'var(--brand-primary)' }}
         >
           <Plus className="h-4 w-4" />
           Add task
@@ -456,7 +456,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
 
       {/* Empty State */}
       {tasks.length === 0 && !isAdding && (
-        <div className="text-center py-8" style={{ color: 'var(--premium-text-tertiary)' }}>
+        <div className="text-center py-8" style={{ color: 'var(--brand-text-muted)' }}>
           <p className="text-sm">No tasks yet</p>
           <p className="text-xs mt-1">Break down your project into steps</p>
         </div>
@@ -486,10 +486,10 @@ function LinkedTodos({ projectId }: { projectId: string }) {
   const doneTodos = linkedTodos.filter(t => t.done)
 
   return (
-    <div className="mt-4 pt-4 border-t border-white/5">
+    <div className="mt-4 pt-4 border-t border-brand-border">
       <div className="flex items-center gap-2 mb-3">
-        <ListTodo className="h-3.5 w-3.5" style={{ color: 'var(--premium-blue)' }} />
-        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--premium-text-tertiary)' }}>
+        <ListTodo className="h-3.5 w-3.5" style={{ color: 'var(--brand-primary)' }} />
+        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--brand-text-muted)' }}>
           Linked Todos
         </span>
         <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(59,130,246,0.1)', color: 'rgba(96,165,250,0.8)' }}>
@@ -503,9 +503,9 @@ function LinkedTodos({ projectId }: { projectId: string }) {
               onClick={() => toggleTodo(todo.id)}
               className="flex-shrink-0 h-5 w-5 rounded-md flex items-center justify-center border-2 border-white/20 bg-black/20 transition-all hover:border-blue-500/50"
             >
-              {todo.done && <Check className="h-3 w-3 text-white" />}
+              {todo.done && <Check className="h-3 w-3 text-brand-text-primary" />}
             </button>
-            <span className="text-sm" style={{ color: 'var(--premium-text-primary)' }}>
+            <span className="text-sm" style={{ color: 'var(--brand-text-primary)' }}>
               {todo.text}
             </span>
             {todo.source_memory_id && (
@@ -516,7 +516,7 @@ function LinkedTodos({ projectId }: { projectId: string }) {
           </div>
         ))}
         {doneTodos.length > 0 && (
-          <p className="text-[10px] pt-1" style={{ color: 'var(--premium-text-tertiary)' }}>
+          <p className="text-[10px] pt-1" style={{ color: 'var(--brand-text-muted)' }}>
             {doneTodos.length} completed
           </p>
         )}

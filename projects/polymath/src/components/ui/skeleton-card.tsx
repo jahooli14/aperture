@@ -17,8 +17,8 @@ export function SkeletonCard({ variant = 'default', count = 1, className }: Skel
               <div className="w-16 h-16 bg-[rgba(255,255,255,0.1)] rounded-lg flex-shrink-0" />
               <div className="flex-1 space-y-3">
                 <div className="h-5 bg-[rgba(255,255,255,0.1)] rounded-lg w-3/4" />
-                <div className="h-4 bg-[rgba(255,255,255,0.1)] rounded w-full" />
-                <div className="h-4 bg-[rgba(255,255,255,0.1)] rounded w-5/6" />
+                <div className="h-4 bg-[rgba(255,255,255,0.1)] rounded-xl w-full" />
+                <div className="h-4 bg-[rgba(255,255,255,0.1)] rounded-xl w-5/6" />
               </div>
             </div>
           </div>
@@ -30,8 +30,8 @@ export function SkeletonCard({ variant = 'default', count = 1, className }: Skel
             <div className="space-y-4">
               <div className="w-full h-32 bg-[rgba(255,255,255,0.1)] rounded-lg" />
               <div className="h-6 bg-[rgba(255,255,255,0.1)] rounded-lg w-3/4" />
-              <div className="h-4 bg-[rgba(255,255,255,0.1)] rounded w-full" />
-              <div className="h-4 bg-[rgba(255,255,255,0.1)] rounded w-4/5" />
+              <div className="h-4 bg-[rgba(255,255,255,0.1)] rounded-xl w-full" />
+              <div className="h-4 bg-[rgba(255,255,255,0.1)] rounded-xl w-4/5" />
             </div>
           </div>
         )
@@ -41,8 +41,8 @@ export function SkeletonCard({ variant = 'default', count = 1, className }: Skel
           <div className="premium-glass-subtle p-6 rounded-xl animate-pulse">
             <div className="space-y-3">
               <div className="h-6 bg-[rgba(255,255,255,0.1)] rounded-lg w-3/4" />
-              <div className="h-4 bg-[rgba(255,255,255,0.1)] rounded w-full" />
-              <div className="h-4 bg-[rgba(255,255,255,0.1)] rounded w-5/6" />
+              <div className="h-4 bg-[rgba(255,255,255,0.1)] rounded-xl w-full" />
+              <div className="h-4 bg-[rgba(255,255,255,0.1)] rounded-xl w-5/6" />
             </div>
           </div>
         )

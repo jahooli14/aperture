@@ -124,7 +124,7 @@ export const SuggestionCard = memo(function SuggestionCard({
 
           <CardDescription
             className="text-base leading-relaxed mb-4"
-            style={{ color: 'var(--premium-text-secondary)' }}
+            style={{ color: 'var(--brand-text-secondary)' }}
           >
             {suggestion.description}
           </CardDescription>
@@ -133,25 +133,25 @@ export const SuggestionCard = memo(function SuggestionCard({
           <div className="flex gap-2 mb-4">
             {/* Novelty */}
             <div className="flex-1">
-              <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--premium-text-tertiary)' }}>
+              <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--brand-text-muted)' }}>
                 Novelty
               </div>
-              <div className="h-1.5 rounded-full bg-[rgba(255,255,255,0.05)] overflow-hidden">
+              <div className="h-1.5 rounded-full bg-[var(--glass-surface)] overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-1000 ease-out"
                   style={{
                     width: `${(suggestion.novelty_score || 0) * 100}%`,
-                    backgroundColor: 'var(--premium-blue)'
+                    backgroundColor: 'var(--brand-primary)'
                   }}
                 />
               </div>
             </div>
             {/* Feasibility */}
             <div className="flex-1">
-              <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--premium-text-tertiary)' }}>
+              <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--brand-text-muted)' }}>
                 Feasibility
               </div>
-              <div className="h-1.5 rounded-full bg-[rgba(255,255,255,0.05)] overflow-hidden">
+              <div className="h-1.5 rounded-full bg-[var(--glass-surface)] overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-1000 ease-out"
                   style={{
@@ -163,10 +163,10 @@ export const SuggestionCard = memo(function SuggestionCard({
             </div>
             {/* Interest */}
             <div className="flex-1">
-              <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--premium-text-tertiary)' }}>
+              <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--brand-text-muted)' }}>
                 Interest
               </div>
-              <div className="h-1.5 rounded-full bg-[rgba(255,255,255,0.05)] overflow-hidden">
+              <div className="h-1.5 rounded-full bg-[var(--glass-surface)] overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-1000 ease-out"
                   style={{
@@ -180,12 +180,12 @@ export const SuggestionCard = memo(function SuggestionCard({
 
           {/* Synthesis Reasoning */}
           {suggestion.synthesis_reasoning && (
-            <div className="mb-4 p-3 rounded-lg bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.08)]">
+            <div className="mb-4 p-3 rounded-lg bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)]">
               <div className="flex items-center gap-2 mb-1">
                 <Lightbulb className="h-3 w-3 text-amber-400" />
                 <span className="text-xs font-bold text-amber-400 uppercase tracking-wide">Why this suggestion?</span>
               </div>
-              <p className="text-sm leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
+              <p className="text-sm leading-relaxed" style={{ color: 'var(--brand-text-secondary)' }}>
                 {suggestion.synthesis_reasoning}
               </p>
             </div>
@@ -194,7 +194,7 @@ export const SuggestionCard = memo(function SuggestionCard({
           {/* One-line insight based on capability overlap */}
           {suggestion.capabilities && suggestion.capabilities.length > 0 && (
             <div className="mb-4 p-3 premium-glass-subtle rounded-lg">
-              <p className="text-sm italic" style={{ color: 'var(--premium-text-secondary)' }}>
+              <p className="text-sm italic" style={{ color: 'var(--brand-text-secondary)' }}>
                 {suggestion.capabilities.length === 1
                   ? `Leverages your ${suggestion.capabilities[0].name} experience`
                   : suggestion.capabilities.length === 2
@@ -211,7 +211,7 @@ export const SuggestionCard = memo(function SuggestionCard({
             <div className="space-y-2">
               <p
                 className="text-xs font-semibold uppercase tracking-wide"
-                style={{ color: 'var(--premium-text-tertiary)' }}
+                style={{ color: 'var(--brand-text-muted)' }}
               >
                 Uses:
               </p>
@@ -222,7 +222,7 @@ export const SuggestionCard = memo(function SuggestionCard({
                     className="px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm"
                     style={{
                       background: 'rgba(59, 130, 246, 0.15)',
-                      color: 'var(--premium-blue)',
+                      color: 'var(--brand-primary)',
                       border: '1px solid rgba(59, 130, 246, 0.3)'
                     }}
                   >
@@ -234,7 +234,7 @@ export const SuggestionCard = memo(function SuggestionCard({
                     className="px-3 py-1.5 rounded-full text-xs font-semibold"
                     style={{
                       background: 'rgba(59, 130, 246, 0.1)',
-                      color: 'var(--premium-blue)',
+                      color: 'var(--brand-primary)',
                       border: '1px solid rgba(59, 130, 246, 0.2)'
                     }}
                   >
@@ -248,7 +248,7 @@ export const SuggestionCard = memo(function SuggestionCard({
 
         <CardFooter
           className="flex gap-2 border-t pt-4 relative z-10"
-          style={{ borderColor: 'rgba(255, 255, 255, 0.08)' }}
+          style={{ borderColor: 'var(--glass-surface-hover)' }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Rate 1-3 buttons - centered text */}
@@ -258,9 +258,9 @@ export const SuggestionCard = memo(function SuggestionCard({
             size="sm"
             className="flex-1 h-11 flex items-center justify-center"
             style={{
-              background: 'rgba(255, 255, 255, 0.05)',
+              background: 'var(--glass-surface)',
               border: '1.5px solid rgba(255, 255, 255, 0.1)',
-              color: 'var(--premium-text-secondary)'
+              color: 'var(--brand-text-secondary)'
             }}
             title="Not interested"
             disabled={loadingAction !== null}
@@ -275,7 +275,7 @@ export const SuggestionCard = memo(function SuggestionCard({
             style={{
               background: 'rgba(59, 130, 246, 0.1)',
               border: '1.5px solid rgba(59, 130, 246, 0.3)',
-              color: 'var(--premium-blue)'
+              color: 'var(--brand-primary)'
             }}
             title="Somewhat interesting"
             disabled={loadingAction !== null}
@@ -290,7 +290,7 @@ export const SuggestionCard = memo(function SuggestionCard({
             style={{
               background: 'rgba(59, 130, 246, 0.2)',
               border: '1.5px solid rgba(59, 130, 246, 0.4)',
-              color: 'var(--premium-blue)'
+              color: 'var(--brand-primary)'
             }}
             title="Very interesting"
             disabled={loadingAction !== null}
@@ -333,11 +333,11 @@ export const SuggestionCard = memo(function SuggestionCard({
                   onClick={() => setShowRatingDialog(false)}
                   className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded-lg transition-colors"
                 >
-                  <X className="h-5 w-5" style={{ color: 'var(--premium-text-secondary)' }} />
+                  <X className="h-5 w-5" style={{ color: 'var(--brand-text-secondary)' }} />
                 </button>
               </div>
 
-              <p className="text-sm mb-6" style={{ color: 'var(--premium-text-secondary)' }}>
+              <p className="text-sm mb-6" style={{ color: 'var(--brand-text-secondary)' }}>
                 {selectedRating === 3 && "Great! What excites you about this?"}
                 {selectedRating === 2 && "Interesting but not quite right? Tell us why"}
                 {selectedRating === 1 && "Why isn't this a good fit?"}
@@ -389,7 +389,7 @@ export const SuggestionCard = memo(function SuggestionCard({
                 onClick={() => setShowRatingDialog(false)}
                 className="w-full mt-6 p-3 rounded-lg text-sm font-medium transition-all"
                 style={{
-                  color: 'var(--premium-text-secondary)',
+                  color: 'var(--brand-text-secondary)',
                   border: '1px solid rgba(255, 255, 255, 0.1)'
                 }}
               >

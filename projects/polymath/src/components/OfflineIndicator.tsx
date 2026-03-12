@@ -34,7 +34,7 @@ export function OfflineIndicator() {
   if (isPulling && isOnline) {
     return (
       <div className="fixed top-2 right-2 z-50 pointer-events-none">
-        <div className="flex items-center gap-1.5 px-2 py-1 bg-[rgba(255,255,255,0.05)] backdrop-blur-sm rounded-full border border-[rgba(255,255,255,0.05)]">
+        <div className="flex items-center gap-1.5 px-2 py-1 bg-[var(--glass-surface)] backdrop-blur-sm rounded-full border border-[var(--glass-surface)]">
           <div className="w-1.5 h-1.5 rounded-full bg-blue-400/60 animate-pulse transition-opacity" />
           <span className="text-[9px] font-bold text-[var(--brand-text-primary)]/20 uppercase tracking-widest invisible group-hover:visible">Sync</span>
         </div>
@@ -130,14 +130,14 @@ export function OfflineIndicator() {
               <button
                 onClick={handleSyncNow}
                 disabled={!isOnline}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <RefreshCw className="h-4 w-4" />
                 <span className="text-sm font-medium">Sync now</span>
               </button>
               <button
                 onClick={handleClear}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded hover:bg-red-600 transition-colors"
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-red-600 transition-colors"
               >
                 <X className="h-4 w-4" />
                 <span className="text-sm font-medium">Clear queue</span>

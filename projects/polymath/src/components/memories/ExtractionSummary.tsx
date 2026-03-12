@@ -35,7 +35,7 @@ export function ExtractionSummary() {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 20, scale: 0.95 }}
           transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-          className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-3 rounded-2xl bg-[#1a1f35]/95 backdrop-blur-xl border border-[rgba(255,255,255,0.08)] shadow-2xl"
+          className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-3 rounded-2xl bg-[#1a1f35]/95 backdrop-blur-xl border border-[var(--glass-surface-hover)] shadow-2xl"
         >
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">

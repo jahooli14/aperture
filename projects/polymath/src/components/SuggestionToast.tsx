@@ -136,8 +136,8 @@ export function SuggestionToast({ itemId, itemType, itemTitle }: SuggestionToast
             <div
               className="premium-glass rounded-xl p-4 mb-3"
               style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                border: '1px solid rgba(255, 255, 255, 0.08)'
+                backgroundColor: 'var(--glass-surface)',
+                border: '1px solid var(--glass-surface-hover)'
               }}
             >
               <div className="flex items-start gap-3 mb-2">
@@ -167,7 +167,7 @@ export function SuggestionToast({ itemId, itemType, itemTitle }: SuggestionToast
                     transition={{ duration: 0.5, ease: 'easeOut' }}
                     className="h-full rounded-full"
                     style={{
-                      background: 'linear-gradient(90deg, var(--premium-blue), var(--premium-purple))'
+                      background: 'linear-gradient(90deg, var(--brand-primary), var(--premium-purple))'
                     }}
                   />
                 </div>
@@ -186,7 +186,7 @@ export function SuggestionToast({ itemId, itemType, itemTitle }: SuggestionToast
                 onClick={handleAccept}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-medium text-sm transition-all active:scale-95"
                 style={{
-                  backgroundColor: 'var(--premium-blue)',
+                  backgroundColor: 'var(--brand-primary)',
                   color: 'white',
                   WebkitTapHighlightColor: 'transparent'
                 }}
@@ -198,7 +198,7 @@ export function SuggestionToast({ itemId, itemType, itemTitle }: SuggestionToast
                 onClick={handleDismiss}
                 className="px-4 py-2.5 rounded-xl text-sm font-medium transition-all active:scale-95"
                 style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  backgroundColor: 'var(--glass-surface)',
                   color: 'rgba(255, 255, 255, 0.6)',
                   WebkitTapHighlightColor: 'transparent'
                 }}
@@ -217,7 +217,7 @@ export function SuggestionToast({ itemId, itemType, itemTitle }: SuggestionToast
                     style={{
                       width: index === currentSuggestionIndex ? '16px' : '6px',
                       backgroundColor: index === currentSuggestionIndex
-                        ? 'var(--premium-blue)'
+                        ? 'var(--brand-primary)'
                         : 'rgba(255, 255, 255, 0.2)'
                     }}
                   />

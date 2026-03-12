@@ -177,12 +177,12 @@ export function ProjectsPage() {
       <SubtleBackground />
       <div className="min-h-screen">
         {/* Header */}
-        <div className="fixed top-0 left-0 right-0 z-40 border-b-2 border-[rgba(255,255,255,0.08)]" style={{
+        <div className="fixed top-0 left-0 right-0 z-40 border-b-2 border-[var(--glass-surface-hover)]" style={{
           backgroundColor: '#0a0f1a'
         }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
             <div className="flex items-center" style={{
-              color: 'var(--premium-blue)',
+              color: 'var(--brand-primary)',
               opacity: 0.7
             }}>
               <Layers className="h-7 w-7" />
@@ -207,9 +207,9 @@ export function ProjectsPage() {
               <CreateProjectDialog />
               <button
                 onClick={() => navigate('/search')}
-                className="h-10 w-10 rounded-sm flex items-center justify-center transition-all hover:bg-[rgba(255,255,255,0.05)]"
+                className="h-10 w-10 rounded-lg flex items-center justify-center transition-all hover:bg-[var(--glass-surface)]"
                 style={{
-                  color: 'var(--premium-blue)'
+                  color: 'var(--brand-primary)'
                 }}
                 title="Search everything"
               >
@@ -230,15 +230,15 @@ export function ProjectsPage() {
           {/* Controls */}
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 pt-2">
             {/* Outer Card Structure */}
-            <div className="p-6 rounded-sm mb-6" style={{
-              background: 'var(--premium-bg-2)',
-              border: '2px solid rgba(255,255,255,0.08)',
+            <div className="p-6 rounded-lg mb-6" style={{
+              background: 'var(--brand-glass-bg)',
+              border: '2px solid var(--glass-surface-hover)',
               boxShadow: '4px 4px 0 rgba(0,0,0,0.5)'
             }}>
               {/* Title Section */}
               <div className="mb-6">
                 <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
-                  Your <span style={{ color: 'var(--premium-blue)' }}>projects</span>
+                  Your <span style={{ color: 'var(--brand-primary)' }}>projects</span>
                 </h2>
               </div>
 
@@ -247,22 +247,22 @@ export function ProjectsPage() {
                 {/* Search Box */}
                 <div className="mb-6">
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'var(--premium-text-tertiary)' }} />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'var(--brand-text-muted)' }} />
                     <input
                       type="text"
                       placeholder="Search projects..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 rounded-sm border-2 transition-all focus:outline-none"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-lg border-2 transition-all focus:outline-none"
                       style={{
-                        backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                        borderColor: searchQuery ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.1)',
-                        color: 'var(--premium-text-primary)'
+                        backgroundColor: 'var(--glass-surface)',
+                        borderColor: searchQuery ? 'var(--brand-primary)' : 'rgba(255, 255, 255, 0.1)',
+                        color: 'var(--brand-text-primary)'
                       }}
                     />
                   </div>
                   {debouncedSearchQuery && (
-                    <div className="mt-2 text-xs" style={{ color: 'var(--premium-text-secondary)' }}>
+                    <div className="mt-2 text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
                       Found {projects.length} project{projects.length !== 1 ? 's' : ''}
                     </div>
                   )}
@@ -271,7 +271,7 @@ export function ProjectsPage() {
                 {/* Tag Filters */}
                 {allTags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-3 mb-6">
-                    <span className="text-sm font-medium self-center" style={{ color: 'var(--premium-text-secondary)' }}>
+                    <span className="text-sm font-medium self-center" style={{ color: 'var(--brand-text-secondary)' }}>
                       Tags:
                     </span>
                     {allTags.map(tag => (
@@ -280,10 +280,10 @@ export function ProjectsPage() {
                         variant={selectedTags.includes(tag) ? 'default' : 'outline'}
                         onClick={() => toggleTag(tag)}
                         size="sm"
-                        className="whitespace-nowrap px-3 py-1 rounded-sm font-medium transition-all text-xs"
+                        className="whitespace-nowrap px-3 py-1 rounded-lg font-medium transition-all text-xs"
                         style={{
-                          backgroundColor: selectedTags.includes(tag) ? 'var(--premium-bg-3)' : 'transparent',
-                          color: selectedTags.includes(tag) ? 'var(--premium-blue)' : 'var(--premium-text-secondary)'
+                          backgroundColor: selectedTags.includes(tag) ? 'var(--glass-surface)' : 'transparent',
+                          color: selectedTags.includes(tag) ? 'var(--brand-primary)' : 'var(--brand-text-secondary)'
                         }}
                       >
                         #{tag}
@@ -295,7 +295,7 @@ export function ProjectsPage() {
                         onClick={() => setSelectedTags([])}
                         size="sm"
                         className="text-xs underline"
-                        style={{ color: 'var(--premium-text-tertiary)' }}
+                        style={{ color: 'var(--brand-text-muted)' }}
                       >
                         Clear tags
                       </Button>

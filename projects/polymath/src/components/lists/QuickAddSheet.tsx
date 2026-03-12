@@ -63,7 +63,7 @@ export function QuickAddSheet({ list, isOpen, onClose, listRgb }: QuickAddSheetP
                         className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl pb-safe"
                         style={{
                             backgroundColor: '#141f32',
-                            boxShadow: `0 -20px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)`
+                            boxShadow: `0 -20px 60px rgba(0,0,0,0.6), inset 0 1px 0 var(--glass-surface-hover)`
                         }}
                     >
                         {/* Handle */}
@@ -85,7 +85,7 @@ export function QuickAddSheet({ list, isOpen, onClose, listRgb }: QuickAddSheetP
                                 </div>
                                 <button
                                     onClick={onClose}
-                                    className="h-8 w-8 flex items-center justify-center rounded-full bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] text-[var(--brand-text-primary)]/40 hover:text-[var(--brand-text-primary)] transition-all"
+                                    className="h-8 w-8 flex items-center justify-center rounded-full bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] text-[var(--brand-text-primary)]/40 hover:text-[var(--brand-text-primary)] transition-all"
                                 >
                                     <X className="h-4 w-4" />
                                 </button>
@@ -98,7 +98,7 @@ export function QuickAddSheet({ list, isOpen, onClose, listRgb }: QuickAddSheetP
                                     value={value}
                                     onChange={e => setValue(e.target.value)}
                                     placeholder={`Add to ${list.title.toLowerCase()}...`}
-                                    className="flex-1 bg-[rgba(255,255,255,0.05)] rounded-xl px-4 py-3 text-[var(--brand-text-primary)] text-sm placeholder-white/20 outline-none border border-white/8 focus:border-white/20 transition-colors uppercase tracking-tight font-medium"
+                                    className="flex-1 bg-[var(--glass-surface)] rounded-xl px-4 py-3 text-[var(--brand-text-primary)] text-sm placeholder-white/20 outline-none border border-white/8 focus:border-white/20 transition-colors uppercase tracking-tight font-medium"
                                     onKeyDown={e => {
                                         if (e.key === 'Escape') onClose()
                                     }}

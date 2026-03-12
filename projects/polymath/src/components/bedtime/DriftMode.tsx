@@ -272,7 +272,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
       {/* Exit Button */}
       <button
         onClick={onClose}
-        className="absolute top-6 right-6 p-4 rounded-full bg-[rgba(255,255,255,0.05)] text-[var(--brand-text-secondary)] hover:bg-[rgba(255,255,255,0.1)]"
+        className="absolute top-6 right-6 p-4 rounded-full bg-[var(--glass-surface)] text-[var(--brand-text-secondary)] hover:bg-[rgba(255,255,255,0.1)]"
       >
         <X className="h-6 w-6" />
       </button>
@@ -319,7 +319,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
 
             <button
               onClick={requestMotionPermission}
-              className="px-8 py-3 rounded-full bg-[rgba(255,255,255,0.1)] text-[#E2E8F0] font-medium hover:bg-white/20 transition-all border border-[rgba(255,255,255,0.05)]"
+              className="px-8 py-3 rounded-full bg-[rgba(255,255,255,0.1)] text-[#E2E8F0] font-medium hover:bg-white/20 transition-all border border-[var(--glass-surface)]"
             >
               Begin Session
             </button>
@@ -382,7 +382,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
                   Jolt Detected
                 </motion.div>
               )}
-              <span className="inline-block px-3 py-1 rounded-full border border-[rgba(255,255,255,0.08)] text-xs font-medium tracking-widest uppercase text-[var(--brand-text-secondary)] mb-4">
+              <span className="inline-block px-3 py-1 rounded-full border border-[var(--glass-surface-hover)] text-xs font-medium tracking-widest uppercase text-[var(--brand-text-secondary)] mb-4">
                 {mode === 'sleep' ? 'Hypnagogic Insight' : 'Logic Breaker'}
               </span>
               <h1 className="text-3xl md:text-4xl font-serif text-[#E2E8F0] leading-tight">
@@ -398,7 +398,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
             <div className="flex items-center justify-center gap-4 mt-12">
               <button
                 onClick={resetDrift}
-                className="px-8 py-4 rounded-full bg-[rgba(255,255,255,0.05)] text-[var(--brand-text-secondary)] hover:bg-[rgba(255,255,255,0.1)] transition-all flex items-center gap-2 border border-[rgba(255,255,255,0.05)]"
+                className="px-8 py-4 rounded-full bg-[var(--glass-surface)] text-[var(--brand-text-secondary)] hover:bg-[rgba(255,255,255,0.1)] transition-all flex items-center gap-2 border border-[var(--glass-surface)]"
               >
                 <Wind className="h-5 w-5" />
                 {mode === 'sleep' ? 'Drift Again' : 'Reset Again'}
@@ -406,7 +406,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
 
               <button
                 onClick={() => setStage('ending')}
-                className="px-6 py-4 rounded-full bg-[rgba(255,255,255,0.05)] text-[var(--brand-text-secondary)] hover:bg-[rgba(255,255,255,0.1)] transition-all border border-[rgba(255,255,255,0.05)]"
+                className="px-6 py-4 rounded-full bg-[var(--glass-surface)] text-[var(--brand-text-secondary)] hover:bg-[rgba(255,255,255,0.1)] transition-all border border-[var(--glass-surface)]"
               >
                 End Session
               </button>
@@ -417,7 +417,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
                 disabled={isProcessing}
                 className={`p-4 rounded-full transition-all ${isRecording
                   ? 'bg-red-500/20 text-red-400 animate-pulse border border-red-500/30'
-                  : 'bg-[rgba(255,255,255,0.05)] text-[var(--brand-text-secondary)] hover:bg-[rgba(255,255,255,0.1)] border border-[rgba(255,255,255,0.05)]'
+                  : 'bg-[var(--glass-surface)] text-[var(--brand-text-secondary)] hover:bg-[rgba(255,255,255,0.1)] border border-[var(--glass-surface)]'
                   }`}
               >
                 {isProcessing ? (
@@ -442,7 +442,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
           >
             <div className="mb-8 relative">
               <div className="absolute inset-0 bg-violet-500/20 blur-3xl rounded-full" />
-              <div className="relative p-6 rounded-2xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.08)]">
+              <div className="relative p-6 rounded-2xl bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)]">
                 <Zap className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
                 <h2 className="text-3xl font-serif text-[#E2E8F0] mb-2">Session Complete</h2>
                 <p className="text-[var(--brand-text-secondary)]">Your subconscious has been primed.</p>
@@ -450,7 +450,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
             </div>
 
             <div className="space-y-4 mb-8">
-              <div className="flex items-center justify-between p-4 rounded-xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.05)]">
+              <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--glass-surface)] border border-[var(--glass-surface)]">
                 <span className="text-[var(--brand-text-secondary)]">Insights Captured</span>
                 <span className="text-2xl font-bold text-violet-400">{capturedInsightsCount}</span>
               </div>

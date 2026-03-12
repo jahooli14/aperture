@@ -86,7 +86,7 @@ export function EditArticleDialog({ article, open, onOpenChange }: EditArticleDi
       <BottomSheetContent>
         <BottomSheetHeader>
           <div className="flex items-center gap-3 mb-2">
-            <Edit className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
+            <Edit className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
             <BottomSheetTitle>Edit article</BottomSheetTitle>
           </div>
           <BottomSheetDescription>
@@ -104,7 +104,7 @@ export function EditArticleDialog({ article, open, onOpenChange }: EditArticleDi
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               onFocus={handleInputFocus}
               required
-              className="text-xl h-14 font-bold bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.08)] focus:border-blue-400 focus:ring-0"
+              className="text-xl h-14 font-bold bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-blue-400 focus:ring-0"
               autoComplete="off"
             />
           </div>
@@ -118,7 +118,7 @@ export function EditArticleDialog({ article, open, onOpenChange }: EditArticleDi
               onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
               onFocus={handleInputFocus}
               rows={3}
-              className="bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.08)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/20"
+              className="bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/20"
             />
           </div>
 
@@ -130,7 +130,7 @@ export function EditArticleDialog({ article, open, onOpenChange }: EditArticleDi
               value={formData.tags}
               onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
               onFocus={handleInputFocus}
-              className="h-14 bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.08)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/20"
+              className="h-14 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/20"
               autoComplete="off"
             />
             <p className="text-[10px] text-[var(--brand-text-muted)]">Comma-separated tags</p>
@@ -145,7 +145,7 @@ export function EditArticleDialog({ article, open, onOpenChange }: EditArticleDi
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               onFocus={handleInputFocus}
               rows={4}
-              className="bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.08)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/20"
+              className="bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/20"
             />
             <p className="text-[10px] text-[var(--brand-text-muted)]">Add your personal insights and highlights</p>
           </div>
@@ -160,7 +160,7 @@ export function EditArticleDialog({ article, open, onOpenChange }: EditArticleDi
                 border: '2px solid rgba(59,130,246,0.5)',
                 borderRadius: '4px',
                 boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
-                color: 'var(--premium-blue)',
+                color: 'var(--brand-primary)',
               }}
             >
               {loading ? 'Saving...' : 'Save Changes'}

@@ -12,7 +12,7 @@ const Card = React.forwardRef<
       className
     )}
     style={{
-      color: 'var(--premium-text-primary)',
+      color: 'var(--brand-text-primary)',
       ...style,
     }}
     {...props}

@@ -14,11 +14,11 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           "flex h-11 w-full rounded-xl px-3.5 py-2 text-[15px]",
           // Reset native browser styling that causes white backgrounds on mobile
           "appearance-none",
-          // Dark glass appearance — bg-white/[0.05] works correctly with appearance-none
-          "bg-white/[0.05]",
+          // Dark glass appearance — bg-brand-surface works correctly with appearance-none
+          "bg-brand-surface",
           "text-[var(--brand-text-primary)]/90 placeholder:text-[var(--brand-text-primary)]/25",
           // Focus — ring via box-shadow so it doesn't conflict with inset border
-          "focus:outline-none focus:bg-white/[0.08]",
+          "focus:outline-none focus:bg-brand-surface/80",
           // Smooth transitions
           "transition-all duration-200",
           // File inputs

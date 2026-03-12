@@ -98,7 +98,7 @@ export function PWAUpdateNotification() {
           <button
             onClick={handleDismiss}
             className="absolute top-3 right-3 p-1 rounded-lg hover:bg-[rgba(255,255,255,0.1)] transition-colors"
-            style={{ color: 'var(--premium-text-tertiary)' }}
+            style={{ color: 'var(--brand-text-muted)' }}
           >
             <X className="h-4 w-4" />
           </button>
@@ -108,17 +108,17 @@ export function PWAUpdateNotification() {
             <div
               className="flex-shrink-0 h-10 w-10 rounded-xl flex items-center justify-center"
               style={{
-                background: 'linear-gradient(135deg, var(--premium-emerald), var(--premium-blue))'
+                background: 'linear-gradient(135deg, var(--premium-emerald), var(--brand-primary))'
               }}
             >
               <RefreshCw className="h-5 w-5 text-[var(--brand-text-primary)]" />
             </div>
 
             <div className="flex-1 min-w-0">
-              <h3 className="font-bold mb-1" style={{ color: 'var(--premium-text-primary)' }}>
+              <h3 className="font-bold mb-1" style={{ color: 'var(--brand-text-primary)' }}>
                 Update Available
               </h3>
-              <p className="text-sm leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
+              <p className="text-sm leading-relaxed" style={{ color: 'var(--brand-text-secondary)' }}>
                 A new version of Aperture is ready. Refresh to get the latest features and improvements.
               </p>
             </div>
@@ -129,7 +129,7 @@ export function PWAUpdateNotification() {
             onClick={handleUpdate}
             className="w-full px-4 py-2.5 rounded-xl font-medium flex items-center justify-center gap-2 transition-all"
             style={{
-              background: 'linear-gradient(135deg, var(--premium-emerald), var(--premium-blue))',
+              background: 'linear-gradient(135deg, var(--premium-emerald), var(--brand-primary))',
               color: 'white',
               boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
             }}

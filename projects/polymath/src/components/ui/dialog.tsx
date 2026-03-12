@@ -166,7 +166,7 @@ const DialogContent = React.forwardRef<
               backdropFilter: 'blur(12px) saturate(180%)',
               WebkitBackdropFilter: 'blur(12px) saturate(180%)',
               borderColor: 'rgba(255, 255, 255, 0.2)',
-              color: 'var(--premium-blue)'
+              color: 'var(--brand-primary)'
             }}
           >
             <X className="h-5 w-5" />
@@ -217,7 +217,7 @@ const DialogTitle = React.forwardRef<
       "text-lg font-semibold leading-none tracking-tight",
       className
     )}
-    style={{ color: 'var(--premium-text-primary)' }}
+    style={{ color: 'var(--brand-text-primary)' }}
     {...props}
   />
 ))
@@ -230,7 +230,7 @@ const DialogDescription = React.forwardRef<
   <p
     ref={ref}
     className={cn("text-sm", className)}
-    style={{ color: 'var(--premium-text-secondary)' }}
+    style={{ color: 'var(--brand-text-secondary)' }}
     {...props}
   />
 ))

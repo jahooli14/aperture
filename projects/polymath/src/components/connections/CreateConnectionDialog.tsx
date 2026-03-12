@@ -239,7 +239,7 @@ export function CreateConnectionDialog({
 
         {/* Search bar */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'var(--premium-text-tertiary)' }} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'var(--brand-text-muted)' }} />
           <input
             type="text"
             placeholder="Search for an item to link..."
@@ -249,8 +249,8 @@ export function CreateConnectionDialog({
             className="w-full pl-10 pr-4 py-3 rounded-xl border-2 focus:outline-none transition-colors premium-glass"
             style={{
               borderColor: 'rgba(255, 255, 255, 0.1)',
-              color: 'var(--premium-text-primary)',
-              backgroundColor: 'rgba(255, 255, 255, 0.05)'
+              color: 'var(--brand-text-primary)',
+              backgroundColor: 'var(--glass-surface)'
             }}
           />
         </div>
@@ -261,8 +261,8 @@ export function CreateConnectionDialog({
             onClick={() => setSelectedType('all')}
             className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
             style={{
-              backgroundColor: selectedType === 'all' ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.05)',
-              color: selectedType === 'all' ? 'white' : 'var(--premium-text-secondary)'
+              backgroundColor: selectedType === 'all' ? 'var(--brand-primary)' : 'var(--glass-surface)',
+              color: selectedType === 'all' ? 'white' : 'var(--brand-text-secondary)'
             }}
           >
             All
@@ -276,8 +276,8 @@ export function CreateConnectionDialog({
                 onClick={() => setSelectedType(type as ConnectionSourceType)}
                 className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5"
                 style={{
-                  backgroundColor: isSelected ? config.primary : 'rgba(255, 255, 255, 0.05)',
-                  color: isSelected ? 'white' : 'var(--premium-text-secondary)'
+                  backgroundColor: isSelected ? config.primary : 'var(--glass-surface)',
+                  color: isSelected ? 'white' : 'var(--brand-text-secondary)'
                 }}
               >
                 <Icon className="h-3.5 w-3.5" />
@@ -291,8 +291,8 @@ export function CreateConnectionDialog({
         <div className="flex-1 overflow-y-auto -mx-6 px-6">
           {loading ? (
             <div className="py-12 text-center">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-3" style={{ color: 'var(--premium-blue)' }} />
-              <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>Loading items...</p>
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-3" style={{ color: 'var(--brand-primary)' }} />
+              <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>Loading items...</p>
             </div>
           ) : (
             <div className="space-y-4 py-2">
@@ -300,8 +300,8 @@ export function CreateConnectionDialog({
               {filteredSuggestions.length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 mb-3 px-1">
-                    <Lightbulb className="h-4 w-4" style={{ color: 'var(--premium-blue)' }} />
-                    <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--premium-blue)' }}>
+                    <Lightbulb className="h-4 w-4" style={{ color: 'var(--brand-primary)' }} />
+                    <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--brand-primary)' }}>
                       Suggested Based on Similarity
                     </h3>
                   </div>
@@ -325,7 +325,7 @@ export function CreateConnectionDialog({
                 <div>
                   {filteredSuggestions.length > 0 && (
                     <div className="flex items-center gap-2 mb-3 px-1 mt-6">
-                      <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--premium-text-secondary)' }}>
+                      <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--brand-text-secondary)' }}>
                         All Items
                       </h3>
                     </div>
@@ -347,9 +347,9 @@ export function CreateConnectionDialog({
               {/* Empty state */}
               {filteredSuggestions.length === 0 && filteredAllItems.length === 0 && (
                 <div className="py-12 text-center">
-                  <Search className="h-12 w-12 mx-auto mb-3" style={{ color: 'var(--premium-text-tertiary)', opacity: 0.3 }} />
-                  <p className="font-medium" style={{ color: 'var(--premium-text-primary)' }}>No items found</p>
-                  <p className="text-sm mt-1" style={{ color: 'var(--premium-text-tertiary)' }}>Try a different search or filter</p>
+                  <Search className="h-12 w-12 mx-auto mb-3" style={{ color: 'var(--brand-text-muted)', opacity: 0.3 }} />
+                  <p className="font-medium" style={{ color: 'var(--brand-text-primary)' }}>No items found</p>
+                  <p className="text-sm mt-1" style={{ color: 'var(--brand-text-muted)' }}>Try a different search or filter</p>
                 </div>
               )}
             </div>
@@ -397,23 +397,23 @@ function ItemCard({
             {showSimilarity && item.similarity !== undefined && (
               <div className="text-xs font-bold px-2 py-0.5 rounded-full" style={{
                 backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                color: 'var(--premium-blue)'
+                color: 'var(--brand-primary)'
               }}>
                 {Math.round(item.similarity * 100)}% match
               </div>
             )}
           </div>
-          <div className="font-medium mb-1 line-clamp-1" style={{ color: 'var(--premium-text-primary)' }}>
+          <div className="font-medium mb-1 line-clamp-1" style={{ color: 'var(--brand-text-primary)' }}>
             {item.title}
           </div>
           {item.preview && (
-            <div className="text-sm line-clamp-2" style={{ color: 'var(--premium-text-secondary)' }}>
+            <div className="text-sm line-clamp-2" style={{ color: 'var(--brand-text-secondary)' }}>
               {item.preview}
             </div>
           )}
         </div>
         <LinkIcon className="h-4 w-4 flex-shrink-0 mt-1 transition-colors" style={{
-          color: 'var(--premium-text-tertiary)',
+          color: 'var(--brand-text-muted)',
           opacity: 0.5
         }} />
       </div>

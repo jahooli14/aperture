@@ -125,7 +125,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
       <div className="space-y-8">
         {[1, 2].map((i) => (
           <div key={i} className="animate-pulse">
-            <div className="h-6 w-24 bg-[rgba(255,255,255,0.1)] rounded mb-4" />
+            <div className="h-6 w-24 bg-[rgba(255,255,255,0.1)] rounded-xl mb-4" />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {[1, 2, 3].map((j) => (
                 <div key={j} className="h-24 bg-[rgba(255,255,255,0.1)] rounded-lg" />
@@ -159,7 +159,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
                 <h3 className="font-bold text-lg premium-text-platinum">
                   {section.title}
                 </h3>
-                <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
+                <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>
                   {section.description}
                 </p>
               </div>
@@ -187,15 +187,15 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
                       to={`/projects/${project.id}`}
                       className="group block p-4 rounded-xl backdrop-blur-xl transition-all duration-300 flex flex-col h-full"
                       style={{
-                        background: 'var(--premium-bg-2)',
+                        background: 'var(--brand-glass-bg)',
                         boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'var(--premium-bg-3)'
+                        e.currentTarget.style.background = 'var(--glass-surface)'
                         e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.5)'
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'var(--premium-bg-2)'
+                        e.currentTarget.style.background = 'var(--brand-glass-bg)'
                         e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.4)'
                       }}
                     >
@@ -205,7 +205,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
                           {project.title}
                         </h4>
                         {project.is_priority && (
-                          <Pin className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--premium-blue)' }} />
+                          <Pin className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
                         )}
                       </div>
 
@@ -214,7 +214,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
                         {project.description && (
                           <p
                             className="text-xs line-clamp-2"
-                            style={{ color: 'var(--premium-text-secondary)' }}
+                            style={{ color: 'var(--brand-text-secondary)' }}
                           >
                             {project.description}
                           </p>
@@ -227,7 +227,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
                       {/* Task or placeholder - fixed height to maintain consistent card sizes */}
                       <div
                         className="rounded-lg p-2 flex items-center justify-between gap-2 bg-opacity-50 mb-3 flex-shrink-0 h-10 overflow-hidden"
-                        style={{ background: nextTask ? 'var(--premium-bg-3)' : 'transparent' }}
+                        style={{ background: nextTask ? 'var(--glass-surface)' : 'transparent' }}
                         onClick={(e) => nextTask && e.stopPropagation()}
                       >
                         {nextTask ? (
@@ -258,7 +258,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
                                   })
                                 }
                               }}
-                              className="flex-shrink-0 h-4 w-4 rounded flex items-center justify-center transition-all hover:bg-blue-500/20"
+                              className="flex-shrink-0 h-4 w-4 rounded-xl flex items-center justify-center transition-all hover:bg-blue-500/20"
                               style={{
                                 color: 'rgba(59, 130, 246, 0.9)',
                                 border: '1px solid rgba(255, 255, 255, 0.2)'
@@ -271,13 +271,13 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
                               {nextTask.text}
                             </p>
                             {totalTasks > 0 && (
-                              <span className="text-xs font-medium flex-shrink-0" style={{ color: 'var(--premium-text-tertiary)' }}>
+                              <span className="text-xs font-medium flex-shrink-0" style={{ color: 'var(--brand-text-muted)' }}>
                                 {completedTasks}/{totalTasks}
                               </span>
                             )}
                           </>
                         ) : (
-                          <p className="text-xs flex-1" style={{ color: 'var(--premium-text-tertiary)' }}>
+                          <p className="text-xs flex-1" style={{ color: 'var(--brand-text-muted)' }}>
                             No tasks yet
                           </p>
                         )}
@@ -292,7 +292,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
                           <motion.div
                             className="h-full"
                             style={{
-                              background: totalTasks > 0 ? 'linear-gradient(90deg, var(--premium-blue), var(--premium-emerald))' : 'transparent',
+                              background: totalTasks > 0 ? 'linear-gradient(90deg, var(--brand-primary), var(--premium-emerald))' : 'transparent',
                               width: totalTasks > 0 ? `${(completedTasks / totalTasks) * 100}%` : '0%'
                             }}
                             initial={{ width: 0 }}
@@ -312,7 +312,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
               <Link
                 to="/projects"
                 className="inline-flex items-center gap-1 text-sm font-medium transition-all hover:gap-2"
-                style={{ color: 'var(--premium-blue)' }}
+                style={{ color: 'var(--brand-primary)' }}
               >
                 View all {section.title.toLowerCase()} <ArrowRight className="h-4 w-4" />
               </Link>
@@ -321,7 +321,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
         ))
       ) : (
         <div className="text-center py-12">
-          <p style={{ color: 'var(--premium-text-secondary)' }}>
+          <p style={{ color: 'var(--brand-text-secondary)' }}>
             No active projects yet. Ready to build something?
           </p>
           <Link
@@ -329,7 +329,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
             className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-lg font-medium"
             style={{
               backgroundColor: 'rgba(59, 130, 246, 0.2)',
-              color: 'var(--premium-blue)'
+              color: 'var(--brand-primary)'
             }}
           >
             View all projects <ArrowRight className="h-4 w-4" />

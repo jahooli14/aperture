@@ -47,7 +47,7 @@ export function PremiumCard({
       onMouseEnter={() => hover && setIsHovered(true)}
       onMouseLeave={() => hover && setIsHovered(false)}
       style={{
-        background: isHovered ? 'var(--premium-bg-3)' : 'var(--premium-bg-2)',
+        background: isHovered ? 'var(--glass-surface)' : 'var(--brand-glass-bg)',
         boxShadow: isHovered
           ? '0 12px 32px rgba(0, 0, 0, 0.5)'
           : '0 8px 24px rgba(0, 0, 0, 0.4)',

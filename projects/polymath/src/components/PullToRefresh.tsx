@@ -96,7 +96,7 @@ export function PullToRefresh({
           {justCompleted ? (
             <span className="text-2xl">✓</span>
           ) : isRefreshing ? (
-            <RefreshCw className="h-6 w-6 animate-spin" style={{ color: 'var(--premium-blue)' }} />
+            <RefreshCw className="h-6 w-6 animate-spin" style={{ color: 'var(--brand-primary)' }} />
           ) : (
             <ArrowDown
               className={cn(
@@ -117,7 +117,7 @@ export function PullToRefresh({
           <p
             className="mt-2 text-xs font-medium transition-all duration-200"
             style={{
-              color: justCompleted ? 'var(--premium-emerald)' : 'var(--premium-text-secondary)',
+              color: justCompleted ? 'var(--premium-emerald)' : 'var(--brand-text-secondary)',
               opacity: justCompleted ? 1 : isRefreshing ? 0.8 : 0.6
             }}
           >

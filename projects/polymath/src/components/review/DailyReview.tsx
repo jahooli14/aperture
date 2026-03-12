@@ -50,7 +50,7 @@ export function DailyReview({ onClose, todos, onUpdateTodo, onAddTodo, onDeleteT
       <button
         onClick={onClose}
         className="absolute top-5 left-5 z-10 h-9 w-9 flex items-center justify-center rounded-xl transition-all"
-        style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.5)' }}
+        style={{ background: 'var(--glass-surface)', color: 'rgba(255,255,255,0.5)' }}
         aria-label="Close review"
       >
         <X className="h-4 w-4" />

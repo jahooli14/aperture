@@ -38,7 +38,7 @@ export function BulkActionsBar({ selectedCount, onCancel, actions }: BulkActions
                 <div
                   className="w-10 h-10 rounded-full flex items-center justify-center"
                   style={{
-                    backgroundColor: 'var(--premium-blue)',
+                    backgroundColor: 'var(--brand-primary)',
                     boxShadow: '0 0 20px rgba(59, 130, 246, 0.3)'
                   }}
                 >
@@ -47,13 +47,13 @@ export function BulkActionsBar({ selectedCount, onCancel, actions }: BulkActions
                 <div>
                   <h3
                     className="text-lg font-semibold"
-                    style={{ color: 'var(--premium-text-primary)' }}
+                    style={{ color: 'var(--brand-text-primary)' }}
                   >
                     {selectedCount} selected
                   </h3>
                   <p
                     className="text-xs"
-                    style={{ color: 'var(--premium-text-tertiary)' }}
+                    style={{ color: 'var(--brand-text-muted)' }}
                   >
                     Choose an action below
                   </p>
@@ -62,7 +62,7 @@ export function BulkActionsBar({ selectedCount, onCancel, actions }: BulkActions
               <button
                 onClick={onCancel}
                 className="p-2 rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.1)]"
-                style={{ color: 'var(--premium-text-secondary)' }}
+                style={{ color: 'var(--brand-text-secondary)' }}
               >
                 <X className="h-5 w-5" />
               </button>
@@ -82,7 +82,7 @@ export function BulkActionsBar({ selectedCount, onCancel, actions }: BulkActions
                       : 'rgba(59, 130, 246, 0.15)',
                     color: action.variant === 'destructive'
                       ? '#ef4444'
-                      : 'var(--premium-blue)',
+                      : 'var(--brand-primary)',
                     border: `1px solid ${action.variant === 'destructive' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`
                   }}
                 >

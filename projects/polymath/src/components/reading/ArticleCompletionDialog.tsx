@@ -153,10 +153,10 @@ export function ArticleCompletionDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[550px]">
         <DialogHeader className="mb-2">
-          <DialogTitle className="text-2xl font-bold mb-3" style={{ color: 'var(--premium-text-primary)' }}>
+          <DialogTitle className="text-2xl font-bold mb-3" style={{ color: 'var(--brand-text-primary)' }}>
             Capture Your Thoughts
           </DialogTitle>
-          <DialogDescription className="text-base leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
+          <DialogDescription className="text-base leading-relaxed" style={{ color: 'var(--brand-text-secondary)' }}>
             What did you learn from "{article.title}"?
           </DialogDescription>
         </DialogHeader>
@@ -169,8 +169,8 @@ export function ArticleCompletionDialog({
             style={{
               borderRadius: '4px',
               boxShadow: mode === 'text' ? '3px 3px 0 rgba(0,0,0,0.5)' : '2px 2px 0 rgba(0,0,0,0.3)',
-              backgroundColor: mode === 'text' ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.05)',
-              color: mode === 'text' ? 'white' : 'var(--premium-text-secondary)',
+              backgroundColor: mode === 'text' ? 'var(--brand-primary)' : 'var(--glass-surface)',
+              color: mode === 'text' ? 'white' : 'var(--brand-text-secondary)',
               transform: mode === 'text' ? 'scale(1.05)' : 'scale(1)'
             }}
           >
@@ -183,8 +183,8 @@ export function ArticleCompletionDialog({
             style={{
               borderRadius: '4px',
               boxShadow: mode === 'voice' ? '3px 3px 0 rgba(0,0,0,0.5)' : '2px 2px 0 rgba(0,0,0,0.3)',
-              backgroundColor: mode === 'voice' ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.05)',
-              color: mode === 'voice' ? 'white' : 'var(--premium-text-secondary)',
+              backgroundColor: mode === 'voice' ? 'var(--brand-primary)' : 'var(--glass-surface)',
+              color: mode === 'voice' ? 'white' : 'var(--brand-text-secondary)',
               transform: mode === 'voice' ? 'scale(1.05)' : 'scale(1)'
             }}
           >
@@ -197,7 +197,7 @@ export function ArticleCompletionDialog({
         {mode === 'text' && (
           <div className="space-y-4">
             <div>
-              <Label htmlFor="thought-text" className="text-sm font-medium mb-2 block" style={{ color: 'var(--premium-text-primary)' }}>
+              <Label htmlFor="thought-text" className="text-sm font-medium mb-2 block" style={{ color: 'var(--brand-text-primary)' }}>
                 Your thoughts (key takeaways, questions, connections)
               </Label>
               <textarea
@@ -206,22 +206,22 @@ export function ArticleCompletionDialog({
                 value={textInput}
                 onChange={(e) => setTextInput(e.target.value)}
                 rows={6}
-                className="w-full rounded-sm px-4 py-3 text-base transition-all focus:outline-none focus:ring-2 resize-none"
+                className="w-full rounded-lg px-4 py-3 text-base transition-all focus:outline-none focus:ring-2 resize-none"
                 style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  color: 'var(--premium-text-primary)',
+                  backgroundColor: 'var(--glass-surface)',
+                  color: 'var(--brand-text-primary)',
                   borderWidth: '1px',
                   borderColor: 'rgba(255, 255, 255, 0.1)',
                   borderStyle: 'solid',
                   fontFamily: 'inherit'
                 }}
                 onFocus={(e) => {
-                  e.target.style.borderColor = 'var(--premium-blue)'
+                  e.target.style.borderColor = 'var(--brand-primary)'
                   e.target.style.backgroundColor = 'rgba(59, 130, 246, 0.05)'
                 }}
                 onBlur={(e) => {
                   e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)'
-                  e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'
+                  e.target.style.backgroundColor = 'var(--glass-surface)'
                 }}
               />
             </div>
@@ -233,8 +233,8 @@ export function ArticleCompletionDialog({
                 {relatedProjects.length > 0 && (
                   <div>
                     <div className="flex items-center gap-2 mb-3">
-                      <Target className="h-4 w-4" style={{ color: 'var(--premium-blue)' }} />
-                      <h4 className="text-sm font-semibold" style={{ color: 'var(--premium-text-primary)' }}>
+                      <Target className="h-4 w-4" style={{ color: 'var(--brand-primary)' }} />
+                      <h4 className="text-sm font-semibold" style={{ color: 'var(--brand-text-primary)' }}>
                         Related Projects
                       </h4>
                     </div>
@@ -242,16 +242,16 @@ export function ArticleCompletionDialog({
                       {relatedProjects.map((project) => (
                         <div
                           key={project.id}
-                          className="flex items-center justify-between gap-2 p-3 rounded-lg border hover:bg-[rgba(255,255,255,0.05)] transition-all"
+                          className="flex items-center justify-between gap-2 p-3 rounded-lg border hover:bg-[var(--glass-surface)] transition-all"
 
                           style={{ borderColor: 'rgba(59, 130, 246, 0.2)', backgroundColor: 'rgba(59, 130, 246, 0.05)' }}
                         >
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate" style={{ color: 'var(--premium-text-primary)' }}>
+                            <p className="text-sm font-medium truncate" style={{ color: 'var(--brand-text-primary)' }}>
                               {project.title}
                             </p>
                             {project.description && (
-                              <p className="text-xs truncate" style={{ color: 'var(--premium-text-tertiary)' }}>
+                              <p className="text-xs truncate" style={{ color: 'var(--brand-text-muted)' }}>
                                 {project.description}
                               </p>
                             )}
@@ -262,7 +262,7 @@ export function ArticleCompletionDialog({
                               className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all hover:bg-[rgba(255,255,255,0.1)]"
 
                               style={{
-                                color: 'var(--premium-blue)'
+                                color: 'var(--brand-primary)'
                               }}
                             >
                               Link
@@ -272,7 +272,7 @@ export function ArticleCompletionDialog({
                               className="p-1.5 rounded-lg transition-all hover:bg-[rgba(255,255,255,0.1)]"
 
                               style={{
-                                color: 'var(--premium-text-secondary)'
+                                color: 'var(--brand-text-secondary)'
                               }}
                             >
                               <ExternalLink className="h-3.5 w-3.5" />
@@ -289,7 +289,7 @@ export function ArticleCompletionDialog({
                   <div>
                     <div className="flex items-center gap-2 mb-3">
                       <Brain className="h-4 w-4" style={{ color: 'var(--premium-indigo)' }} />
-                      <h4 className="text-sm font-semibold" style={{ color: 'var(--premium-text-primary)' }}>
+                      <h4 className="text-sm font-semibold" style={{ color: 'var(--brand-text-primary)' }}>
                         Related Thoughts
                       </h4>
                     </div>
@@ -297,16 +297,16 @@ export function ArticleCompletionDialog({
                       {relatedThoughts.map((thought) => (
                         <div
                           key={thought.id}
-                          className="flex items-center justify-between gap-2 p-3 rounded-lg border hover:bg-[rgba(255,255,255,0.05)] transition-all"
+                          className="flex items-center justify-between gap-2 p-3 rounded-lg border hover:bg-[var(--glass-surface)] transition-all"
 
                           style={{ borderColor: 'rgba(99, 102, 241, 0.2)', backgroundColor: 'rgba(99, 102, 241, 0.05)' }}
                         >
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate" style={{ color: 'var(--premium-text-primary)' }}>
+                            <p className="text-sm font-medium truncate" style={{ color: 'var(--brand-text-primary)' }}>
                               {thought.title}
                             </p>
                             {thought.body && (
-                              <p className="text-xs truncate" style={{ color: 'var(--premium-text-tertiary)' }}>
+                              <p className="text-xs truncate" style={{ color: 'var(--brand-text-muted)' }}>
                                 {thought.body}
                               </p>
                             )}
@@ -317,7 +317,7 @@ export function ArticleCompletionDialog({
                               className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all hover:bg-[rgba(255,255,255,0.1)]"
 
                               style={{
-                                color: 'var(--premium-blue)'
+                                color: 'var(--brand-primary)'
                               }}
                             >
                               Link
@@ -332,7 +332,7 @@ export function ArticleCompletionDialog({
             )}
 
             {loadingRelated && (
-              <div className="flex items-center justify-center gap-2 py-3 text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
+              <div className="flex items-center justify-center gap-2 py-3 text-sm" style={{ color: 'var(--brand-text-muted)' }}>
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Finding related items...
               </div>
@@ -342,10 +342,10 @@ export function ArticleCompletionDialog({
               <button
                 onClick={handleSkip}
                 disabled={loading}
-                className="px-6 py-3 rounded-xl font-medium transition-all hover:bg-[rgba(255,255,255,0.05)]"
+                className="px-6 py-3 rounded-xl font-medium transition-all hover:bg-[var(--glass-surface)]"
 
                 style={{
-                  color: 'var(--premium-text-secondary)'
+                  color: 'var(--brand-text-secondary)'
                 }}
               >
                 Skip
@@ -353,9 +353,9 @@ export function ArticleCompletionDialog({
               <button
                 onClick={handleSubmit}
                 disabled={!textInput.trim() || loading}
-                className="flex items-center gap-2 px-6 py-3 rounded-sm font-medium transition-all disabled:opacity-50"
+                className="flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all disabled:opacity-50"
                 style={{
-                  backgroundColor: !textInput.trim() || loading ? 'rgba(59, 130, 246, 0.3)' : 'var(--premium-blue)',
+                  backgroundColor: !textInput.trim() || loading ? 'rgba(59, 130, 246, 0.3)' : 'var(--brand-primary)',
                   color: 'white'
                 }}
               >
@@ -369,7 +369,7 @@ export function ArticleCompletionDialog({
         {/* Voice Mode */}
         {mode === 'voice' && (
           <div className="space-y-6">
-            <div className="text-sm text-center mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
+            <div className="text-sm text-center mb-4" style={{ color: 'var(--brand-text-secondary)' }}>
               Record your thoughts about this article
             </div>
 
@@ -381,10 +381,10 @@ export function ArticleCompletionDialog({
               <button
                 onClick={handleSkip}
                 disabled={loading}
-                className="px-6 py-3 rounded-xl font-medium transition-all hover:bg-[rgba(255,255,255,0.05)]"
+                className="px-6 py-3 rounded-xl font-medium transition-all hover:bg-[var(--glass-surface)]"
 
                 style={{
-                  color: 'var(--premium-text-secondary)'
+                  color: 'var(--brand-text-secondary)'
                 }}
               >
                 Skip for now

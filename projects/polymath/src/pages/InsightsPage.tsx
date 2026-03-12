@@ -93,11 +93,11 @@ export function InsightsPage() {
 
   const getInsightIcon = (type: string) => {
     switch (type) {
-      case 'evolution': return <TrendingUp className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
+      case 'evolution': return <TrendingUp className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
       case 'pattern': return <Zap className="h-6 w-6" style={{ color: 'var(--premium-indigo)' }} />
       case 'collision': return <AlertCircle className="h-6 w-6" style={{ color: 'var(--premium-amber)' }} />
       case 'opportunity': return <Lightbulb className="h-6 w-6" style={{ color: 'var(--premium-emerald)' }} />
-      default: return <Brain className="h-6 w-6" style={{ color: 'var(--premium-text-tertiary)' }} />
+      default: return <Brain className="h-6 w-6" style={{ color: 'var(--brand-text-muted)' }} />
     }
   }
 
@@ -107,7 +107,7 @@ export function InsightsPage() {
       case 'pattern': return { backgroundColor: 'rgba(139, 92, 246, 0.1)' }
       case 'collision': return { backgroundColor: 'rgba(245, 158, 11, 0.1)' }
       case 'opportunity': return { backgroundColor: 'rgba(16, 185, 129, 0.1)' }
-      default: return { backgroundColor: 'rgba(255, 255, 255, 0.05)' }
+      default: return { backgroundColor: 'var(--glass-surface)' }
     }
   }
 
@@ -130,11 +130,11 @@ export function InsightsPage() {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <TrendingUp className="h-7 w-7" style={{ color: 'var(--premium-blue)', opacity: 0.7 }} />
+            <TrendingUp className="h-7 w-7" style={{ color: 'var(--brand-primary)', opacity: 0.7 }} />
             <h1 className="text-2xl sm:text-3xl" style={{
               fontWeight: 600,
               letterSpacing: 'var(--premium-tracking-tight)',
-              color: 'var(--premium-text-secondary)',
+              color: 'var(--brand-text-secondary)',
               opacity: 0.7
             }}>
               Insights
@@ -142,9 +142,9 @@ export function InsightsPage() {
           </div>
           <button
             onClick={() => navigate('/search')}
-            className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-[rgba(255,255,255,0.05)]"
+            className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-[var(--glass-surface)]"
             style={{
-              color: 'var(--premium-blue)'
+              color: 'var(--brand-primary)'
             }}
             title="Search everything"
           >
@@ -157,30 +157,30 @@ export function InsightsPage() {
         {loading ? (
           <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="p-6 rounded-xl backdrop-blur-xl" style={{
-              background: 'var(--premium-bg-2)',
+              background: 'var(--brand-glass-bg)',
               boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
             }}>
               <div className="text-center py-12">
                 <div className="relative inline-block mb-4">
-                  <Brain className="h-12 w-12 animate-pulse" style={{ color: 'var(--premium-blue)' }} />
+                  <Brain className="h-12 w-12 animate-pulse" style={{ color: 'var(--brand-primary)' }} />
                 </div>
-                <p className="text-lg font-medium mb-1" style={{ color: 'var(--premium-text-primary)' }}>Analyzing your thoughts...</p>
-                <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>Finding patterns and connections</p>
+                <p className="text-lg font-medium mb-1" style={{ color: 'var(--brand-text-primary)' }}>Analyzing your thoughts...</p>
+                <p className="text-sm" style={{ color: 'var(--brand-text-muted)' }}>Finding patterns and connections</p>
               </div>
             </div>
           </section>
         ) : error ? (
           <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="p-6 rounded-xl backdrop-blur-xl" style={{
-              background: 'var(--premium-bg-2)',
+              background: 'var(--brand-glass-bg)',
               boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
             }}>
               <div className="py-12 text-center">
                 <AlertCircle className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--premium-amber)' }} />
-                <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--premium-text-primary)' }}>
+                <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--brand-text-primary)' }}>
                   Something went wrong
                 </h2>
-                <p className="mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
+                <p className="mb-4" style={{ color: 'var(--brand-text-secondary)' }}>
                   {error}
                 </p>
                 <Button onClick={fetchInsights} className="btn-primary">
@@ -192,27 +192,27 @@ export function InsightsPage() {
         ) : insights.length === 0 ? (
           <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="p-6 rounded-xl backdrop-blur-xl" style={{
-              background: 'var(--premium-bg-2)',
+              background: 'var(--brand-glass-bg)',
               boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
             }}>
               <div className="py-16 text-center">
                 {isOffline ? (
                   <>
-                    <WifiOff className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--premium-text-tertiary)' }} />
+                    <WifiOff className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--brand-text-muted)' }} />
                     <h2 className="text-2xl font-bold mb-2 premium-text-platinum">
                       Offline
                     </h2>
-                    <p style={{ color: 'var(--premium-text-secondary)' }} className="mb-6">
+                    <p style={{ color: 'var(--brand-text-secondary)' }} className="mb-6">
                       Insights will be available when you're back online
                     </p>
                   </>
                 ) : (
                   <>
-                    <TrendingUp className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--premium-blue)' }} />
+                    <TrendingUp className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--brand-primary)' }} />
                     <h2 className="text-2xl font-bold mb-2 premium-text-platinum">
                       Building Your Insights
                     </h2>
-                    <p style={{ color: 'var(--premium-text-secondary)' }} className="mb-6">
+                    <p style={{ color: 'var(--brand-text-secondary)' }} className="mb-6">
                       Capture at least 10 thoughts to see evolution patterns and synthesis insights
                     </p>
                   </>
@@ -225,13 +225,13 @@ export function InsightsPage() {
             {/* Header Section */}
             <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
               <div className="p-6 rounded-xl backdrop-blur-xl" style={{
-                background: 'var(--premium-bg-2)',
+                background: 'var(--brand-glass-bg)',
                 boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
               }}>
                 <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
-                  Your synthesis <span style={{ color: 'var(--premium-blue)' }}>insights</span>
+                  Your synthesis <span style={{ color: 'var(--brand-primary)' }}>insights</span>
                 </h2>
-                <p className="mt-2 text-lg" style={{ color: 'var(--premium-text-secondary)' }}>
+                <p className="mt-2 text-lg" style={{ color: 'var(--brand-text-secondary)' }}>
                   How your thinking evolved and patterns emerged
                 </p>
               </div>
@@ -243,16 +243,16 @@ export function InsightsPage() {
                 key={index}
                 className="p-6 rounded-xl backdrop-blur-xl transition-all duration-300"
                 style={{
-                  background: 'var(--premium-bg-2)',
+                  background: 'var(--brand-glass-bg)',
                   boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
                   ...getInsightStyle(insight.type)
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-3)'
+                  e.currentTarget.style.background = 'var(--glass-surface)'
                   e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.5)'
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-2)'
+                  e.currentTarget.style.background = 'var(--brand-glass-bg)'
                   e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.4)'
                 }}
               >
@@ -261,10 +261,10 @@ export function InsightsPage() {
                   {getInsightIcon(insight.type)}
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold mb-2" style={{ color: 'var(--premium-text-primary)' }}>
+                  <h3 className="text-xl font-bold mb-2" style={{ color: 'var(--brand-text-primary)' }}>
                     {insight.title}
                   </h3>
-                  <p className="mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
+                  <p className="mb-4" style={{ color: 'var(--brand-text-secondary)' }}>
                     {insight.description}
                   </p>
 
@@ -274,14 +274,14 @@ export function InsightsPage() {
                       {insight.data.timeline.map((event: any, i: number) => (
                         <div key={i} className="pl-4">
                           <div className="flex items-start gap-3">
-                            <div className="flex-shrink-0 w-24 text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
+                            <div className="flex-shrink-0 w-24 text-sm" style={{ color: 'var(--brand-text-muted)' }}>
                               {new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                             </div>
                             <div className="flex-1">
-                              <p className="text-sm font-medium mb-1" style={{ color: 'var(--premium-text-primary)' }}>
+                              <p className="text-sm font-medium mb-1" style={{ color: 'var(--brand-text-primary)' }}>
                                 {event.stance}
                               </p>
-                              <p className="text-sm italic" style={{ color: 'var(--premium-text-secondary)' }}>
+                              <p className="text-sm italic" style={{ color: 'var(--brand-text-secondary)' }}>
                                 "{event.quote}"
                               </p>
                             </div>
@@ -294,10 +294,10 @@ export function InsightsPage() {
                   {/* Pattern Details */}
                   {insight.type === 'pattern' && insight.data?.recommendation && (
                     <div className="p-4 rounded-lg premium-glass-subtle">
-                      <p className="text-sm font-medium mb-2" style={{ color: 'var(--premium-text-primary)' }}>
+                      <p className="text-sm font-medium mb-2" style={{ color: 'var(--brand-text-primary)' }}>
                         💡 Recommendation:
                       </p>
-                      <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
+                      <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>
                         {insight.data.recommendation}
                       </p>
                     </div>
@@ -310,7 +310,7 @@ export function InsightsPage() {
                         <div key={i} className="p-3 rounded-lg premium-glass-subtle">
                           <div className="flex items-start gap-2 mb-1">
                             <span
-                              className="px-2 py-0.5 rounded text-xs font-medium"
+                              className="px-2 py-0.5 rounded-xl text-xs font-medium"
                               style={
                                 i === 0
                                   ? { backgroundColor: 'rgba(16, 185, 129, 0.2)', color: 'var(--premium-emerald)' }
@@ -319,11 +319,11 @@ export function InsightsPage() {
                             >
                               {event.stance}
                             </span>
-                            <span className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+                            <span className="text-xs" style={{ color: 'var(--brand-text-muted)' }}>
                               {new Date(event.date).toLocaleDateString()}
                             </span>
                           </div>
-                          <p className="text-sm italic" style={{ color: 'var(--premium-text-secondary)' }}>
+                          <p className="text-sm italic" style={{ color: 'var(--brand-text-secondary)' }}>
                             "{event.quote}"
                           </p>
                         </div>
@@ -357,13 +357,13 @@ export function InsightsPage() {
 
             {/* Summary */}
             <div className="p-6 rounded-xl backdrop-blur-xl" style={{
-              background: 'var(--premium-bg-2)',
+              background: 'var(--brand-glass-bg)',
               boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
             }}>
               <h3 className="text-lg font-bold mb-3 premium-text-platinum">
                 Understanding Your Journey
               </h3>
-              <p style={{ color: 'var(--premium-text-secondary)' }}>
+              <p style={{ color: 'var(--brand-text-secondary)' }}>
                 These insights show how your thinking evolves over time. Contradictions aren't failures—they're
                 signs of growth. Patterns help you understand your creative process and break unproductive cycles.
               </p>
@@ -376,7 +376,7 @@ export function InsightsPage() {
       {/* Contradiction Resolution Dialog */}
       {showResolutionDialog && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60" onClick={() => setShowResolutionDialog(false)}>
-          <div className="w-full max-w-lg rounded-2xl bg-[#1a1f35] border border-[rgba(255,255,255,0.08)] p-5" onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-lg rounded-2xl bg-[#1a1f35] border border-[var(--glass-surface-hover)] p-5" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-[var(--brand-text-primary)] mb-3">Resolve the tension</h3>
             <div className="p-3 rounded-xl bg-purple-500/5 border border-purple-500/10 mb-4">
               <p className="text-sm text-[var(--brand-text-secondary)] whitespace-pre-line">{resolutionPrompt}</p>
@@ -385,7 +385,7 @@ export function InsightsPage() {
               value={resolutionText}
               onChange={e => setResolutionText(e.target.value)}
               placeholder="The deeper truth is..."
-              className="w-full bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.08)] rounded-xl px-4 py-3 text-sm text-[var(--brand-text-primary)] placeholder-gray-500 focus:outline-none focus:border-purple-500/30 min-h-[100px] resize-none"
+              className="w-full bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] rounded-xl px-4 py-3 text-sm text-[var(--brand-text-primary)] placeholder-gray-500 focus:outline-none focus:border-purple-500/30 min-h-[100px] resize-none"
               autoFocus
             />
             <div className="flex justify-end gap-2 mt-3">

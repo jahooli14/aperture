@@ -56,10 +56,10 @@ export function ProjectPickerDialog({
                     initial={{ scale: 0.95, opacity: 0, y: 10 }}
                     animate={{ scale: 1, opacity: 1, y: 0 }}
                     exit={{ scale: 0.95, opacity: 0, y: 10 }}
-                    className="relative w-full max-w-md bg-[#1a1f2e] border border-[rgba(255,255,255,0.08)] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
+                    className="relative w-full max-w-md bg-[#1a1f2e] border border-[var(--glass-surface-hover)] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
                 >
                     {/* Header */}
-                    <div className="p-4 border-b border-[rgba(255,255,255,0.08)] flex items-center justify-between bg-[rgba(255,255,255,0.05)]">
+                    <div className="p-4 border-b border-[var(--glass-surface-hover)] flex items-center justify-between bg-[var(--glass-surface)]">
                         <h2 className="text-lg font-semibold text-[var(--brand-text-primary)]">{title}</h2>
                         <button
                             onClick={() => onOpenChange(false)}
@@ -70,7 +70,7 @@ export function ProjectPickerDialog({
                     </div>
 
                     {/* Search */}
-                    <div className="p-4 border-b border-[rgba(255,255,255,0.05)]">
+                    <div className="p-4 border-b border-[var(--glass-surface)]">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--brand-text-secondary)]" />
                             <input
@@ -78,7 +78,7 @@ export function ProjectPickerDialog({
                                 placeholder="Search projects..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full bg-black/20 border border-[rgba(255,255,255,0.08)] rounded-xl py-2.5 pl-10 pr-4 text-[var(--brand-text-primary)] placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all"
+                                className="w-full bg-black/20 border border-[var(--glass-surface-hover)] rounded-xl py-2.5 pl-10 pr-4 text-[var(--brand-text-primary)] placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all"
                                 autoFocus
                             />
                         </div>
@@ -95,7 +95,7 @@ export function ProjectPickerDialog({
                                 <button
                                     key={project.id}
                                     onClick={() => onSelect(project)}
-                                    className="w-full text-left p-3 rounded-xl hover:bg-[rgba(255,255,255,0.05)] transition-colors flex items-center gap-3 group"
+                                    className="w-full text-left p-3 rounded-xl hover:bg-[var(--glass-surface)] transition-colors flex items-center gap-3 group"
                                 >
                                     <div className={`p-2 rounded-lg ${project.status === 'active' ? 'bg-blue-500/20 text-blue-400' :
                                             project.status === 'upcoming' ? 'bg-purple-500/20 text-purple-400' :
@@ -108,7 +108,7 @@ export function ProjectPickerDialog({
                                             {project.title}
                                         </h3>
                                         <div className="flex items-center gap-2 mt-0.5">
-                                            <span className={`text-[10px] uppercase tracking-wider font-medium px-1.5 py-0.5 rounded ${project.status === 'active' ? 'bg-blue-500/10 text-blue-400' :
+                                            <span className={`text-[10px] uppercase tracking-wider font-medium px-1.5 py-0.5 rounded-xl ${project.status === 'active' ? 'bg-blue-500/10 text-blue-400' :
                                                     project.status === 'upcoming' ? 'bg-purple-500/10 text-purple-400' :
                                                         'bg-gray-500/10 text-[var(--brand-text-secondary)]'
                                                 }`}>

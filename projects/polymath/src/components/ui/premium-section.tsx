@@ -37,7 +37,7 @@ export function PremiumSection({
           {description && (
             <p
               className="text-sm"
-              style={{ color: 'var(--premium-text-secondary)' }}
+              style={{ color: 'var(--brand-text-secondary)' }}
             >
               {description}
             </p>

@@ -340,7 +340,7 @@ export function FloatingNav() {
             className="premium-glass flex items-center justify-between gap-0"
             style={{
               borderRadius: 'var(--premium-radius-2xl)',
-              backgroundColor: 'var(--premium-bg-2)',
+              backgroundColor: 'var(--brand-glass-bg)',
               padding: '4px 6px',
             }}
           >

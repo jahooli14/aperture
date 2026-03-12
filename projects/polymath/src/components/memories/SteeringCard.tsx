@@ -151,7 +151,7 @@ export function SteeringCard() {
 
             {/* Action buttons — contextual to the steering move */}
             {(showCreateTodo || showPinThought) && (
-              <div className="flex items-center gap-2 mt-2.5 pt-2 border-t border-white/5">
+              <div className="flex items-center gap-2 mt-2.5 pt-2 border-t border-brand-border">
                 {showCreateTodo && (
                   <button
                     onClick={handleCreateTodo}

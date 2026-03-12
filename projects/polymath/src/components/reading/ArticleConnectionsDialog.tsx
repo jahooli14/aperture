@@ -69,7 +69,7 @@ export function ArticleConnectionsDialog({
 
                 aria-label="Close"
               >
-                <X className="h-5 w-5" style={{ color: 'var(--premium-text-secondary)' }} />
+                <X className="h-5 w-5" style={{ color: 'var(--brand-text-secondary)' }} />
               </button>
 
               {stage === 'prompt' ? (
@@ -89,11 +89,11 @@ export function ArticleConnectionsDialog({
                     Great read!
                   </h2>
 
-                  <p className="text-lg mb-6" style={{ color: 'var(--premium-text-secondary)' }}>
+                  <p className="text-lg mb-6" style={{ color: 'var(--brand-text-secondary)' }}>
                     "{article.title}"
                   </p>
 
-                  <p className="mb-8" style={{ color: 'var(--premium-text-tertiary)' }}>
+                  <p className="mb-8" style={{ color: 'var(--brand-text-muted)' }}>
                     Want to connect this to your projects or thoughts?
                   </p>
 
@@ -101,7 +101,7 @@ export function ArticleConnectionsDialog({
                     <button
                       onClick={handleDiscover}
                       className="px-6 py-3 rounded-lg font-medium inline-flex items-center justify-center gap-2 transition-all"
-                      style={{ background: 'var(--premium-blue-gradient)', color: 'white' }}
+                      style={{ background: 'var(--brand-primary)', color: 'white' }}
                     >
                       <Zap className="h-5 w-5" />
                       Discover Connections
@@ -109,9 +109,9 @@ export function ArticleConnectionsDialog({
                     </button>
                     <button
                       onClick={onClose}
-                      className="px-6 py-3 rounded-lg font-medium border transition-all hover:bg-[rgba(255,255,255,0.05)]"
+                      className="px-6 py-3 rounded-lg font-medium border transition-all hover:bg-[var(--glass-surface)]"
 
-                      style={{ borderColor: 'rgba(255, 255, 255, 0.2)', color: 'var(--premium-text-secondary)' }}
+                      style={{ borderColor: 'rgba(255, 255, 255, 0.2)', color: 'var(--brand-text-secondary)' }}
                     >
                       Skip
                     </button>
@@ -121,13 +121,13 @@ export function ArticleConnectionsDialog({
                 <div className="p-6">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="p-2 rounded-lg" style={{ background: 'rgba(59, 130, 246, 0.2)' }}>
-                      <Brain className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
+                      <Brain className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
                     </div>
                     <div>
                       <h3 className="font-semibold premium-text-platinum">
                         AI-Suggested Connections
                       </h3>
-                      <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
+                      <p className="text-sm" style={{ color: 'var(--brand-text-muted)' }}>
                         Based on "{article.title}"
                       </p>
                     </div>
@@ -148,9 +148,9 @@ export function ArticleConnectionsDialog({
                   <div className="mt-6 pt-6 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
                     <button
                       onClick={onClose}
-                      className="w-full px-6 py-3 rounded-lg font-medium border transition-all hover:bg-[rgba(255,255,255,0.05)]"
+                      className="w-full px-6 py-3 rounded-lg font-medium border transition-all hover:bg-[var(--glass-surface)]"
 
-                      style={{ borderColor: 'rgba(255, 255, 255, 0.2)', color: 'var(--premium-text-secondary)' }}
+                      style={{ borderColor: 'rgba(255, 255, 255, 0.2)', color: 'var(--brand-text-secondary)' }}
                     >
                       Done
                     </button>

@@ -106,18 +106,18 @@ export function ProcessingDebugPanel({ articles, onRetry, onFlushAll }: Processi
           >
             <AlertCircle className="h-5 w-5" style={{ color: 'var(--premium-red)' }} />
             <div>
-              <p className="font-semibold text-sm" style={{ color: 'var(--premium-text-primary)' }}>
+              <p className="font-semibold text-sm" style={{ color: 'var(--brand-text-primary)' }}>
                 Share Sheet Debug ({unprocessedArticles.length} stuck)
               </p>
-              <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+              <p className="text-xs" style={{ color: 'var(--brand-text-muted)' }}>
                 {unprocessedArticles.length > 0 ? 'Tap to expand details' : 'All clear'}
               </p>
             </div>
             <div className="ml-auto">
               {isExpanded ? (
-                <ChevronDown className="h-5 w-5" style={{ color: 'var(--premium-text-tertiary)' }} />
+                <ChevronDown className="h-5 w-5" style={{ color: 'var(--brand-text-muted)' }} />
               ) : (
-                <ChevronUp className="h-5 w-5" style={{ color: 'var(--premium-text-tertiary)' }} />
+                <ChevronUp className="h-5 w-5" style={{ color: 'var(--brand-text-muted)' }} />
               )}
             </div>
           </div>
@@ -148,7 +148,7 @@ export function ProcessingDebugPanel({ articles, onRetry, onFlushAll }: Processi
           <div className="max-h-96 overflow-y-auto">
             {/* Unprocessed Articles */}
             <div className="p-4 space-y-3">
-              <p className="text-xs font-semibold" style={{ color: 'var(--premium-text-secondary)' }}>
+              <p className="text-xs font-semibold" style={{ color: 'var(--brand-text-secondary)' }}>
                 STUCK SHARE SHEET ARTICLES (RSS FILTERED)
               </p>
               {unprocessedArticles.map(article => {
@@ -159,17 +159,17 @@ export function ProcessingDebugPanel({ articles, onRetry, onFlushAll }: Processi
                   <div
                     key={article.id}
                     className="premium-glass rounded-lg p-3 space-y-2"
-                    style={{ backgroundColor: 'rgba(255, 255, 255, 0.03)' }}
+                    style={{ backgroundColor: 'var(--glass-surface)' }}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-mono" style={{ color: 'var(--premium-text-tertiary)' }}>
+                        <p className="text-xs font-mono" style={{ color: 'var(--brand-text-muted)' }}>
                           ID: {article.id.slice(0, 12)}...
                         </p>
-                        <p className="text-sm font-medium truncate mt-1" style={{ color: 'var(--premium-text-primary)' }}>
+                        <p className="text-sm font-medium truncate mt-1" style={{ color: 'var(--brand-text-primary)' }}>
                           {article.title || 'Untitled'}
                         </p>
-                        <p className="text-xs truncate mt-1" style={{ color: 'var(--premium-text-tertiary)' }}>
+                        <p className="text-xs truncate mt-1" style={{ color: 'var(--brand-text-muted)' }}>
                           {new URL(article.url).hostname}
                         </p>
                       </div>
@@ -182,7 +182,7 @@ export function ProcessingDebugPanel({ articles, onRetry, onFlushAll }: Processi
                         className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
                         style={{
                           backgroundColor: processing ? 'rgba(59, 130, 246, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                          color: processing ? 'var(--premium-blue)' : 'var(--premium-red)',
+                          color: processing ? 'var(--brand-primary)' : 'var(--premium-red)',
                         }}
                       >
                         {processing ? (
@@ -201,42 +201,42 @@ export function ProcessingDebugPanel({ articles, onRetry, onFlushAll }: Processi
 
                     <div className="space-y-1">
                       <div className="flex items-center justify-between text-xs">
-                        <span style={{ color: 'var(--premium-text-tertiary)' }}>Age:</span>
-                        <span style={{ color: 'var(--premium-text-secondary)' }}>
+                        <span style={{ color: 'var(--brand-text-muted)' }}>Age:</span>
+                        <span style={{ color: 'var(--brand-text-secondary)' }}>
                           {getArticleAge(article.created_at)}
                         </span>
                       </div>
 
                       {processing && processingState && (
                         <>
-                          <div className="text-xs p-2 rounded mb-1" style={{
+                          <div className="text-xs p-2 rounded-xl mb-1" style={{
                             backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            borderLeft: '2px solid var(--premium-blue)',
-                            color: 'var(--premium-blue)'
+                            borderLeft: '2px solid var(--brand-primary)',
+                            color: 'var(--brand-primary)'
                           }}>
                             <div className="font-semibold">ACTIVE PROCESSING</div>
                             <div className="mt-1">Stage: {processingState.currentStage || 'Unknown'}</div>
                           </div>
                           <div className="flex items-center justify-between text-xs">
-                            <span style={{ color: 'var(--premium-text-tertiary)' }}>Poll Attempts:</span>
-                            <span style={{ color: 'var(--premium-blue)' }}>
+                            <span style={{ color: 'var(--brand-text-muted)' }}>Poll Attempts:</span>
+                            <span style={{ color: 'var(--brand-primary)' }}>
                               {processingState.attempts} / 180
                             </span>
                           </div>
                           <div className="flex items-center justify-between text-xs">
-                            <span style={{ color: 'var(--premium-text-tertiary)' }}>Time Elapsed:</span>
-                            <span style={{ color: 'var(--premium-blue)' }}>
+                            <span style={{ color: 'var(--brand-text-muted)' }}>Time Elapsed:</span>
+                            <span style={{ color: 'var(--brand-primary)' }}>
                               {Math.floor((Date.now() - processingState.startTime) / 1000)}s
                             </span>
                           </div>
                         </>
                       )}
 
-                      <div className="text-xs p-2 rounded mt-1" style={{
+                      <div className="text-xs p-2 rounded-xl mt-1" style={{
                         backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                        color: 'var(--premium-text-tertiary)'
+                        color: 'var(--brand-text-muted)'
                       }}>
-                        <div className="font-semibold mb-1" style={{ color: 'var(--premium-text-secondary)' }}>
+                        <div className="font-semibold mb-1" style={{ color: 'var(--brand-text-secondary)' }}>
                           Backend Status:
                         </div>
                         {article.excerpt || 'No status message from backend'}
@@ -252,12 +252,12 @@ export function ProcessingDebugPanel({ articles, onRetry, onFlushAll }: Processi
               className="p-4 border-t space-y-2"
               style={{ borderColor: 'rgba(239, 68, 68, 0.3)' }}
             >
-              <p className="text-xs font-semibold" style={{ color: 'var(--premium-text-secondary)' }}>
+              <p className="text-xs font-semibold" style={{ color: 'var(--brand-text-secondary)' }}>
                 ACTIVITY LOG
               </p>
               <div
                 className="space-y-1 text-xs font-mono max-h-40 overflow-y-auto"
-                style={{ color: 'var(--premium-text-tertiary)' }}
+                style={{ color: 'var(--brand-text-muted)' }}
               >
                 {logs.length === 0 ? (
                   <p className="text-xs italic">No activity yet...</p>
@@ -271,7 +271,7 @@ export function ProcessingDebugPanel({ articles, onRetry, onFlushAll }: Processi
                           ? 'var(--premium-red)'
                           : log.level === 'success'
                           ? 'var(--premium-green)'
-                          : 'var(--premium-text-tertiary)'
+                          : 'var(--brand-text-muted)'
                       }}
                     >
                       <span className="opacity-60">[{log.time}]</span>

@@ -11,7 +11,7 @@ interface SmartActionDotProps {
 }
 
 export const SmartActionDot: React.FC<SmartActionDotProps> = ({
-  color = 'var(--premium-blue)',
+  color = 'var(--brand-primary)',
   isActive = false,
   onClick,
   title = 'AI Analysis / Suggestion',

@@ -26,19 +26,19 @@ function SkeletonPerspective({ delay }: { delay: number }) {
       transition={{ delay, duration: 0.3 }}
       className="p-4 rounded-xl border"
       style={{
-        background: 'rgba(255,255,255,0.03)',
-        borderColor: 'rgba(255,255,255,0.06)'
+        background: 'var(--glass-surface)',
+        borderColor: 'var(--glass-surface)'
       }}
     >
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-6 h-6 rounded bg-[rgba(255,255,255,0.1)] animate-pulse" />
-        <div className="h-3.5 w-32 rounded bg-[rgba(255,255,255,0.1)] animate-pulse" />
-        <div className="ml-auto h-3 w-10 rounded bg-[rgba(255,255,255,0.05)] animate-pulse" />
+        <div className="w-6 h-6 rounded-xl bg-[rgba(255,255,255,0.1)] animate-pulse" />
+        <div className="h-3.5 w-32 rounded-xl bg-[rgba(255,255,255,0.1)] animate-pulse" />
+        <div className="ml-auto h-3 w-10 rounded-xl bg-[var(--glass-surface)] animate-pulse" />
       </div>
       <div className="space-y-2">
-        <div className="h-3 w-full rounded bg-white/8 animate-pulse" />
-        <div className="h-3 w-4/5 rounded bg-white/8 animate-pulse" />
-        <div className="h-3 w-3/5 rounded bg-white/8 animate-pulse" />
+        <div className="h-3 w-full rounded-xl bg-white/8 animate-pulse" />
+        <div className="h-3 w-4/5 rounded-xl bg-white/8 animate-pulse" />
+        <div className="h-3 w-3/5 rounded-xl bg-white/8 animate-pulse" />
       </div>
     </motion.div>
   )
@@ -85,7 +85,7 @@ function PerspectiveCard({
             </span>
             {perspective.confidence === 'high' && (
               <span
-                className="ml-auto px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-widest flex items-center gap-1"
+                className="ml-auto px-1.5 py-0.5 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-1"
                 style={{ background: colors.bg, border: `1px solid ${colors.border}`, color: colors.text }}
               >
                 <span className="inline-block w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: colors.dot }} />
@@ -94,7 +94,7 @@ function PerspectiveCard({
             )}
           </div>
 
-          <p className="text-sm leading-relaxed aperture-body" style={{ color: 'var(--premium-text-primary)' }}>
+          <p className="text-sm leading-relaxed aperture-body" style={{ color: 'var(--brand-text-primary)' }}>
             {perspective.suggestion}
           </p>
         </div>
@@ -108,9 +108,9 @@ function PerspectiveCard({
             disabled={added}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 hover:opacity-90"
             style={{
-              background: added ? colors.bg : 'rgba(255,255,255,0.06)',
-              border: `1px solid ${added ? colors.border : 'rgba(255,255,255,0.08)'}`,
-              color: added ? colors.text : 'var(--premium-text-secondary)'
+              background: added ? colors.bg : 'var(--glass-surface)',
+              border: `1px solid ${added ? colors.border : 'var(--glass-surface-hover)'}`,
+              color: added ? colors.text : 'var(--brand-text-secondary)'
             }}
           >
             {added ? (
@@ -171,16 +171,16 @@ export function MultiPerspectiveSuggestions({
               ⚡
             </div>
             <div>
-              <h3 className="font-bold text-sm" style={{ color: 'var(--premium-text-primary)' }}>
+              <h3 className="font-bold text-sm" style={{ color: 'var(--brand-text-primary)' }}>
                 Council of Advisors
               </h3>
-              <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+              <p className="text-xs" style={{ color: 'var(--brand-text-muted)' }}>
                 5 perspectives on your next move
               </p>
             </div>
           </div>
 
-          <p className="text-sm mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
+          <p className="text-sm mb-4" style={{ color: 'var(--brand-text-secondary)' }}>
             Spawn 5 AI advisors simultaneously — each with a different lens on what you should do next. ~$0.00006 per session.
           </p>
 
@@ -213,15 +213,15 @@ export function MultiPerspectiveSuggestions({
       <div className="px-5 pt-5 pb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-base">⚡</span>
-          <h3 className="font-bold text-sm aperture-header" style={{ color: 'var(--premium-text-primary)' }}>
+          <h3 className="font-bold text-sm aperture-header" style={{ color: 'var(--brand-text-primary)' }}>
             What's Next?
           </h3>
         </div>
         <button
           onClick={handleRefresh}
           disabled={loading}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:bg-[rgba(255,255,255,0.05)]"
-          style={{ color: 'var(--premium-text-tertiary)', border: '1px solid rgba(255,255,255,0.06)' }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:bg-[var(--glass-surface)]"
+          style={{ color: 'var(--brand-text-muted)', border: '1px solid var(--glass-surface)' }}
           title="Regenerate all perspectives"
         >
           <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
@@ -237,7 +237,7 @@ export function MultiPerspectiveSuggestions({
             {[0, 1, 2, 3, 4].map(i => (
               <SkeletonPerspective key={i} delay={i * 0.08} />
             ))}
-            <p className="text-center text-xs py-1" style={{ color: 'var(--premium-text-tertiary)' }}>
+            <p className="text-center text-xs py-1" style={{ color: 'var(--brand-text-muted)' }}>
               Your advisors are thinking...
             </p>
           </>
@@ -272,8 +272,8 @@ export function MultiPerspectiveSuggestions({
         {!loading && result && hiddenCount > 0 && (
           <button
             onClick={() => setShowAll(!showAll)}
-            className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-[rgba(255,255,255,0.05)]"
-            style={{ color: 'var(--premium-text-tertiary)', border: '1px solid rgba(255,255,255,0.05)' }}
+            className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-[var(--glass-surface)]"
+            style={{ color: 'var(--brand-text-muted)', border: '1px solid var(--glass-surface)' }}
           >
             {showAll ? (
               <>
@@ -297,7 +297,7 @@ export function MultiPerspectiveSuggestions({
             style={{
               background: 'rgba(139,92,246,0.08)',
               border: '1px solid rgba(139,92,246,0.15)',
-              color: 'var(--premium-text-secondary)'
+              color: 'var(--brand-text-secondary)'
             }}
           >
             <span className="font-bold not-italic" style={{ color: 'rgb(196,181,253)' }}>Council synthesis: </span>

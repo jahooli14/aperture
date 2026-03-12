@@ -17,19 +17,19 @@ interface Task {
 }
 
 const CARD_HOVER_STYLES = {
-  enter: { background: 'var(--premium-bg-3)', boxShadow: '0 12px 32px rgba(0, 0, 0, 0.5)', transform: 'translateY(-2px)' },
-  leave: { background: 'var(--premium-bg-2)', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)', transform: 'translateY(0)' }
+  enter: { background: 'var(--glass-surface)', boxShadow: '0 12px 32px rgba(0, 0, 0, 0.5)', transform: 'translateY(-2px)' },
+  leave: { background: 'var(--brand-glass-bg)', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)', transform: 'translateY(0)' }
 }
 
 // Export colors for reuse
 export const PROJECT_COLORS: Record<string, string> = {
-  tech: 'var(--project-tech-raw)',
-  art: 'var(--project-art-raw)',
-  writing: 'var(--project-writing-raw)',
-  music: 'var(--project-music-raw)',
-  business: 'var(--project-business-raw)',
-  life: 'var(--project-life-raw)',
-  default: 'var(--project-default-raw)'
+  tech: 'var(--project-tech-rgb)',
+  art: 'var(--project-art-rgb)',
+  writing: 'var(--project-writing-rgb)',
+  music: 'var(--project-music-rgb)',
+  business: 'var(--project-business-rgb)',
+  life: 'var(--project-life-rgb)',
+  default: 'var(--project-default-rgb)'
 }
 
 export function ProjectCard({ project, prominent = false }: { project: Project, prominent?: boolean }) {
@@ -116,7 +116,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
       {nextTask ? (
         <div className="mb-4">
           <div
-            className="rounded-lg p-3 flex items-start gap-3 transition-all group-hover:bg-[rgba(255,255,255,0.05)]"
+            className="rounded-lg p-3 flex items-start gap-3 transition-all group-hover:bg-[var(--glass-surface)]"
             style={{
               background: `rgba(${theme.rgb}, 0.1)`,
               boxShadow: `inset 0 0 0 1px rgba(${theme.rgb}, 0.2)`
@@ -149,7 +149,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
         <div className="flex items-center gap-2">
           {totalTasks > 0 ? (
             <div className="flex flex-col gap-1 w-full">
-              <div className="w-full h-1 bg-[rgba(255,255,255,0.05)] rounded-full overflow-hidden">
+              <div className="w-full h-1 bg-[var(--glass-surface)] rounded-full overflow-hidden">
                 <div
                   className="h-full transition-all duration-500"
                   style={{
@@ -171,7 +171,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
         </div>
 
         {prominent && (
-          <div className="p-1.5 rounded-full bg-[rgba(255,255,255,0.05)] transition-colors" style={{ color: `rgba(${theme.rgb}, 0.8)` }}>
+          <div className="p-1.5 rounded-full bg-[var(--glass-surface)] transition-colors" style={{ color: `rgba(${theme.rgb}, 0.8)` }}>
             <ArrowRight className="h-4 w-4" />
           </div>
         )}

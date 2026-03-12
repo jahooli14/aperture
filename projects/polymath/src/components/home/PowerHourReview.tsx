@@ -249,7 +249,7 @@ export function PowerHourReview({
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="p-4 border-b border-[rgba(255,255,255,0.08)] flex items-center justify-between flex-shrink-0">
+                <div className="p-4 border-b border-[var(--glass-surface-hover)] flex items-center justify-between flex-shrink-0">
                     <div>
                         <div
                             className="text-[10px] font-bold uppercase tracking-widest mb-1"
@@ -270,7 +270,7 @@ export function PowerHourReview({
                 </div>
 
                 {/* Context Anchor - Always visible above tasks */}
-                <div className="px-4 py-3 bg-gradient-to-b from-white/[0.03] to-transparent border-b border-[rgba(255,255,255,0.05)] flex-shrink-0">
+                <div className="px-4 py-3 bg-gradient-to-b from-white/[0.03] to-transparent border-b border-[var(--glass-surface)] flex-shrink-0">
                     {/* Dormancy Reconnection Card */}
                     {projectContext?.isDormant && (
                         <motion.div
@@ -360,7 +360,7 @@ export function PowerHourReview({
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
-                            className="overflow-hidden border-b border-[rgba(255,255,255,0.08)]"
+                            className="overflow-hidden border-b border-[var(--glass-surface-hover)]"
                         >
                             <div className="p-4 bg-white/[0.02]">
                                 <div className="text-[9px] font-bold uppercase tracking-widest text-[var(--brand-text-primary)]/40 mb-2">
@@ -416,7 +416,7 @@ export function PowerHourReview({
                                     className={`rounded-xl transition-all ${isPlanningTask
                                         ? 'bg-blue-500/10 border border-blue-500/20'
                                         : isRemoved
-                                            ? 'bg-[rgba(255,255,255,0.05)] opacity-60'
+                                            ? 'bg-[var(--glass-surface)] opacity-60'
                                             : isStale && !isRemoved
                                                 ? 'bg-amber-500/5 border-l-2 border-amber-400/40'
                                                 : 'bg-[rgba(255,255,255,0.1)]'
@@ -427,7 +427,7 @@ export function PowerHourReview({
                                         <button
                                             onClick={() => toggleRemove(idx)}
                                             disabled={isPlanningTask}
-                                            className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all mt-0.5 ${isPlanningTask ? 'cursor-default' : ''
+                                            className={`w-5 h-5 rounded-xl border-2 flex items-center justify-center flex-shrink-0 transition-all mt-0.5 ${isPlanningTask ? 'cursor-default' : ''
                                                 }`}
                                             style={{
                                                 borderColor: isPlanningTask
@@ -469,14 +469,14 @@ export function PowerHourReview({
                                                 )}
                                                 {item.is_new && !isRemoved && !isPlanningTask && (
                                                     <span
-                                                        className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
+                                                        className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-xl"
                                                         style={{ backgroundColor: `${projectColor}20`, color: projectColor }}
                                                     >
                                                         AI Suggested
                                                     </span>
                                                 )}
                                                 {isStale && !isPlanningTask && (
-                                                    <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400">
+                                                    <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-xl bg-amber-500/20 text-amber-400">
                                                         {taskAge}d old
                                                     </span>
                                                 )}
@@ -487,7 +487,7 @@ export function PowerHourReview({
                                         {item.is_new && !isRemoved && !isPlanningTask && (
                                             <button
                                                 onClick={() => setShowReasoningFor(showReasoningFor === idx ? null : idx)}
-                                                className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded transition-colors"
+                                                className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded-xl transition-colors"
                                             >
                                                 <HelpCircle className="h-3.5 w-3.5 text-[var(--brand-text-primary)]/30" />
                                             </button>
@@ -498,7 +498,7 @@ export function PowerHourReview({
                                             <div className="relative flex-shrink-0">
                                                 <button
                                                     onClick={() => setExpandedTimeIdx(showTimeOptions ? null : idx)}
-                                                    className="px-2 py-1 rounded-lg bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] transition-colors"
+                                                    className="px-2 py-1 rounded-lg bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] transition-colors"
                                                 >
                                                     <span className="text-sm font-bold text-[var(--brand-text-primary)] tabular-nums">
                                                         {item.estimated_minutes}
@@ -519,7 +519,7 @@ export function PowerHourReview({
                                                                 <button
                                                                     key={d}
                                                                     onClick={() => setDuration(idx, d)}
-                                                                    className={`px-2 py-1 rounded text-xs font-bold transition-colors ${item.estimated_minutes === d
+                                                                    className={`px-2 py-1 rounded-xl text-xs font-bold transition-colors ${item.estimated_minutes === d
                                                                         ? 'bg-white text-black'
                                                                         : 'text-[var(--brand-text-primary)]/70 hover:bg-[rgba(255,255,255,0.1)]'
                                                                         }`}
@@ -544,7 +544,7 @@ export function PowerHourReview({
                                                 className="overflow-hidden"
                                             >
                                                 <div className="px-3 pb-3 pt-0">
-                                                    <div className="p-2 rounded-lg bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.08)]">
+                                                    <div className="p-2 rounded-lg bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)]">
                                                         <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--brand-text-primary)]/40 mb-1">
                                                             Why this task?
                                                         </div>
@@ -569,14 +569,14 @@ export function PowerHourReview({
                                     haptic.light()
                                     setShowBacklog(!showBacklog)
                                 }}
-                                className="w-full flex items-center justify-between p-3 rounded-xl border border-dashed border-white/20 hover:border-white/40 hover:bg-[rgba(255,255,255,0.05)] transition-all"
+                                className="w-full flex items-center justify-between p-3 rounded-xl border border-dashed border-white/20 hover:border-white/40 hover:bg-[var(--glass-surface)] transition-all"
                             >
                                 <div className="flex items-center gap-2 text-[var(--brand-text-primary)]/50">
                                     <ListTodo className="h-4 w-4" />
                                     <span className="text-xs font-medium">
                                         {isManualMode ? 'Add from your tasks' : 'Add from backlog'}
                                     </span>
-                                    <span className="text-[10px] bg-[rgba(255,255,255,0.1)] px-1.5 py-0.5 rounded">
+                                    <span className="text-[10px] bg-[rgba(255,255,255,0.1)] px-1.5 py-0.5 rounded-xl">
                                         {availableBacklogTasks.length}
                                     </span>
                                 </div>
@@ -626,7 +626,7 @@ export function PowerHourReview({
                 </div>
 
                 {/* Time Summary with Sweet Spot Zone */}
-                <div className="px-4 py-3 border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.05)] flex-shrink-0">
+                <div className="px-4 py-3 border-t border-[var(--glass-surface-hover)] bg-[var(--glass-surface)] flex-shrink-0">
                     <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                             <Clock className="h-4 w-4 text-[var(--brand-text-primary)]/50" />
@@ -654,7 +654,7 @@ export function PowerHourReview({
 
                         {/* Actual progress */}
                         <motion.div
-                            className={`h-full rounded-full transition-colors ${isOvertime ? 'bg-red-500' : isIdeal ? 'bg-green-500' : 'bg-white/50'
+                            className={`h-full rounded-full transition-colors ${isOvertime ? 'bg-red-500' : isIdeal ? 'bg-green-500' : 'bg-brand-surface0'
                                 }`}
                             initial={{ width: 0 }}
                             animate={{ width: `${progressPercent}%` }}
@@ -690,7 +690,7 @@ export function PowerHourReview({
                 </div>
 
                 {/* Action Buttons */}
-                <div className="p-4 border-t border-[rgba(255,255,255,0.08)] flex-shrink-0">
+                <div className="p-4 border-t border-[var(--glass-surface-hover)] flex-shrink-0">
                     <div className="flex gap-3">
                         {/* Archive option for dormant projects */}
                         {projectContext?.isDormant && onArchive && (

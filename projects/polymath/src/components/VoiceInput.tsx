@@ -91,7 +91,7 @@ export function VoiceInput({
         disabled={isProcessing}
         className={`w-full py-4 rounded-xl flex items-center justify-center gap-3 transition-all duration-300 ${isRecording
           ? 'bg-red-500/20 text-red-200'
-          : 'bg-[rgba(255,255,255,0.05)] text-[var(--brand-text-secondary)] hover:bg-[rgba(255,255,255,0.1)]'
+          : 'bg-[var(--glass-surface)] text-[var(--brand-text-secondary)] hover:bg-[rgba(255,255,255,0.1)]'
           }`}
         style={{
           boxShadow: isRecording
@@ -118,7 +118,7 @@ export function VoiceInput({
       </Button>
 
       {transcript && !isProcessing && (
-        <div className="p-4 bg-[rgba(255,255,255,0.05)] rounded-xl" style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.08)' }}>
+        <div className="p-4 bg-[var(--glass-surface)] rounded-xl" style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface-hover)' }}>
           <p className="text-sm text-[var(--brand-text-secondary)] italic leading-relaxed">
             "{transcript}"
           </p>

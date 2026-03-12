@@ -110,7 +110,7 @@ export function SuggestionDetailDialog({
             </div>
           </div>
           <DialogTitle className="text-2xl premium-text-platinum">{suggestion.title}</DialogTitle>
-          <DialogDescription className="text-base leading-relaxed pt-2" style={{ color: 'var(--premium-text-secondary)' }}>
+          <DialogDescription className="text-base leading-relaxed pt-2" style={{ color: 'var(--brand-text-secondary)' }}>
             {suggestion.description}
           </DialogDescription>
         </DialogHeader>
@@ -126,21 +126,21 @@ export function SuggestionDetailDialog({
           >
             <button
               onClick={() => toggleSection('why')}
-              className="w-full p-4 flex items-center justify-between hover:bg-[rgba(255,255,255,0.05)] transition-colors rounded-xl"
+              className="w-full p-4 flex items-center justify-between hover:bg-[var(--glass-surface)] transition-colors rounded-xl"
             >
               <h3 className="text-base font-bold premium-text-platinum flex items-center gap-2">
                 <Lightbulb className="h-5 w-5" style={{ color: '#3b82f6' }} />
                 Why This Project Is Good For You
               </h3>
               {expandedSections.has('why') ? (
-                <ChevronUp className="h-5 w-5" style={{ color: 'var(--premium-text-tertiary)' }} />
+                <ChevronUp className="h-5 w-5" style={{ color: 'var(--brand-text-muted)' }} />
               ) : (
-                <ChevronDown className="h-5 w-5" style={{ color: 'var(--premium-text-tertiary)' }} />
+                <ChevronDown className="h-5 w-5" style={{ color: 'var(--brand-text-muted)' }} />
               )}
             </button>
 
             {expandedSections.has('why') && (
-              <div className="px-4 pb-4 space-y-3 text-sm leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
+              <div className="px-4 pb-4 space-y-3 text-sm leading-relaxed" style={{ color: 'var(--brand-text-secondary)' }}>
                 {suggestion.novelty_score > 0.7 && (
                   <div className="flex gap-2">
                     <TrendingUp className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: '#10b981' }} />
@@ -199,26 +199,26 @@ export function SuggestionDetailDialog({
             <div
               className="rounded-lg border-2"
               style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                backgroundColor: 'var(--glass-surface)',
                 borderColor: 'rgba(255, 255, 255, 0.1)'
               }}
             >
               <button
                 onClick={() => toggleSection('ai')}
-                className="w-full p-3 flex items-center justify-between hover:bg-[rgba(255,255,255,0.05)] transition-colors rounded-lg"
+                className="w-full p-3 flex items-center justify-between hover:bg-[var(--glass-surface)] transition-colors rounded-lg"
               >
                 <h3 className="text-sm font-semibold premium-text-platinum flex items-center gap-2">
                   <Brain className="h-4 w-4" />
                   AI Analysis
                 </h3>
                 {expandedSections.has('ai') ? (
-                  <ChevronUp className="h-4 w-4" style={{ color: 'var(--premium-text-tertiary)' }} />
+                  <ChevronUp className="h-4 w-4" style={{ color: 'var(--brand-text-muted)' }} />
                 ) : (
-                  <ChevronDown className="h-4 w-4" style={{ color: 'var(--premium-text-tertiary)' }} />
+                  <ChevronDown className="h-4 w-4" style={{ color: 'var(--brand-text-muted)' }} />
                 )}
               </button>
               {expandedSections.has('ai') && (
-                <p className="text-sm leading-relaxed px-3 pb-3" style={{ color: 'var(--premium-text-secondary)' }}>
+                <p className="text-sm leading-relaxed px-3 pb-3" style={{ color: 'var(--brand-text-secondary)' }}>
                   {suggestion.synthesis_reasoning}
                 </p>
               )}
@@ -230,22 +230,22 @@ export function SuggestionDetailDialog({
             <div
               className="rounded-lg border-2"
               style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                backgroundColor: 'var(--glass-surface)',
                 borderColor: 'rgba(255, 255, 255, 0.1)'
               }}
             >
               <button
                 onClick={() => toggleSection('capabilities')}
-                className="w-full p-3 flex items-center justify-between hover:bg-[rgba(255,255,255,0.05)] transition-colors rounded-lg"
+                className="w-full p-3 flex items-center justify-between hover:bg-[var(--glass-surface)] transition-colors rounded-lg"
               >
                 <h3 className="text-sm font-semibold premium-text-platinum flex items-center gap-2">
                   <Code2 className="h-4 w-4" />
                   Uses These Skills ({suggestion.capabilities.length})
                 </h3>
                 {expandedSections.has('capabilities') ? (
-                  <ChevronUp className="h-4 w-4" style={{ color: 'var(--premium-text-tertiary)' }} />
+                  <ChevronUp className="h-4 w-4" style={{ color: 'var(--brand-text-muted)' }} />
                 ) : (
-                  <ChevronDown className="h-4 w-4" style={{ color: 'var(--premium-text-tertiary)' }} />
+                  <ChevronDown className="h-4 w-4" style={{ color: 'var(--brand-text-muted)' }} />
                 )}
               </button>
               {expandedSections.has('capabilities') && (
@@ -273,26 +273,26 @@ export function SuggestionDetailDialog({
             <div
               className="rounded-lg border-2"
               style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                backgroundColor: 'var(--glass-surface)',
                 borderColor: 'rgba(255, 255, 255, 0.1)'
               }}
             >
               <button
                 onClick={() => toggleSection('memories')}
-                className="w-full p-3 flex items-center justify-between hover:bg-[rgba(255,255,255,0.05)] transition-colors rounded-lg"
+                className="w-full p-3 flex items-center justify-between hover:bg-[var(--glass-surface)] transition-colors rounded-lg"
               >
                 <h3 className="text-sm font-semibold premium-text-platinum flex items-center gap-2">
                   <Brain className="h-4 w-4" />
                   Inspired By Your Memories ({suggestion.memory_ids.length})
                 </h3>
                 {expandedSections.has('memories') ? (
-                  <ChevronUp className="h-4 w-4" style={{ color: 'var(--premium-text-tertiary)' }} />
+                  <ChevronUp className="h-4 w-4" style={{ color: 'var(--brand-text-muted)' }} />
                 ) : (
-                  <ChevronDown className="h-4 w-4" style={{ color: 'var(--premium-text-tertiary)' }} />
+                  <ChevronDown className="h-4 w-4" style={{ color: 'var(--brand-text-muted)' }} />
                 )}
               </button>
               {expandedSections.has('memories') && (
-                <p className="text-xs px-3 pb-3" style={{ color: 'var(--premium-text-tertiary)' }}>
+                <p className="text-xs px-3 pb-3" style={{ color: 'var(--brand-text-muted)' }}>
                   This idea connects to {suggestion.memory_ids.length} of your past thoughts and experiences
                 </p>
               )}
@@ -300,7 +300,7 @@ export function SuggestionDetailDialog({
           )}
 
           {/* Suggested Date */}
-          <div className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+          <div className="text-xs" style={{ color: 'var(--brand-text-muted)' }}>
             Suggested {new Date(suggestion.suggested_at).toLocaleDateString()}
           </div>
         </div>

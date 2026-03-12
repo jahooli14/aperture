@@ -87,7 +87,7 @@ export function StudioTab({ project }: StudioTabProps) {
                         className="w-full h-96 bg-transparent border-0 focus:ring-0 text-zinc-200 placeholder:text-zinc-600 resize-none font-serif text-lg leading-relaxed scroll-minimal"
                     />
 
-                    <div className="mt-4 flex justify-between items-center border-t border-[rgba(255,255,255,0.05)] pt-4">
+                    <div className="mt-4 flex justify-between items-center border-t border-[var(--glass-surface)] pt-4">
                         <div className="flex gap-2">
                             <button
                                 onClick={() => {
@@ -96,7 +96,7 @@ export function StudioTab({ project }: StudioTabProps) {
                                         description: 'AI refinement coming soon to The Studio.',
                                     })
                                 }}
-                                className="px-3 py-1.5 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 text-zinc-400 hover:text-[var(--brand-text-primary)] text-[10px] font-bold uppercase tracking-widest transition-all border border-[rgba(255,255,255,0.05)] flex items-center gap-2 group"
+                                className="px-3 py-1.5 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 text-zinc-400 hover:text-[var(--brand-text-primary)] text-[10px] font-bold uppercase tracking-widest transition-all border border-[var(--glass-surface)] flex items-center gap-2 group"
                             >
                                 <Sparkles className="h-3 w-3 group-hover:text-indigo-400 transition-colors" />
                                 Make it Magic

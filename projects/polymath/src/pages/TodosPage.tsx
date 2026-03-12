@@ -261,7 +261,7 @@ export function TodosPage() {
     <>
       <div
         className="min-h-screen flex flex-col relative"
-        style={{ backgroundColor: 'var(--premium-surface-base)' }}
+        style={{ backgroundColor: 'var(--brand-bg)' }}
       >
         <SubtleBackground />
         {/* Header — view-aware, progress-focused */}
@@ -281,7 +281,7 @@ export function TodosPage() {
                 <div className="flex items-baseline gap-3">
                   <h1
                     className="text-[26px] font-bold tracking-tight leading-none"
-                    style={{ color: 'var(--premium-text-primary)' }}
+                    style={{ color: 'var(--brand-text-primary)' }}
                   >
                     {totalTodayItems === 0
                       ? 'Nothing today'
@@ -316,7 +316,7 @@ export function TodosPage() {
                 <div className="flex items-center gap-2 pb-0.5">
                   {overdueCount > 0 && (
                     <span
-                      className="text-[10px] font-black px-2 py-0.5 rounded-sm uppercase tracking-wide"
+                      className="text-[10px] font-black px-2 py-0.5 rounded-lg uppercase tracking-wide"
                       style={{ background: 'rgba(239,68,68,0.15)', color: 'rgb(252,165,165)', border: '1px solid rgba(248,113,113,0.3)' }}
                     >
                       {overdueCount} overdue
@@ -341,7 +341,7 @@ export function TodosPage() {
               {totalTodayItems > 0 && (
                 <div
                   className="w-full h-[6px] overflow-hidden"
-                  style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }}
+                  style={{ background: 'var(--glass-surface)', border: '1px solid rgba(255,255,255,0.1)' }}
                 >
                   <motion.div
                     className="h-full"
@@ -362,7 +362,7 @@ export function TodosPage() {
                 <div className="mt-3 flex items-center gap-2 flex-wrap">
                   <button
                     onClick={() => setFocusMode(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-[11px] font-black uppercase tracking-wider transition-all active:scale-95"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all active:scale-95"
                     style={{
                       background: 'rgba(139,92,246,0.1)',
                       color: 'rgba(196,181,253,0.9)',
@@ -375,7 +375,7 @@ export function TodosPage() {
                   </button>
                   <button
                     onClick={() => setShowReview(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-[11px] font-black uppercase tracking-wider transition-all active:scale-95"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all active:scale-95"
                     style={hour < 12 ? {
                       background: 'rgba(251,191,36,0.08)',
                       color: 'rgba(253,224,71,0.9)',
@@ -408,7 +408,7 @@ export function TodosPage() {
             <div className="flex items-baseline gap-3">
               <h1
                 className="text-[28px] font-bold tracking-tight"
-                style={{ color: 'var(--premium-text-primary)' }}
+                style={{ color: 'var(--brand-text-primary)' }}
               >
                 {VIEWS.find(v => v.id === activeView)?.label ?? 'Todos'}
               </h1>
@@ -423,7 +423,7 @@ export function TodosPage() {
 
         {/* View tabs — neobrutalist: rectangular, thick underline active */}
         <div className="px-4 max-w-3xl mx-auto w-full">
-          <div className="flex gap-0 overflow-x-auto scrollbar-hide pb-0 border-b border-[rgba(255,255,255,0.08)]">
+          <div className="flex gap-0 overflow-x-auto scrollbar-hide pb-0 border-b border-[var(--glass-surface-hover)]">
             {VIEWS.map(v => {
               const Icon = v.icon
               const count = counts[v.id]
@@ -448,13 +448,13 @@ export function TodosPage() {
                   <span>{v.label}</span>
                   {count > 0 && (
                     <span
-                      className="text-[10px] font-black px-1.5 py-0.5 rounded-sm min-w-[20px] text-center"
+                      className="text-[10px] font-black px-1.5 py-0.5 rounded-lg min-w-[20px] text-center"
                       style={isActive ? {
                         background: 'rgba(255,255,255,0.18)',
                         color: 'rgba(255,255,255,0.9)',
                         border: '1px solid rgba(255,255,255,0.15)',
                       } : {
-                        background: 'rgba(255,255,255,0.07)',
+                        background: 'var(--glass-surface)',
                         color: 'rgba(255,255,255,0.3)',
                         border: '1px solid transparent',
                       }}
@@ -494,7 +494,7 @@ export function TodosPage() {
                   setActiveView(addedFeedback.view)
                   setAddedFeedback(null)
                 }}
-                className="w-full flex items-center justify-between mb-3 px-3.5 py-2.5 rounded-sm text-left"
+                className="w-full flex items-center justify-between mb-3 px-3.5 py-2.5 rounded-lg text-left"
                 style={{
                   background: 'rgba(59,130,246,0.08)',
                   border: '2px solid rgba(99,179,237,0.3)',
@@ -556,15 +556,15 @@ export function TodosPage() {
               {[1, 2, 3].map(i => (
                 <div
                   key={i}
-                  className="flex items-center gap-3.5 px-4 py-3.5 rounded animate-pulse"
+                  className="flex items-center gap-3.5 px-4 py-3.5 rounded-xl animate-pulse"
                   style={{
                     background: '#111113',
                     border: '1.5px solid rgba(255,255,255,0.1)',
                     boxShadow: '3px 3px 0 rgba(0,0,0,0.6)',
                   }}
                 >
-                  <div className="flex-shrink-0 h-[18px] w-[18px] rounded-sm" style={{ background: 'rgba(255,255,255,0.08)', border: '2px solid rgba(255,255,255,0.12)' }} />
-                  <div className="h-[13px] rounded-sm" style={{ width: `${45 + i * 15}%`, background: 'rgba(255,255,255,0.06)' }} />
+                  <div className="flex-shrink-0 h-[18px] w-[18px] rounded-lg" style={{ background: 'var(--glass-surface-hover)', border: '2px solid var(--glass-surface-hover)' }} />
+                  <div className="h-[13px] rounded-lg" style={{ width: `${45 + i * 15}%`, background: 'var(--glass-surface)' }} />
                 </div>
               ))}
             </div>
@@ -725,10 +725,10 @@ function TodayView({
           >
             {label}
           </span>
-          <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
+          <div className="flex-1 h-px" style={{ background: 'var(--glass-surface)' }} />
           <span
-            className="text-[10px] font-bold px-1.5 py-0.5 rounded-sm"
-            style={{ color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}
+            className="text-[10px] font-bold px-1.5 py-0.5 rounded-lg"
+            style={{ color: 'rgba(255,255,255,0.4)', background: 'var(--glass-surface)', border: '1px solid var(--glass-surface-hover)' }}
           >{items.length}</span>
         </div>
       )}
@@ -803,18 +803,18 @@ function TodayView({
             >
               Tomorrow · {tomorrowDayName}
             </span>
-            <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-sm" style={{ color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>{tomorrowItems.length}</span>
+            <div className="flex-1 h-px" style={{ background: 'var(--glass-surface)' }} />
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-lg" style={{ color: 'rgba(255,255,255,0.35)', background: 'var(--glass-surface)', border: '1px solid var(--glass-surface)' }}>{tomorrowItems.length}</span>
           </div>
           <div className="space-y-1.5" style={{ opacity: 0.45 }}>
             {tomorrowItems.slice(0, 3).map(t => (
               <div
                 key={t.id}
-                className="flex items-center gap-3.5 px-4 py-2.5 rounded"
-                style={{ background: '#111113', border: '1.5px solid rgba(255,255,255,0.08)' }}
+                className="flex items-center gap-3.5 px-4 py-2.5 rounded-xl"
+                style={{ background: '#111113', border: '1.5px solid var(--glass-surface-hover)' }}
               >
                 <div
-                  className="flex-shrink-0 h-[16px] w-[16px] rounded-sm"
+                  className="flex-shrink-0 h-[16px] w-[16px] rounded-lg"
                   style={{ border: '2px solid rgba(255,255,255,0.18)' }}
                 />
                 <span className="flex-1 text-[14px] truncate" style={{ color: 'rgba(255,255,255,0.5)' }}>
@@ -852,7 +852,7 @@ function QuickWinsSection({
     <motion.div
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mb-5 px-3.5 py-3 rounded-sm"
+      className="mb-5 px-3.5 py-3 rounded-lg"
       style={{
         background: 'rgba(251,191,36,0.05)',
         border: '2px solid rgba(251,191,36,0.35)',
@@ -861,7 +861,7 @@ function QuickWinsSection({
     >
       <div className="flex items-center gap-2 mb-3">
         <div
-          className="h-5 w-5 rounded-sm flex items-center justify-center flex-shrink-0"
+          className="h-5 w-5 rounded-lg flex items-center justify-center flex-shrink-0"
           style={{ background: 'rgba(251,191,36,0.2)', border: '1px solid rgba(251,191,36,0.35)' }}
         >
           <Zap className="h-2.5 w-2.5" style={{ color: 'rgb(251,191,36)' }} />
@@ -873,7 +873,7 @@ function QuickWinsSection({
           Quick wins · under 5 min
         </span>
         <span
-          className="ml-auto text-[10px] font-black px-1.5 py-0.5 rounded-sm"
+          className="ml-auto text-[10px] font-black px-1.5 py-0.5 rounded-lg"
           style={{ background: 'rgba(251,191,36,0.18)', color: 'rgb(253,224,71)', border: '1px solid rgba(251,191,36,0.3)' }}
         >
           {todos.length}
@@ -890,7 +890,7 @@ function QuickWinsSection({
               exit={{ opacity: 0, scale: 0.85, transition: { duration: 0.15 } }}
               onClick={() => onToggle(todo.id)}
               whileTap={{ scale: 0.95 }}
-              className="flex-shrink-0 flex items-center gap-2 px-3.5 py-2.5 rounded-sm text-left"
+              className="flex-shrink-0 flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-left"
               style={{
                 background: inProgressIds.includes(todo.id)
                   ? 'rgba(251,146,60,0.12)'
@@ -901,7 +901,7 @@ function QuickWinsSection({
               }}
             >
               <div
-                className="flex-shrink-0 h-[16px] w-[16px] rounded-sm"
+                className="flex-shrink-0 h-[16px] w-[16px] rounded-lg"
                 style={{ border: `2px solid ${inProgressIds.includes(todo.id) ? 'rgba(251,146,60,0.7)' : 'rgba(251,191,36,0.6)'}` }}
               />
               <span
@@ -941,7 +941,7 @@ function MorningBanner({ unscheduledCount }: { unscheduledCount: number }) {
       className="overflow-hidden mb-4"
     >
       <div
-        className="flex items-start gap-3 px-3.5 py-3 rounded-sm"
+        className="flex items-start gap-3 px-3.5 py-3 rounded-lg"
         style={{
           background: 'rgba(99,179,237,0.06)',
           borderLeft: '4px solid rgba(99,179,237,0.6)',
@@ -987,7 +987,7 @@ function EveningCaptureBanner({ tomorrowDayName }: { tomorrowDayName: string }) 
       className="overflow-hidden mt-6"
     >
       <div
-        className="flex items-start gap-3 px-3.5 py-3 rounded-sm"
+        className="flex items-start gap-3 px-3.5 py-3 rounded-lg"
         style={{
           background: 'rgba(139,92,246,0.05)',
           border: '1.5px solid rgba(139,92,246,0.25)',
@@ -1039,8 +1039,8 @@ function UpcomingView({
               <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.55)' }}>
                 {label}
               </span>
-              <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-sm" style={{ color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>{groups[dateKey].length}</span>
+              <div className="flex-1 h-px" style={{ background: 'var(--glass-surface)' }} />
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-lg" style={{ color: 'rgba(255,255,255,0.35)', background: 'var(--glass-surface)', border: '1px solid var(--glass-surface)' }}>{groups[dateKey].length}</span>
             </div>
             <div className="space-y-2">
               <AnimatePresence mode="popLayout">
@@ -1097,8 +1097,8 @@ function LogbookView({
               <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.45)' }}>
                 {label}
               </span>
-              <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-sm" style={{ color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>{groups[dateKey].length}</span>
+              <div className="flex-1 h-px" style={{ background: 'var(--glass-surface)' }} />
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-lg" style={{ color: 'rgba(255,255,255,0.3)', background: 'var(--glass-surface)', border: '1px solid var(--glass-surface)' }}>{groups[dateKey].length}</span>
             </div>
             <div className="space-y-px">
               {groups[dateKey].map(todo => (
@@ -1132,7 +1132,7 @@ function EmptyState({ view }: { view: TodoView }) {
       className="flex flex-col items-center justify-center py-24 text-center"
     >
       <div
-        className="h-14 w-14 rounded-sm flex items-center justify-center mb-5"
+        className="h-14 w-14 rounded-lg flex items-center justify-center mb-5"
         style={{
           background: 'rgba(59,130,246,0.07)',
           border: '2px solid rgba(99,179,237,0.2)',

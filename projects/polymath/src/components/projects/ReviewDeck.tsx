@@ -339,18 +339,18 @@ function Card({ project, onSwipe }: { project: Project, onSwipe: (dir: 'left' | 
 
                     {/* Stats / Metadata */}
                     <div className="mt-8 grid grid-cols-2 gap-4">
-                        <div className="p-4 rounded-xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.08)]">
+                        <div className="p-4 rounded-xl bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)]">
                             <div className="text-2xl font-bold text-[var(--brand-text-primary)]">{project.metadata?.tasks?.length || 0}</div>
                             <div className="text-xs text-[var(--brand-text-secondary)] uppercase">Tasks</div>
                         </div>
-                        <div className="p-4 rounded-xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.08)]">
+                        <div className="p-4 rounded-xl bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)]">
                             <div className="text-2xl font-bold text-[var(--brand-text-primary)]">{project.metadata?.tags?.length || 0}</div>
                             <div className="text-xs text-[var(--brand-text-secondary)] uppercase">Tags</div>
                         </div>
                     </div>
                 </div>
 
-                <div className="pt-6 border-t border-[rgba(255,255,255,0.08)] text-center text-sm text-[var(--brand-text-muted)]">
+                <div className="pt-6 border-t border-[var(--glass-surface-hover)] text-center text-sm text-[var(--brand-text-muted)]">
                     Swipe Right to Activate • Left to Snooze • Up to Add Task
                 </div>
             </div>

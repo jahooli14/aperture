@@ -137,13 +137,13 @@ export function ConnectionPulse() {
 
         {/* Expanded connection list */}
         {expanded && (
-          <div className="border-t border-[rgba(255,255,255,0.08)]">
+          <div className="border-t border-[var(--glass-surface-hover)]">
             {current.links.slice(0, 6).map((link, i) => (
               <Link
                 key={i}
                 to={getItemLink(link.id, link.type)}
                 onClick={dismiss}
-                className="flex items-start gap-3 px-4 py-2.5 hover:bg-[rgba(255,255,255,0.05)] transition-colors border-b border-[rgba(255,255,255,0.05)] last:border-b-0"
+                className="flex items-start gap-3 px-4 py-2.5 hover:bg-[var(--glass-surface)] transition-colors border-b border-[var(--glass-surface)] last:border-b-0"
               >
                 <span className="text-base flex-shrink-0 mt-0.5">{TYPE_EMOJI[link.type] || '🔗'}</span>
                 <div className="flex-1 min-w-0">

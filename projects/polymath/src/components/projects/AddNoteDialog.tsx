@@ -186,7 +186,7 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
       <BottomSheetContent>
         <BottomSheetHeader>
           <div className="flex items-center gap-3 mb-2">
-            <FileText className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
+            <FileText className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
             <BottomSheetTitle>Add Update</BottomSheetTitle>
           </div>
           <BottomSheetDescription>
@@ -198,7 +198,7 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
           {/* Bullet Points */}
           {bullets.map((bullet, index) => (
             <div key={index} className="flex gap-2">
-              <span className="flex-shrink-0 mt-3" style={{ color: 'var(--premium-text-tertiary)' }}>•</span>
+              <span className="flex-shrink-0 mt-3" style={{ color: 'var(--brand-text-muted)' }}>•</span>
               <textarea
                 value={bullet}
                 onChange={(e) => updateBullet(index, e.target.value)}
@@ -208,10 +208,10 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
                 autoFocus={index === 0}
                 className="flex-1 px-3 py-2 text-sm border rounded-xl focus:outline-none focus:ring-2 resize-none"
                 style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  backgroundColor: 'var(--glass-surface)',
                   borderColor: 'rgba(255, 255, 255, 0.1)',
-                  color: 'var(--premium-text-primary)',
-                  '--tw-ring-color': 'var(--premium-blue)'
+                  color: 'var(--brand-text-primary)',
+                  '--tw-ring-color': 'var(--brand-primary)'
                 } as React.CSSProperties}
               />
               {bullets.length > 1 && (
@@ -230,7 +230,7 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
           <button
             onClick={addBullet}
             className="flex items-center gap-2 text-sm font-medium transition-colors hover:opacity-80"
-            style={{ color: 'var(--premium-blue)' }}
+            style={{ color: 'var(--brand-primary)' }}
           >
             <Plus className="h-4 w-4" />
             Add another bullet
@@ -239,8 +239,8 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
           {/* Image Upload */}
           <div className="pt-4 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
             <div className="flex items-center justify-between mb-3">
-              <Label className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--premium-text-primary)' }}>
-                <ImageIcon className="h-4 w-4" style={{ color: 'var(--premium-blue)' }} />
+              <Label className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--brand-text-primary)' }}>
+                <ImageIcon className="h-4 w-4" style={{ color: 'var(--brand-primary)' }} />
                 Photos
               </Label>
               <div className="relative">
@@ -258,10 +258,10 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
                   size="sm"
                   className="h-8 px-3 text-xs flex items-center gap-1.5 transition-all hover:bg-[rgba(255,255,255,0.1)] active:scale-95"
                   style={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                    color: 'var(--premium-text-secondary)',
+                    backgroundColor: 'var(--glass-surface)',
+                    color: 'var(--brand-text-secondary)',
                     borderRadius: '9999px',
-                    border: '1px solid rgba(255, 255, 255, 0.05)'
+                    border: '1px solid var(--glass-surface)'
                   }}
                 >
                   <Plus className="h-3.5 w-3.5" />
@@ -302,7 +302,7 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
                       <button
                         type="button"
                         onClick={() => removeFile(index)}
-                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 backdrop-blur-md text-[var(--brand-text-primary)]/90 border border-[rgba(255,255,255,0.08)] transition-all active:bg-red-500/80"
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 backdrop-blur-md text-[var(--brand-text-primary)]/90 border border-[var(--glass-surface-hover)] transition-all active:bg-red-500/80"
                       >
                         <span className="h-3.5 w-3.5 block text-center leading-none">&times;</span>
                       </button>
@@ -319,7 +319,7 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
             onClick={handleSave}
             className="w-full h-12 font-semibold text-[var(--brand-text-primary)] shadow-lg touch-manipulation"
             style={{
-              background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
+              background: 'linear-gradient(135deg, var(--brand-primary), var(--premium-indigo))',
             }}
             disabled={isSaving || uploading || (bullets.every(b => !b.trim()) && selectedFiles.length === 0)}
           >

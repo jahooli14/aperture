@@ -93,12 +93,12 @@ export function ProjectListRow({
         animate={{ opacity: 1, x: 0 }}
         className="p-3 rounded-lg transition-all"
         style={{
-          backgroundColor: isSpotlighted ? spotlightColor : 'rgba(255, 255, 255, 0.02)',
-          border: `1px solid ${isSpotlighted ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.05)'}`,
+          backgroundColor: isSpotlighted ? spotlightColor : 'var(--glass-surface)',
+          border: `1px solid ${isSpotlighted ? 'rgba(255, 255, 255, 0.2)' : 'var(--glass-surface)'}`,
           boxShadow: project.is_priority ? '0 0 24px rgba(245, 158, 11, 0.5), 0 0 48px rgba(245, 158, 11, 0.25), 0 0 72px rgba(245, 158, 11, 0.1)' : 'none'
         }}
         whileHover={{
-          backgroundColor: isSpotlighted ? spotlightColor : 'rgba(255, 255, 255, 0.05)',
+          backgroundColor: isSpotlighted ? spotlightColor : 'var(--glass-surface)',
           borderColor: 'rgba(255, 255, 255, 0.15)',
           boxShadow: project.is_priority ? '0 0 32px rgba(245, 158, 11, 0.6), 0 0 64px rgba(245, 158, 11, 0.35), 0 0 96px rgba(245, 158, 11, 0.15)' : 'none'
         }}
@@ -112,7 +112,7 @@ export function ProjectListRow({
                 e.stopPropagation()
                 setPriority(project.id)
               }}
-              className="flex-shrink-0 p-1 rounded hover:bg-white/20 transition-colors"
+              className="flex-shrink-0 p-1 rounded-xl hover:bg-white/20 transition-colors"
               title={project.is_priority ? "Remove from priority" : "Set as priority"}
             >
               <Star
@@ -131,7 +131,7 @@ export function ProjectListRow({
             </h4>
           </div>
           <span
-            className="text-xs font-medium px-2 py-0.5 rounded whitespace-nowrap flex-shrink-0"
+            className="text-xs font-medium px-2 py-0.5 rounded-xl whitespace-nowrap flex-shrink-0"
             style={{
               backgroundColor: statusColors[project.status] || statusColors.active,
               color: 'rgba(255, 255, 255, 0.8)'
@@ -168,7 +168,7 @@ export function ProjectListRow({
               <motion.div
                 className="h-full"
                 style={{
-                  background: 'linear-gradient(90deg, var(--premium-blue), var(--premium-emerald))'
+                  background: 'linear-gradient(90deg, var(--brand-primary), var(--premium-emerald))'
                 }}
                 initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
@@ -210,7 +210,7 @@ export function ProjectListRow({
                     }
                   }}
                   placeholder="Add task..."
-                  className="flex-1 px-2 py-1 text-xs rounded"
+                  className="flex-1 px-2 py-1 text-xs rounded-xl"
                   style={{
                     backgroundColor: 'rgba(255, 255, 255, 0.1)',
                     border: '1px solid rgba(255, 255, 255, 0.2)',
@@ -220,7 +220,7 @@ export function ProjectListRow({
                 />
                 <button
                   type="submit"
-                  className="p-1 rounded hover:bg-white/20 transition-colors"
+                  className="p-1 rounded-xl hover:bg-white/20 transition-colors"
                   style={{ color: 'rgba(255, 255, 255, 0.8)' }}
                 >
                   <Check size={14} />
@@ -229,7 +229,7 @@ export function ProjectListRow({
             ) : (
               <button
                 onClick={handleStartAddingTask}
-                className="flex items-center gap-1.5 text-xs px-2 py-1 rounded hover:bg-[rgba(255,255,255,0.1)] transition-colors w-full"
+                className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-xl hover:bg-[rgba(255,255,255,0.1)] transition-colors w-full"
                 style={{ color: 'rgba(255, 255, 255, 0.6)' }}
               >
                 <Plus size={14} />

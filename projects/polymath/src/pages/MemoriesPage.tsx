@@ -518,7 +518,7 @@ export function MemoriesPage() {
       }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
           <div className="flex items-center" style={{
-            color: 'var(--premium-blue)',
+            color: 'var(--brand-primary)',
             opacity: 0.7
           }}>
             <Brain className="h-7 w-7" />
@@ -543,9 +543,9 @@ export function MemoriesPage() {
             {view === 'all' && <CreateMemoryDialog />}
             <button
               onClick={() => navigate('/search')}
-              className="h-9 w-9 rounded-sm flex items-center justify-center transition-all"
+              className="h-9 w-9 rounded-lg flex items-center justify-center transition-all"
               style={{
-                color: 'var(--premium-blue)',
+                color: 'var(--brand-primary)',
                 border: '2px solid rgba(59,130,246,0.25)',
                 boxShadow: '2px 2px 0 rgba(0,0,0,0.6)',
               }}
@@ -560,7 +560,7 @@ export function MemoriesPage() {
       <div className="pb-32 relative z-10" style={{ paddingTop: '5.5rem', isolation: 'isolate' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 pt-2">
           {/* Outer Card Structure */}
-          <div className="p-4 sm:p-6 rounded-sm mb-6 w-full max-w-full" style={{
+          <div className="p-4 sm:p-6 rounded-lg mb-6 w-full max-w-full" style={{
             background: '#0d0f14',
             border: '2px solid rgba(255,255,255,0.1)',
             boxShadow: '4px 4px 0 rgba(0,0,0,0.8)',
@@ -569,9 +569,9 @@ export function MemoriesPage() {
           }}>
             {/* Title Section */}
             <div className="mb-4 flex items-center gap-2">
-              <div className="w-1 h-5 rounded-sm" style={{ background: 'var(--premium-blue)' }} />
+              <div className="w-1 h-5 rounded-lg" style={{ background: 'var(--brand-primary)' }} />
               <h2 className="text-sm font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                Your <span style={{ color: 'var(--premium-blue)' }}>thoughts</span>
+                Your <span style={{ color: 'var(--brand-primary)' }}>thoughts</span>
               </h2>
             </div>
 
@@ -589,12 +589,12 @@ export function MemoriesPage() {
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                     placeholder="Search thoughts..."
-                    className="w-full pl-9 pr-9 py-2.5 rounded-sm text-sm outline-none transition-all"
+                    className="w-full pl-9 pr-9 py-2.5 rounded-lg text-sm outline-none transition-all"
                     style={{
                       background: '#111113',
                       border: '2px solid rgba(255,255,255,0.1)',
                       color: 'rgba(255,255,255,0.85)',
-                      caretColor: 'var(--premium-blue)',
+                      caretColor: 'var(--brand-primary)',
                       boxShadow: '2px 2px 0 rgba(0,0,0,0.6)',
                     }}
                     onFocus={e => { e.currentTarget.style.borderColor = 'rgba(59,130,246,0.5)' }}
@@ -603,7 +603,7 @@ export function MemoriesPage() {
                   {searchQuery && (
                     <button
                       onClick={() => setSearchQuery('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-sm transition-colors hover:bg-[rgba(255,255,255,0.1)]"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.1)]"
                       style={{ color: 'rgba(255,255,255,0.4)' }}
                     >
                       <X className="h-3 w-3" />
@@ -629,9 +629,9 @@ export function MemoriesPage() {
                           onClick={() => setActiveTags(prev =>
                             isActive ? prev.filter(t => t !== tag) : [...prev, tag]
                           )}
-                          className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-black uppercase tracking-wide transition-all"
+                          className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide transition-all"
                           style={{
-                            background: isActive ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.04)',
+                            background: isActive ? 'rgba(59,130,246,0.2)' : 'var(--glass-surface)',
                             border: isActive ? '1.5px solid rgba(59,130,246,0.5)' : '1.5px solid rgba(255,255,255,0.1)',
                             color: isActive ? 'rgba(147,197,253,1)' : 'rgba(255,255,255,0.45)',
                             boxShadow: isActive ? '2px 2px 0 rgba(59,130,246,0.15)' : '2px 2px 0 rgba(0,0,0,0.4)',
@@ -645,7 +645,7 @@ export function MemoriesPage() {
                     {activeTags.length > 0 && (
                       <button
                         onClick={() => setActiveTags([])}
-                        className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-black uppercase tracking-wide transition-all"
+                        className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide transition-all"
                         style={{
                           background: 'rgba(239,68,68,0.1)',
                           border: '1.5px solid rgba(239,68,68,0.3)',
@@ -666,16 +666,16 @@ export function MemoriesPage() {
             <div>
               {/* Demo Data Context Banner - Only show on "My Thoughts" view with demo data */}
               {view === 'all' && memories.length > 0 && memories.some(m => m.audiopen_id?.startsWith('demo-')) && (
-                <div className="mb-6 p-4 rounded-sm" style={{ background: '#111113', border: '2px solid rgba(59,130,246,0.25)', borderLeft: '4px solid rgba(59,130,246,0.6)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
+                <div className="mb-6 p-4 rounded-lg" style={{ background: '#111113', border: '2px solid rgba(59,130,246,0.25)', borderLeft: '4px solid rgba(59,130,246,0.6)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
                   <h3 className="font-black text-xs uppercase tracking-widest mb-2 flex items-center gap-2" style={{ color: 'rgba(255,255,255,0.8)' }}>
-                    <Brain className="h-4 w-4" style={{ color: 'var(--premium-blue)' }} />
+                    <Brain className="h-4 w-4" style={{ color: 'var(--brand-primary)' }} />
                     Demo Thoughts — Cross-Domain Examples
                   </h3>
-                  <p className="text-xs leading-relaxed mb-2" style={{ color: 'var(--premium-text-secondary)' }}>
+                  <p className="text-xs leading-relaxed mb-2" style={{ color: 'var(--brand-text-secondary)' }}>
                     These 8 thoughts demonstrate <strong>diverse interests</strong>: React development, woodworking, parenting, photography, ML, meditation, cooking, and design.
                     Notice how they span <strong>technical skills AND hobbies</strong> — this is the key to powerful synthesis.
                   </p>
-                  <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+                  <p className="text-xs" style={{ color: 'var(--brand-text-muted)' }}>
                     💡 <strong>Tip:</strong> Real-world usage works best with 5–10 thoughts covering both your professional expertise and personal interests.
                   </p>
                 </div>
@@ -683,11 +683,11 @@ export function MemoriesPage() {
 
               {/* Resurfacing Info Banner */}
               {view === 'resurfacing' && resurfacing.length > 0 && (
-                <div className="mb-6 p-4 rounded-sm" style={{ background: '#111113', border: '2px solid rgba(139,92,246,0.25)', borderLeft: '4px solid rgba(139,92,246,0.5)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
+                <div className="mb-6 p-4 rounded-lg" style={{ background: '#111113', border: '2px solid rgba(139,92,246,0.25)', borderLeft: '4px solid rgba(139,92,246,0.5)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
                   <h3 className="font-black text-xs uppercase tracking-widest mb-2" style={{ color: 'rgba(255,255,255,0.8)' }}>
                     Up for review
                   </h3>
-                  <p className="text-xs leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
+                  <p className="text-xs leading-relaxed" style={{ color: 'var(--brand-text-secondary)' }}>
                     These thoughts are ready for review based on spaced repetition.
                     Reviewing strengthens your memory and extends the next review interval.
                   </p>
@@ -696,7 +696,7 @@ export function MemoriesPage() {
 
               {/* Error Banner */}
               {error && (
-                <div className="mb-6 rounded-sm p-4 sm:p-5" style={{ background: 'rgba(239,68,68,0.08)', border: '2px solid rgba(239,68,68,0.3)', boxShadow: '3px 3px 0 rgba(239,68,68,0.1)' }}>
+                <div className="mb-6 rounded-lg p-4 sm:p-5" style={{ background: 'rgba(239,68,68,0.08)', border: '2px solid rgba(239,68,68,0.3)', boxShadow: '3px 3px 0 rgba(239,68,68,0.1)' }}>
                   <p className="text-sm text-red-400">{error}</p>
                 </div>
               )}
@@ -711,24 +711,24 @@ export function MemoriesPage() {
 
                   {/* Voice Note Processing Banner */}
                   {processingVoiceNote && (
-                    <div className="mb-6 p-4 rounded-sm animate-pulse" style={{ background: '#111113', border: '2px solid rgba(59,130,246,0.3)', boxShadow: '3px 3px 0 rgba(59,130,246,0.1)' }}>
+                    <div className="mb-6 p-4 rounded-lg animate-pulse" style={{ background: '#111113', border: '2px solid rgba(59,130,246,0.3)', boxShadow: '3px 3px 0 rgba(59,130,246,0.1)' }}>
                       <div className="flex items-center gap-4">
-                        <div className="inline-block h-8 w-8 animate-spin rounded-sm border-4 border-solid" style={{ borderColor: 'var(--premium-blue)', borderRightColor: 'transparent' }}></div>
+                        <div className="inline-block h-8 w-8 animate-spin rounded-lg border-4 border-solid" style={{ borderColor: 'var(--brand-primary)', borderRightColor: 'transparent' }}></div>
                         <div className="flex-1">
                           <h3 className="font-black text-sm uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.85)' }}>
                             ✓ Voice note saved — AI processing...
                           </h3>
-                          <p className="text-xs" style={{ color: 'var(--premium-text-secondary)' }}>
+                          <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
                             Your recording is safe. Creating a formatted thought from your transcript (this may take up to 30 seconds)
                           </p>
                           <div className="mt-3 flex items-center gap-2">
-                            <div className="h-[5px] flex-1" style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                            <div className="h-[5px] flex-1" style={{ backgroundColor: 'var(--glass-surface-hover)', border: '1px solid rgba(255,255,255,0.1)' }}>
                               <div className="h-full animate-pulse" style={{
-                                backgroundColor: 'var(--premium-blue)',
+                                backgroundColor: 'var(--brand-primary)',
                                 width: '60%',
                               }}></div>
                             </div>
-                            <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: 'var(--premium-text-tertiary)' }}>Processing...</span>
+                            <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: 'var(--brand-text-muted)' }}>Processing...</span>
                           </div>
                         </div>
                       </div>
@@ -753,13 +753,13 @@ export function MemoriesPage() {
 
               {/* Empty State */}
               {!isLoading && displayMemories.length === 0 && (
-                <div className="mb-8 rounded-sm p-8" style={{ background: '#111113', border: '2px solid rgba(255,255,255,0.1)', boxShadow: '3px 3px 0 rgba(0,0,0,0.8)' }}>
+                <div className="mb-8 rounded-lg p-8" style={{ background: '#111113', border: '2px solid rgba(255,255,255,0.1)', boxShadow: '3px 3px 0 rgba(0,0,0,0.8)' }}>
                   <div className="py-8">
                     <div className="max-w-2xl mx-auto text-center space-y-6">
                       {view === 'all' && isFiltered ? (
                         /* Search returned no results */
                         <>
-                          <div className="inline-flex items-center justify-center mb-4 p-4 rounded-sm" style={{ background: 'rgba(255,255,255,0.04)', border: '2px solid rgba(255,255,255,0.1)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
+                          <div className="inline-flex items-center justify-center mb-4 p-4 rounded-lg" style={{ background: 'var(--glass-surface)', border: '2px solid rgba(255,255,255,0.1)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
                             <Search className="h-12 w-12" style={{ color: 'rgba(255,255,255,0.2)' }} />
                           </div>
                           <div>
@@ -767,13 +767,13 @@ export function MemoriesPage() {
                               No thoughts match
                               {searchQuery ? ` "${searchQuery}"` : ' your filters'}
                             </h3>
-                            <p className="text-sm mb-6" style={{ color: 'var(--premium-text-secondary)' }}>
+                            <p className="text-sm mb-6" style={{ color: 'var(--brand-text-secondary)' }}>
                               Try different keywords or clear your filters to see all thoughts.
                             </p>
                           </div>
                           <button
                             onClick={() => { setSearchQuery(''); setActiveTags([]) }}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-sm text-xs font-black uppercase tracking-wider transition-all"
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all"
                             style={{
                               background: 'rgba(59,130,246,0.12)',
                               border: '2px solid rgba(59,130,246,0.35)',
@@ -788,17 +788,17 @@ export function MemoriesPage() {
                       ) : view === 'all' ? (
                         /* No memories at all */
                         <>
-                          <div className="inline-flex items-center justify-center mb-4 p-4 rounded-sm" style={{ background: 'rgba(59,130,246,0.08)', border: '2px solid rgba(59,130,246,0.25)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
-                            <Brain className="h-12 w-12" style={{ color: 'var(--premium-blue)' }} />
+                          <div className="inline-flex items-center justify-center mb-4 p-4 rounded-lg" style={{ background: 'rgba(59,130,246,0.08)', border: '2px solid rgba(59,130,246,0.25)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
+                            <Brain className="h-12 w-12" style={{ color: 'var(--brand-primary)' }} />
                           </div>
                           <div>
                             <h3 className="text-xl font-black uppercase tracking-wide mb-4" style={{ color: 'rgba(255,255,255,0.85)' }}>Start capturing your thoughts</h3>
-                            <p className="text-sm mb-6" style={{ color: 'var(--premium-text-secondary)' }}>
+                            <p className="text-sm mb-6" style={{ color: 'var(--brand-text-secondary)' }}>
                               Thoughts are the foundation of your personal knowledge graph. Capture your ideas, insights, and interests to power AI-generated project suggestions.
                             </p>
                           </div>
 
-                          <div className="rounded-sm p-6 text-left" style={{ background: '#0d0f14', border: '2px solid rgba(255,255,255,0.08)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
+                          <div className="rounded-lg p-6 text-left" style={{ background: '#0d0f14', border: '2px solid var(--glass-surface-hover)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
                             <h4 className="font-black text-xs uppercase tracking-widest mb-5" style={{ color: 'rgba(255,255,255,0.6)' }}>How to Capture Thoughts</h4>
                             <div className="space-y-4">
                               {[
@@ -807,12 +807,12 @@ export function MemoriesPage() {
                                 { step: '3', title: 'AI Extracts Insights', desc: 'Polymath automatically identifies entities, topics, and connections' },
                               ].map(({ step, title, desc }) => (
                                 <div key={step} className="flex gap-3">
-                                  <div className="rounded-sm w-7 h-7 flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: 'rgba(59,130,246,0.15)', border: '2px solid rgba(59,130,246,0.35)', boxShadow: '2px 2px 0 rgba(0,0,0,0.5)' }}>
+                                  <div className="rounded-lg w-7 h-7 flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: 'rgba(59,130,246,0.15)', border: '2px solid rgba(59,130,246,0.35)', boxShadow: '2px 2px 0 rgba(0,0,0,0.5)' }}>
                                     <span className="text-blue-400 font-black text-xs">{step}</span>
                                   </div>
                                   <div>
                                     <p className="font-black text-xs uppercase tracking-wide mb-0.5" style={{ color: 'rgba(255,255,255,0.8)' }}>{title}</p>
-                                    <p className="text-xs" style={{ color: 'var(--premium-text-secondary)' }}>{desc}</p>
+                                    <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>{desc}</p>
                                   </div>
                                 </div>
                               ))}
@@ -825,17 +825,17 @@ export function MemoriesPage() {
                             </div>
                           </div>
 
-                          <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+                          <p className="text-xs" style={{ color: 'var(--brand-text-muted)' }}>
                             Tip: The more thoughts you capture, the better your AI-generated suggestions will be
                           </p>
                         </>
                       ) : (
                         <>
-                          <div className="inline-flex items-center justify-center mb-4 p-4 rounded-sm" style={{ background: 'rgba(59,130,246,0.08)', border: '2px solid rgba(59,130,246,0.25)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
-                            <Zap className="h-12 w-12" style={{ color: 'var(--premium-blue)' }} />
+                          <div className="inline-flex items-center justify-center mb-4 p-4 rounded-lg" style={{ background: 'rgba(59,130,246,0.08)', border: '2px solid rgba(59,130,246,0.25)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
+                            <Zap className="h-12 w-12" style={{ color: 'var(--brand-primary)' }} />
                           </div>
                           <h3 className="text-xl font-black uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.85)' }}>Nothing to review right now</h3>
-                          <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
+                          <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>
                             Check back later for memories ready to resurface. Spaced repetition helps strengthen your knowledge over time.
                           </p>
                         </>
@@ -865,7 +865,7 @@ export function MemoriesPage() {
                     <div className="mb-8">
                       <button
                         onClick={() => setSelectedCluster(null)}
-                        className="mb-6 flex items-center gap-2 px-3 py-1.5 rounded-sm text-xs font-black uppercase tracking-wider transition-all"
+                        className="mb-6 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all"
                         style={{
                           background: 'rgba(59,130,246,0.08)',
                           color: 'rgba(147,197,253,0.8)',
@@ -878,7 +878,7 @@ export function MemoriesPage() {
                       </button>
                       <h2 className="text-xl font-black mb-6 flex items-center gap-3 uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.9)' }}>
                         <div
-                          className="flex-shrink-0 w-10 h-10 rounded-sm flex items-center justify-center"
+                          className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
                           style={{
                             background: 'rgba(59,130,246,0.12)',
                             border: '2px solid rgba(59,130,246,0.3)',
@@ -887,11 +887,11 @@ export function MemoriesPage() {
                         >
                           {React.createElement(getIconComponent(selectedCluster.name), {
                             className: 'h-6 w-6',
-                            style: { color: 'var(--premium-blue)' }
+                            style: { color: 'var(--brand-primary)' }
                           })}
                         </div>
                         {selectedCluster.name}
-                        <span className="text-sm font-normal" style={{ color: 'var(--premium-text-secondary)' }}>
+                        <span className="text-sm font-normal" style={{ color: 'var(--brand-text-secondary)' }}>
                           ({selectedCluster.memory_count} thoughts)
                         </span>
                       </h2>
@@ -914,8 +914,8 @@ export function MemoriesPage() {
                     <>
                       {loadingClusters && clusters.length === 0 ? (
                         <div className="text-center py-12">
-                          <div className="inline-block h-10 w-10 animate-spin rounded-sm border-4 border-solid mb-4" style={{ borderColor: 'var(--premium-blue)', borderRightColor: 'transparent' }}></div>
-                          <p className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--premium-text-secondary)' }}>Analyzing themes...</p>
+                          <div className="inline-block h-10 w-10 animate-spin rounded-lg border-4 border-solid mb-4" style={{ borderColor: 'var(--brand-primary)', borderRightColor: 'transparent' }}></div>
+                          <p className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--brand-text-secondary)' }}>Analyzing themes...</p>
                         </div>
                       ) : clusters.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -928,8 +928,8 @@ export function MemoriesPage() {
                           ))}
                         </div>
                       ) : (
-                        <div className="p-6 rounded-sm text-center" style={{ background: '#111113', border: '2px solid rgba(255,255,255,0.08)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
-                          <p className="text-xs" style={{ color: 'var(--premium-text-secondary)' }}>No themes detected yet. Add more thoughts with diverse topics!</p>
+                        <div className="p-6 rounded-lg text-center" style={{ background: '#111113', border: '2px solid var(--glass-surface-hover)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
+                          <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>No themes detected yet. Add more thoughts with diverse topics!</p>
                         </div>
                       )}
                     </>
@@ -947,7 +947,7 @@ export function MemoriesPage() {
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.97 }}
                             transition={{ duration: 0.25 }}
-                            className="mb-6 rounded-sm p-4"
+                            className="mb-6 rounded-lg p-4"
                             style={{
                               background: '#111113',
                               border: '2px solid rgba(251,191,36,0.3)',
@@ -961,7 +961,7 @@ export function MemoriesPage() {
                               </p>
                               <button
                                 onClick={() => setDismissedResurface(true)}
-                                className="flex-shrink-0 h-5 w-5 flex items-center justify-center rounded-sm transition-colors hover:bg-[rgba(255,255,255,0.1)]"
+                                className="flex-shrink-0 h-5 w-5 flex items-center justify-center rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.1)]"
                                 style={{ color: 'rgba(255,255,255,0.3)' }}
                               >
                                 <X className="h-3 w-3" />
@@ -976,9 +976,9 @@ export function MemoriesPage() {
                             <div className="flex items-center gap-3">
                               <button
                                 onClick={() => setDismissedResurface(true)}
-                                className="text-[10px] px-3 py-1.5 rounded-sm font-black uppercase tracking-wide transition-colors"
+                                className="text-[10px] px-3 py-1.5 rounded-lg font-black uppercase tracking-wide transition-colors"
                                 style={{
-                                  background: 'rgba(255,255,255,0.04)',
+                                  background: 'var(--glass-surface)',
                                   border: '1.5px solid rgba(255,255,255,0.1)',
                                   color: 'rgba(255,255,255,0.4)',
                                   boxShadow: '2px 2px 0 rgba(0,0,0,0.4)',
@@ -988,7 +988,7 @@ export function MemoriesPage() {
                               </button>
                               <button
                                 onClick={() => handleOpenDetail(resurfacedMemory)}
-                                className="text-[10px] px-3 py-1.5 rounded-sm font-black uppercase tracking-wide transition-colors"
+                                className="text-[10px] px-3 py-1.5 rounded-lg font-black uppercase tracking-wide transition-colors"
                                 style={{
                                   background: 'rgba(251,191,36,0.12)',
                                   border: '1.5px solid rgba(251,191,36,0.4)',
@@ -1006,7 +1006,7 @@ export function MemoriesPage() {
                       {/* Pinned Thoughts Section */}
                       {pinnedMemories.length > 0 && !searchQuery && activeTags.length === 0 && (
                         <div className="mb-6">
-                          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--premium-text-secondary)' }}>
+                          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--brand-text-secondary)' }}>
                             <Pin className="w-3.5 h-3.5 text-amber-400" style={{ fill: 'currentColor' }} />
                             Pinned
                           </h3>
@@ -1018,18 +1018,18 @@ export function MemoriesPage() {
                                 whileHover={{ y: -2 }}
                                 className="flex-shrink-0 w-56 rounded-xl p-3 cursor-pointer transition-all"
                                 style={{
-                                  background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)',
+                                  background: 'linear-gradient(135deg, var(--glass-surface-hover) 0%, var(--glass-surface) 100%)',
                                   boxShadow: 'inset 0 0 0 1px rgba(251,191,36,0.2), 0 4px 12px rgba(0,0,0,0.2)',
                                   borderTop: '2px solid rgba(251,191,36,0.4)',
                                 }}
                               >
-                                <h4 className="text-sm font-semibold truncate mb-1" style={{ color: 'var(--premium-text-primary)' }}>
+                                <h4 className="text-sm font-semibold truncate mb-1" style={{ color: 'var(--brand-text-primary)' }}>
                                   {memory.title}
                                 </h4>
-                                <p className="text-xs line-clamp-2 leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
+                                <p className="text-xs line-clamp-2 leading-relaxed" style={{ color: 'var(--brand-text-secondary)' }}>
                                   {memory.body}
                                 </p>
-                                <span className="text-[10px] mt-2 block" style={{ color: 'var(--premium-text-tertiary)' }}>
+                                <span className="text-[10px] mt-2 block" style={{ color: 'var(--brand-text-muted)' }}>
                                   {new Date(memory.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                 </span>
                               </motion.div>

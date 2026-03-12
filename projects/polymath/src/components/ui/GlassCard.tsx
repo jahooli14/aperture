@@ -21,8 +21,8 @@ export const GlassCard = React.forwardRef<HTMLDivElement, GlassCardProps>(
       ...style,
     }
 
-    const vibrantBg = 'var(--premium-bg-2)'
-    const vibrantHoverBg = 'var(--premium-bg-3)'
+    const vibrantBg = 'var(--brand-glass-bg)'
+    const vibrantHoverBg = 'var(--glass-surface)'
     const mutedBg = 'rgba(15, 24, 41, 0.5)' // More transparent/muted than vibrant
     const mutedHoverBg = 'rgba(15, 24, 41, 0.7)' // Slightly less transparent on hover
 

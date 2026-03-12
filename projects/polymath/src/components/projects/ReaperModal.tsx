@@ -135,7 +135,7 @@ export function ReaperModal({ isOpen, onClose }: ReaperModalProps) {
             <button
               onClick={onClose}
               className="absolute top-4 right-4 p-2 rounded-full hover:bg-[rgba(255,255,255,0.1)] transition-colors"
-              style={{ color: 'var(--premium-text-tertiary)' }}
+              style={{ color: 'var(--brand-text-muted)' }}
             >
               <X className="h-5 w-5" />
             </button>

@@ -29,7 +29,7 @@ export function ProjectProperties({ project, onUpdate }: ProjectPropertiesProps)
           {currentEnergy && (
             <div className="flex-shrink-0">
               <div className="px-3 py-1.5 rounded-lg border font-medium flex items-center gap-1.5" style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                backgroundColor: 'var(--glass-surface)',
                 borderColor: 'rgba(255, 255, 255, 0.1)',
                 color: currentEnergy.color
               }}>
@@ -42,9 +42,9 @@ export function ProjectProperties({ project, onUpdate }: ProjectPropertiesProps)
           {project.estimated_next_step_time && (
             <div className="flex-shrink-0">
               <div className="px-3 py-1.5 rounded-lg border font-medium flex items-center gap-1.5" style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                backgroundColor: 'var(--glass-surface)',
                 borderColor: 'rgba(255, 255, 255, 0.1)',
-                color: 'var(--premium-text-primary)'
+                color: 'var(--brand-text-primary)'
               }}>
                 <span className="text-xs">{project.estimated_next_step_time}min</span>
               </div>

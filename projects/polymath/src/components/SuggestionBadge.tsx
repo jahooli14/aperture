@@ -185,8 +185,8 @@ export function SuggestionBadge({ itemId, itemType }: SuggestionBadgeProps) {
                     exit={{ opacity: 0, height: 0 }}
                     className="premium-glass rounded-2xl p-4"
                     style={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                      border: '1px solid rgba(255, 255, 255, 0.08)'
+                      backgroundColor: 'var(--glass-surface)',
+                      border: '1px solid var(--glass-surface-hover)'
                     }}
                   >
                     <div className="flex items-start gap-3 mb-3">
@@ -216,7 +216,7 @@ export function SuggestionBadge({ itemId, itemType }: SuggestionBadgeProps) {
                           transition={{ duration: 0.5, ease: 'easeOut' }}
                           className="h-full rounded-full"
                           style={{
-                            background: 'linear-gradient(90deg, var(--premium-blue), var(--premium-purple))'
+                            background: 'linear-gradient(90deg, var(--brand-primary), var(--premium-purple))'
                           }}
                         />
                       </div>
@@ -234,7 +234,7 @@ export function SuggestionBadge({ itemId, itemType }: SuggestionBadgeProps) {
                         onClick={() => handleAccept(suggestion)}
                         className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-sm font-medium transition-all active:scale-95"
                         style={{
-                          backgroundColor: 'var(--premium-blue)',
+                          backgroundColor: 'var(--brand-primary)',
                           color: 'white',
                           WebkitTapHighlightColor: 'transparent'
                         }}
@@ -246,7 +246,7 @@ export function SuggestionBadge({ itemId, itemType }: SuggestionBadgeProps) {
                         onClick={() => handleDismiss(suggestion.id)}
                         className="px-3 py-2 rounded-xl text-sm font-medium transition-all active:scale-95"
                         style={{
-                          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                          backgroundColor: 'var(--glass-surface)',
                           color: 'rgba(255, 255, 255, 0.6)',
                           WebkitTapHighlightColor: 'transparent'
                         }}
