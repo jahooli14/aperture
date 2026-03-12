@@ -168,7 +168,7 @@ function GetInspirationSection({
           >
             <Link
               to={inspiration.url || '/projects'}
-              className="group block p-6 rounded-2xl transition-all duration-300 border flex-1 flex flex-col relative overflow-hidden backdrop-blur-xl"
+              className="group block p-6 rounded transition-all duration-300 border flex-1 flex flex-col relative overflow-hidden"
               style={{
                 background: inspiration.type === 'project'
                   ? getTheme(projects.find(p => p.id === inspiration.url?.split('/').pop())?.type || 'other', inspiration.title).backgroundColor
@@ -220,7 +220,7 @@ function GetInspirationSection({
                     Recommended
                   </span>
                 </div>
-                <div className="p-4 rounded-xl mt-6 bg-white/5 border border-white/10 group-hover:bg-white/10 transition-colors">
+                <div className="p-4 rounded mt-6 bg-white/5 border border-white/10 group-hover:bg-white/10 transition-colors">
                   <p className="text-[10px] font-bold mb-2 text-[var(--brand-primary)] uppercase tracking-wider opacity-50">NEXT STEP</p>
                   {inspiration.type === 'project' && (() => {
                     const proj = projects.find(p => p.id === inspiration.url?.split('/').pop())
@@ -260,11 +260,11 @@ function GetInspirationSection({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300 border flex flex-col"
+                className="p-5 relative overflow-hidden group cursor-pointer rounded transition-all duration-300 border flex flex-col"
                 onClick={() => navigate(`/projects/${sparkCandidate.id}`)}
                 style={{
                   background: theme.backgroundColor,
-                  boxShadow: `0 8px 24px rgba(${theme.rgb}, 0.1)`,
+                  boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
                   borderColor: theme.borderColor
                 }}
                 onMouseEnter={(e) => {
@@ -289,7 +289,7 @@ function GetInspirationSection({
                       <span className="inline-block w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: theme.textColor }} /> Spark
                     </span>
                   </div>
-                  <div className="p-4 rounded-xl mt-6 group-hover:bg-white/5 transition-colors" style={{
+                  <div className="p-4 rounded mt-6 group-hover:bg-white/5 transition-colors" style={{
                     backgroundColor: `rgba(${theme.rgb}, 0.1)`,
                     border: `1px solid rgba(${theme.rgb}, 0.2)`
                   }}>
@@ -306,7 +306,7 @@ function GetInspirationSection({
           // Placeholder if no Spark (e.g. "Suggest Projects" button could live here or be full width below)
           <Link
             to="/suggestions"
-            className="group p-5 rounded-xl transition-all duration-300 border flex flex-col items-center justify-center text-center gap-3 h-full min-h-[200px]"
+            className="group p-5 rounded transition-all duration-300 border flex flex-col items-center justify-center text-center gap-3 h-full min-h-[200px]"
             style={{
               background: 'rgba(255, 255, 255, 0.02)',
               borderColor: 'rgba(255, 255, 255, 0.05)'
@@ -325,7 +325,7 @@ function GetInspirationSection({
       <div className="mt-6">
         <Link
           to="/suggestions"
-          className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all hover:bg-white/10 border border-white/5 text-[var(--brand-primary)] aperture-header"
+          className="flex items-center justify-center gap-2 py-3 rounded text-sm font-bold transition-all hover:bg-white/10 border border-white/5 text-[var(--brand-primary)] aperture-header"
         >
           <Zap className="h-4 w-4" />
           {hasPendingSuggestions
@@ -348,11 +348,11 @@ function InsightDialog({ insight, open, onClose }: { insight: SynthesisInsight |
 
   return (
     <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${open ? '' : 'hidden'}`}>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="relative w-full max-w-lg rounded-2xl p-6 shadow-2xl overflow-y-auto max-h-[80vh]"
+        className="relative w-full max-w-lg rounded p-6 shadow-2xl overflow-y-auto max-h-[80vh]"
         style={{ background: 'var(--premium-bg-2)' }}
       >
         <button
@@ -487,7 +487,7 @@ function InsightsSection() {
         <button
           onClick={() => loadInsights(true)}
           disabled={refreshing}
-          className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
+          className="h-10 w-10 rounded flex items-center justify-center transition-all hover:bg-white/5"
           style={{ color: 'var(--premium-text-tertiary)' }}
           title="Refresh insights"
         >
@@ -522,9 +522,9 @@ function InsightsSection() {
             <button
               key={index}
               onClick={() => setSelectedInsight(insight)}
-              className="w-full text-left p-5 rounded-2xl transition-all hover:border-white/20 active:scale-[0.99] aperture-card mt-2"
+              className="w-full text-left p-5 rounded transition-all hover:border-white/20 active:scale-[0.99] aperture-card mt-2"
               style={{
-                boxShadow: '0 4px 24px rgba(0, 0, 0, 0.4)'
+                boxShadow: '3px 3px 0 rgba(0,0,0,0.5)'
               }}
             >
               <div className="flex items-start gap-3">
@@ -547,7 +547,7 @@ function InsightsSection() {
           {insights.length > 2 && (
             <button
               onClick={() => navigate('/insights')}
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-bold transition-all hover:bg-white/10 border border-white/5 text-[var(--brand-primary)] aperture-header"
+              className="flex items-center justify-center gap-2 w-full py-3 rounded text-sm font-bold transition-all hover:bg-white/10 border border-white/5 text-[var(--brand-primary)] aperture-header"
             >
               View All Insights ({insights.length}) <ArrowRight className="h-4 w-4 ml-1" />
             </button>
@@ -760,9 +760,9 @@ export function HomePage() {
   if (error) {
     return (
       <div className="min-h-screen py-12 px-4 flex items-center justify-center" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
-        <div className="max-w-2xl w-full premium-card p-8 border-red-500/20 bg-red-500/5">
+        <div className="max-w-2xl w-full p-8 border-red-500/20 bg-red-500/5">
           <div className="flex items-center gap-3 mb-6">
-            <div className="h-12 w-12 rounded-xl bg-red-500/20 flex items-center justify-center text-red-500">
+            <div className="h-12 w-12 rounded bg-red-500/20 flex items-center justify-center text-red-500">
               <AlertCircle className="h-6 w-6" />
             </div>
             <h2 className="text-2xl font-bold premium-text-platinum">Initialization Error</h2>
@@ -773,7 +773,7 @@ export function HomePage() {
           <div className="flex items-center gap-4">
             <button
               onClick={() => window.location.reload()}
-              className="px-6 py-2.5 rounded-lg bg-red-500 text-white font-bold hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20"
+              className="px-6 py-2.5 rounded-lg bg-red-500 text-white font-bold hover:bg-red-600 transition-colors shadow-red-500/20"
             >
               Try Again
             </button>
@@ -802,7 +802,7 @@ export function HomePage() {
       {isDev && storedErrors.length > 0 && (
         <button
           onClick={() => setShowDebugPanel(!showDebugPanel)}
-          className="fixed bottom-24 right-4 z-50 h-12 w-12 rounded-full flex items-center justify-center shadow-lg"
+          className="fixed bottom-24 right-4 z-50 h-12 w-12 rounded-full flex items-center justify-center"
           style={{ backgroundColor: '#ef4444', color: 'white' }}
         >
           <AlertCircle className="h-6 w-6" />
@@ -862,9 +862,9 @@ export function HomePage() {
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
               className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8"
             >
-              <div className="premium-card p-6 relative" style={{
+              <div className="p-6 relative" style={{
                 background: 'rgba(6, 182, 212, 0.15)', // Cyan tint
-                boxShadow: '0 8px 32px rgba(6, 182, 212, 0.15)'
+                boxShadow: '3px 3px 0 rgba(0,0,0,0.5)'
               }}>
                 <button
                   onClick={() => setShowOnboardingBanner(false)}
@@ -1064,7 +1064,7 @@ export function HomePage() {
               transition={{ duration: 0.5, ease: "easeOut" }}
               className="aperture-card p-6 relative overflow-hidden mb-6 bg-white/[0.03] border-white/5"
               style={{
-                boxShadow: '0 12px 40px rgba(0, 0, 0, 0.3)'
+                boxShadow: '3px 3px 0 rgba(0,0,0,0.5)'
               }}
             >
               {/* Ambient glow effect */}
@@ -1214,7 +1214,7 @@ export function HomePage() {
             to="/settings"
             className="flex items-center gap-2 px-6 py-3 rounded-sm transition-all border-2 border-white/10 hover:bg-white/5 aperture-card text-sm font-medium"
             style={{
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
+              boxShadow: '3px 3px 0 rgba(0,0,0,0.5)'
             }}
           >
             <MoreHorizontal className="h-4 w-4" />
