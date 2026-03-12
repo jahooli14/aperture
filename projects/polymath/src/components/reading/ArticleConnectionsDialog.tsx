@@ -65,11 +65,8 @@ export function ArticleConnectionsDialog({
               {/* Close Button */}
               <button
                 onClick={onClose}
-<<<<<<< HEAD
-                className="absolute top-4 right-4 p-2 rounded-sm hover:bg-white/10 transition-colors"
-=======
                 className="absolute top-4 right-4 p-2 rounded-lg hover:bg-[rgba(255,255,255,0.1)] transition-colors"
->>>>>>> c9f13343 (style: standardize design language and unify UI variables across polymath app)
+
                 aria-label="Close"
               >
                 <X className="h-5 w-5" style={{ color: 'var(--premium-text-secondary)' }} />
@@ -112,11 +109,8 @@ export function ArticleConnectionsDialog({
                     </button>
                     <button
                       onClick={onClose}
-<<<<<<< HEAD
-                      className="px-6 py-3 rounded-sm font-medium border transition-all hover:bg-white/5"
-=======
                       className="px-6 py-3 rounded-lg font-medium border transition-all hover:bg-[rgba(255,255,255,0.05)]"
->>>>>>> c9f13343 (style: standardize design language and unify UI variables across polymath app)
+
                       style={{ borderColor: 'rgba(255, 255, 255, 0.2)', color: 'var(--premium-text-secondary)' }}
                     >
                       Skip
@@ -154,11 +148,8 @@ export function ArticleConnectionsDialog({
                   <div className="mt-6 pt-6 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
                     <button
                       onClick={onClose}
-<<<<<<< HEAD
-                      className="w-full px-6 py-3 rounded-sm font-medium border transition-all hover:bg-white/5"
-=======
                       className="w-full px-6 py-3 rounded-lg font-medium border transition-all hover:bg-[rgba(255,255,255,0.05)]"
->>>>>>> c9f13343 (style: standardize design language and unify UI variables across polymath app)
+
                       style={{ borderColor: 'rgba(255, 255, 255, 0.2)', color: 'var(--premium-text-secondary)' }}
                     >
                       Done

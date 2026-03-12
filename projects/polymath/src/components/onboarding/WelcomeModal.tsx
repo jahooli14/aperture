@@ -54,21 +54,8 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
 
         {/* Header */}
         <div className="text-center pt-12 pb-8 px-8">
-<<<<<<< HEAD
-          <div
-            className="inline-flex items-center justify-center w-16 h-16 mb-6"
-            style={{
-              background: 'rgba(59,130,246,0.15)',
-              border: '2px solid rgba(59,130,246,0.4)',
-              borderRadius: '4px',
-              boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
-            }}
-          >
-            <Zap className="h-8 w-8" style={{ color: 'var(--premium-blue)' }} />
-=======
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-amber-500 mb-6">
             <Zap className="h-8 w-8 text-[var(--brand-text-primary)]" />
->>>>>>> c9f13343 (style: standardize design language and unify UI variables across polymath app)
           </div>
           <h1 className="text-3xl font-bold mb-3 aperture-header" style={{ color: 'var(--premium-text-primary)' }}>
             Welcome to <BrandName size="xl" />
@@ -214,11 +201,7 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
           </div>
 
           {/* Footer note */}
-<<<<<<< HEAD
-          <p className="mt-6 text-xs text-center" style={{ color: 'var(--premium-text-muted)' }}>
-=======
           <p className="mt-6 text-xs text-center text-[var(--brand-text-muted)]">
->>>>>>> c9f13343 (style: standardize design language and unify UI variables across polymath app)
             First time? We recommend trying demo data to see how everything works.
           </p>
         </div>
