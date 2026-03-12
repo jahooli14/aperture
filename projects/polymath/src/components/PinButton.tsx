@@ -44,7 +44,7 @@ export function PinButton({ type, id, title, content, currentId, contentVersion 
   return (
     <button
       onClick={handlePin}
-      className="h-9 w-9 rounded-lg flex items-center justify-center text-sm font-medium transition-all border hover:bg-white/5"
+      className="h-9 w-9 rounded-lg flex items-center justify-center text-sm font-medium transition-all border hover:bg-[rgba(255,255,255,0.05)]"
       style={{
         borderColor: isThisPinned ? 'rgba(59, 130, 246, 0.5)' : 'rgba(255, 255, 255, 0.2)',
         color: isThisPinned ? 'var(--premium-blue)' : 'var(--premium-text-secondary)'

@@ -229,7 +229,7 @@ export function ProjectListRow({
             ) : (
               <button
                 onClick={handleStartAddingTask}
-                className="flex items-center gap-1.5 text-xs px-2 py-1 rounded hover:bg-white/10 transition-colors w-full"
+                className="flex items-center gap-1.5 text-xs px-2 py-1 rounded hover:bg-[rgba(255,255,255,0.1)] transition-colors w-full"
                 style={{ color: 'rgba(255, 255, 255, 0.6)' }}
               >
                 <Plus size={14} />

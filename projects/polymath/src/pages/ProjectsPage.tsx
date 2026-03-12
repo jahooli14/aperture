@@ -177,7 +177,7 @@ export function ProjectsPage() {
       <SubtleBackground />
       <div className="min-h-screen">
         {/* Header */}
-        <div className="fixed top-0 left-0 right-0 z-40 border-b-2 border-white/10" style={{
+        <div className="fixed top-0 left-0 right-0 z-40 border-b-2 border-[rgba(255,255,255,0.08)]" style={{
           backgroundColor: '#0a0f1a'
         }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
@@ -207,7 +207,7 @@ export function ProjectsPage() {
               <CreateProjectDialog />
               <button
                 onClick={() => navigate('/search')}
-                className="h-10 w-10 rounded-sm flex items-center justify-center transition-all hover:bg-white/5"
+                className="h-10 w-10 rounded-sm flex items-center justify-center transition-all hover:bg-[rgba(255,255,255,0.05)]"
                 style={{
                   color: 'var(--premium-blue)'
                 }}

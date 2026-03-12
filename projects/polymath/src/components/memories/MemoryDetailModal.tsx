@@ -213,7 +213,7 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
             >
               <button
                 onClick={onClose}
-                className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 transition-colors"
+                className="absolute top-4 right-4 p-2 rounded-full hover:bg-[rgba(255,255,255,0.1)] transition-colors"
                 style={{ color: 'var(--premium-text-tertiary)' }}
                 aria-label="Close"
               >
@@ -259,7 +259,7 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
 
                   <button
                     onClick={() => setEditDialogOpen(true)}
-                    className="p-2 rounded-full hover:bg-white/10 transition-colors"
+                    className="p-2 rounded-full hover:bg-[rgba(255,255,255,0.1)] transition-colors"
                     style={{ color: 'var(--premium-text-tertiary)' }}
                     title="Edit Memory"
                   >
@@ -339,7 +339,7 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
 
               {/* Connections Section */}
               {(connectionCount > 0 || isLoadingConnections) && (
-                <div className="mt-8 pt-6 border-t border-white/10">
+                <div className="mt-8 pt-6 border-t border-[rgba(255,255,255,0.08)]">
                   <h3 className="text-lg font-bold premium-text-platinum mb-4">
                     Connections
                   </h3>
@@ -357,7 +357,7 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
               )}
 
               {/* Timestamp */}
-              <div className="flex items-center gap-2 text-xs pt-6 mt-6 border-t border-white/10" style={{ color: 'var(--premium-text-tertiary)' }}>
+              <div className="flex items-center gap-2 text-xs pt-6 mt-6 border-t border-[rgba(255,255,255,0.08)]" style={{ color: 'var(--premium-text-tertiary)' }}>
                 <Calendar className="h-3 w-3" />
                 <span>{format(new Date(memory.created_at), 'PPPp')}</span>
               </div>

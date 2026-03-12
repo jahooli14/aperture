@@ -53,6 +53,9 @@ import { CollisionReport } from '../components/home/CollisionReport'
 import { PROJECT_COLORS } from '../components/projects/ProjectCard'
 import { PowerHourHero } from '../components/home/PowerHourHero'
 import type { Memory, Project, SynthesisInsight } from '../types'
+import { CohesionSummaryWidget } from '../components/home/CohesionSummaryWidget'
+import { useContextEngineStore } from '../stores/useContextEngineStore'
+import { readingDb } from '../lib/db'
 
 interface InspirationData {
   type: 'article' | 'thought' | 'project' | 'empty'
@@ -220,7 +223,7 @@ function GetInspirationSection({
                     Recommended
                   </span>
                 </div>
-                <div className="p-4 rounded mt-6 bg-white/5 border border-white/10 group-hover:bg-white/10 transition-colors">
+                <div className="p-4 rounded-xl mt-6 bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.08)] group-hover:bg-[rgba(255,255,255,0.1)] transition-colors">
                   <p className="text-[10px] font-bold mb-2 text-[var(--brand-primary)] uppercase tracking-wider opacity-50">NEXT STEP</p>
                   {inspiration.type === 'project' && (() => {
                     const proj = projects.find(p => p.id === inspiration.url?.split('/').pop())
@@ -278,7 +281,7 @@ function GetInspirationSection({
               >
                 <div className="relative z-10 flex-1 flex flex-col h-full">
                   <div className="flex items-center justify-between gap-4 mb-4">
-                    <h3 className="text-lg font-bold text-white truncate">
+                    <h3 className="text-lg font-bold text-[var(--brand-text-primary)] truncate">
                       {sparkCandidate.title}
                     </h3>
                     <span className="flex-shrink-0 px-2 py-0.5 rounded text-xs font-medium border flex items-center gap-1" style={{
@@ -289,7 +292,7 @@ function GetInspirationSection({
                       <span className="inline-block w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: theme.textColor }} /> Spark
                     </span>
                   </div>
-                  <div className="p-4 rounded mt-6 group-hover:bg-white/5 transition-colors" style={{
+                  <div className="p-4 rounded-xl mt-6 group-hover:bg-[rgba(255,255,255,0.05)] transition-colors" style={{
                     backgroundColor: `rgba(${theme.rgb}, 0.1)`,
                     border: `1px solid rgba(${theme.rgb}, 0.2)`
                   }}>
@@ -312,11 +315,11 @@ function GetInspirationSection({
               borderColor: 'rgba(255, 255, 255, 0.05)'
             }}
           >
-            <div className="h-12 w-12 rounded-full bg-cyan-500/10 flex items-center justify-center text-cyan-400 mb-2">
+            <div className="h-12 w-12 rounded-full bg-cyan-500/10 flex items-center justify-center text-[var(--brand-primary)] mb-2">
               <Lightbulb className="h-6 w-6" />
             </div>
-            <h3 className="font-bold text-slate-200">Need more ideas?</h3>
-            <p className="text-sm text-slate-500">Generate new project suggestions based on your interests.</p>
+            <h3 className="font-bold text-[var(--brand-text-primary)]">Need more ideas?</h3>
+            <p className="text-sm text-[var(--brand-text-muted)]">Generate new project suggestions based on your interests.</p>
           </Link>
         )}
 
@@ -325,7 +328,7 @@ function GetInspirationSection({
       <div className="mt-6">
         <Link
           to="/suggestions"
-          className="flex items-center justify-center gap-2 py-3 rounded text-sm font-bold transition-all hover:bg-white/10 border border-white/5 text-[var(--brand-primary)] aperture-header"
+          className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all hover:bg-[rgba(255,255,255,0.1)] border border-[rgba(255,255,255,0.05)] text-[var(--brand-primary)] aperture-header"
         >
           <Zap className="h-4 w-4" />
           {hasPendingSuggestions
@@ -338,9 +341,6 @@ function GetInspirationSection({
     </section>
   )
 }
-
-import { useContextEngineStore } from '../stores/useContextEngineStore'
-import { readingDb } from '../lib/db'
 
 // Simple Dialog Component for displaying full insights
 function InsightDialog({ insight, open, onClose }: { insight: SynthesisInsight | null; open: boolean; onClose: () => void }) {
@@ -357,7 +357,7 @@ function InsightDialog({ insight, open, onClose }: { insight: SynthesisInsight |
       >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 transition-colors"
+          className="absolute top-4 right-4 p-2 rounded-full hover:bg-[rgba(255,255,255,0.1)] transition-colors"
           style={{ color: 'var(--premium-text-tertiary)' }}
         >
           <X className="h-5 w-5" />
@@ -384,9 +384,9 @@ function InsightDialog({ insight, open, onClose }: { insight: SynthesisInsight |
 
           {/* Render timeline if available */}
           {insight.data && insight.data.timeline && Array.isArray(insight.data.timeline) && (
-            <div className="mt-6 pt-6 border-t border-white/10">
+            <div className="mt-6 pt-6 border-t border-[rgba(255,255,255,0.08)]">
               <h3 className="text-sm font-bold mb-4" style={{ color: 'var(--premium-text-secondary)' }}>Evolution Timeline</h3>
-              <div className="space-y-4 relative pl-4 border-l-2 border-white/10">
+              <div className="space-y-4 relative pl-4 border-l-2 border-[rgba(255,255,255,0.08)]">
                 {insight.data.timeline.map((item: any, idx: number) => (
                   <div key={idx} className="relative pl-4">
                     <div className="absolute -left-[21px] top-1.5 h-3 w-3 rounded-full border-2 border-[var(--premium-bg-2)]"
@@ -398,7 +398,7 @@ function InsightDialog({ insight, open, onClose }: { insight: SynthesisInsight |
                       {item.stance}
                     </div>
                     {item.quote && (
-                      <div className="text-xs italic pl-2 border-l-2 border-white/10" style={{ color: 'var(--premium-text-secondary)' }}>
+                      <div className="text-xs italic pl-2 border-l-2 border-[rgba(255,255,255,0.08)]" style={{ color: 'var(--premium-text-secondary)' }}>
                         "{item.quote}"
                       </div>
                     )}
@@ -474,7 +474,7 @@ function InsightsSection() {
       case 'pattern': return <Zap className="h-5 w-5 text-[var(--brand-primary)]" />
       case 'collision': return <AlertCircle className="h-5 w-5 text-amber-400" />
       case 'opportunity': return <Lightbulb className="h-5 w-5 text-emerald-400" />
-      default: return <Lightbulb className="h-5 w-5 text-slate-400" />
+      default: return <Lightbulb className="h-5 w-5 text-[var(--brand-text-secondary)]" />
     }
   }
 
@@ -487,7 +487,7 @@ function InsightsSection() {
         <button
           onClick={() => loadInsights(true)}
           disabled={refreshing}
-          className="h-10 w-10 rounded flex items-center justify-center transition-all hover:bg-white/5"
+          className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-[rgba(255,255,255,0.05)]"
           style={{ color: 'var(--premium-text-tertiary)' }}
           title="Refresh insights"
         >
@@ -547,7 +547,7 @@ function InsightsSection() {
           {insights.length > 2 && (
             <button
               onClick={() => navigate('/insights')}
-              className="flex items-center justify-center gap-2 w-full py-3 rounded text-sm font-bold transition-all hover:bg-white/10 border border-white/5 text-[var(--brand-primary)] aperture-header"
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-bold transition-all hover:bg-[rgba(255,255,255,0.1)] border border-[rgba(255,255,255,0.05)] text-[var(--brand-primary)] aperture-header"
             >
               View All Insights ({insights.length}) <ArrowRight className="h-4 w-4 ml-1" />
             </button>
@@ -773,7 +773,7 @@ export function HomePage() {
           <div className="flex items-center gap-4">
             <button
               onClick={() => window.location.reload()}
-              className="px-6 py-2.5 rounded-lg bg-red-500 text-white font-bold hover:bg-red-600 transition-colors shadow-red-500/20"
+              className="px-6 py-2.5 rounded-lg bg-red-500 text-[var(--brand-text-primary)] font-bold hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20"
             >
               Try Again
             </button>
@@ -818,7 +818,7 @@ export function HomePage() {
           >
             <div className="max-w-4xl mx-auto text-red-400 font-mono text-xs">
               {storedErrors.map((e: any, i: number) => <div key={i} className="mb-2 p-2 bg-red-900/20 rounded">{e.message}</div>)}
-              <button onClick={() => { localStorage.removeItem('app_errors'); window.location.reload() }} className="mt-2 text-white underline">Clear & Reload</button>
+              <button onClick={() => { localStorage.removeItem('app_errors'); window.location.reload() }} className="mt-2 text-[var(--brand-text-primary)] underline">Clear & Reload</button>
             </div>
           </motion.div>
         )}
@@ -826,7 +826,7 @@ export function HomePage() {
 
       {/* Fixed Header Bar - Brand & Search */}
       <div
-        className="fixed top-0 left-0 right-0 z-40 border-b-2 border-white/10"
+        className="fixed top-0 left-0 right-0 z-40 border-b-2 border-[rgba(255,255,255,0.08)]"
         style={{
           backgroundColor: '#0a0f1a'
         }}
@@ -840,7 +840,7 @@ export function HomePage() {
           </h1>
           <button
             onClick={() => navigate('/search')}
-            className="h-10 w-10 rounded-sm flex items-center justify-center transition-all hover:bg-white/5"
+            className="h-10 w-10 rounded-sm flex items-center justify-center transition-all hover:bg-[rgba(255,255,255,0.05)]"
             style={{
               color: 'var(--brand-secondary)'
             }}
@@ -868,7 +868,7 @@ export function HomePage() {
               }}>
                 <button
                   onClick={() => setShowOnboardingBanner(false)}
-                  className="absolute top-3 right-3 h-8 w-8 rounded-sm hover:bg-white/10 flex items-center justify-center transition-colors"
+                  className="absolute top-3 right-3 h-8 w-8 rounded-sm hover:bg-[rgba(255,255,255,0.1)] flex items-center justify-center transition-colors"
                   style={{ color: 'var(--premium-text-tertiary)' }}
                 >
                   <X className="h-4 w-4" />
@@ -927,7 +927,7 @@ export function HomePage() {
                 e.stopPropagation()
                 window.dispatchEvent(new CustomEvent('openVoiceCapture'))
               }}
-              className="flex-1 h-14 rounded-sm flex items-center justify-center transition-all hover:bg-white/5"
+              className="flex-1 h-14 rounded-sm flex items-center justify-center transition-all hover:bg-[rgba(255,255,255,0.05)]"
               style={{ background: 'var(--brand-glass-bg)', border: '2px solid rgba(255,255,255,0.1)', boxShadow: '3px 3px 0 rgba(0,0,0,0.5)' }}
               title="Voice Note"
             >
@@ -937,7 +937,7 @@ export function HomePage() {
             {/* Written Thought */}
             <button
               onClick={() => setCreateThoughtOpen(true)}
-              className="flex-1 h-14 rounded-sm flex items-center justify-center transition-all hover:bg-white/5"
+              className="flex-1 h-14 rounded-sm flex items-center justify-center transition-all hover:bg-[rgba(255,255,255,0.05)]"
               style={{ background: 'var(--brand-glass-bg)', border: '2px solid rgba(255,255,255,0.1)', boxShadow: '3px 3px 0 rgba(0,0,0,0.5)' }}
               title="Thought"
             >
@@ -947,7 +947,7 @@ export function HomePage() {
             {/* Article */}
             <button
               onClick={() => setSaveArticleOpen(true)}
-              className="flex-1 h-14 rounded-sm flex items-center justify-center transition-all hover:bg-white/5"
+              className="flex-1 h-14 rounded-sm flex items-center justify-center transition-all hover:bg-[rgba(255,255,255,0.05)]"
               style={{ background: 'var(--brand-glass-bg)', border: '2px solid rgba(255,255,255,0.1)', boxShadow: '3px 3px 0 rgba(0,0,0,0.5)' }}
               title="Article"
             >
@@ -957,7 +957,7 @@ export function HomePage() {
             {/* Project */}
             <button
               onClick={() => setCreateProjectOpen(true)}
-              className="flex-1 h-14 rounded-sm flex items-center justify-center transition-all hover:bg-white/5"
+              className="flex-1 h-14 rounded-sm flex items-center justify-center transition-all hover:bg-[rgba(255,255,255,0.05)]"
               style={{ background: 'var(--brand-glass-bg)', border: '2px solid rgba(255,255,255,0.1)', boxShadow: '3px 3px 0 rgba(0,0,0,0.5)' }}
               title="Project"
             >
@@ -965,6 +965,8 @@ export function HomePage() {
             </button>
           </div>
         </section>
+
+        <CohesionSummaryWidget />
 
         {/* Aperture Power Hour - The Hero Engine */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4 aperture-shelf">
@@ -1062,7 +1064,7 @@ export function HomePage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5, ease: "easeOut" }}
-              className="aperture-card p-6 relative overflow-hidden mb-6 bg-white/[0.03] border-white/5"
+              className="aperture-card p-6 relative overflow-hidden mb-6 bg-white/[0.03] border-[rgba(255,255,255,0.05)]"
               style={{
                 boxShadow: '3px 3px 0 rgba(0,0,0,0.5)'
               }}
@@ -1112,12 +1114,12 @@ export function HomePage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-sm flex items-center justify-center mt-1 bg-white/5 border-2 border-white/10">
-                    <Moon className="h-5 w-5 text-slate-400" />
+                  <div className="flex-shrink-0 h-10 w-10 rounded-sm flex items-center justify-center mt-1 bg-[rgba(255,255,255,0.05)] border-2 border-[rgba(255,255,255,0.08)]">
+                    <Moon className="h-5 w-5 text-[var(--brand-text-secondary)]" />
                   </div>
                   <div>
                     <h3 className="font-bold mb-1 aperture-header">Bedtime ideas</h3>
-                    <p className="text-sm aperture-body text-slate-400">
+                    <p className="text-sm aperture-body text-[var(--brand-text-secondary)]">
                       Creative inspiration for sleep
                     </p>
                   </div>
@@ -1139,12 +1141,12 @@ export function HomePage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-sm flex items-center justify-center mt-1 bg-white/5 border-2 border-white/10">
-                    <Wind className="h-5 w-5 text-slate-400" />
+                  <div className="flex-shrink-0 h-10 w-10 rounded-sm flex items-center justify-center mt-1 bg-[rgba(255,255,255,0.05)] border-2 border-[rgba(255,255,255,0.08)]">
+                    <Wind className="h-5 w-5 text-[var(--brand-text-secondary)]" />
                   </div>
                   <div>
                     <h3 className="font-bold mb-1 aperture-header">Drift Mode</h3>
-                    <p className="text-sm aperture-body text-slate-400">
+                    <p className="text-sm aperture-body text-[var(--brand-text-secondary)]">
                       Mental reset & hypnagogic insights
                     </p>
                   </div>
@@ -1166,12 +1168,12 @@ export function HomePage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-sm flex items-center justify-center mt-1 bg-white/5 border-2 border-white/10">
-                    <Lightbulb className="h-5 w-5 text-slate-400" />
+                  <div className="flex-shrink-0 h-10 w-10 rounded-sm flex items-center justify-center mt-1 bg-[rgba(255,255,255,0.05)] border-2 border-[rgba(255,255,255,0.08)]">
+                    <Lightbulb className="h-5 w-5 text-[var(--brand-text-secondary)]" />
                   </div>
                   <div>
                     <h3 className="font-bold mb-1 aperture-header">Discover Projects</h3>
-                    <p className="text-sm aperture-body text-slate-400">
+                    <p className="text-sm aperture-body text-[var(--brand-text-secondary)]">
                       AI recommendations
                     </p>
                   </div>
@@ -1193,12 +1195,12 @@ export function HomePage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-sm flex items-center justify-center mt-1 bg-white/5 border-2 border-white/10">
-                    <TrendingUp className="h-5 w-5 text-slate-400" />
+                  <div className="flex-shrink-0 h-10 w-10 rounded-sm flex items-center justify-center mt-1 bg-[rgba(255,255,255,0.05)] border-2 border-[rgba(255,255,255,0.08)]">
+                    <TrendingUp className="h-5 w-5 text-[var(--brand-text-secondary)]" />
                   </div>
                   <div>
                     <h3 className="font-bold mb-1 aperture-header">Analysis</h3>
-                    <p className="text-sm aperture-body text-slate-400">
+                    <p className="text-sm aperture-body text-[var(--brand-text-secondary)]">
                       Patterns & Insights
                     </p>
                   </div>
@@ -1212,7 +1214,7 @@ export function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 flex justify-center">
           <Link
             to="/settings"
-            className="flex items-center gap-2 px-6 py-3 rounded-sm transition-all border-2 border-white/10 hover:bg-white/5 aperture-card text-sm font-medium"
+            className="flex items-center gap-2 px-6 py-3 rounded-sm transition-all border-2 border-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.05)] aperture-card text-sm font-medium"
             style={{
               boxShadow: '3px 3px 0 rgba(0,0,0,0.5)'
             }}

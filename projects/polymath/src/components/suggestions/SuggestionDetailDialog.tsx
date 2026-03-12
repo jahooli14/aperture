@@ -126,7 +126,7 @@ export function SuggestionDetailDialog({
           >
             <button
               onClick={() => toggleSection('why')}
-              className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors rounded-xl"
+              className="w-full p-4 flex items-center justify-between hover:bg-[rgba(255,255,255,0.05)] transition-colors rounded-xl"
             >
               <h3 className="text-base font-bold premium-text-platinum flex items-center gap-2">
                 <Lightbulb className="h-5 w-5" style={{ color: '#3b82f6' }} />
@@ -205,7 +205,7 @@ export function SuggestionDetailDialog({
             >
               <button
                 onClick={() => toggleSection('ai')}
-                className="w-full p-3 flex items-center justify-between hover:bg-white/5 transition-colors rounded-lg"
+                className="w-full p-3 flex items-center justify-between hover:bg-[rgba(255,255,255,0.05)] transition-colors rounded-lg"
               >
                 <h3 className="text-sm font-semibold premium-text-platinum flex items-center gap-2">
                   <Brain className="h-4 w-4" />
@@ -236,7 +236,7 @@ export function SuggestionDetailDialog({
             >
               <button
                 onClick={() => toggleSection('capabilities')}
-                className="w-full p-3 flex items-center justify-between hover:bg-white/5 transition-colors rounded-lg"
+                className="w-full p-3 flex items-center justify-between hover:bg-[rgba(255,255,255,0.05)] transition-colors rounded-lg"
               >
                 <h3 className="text-sm font-semibold premium-text-platinum flex items-center gap-2">
                   <Code2 className="h-4 w-4" />
@@ -279,7 +279,7 @@ export function SuggestionDetailDialog({
             >
               <button
                 onClick={() => toggleSection('memories')}
-                className="w-full p-3 flex items-center justify-between hover:bg-white/5 transition-colors rounded-lg"
+                className="w-full p-3 flex items-center justify-between hover:bg-[rgba(255,255,255,0.05)] transition-colors rounded-lg"
               >
                 <h3 className="text-sm font-semibold premium-text-platinum flex items-center gap-2">
                   <Brain className="h-4 w-4" />

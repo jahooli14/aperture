@@ -386,7 +386,7 @@ export function ReaderPage() {
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
         >
-          <Loader2 className="h-8 w-8 text-blue-500" />
+          <Loader2 className="h-8 w-8 text-[var(--brand-primary)]" />
         </motion.div>
       </div>
     )
@@ -513,15 +513,15 @@ export function ReaderPage() {
           animate={{ y: hideUI ? -100 : 0 }}
           className="fixed top-0 left-0 right-0 z-50 px-4 py-3"
         >
-          <div className="max-w-3xl mx-auto flex items-center justify-between px-4 py-2 bg-[#1c1c1e]/80 backdrop-blur-xl border border-white/5 rounded-2xl shadow-2xl">
+          <div className="max-w-3xl mx-auto flex items-center justify-between px-4 py-2 bg-[#1c1c1e]/80 backdrop-blur-xl border border-[rgba(255,255,255,0.05)] rounded-2xl shadow-2xl">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate('/reading')}
-                className="p-2 hover:bg-white/5 rounded-xl transition-colors"
+                className="p-2 hover:bg-[rgba(255,255,255,0.05)] rounded-xl transition-colors"
               >
                 <ArrowLeft className="h-5 w-5" />
               </button>
-              <div className="h-4 w-px bg-white/10" />
+              <div className="h-4 w-px bg-[rgba(255,255,255,0.1)]" />
               <div className="flex items-center gap-2 text-xs font-medium text-zinc-500">
                 {isOfflineCached ? (
                   <span className="flex items-center gap-1 text-emerald-500">
@@ -538,18 +538,18 @@ export function ReaderPage() {
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setIsHighlighterMode(!isHighlighterMode)}
-                className={`p-2 rounded-xl transition-all ${isHighlighterMode ? 'bg-blue-500 text-white' : 'hover:bg-white/5 text-zinc-400'}`}
+                className={`p-2 rounded-xl transition-all ${isHighlighterMode ? 'bg-blue-500 text-[var(--brand-text-primary)]' : 'hover:bg-[rgba(255,255,255,0.05)] text-zinc-400'}`}
                 title="Highlighter Mode"
               >
                 <Highlighter className="h-5 w-5" />
               </button>
 
-              <div className="flex bg-white/5 rounded-xl p-1 mx-1">
+              <div className="flex bg-[rgba(255,255,255,0.05)] rounded-xl p-1 mx-1">
                 {(['compact', 'comfortable', 'spacious'] as const).map((size) => (
                   <button
                     key={size}
                     onClick={() => setFontSize(size)}
-                    className={`px-3 py-1 rounded-lg text-xs transition-all ${fontSize === size ? 'bg-white/10 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
+                    className={`px-3 py-1 rounded-lg text-xs transition-all ${fontSize === size ? 'bg-[rgba(255,255,255,0.1)] text-[var(--brand-text-primary)] shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
                   >
                     <Type className={size === 'compact' ? 'h-3 w-3' : size === 'comfortable' ? 'h-4 w-4' : 'h-5 w-5'} />
                   </button>
@@ -558,7 +558,7 @@ export function ReaderPage() {
 
               <button
                 onClick={handleArchive}
-                className="p-2 hover:bg-white/5 rounded-xl text-zinc-400 hover:text-white transition-colors"
+                className="p-2 hover:bg-[rgba(255,255,255,0.05)] rounded-xl text-zinc-400 hover:text-[var(--brand-text-primary)] transition-colors"
                 title="Archive"
               >
                 <Archive className="h-5 w-5" />
@@ -568,7 +568,7 @@ export function ReaderPage() {
                 href={article.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-2 hover:bg-white/5 rounded-xl text-zinc-400 hover:text-white transition-colors"
+                className="p-2 hover:bg-[rgba(255,255,255,0.05)] rounded-xl text-zinc-400 hover:text-[var(--brand-text-primary)] transition-colors"
               >
                 <ExternalLink className="h-5 w-5" />
               </a>
@@ -576,7 +576,7 @@ export function ReaderPage() {
           </div>
 
           {/* Reading Progress Line */}
-          <div className="max-w-3xl mx-auto mt-2 h-1 bg-white/5 rounded-full overflow-hidden">
+          <div className="max-w-3xl mx-auto mt-2 h-1 bg-[rgba(255,255,255,0.05)] rounded-full overflow-hidden">
             <motion.div
               className="h-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
               initial={{ width: 0 }}
@@ -624,15 +624,15 @@ export function ReaderPage() {
             transition={{ delay: 0.4 }}
             className={`reader-content ${settings.article}`}
             onMouseUp={handleTextSelection}
-            dangerouslySetInnerHTML={{ __html: processedContent || (article.content ? article.content : '<p class="text-zinc-500 italic">No content available for this article. <a href="' + article.url + '" target="_blank" class="text-blue-500 underline">View Original</a></p>') }}
+            dangerouslySetInnerHTML={{ __html: processedContent || (article.content ? article.content : '<p class="text-zinc-500 italic">No content available for this article. <a href="' + article.url + '" target="_blank" class="text-[var(--brand-primary)] underline">View Original</a></p>') }}
           />
 
           {/* Smart Connections Section */}
           {(connectionCount > 0 || isLoadingConnections) && (
-            <div className="mt-20 pt-12 border-t border-white/5">
+            <div className="mt-20 pt-12 border-t border-[rgba(255,255,255,0.05)]">
               <div className="flex items-center justify-between mb-8">
                 <div>
-                  <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">Synthesized Insights</h3>
+                  <h3 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">Synthesized Insights</h3>
                   <p className="text-sm text-zinc-500">Connections discovered by the Aperture Engine.</p>
                 </div>
                 <div className="px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-[10px] font-black uppercase tracking-widest text-blue-400">
@@ -658,7 +658,7 @@ export function ReaderPage() {
               initial={{ opacity: 0, scale: 0.9, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 10 }}
-              className="fixed z-[100] bg-[#161618] border border-white/10 rounded-2xl p-2 shadow-2xl flex items-center gap-1"
+              className="fixed z-[100] bg-[#161618] border border-[rgba(255,255,255,0.08)] rounded-2xl p-2 shadow-2xl flex items-center gap-1"
               style={{
                 left: menuPosition.x,
                 top: menuPosition.y,
@@ -669,7 +669,7 @@ export function ReaderPage() {
                 <button
                   key={color}
                   onClick={() => handleHighlight(color)}
-                  className="w-8 h-8 rounded-full border border-white/10 hover:scale-110 transition-transform"
+                  className="w-8 h-8 rounded-full border border-[rgba(255,255,255,0.08)] hover:scale-110 transition-transform"
                   style={{ backgroundColor: color === 'yellow' ? '#fde047' : color === 'green' ? '#4ade80' : color === 'blue' ? '#60a5fa' : color === 'pink' ? '#f472b6' : '#c084fc' }}
                 />
               ))}

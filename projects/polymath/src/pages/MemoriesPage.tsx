@@ -603,7 +603,7 @@ export function MemoriesPage() {
                   {searchQuery && (
                     <button
                       onClick={() => setSearchQuery('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-sm transition-colors hover:bg-white/10"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-sm transition-colors hover:bg-[rgba(255,255,255,0.1)]"
                       style={{ color: 'rgba(255,255,255,0.4)' }}
                     >
                       <X className="h-3 w-3" />
@@ -961,7 +961,7 @@ export function MemoriesPage() {
                               </p>
                               <button
                                 onClick={() => setDismissedResurface(true)}
-                                className="flex-shrink-0 h-5 w-5 flex items-center justify-center rounded-sm transition-colors hover:bg-white/10"
+                                className="flex-shrink-0 h-5 w-5 flex items-center justify-center rounded-sm transition-colors hover:bg-[rgba(255,255,255,0.1)]"
                                 style={{ color: 'rgba(255,255,255,0.3)' }}
                               >
                                 <X className="h-3 w-3" />

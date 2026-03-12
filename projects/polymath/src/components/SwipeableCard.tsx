@@ -166,14 +166,14 @@ export function SwipeableCard({
 // Common swipe actions for reuse
 export const SwipeActions = {
   delete: (onDelete: () => void): SwipeAction => ({
-    icon: <Trash2 className="h-5 w-5 text-white" />,
+    icon: <Trash2 className="h-5 w-5 text-[var(--brand-text-primary)]" />,
     color: 'bg-red-600',
     label: 'Delete',
     threshold: 100,
     onAction: onDelete
   }),
   archive: (onArchive: () => void): SwipeAction => ({
-    icon: <Archive className="h-5 w-5 text-white" />,
+    icon: <Archive className="h-5 w-5 text-[var(--brand-text-primary)]" />,
     color: 'bg-amber-600',
     label: 'Archive',
     threshold: 100,

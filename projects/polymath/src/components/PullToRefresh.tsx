@@ -101,7 +101,7 @@ export function PullToRefresh({
             <ArrowDown
               className={cn(
                 'transition-all duration-200',
-                isTriggered ? 'text-blue-600' : 'text-gray-400'
+                isTriggered ? 'text-blue-600' : 'text-[var(--brand-text-secondary)]'
               )}
               style={{
                 transform: `rotate(${rotation}deg)`,

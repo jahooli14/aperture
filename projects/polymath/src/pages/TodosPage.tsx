@@ -423,7 +423,7 @@ export function TodosPage() {
 
         {/* View tabs — neobrutalist: rectangular, thick underline active */}
         <div className="px-4 max-w-3xl mx-auto w-full">
-          <div className="flex gap-0 overflow-x-auto scrollbar-hide pb-0 border-b border-white/10">
+          <div className="flex gap-0 overflow-x-auto scrollbar-hide pb-0 border-b border-[rgba(255,255,255,0.08)]">
             {VIEWS.map(v => {
               const Icon = v.icon
               const count = counts[v.id]

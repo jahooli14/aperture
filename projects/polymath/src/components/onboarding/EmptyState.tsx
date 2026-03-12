@@ -101,7 +101,7 @@ export function EmptyState() {
         </div>
 
         {/* Footer note */}
-        <p className="mt-8 text-xs text-neutral-500">
+        <p className="mt-8 text-xs text-[var(--brand-text-muted)]">
           💡 Tip: Record 5-10 voice notes across different topics to see the magic happen
         </p>
       </div>

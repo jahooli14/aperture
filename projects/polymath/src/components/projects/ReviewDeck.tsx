@@ -60,11 +60,11 @@ export function ReviewDeck({ projects, onClose }: ReviewDeckProps) {
                     <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
                         <Check className="h-8 w-8 text-emerald-400" />
                     </div>
-                    <h2 className="text-2xl font-bold text-white mb-2">All Caught Up!</h2>
-                    <p className="text-slate-400 mb-6">You've reviewed all your dormant projects.</p>
+                    <h2 className="text-2xl font-bold text-[var(--brand-text-primary)] mb-2">All Caught Up!</h2>
+                    <p className="text-[var(--brand-text-secondary)] mb-6">You've reviewed all your dormant projects.</p>
                     <button
                         onClick={onClose}
-                        className="w-full py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-500 transition-colors"
+                        className="w-full py-3 rounded-xl bg-blue-600 text-[var(--brand-text-primary)] font-bold hover:bg-blue-500 transition-colors"
                     >
                         Back to Home
                     </button>
@@ -156,14 +156,14 @@ export function ReviewDeck({ projects, onClose }: ReviewDeckProps) {
     return (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center p-4 bg-black/90 backdrop-blur-md">
             <div className="absolute top-4 right-4">
-                <button onClick={onClose} className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white">
+                <button onClick={onClose} className="p-2 rounded-full bg-[rgba(255,255,255,0.1)] hover:bg-white/20 text-[var(--brand-text-primary)]">
                     <X className="h-6 w-6" />
                 </button>
             </div>
 
             <div className="w-full max-w-md mb-8 text-center">
-                <h2 className="text-xl font-bold text-white">Review Dormant Projects</h2>
-                <p className="text-sm text-slate-400">{currentIndex + 1} of {projects.length}</p>
+                <h2 className="text-xl font-bold text-[var(--brand-text-primary)]">Review Dormant Projects</h2>
+                <p className="text-sm text-[var(--brand-text-secondary)]">{currentIndex + 1} of {projects.length}</p>
             </div>
 
             <div className="relative w-full max-w-md aspect-[3/4]">
@@ -179,9 +179,9 @@ export function ReviewDeck({ projects, onClose }: ReviewDeckProps) {
                 {showTaskInput && (
                     <div className="absolute inset-0 z-20 bg-slate-900 rounded-3xl border border-slate-700 shadow-2xl p-6 flex flex-col">
                         <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-xl font-bold text-white">Add Action</h3>
-                            <button onClick={() => setShowTaskInput(false)} className="p-2 hover:bg-white/10 rounded-full">
-                                <X className="h-5 w-5 text-slate-400" />
+                            <h3 className="text-xl font-bold text-[var(--brand-text-primary)]">Add Action</h3>
+                            <button onClick={() => setShowTaskInput(false)} className="p-2 hover:bg-[rgba(255,255,255,0.1)] rounded-full">
+                                <X className="h-5 w-5 text-[var(--brand-text-secondary)]" />
                             </button>
                         </div>
 
@@ -194,7 +194,7 @@ export function ReviewDeck({ projects, onClose }: ReviewDeckProps) {
                                     autoFocus
                                     value={taskInput}
                                     onChange={(e) => setTaskInput(e.target.value)}
-                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none h-32"
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-[var(--brand-text-primary)] placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none h-32"
                                     placeholder="What needs to be done?"
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter' && !e.shiftKey) {
@@ -208,7 +208,7 @@ export function ReviewDeck({ projects, onClose }: ReviewDeckProps) {
                             <div className="flex gap-2">
                                 <button
                                     onClick={() => setTaskInput("Review project status")}
-                                    className="px-3 py-2 rounded-lg bg-slate-800 text-xs text-slate-400 hover:bg-slate-700 transition-colors"
+                                    className="px-3 py-2 rounded-lg bg-slate-800 text-xs text-[var(--brand-text-secondary)] hover:bg-slate-700 transition-colors"
                                 >
                                     Review Status
                                 </button>
@@ -253,7 +253,7 @@ export function ReviewDeck({ projects, onClose }: ReviewDeckProps) {
                         <button
                             onClick={() => handleTaskSubmit()}
                             disabled={!taskInput.trim()}
-                            className="w-full py-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-white font-bold flex items-center justify-center gap-2 transition-all mt-auto"
+                            className="w-full py-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-[var(--brand-text-primary)] font-bold flex items-center justify-center gap-2 transition-all mt-auto"
                         >
                             <Plus className="h-5 w-5" />
                             Add & Continue
@@ -263,7 +263,7 @@ export function ReviewDeck({ projects, onClose }: ReviewDeckProps) {
             </div>
 
             <div className="mt-8 flex items-center gap-6">
-                <button onClick={() => handleSwipe('left')} className="flex flex-col items-center gap-2 text-slate-400 hover:text-white transition-colors">
+                <button onClick={() => handleSwipe('left')} className="flex flex-col items-center gap-2 text-[var(--brand-text-secondary)] hover:text-[var(--brand-text-primary)] transition-colors">
                     <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
                         <Clock className="h-6 w-6" />
                     </div>
@@ -318,7 +318,7 @@ function Card({ project, onSwipe }: { project: Project, onSwipe: (dir: 'left' | 
         >
             {/* Status Overlays */}
             <motion.div style={{ opacity: leftColor }} className="absolute inset-0 bg-slate-500/20 z-10 flex items-center justify-end pr-8 pointer-events-none">
-                <span className="text-4xl font-bold text-slate-300 uppercase tracking-widest border-4 border-slate-300 p-2 rounded-lg transform rotate-12">Snooze</span>
+                <span className="text-4xl font-bold text-[var(--brand-text-secondary)] uppercase tracking-widest border-4 border-slate-300 p-2 rounded-lg transform rotate-12">Snooze</span>
             </motion.div>
             <motion.div style={{ opacity: rightColor }} className="absolute inset-0 bg-emerald-500/20 z-10 flex items-center justify-start pl-8 pointer-events-none">
                 <span className="text-4xl font-bold text-emerald-400 uppercase tracking-widest border-4 border-emerald-400 p-2 rounded-lg transform -rotate-12">Active</span>
@@ -329,28 +329,28 @@ function Card({ project, onSwipe }: { project: Project, onSwipe: (dir: 'left' | 
 
             <div className="h-full flex flex-col p-6">
                 <div className="flex-1">
-                    <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    <div className="text-xs font-bold text-[var(--brand-text-secondary)] uppercase tracking-wider mb-2">
                         Last active {project.last_active ? new Date(project.last_active).toLocaleDateString() : 'Never'}
                     </div>
-                    <h3 className="text-3xl font-bold text-white mb-4">{project.title}</h3>
-                    <p className="text-slate-300 text-lg leading-relaxed">
+                    <h3 className="text-3xl font-bold text-[var(--brand-text-primary)] mb-4">{project.title}</h3>
+                    <p className="text-[var(--brand-text-secondary)] text-lg leading-relaxed">
                         {project.description || "No description provided."}
                     </p>
 
                     {/* Stats / Metadata */}
                     <div className="mt-8 grid grid-cols-2 gap-4">
-                        <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                            <div className="text-2xl font-bold text-white">{project.metadata?.tasks?.length || 0}</div>
-                            <div className="text-xs text-slate-400 uppercase">Tasks</div>
+                        <div className="p-4 rounded-xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.08)]">
+                            <div className="text-2xl font-bold text-[var(--brand-text-primary)]">{project.metadata?.tasks?.length || 0}</div>
+                            <div className="text-xs text-[var(--brand-text-secondary)] uppercase">Tasks</div>
                         </div>
-                        <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                            <div className="text-2xl font-bold text-white">{project.metadata?.tags?.length || 0}</div>
-                            <div className="text-xs text-slate-400 uppercase">Tags</div>
+                        <div className="p-4 rounded-xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.08)]">
+                            <div className="text-2xl font-bold text-[var(--brand-text-primary)]">{project.metadata?.tags?.length || 0}</div>
+                            <div className="text-xs text-[var(--brand-text-secondary)] uppercase">Tags</div>
                         </div>
                     </div>
                 </div>
 
-                <div className="pt-6 border-t border-white/10 text-center text-sm text-slate-500">
+                <div className="pt-6 border-t border-[rgba(255,255,255,0.08)] text-center text-sm text-[var(--brand-text-muted)]">
                     Swipe Right to Activate • Left to Snooze • Up to Add Task
                 </div>
             </div>

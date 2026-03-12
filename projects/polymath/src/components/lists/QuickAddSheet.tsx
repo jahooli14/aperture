@@ -79,13 +79,13 @@ export function QuickAddSheet({ list, isOpen, onClose, listRgb }: QuickAddSheetP
                                         style={{ color: `rgb(${listRgb})` }}>
                                         Quick Add
                                     </p>
-                                    <h3 className="text-base font-black text-white uppercase tracking-tight">
+                                    <h3 className="text-base font-black text-[var(--brand-text-primary)] uppercase tracking-tight">
                                         {list.title}
                                     </h3>
                                 </div>
                                 <button
                                     onClick={onClose}
-                                    className="h-8 w-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all"
+                                    className="h-8 w-8 flex items-center justify-center rounded-full bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] text-[var(--brand-text-primary)]/40 hover:text-[var(--brand-text-primary)] transition-all"
                                 >
                                     <X className="h-4 w-4" />
                                 </button>
@@ -98,7 +98,7 @@ export function QuickAddSheet({ list, isOpen, onClose, listRgb }: QuickAddSheetP
                                     value={value}
                                     onChange={e => setValue(e.target.value)}
                                     placeholder={`Add to ${list.title.toLowerCase()}...`}
-                                    className="flex-1 bg-white/5 rounded-xl px-4 py-3 text-white text-sm placeholder-white/20 outline-none border border-white/8 focus:border-white/20 transition-colors uppercase tracking-tight font-medium"
+                                    className="flex-1 bg-[rgba(255,255,255,0.05)] rounded-xl px-4 py-3 text-[var(--brand-text-primary)] text-sm placeholder-white/20 outline-none border border-white/8 focus:border-white/20 transition-colors uppercase tracking-tight font-medium"
                                     onKeyDown={e => {
                                         if (e.key === 'Escape') onClose()
                                     }}

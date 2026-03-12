@@ -136,7 +136,7 @@ export const SuggestionCard = memo(function SuggestionCard({
               <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--premium-text-tertiary)' }}>
                 Novelty
               </div>
-              <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+              <div className="h-1.5 rounded-full bg-[rgba(255,255,255,0.05)] overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-1000 ease-out"
                   style={{
@@ -151,7 +151,7 @@ export const SuggestionCard = memo(function SuggestionCard({
               <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--premium-text-tertiary)' }}>
                 Feasibility
               </div>
-              <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+              <div className="h-1.5 rounded-full bg-[rgba(255,255,255,0.05)] overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-1000 ease-out"
                   style={{
@@ -166,7 +166,7 @@ export const SuggestionCard = memo(function SuggestionCard({
               <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--premium-text-tertiary)' }}>
                 Interest
               </div>
-              <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+              <div className="h-1.5 rounded-full bg-[rgba(255,255,255,0.05)] overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-1000 ease-out"
                   style={{
@@ -180,7 +180,7 @@ export const SuggestionCard = memo(function SuggestionCard({
 
           {/* Synthesis Reasoning */}
           {suggestion.synthesis_reasoning && (
-            <div className="mb-4 p-3 rounded-lg bg-white/5 border border-white/10">
+            <div className="mb-4 p-3 rounded-lg bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.08)]">
               <div className="flex items-center gap-2 mb-1">
                 <Lightbulb className="h-3 w-3 text-amber-400" />
                 <span className="text-xs font-bold text-amber-400 uppercase tracking-wide">Why this suggestion?</span>
@@ -325,13 +325,13 @@ export const SuggestionCard = memo(function SuggestionCard({
             >
               <div className="flex items-center justify-between mb-6">
                 <h3 className="premium-text-platinum font-bold text-lg flex items-center gap-2">
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold text-white bg-gradient-to-r ${getRatingConfig(selectedRating).color}`}>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold text-[var(--brand-text-primary)] bg-gradient-to-r ${getRatingConfig(selectedRating).color}`}>
                     {getRatingConfig(selectedRating).label}
                   </span>
                 </h3>
                 <button
                   onClick={() => setShowRatingDialog(false)}
-                  className="p-1 hover:bg-white/10 rounded-lg transition-colors"
+                  className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded-lg transition-colors"
                 >
                   <X className="h-5 w-5" style={{ color: 'var(--premium-text-secondary)' }} />
                 </button>
@@ -356,7 +356,7 @@ export const SuggestionCard = memo(function SuggestionCard({
                     key={reason}
                     onClick={() => handleRateWithFeedback(reason)}
                     disabled={loadingAction !== null}
-                    className="w-full p-4 rounded-lg text-left transition-all premium-glass-subtle hover:bg-white/10 disabled:opacity-50"
+                    className="w-full p-4 rounded-lg text-left transition-all premium-glass-subtle hover:bg-[rgba(255,255,255,0.1)] disabled:opacity-50"
                   >
                     <span className="premium-text-platinum font-medium">
                       {label}
@@ -376,7 +376,7 @@ export const SuggestionCard = memo(function SuggestionCard({
                     key={reason}
                     onClick={() => handleRateWithFeedback(reason)}
                     disabled={loadingAction !== null}
-                    className="w-full p-4 rounded-lg text-left transition-all premium-glass-subtle hover:bg-white/10 disabled:opacity-50"
+                    className="w-full p-4 rounded-lg text-left transition-all premium-glass-subtle hover:bg-[rgba(255,255,255,0.1)] disabled:opacity-50"
                   >
                     <span className="premium-text-platinum font-medium">
                       {label}

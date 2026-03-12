@@ -66,7 +66,7 @@ export function PWAInstallBanner() {
           {/* Close Button */}
           <button
             onClick={handleDismiss}
-            className="absolute top-3 right-3 p-1 rounded-lg hover:bg-white/10 transition-colors"
+            className="absolute top-3 right-3 p-1 rounded-lg hover:bg-[rgba(255,255,255,0.1)] transition-colors"
             style={{ color: 'var(--premium-text-tertiary)' }}
           >
             <X className="h-4 w-4" />
@@ -80,7 +80,7 @@ export function PWAInstallBanner() {
                 background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))'
               }}
             >
-              <Smartphone className="h-6 w-6 text-white" />
+              <Smartphone className="h-6 w-6 text-[var(--brand-text-primary)]" />
             </div>
 
             <div className="flex-1 min-w-0">

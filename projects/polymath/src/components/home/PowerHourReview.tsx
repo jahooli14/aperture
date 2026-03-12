@@ -249,7 +249,7 @@ export function PowerHourReview({
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="p-4 border-b border-white/10 flex items-center justify-between flex-shrink-0">
+                <div className="p-4 border-b border-[rgba(255,255,255,0.08)] flex items-center justify-between flex-shrink-0">
                     <div>
                         <div
                             className="text-[10px] font-bold uppercase tracking-widest mb-1"
@@ -257,20 +257,20 @@ export function PowerHourReview({
                         >
                             {task.project_title}
                         </div>
-                        <h2 className="text-lg font-bold uppercase tracking-tight text-white">
+                        <h2 className="text-lg font-bold uppercase tracking-tight text-[var(--brand-text-primary)]">
                             {projectContext?.isDormant ? 'Welcome Back' : 'Plan Your Hour'}
                         </h2>
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                        className="p-2 hover:bg-[rgba(255,255,255,0.1)] rounded-lg transition-colors"
                     >
-                        <X className="h-5 w-5 text-white/50" />
+                        <X className="h-5 w-5 text-[var(--brand-text-primary)]/50" />
                     </button>
                 </div>
 
                 {/* Context Anchor - Always visible above tasks */}
-                <div className="px-4 py-3 bg-gradient-to-b from-white/[0.03] to-transparent border-b border-white/5 flex-shrink-0">
+                <div className="px-4 py-3 bg-gradient-to-b from-white/[0.03] to-transparent border-b border-[rgba(255,255,255,0.05)] flex-shrink-0">
                     {/* Dormancy Reconnection Card */}
                     {projectContext?.isDormant && (
                         <motion.div
@@ -316,18 +316,18 @@ export function PowerHourReview({
                                     onClick={() => setShowGoalDetail(!showGoalDetail)}
                                     className="flex items-center gap-1.5 flex-1 min-w-0 group"
                                 >
-                                    <Target className="h-3 w-3 text-white/40 flex-shrink-0" />
-                                    <span className="text-[10px] text-white/50 truncate group-hover:text-white/70 transition-colors">
+                                    <Target className="h-3 w-3 text-[var(--brand-text-primary)]/40 flex-shrink-0" />
+                                    <span className="text-[10px] text-[var(--brand-text-primary)]/50 truncate group-hover:text-[var(--brand-text-primary)]/70 transition-colors">
                                         {projectContext.endGoal}
                                     </span>
-                                    <ChevronRight className="h-3 w-3 text-white/20 group-hover:text-white/40 flex-shrink-0" />
+                                    <ChevronRight className="h-3 w-3 text-[var(--brand-text-primary)]/20 group-hover:text-[var(--brand-text-primary)]/40 flex-shrink-0" />
                                 </button>
                             ) : null}
 
                             {/* Progress */}
                             {projectContext?.progress !== undefined && projectContext.projectMode !== 'recurring' && (
                                 <div className="flex items-center gap-2 ml-auto flex-shrink-0">
-                                    <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                    <div className="w-16 h-1.5 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
                                         <div
                                             className="h-full rounded-full transition-all"
                                             style={{
@@ -336,7 +336,7 @@ export function PowerHourReview({
                                             }}
                                         />
                                     </div>
-                                    <span className="text-[10px] font-bold text-white/50">
+                                    <span className="text-[10px] font-bold text-[var(--brand-text-primary)]/50">
                                         {projectContext.progress}%
                                     </span>
                                 </div>
@@ -346,7 +346,7 @@ export function PowerHourReview({
 
                     {/* Last completed task (non-dormant) */}
                     {!projectContext?.isDormant && projectContext?.lastCompletedTask && (
-                        <div className="mt-2 flex items-center gap-1.5 text-[10px] text-white/40">
+                        <div className="mt-2 flex items-center gap-1.5 text-[10px] text-[var(--brand-text-primary)]/40">
                             <History className="h-3 w-3" />
                             <span className="truncate">Last: {projectContext.lastCompletedTask}</span>
                         </div>
@@ -360,21 +360,21 @@ export function PowerHourReview({
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
-                            className="overflow-hidden border-b border-white/10"
+                            className="overflow-hidden border-b border-[rgba(255,255,255,0.08)]"
                         >
                             <div className="p-4 bg-white/[0.02]">
-                                <div className="text-[9px] font-bold uppercase tracking-widest text-white/40 mb-2">
+                                <div className="text-[9px] font-bold uppercase tracking-widest text-[var(--brand-text-primary)]/40 mb-2">
                                     Definition of Done
                                 </div>
-                                <p className="text-sm text-white/80 leading-relaxed mb-3">
+                                <p className="text-sm text-[var(--brand-text-primary)]/80 leading-relaxed mb-3">
                                     {projectContext.endGoal}
                                 </p>
                                 {projectContext.motivation && (
                                     <>
-                                        <div className="text-[9px] font-bold uppercase tracking-widest text-white/40 mb-2">
+                                        <div className="text-[9px] font-bold uppercase tracking-widest text-[var(--brand-text-primary)]/40 mb-2">
                                             Why This Matters
                                         </div>
-                                        <p className="text-xs text-white/60 leading-relaxed">
+                                        <p className="text-xs text-[var(--brand-text-primary)]/60 leading-relaxed">
                                             {projectContext.motivation}
                                         </p>
                                     </>
@@ -398,7 +398,7 @@ export function PowerHourReview({
 
                     <div className="p-4 space-y-2">
                         {/* Instruction hint */}
-                        <p className="text-[10px] text-white/30 mb-3">
+                        <p className="text-[10px] text-[var(--brand-text-primary)]/30 mb-3">
                             Tap to exclude • Tap time to change • Scroll for backlog
                         </p>
 
@@ -416,10 +416,10 @@ export function PowerHourReview({
                                     className={`rounded-xl transition-all ${isPlanningTask
                                         ? 'bg-blue-500/10 border border-blue-500/20'
                                         : isRemoved
-                                            ? 'bg-white/5 opacity-60'
+                                            ? 'bg-[rgba(255,255,255,0.05)] opacity-60'
                                             : isStale && !isRemoved
                                                 ? 'bg-amber-500/5 border-l-2 border-amber-400/40'
-                                                : 'bg-white/10'
+                                                : 'bg-[rgba(255,255,255,0.1)]'
                                         }`}
                                 >
                                     <div className="flex items-start gap-3 p-3">
@@ -454,8 +454,8 @@ export function PowerHourReview({
                                             <div className={`text-sm font-medium leading-snug ${isPlanningTask
                                                 ? 'text-blue-300'
                                                 : isRemoved
-                                                    ? 'line-through text-white/30'
-                                                    : 'text-white'
+                                                    ? 'line-through text-[var(--brand-text-primary)]/30'
+                                                    : 'text-[var(--brand-text-primary)]'
                                                 }`}>
                                                 {item.text}
                                             </div>
@@ -487,9 +487,9 @@ export function PowerHourReview({
                                         {item.is_new && !isRemoved && !isPlanningTask && (
                                             <button
                                                 onClick={() => setShowReasoningFor(showReasoningFor === idx ? null : idx)}
-                                                className="p-1 hover:bg-white/10 rounded transition-colors"
+                                                className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded transition-colors"
                                             >
-                                                <HelpCircle className="h-3.5 w-3.5 text-white/30" />
+                                                <HelpCircle className="h-3.5 w-3.5 text-[var(--brand-text-primary)]/30" />
                                             </button>
                                         )}
 
@@ -498,12 +498,12 @@ export function PowerHourReview({
                                             <div className="relative flex-shrink-0">
                                                 <button
                                                     onClick={() => setExpandedTimeIdx(showTimeOptions ? null : idx)}
-                                                    className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                                                    className="px-2 py-1 rounded-lg bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] transition-colors"
                                                 >
-                                                    <span className="text-sm font-bold text-white tabular-nums">
+                                                    <span className="text-sm font-bold text-[var(--brand-text-primary)] tabular-nums">
                                                         {item.estimated_minutes}
                                                     </span>
-                                                    <span className="text-[10px] text-white/50 ml-0.5">m</span>
+                                                    <span className="text-[10px] text-[var(--brand-text-primary)]/50 ml-0.5">m</span>
                                                 </button>
 
                                                 {/* Expanded Time Options */}
@@ -521,7 +521,7 @@ export function PowerHourReview({
                                                                     onClick={() => setDuration(idx, d)}
                                                                     className={`px-2 py-1 rounded text-xs font-bold transition-colors ${item.estimated_minutes === d
                                                                         ? 'bg-white text-black'
-                                                                        : 'text-white/70 hover:bg-white/10'
+                                                                        : 'text-[var(--brand-text-primary)]/70 hover:bg-[rgba(255,255,255,0.1)]'
                                                                         }`}
                                                                 >
                                                                     {d}
@@ -544,11 +544,11 @@ export function PowerHourReview({
                                                 className="overflow-hidden"
                                             >
                                                 <div className="px-3 pb-3 pt-0">
-                                                    <div className="p-2 rounded-lg bg-white/5 border border-white/10">
-                                                        <div className="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-1">
+                                                    <div className="p-2 rounded-lg bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.08)]">
+                                                        <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--brand-text-primary)]/40 mb-1">
                                                             Why this task?
                                                         </div>
-                                                        <p className="text-xs text-white/60 leading-relaxed">
+                                                        <p className="text-xs text-[var(--brand-text-primary)]/60 leading-relaxed">
                                                             {getAIReasoning(item, idx)}
                                                         </p>
                                                     </div>
@@ -569,18 +569,18 @@ export function PowerHourReview({
                                     haptic.light()
                                     setShowBacklog(!showBacklog)
                                 }}
-                                className="w-full flex items-center justify-between p-3 rounded-xl border border-dashed border-white/20 hover:border-white/40 hover:bg-white/5 transition-all"
+                                className="w-full flex items-center justify-between p-3 rounded-xl border border-dashed border-white/20 hover:border-white/40 hover:bg-[rgba(255,255,255,0.05)] transition-all"
                             >
-                                <div className="flex items-center gap-2 text-white/50">
+                                <div className="flex items-center gap-2 text-[var(--brand-text-primary)]/50">
                                     <ListTodo className="h-4 w-4" />
                                     <span className="text-xs font-medium">
                                         {isManualMode ? 'Add from your tasks' : 'Add from backlog'}
                                     </span>
-                                    <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded">
+                                    <span className="text-[10px] bg-[rgba(255,255,255,0.1)] px-1.5 py-0.5 rounded">
                                         {availableBacklogTasks.length}
                                     </span>
                                 </div>
-                                <ChevronDown className={`h-4 w-4 text-white/30 transition-transform ${showBacklog ? 'rotate-180' : ''}`} />
+                                <ChevronDown className={`h-4 w-4 text-[var(--brand-text-primary)]/30 transition-transform ${showBacklog ? 'rotate-180' : ''}`} />
                             </button>
 
                             <AnimatePresence>
@@ -596,10 +596,10 @@ export function PowerHourReview({
                                                 <button
                                                     key={t.id}
                                                     onClick={() => addFromBacklog(t.text)}
-                                                    className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 transition-colors text-left group"
+                                                    className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-[rgba(255,255,255,0.1)] transition-colors text-left group"
                                                 >
-                                                    <Plus className="h-3.5 w-3.5 text-white/30 group-hover:text-white/60 flex-shrink-0" />
-                                                    <span className="text-xs text-white/60 group-hover:text-white/80 leading-snug">
+                                                    <Plus className="h-3.5 w-3.5 text-[var(--brand-text-primary)]/30 group-hover:text-[var(--brand-text-primary)]/60 flex-shrink-0" />
+                                                    <span className="text-xs text-[var(--brand-text-primary)]/60 group-hover:text-[var(--brand-text-primary)]/80 leading-snug">
                                                         {t.text}
                                                     </span>
                                                 </button>
@@ -616,7 +616,7 @@ export function PowerHourReview({
                         <div className="px-4 pb-4">
                             <button
                                 onClick={handleStartFresh}
-                                className="w-full flex items-center justify-center gap-2 py-2 text-[10px] font-bold uppercase tracking-widest text-white/30 hover:text-white/50 transition-colors"
+                                className="w-full flex items-center justify-center gap-2 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--brand-text-primary)]/30 hover:text-[var(--brand-text-primary)]/50 transition-colors"
                             >
                                 <RefreshCw className="h-3 w-3" />
                                 Start fresh – build my own plan
@@ -626,23 +626,23 @@ export function PowerHourReview({
                 </div>
 
                 {/* Time Summary with Sweet Spot Zone */}
-                <div className="px-4 py-3 border-t border-white/10 bg-white/5 flex-shrink-0">
+                <div className="px-4 py-3 border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.05)] flex-shrink-0">
                     <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-white/50" />
-                            <span className="text-sm text-white/70">Session Time</span>
+                            <Clock className="h-4 w-4 text-[var(--brand-text-primary)]/50" />
+                            <span className="text-sm text-[var(--brand-text-primary)]/70">Session Time</span>
                         </div>
                         <div className="flex items-center gap-1">
-                            <span className={`text-xl font-bold tabular-nums ${isOvertime ? 'text-red-400' : isIdeal ? 'text-green-400' : 'text-white'
+                            <span className={`text-xl font-bold tabular-nums ${isOvertime ? 'text-red-400' : isIdeal ? 'text-green-400' : 'text-[var(--brand-text-primary)]'
                                 }`}>
                                 {totalMinutes}
                             </span>
-                            <span className="text-sm text-white/50">/ {targetMinutes} min</span>
+                            <span className="text-sm text-[var(--brand-text-primary)]/50">/ {targetMinutes} min</span>
                         </div>
                     </div>
 
                     {/* Progress bar with sweet spot zone */}
-                    <div className="relative h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div className="relative h-2 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
                         {/* Sweet spot zone */}
                         <div
                             className="absolute h-full bg-green-500/20"
@@ -682,7 +682,7 @@ export function PowerHourReview({
                             </span>
                         )}
                         {isUnder && !isOvertime && (
-                            <span className="text-white/40">
+                            <span className="text-[var(--brand-text-primary)]/40">
                                 Add {TARGET_ZONE_MIN - totalMinutes}m for a full session
                             </span>
                         )}
@@ -690,7 +690,7 @@ export function PowerHourReview({
                 </div>
 
                 {/* Action Buttons */}
-                <div className="p-4 border-t border-white/10 flex-shrink-0">
+                <div className="p-4 border-t border-[rgba(255,255,255,0.08)] flex-shrink-0">
                     <div className="flex gap-3">
                         {/* Archive option for dormant projects */}
                         {projectContext?.isDormant && onArchive && (

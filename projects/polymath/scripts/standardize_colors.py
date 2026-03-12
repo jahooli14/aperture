@@ -1,5 +1,11 @@
-/** @type {import('tailwindcss').Config} */
-module.exports = {
+# Unified Aperture Modern Theme tailwind integration
+# This script will read theme.css and inject its variables into tailwind.config.js
+# and clean up components to use standardized classes.
+import os
+import re
+
+tailwind_content = """/** @type {import('tailwindcss').Config} */
+export default {
   darkMode: ["class"],
   content: [
     './index.html',
@@ -28,7 +34,7 @@ module.exports = {
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         brand: {
-          primary: 'var(--brand-primary-rgb)',
+          primary: 'var(--brand-primary)',
           bg: 'var(--brand-bg)',
           glass: 'var(--brand-glass-bg)',
         },
@@ -82,3 +88,42 @@ module.exports = {
   },
   plugins: [],
 }
+"""
+
+with open('/Users/danielcroome-horgan/Aperture/projects/polymath/tailwind.config.js', 'w') as f:
+    f.write(tailwind_content)
+
+src_dir = '/Users/danielcroome-horgan/Aperture/projects/polymath/src'
+
+def process_colors(filepath):
+    with open(filepath, 'r') as f:
+        content = f.read()
+
+    original_content = content
+    
+    # Text colors
+    content = re.sub(r'text-slate-200|text-white|text-gray-100|text-gray-50', 'text-brand-text-primary', content)
+    content = re.sub(r'text-slate-300|text-slate-400|text-gray-300|text-gray-400', 'text-brand-text-secondary', content)
+    content = re.sub(r'text-slate-500|text-gray-500|text-neutral-500', 'text-brand-text-muted', content)
+    
+    # Bg / Border colors common in dark mode
+    content = re.sub(r'border-white/10|border-white/5|border-slate-800', 'border-[rgba(255,255,255,0.08)]', content)
+    content = re.sub(r'bg-white/5|bg-white/10|bg-slate-800/50|bg-slate-900/50', 'bg-brand-glass', content)
+    
+    # Primary brand coloring mappings
+    content = re.sub(r'text-blue-500|text-cyan-400|text-cyan-500', 'text-brand-primary', content)
+    
+    if content != original_content:
+        with open(filepath, 'w') as f:
+            f.write(content)
+        return True
+    return False
+
+modified_count = 0
+for root, _, files in os.walk(src_dir):
+    for file in files:
+        if file.endswith(('.tsx', '.ts', '.jsx', '.js')):
+            if process_colors(os.path.join(root, file)):
+                modified_count += 1
+
+print(f"Standardized colors in {modified_count} components.")

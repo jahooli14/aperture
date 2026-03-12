@@ -58,7 +58,7 @@ export function ContextMenu({ items, isOpen, onClose, title }: ContextMenuProps)
               )}
               <button
                 onClick={onClose}
-                className="ml-auto p-2 rounded-lg transition-colors hover:bg-white/10"
+                className="ml-auto p-2 rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.1)]"
                 style={{ color: 'var(--premium-text-secondary)' }}
               >
                 <X className="h-5 w-5" />

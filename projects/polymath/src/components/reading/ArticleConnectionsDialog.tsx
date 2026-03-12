@@ -65,7 +65,11 @@ export function ArticleConnectionsDialog({
               {/* Close Button */}
               <button
                 onClick={onClose}
+<<<<<<< HEAD
                 className="absolute top-4 right-4 p-2 rounded-sm hover:bg-white/10 transition-colors"
+=======
+                className="absolute top-4 right-4 p-2 rounded-lg hover:bg-[rgba(255,255,255,0.1)] transition-colors"
+>>>>>>> c9f13343 (style: standardize design language and unify UI variables across polymath app)
                 aria-label="Close"
               >
                 <X className="h-5 w-5" style={{ color: 'var(--premium-text-secondary)' }} />
@@ -81,7 +85,7 @@ export function ArticleConnectionsDialog({
                     className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-6"
                     style={{ background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.8), rgba(147, 197, 253, 0.8))' }}
                   >
-                    <Check className="h-8 w-8 text-white" />
+                    <Check className="h-8 w-8 text-[var(--brand-text-primary)]" />
                   </motion.div>
 
                   <h2 className="text-2xl font-bold premium-text-platinum mb-2">
@@ -108,7 +112,11 @@ export function ArticleConnectionsDialog({
                     </button>
                     <button
                       onClick={onClose}
+<<<<<<< HEAD
                       className="px-6 py-3 rounded-sm font-medium border transition-all hover:bg-white/5"
+=======
+                      className="px-6 py-3 rounded-lg font-medium border transition-all hover:bg-[rgba(255,255,255,0.05)]"
+>>>>>>> c9f13343 (style: standardize design language and unify UI variables across polymath app)
                       style={{ borderColor: 'rgba(255, 255, 255, 0.2)', color: 'var(--premium-text-secondary)' }}
                     >
                       Skip
@@ -146,7 +154,11 @@ export function ArticleConnectionsDialog({
                   <div className="mt-6 pt-6 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
                     <button
                       onClick={onClose}
+<<<<<<< HEAD
                       className="w-full px-6 py-3 rounded-sm font-medium border transition-all hover:bg-white/5"
+=======
+                      className="w-full px-6 py-3 rounded-lg font-medium border transition-all hover:bg-[rgba(255,255,255,0.05)]"
+>>>>>>> c9f13343 (style: standardize design language and unify UI variables across polymath app)
                       style={{ borderColor: 'rgba(255, 255, 255, 0.2)', color: 'var(--premium-text-secondary)' }}
                     >
                       Done

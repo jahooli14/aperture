@@ -154,7 +154,7 @@ export function FocusStream() {
                         >
                             <div className="relative z-10 flex-1">
                                 <div className="flex items-center justify-between gap-4 mb-4">
-                                    <h3 className="text-xl font-bold text-white aperture-header truncate">
+                                    <h3 className="text-xl font-bold text-[var(--brand-text-primary)] aperture-header truncate">
                                         {priorityProject.title}
                                     </h3>
                                     <span className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border aperture-header" style={{
@@ -165,7 +165,7 @@ export function FocusStream() {
                                         Priority
                                     </span>
                                 </div>
-                                <div className="p-4 rounded-xl mt-6 group-hover:bg-white/5 transition-colors" style={{
+                                <div className="p-4 rounded-xl mt-6 group-hover:bg-[rgba(255,255,255,0.05)] transition-colors" style={{
                                     backgroundColor: `rgba(${theme.rgb}, 0.1)`,
                                     border: `1px solid rgba(${theme.rgb}, 0.2)`
                                 }}>
@@ -204,7 +204,7 @@ export function FocusStream() {
                         >
                             <div className="relative z-10 flex-1">
                                 <div className="flex items-center justify-between gap-4 mb-4">
-                                    <h3 className="text-xl font-bold text-white aperture-header truncate">
+                                    <h3 className="text-xl font-bold text-[var(--brand-text-primary)] aperture-header truncate">
                                         {recentProject.title}
                                     </h3>
                                     <span className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest flex items-center gap-1 border aperture-header" style={{
@@ -215,7 +215,7 @@ export function FocusStream() {
                                         Recent
                                     </span>
                                 </div>
-                                <div className="p-4 rounded-xl mt-6 group-hover:bg-white/5 transition-colors" style={{
+                                <div className="p-4 rounded-xl mt-6 group-hover:bg-[rgba(255,255,255,0.05)] transition-colors" style={{
                                     backgroundColor: `rgba(${theme.rgb}, 0.1)`,
                                     border: `1px solid rgba(${theme.rgb}, 0.2)`
                                 }}>
@@ -248,7 +248,7 @@ export function FocusStream() {
 
                             <div className="relative z-10">
                                 <div className="flex items-center gap-2 mb-4">
-                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest border border-white/10 aperture-header text-[var(--brand-text-muted)] bg-white/5">
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest border border-[rgba(255,255,255,0.08)] aperture-header text-[var(--brand-text-muted)] bg-[rgba(255,255,255,0.05)]">
                                         Review Mode
                                     </span>
                                     <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--brand-text-muted)] aperture-header">
@@ -256,7 +256,7 @@ export function FocusStream() {
                                     </span>
                                 </div>
 
-                                <h3 className="text-xl font-bold text-white mb-2 aperture-header">
+                                <h3 className="text-xl font-bold text-[var(--brand-text-primary)] mb-2 aperture-header">
                                     Dust off your archives
                                 </h3>
                                 <p className="text-sm text-[var(--brand-text-secondary)] line-clamp-2 leading-relaxed aperture-body">

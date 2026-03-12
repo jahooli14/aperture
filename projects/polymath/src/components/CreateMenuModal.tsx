@@ -73,7 +73,7 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
                             stiffness: 500,
                             mass: 0.5,
                         }}
-                        className="relative w-full max-w-2xl overflow-hidden rounded-[2.5rem] border border-white/10 bg-zinc-900/50 shadow-2xl"
+                        className="relative w-full max-w-2xl overflow-hidden rounded-[2.5rem] border border-[rgba(255,255,255,0.08)] bg-zinc-900/50 shadow-2xl"
                     >
                         {/* Ambient Background Glows */}
                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-sky-500 to-transparent opacity-50" />
@@ -83,7 +83,7 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
                         <div className="relative p-8 md:p-12">
                             <div className="flex items-center justify-between mb-10">
                                 <div>
-                                    <h2 className="text-3xl font-black italic text-white flex items-center gap-3 tracking-tighter uppercase">
+                                    <h2 className="text-3xl font-black italic text-[var(--brand-text-primary)] flex items-center gap-3 tracking-tighter uppercase">
                                         <Sparkles className="h-6 w-6 text-sky-400" />
                                         Forge New
                                     </h2>
@@ -91,9 +91,9 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
                                 </div>
                                 <button
                                     onClick={onClose}
-                                    className="h-12 w-12 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all border border-white/5 group"
+                                    className="h-12 w-12 rounded-full bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] flex items-center justify-center transition-all border border-[rgba(255,255,255,0.05)] group"
                                 >
-                                    <X className="h-6 w-6 text-zinc-400 group-hover:text-white group-hover:rotate-90 transition-all duration-300" />
+                                    <X className="h-6 w-6 text-zinc-400 group-hover:text-[var(--brand-text-primary)] group-hover:rotate-90 transition-all duration-300" />
                                 </button>
                             </div>
 
@@ -108,7 +108,7 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
                                             onAction(action.id as any)
                                             onClose()
                                         }}
-                                        className="relative group flex items-center gap-5 p-5 rounded-3xl bg-white/[0.03] border border-white/10 hover:bg-white/[0.08] hover:border-white/20 transition-all text-left overflow-hidden"
+                                        className="relative group flex items-center gap-5 p-5 rounded-3xl bg-white/[0.03] border border-[rgba(255,255,255,0.08)] hover:bg-white/[0.08] hover:border-white/20 transition-all text-left overflow-hidden"
                                     >
                                         {/* Hover Gradient Background */}
                                         <div className={cn(
@@ -117,7 +117,7 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
                                         )} />
 
                                         <div className={cn(
-                                            "h-14 w-14 rounded-2xl flex items-center justify-center shrink-0 shadow-lg border border-white/10 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3",
+                                            "h-14 w-14 rounded-2xl flex items-center justify-center shrink-0 shadow-lg border border-[rgba(255,255,255,0.08)] transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3",
                                             "bg-zinc-800"
                                         )}>
                                             <action.icon className={cn("h-7 w-7", action.iconColor)} />
@@ -125,7 +125,7 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
 
                                         <div className="flex-1">
                                             <div className="flex items-center justify-between">
-                                                <span className="text-xl font-bold text-white group-hover:text-sky-400 transition-colors uppercase tracking-tight">
+                                                <span className="text-xl font-bold text-[var(--brand-text-primary)] group-hover:text-sky-400 transition-colors uppercase tracking-tight">
                                                     {action.label}
                                                 </span>
                                             </div>

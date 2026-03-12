@@ -130,7 +130,7 @@ export function SteeringCard() {
               </div>
               <button
                 onClick={dismiss}
-                className="text-white/30 hover:text-white/60 transition-colors mt-0.5 flex-shrink-0"
+                className="text-[var(--brand-text-primary)]/30 hover:text-[var(--brand-text-primary)]/60 transition-colors mt-0.5 flex-shrink-0"
                 aria-label="Dismiss"
               >
                 <X className="w-3.5 h-3.5" />
@@ -138,13 +138,13 @@ export function SteeringCard() {
             </div>
 
             {/* Message */}
-            <p className="text-sm text-white/90 leading-snug font-medium pr-2">
+            <p className="text-sm text-[var(--brand-text-primary)]/90 leading-snug font-medium pr-2">
               {steering.message}
             </p>
 
             {/* Evidence — subtle, below the fold */}
             {steering.evidence && (
-              <p className="text-[11px] text-white/35 mt-1.5 leading-relaxed">
+              <p className="text-[11px] text-[var(--brand-text-primary)]/35 mt-1.5 leading-relaxed">
                 {steering.evidence}
               </p>
             )}

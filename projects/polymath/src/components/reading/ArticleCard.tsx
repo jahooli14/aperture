@@ -173,16 +173,16 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
               }}
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 hover:bg-white/10 shrink-0"
+              className="h-8 w-8 p-0 hover:bg-[rgba(255,255,255,0.1)] shrink-0"
             >
-              <MoreVertical className="h-4 w-4 text-gray-400" />
+              <MoreVertical className="h-4 w-4 text-[var(--brand-text-secondary)]" />
             </Button>
           </div>
 
           <div className="min-w-0">
             {article.title?.startsWith('http') ? (
               <div className="flex items-center gap-2 mb-1">
-                <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                <Loader2 className="h-4 w-4 animate-spin text-[var(--brand-primary)]" />
                 <span className="text-sm font-medium text-blue-400">Extracting...</span>
               </div>
             ) : (

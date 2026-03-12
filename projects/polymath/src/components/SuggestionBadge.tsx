@@ -110,7 +110,7 @@ export function SuggestionBadge({ itemId, itemType }: SuggestionBadgeProps) {
           }
         }}
       >
-        <span className="text-xs font-bold text-white">{count}</span>
+        <span className="text-xs font-bold text-[var(--brand-text-primary)]">{count}</span>
         <motion.div
           className="absolute -top-1 -right-1"
           animate={{ rotate: [0, 10, -10, 0] }}
@@ -168,7 +168,7 @@ export function SuggestionBadge({ itemId, itemType }: SuggestionBadgeProps) {
                 </div>
                 <button
                   onClick={() => setIsExpanded(false)}
-                  className="text-white/40 hover:text-white/60 transition-colors p-2"
+                  className="text-[var(--brand-text-primary)]/40 hover:text-[var(--brand-text-primary)]/60 transition-colors p-2"
                   style={{ WebkitTapHighlightColor: 'transparent' }}
                 >
                   <X size={20} />
@@ -209,7 +209,7 @@ export function SuggestionBadge({ itemId, itemType }: SuggestionBadgeProps) {
 
                     {/* Confidence */}
                     <div className="flex items-center gap-2 mb-3">
-                      <div className="flex-1 h-1 rounded-full bg-white/10 overflow-hidden">
+                      <div className="flex-1 h-1 rounded-full bg-[rgba(255,255,255,0.1)] overflow-hidden">
                         <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: `${suggestion.confidence * 100}%` }}

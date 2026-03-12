@@ -76,7 +76,7 @@ export function PinOverlay() {
               e.stopPropagation()
               unpinItem()
             }}
-            className="h-8 w-8 rounded-lg flex items-center justify-center transition-colors hover:bg-white/10"
+            className="h-8 w-8 rounded-lg flex items-center justify-center transition-colors hover:bg-[rgba(255,255,255,0.1)]"
             style={{ color: 'var(--premium-text-secondary)' }}
             title="Unpin"
           >
@@ -128,7 +128,7 @@ export function PinOverlay() {
           <div className="flex items-center gap-2">
             <button
               onClick={unpinItem}
-              className="h-8 w-8 rounded-lg flex items-center justify-center transition-colors hover:bg-white/10"
+              className="h-8 w-8 rounded-lg flex items-center justify-center transition-colors hover:bg-[rgba(255,255,255,0.1)]"
               style={{ color: 'var(--premium-text-secondary)' }}
               title="Unpin"
             >

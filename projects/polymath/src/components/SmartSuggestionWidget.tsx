@@ -181,7 +181,7 @@ export function SmartSuggestionWidget() {
             </div>
             <button
               onClick={handleRefresh}
-              className="p-2 rounded-lg hover:bg-white/5 transition-colors"
+              className="p-2 rounded-lg hover:bg-[rgba(255,255,255,0.05)] transition-colors"
               style={{ color: 'var(--premium-text-tertiary)' }}
               title="Refresh suggestion"
             >
@@ -196,7 +196,7 @@ export function SmartSuggestionWidget() {
         {/* Main Action */}
         <div
           onClick={() => suggestion.type !== 'rest' && handleSuggestionClick(suggestion)}
-          className={`p-5 ${suggestion.type !== 'rest' ? 'cursor-pointer hover:bg-white/5 transition-all' : ''}`}
+          className={`p-5 ${suggestion.type !== 'rest' ? 'cursor-pointer hover:bg-[rgba(255,255,255,0.05)] transition-all' : ''}`}
         >
           <div className="flex items-start gap-4">
             <div className="flex-1 min-w-0">
@@ -273,7 +273,7 @@ export function SmartSuggestionWidget() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
                   onClick={() => alt.type !== 'rest' && handleSuggestionClick(alt)}
-                  className={`premium-card p-4 ${alt.type !== 'rest' ? 'cursor-pointer hover:bg-white/5 transition-all' : ''}`}
+                  className={`premium-card p-4 ${alt.type !== 'rest' ? 'cursor-pointer hover:bg-[rgba(255,255,255,0.05)] transition-all' : ''}`}
                   style={{ borderColor: altColors.border }}
                 >
                   <div className="flex items-start gap-3">

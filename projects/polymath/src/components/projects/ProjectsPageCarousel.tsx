@@ -94,7 +94,7 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-3">
-        <h4 className={`text-white font-bold leading-tight aperture-header ${prominent ? 'text-lg' : 'text-sm'}`}>
+        <h4 className={`text-[var(--brand-text-primary)] font-bold leading-tight aperture-header ${prominent ? 'text-lg' : 'text-sm'}`}>
           {project.title}
         </h4>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -135,7 +135,7 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-bold text-[var(--brand-text-muted)] uppercase tracking-wider mb-0.5 aperture-header">Next Step</p>
-            <p className={`text-sm font-medium text-gray-100 line-clamp-2 aperture-body`}>
+            <p className={`text-sm font-medium text-[var(--brand-text-primary)] line-clamp-2 aperture-body`}>
               {nextTask.text}
             </p>
           </div>
@@ -143,11 +143,11 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
       )}
 
       {/* Footer / Meta */}
-      <div className="flex items-center justify-between pt-2 border-t border-white/5">
+      <div className="flex items-center justify-between pt-2 border-t border-[rgba(255,255,255,0.05)]">
         <div className="flex items-center gap-2">
           {totalTasks > 0 ? (
             <div className="flex items-center gap-2">
-              <div className="h-1 w-16 bg-white/5 rounded-full overflow-hidden">
+              <div className="h-1 w-16 bg-[rgba(255,255,255,0.05)] rounded-full overflow-hidden">
                 <div
                   className="h-full"
                   style={{
@@ -167,7 +167,7 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
         </div>
 
         {prominent && (
-          <div className="p-1.5 rounded-full bg-white/5 group-hover:bg-[var(--brand-secondary)] group-hover:text-black transition-colors text-[var(--brand-secondary)]">
+          <div className="p-1.5 rounded-full bg-[rgba(255,255,255,0.05)] group-hover:bg-[var(--brand-secondary)] group-hover:text-black transition-colors text-[var(--brand-secondary)]">
             <ArrowRight className="h-4 w-4" />
           </div>
         )}
@@ -216,7 +216,7 @@ export function ProjectsPageCarousel({
       {/* SECTION 2: THE DRAWER (Masonry) */}
       {drawerList.length > 0 && (
         <section>
-          <div className="mb-4 px-1 mt-8 border-t border-white/5 pt-8">
+          <div className="mb-4 px-1 mt-8 border-t border-[rgba(255,255,255,0.05)] pt-8">
             <h3 className="text-xs font-bold text-[var(--brand-text-muted)] uppercase tracking-widest aperture-header">The Drawer</h3>
           </div>
 

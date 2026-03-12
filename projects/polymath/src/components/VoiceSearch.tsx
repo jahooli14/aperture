@@ -165,7 +165,7 @@ export function VoiceSearch({
         {onClose && (
           <button
             onClick={handleClose}
-            className="p-2 rounded-lg hover:bg-white/5 transition-colors"
+            className="p-2 rounded-lg hover:bg-[rgba(255,255,255,0.05)] transition-colors"
             style={{ color: 'var(--premium-text-tertiary)' }}
           >
             <X className="h-5 w-5" />
@@ -215,9 +215,9 @@ export function VoiceSearch({
           }}
         >
           {isListening ? (
-            <MicOff className="h-6 w-6 text-white" />
+            <MicOff className="h-6 w-6 text-[var(--brand-text-primary)]" />
           ) : (
-            <Mic className="h-6 w-6 text-white" />
+            <Mic className="h-6 w-6 text-[var(--brand-text-primary)]" />
           )}
         </button>
 

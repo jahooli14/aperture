@@ -42,7 +42,7 @@ export function BulkActionsBar({ selectedCount, onCancel, actions }: BulkActions
                     boxShadow: '0 0 20px rgba(59, 130, 246, 0.3)'
                   }}
                 >
-                  <Check className="h-5 w-5 text-white" />
+                  <Check className="h-5 w-5 text-[var(--brand-text-primary)]" />
                 </div>
                 <div>
                   <h3
@@ -61,7 +61,7 @@ export function BulkActionsBar({ selectedCount, onCancel, actions }: BulkActions
               </div>
               <button
                 onClick={onCancel}
-                className="p-2 rounded-lg transition-colors hover:bg-white/10"
+                className="p-2 rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.1)]"
                 style={{ color: 'var(--premium-text-secondary)' }}
               >
                 <X className="h-5 w-5" />

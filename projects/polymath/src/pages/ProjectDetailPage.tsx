@@ -539,8 +539,8 @@ export function ProjectDetailPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900" style={{ backgroundColor: 'var(--premium-surface-base, #111)' }}>
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-500" style={{ color: 'var(--premium-blue, #60a5fa)' }} />
-          <p className="text-gray-400" style={{ color: 'var(--premium-text-secondary, #9ca3af)' }}>Loading project...</p>
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-[var(--brand-primary)]" style={{ color: 'var(--premium-blue, #60a5fa)' }} />
+          <p className="text-[var(--brand-text-secondary)]" style={{ color: 'var(--premium-text-secondary, #9ca3af)' }}>Loading project...</p>
         </div>
       </div>
     )
@@ -550,7 +550,7 @@ export function ProjectDetailPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900" style={{ backgroundColor: 'var(--premium-surface-base, #111)' }}>
         <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2 text-white" style={{ color: 'var(--premium-text-primary, #fff)' }}>Project not found</h2>
+          <h2 className="text-xl font-semibold mb-2 text-[var(--brand-text-primary)]" style={{ color: 'var(--premium-text-primary, #fff)' }}>Project not found</h2>
           <Button onClick={() => navigate('/projects')} variant="outline">
             Back to Projects
           </Button>
@@ -610,10 +610,10 @@ export function ProjectDetailPage() {
                       color: 'var(--premium-text-primary)'
                     }}
                   />
-                  <button onClick={saveTitle} className="p-1 rounded hover:bg-white/10">
+                  <button onClick={saveTitle} className="p-1 rounded hover:bg-[rgba(255,255,255,0.1)]">
                     <Check className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
                   </button>
-                  <button onClick={cancelEdit} className="p-1 rounded hover:bg-white/10">
+                  <button onClick={cancelEdit} className="p-1 rounded hover:bg-[rgba(255,255,255,0.1)]">
                     <X className="h-5 w-5" style={{ color: '#ef4444' }} />
                   </button>
                 </div>
@@ -683,7 +683,7 @@ export function ProjectDetailPage() {
                 onClick={() => handleStatusChange(project.status === 'completed' ? 'active' : 'completed')}
                 className={`px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs font-medium transition-all hover:opacity-80 ${project.status === 'completed'
                   ? 'bg-green-500/20 text-green-400 border-green-500/30'
-                  : 'bg-slate-800/50 text-slate-400 border-slate-700/50'
+                  : 'bg-[var(--brand-glass-bg)] text-[var(--brand-text-secondary)] border-slate-700/50'
                   }`}
                 style={{ border: '1px solid' }}
                 title={project.status === 'completed' ? 'Mark as Active' : 'Mark as Completed'}
@@ -704,7 +704,7 @@ export function ProjectDetailPage() {
                 className={`h-10 w-10 flex items-center justify-center rounded-full transition-all touch-manipulation ${
                   project.is_priority
                     ? 'bg-amber-500/20 hover:bg-amber-500/30'
-                    : 'hover:bg-white/10'
+                    : 'hover:bg-[rgba(255,255,255,0.1)]'
                 }`}
                 title={project.is_priority ? 'Remove from priority' : 'Set as priority'}
                 aria-label={project.is_priority ? 'Remove from priority' : 'Set as priority'}
@@ -759,7 +759,7 @@ export function ProjectDetailPage() {
                         setShowMenu(false)
                         setShowEditDialog(true)
                       }}
-                      className="w-full px-4 py-2 text-left text-sm transition-colors hover:bg-white/10"
+                      className="w-full px-4 py-2 text-left text-sm transition-colors hover:bg-[rgba(255,255,255,0.1)]"
                       style={{ color: 'var(--premium-text-primary)' }}
                     >
                       Edit Project Details
@@ -776,10 +776,10 @@ export function ProjectDetailPage() {
       {/* Content - All sections on one page */}
       {/* Tabs */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-6">
-        <div className="flex items-center gap-4 border-b border-white/10">
+        <div className="flex items-center gap-4 border-b border-[rgba(255,255,255,0.08)]">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`pb-3 text-sm font-medium transition-colors relative ${activeTab === 'overview' ? 'text-blue-400' : 'text-slate-400 hover:text-slate-200'
+            className={`pb-3 text-sm font-medium transition-colors relative ${activeTab === 'overview' ? 'text-blue-400' : 'text-[var(--brand-text-secondary)] hover:text-[var(--brand-text-primary)]'
               }`}
           >
             Overview
@@ -792,7 +792,7 @@ export function ProjectDetailPage() {
           </button>
           <button
             onClick={() => setActiveTab('studio')}
-            className={`pb-3 text-sm font-medium transition-colors relative ${activeTab === 'studio' ? 'text-indigo-400' : 'text-slate-400 hover:text-slate-200'
+            className={`pb-3 text-sm font-medium transition-colors relative ${activeTab === 'studio' ? 'text-indigo-400' : 'text-[var(--brand-text-secondary)] hover:text-[var(--brand-text-primary)]'
               }`}
           >
             The Studio
@@ -830,7 +830,7 @@ export function ProjectDetailPage() {
                       Power Hour Session
                     </div>
 
-                    <h2 className="text-3xl font-black text-white mb-3 uppercase italic tracking-tighter leading-none">
+                    <h2 className="text-3xl font-black text-[var(--brand-text-primary)] mb-3 uppercase italic tracking-tighter leading-none">
                       {powerHourTask.task_title}
                     </h2>
 
@@ -839,7 +839,7 @@ export function ProjectDetailPage() {
                         "{powerHourTask.session_summary}"
                       </p>
                     ) : (
-                      <p className="text-lg text-slate-300 mb-6 max-w-2xl leading-relaxed">
+                      <p className="text-lg text-[var(--brand-text-secondary)] mb-6 max-w-2xl leading-relaxed">
                         {powerHourTask.task_description}
                       </p>
                     )}
@@ -856,7 +856,7 @@ export function ProjectDetailPage() {
                           }
                           addToast({ title: 'Focus on your hit-list below', variant: 'default' })
                         }}
-                        className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-xs tracking-widest rounded transition-all flex items-center gap-3 group/btn"
+                        className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-[var(--brand-text-primary)] font-black uppercase text-xs tracking-widest rounded transition-all flex items-center gap-3 group/btn"
                       >
                         <Check className="h-4 w-4 group-hover/btn:scale-125 transition-transform" />
                         Execute Hit-List
@@ -877,10 +877,11 @@ export function ProjectDetailPage() {
                 {/* The Vision: Merges Description and Motivation */}
                 {(project.description || project.metadata?.motivation) && (
                   <div className="relative group">
-                    <div className="relative p-8 rounded bg-white/[0.03] border border-white/5 space-y-4">
+                    <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
+                    <div className="relative p-8 rounded-2xl bg-white/[0.03] border border-[rgba(255,255,255,0.05)] space-y-4">
                       <div className="flex items-center gap-3 mb-4 opacity-50">
                         <div className="h-px bg-white/20 flex-grow" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/50">The Vision</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--brand-text-primary)]/50">The Vision</span>
                         <div className="h-px bg-white/20 flex-grow" />
                       </div>
 
@@ -905,11 +906,11 @@ export function ProjectDetailPage() {
                               }
                               if (e.key === 'Escape') cancelEdit()
                             }}
-                            className="w-full bg-black/40 border-white/10 rounded p-4 text-xl sm:text-2xl font-medium text-white leading-relaxed italic font-serif text-center outline-none focus:border-blue-500/50"
+                            className="w-full bg-black/40 border-[rgba(255,255,255,0.08)] rounded-xl p-4 text-xl sm:text-2xl font-medium text-[var(--brand-text-primary)] leading-relaxed italic font-serif text-center outline-none focus:border-blue-500/50"
                             autoFocus
                           />
                         ) : (
-                          <p className="text-xl sm:text-2xl font-medium text-white/90 leading-relaxed italic font-serif text-center">
+                          <p className="text-xl sm:text-2xl font-medium text-[var(--brand-text-primary)]/90 leading-relaxed italic font-serif text-center">
                             "{project.description || 'Add a vision for this project...'}"
                           </p>
                         )}
@@ -918,7 +919,7 @@ export function ProjectDetailPage() {
                       {(project.metadata?.motivation || editingMotivation) && (
                         <div className="pt-6 relative">
                           <div
-                            className="cursor-pointer hover:text-white transition-colors"
+                            className="cursor-pointer hover:text-[var(--brand-text-primary)] transition-colors"
                             onClick={() => {
                               setTempMotivation(project.metadata?.motivation || '')
                               setEditingMotivation(true)
@@ -938,11 +939,11 @@ export function ProjectDetailPage() {
                                   }
                                   if (e.key === 'Escape') cancelEdit()
                                 }}
-                                className="w-full bg-black/40 border-white/10 rounded-xl p-3 text-sm text-white leading-relaxed max-w-2xl mx-auto block outline-none focus:border-blue-500/50 text-center"
+                                className="w-full bg-black/40 border-[rgba(255,255,255,0.08)] rounded-xl p-3 text-sm text-[var(--brand-text-primary)] leading-relaxed max-w-2xl mx-auto block outline-none focus:border-blue-500/50 text-center"
                                 autoFocus
                               />
                             ) : (
-                              <p className="text-sm text-white/50 leading-relaxed max-w-2xl mx-auto text-center font-serif italic">
+                              <p className="text-sm text-[var(--brand-text-primary)]/50 leading-relaxed max-w-2xl mx-auto text-center font-serif italic">
                                 — {project.metadata?.motivation || 'What drives this project?'}
                               </p>
                             )}
@@ -957,7 +958,7 @@ export function ProjectDetailPage() {
               {/* The Finish Line (Definition of Done) */}
               <div className="grid gap-3 mt-6">
                 <div
-                  className="group relative p-6 cursor-pointer hover:bg-white/5 transition-all rounded-xl border border-white/5 hover:border-green-500/30 overflow-hidden"
+                  className="group relative p-6 cursor-pointer hover:bg-[rgba(255,255,255,0.05)] transition-all rounded-xl border border-[rgba(255,255,255,0.05)] hover:border-green-500/30 overflow-hidden"
                   onClick={!editingGoal ? startEditGoal : undefined}
                   title="Click to edit"
                 >
@@ -975,7 +976,7 @@ export function ProjectDetailPage() {
                         ref={goalInputRef}
                         value={tempGoal}
                         onChange={(e) => setTempGoal(e.target.value)}
-                        className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-base resize-none focus:outline-none focus:border-green-500/50 text-white leading-relaxed"
+                        className="w-full bg-black/20 border border-[rgba(255,255,255,0.08)] rounded-lg p-3 text-base resize-none focus:outline-none focus:border-green-500/50 text-[var(--brand-text-primary)] leading-relaxed"
                         rows={3}
                         placeholder="What does 'done' look like?"
                         onKeyDown={(e) => {
@@ -1003,8 +1004,8 @@ export function ProjectDetailPage() {
                       </div>
                     </div>
                   ) : (
-                    <p className="text-lg text-white/90 leading-relaxed font-medium">
-                      {project.metadata?.end_goal || <span className="text-white/30 italic">Define the clear target for completion...</span>}
+                    <p className="text-lg text-[var(--brand-text-primary)]/90 leading-relaxed font-medium">
+                      {project.metadata?.end_goal || <span className="text-[var(--brand-text-primary)]/30 italic">Define the clear target for completion...</span>}
                     </p>
                   )}
                 </div>
@@ -1014,7 +1015,7 @@ export function ProjectDetailPage() {
               <div data-task-list className="mt-8">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3 flex-grow opacity-50">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/50">Execution Plan</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--brand-text-primary)]/50">Execution Plan</span>
                     <div className="h-px bg-white/20 flex-grow" />
                   </div>
 

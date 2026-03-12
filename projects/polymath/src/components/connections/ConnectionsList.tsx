@@ -239,7 +239,7 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
     return (
       <div className="space-y-3">
         {[1, 2, 3].map(i => (
-          <div key={i} className="h-20 rounded-xl bg-white/5 animate-pulse" />
+          <div key={i} className="h-20 rounded-xl bg-[rgba(255,255,255,0.05)] animate-pulse" />
         ))}
       </div>
     )
@@ -287,7 +287,7 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
             >
               <Link
                 to={getItemUrl(item.type, item.id)}
-                className="group relative overflow-hidden rounded-xl border border-white/5 bg-white/5 p-4 block transition-all hover:bg-white/10 hover:border-white/10 premium-glass-subtle"
+                className="group relative overflow-hidden rounded-xl border border-[rgba(255,255,255,0.05)] bg-[rgba(255,255,255,0.05)] p-4 block transition-all hover:bg-[rgba(255,255,255,0.1)] hover:border-[rgba(255,255,255,0.08)] premium-glass-subtle"
                 style={{
                   backgroundColor: isAI ? undefined : 'rgba(255, 255, 255, 0.08)' // Subtle distinction for manual?
                 }}
@@ -327,7 +327,7 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
 
                   {/* Arrow Indicator */}
                   <div className="self-center opacity-0 group-hover:opacity-50 transition-opacity">
-                    <ArrowRight className="h-4 w-4 text-white" />
+                    <ArrowRight className="h-4 w-4 text-[var(--brand-text-primary)]" />
                   </div>
                 </div>
               </Link>
@@ -343,11 +343,11 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
       <div className="pt-2">
         <button
           onClick={() => setShowCreateDialog(true)}
-          className="w-full py-3 rounded-xl border border-dashed border-white/10 flex items-center justify-center gap-2 text-xs font-medium transition-all hover:bg-white/5 hover:border-white/20 group"
+          className="w-full py-3 rounded-xl border border-dashed border-[rgba(255,255,255,0.08)] flex items-center justify-center gap-2 text-xs font-medium transition-all hover:bg-[rgba(255,255,255,0.05)] hover:border-white/20 group"
           style={{ color: 'var(--premium-text-secondary)' }}
         >
           <Plus className="h-4 w-4 group-hover:text-blue-400 transition-colors" />
-          <span className="group-hover:text-white transition-colors">
+          <span className="group-hover:text-[var(--brand-text-primary)] transition-colors">
             {displayItems.length >= 5 ? 'Override with Manual Link' : 'Add Link Yourself'}
           </span>
         </button>

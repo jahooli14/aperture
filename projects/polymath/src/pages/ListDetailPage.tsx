@@ -145,12 +145,12 @@ const CompletionCelebration = ({
                     ✓
                 </motion.div>
 
-                <h3 className="text-lg font-black text-white uppercase tracking-tight mb-1">
+                <h3 className="text-lg font-black text-[var(--brand-text-primary)] uppercase tracking-tight mb-1">
                     Marked as done!
                 </h3>
-                <p className="text-sm text-white/40 mb-6 font-mono truncate">{item.content}</p>
+                <p className="text-sm text-[var(--brand-text-primary)]/40 mb-6 font-mono truncate">{item.content}</p>
 
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 mb-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--brand-text-primary)]/30 mb-3">
                     How was it?
                 </p>
 
@@ -169,7 +169,7 @@ const CompletionCelebration = ({
 
                 <button
                     onClick={onClose}
-                    className="text-[11px] font-bold text-white/30 uppercase tracking-widest hover:text-white/60 transition-colors"
+                    className="text-[11px] font-bold text-[var(--brand-text-primary)]/30 uppercase tracking-widest hover:text-[var(--brand-text-primary)]/60 transition-colors"
                 >
                     Skip rating
                 </button>
@@ -327,7 +327,7 @@ const QuoteCard = memo(({
                 <div className={`absolute top-0 left-0 w-40 h-40 bg-gradient-to-br ${colors.gradient} rounded-full blur-3xl opacity-30`} />
 
                 {variant === 0 && (
-                    <div className="absolute top-6 left-6 text-6xl font-serif text-white/[0.03] select-none leading-none">"</div>
+                    <div className="absolute top-6 left-6 text-6xl font-serif text-[var(--brand-text-primary)]/[0.03] select-none leading-none">"</div>
                 )}
                 {variant === 1 && (
                     <div className="absolute top-6 right-6 w-12 h-12 border-t-2 border-r-2 border-cyan-500/10 rounded-tr-3xl" />
@@ -335,7 +335,7 @@ const QuoteCard = memo(({
 
                 {/* The Quote */}
                 <div className="relative z-10 pt-4 sm:pt-6">
-                    <p className={`${isShort ? 'text-3xl sm:text-4xl md:text-5xl' : isMedium ? 'text-2xl sm:text-3xl md:text-4xl' : 'text-xl sm:text-2xl md:text-3xl'} text-white/95 leading-relaxed tracking-wide ${variant === 0 ? 'font-light' : variant === 1 ? 'font-normal' : variant === 2 ? 'font-light italic' : variant === 3 ? 'font-medium' : 'font-light'}`}
+                    <p className={`${isShort ? 'text-3xl sm:text-4xl md:text-5xl' : isMedium ? 'text-2xl sm:text-3xl md:text-4xl' : 'text-xl sm:text-2xl md:text-3xl'} text-[var(--brand-text-primary)]/95 leading-relaxed tracking-wide ${variant === 0 ? 'font-light' : variant === 1 ? 'font-normal' : variant === 2 ? 'font-light italic' : variant === 3 ? 'font-medium' : 'font-light'}`}
                         style={{
                             fontFamily: variant === 0 ? 'Georgia, serif' : variant === 1 ? 'Palatino, serif' : variant === 2 ? 'Garamond, serif' : variant === 3 ? 'Times New Roman, serif' : 'Georgia, serif',
                             textShadow: `0 2px 10px rgba(${colors.rgb}, 0.1)`
@@ -351,7 +351,7 @@ const QuoteCard = memo(({
                                     type="text"
                                     value={authorValue}
                                     onChange={(e) => setAuthorValue(e.target.value)}
-                                    className="rounded px-3 py-1 text-sm text-white/90 focus:outline-none appearance-none"
+                                    className="rounded px-3 py-1 text-sm text-[var(--brand-text-primary)]/90 focus:outline-none appearance-none"
                                     style={{ backgroundColor: 'rgba(255,255,255,0.1)', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.2)' }}
                                     placeholder="Author name"
                                     autoFocus
@@ -363,8 +363,8 @@ const QuoteCard = memo(({
                                         }
                                     }}
                                 />
-                                <button onClick={handleSaveAuthor} className="p-1.5 rounded bg-white/10 hover:bg-white/20 transition-colors">
-                                    <Check className="h-3.5 w-3.5 text-white/70" />
+                                <button onClick={handleSaveAuthor} className="p-1.5 rounded bg-[rgba(255,255,255,0.1)] hover:bg-white/20 transition-colors">
+                                    <Check className="h-3.5 w-3.5 text-[var(--brand-text-primary)]/70" />
                                 </button>
                             </div>
                         ) : (
@@ -375,9 +375,9 @@ const QuoteCard = memo(({
                                 </p>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setIsEditingAuthor(true) }}
-                                    className="p-1.5 rounded bg-white/5 hover:bg-white/10 opacity-0 group-hover/author:opacity-100 transition-all"
+                                    className="p-1.5 rounded bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] opacity-0 group-hover/author:opacity-100 transition-all"
                                 >
-                                    <Pencil className="h-3 w-3 text-white/50" />
+                                    <Pencil className="h-3 w-3 text-[var(--brand-text-primary)]/50" />
                                 </button>
                             </>
                         )}
@@ -389,7 +389,7 @@ const QuoteCard = memo(({
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
                             exit={{ opacity: 0, height: 0 }}
-                            className="mt-8 pt-6 border-t border-white/10 space-y-4"
+                            className="mt-8 pt-6 border-t border-[rgba(255,255,255,0.08)] space-y-4"
                         >
                             {item.metadata.description && (
                                 <p className="text-base text-zinc-300/90 leading-relaxed italic">{item.metadata.description}</p>
@@ -397,7 +397,7 @@ const QuoteCard = memo(({
                             {item.metadata.tags && item.metadata.tags.length > 0 && (
                                 <div className="flex flex-wrap gap-2 pt-2">
                                     {item.metadata.tags.map((tag: string) => (
-                                        <span key={tag} className="text-xs bg-white/10 backdrop-blur-sm border border-white/20 px-4 py-1.5 rounded-full text-zinc-300 font-medium tracking-wide">
+                                        <span key={tag} className="text-xs bg-[rgba(255,255,255,0.1)] backdrop-blur-sm border border-white/20 px-4 py-1.5 rounded-full text-zinc-300 font-medium tracking-wide">
                                             {tag}
                                         </span>
                                     ))}
@@ -421,7 +421,7 @@ const QuoteCard = memo(({
                     {/* Copy button */}
                     <button
                         onClick={(e) => { e.stopPropagation(); onCopy(item.content) }}
-                        className="p-2.5 rounded-xl bg-zinc-900/50 backdrop-blur-sm border border-white/10 hover:bg-white/10 text-zinc-500 hover:text-white opacity-0 group-hover:opacity-100 transition-all duration-300"
+                        className="p-2.5 rounded-xl bg-zinc-900/50 backdrop-blur-sm border border-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.1)] text-zinc-500 hover:text-[var(--brand-text-primary)] opacity-0 group-hover:opacity-100 transition-all duration-300"
                         aria-label="Copy quote"
                     >
                         <Copy className="h-4 w-4" />
@@ -519,7 +519,7 @@ const StandardItemCard = memo(({
                     )}
                 </div>
             ) : (
-                <div className="relative aspect-square bg-zinc-900 border border-white/5 overflow-hidden flex items-center justify-center">
+                <div className="relative aspect-square bg-zinc-900 border border-[rgba(255,255,255,0.05)] overflow-hidden flex items-center justify-center">
                     <div className="absolute inset-0 opacity-10"
                         style={{ background: `linear-gradient(135deg, rgb(${rgb}), transparent)` }}
                     />
@@ -549,7 +549,7 @@ const StandardItemCard = memo(({
                             <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: `rgb(${rgb})` }} />
                         )}
                     </button>
-                    <h3 className={`text-white font-bold leading-tight group-hover:text-sky-400 transition-colors uppercase tracking-tight drop-shadow-lg text-xs mb-1 ${isCompleted ? 'line-through opacity-50' : ''}`}>
+                    <h3 className={`text-[var(--brand-text-primary)] font-bold leading-tight group-hover:text-sky-400 transition-colors uppercase tracking-tight drop-shadow-lg text-xs mb-1 ${isCompleted ? 'line-through opacity-50' : ''}`}>
                         {item.content}
                     </h3>
                 </div>
@@ -567,7 +567,7 @@ const StandardItemCard = memo(({
 
                 {/* Key metadata on expanded */}
                 {isExpanded && (
-                    <div className="pl-6 space-y-1 backdrop-blur-sm bg-black/30 p-2 rounded-lg border border-white/10">
+                    <div className="pl-6 space-y-1 backdrop-blur-sm bg-black/30 p-2 rounded-lg border border-[rgba(255,255,255,0.08)]">
                         {item.metadata?.subtitle && (
                             <p className="text-zinc-300 text-[10px] italic leading-relaxed">{item.metadata.subtitle}</p>
                         )}
@@ -597,7 +597,7 @@ const StandardItemCard = memo(({
                                     <span className="text-[9px] text-zinc-400">dir. {item.metadata.director}</span>
                                 )}
                                 {item.metadata.genre && (
-                                    <span className="text-[9px] bg-white/10 px-1.5 py-0.5 rounded text-zinc-400">{item.metadata.genre}</span>
+                                    <span className="text-[9px] bg-[rgba(255,255,255,0.1)] px-1.5 py-0.5 rounded text-zinc-400">{item.metadata.genre}</span>
                                 )}
                             </div>
                         )}
@@ -615,7 +615,7 @@ const StandardItemCard = memo(({
                                 href={item.metadata.link}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-[9px] font-bold text-sky-400 hover:text-white transition-colors uppercase tracking-widest flex items-center gap-1 mt-1"
+                                className="text-[9px] font-bold text-sky-400 hover:text-[var(--brand-text-primary)] transition-colors uppercase tracking-widest flex items-center gap-1 mt-1"
                                 onClick={e => e.stopPropagation()}
                             >
                                 Details →
@@ -637,7 +637,7 @@ const StandardItemCard = memo(({
             <div className="absolute top-2 right-2 flex gap-1 transform translate-y-[-120%] group-hover:translate-y-0 transition-transform duration-300">
                 <button
                     onClick={(e) => { e.stopPropagation(); onDelete(item.id, item.list_id) }}
-                    className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500 text-red-500/50 hover:text-white backdrop-blur-md border border-red-500/20 transition-all"
+                    className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500 text-red-500/50 hover:text-[var(--brand-text-primary)] backdrop-blur-md border border-red-500/20 transition-all"
                 >
                     <Trash2 className="h-3 w-3" />
                 </button>
@@ -886,7 +886,7 @@ export default function ListDetailPage() {
         <div className="min-h-screen bg-black flex flex-col">
             {/* Header */}
             <div className="pt-24 px-4 sm:px-6 lg:px-8 pb-4">
-                <Button variant="ghost" onClick={() => navigate('/lists')} className="text-zinc-400 mb-4 pl-0 hover:text-white hover:bg-transparent">
+                <Button variant="ghost" onClick={() => navigate('/lists')} className="text-zinc-400 mb-4 pl-0 hover:text-[var(--brand-text-primary)] hover:bg-transparent">
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Back to Collections
                 </Button>
@@ -911,13 +911,13 @@ export default function ListDetailPage() {
                 </div>
 
                 <div className="flex items-center justify-between">
-                    <h1 className="text-3xl font-bold text-white mb-1 uppercase tracking-tight italic">{list.title}</h1>
+                    <h1 className="text-3xl font-bold text-[var(--brand-text-primary)] mb-1 uppercase tracking-tight italic">{list.title}</h1>
                     <div className="flex items-center gap-2">
                         {/* Sort picker */}
                         <div className="relative">
                             <button
                                 onClick={(e) => { e.stopPropagation(); setShowSortMenu(v => !v) }}
-                                className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-white/10 text-zinc-500 hover:text-white hover:border-white/20 transition-all"
+                                className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-[rgba(255,255,255,0.08)] text-zinc-500 hover:text-[var(--brand-text-primary)] hover:border-white/20 transition-all"
                             >
                                 <SortAsc className="h-3 w-3" />
                                 <span className="text-[10px] font-black uppercase tracking-widest">Sort</span>
@@ -941,7 +941,7 @@ export default function ListDetailPage() {
                                             <button
                                                 key={opt.value}
                                                 onClick={() => { setSortOption(opt.value); setShowSortMenu(false) }}
-                                                className="w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-white/5 flex items-center justify-between"
+                                                className="w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-[rgba(255,255,255,0.05)] flex items-center justify-between"
                                                 style={{ color: sortOption === opt.value ? `rgb(${rgb})` : 'rgba(255,255,255,0.6)' }}
                                             >
                                                 <span className="text-[11px] font-bold uppercase tracking-widest">{opt.label}</span>
@@ -956,7 +956,7 @@ export default function ListDetailPage() {
                         {/* Reorder toggle */}
                         <button
                             onClick={() => setIsReordering(!isReordering)}
-                            className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all ${isReordering ? 'bg-sky-500 border-sky-400 text-white' : 'border-white/10 text-zinc-500 hover:text-white hover:border-white/20'}`}
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all ${isReordering ? 'bg-sky-500 border-sky-400 text-[var(--brand-text-primary)]' : 'border-[rgba(255,255,255,0.08)] text-zinc-500 hover:text-[var(--brand-text-primary)] hover:border-white/20'}`}
                         >
                             {isReordering ? <Check className="h-3 w-3" /> : <ListOrdered className="h-3 w-3" />}
                             <span className="text-[10px] font-black uppercase tracking-widest">{isReordering ? 'Done' : 'Order'}</span>
@@ -1015,7 +1015,7 @@ export default function ListDetailPage() {
                                 >
                                     <div className="flex items-center justify-between mb-3">
                                         <span className="text-sm text-sky-400 font-medium">Voice Quick-Add</span>
-                                        <button onClick={() => setIsVoiceMode(false)} className="text-zinc-500 hover:text-white transition-colors">
+                                        <button onClick={() => setIsVoiceMode(false)} className="text-zinc-500 hover:text-[var(--brand-text-primary)] transition-colors">
                                             <MicOff className="h-4 w-4" />
                                         </button>
                                     </div>
@@ -1030,13 +1030,13 @@ export default function ListDetailPage() {
                                     className="backdrop-blur-2xl bg-zinc-900/60 rounded-2xl p-2 flex items-center gap-2 shadow-2xl transition-all font-mono"
                                     style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.08), 0 25px 50px rgba(0,0,0,0.5)' }}
                                 >
-                                    <form onSubmit={handleAddItem} className="flex-1 flex px-3 text-white items-center gap-2">
+                                    <form onSubmit={handleAddItem} className="flex-1 flex px-3 text-[var(--brand-text-primary)] items-center gap-2">
                                         <Input
                                             ref={inputRef}
                                             value={inputText}
                                             onChange={e => setInputText(e.target.value)}
                                             placeholder={`Add to ${list.title.toLowerCase()}...`}
-                                            className="border-0 bg-transparent focus-visible:ring-0 text-lg text-white placeholder:text-zinc-600 h-12 uppercase tracking-tight"
+                                            className="border-0 bg-transparent focus-visible:ring-0 text-lg text-[var(--brand-text-primary)] placeholder:text-zinc-600 h-12 uppercase tracking-tight"
                                             autoFocus
                                         />
                                         <div className="flex items-center gap-2 px-1">
@@ -1091,7 +1091,7 @@ export default function ListDetailPage() {
                                             </div>
                                         )}
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-white font-bold uppercase tracking-tight truncate">{item.content}</p>
+                                            <p className="text-[var(--brand-text-primary)] font-bold uppercase tracking-tight truncate">{item.content}</p>
                                             {item.metadata?.subtitle && (
                                                 <p className="text-[10px] text-zinc-500 italic truncate">{item.metadata.subtitle}</p>
                                             )}
@@ -1131,7 +1131,7 @@ export default function ListDetailPage() {
                                     </p>
                                     <button
                                         onClick={() => setStatusFilter('all')}
-                                        className="mt-4 text-xs font-bold uppercase tracking-widest text-zinc-500 hover:text-white transition-colors"
+                                        className="mt-4 text-xs font-bold uppercase tracking-widest text-zinc-500 hover:text-[var(--brand-text-primary)] transition-colors"
                                     >
                                         Show all →
                                     </button>
@@ -1163,10 +1163,10 @@ export default function ListDetailPage() {
             {/* Smart Connections Section */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-48">
                 {(connectionCount > 0 || isLoadingConnections) && (
-                    <div className="mt-12 pt-12 border-t border-white/5 pb-20">
+                    <div className="mt-12 pt-12 border-t border-[rgba(255,255,255,0.05)] pb-20">
                         <div className="flex items-center justify-between mb-8">
                             <div>
-                                <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">Synthesized Insights</h3>
+                                <h3 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">Synthesized Insights</h3>
                                 <p className="text-sm text-zinc-500">Connections discovered by the Aperture Engine.</p>
                             </div>
                             <div className="px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-[10px] font-black uppercase tracking-widest text-blue-400">

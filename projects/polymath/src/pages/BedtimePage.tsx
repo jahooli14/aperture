@@ -265,7 +265,7 @@ export function BedtimePage() {
                 Bedtime Ideas
               </h1>
             </div>
-            <button className="p-2 rounded-lg hover:bg-white/10 transition-colors">
+            <button className="p-2 rounded-lg hover:bg-[rgba(255,255,255,0.1)] transition-colors">
               <Search className="h-5 w-5 premium-text-platinum" />
             </button>
           </div>
@@ -320,7 +320,7 @@ export function BedtimePage() {
                 <>
                   <button
                     onClick={() => setDriftModeOpen(true)}
-                    className="px-4 py-2 rounded-lg transition-all premium-glass-subtle hover:bg-white/10 flex items-center gap-2"
+                    className="px-4 py-2 rounded-lg transition-all premium-glass-subtle hover:bg-[rgba(255,255,255,0.1)] flex items-center gap-2"
                     style={{ border: '1px solid rgba(255, 255, 255, 0.1)' }}
                     title="Drift Mode (Motion Activated)"
                   >
@@ -329,7 +329,7 @@ export function BedtimePage() {
                   </button>
                   <button
                     onClick={() => setZenModeOpen(true)}
-                    className="px-4 py-2 rounded-lg transition-all premium-glass-subtle hover:bg-white/10 flex items-center gap-2"
+                    className="px-4 py-2 rounded-lg transition-all premium-glass-subtle hover:bg-[rgba(255,255,255,0.1)] flex items-center gap-2"
                     style={{ border: '1px solid rgba(255, 255, 255, 0.1)' }}
                     title="Zen Mode"
                   >
@@ -341,7 +341,7 @@ export function BedtimePage() {
               <button
                 onClick={generateNew}
                 disabled={generating}
-                className="px-4 py-2 rounded-lg transition-all premium-glass-subtle hover:bg-white/10"
+                className="px-4 py-2 rounded-lg transition-all premium-glass-subtle hover:bg-[rgba(255,255,255,0.1)]"
                 style={{ border: '1px solid rgba(255, 255, 255, 0.1)' }}
               >
                 {generating ? (
@@ -411,7 +411,7 @@ export function BedtimePage() {
 
                         <button
                           onClick={() => markViewed(prompt.id)}
-                          className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                          className="p-2 rounded-lg hover:bg-[rgba(255,255,255,0.1)] transition-colors"
                           title={isViewed ? 'Viewed' : 'Mark as viewed'}
                         >
                           {isViewed ? (
@@ -480,7 +480,7 @@ export function BedtimePage() {
                             }}
                             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${prompt.resulted_in_breakthrough
                               ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/40'
-                              : 'border border-white/10 hover:border-yellow-500/30'
+                              : 'border border-[rgba(255,255,255,0.08)] hover:border-yellow-500/30'
                               }`}
                             title={prompt.resulted_in_breakthrough ? 'Led to a breakthrough!' : 'Mark as breakthrough'}
                           >
@@ -518,7 +518,7 @@ export function BedtimePage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
           >
-            <div className="inline-flex items-center justify-center p-3 mb-6 rounded-full bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl">
+            <div className="inline-flex items-center justify-center p-3 mb-6 rounded-full bg-[rgba(255,255,255,0.05)] backdrop-blur-xl border border-[rgba(255,255,255,0.08)] shadow-2xl">
               <Moon className="w-8 h-8 text-indigo-300" />
             </div>
 

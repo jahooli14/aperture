@@ -169,7 +169,7 @@ export function PowerHourHero() {
     }
 
     if (loading) return (
-        <div className="w-full h-64 bg-zebra-gray-dark animate-pulse rounded-2xl border border-white/10 mb-8" />
+        <div className="w-full h-64 bg-zebra-gray-dark animate-pulse rounded-2xl border border-[rgba(255,255,255,0.08)] mb-8" />
     )
 
     if (error) return (
@@ -177,8 +177,8 @@ export function PowerHourHero() {
             <div className="zebra-card p-12 text-center border-2 border-dashed border-red-500/20 bg-red-500/5">
                 <Zap className="h-12 w-12 text-red-500/20 mx-auto mb-4" />
                 <h2 className="text-xl font-black uppercase italic mb-2 tracking-tighter text-red-500">Engine Offline</h2>
-                <p className="text-gray-400 text-sm max-w-sm mx-auto mb-6">{error}</p>
-                <button onClick={() => fetchPowerHour()} className="px-6 py-3 bg-red-500 text-white font-black uppercase text-xs tracking-widest hover:bg-black transition-colors">
+                <p className="text-[var(--brand-text-secondary)] text-sm max-w-sm mx-auto mb-6">{error}</p>
+                <button onClick={() => fetchPowerHour()} className="px-6 py-3 bg-red-500 text-[var(--brand-text-primary)] font-black uppercase text-xs tracking-widest hover:bg-black transition-colors">
                     Retry Feed
                 </button>
             </div>
@@ -188,9 +188,9 @@ export function PowerHourHero() {
     if (tasks.length === 0) return (
         <div className="relative overflow-hidden mb-12">
             <div className="zebra-card p-12 text-center border-2 border-dashed border-white/20">
-                <Zap className="h-12 w-12 text-white/20 mx-auto mb-4" />
+                <Zap className="h-12 w-12 text-[var(--brand-text-primary)]/20 mx-auto mb-4" />
                 <h2 className="text-xl font-black uppercase italic mb-2 tracking-tighter">Engine Dormant</h2>
-                <p className="text-gray-500 text-sm max-w-sm mx-auto mb-6">Create or activate a project to initialize the hour.</p>
+                <p className="text-[var(--brand-text-muted)] text-sm max-w-sm mx-auto mb-6">Create or activate a project to initialize the hour.</p>
                 <button onClick={() => navigate('/projects')} className="px-6 py-3 bg-white text-black font-black uppercase text-xs tracking-widest hover:bg-zebra-accent transition-colors">
                     Initialize Project
                 </button>
@@ -337,7 +337,7 @@ export function PowerHourHero() {
                 <div className="absolute top-4 right-4 z-20 flex gap-2">
                     <button
                         onClick={() => setShowProjectPicker(!showProjectPicker)}
-                        className="bg-white/5 backdrop-blur-md border border-white/10 text-white p-2 rounded-lg hover:bg-white/10 transition-all group/picker"
+                        className="bg-[rgba(255,255,255,0.05)] backdrop-blur-md border border-[rgba(255,255,255,0.08)] text-[var(--brand-text-primary)] p-2 rounded-lg hover:bg-[rgba(255,255,255,0.1)] transition-all group/picker"
                         title="Change Project Focus"
                     >
                         {isRefreshing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Layers className="h-4 w-4" />}
@@ -358,7 +358,7 @@ export function PowerHourHero() {
                                 }}
                                 className={`px-3 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-1.5 border ${isActive
                                     ? 'bg-white text-black border-white'
-                                    : 'bg-black/40 text-white/40 border-white/10 hover:border-white/20'
+                                    : 'bg-black/40 text-[var(--brand-text-primary)]/40 border-[rgba(255,255,255,0.08)] hover:border-white/20'
                                     }`}
                             >
                                 <div
@@ -379,7 +379,7 @@ export function PowerHourHero() {
                             exit={{ opacity: 0, y: -10 }}
                             className="absolute top-16 right-4 z-30 w-72 aperture-card shadow-2xl max-h-80 overflow-y-auto"
                         >
-                            <div className="p-3 bg-white/5 border-b border-white/10 text-[10px] font-bold uppercase tracking-widest text-[var(--brand-text-muted)] aperture-header">
+                            <div className="p-3 bg-[rgba(255,255,255,0.05)] border-b border-[rgba(255,255,255,0.08)] text-[10px] font-bold uppercase tracking-widest text-[var(--brand-text-muted)] aperture-header">
                                 Select Project Target
                             </div>
                             {activeProjects.map(p => {
@@ -391,9 +391,9 @@ export function PowerHourHero() {
                                             haptic.light()
                                             fetchPowerHour(p.id)
                                         }}
-                                        className="w-full p-4 text-left hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 group"
+                                        className="w-full p-4 text-left hover:bg-[rgba(255,255,255,0.05)] transition-colors border-b border-[rgba(255,255,255,0.05)] last:border-0 group"
                                     >
-                                        <div className="font-bold text-sm group-hover:text-white mt-1 flex items-center gap-2 aperture-header uppercase">
+                                        <div className="font-bold text-sm group-hover:text-[var(--brand-text-primary)] mt-1 flex items-center gap-2 aperture-header uppercase">
                                             <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: pTheme.text }} />
                                             {p.title}
                                         </div>
@@ -423,7 +423,7 @@ export function PowerHourHero() {
                                     </div>
                                 </div>
 
-                                <h1 className={`text-2xl md:text-3xl font-bold mb-3 uppercase leading-none tracking-tight text-white aperture-header line-clamp-2 min-h-[1.5em] ${mainTask.task_title === "Planning session..." ? "animate-pulse opacity-50" : ""}`}>
+                                <h1 className={`text-2xl md:text-3xl font-bold mb-3 uppercase leading-none tracking-tight text-[var(--brand-text-primary)] aperture-header line-clamp-2 min-h-[1.5em] ${mainTask.task_title === "Planning session..." ? "animate-pulse opacity-50" : ""}`}>
                                     {mainTask.task_title}
                                 </h1>
 
@@ -432,13 +432,13 @@ export function PowerHourHero() {
                                 </p>
 
                                 {currentProject?.metadata?.next_step && (
-                                    <div className="mb-6 p-3 rounded-lg bg-white/5 border border-white/10 flex items-start gap-3">
-                                        <div className="p-1.5 rounded-md bg-white/10">
-                                            <Bookmark className="h-3 w-3 text-white/50" />
+                                    <div className="mb-6 p-3 rounded-lg bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.08)] flex items-start gap-3">
+                                        <div className="p-1.5 rounded-md bg-[rgba(255,255,255,0.1)]">
+                                            <Bookmark className="h-3 w-3 text-[var(--brand-text-primary)]/50" />
                                         </div>
                                         <div>
-                                            <div className="text-[9px] uppercase tracking-widest font-black text-white/30 mb-1 aperture-header">Last Bookmark</div>
-                                            <div className="text-xs text-white/80 leading-relaxed aperture-body line-clamp-2 italic">"{currentProject.metadata.next_step}"</div>
+                                            <div className="text-[9px] uppercase tracking-widest font-black text-[var(--brand-text-primary)]/30 mb-1 aperture-header">Last Bookmark</div>
+                                            <div className="text-xs text-[var(--brand-text-primary)]/80 leading-relaxed aperture-body line-clamp-2 italic">"{currentProject.metadata.next_step}"</div>
                                         </div>
                                     </div>
                                 )}
@@ -451,7 +451,7 @@ export function PowerHourHero() {
                                         </div>
                                     )}
                                     <div className="w-px h-3 bg-white/20" />
-                                    <div className="flex items-center gap-1 text-white">
+                                    <div className="flex items-center gap-1 text-[var(--brand-text-primary)]">
                                         <Play className="h-3 w-3" />
                                         <span>Flow</span>
                                     </div>
@@ -482,7 +482,7 @@ export function PowerHourHero() {
 
                                     <button
                                         onClick={() => setShowReview(true)}
-                                        className="flex items-center gap-2 px-4 py-3 border border-white/10 rounded-xl hover:bg-white/5 transition-all uppercase text-[10px] font-bold tracking-widest backdrop-blur-sm text-white/70 aperture-header"
+                                        className="flex items-center gap-2 px-4 py-3 border border-[rgba(255,255,255,0.08)] rounded-xl hover:bg-[rgba(255,255,255,0.05)] transition-all uppercase text-[10px] font-bold tracking-widest backdrop-blur-sm text-[var(--brand-text-primary)]/70 aperture-header"
                                     >
                                         <Clock className="h-3.5 w-3.5" />
                                         <span>Adjust</span>
@@ -491,7 +491,7 @@ export function PowerHourHero() {
                                     {mainTask.fuel_id && (
                                         <button
                                             onClick={() => navigate(`/reading/${mainTask.fuel_id}`)}
-                                            className="flex items-center gap-2 px-4 py-3 border border-white/10 rounded-xl hover:bg-white/5 transition-all uppercase text-[10px] font-bold tracking-widest backdrop-blur-sm text-white aperture-header"
+                                            className="flex items-center gap-2 px-4 py-3 border border-[rgba(255,255,255,0.08)] rounded-xl hover:bg-[rgba(255,255,255,0.05)] transition-all uppercase text-[10px] font-bold tracking-widest backdrop-blur-sm text-[var(--brand-text-primary)] aperture-header"
                                         >
                                             <BookOpen className="h-3.5 w-3.5" />
                                             <span>Read Fuel</span>
@@ -502,15 +502,15 @@ export function PowerHourHero() {
                         </AnimatePresence>
                     </div>
 
-                    <div className="hidden md:flex flex-col p-0 border-l border-white/5 relative w-48 bg-white/[0.02]">
+                    <div className="hidden md:flex flex-col p-0 border-l border-[rgba(255,255,255,0.05)] relative w-48 bg-white/[0.02]">
                         <div className="flex flex-col h-full">
                             {DURATION_OPTIONS.map((opt) => (
                                 <button
                                     key={opt.value}
                                     onClick={() => handleDurationChange(opt.value)}
-                                    className={`flex-1 flex flex-col justify-center items-center gap-2 transition-all border-b border-white/5 last:border-0 ${duration === opt.value
-                                        ? 'bg-white/10 text-white shadow-[inset_0_0_20px_rgba(255,255,255,0.05)]'
-                                        : 'hover:bg-white/5 text-white/30'
+                                    className={`flex-1 flex flex-col justify-center items-center gap-2 transition-all border-b border-[rgba(255,255,255,0.05)] last:border-0 ${duration === opt.value
+                                        ? 'bg-[rgba(255,255,255,0.1)] text-[var(--brand-text-primary)] shadow-[inset_0_0_20px_rgba(255,255,255,0.05)]'
+                                        : 'hover:bg-[rgba(255,255,255,0.05)] text-[var(--brand-text-primary)]/30'
                                         }`}
                                 >
                                     <opt.icon className={`h-4 w-4 ${duration === opt.value ? 'text-[var(--zebra-accent)]' : ''}`} />
@@ -522,12 +522,12 @@ export function PowerHourHero() {
                     </div>
                 </div>
 
-                <div className="md:hidden border-t border-white/10 flex divide-x divide-white/10">
+                <div className="md:hidden border-t border-[rgba(255,255,255,0.08)] flex divide-x divide-white/10">
                     {DURATION_OPTIONS.map((opt) => (
                         <button
                             key={opt.value}
                             onClick={() => handleDurationChange(opt.value)}
-                            className={`flex-1 py-3 flex items-center justify-center gap-2 transition-colors ${duration === opt.value ? 'bg-white/10 text-white' : 'text-white/40'
+                            className={`flex-1 py-3 flex items-center justify-center gap-2 transition-colors ${duration === opt.value ? 'bg-[rgba(255,255,255,0.1)] text-[var(--brand-text-primary)]' : 'text-[var(--brand-text-primary)]/40'
                                 }`}
                         >
                             <span className="text-[9px] font-bold uppercase tracking-widest aperture-header">{opt.value}m</span>

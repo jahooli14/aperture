@@ -304,7 +304,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
       {!hideTrigger && (trigger || (
         <button
           onClick={() => setOpen(true)}
-          className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
+          className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-[rgba(255,255,255,0.05)]"
           style={{
             boxShadow: 'inset 0 0 0 1px rgba(100,180,255,0.2)',
             color: 'rgba(100, 180, 255, 1)'
@@ -349,7 +349,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                 onBlur={() => setBodyFocused(false)}
                 required
                 autoFocus
-                className="w-full text-[15px] leading-relaxed border-0 focus:outline-none focus:ring-0 resize-none placeholder:text-white/20 appearance-none"
+                className="w-full text-[15px] leading-relaxed border-0 focus:outline-none focus:ring-0 resize-none placeholder:text-[var(--brand-text-primary)]/20 appearance-none"
                 style={{
                   color: 'var(--premium-text-primary)',
                   backgroundColor: 'transparent',
@@ -367,7 +367,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 onFocus={handleInputFocus}
                 autoComplete="off"
-                className="h-10 border-0 border-b rounded-none bg-transparent px-1 text-sm focus:ring-0 focus:border-b focus:border-white/20 placeholder:text-white/20"
+                className="h-10 border-0 border-b rounded-none bg-transparent px-1 text-sm focus:ring-0 focus:border-b focus:border-white/20 placeholder:text-[var(--brand-text-primary)]/20"
                 style={{ color: 'var(--premium-text-secondary)' }}
               />
             </div>
@@ -391,7 +391,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                     className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
                       formData.tags?.split(',').map(t => t.trim()).includes(tag)
                         ? 'bg-blue-500/20 text-blue-400'
-                        : 'bg-white/5 text-gray-500 hover:bg-white/10'
+                        : 'bg-[rgba(255,255,255,0.05)] text-[var(--brand-text-muted)] hover:bg-[rgba(255,255,255,0.1)]'
                     }`}
                     style={{
                       boxShadow: formData.tags?.split(',').map(t => t.trim()).includes(tag)
@@ -405,7 +405,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                 <button
                   type="button"
                   onClick={() => setShowOptions(true)}
-                  className="px-2.5 py-1 rounded-full text-xs text-gray-600 hover:bg-white/5 transition-colors"
+                  className="px-2.5 py-1 rounded-full text-xs text-gray-600 hover:bg-[rgba(255,255,255,0.05)] transition-colors"
                   style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.06)' }}
                 >
                   + tag
@@ -427,7 +427,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                 />
                 <button
                   type="button"
-                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-all hover:bg-white/5"
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-all hover:bg-[rgba(255,255,255,0.05)]"
                   style={{ color: 'var(--premium-text-secondary)' }}
                 >
                   <ImageIcon className="h-4 w-4" style={{ color: 'var(--premium-blue)' }} />
@@ -444,7 +444,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
               <button
                 type="button"
                 onClick={() => setShowOptions(!showOptions)}
-                className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-all hover:bg-white/5"
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-all hover:bg-[rgba(255,255,255,0.05)]"
                 style={{ color: 'var(--premium-text-secondary)' }}
               >
                 <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showOptions ? 'rotate-180' : ''}`} />
@@ -473,7 +473,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.8 }}
                       key={`${file.name}-${index}`}
-                      className={`relative rounded-xl overflow-hidden group border border-white/10 shadow-lg ${selectedFiles.length === 3 && index === 0 ? 'col-span-2 aspect-[2/1]' :
+                      className={`relative rounded-xl overflow-hidden group border border-[rgba(255,255,255,0.08)] shadow-lg ${selectedFiles.length === 3 && index === 0 ? 'col-span-2 aspect-[2/1]' :
                         selectedFiles.length === 1 ? 'aspect-[16/9]' : 'aspect-square'
                         }`}
                     >
@@ -487,7 +487,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                       <button
                         type="button"
                         onClick={() => removeFile(index)}
-                        className="absolute top-2 right-2 p-2 rounded-full bg-black/50 backdrop-blur-md text-white/90 border border-white/10 active:bg-red-500/80"
+                        className="absolute top-2 right-2 p-2 rounded-full bg-black/50 backdrop-blur-md text-[var(--brand-text-primary)]/90 border border-[rgba(255,255,255,0.08)] active:bg-red-500/80"
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
@@ -510,7 +510,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                   <div className="space-y-4 pt-2">
                     {/* Memory Type — pill buttons instead of dropdown */}
                     <div className="space-y-2">
-                      <Label className="font-bold text-xs uppercase tracking-widest text-gray-500">Type</Label>
+                      <Label className="font-bold text-xs uppercase tracking-widest text-[var(--brand-text-muted)]">Type</Label>
                       <div className="flex flex-wrap gap-2">
                         {[
                           { value: '', label: 'Auto' },
@@ -524,7 +524,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                             onClick={() => setFormData({ ...formData, memory_type: type.value as any })}
                             className={`px-4 py-2 rounded-full text-xs font-bold border transition-all ${formData.memory_type === type.value
                               ? 'bg-white text-black border-white'
-                              : 'bg-transparent border-white/10 text-gray-400 hover:border-white/30'
+                              : 'bg-transparent border-[rgba(255,255,255,0.08)] text-[var(--brand-text-secondary)] hover:border-white/30'
                               }`}
                           >
                             {type.label}
@@ -535,14 +535,14 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
 
                     {/* Tags */}
                     <div className="space-y-2">
-                      <Label className="font-bold text-xs uppercase tracking-widest text-gray-500">Tags</Label>
+                      <Label className="font-bold text-xs uppercase tracking-widest text-[var(--brand-text-muted)]">Tags</Label>
                       <Input
                         id="tags"
                         placeholder="ai, programming, health"
                         value={formData.tags}
                         onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
                         onFocus={handleInputFocus}
-                        className="h-11 bg-white/5 border-white/10 focus:border-blue-400 placeholder:text-white/15"
+                        className="h-11 bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.08)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/15"
                         style={{ color: 'var(--premium-text-primary)' }}
                         autoComplete="off"
                       />

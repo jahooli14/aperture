@@ -402,7 +402,7 @@ export function FloatingNav() {
                     {/* Count badge (overdue todos) */}
                     {badge !== null && (
                       <span
-                        className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center text-white font-bold"
+                        className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center text-[var(--brand-text-primary)] font-bold"
                         style={{
                           fontSize: '9px',
                           lineHeight: 1,

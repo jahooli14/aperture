@@ -96,7 +96,7 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
                                     placeholder="Search collections..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="pl-10 bg-white/5 border-white/10 focus:border-blue-400 placeholder:text-white/15"
+                                    className="pl-10 bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.08)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/15"
                                     style={{ color: 'var(--premium-text-primary)' }}
                                     autoFocus
                                 />
@@ -108,7 +108,7 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
                                         <button
                                             key={list.id}
                                             onClick={() => setSelectedListId(list.id)}
-                                            className="flex items-center justify-between p-3 rounded-xl border transition-all group hover:bg-white/5"
+                                            className="flex items-center justify-between p-3 rounded-xl border transition-all group hover:bg-[rgba(255,255,255,0.05)]"
                                             style={{
                                                 backgroundColor: 'rgba(255, 255, 255, 0.03)',
                                                 borderColor: 'rgba(255, 255, 255, 0.08)',
@@ -168,7 +168,7 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
                                 </div>
                                 <button
                                     onClick={() => setSelectedListId(null)}
-                                    className="p-2 transition-colors hover:bg-white/10 rounded-lg"
+                                    className="p-2 transition-colors hover:bg-[rgba(255,255,255,0.1)] rounded-lg"
                                     style={{ color: 'var(--premium-text-tertiary)' }}
                                 >
                                     <X className="h-4 w-4" />
@@ -177,13 +177,13 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
 
                             <form onSubmit={handleSubmit} className="space-y-4">
                                 <div className="space-y-2">
-                                    <Label className="font-bold text-xs uppercase tracking-widest text-gray-500">What are we adding?</Label>
+                                    <Label className="font-bold text-xs uppercase tracking-widest text-[var(--brand-text-muted)]">What are we adding?</Label>
                                     <Input
                                         autoFocus
                                         placeholder="Enter item name..."
                                         value={content}
                                         onChange={(e) => setContent(e.target.value)}
-                                        className="bg-white/5 border-white/10 focus:border-blue-400 placeholder:text-white/15 py-6 text-lg"
+                                        className="bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.08)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/15 py-6 text-lg"
                                         style={{ color: 'var(--premium-text-primary)' }}
                                     />
                                 </div>

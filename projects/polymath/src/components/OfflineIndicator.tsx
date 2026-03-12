@@ -34,9 +34,9 @@ export function OfflineIndicator() {
   if (isPulling && isOnline) {
     return (
       <div className="fixed top-2 right-2 z-50 pointer-events-none">
-        <div className="flex items-center gap-1.5 px-2 py-1 bg-white/5 backdrop-blur-sm rounded-full border border-white/5">
+        <div className="flex items-center gap-1.5 px-2 py-1 bg-[rgba(255,255,255,0.05)] backdrop-blur-sm rounded-full border border-[rgba(255,255,255,0.05)]">
           <div className="w-1.5 h-1.5 rounded-full bg-blue-400/60 animate-pulse transition-opacity" />
-          <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest invisible group-hover:visible">Sync</span>
+          <span className="text-[9px] font-bold text-[var(--brand-text-primary)]/20 uppercase tracking-widest invisible group-hover:visible">Sync</span>
         </div>
       </div>
     )
@@ -46,7 +46,7 @@ export function OfflineIndicator() {
   if (wasOffline && isOnline && queueSize === 0) {
     return (
       <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-5">
-        <div className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg shadow-lg">
+        <div className="flex items-center gap-2 px-4 py-2 bg-green-500 text-[var(--brand-text-primary)] rounded-lg shadow-lg">
           <CheckCircle className="h-5 w-5" />
           <span className="font-medium">Back online</span>
         </div>
@@ -58,7 +58,7 @@ export function OfflineIndicator() {
   if (!isOnline) {
     return (
       <div className="fixed top-0 left-0 right-0 z-50">
-        <div className="flex items-center justify-center gap-2 px-4 py-2 bg-amber-500 text-white">
+        <div className="flex items-center justify-center gap-2 px-4 py-2 bg-amber-500 text-[var(--brand-text-primary)]">
           <WifiOff className="h-4 w-4" />
           <span className="text-sm font-medium">
             You're offline - changes will sync when reconnected
@@ -77,7 +77,7 @@ export function OfflineIndicator() {
   if (isSyncing && queueSize > 0) {
     return (
       <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-5">
-        <div className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg shadow-lg">
+        <div className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-[var(--brand-text-primary)] rounded-lg shadow-lg">
           <Upload className="h-5 w-5 animate-pulse" />
           <span className="font-medium">
             Syncing {queueSize} {queueSize === 1 ? 'operation' : 'operations'}...
@@ -111,7 +111,7 @@ export function OfflineIndicator() {
 
     return (
       <div className="fixed top-4 right-4 z-50">
-        <div className="bg-neutral-800 text-white rounded-lg shadow-lg overflow-hidden">
+        <div className="bg-neutral-800 text-[var(--brand-text-primary)] rounded-lg shadow-lg overflow-hidden">
           {/* Main notification bar */}
           <button
             onClick={() => setIsExpanded(!isExpanded)}

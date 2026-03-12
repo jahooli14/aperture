@@ -192,7 +192,7 @@ export function SuggestionsPage() {
         <Card className="max-w-md w-full premium-card border-red-500/20 bg-red-500/5">
           <CardContent className="pt-6 text-center">
             <Database className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-white mb-2">Error Loading Suggestions</h3>
+            <h3 className="text-xl font-bold text-[var(--brand-text-primary)] mb-2">Error Loading Suggestions</h3>
             <p className="text-red-400 mb-6">{error}</p>
             <Button onClick={() => fetchSuggestions()} variant="outline" className="w-full">
               Retry
@@ -217,7 +217,7 @@ export function SuggestionsPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold premium-text-platinum tracking-tight">Discovery</h1>
-            <p className="text-slate-400 text-sm">Focused suggestions for your next move</p>
+            <p className="text-[var(--brand-text-secondary)] text-sm">Focused suggestions for your next move</p>
           </div>
           <button
             onClick={handleSynthesize}
@@ -236,7 +236,7 @@ export function SuggestionsPage() {
               <Sparkles className="w-4 h-4" />
               <span>Your engine is learning</span>
             </div>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-[var(--brand-text-secondary)]">
               Based on {learnedPairs.length} preference{learnedPairs.length > 1 ? 's' : ''} detected —
               you tend to prefer {learnedPairs[0].capability_a} + {learnedPairs[0].capability_b} combinations
             </p>
@@ -259,7 +259,7 @@ export function SuggestionsPage() {
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                 synthesisMode === mode.id
                   ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                  : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
+                  : 'bg-[rgba(255,255,255,0.05)] text-[var(--brand-text-secondary)] border border-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.1)]'
               }`}
             >
               <mode.icon className="w-3 h-3" />
@@ -277,7 +277,7 @@ export function SuggestionsPage() {
               exit={{ opacity: 0, height: 0 }}
               className="mb-8"
             >
-              <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/10">
+              <div className="h-1.5 w-full bg-[rgba(255,255,255,0.05)] rounded-full overflow-hidden border border-[rgba(255,255,255,0.08)]">
                 <motion.div 
                   className="h-full bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]"
                   style={{ width: `${progress}%` }}
@@ -290,7 +290,7 @@ export function SuggestionsPage() {
         {loading ? (
           <div className="premium-card p-12 flex flex-col items-center justify-center space-y-4">
             <div className="h-12 w-12 rounded-full border-2 border-blue-500/30 border-t-blue-500 animate-spin" />
-            <p className="text-slate-400 animate-pulse">Scanning knowledge graph...</p>
+            <p className="text-[var(--brand-text-secondary)] animate-pulse">Scanning knowledge graph...</p>
           </div>
         ) : pendingSuggestions.length === 0 ? (
           <EmptyState
@@ -316,14 +316,14 @@ export function SuggestionsPage() {
                 className="relative"
               >
                 <div className="absolute -inset-1 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-blue-600/20 rounded-[2rem] blur-xl opacity-50" />
-                <Card className="relative bg-slate-900/80 border-white/10 backdrop-blur-xl rounded-[2rem] overflow-hidden shadow-2xl">
+                <Card className="relative bg-slate-900/80 border-[rgba(255,255,255,0.08)] backdrop-blur-xl rounded-[2rem] overflow-hidden shadow-2xl">
                   <CardContent className="p-8 md:p-12">
                     {/* Top Meta */}
                     <div className="flex items-center gap-3 mb-6">
                       <div className="px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold uppercase tracking-wider">
                         {currentSuggestion.is_wildcard ? '🎲 Wildcard' : 'Recommended'}
                       </div>
-                      <div className="text-slate-500 text-xs font-medium">
+                      <div className="text-[var(--brand-text-muted)] text-xs font-medium">
                         {currentIndex + 1} of {pendingSuggestions.length}
                       </div>
                     </div>
@@ -332,18 +332,18 @@ export function SuggestionsPage() {
                     <h2 className="text-3xl md:text-4xl font-bold premium-text-platinum mb-6 leading-tight">
                       {currentSuggestion.title}
                     </h2>
-                    <p className="text-lg md:text-xl text-slate-300 leading-relaxed mb-8">
+                    <p className="text-lg md:text-xl text-[var(--brand-text-secondary)] leading-relaxed mb-8">
                       {currentSuggestion.description}
                     </p>
 
                     {/* Reasoning Section */}
                     {currentSuggestion.synthesis_reasoning && (
-                      <div className="p-6 rounded-2xl bg-white/5 border border-white/10 mb-8">
+                      <div className="p-6 rounded-2xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.08)] mb-8">
                         <div className="flex items-center gap-2 mb-3">
                           <Brain className="h-4 w-4 text-purple-400" />
                           <span className="text-sm font-bold text-purple-300 uppercase tracking-wide">AI Rationale</span>
                         </div>
-                        <p className="text-slate-400 leading-relaxed italic">
+                        <p className="text-[var(--brand-text-secondary)] leading-relaxed italic">
                           "{currentSuggestion.synthesis_reasoning}"
                         </p>
                       </div>
@@ -351,16 +351,16 @@ export function SuggestionsPage() {
 
                     {/* Stats Grid */}
                     <div className="grid grid-cols-3 gap-4 mb-8">
-                      <div className="p-4 rounded-xl bg-white/5 border border-white/5 text-center">
-                        <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-1 font-bold">Novelty</div>
+                      <div className="p-4 rounded-xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.05)] text-center">
+                        <div className="text-[10px] uppercase tracking-widest text-[var(--brand-text-muted)] mb-1 font-bold">Novelty</div>
                         <div className="text-lg font-bold text-blue-400">{Math.round(currentSuggestion.novelty_score * 100)}%</div>
                       </div>
-                      <div className="p-4 rounded-xl bg-white/5 border border-white/5 text-center">
-                        <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-1 font-bold">Feasibility</div>
+                      <div className="p-4 rounded-xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.05)] text-center">
+                        <div className="text-[10px] uppercase tracking-widest text-[var(--brand-text-muted)] mb-1 font-bold">Feasibility</div>
                         <div className="text-lg font-bold text-emerald-400">{Math.round(currentSuggestion.feasibility_score * 100)}%</div>
                       </div>
-                      <div className="p-4 rounded-xl bg-white/5 border border-white/5 text-center">
-                        <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-1 font-bold">Interest</div>
+                      <div className="p-4 rounded-xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.05)] text-center">
+                        <div className="text-[10px] uppercase tracking-widest text-[var(--brand-text-muted)] mb-1 font-bold">Interest</div>
                         <div className="text-lg font-bold text-purple-400">{Math.round(currentSuggestion.interest_score * 100)}%</div>
                       </div>
                     </div>
@@ -369,7 +369,7 @@ export function SuggestionsPage() {
                     {currentSuggestion.capabilities && currentSuggestion.capabilities.length > 0 && (
                       <div className="flex flex-wrap gap-2 mb-12">
                         {currentSuggestion.capabilities.map(cap => (
-                          <span key={cap.id} className="px-3 py-1.5 rounded-lg bg-slate-800 border border-white/5 text-xs font-semibold text-slate-400">
+                          <span key={cap.id} className="px-3 py-1.5 rounded-lg bg-slate-800 border border-[rgba(255,255,255,0.05)] text-xs font-semibold text-[var(--brand-text-secondary)]">
                             {cap.name}
                           </span>
                         ))}
@@ -380,29 +380,29 @@ export function SuggestionsPage() {
                     <div className="grid grid-cols-3 gap-4">
                       <button
                         onClick={() => handleAction('no')}
-                        className="group flex flex-col items-center gap-3 p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-red-500/10 hover:border-red-500/30 transition-all"
+                        className="group flex flex-col items-center gap-3 p-4 rounded-2xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.05)] hover:bg-red-500/10 hover:border-red-500/30 transition-all"
                       >
-                        <div className="h-12 w-12 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-red-500 group-hover:text-white transition-all">
+                        <div className="h-12 w-12 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-red-500 group-hover:text-[var(--brand-text-primary)] transition-all">
                           <X className="h-6 w-6" />
                         </div>
-                        <span className="text-xs font-bold uppercase tracking-wider text-slate-500 group-hover:text-red-400">No</span>
+                        <span className="text-xs font-bold uppercase tracking-wider text-[var(--brand-text-muted)] group-hover:text-red-400">No</span>
                       </button>
 
                       <button
                         onClick={() => handleAction('later')}
-                        className="group flex flex-col items-center gap-3 p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-amber-500/10 hover:border-amber-500/30 transition-all"
+                        className="group flex flex-col items-center gap-3 p-4 rounded-2xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.05)] hover:bg-amber-500/10 hover:border-amber-500/30 transition-all"
                       >
-                        <div className="h-12 w-12 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-amber-500 group-hover:text-white transition-all">
+                        <div className="h-12 w-12 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-amber-500 group-hover:text-[var(--brand-text-primary)] transition-all">
                           <Clock className="h-6 w-6" />
                         </div>
-                        <span className="text-xs font-bold uppercase tracking-wider text-slate-500 group-hover:text-amber-400">Maybe Later</span>
+                        <span className="text-xs font-bold uppercase tracking-wider text-[var(--brand-text-muted)] group-hover:text-amber-400">Maybe Later</span>
                       </button>
 
                       <button
                         onClick={() => handleAction('yes')}
                         className="group flex flex-col items-center gap-3 p-4 rounded-2xl bg-blue-600/10 border border-blue-500/20 hover:bg-blue-600/20 hover:border-blue-500/40 transition-all"
                       >
-                        <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-[0_0_20px_rgba(37,99,235,0.4)] group-hover:scale-110 transition-all">
+                        <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center text-[var(--brand-text-primary)] shadow-[0_0_20px_rgba(37,99,235,0.4)] group-hover:scale-110 transition-all">
                           <Plus className="h-6 w-6" />
                         </div>
                         <span className="text-xs font-bold uppercase tracking-wider text-blue-400 group-hover:text-blue-300 text-center">Add to Projects</span>
@@ -418,11 +418,11 @@ export function SuggestionsPage() {
               <button
                 onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
                 disabled={currentIndex === 0}
-                className="h-12 w-12 rounded-full border border-white/10 flex items-center justify-center text-slate-400 hover:bg-white/5 disabled:opacity-20 transition-all"
+                className="h-12 w-12 rounded-full border border-[rgba(255,255,255,0.08)] flex items-center justify-center text-[var(--brand-text-secondary)] hover:bg-[rgba(255,255,255,0.05)] disabled:opacity-20 transition-all"
               >
                 <ChevronLeft className="h-6 w-6" />
               </button>
-              <div className="h-1 w-24 bg-white/5 rounded-full overflow-hidden">
+              <div className="h-1 w-24 bg-[rgba(255,255,255,0.05)] rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-blue-500/50 transition-all duration-300"
                   style={{ width: `${((currentIndex + 1) / pendingSuggestions.length) * 100}%` }}
@@ -431,7 +431,7 @@ export function SuggestionsPage() {
               <button
                 onClick={() => setCurrentIndex(prev => Math.min(pendingSuggestions.length - 1, prev + 1))}
                 disabled={currentIndex === pendingSuggestions.length - 1}
-                className="h-12 w-12 rounded-full border border-white/10 flex items-center justify-center text-slate-400 hover:bg-white/5 disabled:opacity-20 transition-all"
+                className="h-12 w-12 rounded-full border border-[rgba(255,255,255,0.08)] flex items-center justify-center text-[var(--brand-text-secondary)] hover:bg-[rgba(255,255,255,0.05)] disabled:opacity-20 transition-all"
               >
                 <ChevronRight className="h-6 w-6" />
               </button>
@@ -461,7 +461,7 @@ export function SuggestionsPage() {
               <h3 className="text-xl font-bold premium-text-platinum mb-2">
                 {feedbackMode === 'no' ? 'Dismiss Suggestion' : 'Maybe Later'}
               </h3>
-              <p className="text-slate-400 text-sm mb-6">
+              <p className="text-[var(--brand-text-secondary)] text-sm mb-6">
                 Briefly, why isn't this right for you today? This helps refine future suggestions.
               </p>
 
@@ -475,7 +475,7 @@ export function SuggestionsPage() {
                       "px-3 py-1.5 rounded-full text-xs font-medium transition-all border",
                       rationale === option 
                         ? "bg-blue-600/20 border-blue-500 text-blue-400" 
-                        : "bg-white/5 border-white/10 text-slate-400 hover:bg-white/10"
+                        : "bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.08)] text-[var(--brand-text-secondary)] hover:bg-[rgba(255,255,255,0.1)]"
                     )}
                   >
                     {option}

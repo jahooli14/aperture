@@ -109,7 +109,7 @@ export function ConnectionPulse() {
             <p className="text-[11px] font-semibold text-blue-400 uppercase tracking-widest leading-none mb-1">
               AI linked your new {TYPE_SOURCE_LABEL[current.sourceType] || 'item'}
             </p>
-            <p className="text-sm text-white font-medium truncate leading-snug">
+            <p className="text-sm text-[var(--brand-text-primary)] font-medium truncate leading-snug">
               "{current.sourceTitle}"
               <span className="text-blue-300/70 font-normal">
                 {' '}→ {totalCount} connection{totalCount !== 1 ? 's' : ''}
@@ -119,14 +119,14 @@ export function ConnectionPulse() {
 
           <div className="flex items-center gap-1 flex-shrink-0">
             <button
-              className="p-1 rounded-lg hover:bg-white/10 transition-colors text-gray-400"
+              className="p-1 rounded-lg hover:bg-[rgba(255,255,255,0.1)] transition-colors text-[var(--brand-text-secondary)]"
               onClick={e => { e.stopPropagation(); setExpanded(x => !x) }}
               aria-label={expanded ? 'Collapse' : 'Expand'}
             >
               {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </button>
             <button
-              className="p-1 rounded-lg hover:bg-white/10 transition-colors text-gray-400"
+              className="p-1 rounded-lg hover:bg-[rgba(255,255,255,0.1)] transition-colors text-[var(--brand-text-secondary)]"
               onClick={e => { e.stopPropagation(); dismiss() }}
               aria-label="Dismiss"
             >
@@ -137,13 +137,13 @@ export function ConnectionPulse() {
 
         {/* Expanded connection list */}
         {expanded && (
-          <div className="border-t border-white/10">
+          <div className="border-t border-[rgba(255,255,255,0.08)]">
             {current.links.slice(0, 6).map((link, i) => (
               <Link
                 key={i}
                 to={getItemLink(link.id, link.type)}
                 onClick={dismiss}
-                className="flex items-start gap-3 px-4 py-2.5 hover:bg-white/5 transition-colors border-b border-white/5 last:border-b-0"
+                className="flex items-start gap-3 px-4 py-2.5 hover:bg-[rgba(255,255,255,0.05)] transition-colors border-b border-[rgba(255,255,255,0.05)] last:border-b-0"
               >
                 <span className="text-base flex-shrink-0 mt-0.5">{TYPE_EMOJI[link.type] || '🔗'}</span>
                 <div className="flex-1 min-w-0">
@@ -151,7 +151,7 @@ export function ConnectionPulse() {
                     <span className="text-[10px] font-medium text-blue-400/80 uppercase tracking-wide">
                       {TYPE_LABEL[link.type]}
                     </span>
-                    <span className="text-[10px] text-gray-500">
+                    <span className="text-[10px] text-[var(--brand-text-muted)]">
                       {CONNECTION_TYPE_LABEL[link.connectionType] || link.connectionType}
                     </span>
                     {link.autoLinked && (
@@ -160,12 +160,12 @@ export function ConnectionPulse() {
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-white font-medium truncate">{link.title}</p>
-                  <p className="text-xs text-gray-400 mt-0.5 line-clamp-2 leading-relaxed">
+                  <p className="text-sm text-[var(--brand-text-primary)] font-medium truncate">{link.title}</p>
+                  <p className="text-xs text-[var(--brand-text-secondary)] mt-0.5 line-clamp-2 leading-relaxed">
                     {link.reasoning}
                   </p>
                 </div>
-                <ArrowRight className="h-3.5 w-3.5 text-gray-500 flex-shrink-0 mt-2" />
+                <ArrowRight className="h-3.5 w-3.5 text-[var(--brand-text-muted)] flex-shrink-0 mt-2" />
               </Link>
             ))}
           </div>

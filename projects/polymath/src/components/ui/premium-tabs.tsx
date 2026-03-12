@@ -16,7 +16,7 @@ interface PremiumTabsProps {
 
 export function PremiumTabs({ tabs, activeTab, onChange, className }: PremiumTabsProps) {
   return (
-    <div className={cn('flex border-b border-white/10', className)} style={{ gap: 0 }}>
+    <div className={cn('flex border-b border-[rgba(255,255,255,0.08)]', className)} style={{ gap: 0 }}>
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id
 

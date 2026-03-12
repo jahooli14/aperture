@@ -105,7 +105,7 @@ export function VoiceCommandButton() {
                 </div>
                 <button
                   onClick={handleClose}
-                  className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-white/5 transition-colors"
+                  className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-[rgba(255,255,255,0.05)] transition-colors"
                   style={{ color: 'var(--premium-text-tertiary)' }}
                 >
                   <X className="h-5 w-5" />

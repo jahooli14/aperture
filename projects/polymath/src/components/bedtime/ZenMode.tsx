@@ -115,7 +115,7 @@ export function ZenMode({ prompts, onClose, onMarkViewed }: ZenModeProps) {
       {/* Close button */}
       <button
         onClick={onClose}
-        className="absolute top-6 right-6 p-2 rounded-full transition-all hover:bg-white/10"
+        className="absolute top-6 right-6 p-2 rounded-full transition-all hover:bg-[rgba(255,255,255,0.1)]"
         style={{ color: 'var(--premium-text-secondary)' }}
       >
         <X className="h-6 w-6" />
@@ -204,7 +204,7 @@ export function ZenMode({ prompts, onClose, onMarkViewed }: ZenModeProps) {
           <button
             onClick={handlePrevious}
             disabled={currentIndex === 0}
-            className="p-4 rounded-full transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/10"
+            className="p-4 rounded-full transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[rgba(255,255,255,0.1)]"
             style={{ color: 'var(--premium-text-secondary)' }}
           >
             <ChevronLeft className="h-6 w-6" />
@@ -223,7 +223,7 @@ export function ZenMode({ prompts, onClose, onMarkViewed }: ZenModeProps) {
 
           <button
             onClick={handleNext}
-            className="p-4 rounded-full transition-all hover:bg-white/10"
+            className="p-4 rounded-full transition-all hover:bg-[rgba(255,255,255,0.1)]"
             style={{ color: 'var(--premium-text-secondary)' }}
           >
             <ChevronRight className="h-6 w-6" />

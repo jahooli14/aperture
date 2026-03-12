@@ -76,7 +76,7 @@ export function RelatedItems({ sourceId, sourceType, sourceText, limit = 5 }: Re
         <div className="flex items-center gap-2 mb-4">
           <Lightbulb className="h-4 w-4 text-blue-900" />
           <h3 className="font-semibold text-neutral-900">Related</h3>
-          <span className="text-xs text-neutral-500">({items.length})</span>
+          <span className="text-xs text-[var(--brand-text-muted)]">({items.length})</span>
         </div>
 
         <div className="space-y-2">
@@ -129,7 +129,7 @@ function RelatedItemCard({ item }: { item: RelatedItem }) {
                 style={{ width: `${item.relevance * 100}%` }}
               />
             </div>
-            <span className="text-xs text-neutral-500">{Math.round(item.relevance * 100)}%</span>
+            <span className="text-xs text-[var(--brand-text-muted)]">{Math.round(item.relevance * 100)}%</span>
           </div>
         )}
       </div>
