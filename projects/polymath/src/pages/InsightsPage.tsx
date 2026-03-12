@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
-import { Zap, TrendingUp, AlertCircle, Lightbulb, Search, Brain, WifiOff, Sparkles } from 'lucide-react'
+import { Zap, TrendingUp, AlertCircle, Lightbulb, Search, Brain, WifiOff } from 'lucide-react'
 import { SubtleBackground } from '../components/SubtleBackground'
 import type { SynthesisInsight } from '../types'
 import { readingDb } from '../lib/db'
@@ -335,7 +335,7 @@ export function InsightsPage() {
                       onClick={() => handleResolveContradiction(insight)}
                       className="mt-3 flex items-center gap-2 px-3 py-2 rounded-xl bg-brand-primary/10 border border-purple-500/20 text-brand-primary text-sm hover:bg-brand-primary/20 transition-all"
                     >
-                      <Sparkles className="w-4 h-4" />
+                      <Zap className="w-4 h-4" />
                       Resolve this tension
                     </button>
                   )}

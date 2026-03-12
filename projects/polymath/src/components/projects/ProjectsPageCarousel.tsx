@@ -1,12 +1,7 @@
 import React, { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import {
-  Star,
-  ArrowRight,
-  CheckCircle2,
-  Clock
-} from 'lucide-react'
+import { Star, ArrowRight, CheckCircle2, Clock } from 'lucide-react'
 import type { Project } from '../../types'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useSuggestionStore } from '../../stores/useSuggestionStore'

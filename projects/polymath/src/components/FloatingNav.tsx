@@ -6,14 +6,7 @@
 import React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  Home,
-  Brain,
-  CheckSquare,
-  BookOpen,
-  Briefcase,
-  List,
-} from 'lucide-react'
+import { Home, Brain, CheckSquare, BookOpen, Briefcase, List } from 'lucide-react'
 import { VoiceFAB } from './VoiceFAB'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useMemoryStore } from '../stores/useMemoryStore'

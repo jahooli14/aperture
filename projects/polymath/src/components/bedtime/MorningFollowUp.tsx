@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Sun, X, Sparkles, ChevronRight } from 'lucide-react'
+import { Sun, X, Zap, ChevronRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface MorningFollowUpProps {
@@ -106,7 +106,7 @@ export function MorningFollowUp({ onDismiss, onCapture }: MorningFollowUpProps) 
           exit={{ opacity: 0 }}
           className="mx-4 mb-4 p-4 rounded-2xl border border-emerald-500/20 bg-brand-primary/5 flex items-center gap-2"
         >
-          <Sparkles className="w-4 h-4 text-brand-text-secondary" />
+          <Zap className="w-4 h-4 text-brand-text-secondary" />
           <span className="text-sm text-brand-primary">Captured. Your synthesis engine will use this.</span>
         </motion.div>
       )}

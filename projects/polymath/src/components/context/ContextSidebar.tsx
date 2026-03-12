@@ -1,23 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import {
-    X,
-    Lightbulb,
-    BookOpen,
-    Layers,
-    Brain,
-    ArrowRight,
-    Link as LinkIcon,
-    Loader2,
-    Zap,
-    TrendingUp,
-    RefreshCw,
-    FileText,
-    HelpCircle,
-    Compass,
-    GitBranch
-} from 'lucide-react'
+import { X, Lightbulb, BookOpen, Layers, Brain, ArrowRight, Link as LinkIcon, Loader2, Zap, TrendingUp, RefreshCw, FileText, HelpCircle, Compass, GitBranch } from 'lucide-react'
 import { useContextEngineStore, ContextItem } from '../../stores/useContextEngineStore'
 import { useToast } from '../ui/toast'
 

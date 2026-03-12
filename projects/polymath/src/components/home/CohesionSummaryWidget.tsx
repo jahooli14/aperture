@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Brain, Zap, ArrowRight, Sparkles } from 'lucide-react';
+import { Brain, Zap, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface Flow {
@@ -55,7 +55,7 @@ export function CohesionSummaryWidget() {
         className="relative overflow-hidden rounded-3xl p-8 border border-[var(--glass-surface-hover)] backdrop-blur-3xl bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-transparent"
       >
         <div className="absolute top-0 right-0 p-4 opacity-20">
-          <Sparkles className="h-12 w-12 text-brand-primary" />
+          <Zap className="h-12 w-12 text-brand-primary" />
         </div>
 
         <div className="relative z-10">

@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react'
-import { Sparkles, X, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react'
+import { Zap, X, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAmbientLinker, type Discovery } from '../hooks/useAmbientLinker'
 
@@ -102,7 +102,7 @@ export function ConnectionPulse() {
           onClick={() => setExpanded(e => !e)}
         >
           <div className="flex-shrink-0 w-8 h-8 rounded-full bg-brand-primary/20 flex items-center justify-center">
-            <Sparkles className="h-4 w-4 text-brand-primary" />
+            <Zap className="h-4 w-4 text-brand-primary" />
           </div>
 
           <div className="flex-1 min-w-0">

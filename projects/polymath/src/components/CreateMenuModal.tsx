@@ -1,6 +1,6 @@
 import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Brain, Layers, BookmarkPlus, ListPlus, X, Sparkles } from 'lucide-react'
+import { Brain, Layers, BookmarkPlus, ListPlus, X, Zap } from 'lucide-react'
 import { cn } from '../lib/utils'
 
 interface CreateMenuModalProps {
@@ -84,7 +84,7 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
                             <div className="flex items-center justify-between mb-10">
                                 <div>
                                     <h2 className="text-3xl font-black italic text-[var(--brand-text-primary)] flex items-center gap-3 tracking-tighter uppercase">
-                                        <Sparkles className="h-6 w-6 text-brand-primary" />
+                                        <Zap className="h-6 w-6 text-brand-primary" />
                                         Forge New
                                     </h2>
                                     <p className="text-brand-text-muted text-sm font-medium mt-1">Select an entity to bring into existence.</p>

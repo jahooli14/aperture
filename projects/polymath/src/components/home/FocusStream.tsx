@@ -5,19 +5,7 @@ import { useProjectStore } from '../../stores/useProjectStore'
 import { useNavigate } from 'react-router-dom'
 import { ReviewDeck } from '../projects/ReviewDeck'
 import { PROJECT_COLORS } from '../projects/ProjectCard'
-import {
-    Code,
-    PenTool,
-    Terminal,
-    Lightbulb,
-    Globe,
-    Music,
-    Video,
-    BookOpen,
-    Dribbble,
-    Atom,
-    Cpu
-} from 'lucide-react'
+import { Code, PenTool, Terminal, Lightbulb, Globe, Music, Video, BookOpen, Dribbble, Atom, Cpu } from 'lucide-react'
 
 const getProjectIcon = (type: string) => {
     const t = type?.toLowerCase().trim() || ''

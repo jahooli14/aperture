@@ -1,11 +1,7 @@
 import React, { useEffect, useState, useRef, useMemo, memo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import {
-    ArrowLeft, Send, Trash2, Mic, MicOff, ListOrdered, Check, GripVertical,
-    Film, Music, Book, MapPin, Box, Quote, Pencil, Monitor, Gamepad2, Calendar,
-    Star, SortAsc, ChevronDown, Copy
-} from 'lucide-react'
+import { ArrowLeft, Send, Trash2, Mic, MicOff, ListOrdered, Check, GripVertical, Film, Music, Book, MapPin, Box, Quote, Pencil, Monitor, Gamepad2, Calendar, Star, SortAsc, ChevronDown, Copy } from 'lucide-react'
 import { useListStore } from '../stores/useListStore'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'

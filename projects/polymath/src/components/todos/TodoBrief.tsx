@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, X, Plus, ChevronDown, ChevronUp } from 'lucide-react'
+import { Zap, X, Plus, ChevronDown, ChevronUp } from 'lucide-react'
 import { useTodoStore } from '../../stores/useTodoStore'
 import type { DailyBrief } from '../../../api/todos'
 
@@ -83,7 +83,7 @@ export function TodoBrief() {
           {/* Header */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
+              <Zap className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
               <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--brand-primary)" }}>
                 Daily Brief
               </span>

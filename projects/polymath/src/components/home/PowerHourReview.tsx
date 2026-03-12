@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Clock, Zap, AlertTriangle, Plus, ChevronDown, ListTodo, Target, Sparkles, History, RefreshCw, Archive, HelpCircle, ChevronRight } from 'lucide-react'
+import { X, Clock, Zap, AlertTriangle, Plus, ChevronDown, ListTodo, Target, History, RefreshCw, Archive, HelpCircle, ChevronRight } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
 
 interface ChecklistItem {
@@ -279,7 +279,7 @@ export function PowerHourReview({
                             className="p-3 rounded-xl bg-brand-primary/10 border border-amber-500/20 mb-3"
                         >
                             <div className="flex items-start gap-2">
-                                <Sparkles className="h-4 w-4 text-brand-text-secondary mt-0.5 flex-shrink-0" />
+                                <Zap className="h-4 w-4 text-brand-text-secondary mt-0.5 flex-shrink-0" />
                                 <div className="flex-1 min-w-0">
                                     <div className="text-xs font-bold text-brand-primary mb-1">
                                         It's been {projectContext.daysDormant} days
