@@ -206,7 +206,7 @@ export function TodoItem({
     >
       <SwipeableCard
         leftAction={SwipeActions.delete(() => onDelete(todo.id))}
-        rightAction={{ icon: <Check className="h-5 w-5 text-white" />, color: 'bg-emerald-600', label: 'Complete', threshold: 100, onAction: handleToggle }}
+        rightAction={{ icon: <Check className="h-5 w-5 text-[var(--brand-text-primary)]" />, color: 'bg-emerald-600', label: 'Complete', threshold: 100, onAction: handleToggle }}
         className="rounded"
       >
         <div
@@ -251,7 +251,7 @@ export function TodoItem({
                     exit={{ scale: 0, opacity: 0 }}
                     transition={{ type: 'spring', stiffness: 600, damping: 22 }}
                   >
-                    <Check className="h-[11px] w-[11px] text-white" strokeWidth={3} />
+                    <Check className="h-[11px] w-[11px] text-[var(--brand-text-primary)]" strokeWidth={3} />
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -525,7 +525,7 @@ export function LogbookItem({ todo, onUndo }: { todo: Todo; onUndo: (id: string)
         className="flex-shrink-0 h-[16px] w-[16px] rounded-sm flex items-center justify-center"
         style={{ background: 'rgba(52,211,153,0.22)', border: '1px solid rgba(52,211,153,0.35)' }}
       >
-        <Check className="h-[9px] w-[9px] text-white" strokeWidth={3} />
+        <Check className="h-[9px] w-[9px] text-[var(--brand-text-primary)]" strokeWidth={3} />
       </div>
       <span
         className="flex-1 text-[15px] truncate"

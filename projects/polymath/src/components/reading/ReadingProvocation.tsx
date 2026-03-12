@@ -51,7 +51,7 @@ export function ReadingProvocation() {
               </button>
             </div>
           </div>
-          <button onClick={() => setDismissed(true)} className="text-gray-600 hover:text-gray-400 flex-shrink-0">
+          <button onClick={() => setDismissed(true)} className="text-gray-600 hover:text-[var(--brand-text-secondary)] flex-shrink-0">
             <X className="w-3.5 h-3.5" />
           </button>
         </div>

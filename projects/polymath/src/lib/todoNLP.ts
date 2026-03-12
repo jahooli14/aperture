@@ -572,7 +572,7 @@ export const PRIORITY_LABELS: Record<number, string> = {
 }
 
 export const PRIORITY_COLORS: Record<number, string> = {
-  0: 'text-white/30',
+  0: 'text-[var(--brand-text-primary)]/30',
   1: 'text-blue-400',
   2: 'text-amber-400',
   3: 'text-red-400',

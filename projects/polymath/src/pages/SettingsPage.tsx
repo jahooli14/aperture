@@ -104,7 +104,7 @@ export function SettingsPage() {
           </div>
           <button
             onClick={() => navigate('/search')}
-            className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
+            className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-[rgba(255,255,255,0.05)]"
             style={{
               color: 'var(--premium-blue)'
             }}
@@ -123,7 +123,7 @@ export function SettingsPage() {
             background: 'var(--premium-bg-2)',
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
           }}>
-            <div className="flex items-center gap-3 mb-6 border-b border-white/5 pb-4">
+            <div className="flex items-center gap-3 mb-6 border-b border-[rgba(255,255,255,0.05)] pb-4">
               <Palette className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
               <h2
                 className="text-xl font-bold"
@@ -155,7 +155,7 @@ export function SettingsPage() {
                     >
                       {isSelected && (
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <Check className="h-6 w-6 text-white drop-shadow-md" />
+                          <Check className="h-6 w-6 text-[var(--brand-text-primary)] drop-shadow-md" />
                         </div>
                       )}
                       <div className="sr-only">{color}</div>
@@ -232,7 +232,7 @@ export function SettingsPage() {
             background: 'var(--premium-bg-2)',
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
           }}>
-            <div className="flex items-center gap-3 mb-6 border-b border-white/5 pb-4">
+            <div className="flex items-center gap-3 mb-6 border-b border-[rgba(255,255,255,0.05)] pb-4">
               <Bell className="h-6 w-6" style={{ color: 'rgba(59,130,246,0.8)' }} />
               <h2 className="text-xl font-bold" style={{ color: 'var(--premium-text-primary)' }}>
                 Notifications
@@ -257,7 +257,7 @@ export function SettingsPage() {
                   </button>
                 </div>
                 {bedtimeEnabled && (
-                  <div className="px-4 pb-3.5 flex items-center gap-3 border-t border-white/5 pt-3">
+                  <div className="px-4 pb-3.5 flex items-center gap-3 border-t border-[rgba(255,255,255,0.05)] pt-3">
                     <span className="text-[12px]" style={{ color: 'rgba(255,255,255,0.4)' }}>Time</span>
                     <select
                       value={bedtimeHour}
@@ -304,7 +304,7 @@ export function SettingsPage() {
                   </button>
                 </div>
                 {morningEnabled && (
-                  <div className="px-4 pb-3.5 flex items-center gap-3 border-t border-white/5 pt-3">
+                  <div className="px-4 pb-3.5 flex items-center gap-3 border-t border-[rgba(255,255,255,0.05)] pt-3">
                     <span className="text-[12px]" style={{ color: 'rgba(255,255,255,0.4)' }}>Time</span>
                     <select
                       value={morningHour}
@@ -366,7 +366,7 @@ export function SettingsPage() {
                   </button>
                 </div>
                 {overdueReminderEnabled && (
-                  <div className="px-4 pb-3.5 flex items-center gap-3 border-t border-white/5 pt-3">
+                  <div className="px-4 pb-3.5 flex items-center gap-3 border-t border-[rgba(255,255,255,0.05)] pt-3">
                     <span className="text-[12px]" style={{ color: 'rgba(255,255,255,0.4)' }}>Time</span>
                     <select
                       value={overdueReminderHour}
@@ -407,7 +407,7 @@ export function SettingsPage() {
             background: 'var(--premium-bg-2)',
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
           }}>
-            <div className="flex items-center gap-3 mb-6 border-b border-white/5 pb-4">
+            <div className="flex items-center gap-3 mb-6 border-b border-[rgba(255,255,255,0.05)] pb-4">
               <Zap className="h-6 w-6" style={{ color: 'var(--premium-amber)' }} />
               <h2
                 className="text-xl font-bold"
@@ -421,7 +421,7 @@ export function SettingsPage() {
               {/* Bug Tracker Toggle */}
               <button
                 onClick={() => setShowBugTracker(!showBugTracker)}
-                className="w-full flex items-center gap-4 p-4 rounded-xl backdrop-blur-xl transition-all text-left border hover:bg-white/5"
+                className="w-full flex items-center gap-4 p-4 rounded-xl backdrop-blur-xl transition-all text-left border hover:bg-[rgba(255,255,255,0.05)]"
                 style={{
                   background: 'rgba(255, 255, 255, 0.02)',
                   borderColor: 'rgba(255, 255, 255, 0.05)'

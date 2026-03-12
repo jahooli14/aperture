@@ -256,7 +256,7 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-8 px-3 text-xs flex items-center gap-1.5 transition-all hover:bg-white/10 active:scale-95"
+                  className="h-8 px-3 text-xs flex items-center gap-1.5 transition-all hover:bg-[rgba(255,255,255,0.1)] active:scale-95"
                   style={{
                     backgroundColor: 'rgba(255, 255, 255, 0.05)',
                     color: 'var(--premium-text-secondary)',
@@ -302,7 +302,7 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
                       <button
                         type="button"
                         onClick={() => removeFile(index)}
-                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 backdrop-blur-md text-white/90 border border-white/10 transition-all active:bg-red-500/80"
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 backdrop-blur-md text-[var(--brand-text-primary)]/90 border border-[rgba(255,255,255,0.08)] transition-all active:bg-red-500/80"
                       >
                         <span className="h-3.5 w-3.5 block text-center leading-none">&times;</span>
                       </button>
@@ -317,7 +317,7 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
         <BottomSheetFooter>
           <Button
             onClick={handleSave}
-            className="w-full h-12 font-semibold text-white shadow-lg touch-manipulation"
+            className="w-full h-12 font-semibold text-[var(--brand-text-primary)] shadow-lg touch-manipulation"
             style={{
               background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
             }}

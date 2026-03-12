@@ -126,7 +126,7 @@ export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProp
                 e.stopPropagation()
                 onRead()
               }}
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white h-8 text-xs"
+              className="w-full bg-blue-600 hover:bg-blue-500 text-[var(--brand-text-primary)] h-8 text-xs"
             >
               Read Article
             </Button>
@@ -136,7 +136,7 @@ export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProp
                 e.stopPropagation()
                 window.open(item.link, '_blank')
               }}
-              className="bg-transparent border-white/10 text-zinc-400 hover:text-white h-8 text-xs px-3"
+              className="bg-transparent border-[rgba(255,255,255,0.08)] text-zinc-400 hover:text-[var(--brand-text-primary)] h-8 text-xs px-3"
             >
               <ExternalLink className="h-3.5 w-3.5" />
             </Button>

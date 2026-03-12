@@ -21,7 +21,7 @@ const badgeVariants = cva(
         meta:
           "border-transparent bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100",
         wildcard:
-          "border-transparent bg-gradient-to-r from-pink-500 to-purple-500 text-white",
+          "border-transparent bg-gradient-to-r from-pink-500 to-purple-500 text-[var(--brand-text-primary)]",
       },
     },
     defaultVariants: {

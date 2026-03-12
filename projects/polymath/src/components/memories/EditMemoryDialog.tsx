@@ -291,7 +291,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-8 px-3 text-xs flex items-center gap-1.5 transition-all hover:bg-white/10 active:scale-95"
+                  className="h-8 px-3 text-xs flex items-center gap-1.5 transition-all hover:bg-[rgba(255,255,255,0.1)] active:scale-95"
                   style={{
                     backgroundColor: 'rgba(255, 255, 255, 0.05)',
                     color: 'var(--premium-text-secondary)',
@@ -337,7 +337,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
                       <button
                         type="button"
                         onClick={() => removeExistingImage(url)}
-                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-md text-white/90 border border-white/10 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/80 hover:text-white"
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-md text-[var(--brand-text-primary)]/90 border border-[rgba(255,255,255,0.08)] opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/80 hover:text-[var(--brand-text-primary)]"
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
@@ -360,13 +360,13 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
                         className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all duration-500"
                       />
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <span className="bg-black/50 text-white text-[10px] px-2 py-1 rounded-full backdrop-blur-sm">New</span>
+                        <span className="bg-black/50 text-[var(--brand-text-primary)] text-[10px] px-2 py-1 rounded-full backdrop-blur-sm">New</span>
                       </div>
 
                       <button
                         type="button"
                         onClick={() => removeNewFile(index)}
-                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-md text-white/90 border border-white/10 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/80 hover:text-white"
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-md text-[var(--brand-text-primary)]/90 border border-[rgba(255,255,255,0.08)] opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/80 hover:text-[var(--brand-text-primary)]"
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>

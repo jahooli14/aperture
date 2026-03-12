@@ -134,7 +134,7 @@ export function ReaperModal({ isOpen, onClose }: ReaperModalProps) {
           >
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 transition-colors"
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-[rgba(255,255,255,0.1)] transition-colors"
               style={{ color: 'var(--premium-text-tertiary)' }}
             >
               <X className="h-5 w-5" />
@@ -156,7 +156,7 @@ export function ReaperModal({ isOpen, onClose }: ReaperModalProps) {
                 </p>
 
                 <div className="bg-black/20 p-5 rounded-lg mb-8" style={{ border: '1px solid rgba(239, 68, 68, 0.3)' }}>
-                  <h3 className="text-xl font-semibold text-white mb-2">
+                  <h3 className="text-xl font-semibold text-[var(--brand-text-primary)] mb-2">
                     "{rottingProject.title}"
                   </h3>
                   {rottingProject.description && (
@@ -200,11 +200,11 @@ export function ReaperModal({ isOpen, onClose }: ReaperModalProps) {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-12">
-                <Zap className="h-12 w-12 text-gray-500 mb-4" />
-                <p className="text-gray-300">All projects are alive and well.</p>
+                <Zap className="h-12 w-12 text-[var(--brand-text-muted)] mb-4" />
+                <p className="text-[var(--brand-text-secondary)]">All projects are alive and well.</p>
                 <button
                   onClick={onClose}
-                  className="mt-6 px-4 py-2 rounded-lg bg-white/10 text-gray-200 hover:bg-white/20 transition-colors"
+                  className="mt-6 px-4 py-2 rounded-lg bg-[rgba(255,255,255,0.1)] text-gray-200 hover:bg-white/20 transition-colors"
                 >
                   Close
                 </button>

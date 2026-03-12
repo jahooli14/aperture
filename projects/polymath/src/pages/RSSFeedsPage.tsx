@@ -157,7 +157,7 @@ export function RSSFeedsPage() {
               <button
                 onClick={handleSync}
                 disabled={syncing || feeds.length === 0}
-                className="premium-glass border px-4 py-2 rounded-lg inline-flex items-center gap-2 hover:bg-white/5 transition-all disabled:opacity-50"
+                className="premium-glass border px-4 py-2 rounded-lg inline-flex items-center gap-2 hover:bg-[rgba(255,255,255,0.05)] transition-all disabled:opacity-50"
                 style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}
               >
                 <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} style={{ color: 'var(--premium-blue)' }} />
@@ -201,7 +201,7 @@ export function RSSFeedsPage() {
                 </div>
                 <button
                   onClick={handleCopyEmail}
-                  className="premium-glass border px-4 py-2 rounded-lg inline-flex items-center gap-2 hover:bg-white/5 transition-all"
+                  className="premium-glass border px-4 py-2 rounded-lg inline-flex items-center gap-2 hover:bg-[rgba(255,255,255,0.05)] transition-all"
                   style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}
                 >
                   <Copy className="h-4 w-4" style={{ color: 'var(--premium-blue)' }} />
@@ -298,7 +298,7 @@ export function RSSFeedsPage() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleToggle(feed)}
-                      className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                      className="p-2 rounded-lg hover:bg-[rgba(255,255,255,0.1)] transition-colors"
                       title={feed.enabled ? 'Pause feed' : 'Enable feed'}
                     >
                       <Power className="h-5 w-5" style={{
@@ -307,7 +307,7 @@ export function RSSFeedsPage() {
                     </button>
                     <button
                       onClick={() => handleUnsubscribe(feed)}
-                      className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                      className="p-2 rounded-lg hover:bg-[rgba(255,255,255,0.1)] transition-colors"
                       title="Unsubscribe"
                     >
                       <Trash2 className="h-5 w-5" style={{ color: 'var(--premium-text-tertiary)' }} />
@@ -336,14 +336,14 @@ export function RSSFeedsPage() {
               </h3>
               <button
                 onClick={() => setShowAddDialog(false)}
-                className="p-1 hover:bg-white/10 rounded-lg transition-colors"
+                className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded-lg transition-colors"
               >
                 <X className="h-5 w-5" style={{ color: 'var(--premium-text-secondary)' }} />
               </button>
             </div>
 
             {/* Custom Feed URL */}
-            <div className="mb-8 p-4 rounded-xl border border-white/5 bg-white/[0.02]">
+            <div className="mb-8 p-4 rounded-xl border border-[rgba(255,255,255,0.05)] bg-white/[0.02]">
               <label className="block text-sm font-semibold mb-3 premium-text-platinum">
                 Add by URL
               </label>
@@ -394,7 +394,7 @@ export function RSSFeedsPage() {
                 <button
                   onClick={handleSearch}
                   disabled={!searchQuery || isSearching}
-                  className="premium-glass border px-6 py-3 rounded-lg inline-flex items-center gap-2 hover:bg-white/5 transition-all font-medium"
+                  className="premium-glass border px-6 py-3 rounded-lg inline-flex items-center gap-2 hover:bg-[rgba(255,255,255,0.05)] transition-all font-medium"
                   style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}
                 >
                   {isSearching ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Search'}
@@ -407,7 +407,7 @@ export function RSSFeedsPage() {
                   {searchResults.map((result) => (
                     <div
                       key={result.feed_url}
-                      className="flex items-center justify-between p-4 rounded-xl premium-glass-subtle border border-white/5 hover:bg-white/5 transition-all group"
+                      className="flex items-center justify-between p-4 rounded-xl premium-glass-subtle border border-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.05)] transition-all group"
                     >
                       <div className="flex-1 min-w-0 pr-4">
                         <div className="flex items-center gap-2 mb-1">
@@ -416,11 +416,11 @@ export function RSSFeedsPage() {
                           )}
                           <h5 className="premium-text-platinum font-bold text-sm truncate">{result.title}</h5>
                         </div>
-                        <p className="text-xs text-white/40 line-clamp-2 leading-relaxed">{result.description}</p>
+                        <p className="text-xs text-[var(--brand-text-primary)]/40 line-clamp-2 leading-relaxed">{result.description}</p>
                         {result.topics && result.topics.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-2">
                             {result.topics.slice(0, 3).map((topic: string) => (
-                              <span key={topic} className="px-1.5 py-0.5 rounded bg-white/5 text-[9px] uppercase tracking-wider text-white/30 font-bold">{topic}</span>
+                              <span key={topic} className="px-1.5 py-0.5 rounded bg-[rgba(255,255,255,0.05)] text-[9px] uppercase tracking-wider text-[var(--brand-text-primary)]/30 font-bold">{topic}</span>
                             ))}
                           </div>
                         )}
@@ -428,7 +428,7 @@ export function RSSFeedsPage() {
                       <button
                         onClick={() => handleSubscribe(result.feed_url)}
                         disabled={subscribing}
-                        className="px-4 py-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg text-xs font-bold hover:bg-blue-600 hover:text-white transition-all whitespace-nowrap"
+                        className="px-4 py-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg text-xs font-bold hover:bg-blue-600 hover:text-[var(--brand-text-primary)] transition-all whitespace-nowrap"
                       >
                         {subscribing ? '...' : 'Subscribe'}
                       </button>
@@ -438,7 +438,7 @@ export function RSSFeedsPage() {
               )}
 
               {searchQuery && !isSearching && searchResults.length === 0 && (
-                <p className="text-center text-sm py-4 text-white/20 italic">No feeds found for "{searchQuery}"</p>
+                <p className="text-center text-sm py-4 text-[var(--brand-text-primary)]/20 italic">No feeds found for "{searchQuery}"</p>
               )}
             </div>
 
@@ -479,7 +479,7 @@ export function RSSFeedsPage() {
                       <button
                         onClick={() => handleSubscribe(preset.feed_url)}
                         disabled={subscribing}
-                        className="ml-4 premium-glass border px-4 py-2 rounded-lg inline-flex items-center gap-2 hover:bg-white/5 transition-all disabled:opacity-50"
+                        className="ml-4 premium-glass border px-4 py-2 rounded-lg inline-flex items-center gap-2 hover:bg-[rgba(255,255,255,0.05)] transition-all disabled:opacity-50"
                         style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}
                       >
                         <Plus className="h-4 w-4" style={{ color: 'var(--premium-blue)' }} />

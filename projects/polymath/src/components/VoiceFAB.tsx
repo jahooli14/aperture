@@ -311,8 +311,8 @@ export function VoiceFAB({
                   pointerEvents: 'none',
                 }}
               >
-                <opt.icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-white' : 'text-white/75')} />
-                <span className={cn('text-sm font-bold tracking-tight', isActive ? 'text-white' : 'text-white/75')}>
+                <opt.icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-[var(--brand-text-primary)]' : 'text-[var(--brand-text-primary)]/75')} />
+                <span className={cn('text-sm font-bold tracking-tight', isActive ? 'text-[var(--brand-text-primary)]' : 'text-[var(--brand-text-primary)]/75')}>
                   {opt.label}
                 </span>
               </motion.div>
@@ -326,7 +326,7 @@ export function VoiceFAB({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ delay: 0.15 }}
-            className="fixed z-[24995] pointer-events-none text-center text-[9px] font-black uppercase tracking-[0.2em] text-white/40"
+            className="fixed z-[24995] pointer-events-none text-center text-[9px] font-black uppercase tracking-[0.2em] text-[var(--brand-text-primary)]/40"
             style={{ bottom: fabRect.bottom - 20, right: fabRect.right - 8, width: fabRect.size + 16 }}
           >
             {activeOption
@@ -384,12 +384,12 @@ export function VoiceFAB({
           animate={{ rotate: activeOption ? 45 : 0 }}
           transition={{ duration: 0.15 }}
         >
-          <Plus className={cn('h-6 w-6', activeOption ? 'text-white' : 'text-zinc-400')} />
+          <Plus className={cn('h-6 w-6', activeOption ? 'text-[var(--brand-text-primary)]' : 'text-zinc-400')} />
         </motion.div>
       ) : (
-        <Plus className="h-6 w-6 text-zinc-300 transition-transform group-hover:rotate-90 group-hover:text-white" />
+        <Plus className="h-6 w-6 text-zinc-300 transition-transform group-hover:rotate-90 group-hover:text-[var(--brand-text-primary)]" />
       )}
-      <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className="absolute inset-0 bg-[rgba(255,255,255,0.05)] opacity-0 group-hover:opacity-100 transition-opacity" />
     </motion.button>,
     document.body
   )
@@ -430,15 +430,15 @@ export function VoiceFAB({
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: '100%', opacity: 0 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                className="relative w-full md:w-[500px] bg-[#0A0A0B] border border-white/10 rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl z-10 overflow-hidden mb-0 md:mb-12"
+                className="relative w-full md:w-[500px] bg-[#0A0A0B] border border-[rgba(255,255,255,0.08)] rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl z-10 overflow-hidden mb-0 md:mb-12"
               >
                 <div style={{ paddingBottom: 'env(safe-area-inset-bottom, 20px)' }}>
                   <div className="flex justify-center pt-4 pb-2 md:hidden">
-                    <div className="w-12 h-1.5 rounded-full bg-white/10" />
+                    <div className="w-12 h-1.5 rounded-full bg-[rgba(255,255,255,0.1)]" />
                   </div>
                   <div className="flex items-center justify-between px-8 py-8">
                     <div>
-                      <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white flex items-center gap-2">
+                      <h3 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] flex items-center gap-2">
                         <Mic className="h-6 w-6 text-sky-400" />
                         Voice Capture
                       </h3>
@@ -448,7 +448,7 @@ export function VoiceFAB({
                     </div>
                     <button
                       onClick={() => setIsVoiceOpen(false)}
-                      className="h-12 w-12 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all border border-white/5"
+                      className="h-12 w-12 rounded-full bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] flex items-center justify-center transition-all border border-[rgba(255,255,255,0.05)]"
                     >
                       <X className="h-6 w-6 text-zinc-400" />
                     </button>
@@ -495,7 +495,7 @@ export function VoiceFAB({
                 style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 16px) + 2rem)' }}
               >
                 <div className="max-w-2xl mx-auto">
-                  <p className="text-xs font-medium text-white/30 uppercase tracking-widest mb-2 px-1">Quick task</p>
+                  <p className="text-xs font-medium text-[var(--brand-text-primary)]/30 uppercase tracking-widest mb-2 px-1">Quick task</p>
                   <TodoInput
                     autoFocus
                     onAdd={(parsed) => {

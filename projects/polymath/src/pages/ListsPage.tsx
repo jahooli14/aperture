@@ -243,7 +243,7 @@ export default function ListsPage() {
         <div className="min-h-screen pb-32 pt-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto aperture-shelf overflow-hidden">
             <div className="flex items-center justify-between mb-8">
                 <div>
-                    <h1 className="text-3xl font-black italic uppercase tracking-tighter text-white">
+                    <h1 className="text-3xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
                         your <span className="text-sky-400">collections</span>
                     </h1>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mt-1">Curate your existence.</p>
@@ -254,8 +254,8 @@ export default function ListsPage() {
                             onClick={() => setIsReordering(!isReordering)}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all ${
                                 isReordering
-                                    ? 'bg-sky-500 text-white rounded-sm'
-                                    : 'text-white hover:bg-white/5 rounded-sm'
+                                    ? 'bg-sky-500 text-[var(--brand-text-primary)] rounded-sm'
+                                    : 'text-[var(--brand-text-primary)] hover:bg-[rgba(255,255,255,0.05)] rounded-sm'
                             }`}
                             style={isReordering
                                 ? { border: '2px solid rgba(125,211,252,0.5)' }
@@ -270,7 +270,7 @@ export default function ListsPage() {
                     )}
                     <Button
                         onClick={() => setCreateOpen(true)}
-                        className="h-10 w-10 p-0 rounded-sm hover:bg-white/5 bg-transparent text-white"
+                        className="h-10 w-10 p-0 rounded-sm hover:bg-[rgba(255,255,255,0.05)] bg-transparent text-[var(--brand-text-primary)]"
                         style={{ border: '2px solid rgba(255,255,255,0.1)' }}
                     >
                         <Plus className="h-4 w-4" />
@@ -302,13 +302,13 @@ export default function ListsPage() {
                             style={{ boxShadow: 'inset 0 0 0 1px rgba(56,189,248,0.15)' }}>
                             <Box className="h-8 w-8 text-sky-400" />
                         </div>
-                        <h3 className="text-xl font-black uppercase tracking-tight text-white mb-2">Your trophy cabinet awaits</h3>
+                        <h3 className="text-xl font-black uppercase tracking-tight text-[var(--brand-text-primary)] mb-2">Your trophy cabinet awaits</h3>
                         <p className="text-sm text-zinc-400 mb-8 max-w-xs mx-auto leading-relaxed">
                             Every great collection starts with one item. What are you keeping track of?
                         </p>
                         <Button
                             onClick={() => setCreateOpen(true)}
-                            className="h-11 px-6 rounded-full border border-white/10 hover:bg-white/5 bg-transparent text-white font-bold uppercase tracking-widest text-xs"
+                            className="h-11 px-6 rounded-full border border-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.05)] bg-transparent text-[var(--brand-text-primary)] font-bold uppercase tracking-widest text-xs"
                         >
                             <Plus className="h-4 w-4 mr-2" />
                             Create First Collection
@@ -352,8 +352,8 @@ export default function ListsPage() {
                                         <div className="absolute inset-0 p-3 flex flex-col justify-end">
                                             <p className="text-[8px] font-black uppercase tracking-wider mb-0.5"
                                                 style={{ color: `rgb(${rgb})` }}>{example.type}</p>
-                                            <h4 className="text-xs font-black text-white uppercase tracking-tight leading-tight">{example.label}</h4>
-                                            <p className="text-[8px] text-white/30 mt-0.5">{example.desc}</p>
+                                            <h4 className="text-xs font-black text-[var(--brand-text-primary)] uppercase tracking-tight leading-tight">{example.label}</h4>
+                                            <p className="text-[8px] text-[var(--brand-text-primary)]/30 mt-0.5">{example.desc}</p>
                                         </div>
                                     </button>
                                 )
@@ -397,7 +397,7 @@ export default function ListsPage() {
                                     />
                                 ) : quoteCover ? (
                                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-zinc-950 via-zinc-900 to-black p-1">
-                                        <p className="text-white/60 text-[8px] font-light text-center line-clamp-4" style={{ fontFamily: 'Georgia, serif' }}>
+                                        <p className="text-[var(--brand-text-primary)]/60 text-[8px] font-light text-center line-clamp-4" style={{ fontFamily: 'Georgia, serif' }}>
                                             {quoteCover}
                                         </p>
                                     </div>
@@ -412,7 +412,7 @@ export default function ListsPage() {
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
                                     <ListIcon type={list.type} className="h-3 w-3 flex-shrink-0" style={{ color: `rgb(${rgb})` }} />
-                                    <h3 className="text-sm font-black text-white uppercase tracking-tight truncate">
+                                    <h3 className="text-sm font-black text-[var(--brand-text-primary)] uppercase tracking-tight truncate">
                                         {list.title}
                                     </h3>
                                     {recentlyUpdated && (
@@ -420,7 +420,7 @@ export default function ListsPage() {
                                             style={{ backgroundColor: `rgb(${rgb})` }} />
                                     )}
                                 </div>
-                                <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest">
+                                <p className="text-[9px] font-bold text-[var(--brand-text-primary)]/40 uppercase tracking-widest">
                                     {list.item_count || 0} ITEMS
                                 </p>
                             </div>
@@ -469,12 +469,12 @@ export default function ListsPage() {
                                         <div className={`absolute inset-0 bg-gradient-to-br ${ListGradient(list.type)} opacity-40`} />
 
                                         {/* Minimal decorative elements */}
-                                        <div className="absolute top-4 right-4 text-6xl font-serif text-white/[0.03] select-none leading-none">"</div>
-                                        <div className="absolute bottom-4 left-4 text-6xl font-serif text-white/[0.03] select-none leading-none">"</div>
+                                        <div className="absolute top-4 right-4 text-6xl font-serif text-[var(--brand-text-primary)]/[0.03] select-none leading-none">"</div>
+                                        <div className="absolute bottom-4 left-4 text-6xl font-serif text-[var(--brand-text-primary)]/[0.03] select-none leading-none">"</div>
 
                                         {/* The phrase - centered and beautiful */}
                                         <div className="relative z-10 flex flex-col items-center justify-center text-center">
-                                            <p className="text-white/90 font-light text-lg sm:text-xl leading-relaxed tracking-wide px-2"
+                                            <p className="text-[var(--brand-text-primary)]/90 font-light text-lg sm:text-xl leading-relaxed tracking-wide px-2"
                                                 style={{
                                                     fontFamily: 'Georgia, serif',
                                                     textShadow: `0 2px 20px rgba(${rgb}, 0.3)`,
@@ -506,11 +506,11 @@ export default function ListsPage() {
 
                                         {/* Main Icon */}
                                         <div className="relative z-10 flex flex-col items-center gap-4">
-                                            <div className="relative p-8 rounded-full bg-white/5 transition-all duration-300" style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1)' }}>
+                                            <div className="relative p-8 rounded-full bg-[rgba(255,255,255,0.05)] transition-all duration-300" style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1)' }}>
                                                 <ListIcon type={list.type} className="h-12 w-12" style={{ color: `rgb(${rgb})` }} />
                                             </div>
 
-                                            <div className="text-[9px] font-black uppercase tracking-[0.3em] text-white/30">
+                                            <div className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--brand-text-primary)]/30">
                                                 Empty
                                             </div>
                                         </div>
@@ -524,7 +524,7 @@ export default function ListsPage() {
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-1.5 px-2 py-1 rounded-sm bg-black/60" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
                                         <ListIcon type={list.type} className="h-3 w-3" style={{ color: `rgb(${rgb})` }} />
-                                        <span className="text-[8px] font-black uppercase tracking-wider text-white">
+                                        <span className="text-[8px] font-black uppercase tracking-wider text-[var(--brand-text-primary)]">
                                             {list.type}
                                         </span>
                                     </div>
@@ -535,7 +535,7 @@ export default function ListsPage() {
                                                 e.stopPropagation()
                                                 setQuickAddList(list)
                                             }}
-                                            className="h-6 w-6 flex items-center justify-center rounded-sm bg-black/60 text-white/50 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                                            className="h-6 w-6 flex items-center justify-center rounded-sm bg-black/60 text-[var(--brand-text-primary)]/50 hover:text-[var(--brand-text-primary)] transition-all opacity-0 group-hover:opacity-100"
                                             style={{ boxShadow: `inset 0 0 0 1px rgba(${rgb}, 0.25)` }}
                                             title="Quick add"
                                         >
@@ -554,14 +554,14 @@ export default function ListsPage() {
                                             <Trash2 className="h-3 w-3" />
                                         </button>
                                         <div className="opacity-0 group-hover:opacity-40 transition-opacity">
-                                            <GripVertical className="h-3 w-3 text-white" />
+                                            <GripVertical className="h-3 w-3 text-[var(--brand-text-primary)]" />
                                         </div>
                                     </div>
                                 </div>
 
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-1.5">
-                                        <h3 className="text-xs font-black text-white uppercase tracking-tight drop-shadow-md leading-tight group-hover:text-sky-400 transition-colors">
+                                        <h3 className="text-xs font-black text-[var(--brand-text-primary)] uppercase tracking-tight drop-shadow-md leading-tight group-hover:text-sky-400 transition-colors">
                                             {list.title}
                                         </h3>
                                         {/* Recently updated dot */}

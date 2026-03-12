@@ -16,13 +16,13 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           "appearance-none",
           // Dark glass appearance — bg-white/[0.05] works correctly with appearance-none
           "bg-white/[0.05]",
-          "text-white/90 placeholder:text-white/25",
+          "text-[var(--brand-text-primary)]/90 placeholder:text-[var(--brand-text-primary)]/25",
           // Focus — ring via box-shadow so it doesn't conflict with inset border
           "focus:outline-none focus:bg-white/[0.08]",
           // Smooth transitions
           "transition-all duration-200",
           // File inputs
-          "file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-white/70",
+          "file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-[var(--brand-text-primary)]/70",
           // Disabled
           "disabled:cursor-not-allowed disabled:opacity-40",
           className

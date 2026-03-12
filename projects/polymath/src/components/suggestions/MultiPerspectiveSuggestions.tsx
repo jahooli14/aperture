@@ -31,9 +31,9 @@ function SkeletonPerspective({ delay }: { delay: number }) {
       }}
     >
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-6 h-6 rounded bg-white/10 animate-pulse" />
-        <div className="h-3.5 w-32 rounded bg-white/10 animate-pulse" />
-        <div className="ml-auto h-3 w-10 rounded bg-white/5 animate-pulse" />
+        <div className="w-6 h-6 rounded bg-[rgba(255,255,255,0.1)] animate-pulse" />
+        <div className="h-3.5 w-32 rounded bg-[rgba(255,255,255,0.1)] animate-pulse" />
+        <div className="ml-auto h-3 w-10 rounded bg-[rgba(255,255,255,0.05)] animate-pulse" />
       </div>
       <div className="space-y-2">
         <div className="h-3 w-full rounded bg-white/8 animate-pulse" />
@@ -220,7 +220,7 @@ export function MultiPerspectiveSuggestions({
         <button
           onClick={handleRefresh}
           disabled={loading}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:bg-white/5"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:bg-[rgba(255,255,255,0.05)]"
           style={{ color: 'var(--premium-text-tertiary)', border: '1px solid rgba(255,255,255,0.06)' }}
           title="Regenerate all perspectives"
         >
@@ -272,7 +272,7 @@ export function MultiPerspectiveSuggestions({
         {!loading && result && hiddenCount > 0 && (
           <button
             onClick={() => setShowAll(!showAll)}
-            className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-white/5"
+            className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-[rgba(255,255,255,0.05)]"
             style={{ color: 'var(--premium-text-tertiary)', border: '1px solid rgba(255,255,255,0.05)' }}
           >
             {showAll ? (

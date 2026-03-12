@@ -49,7 +49,7 @@ export function ProjectActivityStream({ notes, onRefresh }: ProjectActivityStrea
           <h2 className="text-lg font-bold premium-text-platinum">Recent updates</h2>
           <button
             onClick={onRefresh}
-            className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-white/5 transition-colors"
+            className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-[rgba(255,255,255,0.05)] transition-colors"
             aria-label="Refresh"
             style={{ color: 'var(--premium-text-tertiary)' }}
           >
@@ -201,7 +201,7 @@ export function ProjectActivityStream({ notes, onRefresh }: ProjectActivityStrea
                                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                   <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <div className="p-1.5 rounded-full bg-black/40 backdrop-blur-sm">
-                                      <ImageIcon className="h-3 w-3 text-white" />
+                                      <ImageIcon className="h-3 w-3 text-[var(--brand-text-primary)]" />
                                     </div>
                                   </div>
                                 </motion.div>

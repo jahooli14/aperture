@@ -46,7 +46,8 @@ export function FocusSummary() {
                 </div>
 
                 {/* Task List - Minimal */}
-                <div className="aperture-card p-6 mb-6 max-h-[30vh] overflow-y-auto">
+                <div className="bg-[rgba(255,255,255,0.05)] rounded-2xl p-6 mb-6 border border-[rgba(255,255,255,0.05)] max-h-[30vh] overflow-y-auto">
+
                     <h3 className="text-xs font-bold uppercase tracking-widest text-[#64748b] mb-4">
                         Completed
                     </h3>
@@ -74,7 +75,7 @@ export function FocusSummary() {
                         value={nextStep}
                         onChange={e => setNextStep(e.target.value)}
                         placeholder="What's the very next thing you'll do when you pick this back up?"
-                        className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-[#cbd5e1] focus:outline-none focus:border-white/30 transition-colors min-h-[100px] resize-none"
+                        className="w-full bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.08)] rounded-xl p-4 text-sm text-[#cbd5e1] focus:outline-none focus:border-white/30 transition-colors min-h-[100px] resize-none"
                     />
                 </div>
 

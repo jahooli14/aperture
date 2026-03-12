@@ -92,7 +92,7 @@ export function PromptModal({
       <div className="flex items-center justify-between p-4" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
         <button
           onClick={handleSkip}
-          className="p-2 rounded-full transition-colors active:bg-white/10"
+          className="p-2 rounded-full transition-colors active:bg-[rgba(255,255,255,0.1)]"
           style={{ color: 'var(--premium-text-secondary)' }}
           disabled={submitting}
         >
@@ -127,7 +127,7 @@ export function PromptModal({
               {bullets.length > 3 && (
                 <button
                   onClick={() => handleRemoveBullet(index)}
-                  className="p-2 rounded-full transition-colors mt-2 active:bg-white/10"
+                  className="p-2 rounded-full transition-colors mt-2 active:bg-[rgba(255,255,255,0.1)]"
                   style={{ color: 'var(--premium-text-tertiary)' }}
                   disabled={submitting}
                 >

@@ -199,11 +199,11 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
               onDragOver={(e) => handleDragOver(e, task.id)}
               onDragEnd={handleDragEnd}
               className={cn(
-                "group relative flex items-center gap-3 p-3.5 rounded-sm transition-all cursor-move border border-white/5",
+                "group relative flex items-center gap-3 p-3.5 rounded-xl transition-all cursor-move border border-[rgba(255,255,255,0.05)]",
                 isHighlighted
                   ? "border-blue-500/40 bg-blue-500/10 shadow-[0_0_20px_rgba(59,130,246,0.1)]"
                   : isNextTask
-                    ? "bg-white/[0.05] border-white/10"
+                    ? "bg-white/[0.05] border-[rgba(255,255,255,0.08)]"
                     : "hover:bg-white/[0.02]"
               )}
               style={{
@@ -222,7 +222,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
               )}
 
               {/* Drag Handle */}
-              <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing text-white/20">
+              <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing text-[var(--brand-text-primary)]/20">
                 <GripVertical className="h-4 w-4" />
               </div>
 
@@ -234,7 +234,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                   isHighlighted ? "border-blue-500/50 bg-blue-500/5" : "border-white/20 bg-black/20"
                 )}
               >
-                {task.done && <Check className="h-3.5 w-3.5 text-white" />}
+                {task.done && <Check className="h-3.5 w-3.5 text-[var(--brand-text-primary)]" />}
               </button>
 
               {/* Task Text & Metadata */}
@@ -249,7 +249,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                       if (e.key === 'Enter') handleEditSave(task.id)
                       if (e.key === 'Escape') handleEditCancel()
                     }}
-                    className="w-full px-2 py-1 text-sm rounded bg-white/10 outline-none ring-1 ring-blue-500/50"
+                    className="w-full px-2 py-1 text-sm rounded bg-[rgba(255,255,255,0.1)] outline-none ring-1 ring-blue-500/50"
                     style={{ color: 'white' }}
                     autoFocus
                   />
@@ -258,7 +258,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                     <span
                       className={cn(
                         "text-sm font-medium cursor-text transition-all",
-                        isHighlighted ? "text-blue-500" : "text-white/90"
+                        isHighlighted ? "text-[var(--brand-primary)]" : "text-[var(--brand-text-primary)]/90"
                       )}
                       onClick={() => handleEditStart(task.id, task.text)}
                     >
@@ -274,8 +274,8 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                         className={cn(
                           "text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded transition-colors",
                           task.estimated_minutes
-                            ? "bg-white/10 text-white/70 hover:bg-white/20"
-                            : "bg-white/5 text-white/30 hover:bg-white/10"
+                            ? "bg-[rgba(255,255,255,0.1)] text-[var(--brand-text-primary)]/70 hover:bg-white/20"
+                            : "bg-[rgba(255,255,255,0.05)] text-[var(--brand-text-primary)]/30 hover:bg-[rgba(255,255,255,0.1)]"
                         )}
                       >
                         {task.estimated_minutes ? `${task.estimated_minutes}m` : '15m'}
@@ -288,7 +288,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                       )}
 
                       {isHighlighted && (
-                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-500/50">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-[var(--brand-primary)]/50">
                           Power Hour Priority
                         </span>
                       )}
@@ -300,7 +300,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
               {/* Delete Button */}
               <button
                 onClick={() => handleDeleteTask(task.id)}
-                className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/10 text-white/20 hover:text-red-500"
+                className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/10 text-[var(--brand-text-primary)]/20 hover:text-red-500"
                 aria-label="Delete task"
               >
                 <Trash2 className="h-4 w-4" />
@@ -314,7 +314,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
           <div className="mt-3">
             <button
               onClick={() => setShowCompleted(!showCompleted)}
-              className="w-full flex items-center gap-2 p-2 rounded-sm hover:bg-white/5 transition-colors text-sm"
+              className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-[rgba(255,255,255,0.05)] transition-colors text-sm"
               style={{ color: 'var(--premium-text-tertiary)' }}
             >
               {showCompleted ? (
@@ -346,7 +346,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                         border: '2px solid var(--premium-blue)'
                       }}
                     >
-                      <Check className="h-3 w-3 text-white" />
+                      <Check className="h-3 w-3 text-[var(--brand-text-primary)]" />
                     </button>
 
                     {/* Task Text */}
@@ -360,7 +360,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                           if (e.key === 'Enter') handleEditSave(task.id)
                           if (e.key === 'Escape') handleEditCancel()
                         }}
-                        className="flex-1 px-2 py-1 text-sm rounded focus:outline-none focus:ring-2 bg-white/10"
+                        className="flex-1 px-2 py-1 text-sm rounded focus:outline-none focus:ring-2 bg-[rgba(255,255,255,0.1)]"
                         style={{ color: 'var(--premium-text-primary)' }}
                         autoFocus
                       />
@@ -443,7 +443,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
       ) : (
         <button
           onClick={() => setIsAdding(true)}
-          className="mt-3 flex items-center gap-2 text-sm font-medium transition-colors w-full p-2 rounded-sm hover:bg-white/5"
+          className="mt-3 flex items-center gap-2 text-sm font-medium transition-colors w-full p-2 rounded-lg hover:bg-[rgba(255,255,255,0.05)]"
           style={{ color: 'var(--premium-blue)' }}
         >
           <Plus className="h-4 w-4" />

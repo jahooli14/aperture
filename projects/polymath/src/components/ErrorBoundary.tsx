@@ -139,7 +139,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
             <button
               onClick={this.handleReset}
-              className="premium-glass px-6 py-3 rounded-lg font-medium transition-all hover:bg-white/10"
+              className="premium-glass px-6 py-3 rounded-lg font-medium transition-all hover:bg-[rgba(255,255,255,0.1)]"
               style={{
                 color: 'var(--premium-blue)'
               }}

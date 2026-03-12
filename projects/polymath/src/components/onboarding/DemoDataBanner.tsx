@@ -71,10 +71,10 @@ export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-start gap-4">
             <div className="flex-shrink-0">
-              <Trash2 className="h-6 w-6 text-white" />
+              <Trash2 className="h-6 w-6 text-[var(--brand-text-primary)]" />
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-white mb-2">
+              <h3 className="text-lg font-semibold text-[var(--brand-text-primary)] mb-2">
                 Clear all demo data?
               </h3>
               <p className="text-sm text-amber-50 mb-4">
@@ -91,7 +91,7 @@ export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps
                 </button>
                 <button
                   onClick={() => setShowConfirm(false)}
-                  className="backdrop-blur-xl bg-white/30 border-2 shadow-md rounded-lg px-4 py-2 font-medium transition-all hover:shadow-lg text-white"
+                  className="backdrop-blur-xl bg-white/30 border-2 shadow-md rounded-lg px-4 py-2 font-medium transition-all hover:shadow-lg text-[var(--brand-text-primary)]"
                   style={{ borderColor: 'rgba(255, 255, 255, 0.3)' }}
                 >
                   Cancel
@@ -109,10 +109,10 @@ export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex items-start gap-4">
           <div className="flex-shrink-0">
-            <Lightbulb className="h-6 w-6 text-white" />
+            <Lightbulb className="h-6 w-6 text-[var(--brand-text-primary)]" />
           </div>
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-white mb-1">
+            <h3 className="text-lg font-semibold text-[var(--brand-text-primary)] mb-1">
               You're viewing demo data
             </h3>
             <p className="text-sm text-amber-50 mb-3">
@@ -130,7 +130,7 @@ export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps
               </button>
               <button
                 onClick={() => setShowConfirm(true)}
-                className="inline-flex items-center gap-2 backdrop-blur-xl bg-white/30 border-2 shadow-md rounded-lg px-4 py-2 font-medium transition-all hover:shadow-lg text-white"
+                className="inline-flex items-center gap-2 backdrop-blur-xl bg-white/30 border-2 shadow-md rounded-lg px-4 py-2 font-medium transition-all hover:shadow-lg text-[var(--brand-text-primary)]"
                 style={{ borderColor: 'rgba(255, 255, 255, 0.3)' }}
               >
                 <Trash2 className="h-4 w-4" />
@@ -140,7 +140,7 @@ export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps
           </div>
           <button
             onClick={onDismiss}
-            className="flex-shrink-0 p-1 text-white hover:text-amber-100 transition-colors"
+            className="flex-shrink-0 p-1 text-[var(--brand-text-primary)] hover:text-amber-100 transition-colors"
             aria-label="Dismiss banner"
           >
             <X className="h-5 w-5" />

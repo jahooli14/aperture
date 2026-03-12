@@ -793,7 +793,7 @@ export function ReadingPage() {
                 onFocus={() => setInlineUrlFocused(true)}
                 onBlur={() => setInlineUrlFocused(false)}
                 autoComplete="off"
-                className="flex-1 h-full border-0 text-sm focus:outline-none focus:ring-0 placeholder:text-white/20 appearance-none bg-transparent"
+                className="flex-1 h-full border-0 text-sm focus:outline-none focus:ring-0 placeholder:text-[var(--brand-text-primary)]/20 appearance-none bg-transparent"
                 style={{ color: 'rgba(255,255,255,0.85)' }}
               />
               {inlineUrl && (
@@ -1020,7 +1020,7 @@ export function ReadingPage() {
                         <button
                           onClick={handleRSSSync}
                           disabled={syncing}
-                          className="premium-glass rounded-full px-6 py-3 font-medium inline-flex items-center gap-2 transition-all hover:bg-white/10"
+                          className="premium-glass rounded-full px-6 py-3 font-medium inline-flex items-center gap-2 transition-all hover:bg-[rgba(255,255,255,0.1)]"
                           style={{
                             color: syncing ? 'var(--premium-text-tertiary)' : 'var(--premium-blue)',
                             opacity: syncing ? 0.5 : 1
@@ -1125,7 +1125,7 @@ export function ReadingPage() {
                                         pointerEvents: 'auto'
                                       }}
                                     >
-                                      {isSelected && <Check className="h-4 w-4 text-white" />}
+                                      {isSelected && <Check className="h-4 w-4 text-[var(--brand-text-primary)]" />}
                                     </div>
                                   )}
                                   <div style={{ pointerEvents: 'auto' }}>

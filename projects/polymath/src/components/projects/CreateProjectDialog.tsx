@@ -114,7 +114,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
       {!hideTrigger && (trigger || (
         <button
           onClick={() => setOpen(true)}
-          className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-white/5"
+          className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-[rgba(255,255,255,0.05)]"
           style={{
             borderColor: 'rgba(30, 42, 88, 0.2)',
             color: 'rgba(100, 180, 255, 1)'
@@ -147,7 +147,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 onFocus={handleInputFocus}
-                className="text-2xl h-16 font-bold bg-white/5 border-white/10 focus:border-zebra-accent focus:ring-0 transition-all placeholder:text-white/10"
+                className="text-2xl h-16 font-bold bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.08)] focus:border-zebra-accent focus:ring-0 transition-all placeholder:text-[var(--brand-text-primary)]/10"
                 autoComplete="off"
                 autoFocus
               />
@@ -164,15 +164,15 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 onFocus={handleInputFocus}
-                className="h-14 bg-white/5 border-white/10 focus:border-blue-400 placeholder:text-white/10"
+                className="h-14 bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.08)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/10"
                 autoComplete="off"
               />
-              <p className="text-[10px] text-gray-500 text-right">{formData.description.length}/10 chars min</p>
+              <p className="text-[10px] text-[var(--brand-text-muted)] text-right">{formData.description.length}/10 chars min</p>
             </div>
 
             {/* Classification */}
             <div className="space-y-2">
-              <Label className="font-bold text-xs uppercase tracking-widest text-gray-500">Classification</Label>
+              <Label className="font-bold text-xs uppercase tracking-widest text-[var(--brand-text-muted)]">Classification</Label>
               <div className="grid grid-cols-3 gap-2">
                 {['Writing', 'Tech', 'Art', 'Music', 'Business', 'Creative'].map((cat) => (
                   <button
@@ -181,7 +181,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                     onClick={() => setFormData({ ...formData, type: cat })}
                     className={`p-3 rounded-xl text-sm font-bold border transition-all text-center ${formData.type === cat
                       ? 'bg-white text-black border-white'
-                      : 'bg-black border-white/10 text-gray-400 hover:border-white/30'
+                      : 'bg-black border-[rgba(255,255,255,0.08)] text-[var(--brand-text-secondary)] hover:border-white/30'
                       }`}
                   >
                     {cat}
@@ -192,7 +192,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
 
             {/* Project Mode Toggle */}
             <div className="space-y-2">
-              <Label className="font-bold text-xs uppercase tracking-widest text-gray-500">
+              <Label className="font-bold text-xs uppercase tracking-widest text-[var(--brand-text-muted)]">
                 Project Type
               </Label>
               <div className="grid grid-cols-2 gap-2">
@@ -201,7 +201,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                   onClick={() => setFormData({ ...formData, project_mode: 'completion' })}
                   className={`p-3 rounded-xl text-xs font-bold border transition-all text-left ${formData.project_mode === 'completion'
                     ? 'bg-white text-black border-white'
-                    : 'bg-black border-white/10 text-gray-400 hover:border-white/30'
+                    : 'bg-black border-[rgba(255,255,255,0.08)] text-[var(--brand-text-secondary)] hover:border-white/30'
                     }`}
                 >
                   <div className="font-bold">Has End Goal</div>
@@ -212,7 +212,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                   onClick={() => setFormData({ ...formData, project_mode: 'recurring' })}
                   className={`p-3 rounded-xl text-xs font-bold border transition-all text-left ${formData.project_mode === 'recurring'
                     ? 'bg-white text-black border-white'
-                    : 'bg-black border-white/10 text-gray-400 hover:border-white/30'
+                    : 'bg-black border-[rgba(255,255,255,0.08)] text-[var(--brand-text-secondary)] hover:border-white/30'
                     }`}
                 >
                   <div className="font-bold">Ongoing Habit</div>
@@ -224,7 +224,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
             {/* Definition of Done - only for completion projects */}
             {formData.project_mode === 'completion' && (
               <div className="space-y-2">
-                <Label htmlFor="end_goal" className="font-bold text-xs uppercase tracking-widest text-gray-500">
+                <Label htmlFor="end_goal" className="font-bold text-xs uppercase tracking-widest text-[var(--brand-text-muted)]">
                   Definition of Done (Optional)
                 </Label>
                 <Input
@@ -233,7 +233,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                   value={formData.end_goal}
                   onChange={(e) => setFormData({ ...formData, end_goal: e.target.value })}
                   onFocus={handleInputFocus}
-                  className="h-14 bg-white/5 border-white/10 focus:border-blue-400 placeholder:text-white/10"
+                  className="h-14 bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.08)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/10"
                   autoComplete="off"
                 />
               </div>
@@ -241,7 +241,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
 
             {/* First Step */}
             <div className="space-y-2 pb-4">
-              <Label htmlFor="next_step" className="font-bold text-xs uppercase tracking-widest text-gray-500">
+              <Label htmlFor="next_step" className="font-bold text-xs uppercase tracking-widest text-[var(--brand-text-muted)]">
                 First Step (Optional)
               </Label>
               <Input
@@ -250,7 +250,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                 value={formData.next_step}
                 onChange={(e) => setFormData({ ...formData, next_step: e.target.value })}
                 onFocus={handleInputFocus}
-                className="h-14 bg-white/5 border-white/10 focus:border-zebra-accent placeholder:text-white/10"
+                className="h-14 bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.08)] focus:border-zebra-accent placeholder:text-[var(--brand-text-primary)]/10"
                 autoComplete="off"
               />
             </div>

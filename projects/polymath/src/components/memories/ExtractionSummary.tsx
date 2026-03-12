@@ -35,15 +35,15 @@ export function ExtractionSummary() {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 20, scale: 0.95 }}
           transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-          className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-3 rounded-2xl bg-[#1a1f35]/95 backdrop-blur-xl border border-white/10 shadow-2xl"
+          className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-3 rounded-2xl bg-[#1a1f35]/95 backdrop-blur-xl border border-[rgba(255,255,255,0.08)] shadow-2xl"
         >
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
               <Brain className="w-3.5 h-3.5 text-blue-400" />
               <span className="text-xs text-blue-300 font-medium">Understood</span>
             </div>
-            <div className="h-3 w-px bg-white/10" />
-            <div className="flex items-center gap-2.5 text-xs text-gray-400">
+            <div className="h-3 w-px bg-[rgba(255,255,255,0.1)]" />
+            <div className="flex items-center gap-2.5 text-xs text-[var(--brand-text-secondary)]">
               {extraction.topics > 0 && (
                 <span className="flex items-center gap-1">
                   <Hash className="w-3 h-3 text-emerald-400" />

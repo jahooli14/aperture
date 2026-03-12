@@ -256,7 +256,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
                 e.stopPropagation()
                 navigate(`/search?similar=${memory.id}`)
               }}
-              className="p-1.5 rounded-sm hover:bg-white/10 text-gray-500 hover:text-gray-300 transition-all"
+              className="p-1.5 rounded-sm hover:bg-[rgba(255,255,255,0.1)] text-[var(--brand-text-muted)] hover:text-[var(--brand-text-secondary)] transition-all"
               title="Find similar"
             >
               <Sparkles className="w-3.5 h-3.5" />
@@ -280,7 +280,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
               }}
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 touch-manipulation hover:bg-white/10 transition-colors"
+              className="h-8 w-8 p-0 touch-manipulation hover:bg-[rgba(255,255,255,0.1)] transition-colors"
               aria-label="More options"
             >
               <MoreVertical className="h-4 w-4" style={{ color: 'var(--premium-text-tertiary)' }} />
@@ -341,7 +341,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
                 />
                 {i === 1 && memory.image_urls!.length > 2 && (
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none">
-                    <span className="text-white font-bold text-xs">+{memory.image_urls!.length - 2}</span>
+                    <span className="text-[var(--brand-text-primary)] font-bold text-xs">+{memory.image_urls!.length - 2}</span>
                   </div>
                 )}
               </div>

@@ -142,7 +142,7 @@ export function InsightsPage() {
           </div>
           <button
             onClick={() => navigate('/search')}
-            className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
+            className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-[rgba(255,255,255,0.05)]"
             style={{
               color: 'var(--premium-blue)'
             }}
@@ -376,22 +376,22 @@ export function InsightsPage() {
       {/* Contradiction Resolution Dialog */}
       {showResolutionDialog && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60" onClick={() => setShowResolutionDialog(false)}>
-          <div className="w-full max-w-lg rounded-2xl bg-[#1a1f35] border border-white/10 p-5" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-white mb-3">Resolve the tension</h3>
+          <div className="w-full max-w-lg rounded-2xl bg-[#1a1f35] border border-[rgba(255,255,255,0.08)] p-5" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-[var(--brand-text-primary)] mb-3">Resolve the tension</h3>
             <div className="p-3 rounded-xl bg-purple-500/5 border border-purple-500/10 mb-4">
-              <p className="text-sm text-gray-300 whitespace-pre-line">{resolutionPrompt}</p>
+              <p className="text-sm text-[var(--brand-text-secondary)] whitespace-pre-line">{resolutionPrompt}</p>
             </div>
             <textarea
               value={resolutionText}
               onChange={e => setResolutionText(e.target.value)}
               placeholder="The deeper truth is..."
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/30 min-h-[100px] resize-none"
+              className="w-full bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.08)] rounded-xl px-4 py-3 text-sm text-[var(--brand-text-primary)] placeholder-gray-500 focus:outline-none focus:border-purple-500/30 min-h-[100px] resize-none"
               autoFocus
             />
             <div className="flex justify-end gap-2 mt-3">
               <button
                 onClick={() => setShowResolutionDialog(false)}
-                className="px-4 py-2 text-sm text-gray-400 hover:text-gray-200"
+                className="px-4 py-2 text-sm text-[var(--brand-text-secondary)] hover:text-gray-200"
               >
                 Cancel
               </button>

@@ -47,7 +47,7 @@ export function CollisionReport() {
         {' '}collided with {top.target_type} <span className="text-purple-300 font-medium">"{top.target_title}"</span>
       </p>
       {top.ai_reasoning && (
-        <p className="text-xs text-gray-400 mt-1.5">{top.ai_reasoning}</p>
+        <p className="text-xs text-[var(--brand-text-secondary)] mt-1.5">{top.ai_reasoning}</p>
       )}
       <div className="flex items-center gap-1 mt-2 text-purple-400 text-xs">
         <span>Explore</span>

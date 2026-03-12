@@ -85,7 +85,7 @@ export function CreateListDialog({ open, onOpenChange }: Props) {
                             value={title}
                             onChange={e => setTitle(e.target.value)}
                             placeholder="e.g. Scifi Movies 2024"
-                            className="text-lg h-14 bg-white/5 border-white/10 focus:border-blue-400 placeholder:text-white/10"
+                            className="text-lg h-14 bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.08)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/10"
                             style={{ color: 'var(--premium-text-primary)' }}
                             autoFocus
                             autoComplete="off"
@@ -93,7 +93,7 @@ export function CreateListDialog({ open, onOpenChange }: Props) {
                     </div>
 
                     <div className="space-y-2">
-                        <Label className="font-bold text-xs uppercase tracking-widest text-gray-500">Type</Label>
+                        <Label className="font-bold text-xs uppercase tracking-widest text-[var(--brand-text-muted)]">Type</Label>
                         <div className="grid grid-cols-3 gap-2">
                             {TYPES.map(t => {
                                 const Icon = t.icon
@@ -105,7 +105,7 @@ export function CreateListDialog({ open, onOpenChange }: Props) {
                                         onClick={() => setType(t.id)}
                                         className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${isSelected
                                             ? 'bg-white text-black border-white'
-                                            : 'bg-black border-white/10 text-gray-400 hover:border-white/30'
+                                            : 'bg-black border-[rgba(255,255,255,0.08)] text-[var(--brand-text-secondary)] hover:border-white/30'
                                             }`}
                                     >
                                         <Icon className="h-5 w-5 mb-1" />

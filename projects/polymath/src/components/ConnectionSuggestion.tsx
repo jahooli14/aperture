@@ -129,7 +129,7 @@ export function ConnectionSuggestion({
             </div>
             <button
               onClick={handleDismiss}
-              className="p-1 hover:bg-white/10 rounded-lg transition-colors"
+              className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded-lg transition-colors"
             >
               <X className="h-4 w-4" style={{ color: 'var(--premium-text-secondary)' }} />
             </button>
@@ -147,7 +147,7 @@ export function ConnectionSuggestion({
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className="premium-glass-subtle rounded-lg p-4 group hover:bg-white/10 transition-all"
+                  className="premium-glass-subtle rounded-lg p-4 group hover:bg-[rgba(255,255,255,0.1)] transition-all"
                 >
                   <div className="flex items-start gap-3">
                     <div className="p-2 rounded-lg flex-shrink-0" style={{
@@ -195,7 +195,7 @@ export function ConnectionSuggestion({
                         ) : (
                           <button
                             onClick={() => handleLink(suggestion)}
-                            className="text-xs font-medium px-3 py-1.5 rounded-lg transition-all hover:bg-white/10"
+                            className="text-xs font-medium px-3 py-1.5 rounded-lg transition-all hover:bg-[rgba(255,255,255,0.1)]"
                             style={{
                               color: 'var(--premium-blue)'
                             }}
@@ -206,7 +206,7 @@ export function ConnectionSuggestion({
 
                         <a
                           href={getPath(suggestion.targetType, suggestion.targetId)}
-                          className="text-xs font-medium px-3 py-1.5 rounded-lg transition-all hover:bg-white/10 inline-flex items-center gap-1"
+                          className="text-xs font-medium px-3 py-1.5 rounded-lg transition-all hover:bg-[rgba(255,255,255,0.1)] inline-flex items-center gap-1"
                           style={{
                             color: 'var(--premium-text-secondary)'
                           }}

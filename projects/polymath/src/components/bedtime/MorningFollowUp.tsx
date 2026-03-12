@@ -72,14 +72,14 @@ export function MorningFollowUp({ onDismiss, onCapture }: MorningFollowUpProps) 
               <Sun className="w-5 h-5 text-amber-400" />
               <span className="text-sm font-medium text-amber-300">Morning follow-up</span>
             </div>
-            <button onClick={onDismiss} className="text-gray-500 hover:text-gray-300">
+            <button onClick={onDismiss} className="text-[var(--brand-text-muted)] hover:text-[var(--brand-text-secondary)]">
               <X className="w-4 h-4" />
             </button>
           </div>
-          <p className="text-sm text-gray-300 mb-3">
+          <p className="text-sm text-[var(--brand-text-secondary)] mb-3">
             Last night you explored: <span className="text-amber-200/80 italic">"{lastPrompt.prompt?.substring(0, 100)}..."</span>
           </p>
-          <p className="text-xs text-gray-400 mb-3">Did anything surface overnight?</p>
+          <p className="text-xs text-[var(--brand-text-secondary)] mb-3">Did anything surface overnight?</p>
           <div className="flex gap-2">
             <input
               type="text"
@@ -87,7 +87,7 @@ export function MorningFollowUp({ onDismiss, onCapture }: MorningFollowUpProps) 
               onChange={e => setResponse(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSubmit()}
               placeholder="A thought, connection, or nothing at all..."
-              className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/30"
+              className="flex-1 bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.08)] rounded-xl px-3 py-2 text-sm text-[var(--brand-text-primary)] placeholder-gray-500 focus:outline-none focus:border-amber-500/30"
               autoFocus
             />
             <button

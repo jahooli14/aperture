@@ -127,7 +127,7 @@ export function FocusSession() {
 
                 <button
                     onClick={endSession}
-                    className="p-2 hover:bg-white/10 rounded-full transition-colors opacity-50 hover:opacity-100"
+                    className="p-2 hover:bg-[rgba(255,255,255,0.1)] rounded-full transition-colors opacity-50 hover:opacity-100"
                 >
                     <X className="h-5 w-5" />
                 </button>
@@ -155,7 +155,7 @@ export function FocusSession() {
                                     value={parkInput}
                                     onChange={e => setParkInput(e.target.value)}
                                     placeholder="Get it out of your head..."
-                                    className="w-full bg-transparent border-b-2 border-white/20 text-xl py-2 outline-none focus:border-white/50 transition-colors placeholder:text-white/20"
+                                    className="w-full bg-transparent border-b-2 border-white/20 text-xl py-2 outline-none focus:border-white/50 transition-colors placeholder:text-[var(--brand-text-primary)]/20"
                                     onBlur={() => {
                                         // Optional: close on blur if empty? 
                                         // kept manual close for now to avoid losing thought accidentally
@@ -165,13 +165,13 @@ export function FocusSession() {
                                     <button
                                         type="button"
                                         onClick={() => setIsParking(false)}
-                                        className="text-sm text-[#64748b] hover:text-white transition-colors"
+                                        className="text-sm text-[#64748b] hover:text-[var(--brand-text-primary)] transition-colors"
                                     >
                                         Cancel
                                     </button>
                                     <button
                                         type="submit"
-                                        className="text-sm font-bold text-white bg-white/10 px-4 py-2 rounded-lg hover:bg-white/20 transition-colors"
+                                        className="text-sm font-bold text-[var(--brand-text-primary)] bg-[rgba(255,255,255,0.1)] px-4 py-2 rounded-lg hover:bg-white/20 transition-colors"
                                     >
                                         Park It
                                     </button>
@@ -190,7 +190,7 @@ export function FocusSession() {
                             animate={{ opacity: 1, y: 0 }}
                             className="text-center"
                         >
-                            <h2 className="text-4xl font-serif text-white mb-4">Session Complete</h2>
+                            <h2 className="text-4xl font-serif text-[var(--brand-text-primary)] mb-4">Session Complete</h2>
                             <p className="text-[#94a3b8] mb-8">You've cleared the list.</p>
                             <button
                                 onClick={endSession}
@@ -226,10 +226,10 @@ export function FocusSession() {
                                 {/* Complete Button (Big) */}
                                 <button
                                     onClick={handleComplete}
-                                    className="group relative flex items-center justify-center w-24 h-24 rounded-full border border-white/10 hover:border-white/30 hover:bg-white/5 transition-all"
+                                    className="group relative flex items-center justify-center w-24 h-24 rounded-full border border-[rgba(255,255,255,0.08)] hover:border-white/30 hover:bg-[rgba(255,255,255,0.05)] transition-all"
                                 >
-                                    <div className="absolute inset-0 rounded-full border border-white/5 scale-110 group-hover:scale-125 transition-transform duration-500 opacity-50" />
-                                    <Check className="h-8 w-8 text-[#cbd5e1] group-hover:text-white transition-colors" />
+                                    <div className="absolute inset-0 rounded-full border border-[rgba(255,255,255,0.05)] scale-110 group-hover:scale-125 transition-transform duration-500 opacity-50" />
+                                    <Check className="h-8 w-8 text-[#cbd5e1] group-hover:text-[var(--brand-text-primary)] transition-colors" />
                                     <span className="sr-only">Complete Task</span>
                                 </button>
 
@@ -262,7 +262,7 @@ export function FocusSession() {
                 {/* Park Thought Trigger */}
                 <button
                     onClick={() => setIsParking(true)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/5 text-[#64748b] hover:text-[#e2e8f0] hover:bg-white/5 transition-colors text-xs font-bold uppercase tracking-widest"
+                    className="flex items-center gap-2 px-4 py-2 rounded-full border border-[rgba(255,255,255,0.05)] text-[#64748b] hover:text-[#e2e8f0] hover:bg-[rgba(255,255,255,0.05)] transition-colors text-xs font-bold uppercase tracking-widest"
                 >
                     <PenTool className="h-3 w-3" />
                     Park Thought

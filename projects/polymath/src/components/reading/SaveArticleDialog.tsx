@@ -137,7 +137,7 @@ export function SaveArticleDialog({ open, onClose, hideTrigger = false }: SaveAr
                 required
                 autoFocus
                 autoComplete="off"
-                className="flex-1 h-14 border-0 text-[15px] focus:outline-none focus:ring-0 placeholder:text-white/20 appearance-none"
+                className="flex-1 h-14 border-0 text-[15px] focus:outline-none focus:ring-0 placeholder:text-[var(--brand-text-primary)]/20 appearance-none"
                 style={{ color: 'var(--premium-text-primary)', backgroundColor: 'transparent' }}
               />
             </div>

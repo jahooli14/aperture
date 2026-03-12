@@ -56,29 +56,29 @@ export function ProjectPickerDialog({
                     initial={{ scale: 0.95, opacity: 0, y: 10 }}
                     animate={{ scale: 1, opacity: 1, y: 0 }}
                     exit={{ scale: 0.95, opacity: 0, y: 10 }}
-                    className="relative w-full max-w-md bg-[#1a1f2e] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
+                    className="relative w-full max-w-md bg-[#1a1f2e] border border-[rgba(255,255,255,0.08)] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
                 >
                     {/* Header */}
-                    <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
-                        <h2 className="text-lg font-semibold text-white">{title}</h2>
+                    <div className="p-4 border-b border-[rgba(255,255,255,0.08)] flex items-center justify-between bg-[rgba(255,255,255,0.05)]">
+                        <h2 className="text-lg font-semibold text-[var(--brand-text-primary)]">{title}</h2>
                         <button
                             onClick={() => onOpenChange(false)}
-                            className="p-2 hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-white"
+                            className="p-2 hover:bg-[rgba(255,255,255,0.1)] rounded-lg transition-colors text-[var(--brand-text-secondary)] hover:text-[var(--brand-text-primary)]"
                         >
                             <X className="h-5 w-5" />
                         </button>
                     </div>
 
                     {/* Search */}
-                    <div className="p-4 border-b border-white/5">
+                    <div className="p-4 border-b border-[rgba(255,255,255,0.05)]">
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--brand-text-secondary)]" />
                             <input
                                 type="text"
                                 placeholder="Search projects..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full bg-black/20 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all"
+                                className="w-full bg-black/20 border border-[rgba(255,255,255,0.08)] rounded-xl py-2.5 pl-10 pr-4 text-[var(--brand-text-primary)] placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all"
                                 autoFocus
                             />
                         </div>
@@ -87,7 +87,7 @@ export function ProjectPickerDialog({
                     {/* List */}
                     <div className="flex-1 overflow-y-auto p-2 space-y-1">
                         {sortedProjects.length === 0 ? (
-                            <div className="py-8 text-center text-gray-500">
+                            <div className="py-8 text-center text-[var(--brand-text-muted)]">
                                 <p>No active projects found.</p>
                             </div>
                         ) : (
@@ -95,26 +95,26 @@ export function ProjectPickerDialog({
                                 <button
                                     key={project.id}
                                     onClick={() => onSelect(project)}
-                                    className="w-full text-left p-3 rounded-xl hover:bg-white/5 transition-colors flex items-center gap-3 group"
+                                    className="w-full text-left p-3 rounded-xl hover:bg-[rgba(255,255,255,0.05)] transition-colors flex items-center gap-3 group"
                                 >
                                     <div className={`p-2 rounded-lg ${project.status === 'active' ? 'bg-blue-500/20 text-blue-400' :
                                             project.status === 'upcoming' ? 'bg-purple-500/20 text-purple-400' :
-                                                'bg-gray-500/20 text-gray-400'
+                                                'bg-gray-500/20 text-[var(--brand-text-secondary)]'
                                         }`}>
                                         <Layers className="h-4 w-4" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="text-sm font-medium text-gray-200 group-hover:text-white truncate">
+                                        <h3 className="text-sm font-medium text-gray-200 group-hover:text-[var(--brand-text-primary)] truncate">
                                             {project.title}
                                         </h3>
                                         <div className="flex items-center gap-2 mt-0.5">
                                             <span className={`text-[10px] uppercase tracking-wider font-medium px-1.5 py-0.5 rounded ${project.status === 'active' ? 'bg-blue-500/10 text-blue-400' :
                                                     project.status === 'upcoming' ? 'bg-purple-500/10 text-purple-400' :
-                                                        'bg-gray-500/10 text-gray-400'
+                                                        'bg-gray-500/10 text-[var(--brand-text-secondary)]'
                                                 }`}>
                                                 {project.status}
                                             </span>
-                                            <span className="text-xs text-gray-500 flex items-center gap-1">
+                                            <span className="text-xs text-[var(--brand-text-muted)] flex items-center gap-1">
                                                 <Clock className="h-3 w-3" />
                                                 {new Date(project.updated_at || project.created_at).toLocaleDateString()}
                                             </span>

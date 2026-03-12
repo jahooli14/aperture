@@ -201,35 +201,35 @@ export function ContextSidebar() {
                         animate={{ x: 0 }}
                         exit={{ x: '100%' }}
                         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                        className="fixed right-0 top-0 bottom-0 z-50 w-80 shadow-2xl border-l border-white/10 flex flex-col"
+                        className="fixed right-0 top-0 bottom-0 z-50 w-80 shadow-2xl border-l border-[rgba(255,255,255,0.08)] flex flex-col"
                         style={{
                             backgroundColor: 'rgba(15, 23, 42, 0.95)',
                             backdropFilter: 'blur(20px)'
                         }}
                     >
                         {/* Header */}
-                        <div className="p-4 border-b border-white/10 flex items-center justify-between">
+                        <div className="p-4 border-b border-[rgba(255,255,255,0.08)] flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <Lightbulb className="h-5 w-5 text-purple-400" />
-                                <h2 className="font-bold text-white">Context Engine</h2>
+                                <h2 className="font-bold text-[var(--brand-text-primary)]">Context Engine</h2>
                             </div>
                             <button
                                 onClick={() => toggleSidebar(false)}
-                                className="p-2 hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-white"
+                                className="p-2 hover:bg-[rgba(255,255,255,0.1)] rounded-lg transition-colors text-[var(--brand-text-secondary)] hover:text-[var(--brand-text-primary)]"
                             >
                                 <X className="h-5 w-5" />
                             </button>
                         </div>
 
                         {/* Active Context Indicator */}
-                        <div className="px-4 py-3 bg-white/5 border-b border-white/5">
+                        <div className="px-4 py-3 bg-[rgba(255,255,255,0.05)] border-b border-[rgba(255,255,255,0.05)]">
                             <p className="text-xs font-medium text-purple-300 mb-1 uppercase tracking-wider">
                                 Current Focus
                             </p>
-                            <p className="text-sm text-white font-medium truncate">
+                            <p className="text-sm text-[var(--brand-text-primary)] font-medium truncate">
                                 {activeContext.title || 'Exploring...'}
                             </p>
-                            <p className="text-xs text-gray-400 capitalize">
+                            <p className="text-xs text-[var(--brand-text-secondary)] capitalize">
                                 {activeContext.type}
                             </p>
                         </div>
@@ -249,22 +249,22 @@ export function ContextSidebar() {
                                         <button
                                             onClick={fetchAnalysis}
                                             disabled={analysisLoading}
-                                            className="p-1 hover:bg-white/10 rounded transition-colors"
+                                            className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded transition-colors"
                                             title="Refresh analysis"
                                         >
-                                            <RefreshCw className={`h-3 w-3 text-gray-400 ${analysisLoading ? 'animate-spin' : ''}`} />
+                                            <RefreshCw className={`h-3 w-3 text-[var(--brand-text-secondary)] ${analysisLoading ? 'animate-spin' : ''}`} />
                                         </button>
                                     </div>
 
                                     {analysisLoading ? (
-                                        <div className="flex items-center gap-2 text-gray-400 text-sm">
+                                        <div className="flex items-center gap-2 text-[var(--brand-text-secondary)] text-sm">
                                             <Loader2 className="h-4 w-4 animate-spin" />
                                             <span>Analyzing...</span>
                                         </div>
                                     ) : analysisData ? (
                                         <div className="space-y-3">
                                             {/* Summary */}
-                                            <p className="text-sm text-gray-300 leading-relaxed">
+                                            <p className="text-sm text-[var(--brand-text-secondary)] leading-relaxed">
                                                 {analysisData.analysis.summary}
                                             </p>
 
@@ -274,7 +274,7 @@ export function ContextSidebar() {
                                                     {analysisData.analysis.patterns.map((pattern, i) => (
                                                         <div key={i} className="flex items-start gap-2">
                                                             <TrendingUp className="h-3 w-3 text-blue-400 mt-1 flex-shrink-0" />
-                                                            <span className="text-xs text-gray-400">{pattern}</span>
+                                                            <span className="text-xs text-[var(--brand-text-secondary)]">{pattern}</span>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -282,7 +282,7 @@ export function ContextSidebar() {
 
                                             {/* Insight */}
                                             {analysisData.analysis.insight && (
-                                                <div className="flex items-start gap-2 pt-2 border-t border-white/5">
+                                                <div className="flex items-start gap-2 pt-2 border-t border-[rgba(255,255,255,0.05)]">
                                                     <Lightbulb className="h-3 w-3 text-amber-400 mt-1 flex-shrink-0" />
                                                     <span className="text-xs text-amber-200/80">{analysisData.analysis.insight}</span>
                                                 </div>
@@ -298,12 +298,12 @@ export function ContextSidebar() {
                                             )}
 
                                             {/* Connection count */}
-                                            <p className="text-xs text-gray-500 pt-1">
+                                            <p className="text-xs text-[var(--brand-text-muted)] pt-1">
                                                 {analysisData.connectionCount} connection{analysisData.connectionCount !== 1 ? 's' : ''}
                                             </p>
                                         </div>
                                     ) : (
-                                        <p className="text-xs text-gray-500">
+                                        <p className="text-xs text-[var(--brand-text-muted)]">
                                             No analysis available yet
                                         </p>
                                     )}
@@ -313,75 +313,75 @@ export function ContextSidebar() {
                             {/* Quick Actions */}
                             {activeContext.type !== 'page' && activeContext.type !== 'home' && (
                                 <div className="space-y-3">
-                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                                    <p className="text-xs font-semibold text-[var(--brand-text-secondary)] uppercase tracking-wider">
                                         Quick Actions
                                     </p>
                                     <div className="grid grid-cols-2 gap-2">
                                         <button
                                             onClick={() => executeAction('summarize')}
                                             disabled={!!actionLoading}
-                                            className="flex items-center gap-2 p-2.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-left"
+                                            className="flex items-center gap-2 p-2.5 rounded-lg bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] transition-colors text-left"
                                         >
                                             {actionLoading === 'summarize' ? (
                                                 <Loader2 className="h-4 w-4 animate-spin text-blue-400" />
                                             ) : (
                                                 <FileText className="h-4 w-4 text-blue-400" />
                                             )}
-                                            <span className="text-xs text-gray-300">Summarize</span>
+                                            <span className="text-xs text-[var(--brand-text-secondary)]">Summarize</span>
                                         </button>
                                         <button
                                             onClick={() => executeAction('find-gaps')}
                                             disabled={!!actionLoading}
-                                            className="flex items-center gap-2 p-2.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-left"
+                                            className="flex items-center gap-2 p-2.5 rounded-lg bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] transition-colors text-left"
                                         >
                                             {actionLoading === 'find-gaps' ? (
                                                 <Loader2 className="h-4 w-4 animate-spin text-amber-400" />
                                             ) : (
                                                 <HelpCircle className="h-4 w-4 text-amber-400" />
                                             )}
-                                            <span className="text-xs text-gray-300">Find Gaps</span>
+                                            <span className="text-xs text-[var(--brand-text-secondary)]">Find Gaps</span>
                                         </button>
                                         <button
                                             onClick={() => executeAction('suggest-next')}
                                             disabled={!!actionLoading}
-                                            className="flex items-center gap-2 p-2.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-left"
+                                            className="flex items-center gap-2 p-2.5 rounded-lg bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] transition-colors text-left"
                                         >
                                             {actionLoading === 'suggest-next' ? (
                                                 <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
                                             ) : (
                                                 <Compass className="h-4 w-4 text-emerald-400" />
                                             )}
-                                            <span className="text-xs text-gray-300">Suggest Next</span>
+                                            <span className="text-xs text-[var(--brand-text-secondary)]">Suggest Next</span>
                                         </button>
                                         <button
                                             onClick={() => executeAction('connect-dots')}
                                             disabled={!!actionLoading}
-                                            className="flex items-center gap-2 p-2.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-left"
+                                            className="flex items-center gap-2 p-2.5 rounded-lg bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] transition-colors text-left"
                                         >
                                             {actionLoading === 'connect-dots' ? (
                                                 <Loader2 className="h-4 w-4 animate-spin text-purple-400" />
                                             ) : (
                                                 <GitBranch className="h-4 w-4 text-purple-400" />
                                             )}
-                                            <span className="text-xs text-gray-300">Connect Dots</span>
+                                            <span className="text-xs text-[var(--brand-text-secondary)]">Connect Dots</span>
                                         </button>
                                     </div>
 
                                     {/* Action Result */}
                                     {actionResult && (
-                                        <div className="rounded-lg p-3 bg-white/5 border border-white/10">
+                                        <div className="rounded-lg p-3 bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.08)]">
                                             <div className="flex items-center justify-between mb-2">
-                                                <span className="text-xs font-medium text-gray-400 capitalize">
+                                                <span className="text-xs font-medium text-[var(--brand-text-secondary)] capitalize">
                                                     {actionResult.type.replace('-', ' ')}
                                                 </span>
                                                 <button
                                                     onClick={() => setActionResult(null)}
-                                                    className="p-1 hover:bg-white/10 rounded transition-colors"
+                                                    className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded transition-colors"
                                                 >
-                                                    <X className="h-3 w-3 text-gray-500" />
+                                                    <X className="h-3 w-3 text-[var(--brand-text-muted)]" />
                                                 </button>
                                             </div>
-                                            <div className="text-sm text-gray-300 leading-relaxed space-y-2">
+                                            <div className="text-sm text-[var(--brand-text-secondary)] leading-relaxed space-y-2">
                                                 {actionResult.result.split('\n').map((line, i) => {
                                                     const trimmed = line.trim()
                                                     if (!trimmed) return null
@@ -404,7 +404,7 @@ export function ContextSidebar() {
                                                             <p key={i}>
                                                                 {parts.map((part, j) =>
                                                                     j % 2 === 1
-                                                                        ? <strong key={j} className="text-white font-medium">{part}</strong>
+                                                                        ? <strong key={j} className="text-[var(--brand-text-primary)] font-medium">{part}</strong>
                                                                         : part
                                                                 )}
                                                             </p>
@@ -421,12 +421,12 @@ export function ContextSidebar() {
 
                             {/* Related Items Section */}
                             {loading ? (
-                                <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                                <div className="flex flex-col items-center justify-center py-12 text-[var(--brand-text-secondary)]">
                                     <Loader2 className="h-8 w-8 animate-spin mb-3 text-purple-500" />
                                     <p className="text-sm">Analyzing context...</p>
                                 </div>
                             ) : relatedItems.length === 0 ? (
-                                <div className="text-center py-12 text-gray-500">
+                                <div className="text-center py-12 text-[var(--brand-text-muted)]">
                                     <p>No direct connections found.</p>
                                     <p className="text-xs mt-2">Try exploring other areas to build connections.</p>
                                 </div>
@@ -439,7 +439,7 @@ export function ContextSidebar() {
                                             layout
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            className="group relative bg-white/5 hover:bg-white/10 rounded-xl p-3 cursor-pointer transition-all border border-transparent hover:border-purple-500/30"
+                                            className="group relative bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] rounded-xl p-3 cursor-pointer transition-all border border-transparent hover:border-purple-500/30"
                                             onClick={() => handleItemClick(item)}
                                         >
                                             <div className="flex items-start gap-3">
@@ -450,11 +450,11 @@ export function ContextSidebar() {
                                                     <Icon className="h-4 w-4" />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <h3 className="text-sm font-medium text-gray-200 leading-tight mb-1 group-hover:text-white transition-colors">
+                                                    <h3 className="text-sm font-medium text-gray-200 leading-tight mb-1 group-hover:text-[var(--brand-text-primary)] transition-colors">
                                                         {item.title}
                                                     </h3>
                                                     {item.matchReason && (
-                                                        <p className="text-xs text-gray-500 line-clamp-2">
+                                                        <p className="text-xs text-[var(--brand-text-muted)] line-clamp-2">
                                                             {item.matchReason}
                                                         </p>
                                                     )}
@@ -465,7 +465,7 @@ export function ContextSidebar() {
                                             <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                                                 <button
                                                     onClick={(e) => handleLinkItem(e, item)}
-                                                    className="p-1.5 bg-purple-500/20 hover:bg-purple-500 text-purple-300 hover:text-white rounded-lg transition-colors"
+                                                    className="p-1.5 bg-purple-500/20 hover:bg-purple-500 text-purple-300 hover:text-[var(--brand-text-primary)] rounded-lg transition-colors"
                                                     title="Link to current context"
                                                 >
                                                     <LinkIcon className="h-3 w-3" />

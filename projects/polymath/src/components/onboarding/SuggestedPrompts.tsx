@@ -72,7 +72,7 @@ export function SuggestedPrompts() {
               </button>
               <button
                 onClick={() => handleAdd(prompt)}
-                className="flex-1 px-4 py-1.5 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
+                className="flex-1 px-4 py-1.5 text-sm font-medium text-[var(--brand-text-primary)] bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
               >
                 Add →
               </button>

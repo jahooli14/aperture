@@ -81,7 +81,7 @@ export function NextActionCard({ project }: NextActionCardProps) {
       <CardContent className="p-5">
         <div className="flex items-start gap-3">
           <div className="h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))' }}>
-            <Target className="h-5 w-5 text-white" />
+            <Target className="h-5 w-5 text-[var(--brand-text-primary)]" />
           </div>
 
           <div className="flex-1 min-w-0">

@@ -125,10 +125,10 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
       <div className="space-y-8">
         {[1, 2].map((i) => (
           <div key={i} className="animate-pulse">
-            <div className="h-6 w-24 bg-white/10 rounded mb-4" />
+            <div className="h-6 w-24 bg-[rgba(255,255,255,0.1)] rounded mb-4" />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {[1, 2, 3].map((j) => (
-                <div key={j} className="h-24 bg-white/10 rounded-lg" />
+                <div key={j} className="h-24 bg-[rgba(255,255,255,0.1)] rounded-lg" />
               ))}
             </div>
           </div>

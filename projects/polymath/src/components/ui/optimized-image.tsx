@@ -113,7 +113,7 @@ export function OptimizedImage({
                 d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
               />
             </svg>
-            <p className="mt-2 text-sm text-neutral-500">Failed to load image</p>
+            <p className="mt-2 text-sm text-[var(--brand-text-muted)]">Failed to load image</p>
           </div>
         </div>
       )}
@@ -175,7 +175,7 @@ export function Avatar({ src, alt, size = 'md', className, fallback }: AvatarPro
       <div
         className={cn(
           'rounded-full flex items-center justify-center font-semibold',
-          'bg-gradient-to-br from-blue-400 to-indigo-600 text-white',
+          'bg-gradient-to-br from-blue-400 to-indigo-600 text-[var(--brand-text-primary)]',
           sizeClasses[size],
           className
         )}

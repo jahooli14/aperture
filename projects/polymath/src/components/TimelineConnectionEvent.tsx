@@ -96,7 +96,7 @@ export function TimelineConnectionEvent({
 
       {/* Connection card */}
       <div
-        className="premium-glass rounded-2xl p-4 cursor-pointer hover:bg-white/5 transition-all"
+        className="premium-glass rounded-2xl p-4 cursor-pointer hover:bg-[rgba(255,255,255,0.05)] transition-all"
         onClick={handleSplitView}
         style={{
           border: '1px solid rgba(6, 182, 212, 0.2)'

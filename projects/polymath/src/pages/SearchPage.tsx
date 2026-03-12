@@ -311,7 +311,7 @@ export function SearchPage() {
 
       {/* Fixed Header Bar */}
       <div
-        className="fixed top-0 left-0 right-0 z-40 border-b-2 border-white/10"
+        className="fixed top-0 left-0 right-0 z-40 border-b-2 border-[rgba(255,255,255,0.08)]"
         style={{
           backgroundColor: '#0a0f1a'
         }}
@@ -417,7 +417,7 @@ export function SearchPage() {
               <button
                 onClick={() => { setSearchMode('text'); if (query.trim().length >= 2) performSearch(query.trim()) }}
                 className={`px-4 py-2 rounded-sm text-sm font-medium transition-all active:scale-95 ${
-                  searchMode === 'text' ? 'bg-white/10 text-white' : 'text-gray-500'
+                  searchMode === 'text' ? 'bg-[rgba(255,255,255,0.1)] text-[var(--brand-text-primary)]' : 'text-[var(--brand-text-muted)]'
                 }`}
               >
                 Exact
@@ -425,7 +425,7 @@ export function SearchPage() {
               <button
                 onClick={() => { setSearchMode('semantic'); if (query.trim().length >= 2) performSearch(query.trim()) }}
                 className={`px-4 py-2 rounded-sm text-sm font-medium transition-all active:scale-95 ${
-                  searchMode === 'semantic' ? 'bg-blue-500/20 text-blue-400' : 'text-gray-500'
+                  searchMode === 'semantic' ? 'bg-blue-500/20 text-blue-400' : 'text-[var(--brand-text-muted)]'
                 }`}
               >
                 Semantic

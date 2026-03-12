@@ -93,7 +93,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-3">
-        <h4 className="font-bold leading-tight aperture-header text-white" style={{ fontSize: prominent ? '1.125rem' : '0.875rem' }}>
+        <h4 className="font-bold leading-tight aperture-header text-[var(--brand-text-primary)]" style={{ fontSize: prominent ? '1.125rem' : '0.875rem' }}>
           {project.title}
         </h4>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -116,7 +116,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
       {nextTask ? (
         <div className="mb-4">
           <div
-            className="rounded-lg p-3 flex items-start gap-3 transition-all group-hover:bg-white/5"
+            className="rounded-lg p-3 flex items-start gap-3 transition-all group-hover:bg-[rgba(255,255,255,0.05)]"
             style={{
               background: `rgba(${theme.rgb}, 0.1)`,
               boxShadow: `inset 0 0 0 1px rgba(${theme.rgb}, 0.2)`
@@ -129,7 +129,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
               <p className="text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70 aperture-header" style={{ color: theme.text }}>
                 Immediate Next Step
               </p>
-              <p className="text-sm font-medium leading-snug text-gray-100 line-clamp-3 aperture-body">
+              <p className="text-sm font-medium leading-snug text-[var(--brand-text-primary)] line-clamp-3 aperture-body">
                 {nextTask.text}
               </p>
             </div>
@@ -149,7 +149,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
         <div className="flex items-center gap-2">
           {totalTasks > 0 ? (
             <div className="flex flex-col gap-1 w-full">
-              <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+              <div className="w-full h-1 bg-[rgba(255,255,255,0.05)] rounded-full overflow-hidden">
                 <div
                   className="h-full transition-all duration-500"
                   style={{
@@ -171,7 +171,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
         </div>
 
         {prominent && (
-          <div className="p-1.5 rounded-full bg-white/5 transition-colors" style={{ color: `rgba(${theme.rgb}, 0.8)` }}>
+          <div className="p-1.5 rounded-full bg-[rgba(255,255,255,0.05)] transition-colors" style={{ color: `rgba(${theme.rgb}, 0.8)` }}>
             <ArrowRight className="h-4 w-4" />
           </div>
         )}

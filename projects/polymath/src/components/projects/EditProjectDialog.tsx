@@ -105,14 +105,14 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
                             value={formData.title}
                             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                             onFocus={handleInputFocus}
-                            className="text-2xl h-16 font-bold bg-white/5 border-white/10 focus:border-blue-400 focus:ring-0 transition-all"
+                            className="text-2xl h-16 font-bold bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.08)] focus:border-blue-400 focus:ring-0 transition-all"
                             autoComplete="off"
                         />
                     </div>
 
                     {/* Classification */}
                     <div className="space-y-2">
-                        <Label className="font-bold text-xs uppercase tracking-widest text-gray-500">Classification</Label>
+                        <Label className="font-bold text-xs uppercase tracking-widest text-[var(--brand-text-muted)]">Classification</Label>
                         <div className="grid grid-cols-2 gap-3">
                             {['Creative', 'Tech', 'Learning', 'Business'].map((cat) => (
                                 <button
@@ -121,7 +121,7 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
                                     onClick={() => setFormData({ ...formData, type: cat })}
                                     className={`p-4 rounded-xl text-sm font-bold border transition-all text-left flex items-center justify-between group ${formData.type === cat
                                         ? 'bg-white text-black border-white'
-                                        : 'bg-black border-white/10 text-gray-400 hover:border-white/30'
+                                        : 'bg-black border-[rgba(255,255,255,0.08)] text-[var(--brand-text-secondary)] hover:border-white/30'
                                         }`}
                                 >
                                     <span>{cat}</span>
@@ -141,15 +141,15 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                             onFocus={handleInputFocus}
-                            className="h-14 bg-white/5 border-white/10 focus:border-blue-400"
+                            className="h-14 bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.08)] focus:border-blue-400"
                             autoComplete="off"
                         />
-                        <p className="text-[10px] text-gray-500 text-right">{formData.description.length}/10 chars min</p>
+                        <p className="text-[10px] text-[var(--brand-text-muted)] text-right">{formData.description.length}/10 chars min</p>
                     </div>
 
                     {/* Definition of Done */}
                     <div className="space-y-2 pb-4">
-                        <Label htmlFor="end_goal" className="font-bold text-xs uppercase tracking-widest text-gray-500">
+                        <Label htmlFor="end_goal" className="font-bold text-xs uppercase tracking-widest text-[var(--brand-text-muted)]">
                             Definition of Done (Optional)
                         </Label>
                         <Input
@@ -158,10 +158,10 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
                             value={formData.end_goal}
                             onChange={(e) => setFormData({ ...formData, end_goal: e.target.value })}
                             onFocus={handleInputFocus}
-                            className="h-14 bg-white/5 border-white/10 focus:border-blue-400 placeholder:text-white/20"
+                            className="h-14 bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.08)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/20"
                             autoComplete="off"
                         />
-                        <p className="text-[10px] text-gray-500">Helps AI suggest tasks that drive toward completion</p>
+                        <p className="text-[10px] text-[var(--brand-text-muted)]">Helps AI suggest tasks that drive toward completion</p>
                     </div>
 
                     <BottomSheetFooter>

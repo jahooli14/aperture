@@ -104,13 +104,13 @@ export function EditArticleDialog({ article, open, onOpenChange }: EditArticleDi
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               onFocus={handleInputFocus}
               required
-              className="text-xl h-14 font-bold bg-white/5 border-white/10 focus:border-blue-400 focus:ring-0"
+              className="text-xl h-14 font-bold bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.08)] focus:border-blue-400 focus:ring-0"
               autoComplete="off"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="excerpt" className="font-bold text-xs uppercase tracking-widest text-gray-500">Excerpt</Label>
+            <Label htmlFor="excerpt" className="font-bold text-xs uppercase tracking-widest text-[var(--brand-text-muted)]">Excerpt</Label>
             <Textarea
               id="excerpt"
               placeholder="Brief summary or key points..."
@@ -118,26 +118,26 @@ export function EditArticleDialog({ article, open, onOpenChange }: EditArticleDi
               onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
               onFocus={handleInputFocus}
               rows={3}
-              className="bg-white/5 border-white/10 focus:border-blue-400 placeholder:text-white/20"
+              className="bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.08)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/20"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="tags" className="font-bold text-xs uppercase tracking-widest text-gray-500">Tags</Label>
+            <Label htmlFor="tags" className="font-bold text-xs uppercase tracking-widest text-[var(--brand-text-muted)]">Tags</Label>
             <Input
               id="tags"
               placeholder="technology, ai, programming"
               value={formData.tags}
               onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
               onFocus={handleInputFocus}
-              className="h-14 bg-white/5 border-white/10 focus:border-blue-400 placeholder:text-white/20"
+              className="h-14 bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.08)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/20"
               autoComplete="off"
             />
-            <p className="text-[10px] text-gray-500">Comma-separated tags</p>
+            <p className="text-[10px] text-[var(--brand-text-muted)]">Comma-separated tags</p>
           </div>
 
           <div className="space-y-2 pb-4">
-            <Label htmlFor="notes" className="font-bold text-xs uppercase tracking-widest text-gray-500">Personal Notes</Label>
+            <Label htmlFor="notes" className="font-bold text-xs uppercase tracking-widest text-[var(--brand-text-muted)]">Personal Notes</Label>
             <Textarea
               id="notes"
               placeholder="Your thoughts, highlights, and reflections..."
@@ -145,9 +145,9 @@ export function EditArticleDialog({ article, open, onOpenChange }: EditArticleDi
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               onFocus={handleInputFocus}
               rows={4}
-              className="bg-white/5 border-white/10 focus:border-blue-400 placeholder:text-white/20"
+              className="bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.08)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/20"
             />
-            <p className="text-[10px] text-gray-500">Add your personal insights and highlights</p>
+            <p className="text-[10px] text-[var(--brand-text-muted)]">Add your personal insights and highlights</p>
           </div>
 
           <BottomSheetFooter>
