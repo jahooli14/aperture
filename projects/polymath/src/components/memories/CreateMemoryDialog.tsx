@@ -556,7 +556,14 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
               <Button
                 type="submit"
                 disabled={loading || !body.trim() || uploading}
-                className="w-full h-12 bg-white text-black hover:bg-zinc-100 font-bold tracking-wide text-[15px] touch-manipulation"
+                className="w-full h-12 font-bold tracking-wide text-[15px] touch-manipulation"
+                style={{
+                  background: 'rgba(59,130,246,0.15)',
+                  border: '2px solid rgba(59,130,246,0.5)',
+                  borderRadius: '4px',
+                  boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
+                  color: 'var(--premium-blue)',
+                }}
               >
                 {uploading ? (
                   <>

@@ -65,7 +65,7 @@ export function ArticleConnectionsDialog({
               {/* Close Button */}
               <button
                 onClick={onClose}
-                className="absolute top-4 right-4 p-2 rounded-lg hover:bg-white/10 transition-colors"
+                className="absolute top-4 right-4 p-2 rounded-sm hover:bg-white/10 transition-colors"
                 aria-label="Close"
               >
                 <X className="h-5 w-5" style={{ color: 'var(--premium-text-secondary)' }} />
@@ -108,7 +108,7 @@ export function ArticleConnectionsDialog({
                     </button>
                     <button
                       onClick={onClose}
-                      className="px-6 py-3 rounded-lg font-medium border transition-all hover:bg-white/5"
+                      className="px-6 py-3 rounded-sm font-medium border transition-all hover:bg-white/5"
                       style={{ borderColor: 'rgba(255, 255, 255, 0.2)', color: 'var(--premium-text-secondary)' }}
                     >
                       Skip
@@ -146,7 +146,7 @@ export function ArticleConnectionsDialog({
                   <div className="mt-6 pt-6 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
                     <button
                       onClick={onClose}
-                      className="w-full px-6 py-3 rounded-lg font-medium border transition-all hover:bg-white/5"
+                      className="w-full px-6 py-3 rounded-sm font-medium border transition-all hover:bg-white/5"
                       style={{ borderColor: 'rgba(255, 255, 255, 0.2)', color: 'var(--premium-text-secondary)' }}
                     >
                       Done

@@ -46,22 +46,34 @@ export function BottomSheet({ open, onClose, children, title }: BottomSheetProps
 
       {/* Sheet */}
       <div
-        className={`fixed bottom-0 left-0 right-0 bg-white rounded-t-xl shadow-xl z-50 max-h-[85vh] flex flex-col transition-transform duration-300 ${
+        className={`fixed bottom-0 left-0 right-0 z-50 max-h-[85vh] flex flex-col transition-transform duration-300 ${
           open ? 'translate-y-0' : 'translate-y-full'
         }`}
+        style={{
+          background: 'rgba(15, 24, 41, 0.98)',
+          borderTop: '2px solid rgba(255,255,255,0.15)',
+          borderLeft: '2px solid rgba(255,255,255,0.1)',
+          borderRight: '2px solid rgba(255,255,255,0.1)',
+          borderRadius: '4px 4px 0 0',
+          boxShadow: '0 -4px 0 rgba(0,0,0,0.6)',
+        }}
       >
         {/* Handle */}
         <div className="flex justify-center pt-3 pb-2">
-          <div className="w-10 h-1 bg-gray-300 rounded-full" />
+          <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.2)' }} />
         </div>
 
         {/* Header */}
         {title && (
-          <div className="flex items-center justify-between px-4 py-3 border-b">
-            <h2 className="text-lg font-semibold">{title}</h2>
+          <div
+            className="flex items-center justify-between px-4 py-3 border-b"
+            style={{ borderColor: 'rgba(255,255,255,0.08)' }}
+          >
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--premium-text-primary)' }}>{title}</h2>
             <button
               onClick={onClose}
-              className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-1 rounded-sm transition-colors hover:bg-white/10"
+              style={{ color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}
             >
               <X className="h-5 w-5" />
             </button>

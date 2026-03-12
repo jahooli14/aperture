@@ -34,7 +34,8 @@ export function CollisionReport() {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-4 rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/10 to-pink-500/5 cursor-pointer hover:border-purple-500/30 transition-all"
+      className="aperture-card p-4 cursor-pointer transition-all"
+      style={{ borderColor: 'rgba(139,92,246,0.3)' }}
       onClick={() => navigate('/insights')}
     >
       <div className="flex items-center gap-2 mb-2">

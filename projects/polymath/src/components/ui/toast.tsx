@@ -96,19 +96,25 @@ function ToastItem({ toast, isRemoving, onClose }: { toast: Toast; isRemoving: b
         return {
           backgroundColor: 'rgba(239, 68, 68, 0.1)',
           color: '#ef4444',
-          border: '1px solid rgba(239, 68, 68, 0.2)'
+          border: '1.5px solid rgba(239, 68, 68, 0.35)',
+          borderRadius: '4px',
+          boxShadow: '3px 3px 0 rgba(0,0,0,0.6)',
         }
       case "success":
         return {
           backgroundColor: 'rgba(16, 185, 129, 0.1)',
           color: 'var(--premium-text-primary)',
-          border: '1px solid rgba(16, 185, 129, 0.2)'
+          border: '1.5px solid rgba(16, 185, 129, 0.35)',
+          borderRadius: '4px',
+          boxShadow: '3px 3px 0 rgba(0,0,0,0.6)',
         }
       default:
         return {
-          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          backgroundColor: 'rgba(20, 27, 38, 0.95)',
           color: 'var(--premium-text-primary)',
-          border: '1px solid rgba(255, 255, 255, 0.15)'
+          border: '1.5px solid rgba(255, 255, 255, 0.15)',
+          borderRadius: '4px',
+          boxShadow: '3px 3px 0 rgba(0,0,0,0.6)',
         }
     }
   }
@@ -116,7 +122,7 @@ function ToastItem({ toast, isRemoving, onClose }: { toast: Toast; isRemoving: b
   return (
     <div
       className={cn(
-        "group pointer-events-auto relative flex items-center justify-between space-x-4 rounded-2xl p-6 pr-8 mb-2 min-w-[280px] max-w-[420px]",
+        "group pointer-events-auto relative flex items-center justify-between space-x-4 p-6 pr-8 mb-2 min-w-[280px] max-w-[420px]",
         "backdrop-blur-xl shadow-2xl transition-all duration-500 ease-out",
         isVisible && !isRemoving ? "opacity-100 scale-100" : "opacity-0 scale-95"
       )}

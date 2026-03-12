@@ -46,7 +46,7 @@ export function FocusSummary() {
                 </div>
 
                 {/* Task List - Minimal */}
-                <div className="bg-white/5 rounded-2xl p-6 mb-6 border border-white/5 max-h-[30vh] overflow-y-auto">
+                <div className="aperture-card p-6 mb-6 max-h-[30vh] overflow-y-auto">
                     <h3 className="text-xs font-bold uppercase tracking-widest text-[#64748b] mb-4">
                         Completed
                     </h3>
@@ -81,7 +81,14 @@ export function FocusSummary() {
                 <div className="flex flex-col gap-3">
                     <button
                         onClick={handleExit}
-                        className="w-full py-4 bg-white text-black font-bold rounded-xl hover:bg-[#f1f5f9] transition-colors flex items-center justify-center gap-2"
+                        className="w-full py-4 font-bold transition-colors flex items-center justify-center gap-2"
+                        style={{
+                          background: 'rgba(255,255,255,0.1)',
+                          border: '2px solid rgba(255,255,255,0.25)',
+                          borderRadius: '4px',
+                          boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
+                          color: 'white',
+                        }}
                     >
                         <span>Return to Day</span>
                         <ArrowRight className="h-4 w-4" />
