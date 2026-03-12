@@ -242,11 +242,8 @@ export function ArticleCompletionDialog({
                       {relatedProjects.map((project) => (
                         <div
                           key={project.id}
-<<<<<<< HEAD
-                          className="flex items-center justify-between gap-2 p-3 rounded-sm border hover:bg-white/5 transition-all"
-=======
                           className="flex items-center justify-between gap-2 p-3 rounded-lg border hover:bg-[rgba(255,255,255,0.05)] transition-all"
->>>>>>> c9f13343 (style: standardize design language and unify UI variables across polymath app)
+
                           style={{ borderColor: 'rgba(59, 130, 246, 0.2)', backgroundColor: 'rgba(59, 130, 246, 0.05)' }}
                         >
                           <div className="flex-1 min-w-0">
@@ -262,11 +259,8 @@ export function ArticleCompletionDialog({
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => handleLinkToProject(project.id)}
-<<<<<<< HEAD
-                              className="text-xs px-3 py-1.5 rounded-sm font-medium transition-all hover:bg-white/10"
-=======
                               className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all hover:bg-[rgba(255,255,255,0.1)]"
->>>>>>> c9f13343 (style: standardize design language and unify UI variables across polymath app)
+
                               style={{
                                 color: 'var(--premium-blue)'
                               }}
@@ -275,11 +269,8 @@ export function ArticleCompletionDialog({
                             </button>
                             <button
                               onClick={() => navigate(`/projects/${project.id}`)}
-<<<<<<< HEAD
-                              className="p-1.5 rounded-sm transition-all hover:bg-white/10"
-=======
                               className="p-1.5 rounded-lg transition-all hover:bg-[rgba(255,255,255,0.1)]"
->>>>>>> c9f13343 (style: standardize design language and unify UI variables across polymath app)
+
                               style={{
                                 color: 'var(--premium-text-secondary)'
                               }}
@@ -306,11 +297,8 @@ export function ArticleCompletionDialog({
                       {relatedThoughts.map((thought) => (
                         <div
                           key={thought.id}
-<<<<<<< HEAD
-                          className="flex items-center justify-between gap-2 p-3 rounded-sm border hover:bg-white/5 transition-all"
-=======
                           className="flex items-center justify-between gap-2 p-3 rounded-lg border hover:bg-[rgba(255,255,255,0.05)] transition-all"
->>>>>>> c9f13343 (style: standardize design language and unify UI variables across polymath app)
+
                           style={{ borderColor: 'rgba(99, 102, 241, 0.2)', backgroundColor: 'rgba(99, 102, 241, 0.05)' }}
                         >
                           <div className="flex-1 min-w-0">
@@ -326,11 +314,8 @@ export function ArticleCompletionDialog({
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => handleLinkToThought(thought.id)}
-<<<<<<< HEAD
-                              className="text-xs px-3 py-1.5 rounded-sm font-medium transition-all hover:bg-white/10"
-=======
                               className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all hover:bg-[rgba(255,255,255,0.1)]"
->>>>>>> c9f13343 (style: standardize design language and unify UI variables across polymath app)
+
                               style={{
                                 color: 'var(--premium-blue)'
                               }}
@@ -357,11 +342,8 @@ export function ArticleCompletionDialog({
               <button
                 onClick={handleSkip}
                 disabled={loading}
-<<<<<<< HEAD
-                className="px-6 py-3 rounded-sm font-medium transition-all hover:bg-white/5"
-=======
                 className="px-6 py-3 rounded-xl font-medium transition-all hover:bg-[rgba(255,255,255,0.05)]"
->>>>>>> c9f13343 (style: standardize design language and unify UI variables across polymath app)
+
                 style={{
                   color: 'var(--premium-text-secondary)'
                 }}
@@ -399,11 +381,8 @@ export function ArticleCompletionDialog({
               <button
                 onClick={handleSkip}
                 disabled={loading}
-<<<<<<< HEAD
-                className="px-6 py-3 rounded-sm font-medium transition-all hover:bg-white/5"
-=======
                 className="px-6 py-3 rounded-xl font-medium transition-all hover:bg-[rgba(255,255,255,0.05)]"
->>>>>>> c9f13343 (style: standardize design language and unify UI variables across polymath app)
+
                 style={{
                   color: 'var(--premium-text-secondary)'
                 }}
