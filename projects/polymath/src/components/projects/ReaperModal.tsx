@@ -69,7 +69,7 @@ export function ReaperModal({ isOpen, onClose }: ReaperModalProps) {
     try {
       await api.post(`projects?resource=reaper&action=bury&id=${rottingProject.id}`, {})
       addToast({
-        title: `💀 Buried "${rottingProject.title}"`,
+        title: `Buried "${rottingProject.title}"`,
         description: 'It now rests in the Graveyard.',
         variant: 'success',
       })
@@ -93,7 +93,7 @@ export function ReaperModal({ isOpen, onClose }: ReaperModalProps) {
     try {
       await api.post(`projects?resource=reaper&action=resurrect&id=${rottingProject.id}`, {})
       addToast({
-        title: `🌱 Resurrected "${rottingProject.title}"`,
+        title: `Resurrected "${rottingProject.title}"`,
         description: 'Welcome back to the living!',
         variant: 'success',
       })

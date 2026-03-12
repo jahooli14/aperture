@@ -259,7 +259,14 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
               <Button
                 type="submit"
                 disabled={loading || !isFormValid}
-                className="w-full h-14 bg-white text-black hover:bg-zebra-accent font-black uppercase tracking-widest touch-manipulation"
+                className="w-full h-14 font-black uppercase tracking-widest touch-manipulation"
+                style={{
+                  background: 'rgba(59,130,246,0.15)',
+                  border: '2px solid rgba(59,130,246,0.5)',
+                  borderRadius: '4px',
+                  boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
+                  color: 'var(--premium-blue)',
+                }}
               >
                 {loading ? 'Launching...' : 'Create Project'}
               </Button>

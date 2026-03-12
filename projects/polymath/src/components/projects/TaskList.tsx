@@ -169,12 +169,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
   const totalCount = tasks.length
 
   return (
-    <div className="rounded-xl" style={{
-      background: 'var(--premium-bg-2)',
-      backdropFilter: 'blur(12px)',
-      boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
-      padding: '1.25rem'
-    }}>
+    <div className="aperture-card" style={{ padding: '1.25rem' }}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
@@ -204,7 +199,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
               onDragOver={(e) => handleDragOver(e, task.id)}
               onDragEnd={handleDragEnd}
               className={cn(
-                "group relative flex items-center gap-3 p-3.5 rounded-xl transition-all cursor-move border border-white/5",
+                "group relative flex items-center gap-3 p-3.5 rounded-sm transition-all cursor-move border border-white/5",
                 isHighlighted
                   ? "border-blue-500/40 bg-blue-500/10 shadow-[0_0_20px_rgba(59,130,246,0.1)]"
                   : isNextTask
@@ -235,7 +230,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
               <button
                 onClick={() => handleToggleTask(task.id)}
                 className={cn(
-                  "flex-shrink-0 h-6 w-6 rounded-lg flex items-center justify-center transition-all border-2",
+                  "flex-shrink-0 h-6 w-6 rounded-sm flex items-center justify-center transition-all border-2",
                   isHighlighted ? "border-blue-500/50 bg-blue-500/5" : "border-white/20 bg-black/20"
                 )}
               >
@@ -319,7 +314,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
           <div className="mt-3">
             <button
               onClick={() => setShowCompleted(!showCompleted)}
-              className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-white/5 transition-colors text-sm"
+              className="w-full flex items-center gap-2 p-2 rounded-sm hover:bg-white/5 transition-colors text-sm"
               style={{ color: 'var(--premium-text-tertiary)' }}
             >
               {showCompleted ? (
@@ -337,7 +332,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                 {completedTasks.map((task) => (
                   <div
                     key={task.id}
-                    className="group flex items-center gap-2 p-2.5 rounded-lg transition-all"
+                    className="group flex items-center gap-2 p-2.5 rounded-sm transition-all"
                     style={{
                       backgroundColor: 'rgba(255, 255, 255, 0.02)'
                     }}
@@ -413,7 +408,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
             }}
             placeholder="Task description..."
             autoFocus
-            className="flex-1 px-3 py-2 text-sm rounded-lg focus:outline-none focus:ring-2 premium-glass"
+            className="flex-1 px-3 py-2 text-sm rounded-sm focus:outline-none focus:ring-2 premium-glass"
             style={{
               color: 'var(--premium-text-primary)'
             }}
@@ -421,10 +416,13 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
           <button
             onClick={handleAddTask}
             disabled={!newTaskText.trim()}
-            className="px-4 py-2 text-sm font-medium rounded-lg transition-all disabled:opacity-50"
+            className="px-4 py-2 text-sm font-medium transition-all disabled:opacity-50"
             style={{
-              background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
-              color: 'white'
+              background: 'rgba(59,130,246,0.15)',
+              border: '1.5px solid rgba(59,130,246,0.4)',
+              borderRadius: '4px',
+              boxShadow: '2px 2px 0 rgba(0,0,0,0.4)',
+              color: 'var(--premium-blue)',
             }}
           >
             Add
@@ -434,7 +432,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
               setIsAdding(false)
               setNewTaskText('')
             }}
-            className="px-4 py-2 text-sm font-medium rounded-lg transition-all"
+            className="px-4 py-2 text-sm font-medium transition-all rounded-sm"
             style={{
               color: 'var(--premium-text-primary)'
             }}
@@ -445,7 +443,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
       ) : (
         <button
           onClick={() => setIsAdding(true)}
-          className="mt-3 flex items-center gap-2 text-sm font-medium transition-colors w-full p-2 rounded-lg hover:bg-white/5"
+          className="mt-3 flex items-center gap-2 text-sm font-medium transition-colors w-full p-2 rounded-sm hover:bg-white/5"
           style={{ color: 'var(--premium-blue)' }}
         >
           <Plus className="h-4 w-4" />
