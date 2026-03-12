@@ -167,7 +167,7 @@ export function TodoItem({
         ? 'rgba(251,146,60,0.08)'
         : priorityCfg
           ? priorityCfg.cardTint
-          : '#111113'
+          : 'rgba(255,255,255,0.04)'
 
   // Thick left border for status/priority — neobrutalist accent
   const borderLeft = todo.done || completing
@@ -176,7 +176,7 @@ export function TodoItem({
       ? '4px solid rgba(251,146,60,0.95)'
       : priorityCfg
         ? priorityCfg.border
-        : '1.5px solid rgba(255,255,255,0.1)'
+        : '4px solid rgba(255,255,255,0.28)'
 
   const boxShadow = todo.done || completing
     ? 'none'
@@ -184,7 +184,7 @@ export function TodoItem({
       ? '3px 3px 0 rgba(251,146,60,0.2)'
       : priorityCfg
         ? priorityCfg.shadow
-        : '3px 3px 0 rgba(0,0,0,0.8)'
+        : '3px 3px 0 rgba(255,255,255,0.06)'
 
   return (
     <motion.div
@@ -216,7 +216,7 @@ export function TodoItem({
           )}
           style={{
             background: itemBackground,
-            border: '1.5px solid rgba(255,255,255,0.1)',
+            border: '1.5px solid rgba(255,255,255,0.15)',
             borderLeft,
             boxShadow,
           }}
@@ -239,7 +239,7 @@ export function TodoItem({
                       ? '2px solid rgba(251,146,60,0.75)'
                       : priorityCfg
                         ? `2px solid ${priorityCfg.dot}`
-                        : '2px solid rgba(255,255,255,0.22)',
+                        : '2px solid rgba(255,255,255,0.40)',
                 background: (todo.done || completing) ? 'rgb(16,185,129)' : 'transparent',
               }}
             >

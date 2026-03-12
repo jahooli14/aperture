@@ -12,10 +12,10 @@ interface ProjectPropertiesProps {
 }
 
 export function ProjectProperties({ project, onUpdate }: ProjectPropertiesProps) {
-  const energyConfig: Record<string, { label: string; emoji: string; color: string }> = {
-    low: { label: 'Low Energy', emoji: '🔋', color: '#10b981' },
-    moderate: { label: 'Moderate', emoji: '⚡', color: '#fbbf24' },
-    high: { label: 'High Energy', emoji: '🔥', color: '#ef4444' },
+  const energyConfig: Record<string, { label: string; color: string }> = {
+    low: { label: 'Low Energy', color: '#10b981' },
+    moderate: { label: 'Moderate', color: '#fbbf24' },
+    high: { label: 'High Energy', color: '#ef4444' },
   }
 
   const currentEnergy = project.energy_level ? energyConfig[project.energy_level] : null
@@ -33,7 +33,6 @@ export function ProjectProperties({ project, onUpdate }: ProjectPropertiesProps)
                 borderColor: 'rgba(255, 255, 255, 0.1)',
                 color: currentEnergy.color
               }}>
-                <span className="text-sm">{currentEnergy.emoji}</span>
                 <span className="text-xs">{currentEnergy.label}</span>
               </div>
             </div>
@@ -47,7 +46,6 @@ export function ProjectProperties({ project, onUpdate }: ProjectPropertiesProps)
                 borderColor: 'rgba(255, 255, 255, 0.1)',
                 color: 'var(--premium-text-primary)'
               }}>
-                <span className="text-sm">⏱️</span>
                 <span className="text-xs">{project.estimated_next_step_time}min</span>
               </div>
             </div>

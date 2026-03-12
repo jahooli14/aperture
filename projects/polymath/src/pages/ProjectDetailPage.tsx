@@ -563,7 +563,7 @@ export function ProjectDetailPage() {
     <div className="min-h-screen pb-24 relative" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
       <SubtleBackground />
       {/* Sticky Header */}
-      <div className="premium-glass-strong sticky top-0 z-40">
+      <div className="sticky top-0 z-40">
         {/* Sync Progress Indicator */}
         <AnimatePresence>
           {isUpdating && (
@@ -654,10 +654,9 @@ export function ProjectDetailPage() {
                       className="fixed inset-0 z-10"
                       onClick={() => setShowCategoryMenu(false)}
                     />
-                    <div className="absolute right-0 mt-2 w-40 rounded-lg py-1 z-20 shadow-lg"
+                    <div className="absolute right-0 mt-2 w-40 rounded py-1 z-20"
                       style={{
                         background: 'rgba(15, 24, 41, 0.9)',
-                        backdropFilter: 'blur(12px)',
                         border: '1px solid rgba(59, 130, 246, 0.3)'
                       }}
                     >
@@ -744,7 +743,7 @@ export function ProjectDetailPage() {
                     className="fixed inset-0 z-10"
                     onClick={() => setShowMenu(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-48 premium-card rounded-lg shadow-lg py-1 z-20">
+                  <div className="absolute right-0 mt-2 w-48 rounded py-1 z-20">
                     <button
                       onClick={() => {
                         setShowMenu(false)
@@ -821,7 +820,7 @@ export function ProjectDetailPage() {
             >
               {/* Power Hour Focus Mode */}
               {powerHourTask && (
-                <div className="premium-card p-8 border-2 border-blue-500/50 relative overflow-hidden group mb-8 bg-blue-900/20 backdrop-blur-xl">
+                <div className="p-8 border-2 border-blue-500/50 relative overflow-hidden group mb-8 bg-blue-900/20">
                   <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform duration-700">
                     <Zap className="h-48 w-48 text-blue-400" />
                   </div>
@@ -878,8 +877,7 @@ export function ProjectDetailPage() {
                 {/* The Vision: Merges Description and Motivation */}
                 {(project.description || project.metadata?.motivation) && (
                   <div className="relative group">
-                    <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
-                    <div className="relative p-8 rounded-2xl bg-white/[0.03] border border-white/5 space-y-4">
+                    <div className="relative p-8 rounded bg-white/[0.03] border border-white/5 space-y-4">
                       <div className="flex items-center gap-3 mb-4 opacity-50">
                         <div className="h-px bg-white/20 flex-grow" />
                         <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/50">The Vision</span>
@@ -907,7 +905,7 @@ export function ProjectDetailPage() {
                               }
                               if (e.key === 'Escape') cancelEdit()
                             }}
-                            className="w-full bg-black/40 border-white/10 rounded-xl p-4 text-xl sm:text-2xl font-medium text-white leading-relaxed italic font-serif text-center outline-none focus:border-blue-500/50"
+                            className="w-full bg-black/40 border-white/10 rounded p-4 text-xl sm:text-2xl font-medium text-white leading-relaxed italic font-serif text-center outline-none focus:border-blue-500/50"
                             autoFocus
                           />
                         ) : (

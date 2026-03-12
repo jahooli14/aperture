@@ -82,31 +82,31 @@ export function ProgressiveLoading({ messages, duration, className = '' }: Progr
 // Preset message sequences for common operations
 export const LoadingPresets = {
   synthesis: [
-    { time: 0, message: 'Analyzing your knowledge graph...', icon: '🧠' },
-    { time: 5000, message: 'Finding cross-domain patterns...', icon: '🔍' },
-    { time: 12000, message: 'Generating project ideas...', icon: '✨' },
-    { time: 20000, message: 'Evaluating feasibility...', icon: '⚡' },
-    { time: 28000, message: 'Almost ready...', icon: '🎯' },
+    { time: 0, message: 'Analyzing your knowledge graph...', icon: '...' },
+    { time: 5000, message: 'Finding cross-domain patterns...', icon: '...' },
+    { time: 12000, message: 'Generating project ideas...', icon: '...' },
+    { time: 20000, message: 'Evaluating feasibility...', icon: '...' },
+    { time: 28000, message: 'Almost ready...', icon: '...' },
   ],
 
   voiceProcessing: [
-    { time: 0, message: 'Voice note saved ✓', icon: '🎤' },
-    { time: 3000, message: 'Transcribing audio...', icon: '📝' },
-    { time: 10000, message: 'Analyzing content...', icon: '🧠' },
-    { time: 18000, message: 'Extracting insights...', icon: '✨' },
-    { time: 25000, message: 'Finding connections...', icon: '🔗' },
+    { time: 0, message: 'Voice note saved', icon: '...' },
+    { time: 3000, message: 'Transcribing audio...', icon: '...' },
+    { time: 10000, message: 'Analyzing content...', icon: '...' },
+    { time: 18000, message: 'Extracting insights...', icon: '...' },
+    { time: 25000, message: 'Finding connections...', icon: '...' },
   ],
 
   articleExtraction: [
-    { time: 0, message: 'Fetching article...', icon: '📰' },
-    { time: 2000, message: 'Extracting content...', icon: '📄' },
-    { time: 5000, message: 'Cleaning formatting...', icon: '✨' },
-    { time: 8000, message: 'Almost done...', icon: '⏳' },
+    { time: 0, message: 'Fetching article...', icon: '...' },
+    { time: 2000, message: 'Extracting content...', icon: '...' },
+    { time: 5000, message: 'Cleaning formatting...', icon: '...' },
+    { time: 8000, message: 'Almost done...', icon: '...' },
   ],
 
   rssSync: [
-    { time: 0, message: 'Connecting to feeds...', icon: '📡' },
-    { time: 3000, message: 'Fetching new items...', icon: '📥' },
-    { time: 7000, message: 'Processing updates...', icon: '⚙️' },
+    { time: 0, message: 'Connecting to feeds...', icon: '...' },
+    { time: 3000, message: 'Fetching new items...', icon: '...' },
+    { time: 7000, message: 'Processing updates...', icon: '...' },
   ],
 }

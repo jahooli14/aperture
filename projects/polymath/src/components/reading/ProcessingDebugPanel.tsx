@@ -214,7 +214,7 @@ export function ProcessingDebugPanel({ articles, onRetry, onFlushAll }: Processi
                             borderLeft: '2px solid var(--premium-blue)',
                             color: 'var(--premium-blue)'
                           }}>
-                            <div className="font-semibold">🔄 ACTIVE PROCESSING</div>
+                            <div className="font-semibold">ACTIVE PROCESSING</div>
                             <div className="mt-1">Stage: {processingState.currentStage || 'Unknown'}</div>
                           </div>
                           <div className="flex items-center justify-between text-xs">

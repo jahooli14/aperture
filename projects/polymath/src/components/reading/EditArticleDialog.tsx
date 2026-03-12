@@ -154,7 +154,14 @@ export function EditArticleDialog({ article, open, onOpenChange }: EditArticleDi
             <Button
               type="submit"
               disabled={loading || !formData.title}
-              className="w-full h-14 bg-white text-black hover:bg-blue-400 font-black uppercase tracking-widest touch-manipulation"
+              className="w-full h-14 font-black uppercase tracking-widest touch-manipulation"
+              style={{
+                background: 'rgba(59,130,246,0.15)',
+                border: '2px solid rgba(59,130,246,0.5)',
+                borderRadius: '4px',
+                boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
+                color: 'var(--premium-blue)',
+              }}
             >
               {loading ? 'Saving...' : 'Save Changes'}
             </Button>

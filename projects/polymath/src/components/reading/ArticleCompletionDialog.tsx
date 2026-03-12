@@ -165,8 +165,10 @@ export function ArticleCompletionDialog({
         <div className="flex gap-3 justify-center my-6">
           <button
             onClick={() => setMode('text')}
-            className="flex items-center gap-2 px-6 py-3 rounded-2xl font-medium transition-all"
+            className="flex items-center gap-2 px-6 py-3 font-medium transition-all"
             style={{
+              borderRadius: '4px',
+              boxShadow: mode === 'text' ? '3px 3px 0 rgba(0,0,0,0.5)' : '2px 2px 0 rgba(0,0,0,0.3)',
               backgroundColor: mode === 'text' ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.05)',
               color: mode === 'text' ? 'white' : 'var(--premium-text-secondary)',
               transform: mode === 'text' ? 'scale(1.05)' : 'scale(1)'
@@ -177,8 +179,10 @@ export function ArticleCompletionDialog({
           </button>
           <button
             onClick={() => setMode('voice')}
-            className="flex items-center gap-2 px-6 py-3 rounded-2xl font-medium transition-all"
+            className="flex items-center gap-2 px-6 py-3 font-medium transition-all"
             style={{
+              borderRadius: '4px',
+              boxShadow: mode === 'voice' ? '3px 3px 0 rgba(0,0,0,0.5)' : '2px 2px 0 rgba(0,0,0,0.3)',
               backgroundColor: mode === 'voice' ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.05)',
               color: mode === 'voice' ? 'white' : 'var(--premium-text-secondary)',
               transform: mode === 'voice' ? 'scale(1.05)' : 'scale(1)'
@@ -202,7 +206,7 @@ export function ArticleCompletionDialog({
                 value={textInput}
                 onChange={(e) => setTextInput(e.target.value)}
                 rows={6}
-                className="w-full rounded-xl px-4 py-3 text-base transition-all focus:outline-none focus:ring-2 resize-none"
+                className="w-full rounded-sm px-4 py-3 text-base transition-all focus:outline-none focus:ring-2 resize-none"
                 style={{
                   backgroundColor: 'rgba(255, 255, 255, 0.05)',
                   color: 'var(--premium-text-primary)',
@@ -238,7 +242,7 @@ export function ArticleCompletionDialog({
                       {relatedProjects.map((project) => (
                         <div
                           key={project.id}
-                          className="flex items-center justify-between gap-2 p-3 rounded-lg border hover:bg-white/5 transition-all"
+                          className="flex items-center justify-between gap-2 p-3 rounded-sm border hover:bg-white/5 transition-all"
                           style={{ borderColor: 'rgba(59, 130, 246, 0.2)', backgroundColor: 'rgba(59, 130, 246, 0.05)' }}
                         >
                           <div className="flex-1 min-w-0">
@@ -254,7 +258,7 @@ export function ArticleCompletionDialog({
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => handleLinkToProject(project.id)}
-                              className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all hover:bg-white/10"
+                              className="text-xs px-3 py-1.5 rounded-sm font-medium transition-all hover:bg-white/10"
                               style={{
                                 color: 'var(--premium-blue)'
                               }}
@@ -263,7 +267,7 @@ export function ArticleCompletionDialog({
                             </button>
                             <button
                               onClick={() => navigate(`/projects/${project.id}`)}
-                              className="p-1.5 rounded-lg transition-all hover:bg-white/10"
+                              className="p-1.5 rounded-sm transition-all hover:bg-white/10"
                               style={{
                                 color: 'var(--premium-text-secondary)'
                               }}
@@ -290,7 +294,7 @@ export function ArticleCompletionDialog({
                       {relatedThoughts.map((thought) => (
                         <div
                           key={thought.id}
-                          className="flex items-center justify-between gap-2 p-3 rounded-lg border hover:bg-white/5 transition-all"
+                          className="flex items-center justify-between gap-2 p-3 rounded-sm border hover:bg-white/5 transition-all"
                           style={{ borderColor: 'rgba(99, 102, 241, 0.2)', backgroundColor: 'rgba(99, 102, 241, 0.05)' }}
                         >
                           <div className="flex-1 min-w-0">
@@ -306,7 +310,7 @@ export function ArticleCompletionDialog({
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => handleLinkToThought(thought.id)}
-                              className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all hover:bg-white/10"
+                              className="text-xs px-3 py-1.5 rounded-sm font-medium transition-all hover:bg-white/10"
                               style={{
                                 color: 'var(--premium-blue)'
                               }}
@@ -333,7 +337,7 @@ export function ArticleCompletionDialog({
               <button
                 onClick={handleSkip}
                 disabled={loading}
-                className="px-6 py-3 rounded-xl font-medium transition-all hover:bg-white/5"
+                className="px-6 py-3 rounded-sm font-medium transition-all hover:bg-white/5"
                 style={{
                   color: 'var(--premium-text-secondary)'
                 }}
@@ -343,7 +347,7 @@ export function ArticleCompletionDialog({
               <button
                 onClick={handleSubmit}
                 disabled={!textInput.trim() || loading}
-                className="flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all disabled:opacity-50"
+                className="flex items-center gap-2 px-6 py-3 rounded-sm font-medium transition-all disabled:opacity-50"
                 style={{
                   backgroundColor: !textInput.trim() || loading ? 'rgba(59, 130, 246, 0.3)' : 'var(--premium-blue)',
                   color: 'white'
@@ -371,7 +375,7 @@ export function ArticleCompletionDialog({
               <button
                 onClick={handleSkip}
                 disabled={loading}
-                className="px-6 py-3 rounded-xl font-medium transition-all hover:bg-white/5"
+                className="px-6 py-3 rounded-sm font-medium transition-all hover:bg-white/5"
                 style={{
                   color: 'var(--premium-text-secondary)'
                 }}

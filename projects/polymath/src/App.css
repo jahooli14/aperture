@@ -210,12 +210,12 @@
     transform: translateY(-4px) scale(1.01) translateZ(0);
   }
 
-  /* Glass Panel - Material You style */
+  /* Glass Panel - Neobrutalism style */
   .glass-panel {
-    @apply backdrop-blur-md rounded-xl;
+    @apply rounded;
     background-color: var(--md-sys-color-surface-container);
     color: var(--md-sys-color-on-surface);
-    box-shadow: var(--md-sys-shadow-2);
+    box-shadow: 3px 3px 0 rgba(0,0,0,0.5);
   }
 
   /* Material You gradient text */
