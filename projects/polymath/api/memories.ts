@@ -11,6 +11,26 @@ import { MODELS } from './_lib/models.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
+// ─── Types merged from insight.ts and steer.ts ────────────────────────────
+export interface InsightResult {
+  insight: string
+  suggested_action?: {
+    type: 'create_todo' | 'open_project'
+    text: string
+    id?: string
+  }
+}
+
+export type SteeringMove = 'DEEPEN' | 'COLLIDE' | 'SURFACE' | 'REDIRECT' | 'COMMIT'
+
+export interface SteeringResult {
+  move: SteeringMove
+  message: string
+  evidence: string
+  related_id?: string
+  related_type?: 'memory' | 'project'
+}
+
 // Disable default body parser for multipart/form-data (transcription endpoint)
 export const config = {
   api: {
@@ -128,6 +148,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return await handleCapture(req, res, supabase, userId)
     }
 
+    // POST: Steering (merged from steer.ts)
+    if (req.method === 'POST' && action === 'steer') {
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+      if (!req.body && req.headers['content-type']?.includes('application/json')) {
+        const chunks = []
+        for await (const chunk of req) chunks.push(chunk)
+        req.body = JSON.parse(Buffer.concat(chunks).toString())
+      }
+      return await handleSteer(req, res, supabase, userId)
+    }
+
     // POST: Mark memory as reviewed
     if (req.method === 'POST') {
       if (!req.body && req.headers['content-type']?.includes('application/json')) {
@@ -184,6 +215,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return await handleResurfacing(res, supabase)
     }
 
+    // GET: Insight (merged from insight.ts)
+    if (req.method === 'GET' && action === 'insight') {
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+      return await handleInsight(req, res, supabase, userId)
+    }
+
     // GET: Single memory by ID
     if (req.method === 'GET' && id && !bridges) {
       const { data, error } = await supabase
@@ -227,6 +264,235 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   } catch (error) {
     return res.status(500).json({ error: 'Internal server error' })
+  }
+}
+
+// ─── Insight handler (merged from insight.ts) ─────────────────────────────
+async function handleInsight(req: VercelRequest, res: VercelResponse, supabase: ReturnType<typeof getSupabaseClient>, userId: string) {
+  const { id, type } = req.query
+  if (!id || !type) return res.status(400).json({ error: 'id and type required' })
+
+  try {
+    const insights: string[] = []
+    let suggestedAction: InsightResult['suggested_action'] = undefined
+
+    const { count: connectionCount } = await supabase
+      .from('connections')
+      .select('*', { count: 'exact', head: true })
+      .or(`source_id.eq.${id},target_id.eq.${id}`)
+
+    if (connectionCount && connectionCount > 0) {
+      insights.push(`Connected to ${connectionCount} other item${connectionCount !== 1 ? 's' : ''}`)
+    }
+
+    if (type === 'thought') {
+      const { data: linkedTodos } = await supabase
+        .from('todos')
+        .select('text, done')
+        .eq('source_memory_id', id as string)
+        .is('deleted_at', null)
+        .limit(3)
+
+      if (linkedTodos && linkedTodos.length > 0) {
+        const active = linkedTodos.filter(t => !t.done)
+        if (active.length > 0) {
+          insights.push(`Has ${active.length} linked todo${active.length !== 1 ? 's' : ''}: "${active[0].text}"`)
+        } else {
+          insights.push(`All ${linkedTodos.length} linked todo${linkedTodos.length !== 1 ? 's' : ''} completed`)
+        }
+      } else {
+        suggestedAction = { type: 'create_todo', text: 'Create a todo from this thought' }
+      }
+
+      const { data: memory } = await supabase
+        .from('memories')
+        .select('themes, created_at')
+        .eq('id', id as string)
+        .single()
+
+      if (memory?.themes && memory.themes.length > 0) {
+        const primaryTheme = memory.themes[0]
+        const { count: themeCount } = await supabase
+          .from('memories')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .contains('themes', [primaryTheme])
+
+        if (themeCount && themeCount > 2) {
+          insights.push(`"${primaryTheme}" appears in ${themeCount} of your thoughts`)
+        }
+      }
+
+      const { data: relatedProjects } = await supabase
+        .from('connections')
+        .select('target_id, target_type, source_id, source_type')
+        .or(`source_id.eq.${id},target_id.eq.${id}`)
+        .in('source_type', ['project'])
+        .limit(1)
+
+      const { data: reverseProjects } = await supabase
+        .from('connections')
+        .select('target_id, source_id, target_type, source_type')
+        .or(`source_id.eq.${id},target_id.eq.${id}`)
+        .in('target_type', ['project'])
+        .limit(1)
+
+      const projectConn = relatedProjects?.[0] || reverseProjects?.[0]
+      if (projectConn) {
+        const projectId = projectConn.source_type === 'project' ? projectConn.source_id : projectConn.target_id
+        const { data: project } = await supabase
+          .from('projects')
+          .select('title')
+          .eq('id', projectId)
+          .single()
+
+        if (project) {
+          insights.push(`Related to project "${project.title}"`)
+          if (!suggestedAction) {
+            suggestedAction = { type: 'open_project', text: `Open ${project.title}`, id: projectId }
+          }
+        }
+      }
+    }
+
+    const insight = insights.length > 0
+      ? insights.join(' · ')
+      : 'No connections yet — this thought is still finding its place'
+
+    if (insights.length === 0 && !suggestedAction) {
+      suggestedAction = { type: 'create_todo', text: 'Turn this into an action' }
+    }
+
+    return res.status(200).json({ insight, suggested_action: suggestedAction })
+  } catch (error) {
+    console.error('[insight] Error:', error)
+    return res.status(500).json({ error: 'Failed to generate insight' })
+  }
+}
+
+// ─── Steer handler (merged from steer.ts) ────────────────────────────────
+async function handleSteer(req: VercelRequest, res: VercelResponse, supabase: ReturnType<typeof getSupabaseClient>, userId: string) {
+  const { memory_id } = req.body
+  if (!memory_id) return res.status(400).json({ error: 'memory_id required' })
+
+  try {
+    const [memoryRes, allMemoriesRes, projectsRes, capabilitiesRes] = await Promise.all([
+      supabase
+        .from('memories')
+        .select('id, title, body, created_at, themes, entities, emotional_tone, memory_type')
+        .eq('id', memory_id)
+        .single(),
+      supabase
+        .from('memories')
+        .select('id, title, body, created_at, memory_type')
+        .eq('user_id', userId)
+        .neq('id', memory_id)
+        .order('created_at', { ascending: false })
+        .limit(400),
+      supabase
+        .from('projects')
+        .select('id, title, description, status, metadata')
+        .eq('user_id', userId)
+        .in('status', ['active', 'upcoming', 'dormant']),
+      supabase
+        .from('capabilities')
+        .select('name, strength, description')
+        .eq('user_id', userId)
+        .order('strength', { ascending: false })
+        .limit(15),
+    ])
+
+    if (memoryRes.error || !memoryRes.data) {
+      return res.status(404).json({ error: 'Memory not found' })
+    }
+
+    const memory = memoryRes.data
+    const allMemories = allMemoriesRes.data || []
+    const projects = projectsRes.data || []
+    const capabilities = capabilitiesRes.data || []
+
+    const newThought = `${memory.title}\n${memory.body || ''}\nCaptured: ${new Date(memory.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+
+    const memoryTimeline = allMemories
+      .map((m: any) => {
+        const date = new Date(m.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+        const body = m.body ? m.body.slice(0, 160).replace(/\n/g, ' ') : ''
+        return `[${date}] ${m.title}${body ? ` — ${body}` : ''}`
+      })
+      .join('\n')
+
+    const projectList = projects
+      .map((p: any) => `• ${p.title} (${p.status})${p.description ? ': ' + p.description.slice(0, 120) : ''}`)
+      .join('\n')
+
+    const capabilityList = capabilities
+      .map((c: any) => `• ${c.name} (strength: ${c.strength?.toFixed(2) || '?'})`)
+      .join('\n')
+
+    const prompt = `You are a thinking partner for a personal knowledge system.
+
+A new thought just arrived. Analyse it against the user's complete knowledge base and return ONE steering move that will push their thinking forward RIGHT NOW.
+
+=== NEW THOUGHT ===
+${newThought}
+
+=== KNOWLEDGE BASE — ${allMemories.length} memories (newest first) ===
+${memoryTimeline || '(no prior memories)'}
+
+=== PROJECTS ===
+${projectList || '(none)'}
+
+=== TOP CAPABILITIES ===
+${capabilityList || '(none)'}
+
+=== STEERING MOVES ===
+Choose exactly one:
+- DEEPEN: They've circled this theme before — there's an obvious next question they haven't asked
+- COLLIDE: This thought directly contradicts or creates productive tension with something prior
+- SURFACE: This connects to a dormant project or forgotten idea they should revisit
+- REDIRECT: There's a recurring pattern or avoidance in the knowledge base this thought reveals
+- COMMIT: They have accumulated enough material on this — it's time to build or decide
+
+=== RULES ===
+- The message MUST reference their specific content (names, projects, dates), not generic advice
+- Maximum 20 words for message
+- Never start with "You", "I", or "Consider"
+- If you can see a contradiction or pattern, name it directly — don't soften it
+- related_id should be the memory or project ID most relevant to this steering move (optional)
+
+Return ONLY valid JSON, no markdown:
+{
+  "move": "DEEPEN" | "COLLIDE" | "SURFACE" | "REDIRECT" | "COMMIT",
+  "message": "One sharp, specific sentence (max 20 words)",
+  "evidence": "What in the knowledge base triggered this (max 30 words)",
+  "related_id": "optional memory or project id",
+  "related_type": "memory" | "project" | null
+}`
+
+    const model = genAI.getGenerativeModel({
+      model: MODELS.DEFAULT_CHAT,
+      generationConfig: { responseMimeType: 'application/json' },
+    })
+
+    const result = await model.generateContent(prompt)
+    const text = result.response.text()
+
+    let steering: SteeringResult
+    try {
+      steering = JSON.parse(text)
+    } catch {
+      const match = text.match(/\{[\s\S]*\}/)
+      if (!match) throw new Error('No JSON in response')
+      steering = JSON.parse(match[0])
+    }
+
+    const validMoves: SteeringMove[] = ['DEEPEN', 'COLLIDE', 'SURFACE', 'REDIRECT', 'COMMIT']
+    if (!validMoves.includes(steering.move)) steering.move = 'DEEPEN'
+
+    return res.status(200).json(steering)
+  } catch (error) {
+    console.error('[steer] Error:', error)
+    return res.status(500).json({ error: 'Steering failed' })
   }
 }
 
