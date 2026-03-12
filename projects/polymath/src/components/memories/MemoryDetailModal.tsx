@@ -16,7 +16,7 @@ import { CACHE_TTL } from '../../lib/cacheConfig'
 
 import { useContextEngineStore } from '../../stores/useContextEngineStore'
 import { useTodoStore } from '../../stores/useTodoStore'
-import type { InsightResult } from '../../../api/insight'
+import type { InsightResult } from '../../../api/memories'
 
 interface MemoryDetailModalProps {
   memory: Memory | null
@@ -47,7 +47,7 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
     if (!memory || !isOpen) { setInsight(null); return }
     if (memory.id.startsWith('temp_')) return
 
-    fetch(`/api/insight?id=${memory.id}&type=thought`)
+    fetch(`/api/memories?action=insight&id=${memory.id}&type=thought`)
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data) setInsight(data) })
       .catch(() => {})
