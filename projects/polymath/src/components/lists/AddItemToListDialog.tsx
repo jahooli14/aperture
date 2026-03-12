@@ -192,7 +192,14 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
                                     <Button
                                         type="submit"
                                         disabled={isSubmitting || !content.trim()}
-                                        className="w-full bg-white text-black hover:bg-zinc-200 h-12 rounded-xl font-bold flex items-center justify-center gap-2 touch-manipulation"
+                                        className="w-full h-12 font-bold flex items-center justify-center gap-2 touch-manipulation"
+                                        style={{
+                                          background: 'rgba(59,130,246,0.15)',
+                                          border: '2px solid rgba(59,130,246,0.5)',
+                                          borderRadius: '4px',
+                                          boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
+                                          color: 'var(--premium-blue)',
+                                        }}
                                     >
                                         {isSubmitting ? 'Adding...' : (
                                             <>

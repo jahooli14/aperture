@@ -74,10 +74,12 @@ export function DailyReview({ onClose, todos, onUpdateTodo, onAddTodo, onDeleteT
             <div className="flex flex-col gap-3 w-full max-w-xs">
               <button
                 onClick={() => setReviewType('morning')}
-                className="flex items-center gap-3 px-5 py-4 rounded-2xl text-left"
+                className="flex items-center gap-3 px-5 py-4 text-left transition-all"
                 style={{
                   background: 'rgba(251,191,36,0.10)',
-                  border: '1px solid rgba(251,191,36,0.22)',
+                  border: '1.5px solid rgba(251,191,36,0.35)',
+                  borderRadius: '4px',
+                  boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
                 }}
               >
                 <Sun className="h-5 w-5 flex-shrink-0" style={{ color: 'rgba(251,191,36,0.8)' }} />
@@ -93,10 +95,12 @@ export function DailyReview({ onClose, todos, onUpdateTodo, onAddTodo, onDeleteT
 
               <button
                 onClick={() => setReviewType('evening')}
-                className="flex items-center gap-3 px-5 py-4 rounded-2xl text-left"
+                className="flex items-center gap-3 px-5 py-4 text-left transition-all"
                 style={{
                   background: 'rgba(139,92,246,0.10)',
-                  border: '1px solid rgba(139,92,246,0.22)',
+                  border: '1.5px solid rgba(139,92,246,0.35)',
+                  borderRadius: '4px',
+                  boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
                 }}
               >
                 <Moon className="h-5 w-5 flex-shrink-0" style={{ color: 'rgba(196,181,253,0.8)' }} />

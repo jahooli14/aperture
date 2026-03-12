@@ -46,8 +46,16 @@ export function ConfirmDialog({
         <DialogHeader>
           <div className="flex items-start gap-4">
             {variant === "destructive" && (
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-100">
-                <AlertCircle className="h-6 w-6 text-red-600" />
+              <div
+                className="flex h-12 w-12 shrink-0 items-center justify-center"
+                style={{
+                  background: 'rgba(239,68,68,0.12)',
+                  border: '1.5px solid rgba(239,68,68,0.35)',
+                  borderRadius: '4px',
+                  boxShadow: '2px 2px 0 rgba(0,0,0,0.4)',
+                }}
+              >
+                <AlertCircle className="h-6 w-6" style={{ color: 'rgba(239,68,68,0.9)' }} />
               </div>
             )}
             <div className="flex-1 pt-1">
