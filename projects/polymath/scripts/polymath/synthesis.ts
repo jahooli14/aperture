@@ -63,7 +63,7 @@ interface ProjectIdea {
  */
 async function generateEmbedding(text: string): Promise<number[]> {
   const model = genAI.getGenerativeModel({ model: 'gemini-embedding-001' })
-  const result = await model.embedContent({ content: { parts: [{ text }] }, outputDimensionality: 768 })
+  const result = await model.embedContent({ content: { role: 'user', parts: [{ text }] }, outputDimensionality: 768 })
   return result.embedding.values
 }
 
