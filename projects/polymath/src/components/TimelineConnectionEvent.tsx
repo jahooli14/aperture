@@ -31,10 +31,10 @@ export function TimelineConnectionEvent({
 
   const getItemIcon = (type: string) => {
     switch (type) {
-      case 'project': return '📦'
-      case 'article': return '📰'
-      case 'thought': return '💭'
-      default: return '📄'
+      case 'project': return 'PRJ'
+      case 'article': return 'ART'
+      case 'thought': return 'THT'
+      default: return 'MEM'
     }
   }
 
@@ -124,7 +124,7 @@ export function TimelineConnectionEvent({
         {/* Items */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <span className="text-lg">{getItemIcon(fromItem.type)}</span>
+            <span className="text-xs font-bold opacity-60">{getItemIcon(fromItem.type)}</span>
             <span className="text-sm font-medium" style={{ color: 'var(--premium-text-primary)' }}>
               {fromItem.title}
             </span>

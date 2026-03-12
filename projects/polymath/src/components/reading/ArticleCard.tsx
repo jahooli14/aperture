@@ -211,7 +211,6 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
             </div>
           ) : (
             <div className="w-16 h-16 rounded-sm flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.08)' }}>
-              <div className="text-2xl opacity-20">📄</div>
             </div>
           )}
 

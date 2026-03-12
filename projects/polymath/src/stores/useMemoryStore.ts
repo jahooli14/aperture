@@ -152,7 +152,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
         .filter(op => op.type === 'create_memory')
         .map(op => ({
           id: `offline_op_${op.timestamp}`,
-          title: op.data.title || '⏳ Saving thought...',
+          title: op.data.title || 'Saving thought...',
           body: op.data.body || '',
           tags: op.data.tags || [],
           created_at: new Date(op.timestamp).toISOString(),
@@ -165,7 +165,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
 
       const queuedCaptures: Memory[] = pendingCaptures.map(pc => ({
         id: `offline_cap_${pc.timestamp}`,
-        title: '⏳ Processing Voice (Offline)',
+        title: 'Processing Voice (Offline)',
         body: pc.transcript || 'Audio note captured while offline.',
         tags: ['offline-pending'],
         created_at: new Date(pc.timestamp).toISOString(),
@@ -532,7 +532,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
         .filter(op => op.type === 'create_memory')
         .map(op => ({
           id: `offline_op_${op.timestamp}`,
-          title: op.data.title || '⏳ Saving thought...',
+          title: op.data.title || 'Saving thought...',
           body: op.data.body || '',
           tags: op.data.tags || [],
           created_at: new Date(op.timestamp).toISOString(),
@@ -547,7 +547,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       // Map pending voice captures
       const queuedCaptures: Memory[] = pendingCaptures.map(pc => ({
         id: `offline_cap_${pc.timestamp}`,
-        title: '⏳ Processing Voice (Offline)',
+        title: 'Processing Voice (Offline)',
         body: pc.transcript || 'Audio note captured while offline.',
         tags: ['offline-pending'],
         created_at: new Date(pc.timestamp).toISOString(),
@@ -662,7 +662,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       id: tempId,
       created_at: now,
       audiopen_id: tempId,
-      title: '⏳ Processing...',
+      title: 'Processing...',
       body: transcript,
       orig_transcript: transcript,
       tags: [],

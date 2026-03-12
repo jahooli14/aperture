@@ -56,10 +56,10 @@
     /* Layout Standards */
     --brand-border: 1px solid rgba(255, 255, 255, 0.08);
     --brand-border-bold: 1px solid rgba(255, 255, 255, 0.15);
-    --brand-radius: 12px;
+    --brand-radius: 4px;
     --brand-glass-bg: rgba(15, 23, 42, 0.4);
     /* Neutral Slate-Dark */
-    --brand-glass-blur: blur(20px);
+    --brand-glass-blur: none;
 }
 
 /* Base Styles */
@@ -98,13 +98,12 @@
     margin-top: 1.5rem;
 }
 
-/* Unified Glass Card */
+/* Unified Card - Neobrutalism */
 .aperture-card {
     background: var(--brand-glass-bg);
-    backdrop-filter: var(--brand-glass-blur);
-    -webkit-backdrop-filter: var(--brand-glass-blur);
     border: var(--brand-border);
     border-radius: var(--brand-radius);
+    box-shadow: 3px 3px 0 rgba(0,0,0,0.5);
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -112,15 +111,15 @@
     background: rgba(30, 42, 88, 0.25);
     border-color: rgba(255, 255, 255, 0.2);
     transform: translateY(-2px);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+    box-shadow: 4px 4px 0 rgba(0,0,0,0.6);
 }
 
-/* Zebra Hero Override (Aperture Hero) */
+/* Aperture Hero Card - Neobrutalism */
 .aperture-hero-card {
     background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(20px);
     border: 1px solid #ffffff;
-    border-radius: 16px;
+    border-radius: 4px;
+    box-shadow: 3px 3px 0 rgba(0,0,0,0.5);
 }
 
 /* ─── Accessible text utility classes ─────────────────────── */
