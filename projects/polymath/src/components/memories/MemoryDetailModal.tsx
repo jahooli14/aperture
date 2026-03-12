@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Brain, Calendar, Edit, Trash2, Copy, Share2, Link2, Plus, Pin, CheckSquare } from 'lucide-react'
+import { MarkdownRenderer } from '../ui/MarkdownRenderer'
 import { format } from 'date-fns'
 import type { Memory, BridgeWithMemories } from '../../types'
 import { useMemoryStore } from '../../stores/useMemoryStore'
@@ -287,9 +288,11 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
                 >
                   <Brain className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" style={{ color: "var(--brand-primary)" }} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs leading-relaxed whitespace-pre-wrap" style={{ color: "var(--brand-primary)" }}>
-                      {insight.insight}
-                    </p>
+                    <MarkdownRenderer
+                      content={insight.insight}
+                      className="text-xs"
+                      style={{ color: "var(--brand-primary)" }}
+                    />
                   </div>
                   {insight.suggested_action?.type === 'create_todo' && (
                     <button
@@ -304,10 +307,12 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
                 </div>
               )}
 
-              <div className="prose prose-invert prose-sm max-w-none mb-6">
-                <p className="leading-relaxed text-base whitespace-pre-wrap" style={{ color: "var(--brand-primary)" }}>
-                  {memory.body}
-                </p>
+              <div className="mb-6">
+                <MarkdownRenderer
+                  content={memory.body}
+                  className="text-base"
+                  style={{ color: "var(--brand-primary)" }}
+                />
                 {memory.image_urls && memory.image_urls.length > 0 && (
                   <div className={`mt-4 grid gap-4 ${memory.image_urls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                     {memory.image_urls.map((url, i) => (

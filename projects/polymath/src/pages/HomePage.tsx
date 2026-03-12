@@ -24,6 +24,7 @@ import { EmptyState } from '../components/ui/empty-state'
 import { Layers, ArrowRight, Plus, Mic, FileText, FolderKanban, Search, TrendingUp, Moon, Calendar, Zap, Brain, X, AlertCircle, Check, Lightbulb, RefreshCw, Wind, Rss, Map as MapIcon, MoreHorizontal } from 'lucide-react'
 import { MultiPerspectiveSuggestions } from '../components/suggestions/MultiPerspectiveSuggestions'
 import { BrandName } from '../components/BrandName'
+import { MarkdownRenderer } from '../components/ui/MarkdownRenderer'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { DriftMode } from '../components/bedtime/DriftMode'
 import { MorningFollowUp } from '../components/bedtime/MorningFollowUp'
@@ -344,10 +345,12 @@ function InsightDialog({ insight, open, onClose }: { insight: SynthesisInsight |
         </div>
 
         <div className="space-y-6">
-          <div className="prose prose-invert prose-sm max-w-none">
-            <p className="leading-relaxed text-base whitespace-pre-wrap" style={{ color: "var(--brand-primary)" }}>
-              {insight.description}
-            </p>
+          <div className="mb-6">
+            <MarkdownRenderer
+              content={insight.description}
+              className="text-base"
+              style={{ color: "var(--brand-primary)" }}
+            />
           </div>
 
           {/* Render timeline if available */}
@@ -503,9 +506,11 @@ function InsightsSection() {
                   <h3 className="font-bold text-sm mb-1 premium-text-platinum">
                     {insight.title}
                   </h3>
-                  <p className="text-sm line-clamp-2 whitespace-pre-wrap" style={{ color: "var(--brand-primary)" }}>
-                    {insight.description}
-                  </p>
+                  <MarkdownRenderer
+                    content={insight.description}
+                    className="text-sm line-clamp-2"
+                    style={{ color: "var(--brand-primary)" }}
+                  />
                 </div>
                 <ArrowRight className="h-4 w-4 mt-1 opacity-50" style={{ color: "var(--brand-primary)" }} />
               </div>

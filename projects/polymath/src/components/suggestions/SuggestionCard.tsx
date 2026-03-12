@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import { ThumbsDown, Hammer, MoreHorizontal, Lightbulb, Loader2, X, Star } from 'lucide-react'
+import { MarkdownRenderer } from '../ui/MarkdownRenderer'
 import type { SuggestionCardProps } from '../../types'
 
 type InterestRating = 1 | 2 | 3
@@ -122,12 +123,11 @@ export const SuggestionCard = memo(function SuggestionCard({
             {suggestion.title}
           </CardTitle>
 
-          <CardDescription
-            className="text-base leading-relaxed mb-4 whitespace-pre-wrap"
+          <MarkdownRenderer
+            content={suggestion.description}
+            className="text-base mb-4"
             style={{ color: "var(--brand-primary)" }}
-          >
-            {suggestion.description}
-          </CardDescription>
+          />
 
           {/* AI Score Breakdown */}
           <div className="flex gap-2 mb-4">
@@ -185,9 +185,11 @@ export const SuggestionCard = memo(function SuggestionCard({
                 <Lightbulb className="h-3 w-3 text-brand-text-secondary" />
                 <span className="text-xs font-bold text-brand-text-secondary uppercase tracking-wide">Why this suggestion?</span>
               </div>
-              <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: "var(--brand-primary)" }}>
-                {suggestion.synthesis_reasoning}
-              </p>
+              <MarkdownRenderer
+                content={suggestion.synthesis_reasoning}
+                className="text-sm"
+                style={{ color: "var(--brand-primary)" }}
+              />
             </div>
           )}
 

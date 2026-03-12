@@ -1,6 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { MarkdownRenderer } from '../ui/MarkdownRenderer'
 import { Pin, ArrowRight, CheckCircle2, Clock } from 'lucide-react'
 import type { Project } from '../../types'
 import { useContextEngineStore } from '../../stores/useContextEngineStore'
@@ -124,18 +125,21 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
               <p className="text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70 aperture-header" style={{ color: theme.text }}>
                 Immediate Next Step
               </p>
-              <p className="text-sm font-medium leading-snug text-[var(--brand-text-primary)] line-clamp-3 aperture-body whitespace-pre-wrap">
-                {nextTask.text}
-              </p>
+              <MarkdownRenderer
+                content={nextTask.text}
+                className="text-sm font-medium leading-snug text-[var(--brand-text-primary)] line-clamp-3 aperture-body"
+              />
             </div>
           </div>
         </div>
       ) : (
         /* Fallback: Description if no next task */
         project.description && (
-          <p className={`mb-4 italic opacity-90 aperture-body whitespace-pre-wrap ${prominent ? 'text-sm line-clamp-3' : 'text-xs line-clamp-4'}`} style={{ color: `rgba(${theme.rgb}, 0.9)` }}>
-            "{project.description}"
-          </p>
+          <MarkdownRenderer
+            content={`"${project.description}"`}
+            className={`mb-4 italic opacity-90 aperture-body ${prominent ? 'text-sm line-clamp-3' : 'text-xs line-clamp-4'}`}
+            style={{ color: `rgba(${theme.rgb}, 0.9)` }}
+          />
         )
       )}
 
