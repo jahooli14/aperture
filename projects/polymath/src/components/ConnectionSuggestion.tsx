@@ -84,9 +84,9 @@ export function ConnectionSuggestion({
 
   const getIconColor = (type: string) => {
     switch (type) {
-      case 'memory': return 'var(--premium-indigo)'
+      case 'memory': return 'var(--brand-primary)'
       case 'project': return 'var(--brand-primary)'
-      case 'article': return 'var(--premium-emerald)'
+      case 'article': return 'var(--brand-primary)'
       default: return 'var(--premium-platinum)'
     }
   }
@@ -116,13 +116,13 @@ export function ConnectionSuggestion({
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg" style={{ background: 'rgba(59, 130, 246, 0.2)' }}>
-                <Link2 className="h-5 w-5" style={{ color: 'var(--brand-primary)' }} />
+                <Link2 className="h-5 w-5" style={{ color: "var(--brand-primary)" }} />
               </div>
               <div>
                 <h3 className="premium-text-platinum font-bold text-base">
                   Graph Connection Found
                 </h3>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--brand-text-secondary)' }}>
+                <p className="text-xs mt-0.5" style={{ color: "var(--brand-primary)" }}>
                   Linking this {sourceType} to related content strengthens your AI's ability to generate creative insights.
                 </p>
               </div>
@@ -131,7 +131,7 @@ export function ConnectionSuggestion({
               onClick={handleDismiss}
               className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded-lg transition-colors"
             >
-              <X className="h-4 w-4" style={{ color: 'var(--brand-text-secondary)' }} />
+              <X className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
             </button>
           </div>
 
@@ -170,7 +170,7 @@ export function ConnectionSuggestion({
                               {Math.round(suggestion.confidence * 100)}%
                             </span>
                           </div>
-                          <p className="text-xs leading-relaxed" style={{ color: 'var(--brand-text-secondary)' }}>
+                          <p className="text-xs leading-relaxed" style={{ color: "var(--brand-primary)" }}>
                             {suggestion.reason}
                           </p>
                         </div>
@@ -180,7 +180,7 @@ export function ConnectionSuggestion({
                         <div className="mt-2 p-2 rounded-xl" style={{
                           background: 'var(--glass-surface)'
                         }}>
-                          <p className="text-xs italic" style={{ color: 'var(--brand-text-muted)' }}>
+                          <p className="text-xs italic" style={{ color: "var(--brand-primary)" }}>
                             "{suggestion.snippet}"
                           </p>
                         </div>
@@ -188,7 +188,7 @@ export function ConnectionSuggestion({
 
                       <div className="flex items-center gap-2 mt-3">
                         {isLinked ? (
-                          <div className="flex items-center gap-1.5 text-xs font-medium" style={{ color: 'var(--premium-emerald)' }}>
+                          <div className="flex items-center gap-1.5 text-xs font-medium" style={{ color: "var(--brand-primary)" }}>
                             <Check className="h-3.5 w-3.5" />
                             Linked
                           </div>
@@ -196,9 +196,7 @@ export function ConnectionSuggestion({
                           <button
                             onClick={() => handleLink(suggestion)}
                             className="text-xs font-medium px-3 py-1.5 rounded-lg transition-all hover:bg-[rgba(255,255,255,0.1)]"
-                            style={{
-                              color: 'var(--brand-primary)'
-                            }}
+                            style={{ color: "var(--brand-primary)" }}
                           >
                             Link Together
                           </button>
@@ -207,9 +205,7 @@ export function ConnectionSuggestion({
                         <a
                           href={getPath(suggestion.targetType, suggestion.targetId)}
                           className="text-xs font-medium px-3 py-1.5 rounded-lg transition-all hover:bg-[rgba(255,255,255,0.1)] inline-flex items-center gap-1"
-                          style={{
-                            color: 'var(--brand-text-secondary)'
-                          }}
+                          style={{ color: "var(--brand-primary)" }}
                         >
                           View <ExternalLink className="h-3 w-3" />
                         </a>
@@ -223,8 +219,8 @@ export function ConnectionSuggestion({
 
           {/* Footer tip */}
           <div className="mt-4 pt-3">
-            <p className="text-xs text-center" style={{ color: 'var(--brand-text-muted)' }}>
-              💡 <strong>Why link?</strong> Connected nodes allow the AI to find non-obvious patterns between your projects and reading list.
+            <p className="text-xs text-center" style={{ color: "var(--brand-primary)" }}>
+               <strong>Why link?</strong> Connected nodes allow the AI to find non-obvious patterns between your projects and reading list.
             </p>
           </div>
         </div>

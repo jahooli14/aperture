@@ -87,7 +87,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
         title: 'Pinned',
         description: 'Your favorite projects',
         icon: <Pin className="h-5 w-5" />,
-        color: 'rgba(59, 130, 246, 0.1)',
+        color: "var(--brand-text-secondary)",
         projects: pinned
       },
       {
@@ -95,7 +95,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
         title: 'Recent',
         description: 'Recently worked on',
         icon: <Clock className="h-5 w-5" />,
-        color: 'rgba(168, 85, 247, 0.1)',
+        color: "var(--brand-text-secondary)",
         projects: recent
       },
       {
@@ -103,7 +103,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
         title: 'Resurface',
         description: 'Needs some attention',
         icon: <AlertCircle className="h-5 w-5" />,
-        color: 'rgba(251, 191, 36, 0.1)',
+        color: "var(--brand-text-secondary)",
         projects: resurface
       },
       {
@@ -111,7 +111,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
         title: 'New Ideas',
         description: 'Fresh projects',
         icon: <Zap className="h-5 w-5" />,
-        color: 'rgba(16, 185, 129, 0.1)',
+        color: "var(--brand-text-secondary)",
         projects: newIdeas
       }
     ]
@@ -159,7 +159,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
                 <h3 className="font-bold text-lg premium-text-platinum">
                   {section.title}
                 </h3>
-                <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>
+                <p className="text-sm" style={{ color: "var(--brand-primary)" }}>
                   {section.description}
                 </p>
               </div>
@@ -205,7 +205,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
                           {project.title}
                         </h4>
                         {project.is_priority && (
-                          <Pin className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
+                          <Pin className="h-4 w-4 flex-shrink-0" style={{ color: "var(--brand-primary)" }} />
                         )}
                       </div>
 
@@ -214,7 +214,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
                         {project.description && (
                           <p
                             className="text-xs line-clamp-2"
-                            style={{ color: 'var(--brand-text-secondary)' }}
+                            style={{ color: "var(--brand-primary)" }}
                           >
                             {project.description}
                           </p>
@@ -258,9 +258,9 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
                                   })
                                 }
                               }}
-                              className="flex-shrink-0 h-4 w-4 rounded-xl flex items-center justify-center transition-all hover:bg-blue-500/20"
+                              className="flex-shrink-0 h-4 w-4 rounded-xl flex items-center justify-center transition-all hover:bg-brand-primary/20"
                               style={{
-                                color: 'rgba(59, 130, 246, 0.9)',
+                                color: "var(--brand-text-secondary)",
                                 border: '1px solid rgba(255, 255, 255, 0.2)'
                               }}
                               title="Mark as complete"
@@ -271,13 +271,13 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
                               {nextTask.text}
                             </p>
                             {totalTasks > 0 && (
-                              <span className="text-xs font-medium flex-shrink-0" style={{ color: 'var(--brand-text-muted)' }}>
+                              <span className="text-xs font-medium flex-shrink-0" style={{ color: "var(--brand-primary)" }}>
                                 {completedTasks}/{totalTasks}
                               </span>
                             )}
                           </>
                         ) : (
-                          <p className="text-xs flex-1" style={{ color: 'var(--brand-text-muted)' }}>
+                          <p className="text-xs flex-1" style={{ color: "var(--brand-primary)" }}>
                             No tasks yet
                           </p>
                         )}
@@ -292,7 +292,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
                           <motion.div
                             className="h-full"
                             style={{
-                              background: totalTasks > 0 ? 'linear-gradient(90deg, var(--brand-primary), var(--premium-emerald))' : 'transparent',
+                              background: totalTasks > 0 ? 'linear-gradient(90deg, var(--brand-primary), var(--brand-primary))' : 'transparent',
                               width: totalTasks > 0 ? `${(completedTasks / totalTasks) * 100}%` : '0%'
                             }}
                             initial={{ width: 0 }}
@@ -312,7 +312,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
               <Link
                 to="/projects"
                 className="inline-flex items-center gap-1 text-sm font-medium transition-all hover:gap-2"
-                style={{ color: 'var(--brand-primary)' }}
+                style={{ color: "var(--brand-primary)" }}
               >
                 View all {section.title.toLowerCase()} <ArrowRight className="h-4 w-4" />
               </Link>
@@ -321,7 +321,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
         ))
       ) : (
         <div className="text-center py-12">
-          <p style={{ color: 'var(--brand-text-secondary)' }}>
+          <p style={{ color: "var(--brand-primary)" }}>
             No active projects yet. Ready to build something?
           </p>
           <Link

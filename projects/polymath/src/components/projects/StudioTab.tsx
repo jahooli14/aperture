@@ -54,24 +54,24 @@ export function StudioTab({ project }: StudioTabProps) {
                 <div className="premium-card p-6 bg-gradient-to-br from-indigo-900/10 to-purple-900/10 border-indigo-500/20">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-indigo-500/20 text-indigo-300">
+                            <div className="p-2 rounded-lg bg-brand-primary/20 text-brand-primary">
                                 <PenTool className="h-5 w-5" />
                             </div>
                             <div>
                                 <h3 className="text-lg font-bold text-[var(--brand-text-primary)] leading-none">The Studio</h3>
-                                <p className="text-[10px] text-zinc-500 uppercase tracking-widest mt-1">The Workbench for Ideas</p>
+                                <p className="text-[10px] text-brand-text-muted uppercase tracking-widest mt-1">The Workbench for Ideas</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
                             {lastSaved && (
-                                <span className="text-[10px] text-zinc-500 font-mono">
+                                <span className="text-[10px] text-brand-text-muted font-mono">
                                     SAVED: {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </span>
                             )}
                             {isSaving && (
                                 <div className="h-1.5 w-12 bg-zinc-800 rounded-full overflow-hidden">
                                     <motion.div
-                                        className="h-full bg-indigo-500"
+                                        className="h-full bg-brand-primary"
                                         animate={{ x: [-48, 48] }}
                                         transition={{ repeat: Infinity, duration: 1 }}
                                     />
@@ -96,9 +96,9 @@ export function StudioTab({ project }: StudioTabProps) {
                                         description: 'AI refinement coming soon to The Studio.',
                                     })
                                 }}
-                                className="px-3 py-1.5 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 text-zinc-400 hover:text-[var(--brand-text-primary)] text-[10px] font-bold uppercase tracking-widest transition-all border border-[var(--glass-surface)] flex items-center gap-2 group"
+                                className="px-3 py-1.5 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 text-brand-text-muted hover:text-[var(--brand-text-primary)] text-[10px] font-bold uppercase tracking-widest transition-all border border-[var(--glass-surface)] flex items-center gap-2 group"
                             >
-                                <Sparkles className="h-3 w-3 group-hover:text-indigo-400 transition-colors" />
+                                <Sparkles className="h-3 w-3 group-hover:text-brand-primary transition-colors" />
                                 Make it Magic
                             </button>
                         </div>
@@ -114,10 +114,10 @@ export function StudioTab({ project }: StudioTabProps) {
                 {(connectionCount > 0 || isLoadingConnections) && (
                     <div className="premium-card p-6 border-zinc-500/10">
                         <div className="flex items-center gap-2 mb-4">
-                            <Sparkles className="h-4 w-4 text-sky-400" />
-                            <h4 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">Contextual Sparks</h4>
+                            <Sparkles className="h-4 w-4 text-brand-primary" />
+                            <h4 className="text-xs font-black uppercase tracking-[0.2em] text-brand-text-muted">Contextual Sparks</h4>
                         </div>
-                        <div className="text-xs text-zinc-500 mb-4 leading-relaxed">
+                        <div className="text-xs text-brand-text-muted mb-4 leading-relaxed">
                             Automatic connections found by the Aperture Engine based on your Studio notes.
                         </div>
                         <ConnectionsList
@@ -132,10 +132,10 @@ export function StudioTab({ project }: StudioTabProps) {
 
                 <div className="premium-card p-6 border-zinc-500/10 bg-gradient-to-tr from-sky-500/5 to-transparent">
                     <div className="flex items-center gap-2 mb-3">
-                        <Lightbulb className="h-4 w-4 text-amber-400" />
-                        <h4 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">About The Studio</h4>
+                        <Lightbulb className="h-4 w-4 text-brand-text-secondary" />
+                        <h4 className="text-xs font-black uppercase tracking-[0.2em] text-brand-text-muted">About The Studio</h4>
                     </div>
-                    <p className="text-xs text-zinc-500 leading-relaxed mb-4">
+                    <p className="text-xs text-brand-text-muted leading-relaxed mb-4">
                         Separating <strong>Doing</strong> (Overview) from <strong>Thinking</strong> (Studio) keeps your checklist clean. Use this space to get messy before you commit to tasks.
                     </p>
                 </div>

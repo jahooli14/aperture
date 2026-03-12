@@ -57,14 +57,14 @@ export function ReviewDeck({ projects, onClose }: ReviewDeckProps) {
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
                 <div className="premium-card p-8 max-w-md w-full text-center">
-                    <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
-                        <Check className="h-8 w-8 text-emerald-400" />
+                    <div className="w-16 h-16 rounded-full bg-brand-primary/20 flex items-center justify-center mx-auto mb-4">
+                        <Check className="h-8 w-8 text-brand-text-secondary" />
                     </div>
                     <h2 className="text-2xl font-bold text-[var(--brand-text-primary)] mb-2">All Caught Up!</h2>
                     <p className="text-[var(--brand-text-secondary)] mb-6">You've reviewed all your dormant projects.</p>
                     <button
                         onClick={onClose}
-                        className="w-full py-3 rounded-xl bg-blue-600 text-[var(--brand-text-primary)] font-bold hover:bg-blue-500 transition-colors"
+                        className="w-full py-3 rounded-xl bg-brand-primary text-[var(--brand-text-primary)] font-bold hover:bg-brand-primary transition-colors"
                     >
                         Back to Home
                     </button>
@@ -187,7 +187,7 @@ export function ReviewDeck({ projects, onClose }: ReviewDeckProps) {
 
                         <div className="flex-1 flex flex-col justify-center gap-4">
                             <div className="space-y-2">
-                                <label className="text-xs font-medium text-blue-400 uppercase tracking-wider">
+                                <label className="text-xs font-medium text-brand-primary uppercase tracking-wider">
                                     Next Step
                                 </label>
                                 <textarea
@@ -237,7 +237,7 @@ export function ReviewDeck({ projects, onClose }: ReviewDeckProps) {
 
                                         setTaskInput(suggestion)
                                     }}
-                                    className="px-3 py-2 rounded-lg bg-indigo-500/20 text-xs text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500/30 transition-colors flex items-center gap-1"
+                                    className="px-3 py-2 rounded-lg bg-brand-primary/20 text-xs text-brand-primary border border-indigo-500/30 hover:bg-brand-primary/30 transition-colors flex items-center gap-1"
                                     disabled={isLoadingSuggestions}
                                 >
                                     {isLoadingSuggestions ? (
@@ -253,7 +253,7 @@ export function ReviewDeck({ projects, onClose }: ReviewDeckProps) {
                         <button
                             onClick={() => handleTaskSubmit()}
                             disabled={!taskInput.trim()}
-                            className="w-full py-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-[var(--brand-text-primary)] font-bold flex items-center justify-center gap-2 transition-all mt-auto"
+                            className="w-full py-4 bg-brand-primary hover:bg-brand-primary disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-[var(--brand-text-primary)] font-bold flex items-center justify-center gap-2 transition-all mt-auto"
                         >
                             <Plus className="h-5 w-5" />
                             Add & Continue
@@ -270,15 +270,15 @@ export function ReviewDeck({ projects, onClose }: ReviewDeckProps) {
                     <span className="text-xs font-medium">Snooze</span>
                 </button>
 
-                <button onClick={() => handleSwipe('up')} className="flex flex-col items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors">
-                    <div className="w-14 h-14 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-500/50">
+                <button onClick={() => handleSwipe('up')} className="flex flex-col items-center gap-2 text-brand-primary hover:text-brand-primary transition-colors">
+                    <div className="w-14 h-14 rounded-full bg-brand-primary/20 flex items-center justify-center border border-blue-500/50">
                         <Zap className="h-7 w-7" />
                     </div>
                     <span className="text-xs font-medium">Action</span>
                 </button>
 
-                <button onClick={() => handleSwipe('right')} className="flex flex-col items-center gap-2 text-emerald-400 hover:text-emerald-300 transition-colors">
-                    <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/50">
+                <button onClick={() => handleSwipe('right')} className="flex flex-col items-center gap-2 text-brand-text-secondary hover:text-brand-primary transition-colors">
+                    <div className="w-12 h-12 rounded-full bg-brand-primary/20 flex items-center justify-center border border-emerald-500/50">
                         <Check className="h-6 w-6" />
                     </div>
                     <span className="text-xs font-medium">Active</span>
@@ -320,11 +320,11 @@ function Card({ project, onSwipe }: { project: Project, onSwipe: (dir: 'left' | 
             <motion.div style={{ opacity: leftColor }} className="absolute inset-0 bg-slate-500/20 z-10 flex items-center justify-end pr-8 pointer-events-none">
                 <span className="text-4xl font-bold text-[var(--brand-text-secondary)] uppercase tracking-widest border-4 border-slate-300 p-2 rounded-lg transform rotate-12">Snooze</span>
             </motion.div>
-            <motion.div style={{ opacity: rightColor }} className="absolute inset-0 bg-emerald-500/20 z-10 flex items-center justify-start pl-8 pointer-events-none">
-                <span className="text-4xl font-bold text-emerald-400 uppercase tracking-widest border-4 border-emerald-400 p-2 rounded-lg transform -rotate-12">Active</span>
+            <motion.div style={{ opacity: rightColor }} className="absolute inset-0 bg-brand-primary/20 z-10 flex items-center justify-start pl-8 pointer-events-none">
+                <span className="text-4xl font-bold text-brand-text-secondary uppercase tracking-widest border-4 border-emerald-400 p-2 rounded-lg transform -rotate-12">Active</span>
             </motion.div>
-            <motion.div style={{ opacity: upColor }} className="absolute inset-0 bg-blue-500/20 z-10 flex items-end justify-center pb-8 pointer-events-none">
-                <span className="text-4xl font-bold text-blue-400 uppercase tracking-widest border-4 border-blue-400 p-2 rounded-lg">Action</span>
+            <motion.div style={{ opacity: upColor }} className="absolute inset-0 bg-brand-primary/20 z-10 flex items-end justify-center pb-8 pointer-events-none">
+                <span className="text-4xl font-bold text-brand-primary uppercase tracking-widest border-4 border-blue-400 p-2 rounded-lg">Action</span>
             </motion.div>
 
             <div className="h-full flex flex-col p-6">
@@ -351,7 +351,7 @@ function Card({ project, onSwipe }: { project: Project, onSwipe: (dir: 'left' | 
                 </div>
 
                 <div className="pt-6 border-t border-[var(--glass-surface-hover)] text-center text-sm text-[var(--brand-text-muted)]">
-                    Swipe Right to Activate • Left to Snooze • Up to Add Task
+                    Swipe Right to Activate  Left to Snooze  Up to Add Task
                 </div>
             </div>
         </motion.div>

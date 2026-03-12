@@ -47,7 +47,7 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-2 transition-colors rounded-lg hover:bg-brand-surface/80"
-          style={{ color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}
+          style={{ color: "var(--brand-primary)" }}
         >
           <X className="h-5 w-5" />
         </button>
@@ -57,10 +57,10 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-amber-500 mb-6">
             <Zap className="h-8 w-8 text-[var(--brand-text-primary)]" />
           </div>
-          <h1 className="text-3xl font-bold mb-3 aperture-header" style={{ color: 'var(--brand-text-primary)' }}>
+          <h1 className="text-3xl font-bold mb-3 aperture-header" style={{ color: "var(--brand-primary)" }}>
             Welcome to <BrandName size="xl" />
           </h1>
-          <p className="text-lg max-w-xl mx-auto" style={{ color: 'var(--brand-text-secondary)' }}>
+          <p className="text-lg max-w-xl mx-auto" style={{ color: "var(--brand-primary)" }}>
             Turn your scattered thoughts into connected insights and creative projects
           </p>
         </div>
@@ -79,13 +79,13 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
                   boxShadow: '2px 2px 0 rgba(0,0,0,0.4)',
                 }}
               >
-                <Brain className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
+                <Brain className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
               </div>
               <div>
-                <h3 className="font-semibold mb-1" style={{ color: 'var(--brand-text-primary)' }}>
+                <h3 className="font-semibold mb-1" style={{ color: "var(--brand-primary)" }}>
                   1. Capture Memories
                 </h3>
-                <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>
+                <p className="text-sm" style={{ color: "var(--brand-primary)" }}>
                   Send voice notes via Audiopen. <BrandName size="sm" /> extracts themes, entities, and insights automatically.
                 </p>
               </div>
@@ -102,13 +102,13 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
                   boxShadow: '2px 2px 0 rgba(0,0,0,0.4)',
                 }}
               >
-                <Lightbulb className="h-6 w-6" style={{ color: 'var(--premium-amber)' }} />
+                <Lightbulb className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
               </div>
               <div>
-                <h3 className="font-semibold mb-1" style={{ color: 'var(--brand-text-primary)' }}>
+                <h3 className="font-semibold mb-1" style={{ color: "var(--brand-primary)" }}>
                   2. AI Generates Suggestions
                 </h3>
-                <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>
+                <p className="text-sm" style={{ color: "var(--brand-primary)" }}>
                   Google Gemini synthesizes your memories into creative project ideas. Cross-pollinates your interests and skills.
                 </p>
               </div>
@@ -125,13 +125,13 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
                   boxShadow: '2px 2px 0 rgba(0,0,0,0.4)',
                 }}
               >
-                <Layers className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
+                <Layers className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
               </div>
               <div>
-                <h3 className="font-semibold mb-1" style={{ color: 'var(--brand-text-primary)' }}>
+                <h3 className="font-semibold mb-1" style={{ color: "var(--brand-primary)" }}>
                   3. Build Projects
                 </h3>
-                <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>
+                <p className="text-sm" style={{ color: "var(--brand-primary)" }}>
                   Rate suggestions as "sparks" to build them. Track progress, link back to originating memories.
                 </p>
               </div>
@@ -148,16 +148,16 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
               boxShadow: '3px 3px 0 rgba(0,0,0,0.4)',
             }}
           >
-            <h3 className="font-semibold mb-2 flex items-center gap-2" style={{ color: 'var(--brand-text-primary)' }}>
-              <Lightbulb className="h-5 w-5" style={{ color: 'var(--premium-amber)' }} />
+            <h3 className="font-semibold mb-2 flex items-center gap-2" style={{ color: "var(--brand-primary)" }}>
+              <Lightbulb className="h-5 w-5" style={{ color: "var(--brand-primary)" }} />
               Try it with demo data
             </h3>
-            <p className="text-sm mb-4" style={{ color: 'var(--brand-text-secondary)' }}>
-              We'll load <strong style={{ color: 'var(--brand-text-primary)' }}>8 sample memories</strong> (coding, woodworking, parenting, photography, etc.)
-              and show you <strong style={{ color: 'var(--brand-text-primary)' }}>7 AI-generated suggestions</strong> plus <strong style={{ color: 'var(--brand-text-primary)' }}>4 projects</strong> in various stages.
+            <p className="text-sm mb-4" style={{ color: "var(--brand-primary)" }}>
+              We'll load <strong style={{ color: "var(--brand-primary)" }}>8 sample memories</strong> (coding, woodworking, parenting, photography, etc.)
+              and show you <strong style={{ color: "var(--brand-primary)" }}>7 AI-generated suggestions</strong> plus <strong style={{ color: "var(--brand-primary)" }}>4 projects</strong> in various stages.
             </p>
-            <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--brand-text-muted)' }}>
-              <span className="inline-block w-2 h-2 rounded-full bg-green-500"></span>
+            <div className="flex items-center gap-2 text-xs" style={{ color: "var(--brand-primary)" }}>
+              <span className="inline-block w-2 h-2 rounded-full bg-brand-primary"></span>
               You can clear demo data anytime
             </div>
           </div>

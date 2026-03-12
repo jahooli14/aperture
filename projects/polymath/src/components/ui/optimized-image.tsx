@@ -101,7 +101,7 @@ export function OptimizedImage({
         <div className="absolute inset-0 flex items-center justify-center bg-neutral-100">
           <div className="text-center p-4">
             <svg
-              className="mx-auto h-12 w-12 text-neutral-400"
+              className="mx-auto h-12 w-12 text-brand-text-muted"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -141,7 +141,7 @@ export function OptimizedImage({
         <div className="absolute inset-0 flex items-center justify-center">
           <div
             className="h-8 w-8 animate-spin rounded-full border-2 border-solid border-current border-r-transparent"
-            style={{ color: 'var(--brand-primary)' }}
+            style={{ color: "var(--brand-primary)" }}
           />
         </div>
       )}

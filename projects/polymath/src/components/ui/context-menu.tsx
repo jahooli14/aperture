@@ -52,14 +52,14 @@ export function ContextMenu({ items, isOpen, onClose, title }: ContextMenuProps)
             {/* Header */}
             <div className="flex items-center justify-between mb-2">
               {title && (
-                <h3 className="text-lg font-semibold" style={{ color: 'var(--brand-text-primary)' }}>
+                <h3 className="text-lg font-semibold" style={{ color: "var(--brand-primary)" }}>
                   {title}
                 </h3>
               )}
               <button
                 onClick={onClose}
                 className="ml-auto p-2 rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.1)]"
-                style={{ color: 'var(--brand-text-secondary)' }}
+                style={{ color: "var(--brand-primary)" }}
               >
                 <X className="h-5 w-5" />
               </button>

@@ -79,7 +79,7 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
             <BottomSheetContent>
                 <BottomSheetHeader>
                     <div className="flex items-center gap-3 mb-2">
-                        <ListPlus className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
+                        <ListPlus className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
                         <BottomSheetTitle>Add to List</BottomSheetTitle>
                     </div>
                     <BottomSheetDescription>
@@ -91,13 +91,13 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
                     {!selectedListId ? (
                         <div className="space-y-4">
                             <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'var(--brand-text-muted)' }} />
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "var(--brand-primary)" }} />
                                 <Input
                                     placeholder="Search collections..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     className="pl-10 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/15"
-                                    style={{ color: 'var(--brand-text-primary)' }}
+                                    style={{ color: "var(--brand-primary)" }}
                                     autoFocus
                                 />
                             </div>
@@ -122,19 +122,19 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
                                                         borderColor: 'rgba(59, 130, 246, 0.2)',
                                                     }}
                                                 >
-                                                    <span className="text-lg">{list.icon || '📁'}</span>
+                                                    <span className="text-lg">{list.icon || ''}</span>
                                                 </div>
                                                 <div className="text-left">
-                                                    <p className="text-sm font-medium" style={{ color: 'var(--brand-text-primary)' }}>{list.title}</p>
-                                                    <p className="text-xs" style={{ color: 'var(--brand-text-muted)' }}>{list.item_count || 0} items</p>
+                                                    <p className="text-sm font-medium" style={{ color: "var(--brand-primary)" }}>{list.title}</p>
+                                                    <p className="text-xs" style={{ color: "var(--brand-primary)" }}>{list.item_count || 0} items</p>
                                                 </div>
                                             </div>
-                                            <ChevronRight className="h-4 w-4 transition-colors" style={{ color: 'var(--brand-text-muted)' }} />
+                                            <ChevronRight className="h-4 w-4 transition-colors" style={{ color: "var(--brand-primary)" }} />
                                         </button>
                                     ))
                                 ) : (
                                     <div className="text-center py-8">
-                                        <p className="text-sm" style={{ color: 'var(--brand-text-muted)' }}>No lists found</p>
+                                        <p className="text-sm" style={{ color: "var(--brand-primary)" }}>No lists found</p>
                                     </div>
                                 )}
                             </div>
@@ -160,16 +160,16 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
                                         borderColor: 'rgba(59, 130, 246, 0.25)',
                                     }}
                                 >
-                                    <span className="text-xl">{selectedList?.icon || '📁'}</span>
+                                    <span className="text-xl">{selectedList?.icon || ''}</span>
                                 </div>
                                 <div className="flex-1">
-                                    <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--brand-primary)' }}>Target Collection</p>
-                                    <p className="text-lg font-bold" style={{ color: 'var(--brand-text-primary)' }}>{selectedList?.title}</p>
+                                    <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--brand-primary)" }}>Target Collection</p>
+                                    <p className="text-lg font-bold" style={{ color: "var(--brand-primary)" }}>{selectedList?.title}</p>
                                 </div>
                                 <button
                                     onClick={() => setSelectedListId(null)}
                                     className="p-2 transition-colors hover:bg-[rgba(255,255,255,0.1)] rounded-lg"
-                                    style={{ color: 'var(--brand-text-muted)' }}
+                                    style={{ color: "var(--brand-primary)" }}
                                 >
                                     <X className="h-4 w-4" />
                                 </button>
@@ -184,7 +184,7 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
                                         value={content}
                                         onChange={(e) => setContent(e.target.value)}
                                         className="bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/15 py-6 text-lg"
-                                        style={{ color: 'var(--brand-text-primary)' }}
+                                        style={{ color: "var(--brand-primary)" }}
                                     />
                                 </div>
 

@@ -1,6 +1,6 @@
 /**
  * Task Energy Level Analyzer
- * Uses Gemini Flash to analyze tasks and assign appropriate energy levels
+ * Uses Gemini 3.1 Flash-Lite to analyze tasks and assign appropriate energy levels
  */
 
 import { generateText } from './gemini-chat.js'

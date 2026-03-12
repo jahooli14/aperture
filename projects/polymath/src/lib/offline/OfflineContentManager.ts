@@ -52,7 +52,7 @@ export class OfflineContentManager {
       // 3. Mark images as cached ONLY if all were successful
       if (allImagesCached) {
         await readingDb.markImagesCached(article.id)
-        console.log('[OfflineContentManager] ✓ Successfully cached:', article.title)
+        console.log('[OfflineContentManager]  Successfully cached:', article.title)
       } else {
         // If not all images cached, we might still want to mark article content as available
         // but reflect partial image caching if a separate flag exists, or keep images_cached=false
@@ -140,10 +140,10 @@ export class OfflineContentManager {
 
         // Cache in IndexedDB
         await readingDb.cacheImage(articleId, absoluteUrl, blob)
-        console.log(`[OfflineContentManager] ✓ Cached image: ${absoluteUrl.substring(0, 50)}...`)
+        console.log(`[OfflineContentManager]  Cached image: ${absoluteUrl.substring(0, 50)}...`)
         return true
       } catch (error) {
-        console.warn(`[OfflineContentManager] ✗ Failed to cache image ${absoluteUrl}:`, error)
+        console.warn(`[OfflineContentManager]  Failed to cache image ${absoluteUrl}:`, error)
         return false // Indicate failure for this specific image
       }
     })
@@ -152,10 +152,10 @@ export class OfflineContentManager {
     const allSuccessful = results.every(result => result.status === 'fulfilled' && result.value === true)
 
     if (allSuccessful) {
-      console.log(`[OfflineContentManager] ✓ All ${totalImages} images successfully cached for article ${articleId}.`)
+      console.log(`[OfflineContentManager]  All ${totalImages} images successfully cached for article ${articleId}.`)
     } else {
       const failedCount = results.filter(result => result.status === 'rejected' || result.value === false).length
-      console.warn(`[OfflineContentManager] ✗ ${failedCount} images failed to cache for article ${articleId}.`)
+      console.warn(`[OfflineContentManager]  ${failedCount} images failed to cache for article ${articleId}.`)
     }
     return allSuccessful
   }

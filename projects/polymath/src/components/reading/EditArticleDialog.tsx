@@ -86,7 +86,7 @@ export function EditArticleDialog({ article, open, onOpenChange }: EditArticleDi
       <BottomSheetContent>
         <BottomSheetHeader>
           <div className="flex items-center gap-3 mb-2">
-            <Edit className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
+            <Edit className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
             <BottomSheetTitle>Edit article</BottomSheetTitle>
           </div>
           <BottomSheetDescription>
@@ -96,7 +96,7 @@ export function EditArticleDialog({ article, open, onOpenChange }: EditArticleDi
 
         <form onSubmit={handleSubmit} className="space-y-5 mt-6">
           <div className="space-y-2">
-            <Label htmlFor="title" className="font-bold text-xs uppercase tracking-widest text-blue-400">Title <span className="text-red-500">*</span></Label>
+            <Label htmlFor="title" className="font-bold text-xs uppercase tracking-widest text-brand-primary">Title <span className="text-brand-text-secondary">*</span></Label>
             <Input
               id="title"
               placeholder="Article title"

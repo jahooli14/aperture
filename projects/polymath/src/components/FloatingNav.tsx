@@ -43,7 +43,7 @@ interface NavOption {
   color: keyof typeof SCHEMA_COLORS
 }
 
-// All 6 nav sections — icon-only layout with active label
+// All 6 nav sections  icon-only layout with active label
 const NAV_OPTIONS: NavOption[] = [
   { id: 'home',     label: 'Home',     icon: Home,         path: '/',         action: 'navigate', color: 'home' },
   { id: 'todos',    label: 'Todos',    icon: CheckSquare,  path: '/todos',    action: 'navigate', color: 'todos' },
@@ -221,7 +221,7 @@ export function FloatingNav() {
         }
 
         const data = await response.json()
-        console.log('✓ Memory created:', data)
+        console.log(' Memory created:', data)
 
         // Replace optimistic memory with real one
         replaceOptimisticMemory(tempId, data.memory)
@@ -243,7 +243,7 @@ export function FloatingNav() {
             })
 
             if (connectionResponse.ok) {
-              console.log('✓ Auto-linked to project:', projectId)
+              console.log(' Auto-linked to project:', projectId)
             }
           } catch (linkError) {
             console.warn('Failed to auto-link to project:', linkError)
@@ -341,6 +341,8 @@ export function FloatingNav() {
             style={{
               borderRadius: 'var(--premium-radius-2xl)',
               backgroundColor: 'var(--brand-glass-bg)',
+              backdropFilter: 'var(--brand-glass-blur)',
+              WebkitBackdropFilter: 'var(--brand-glass-blur)',
               padding: '4px 6px',
             }}
           >
@@ -426,7 +428,7 @@ export function FloatingNav() {
                     )}
                   </div>
 
-                  {/* Label — only visible for active tab, slides in */}
+                  {/* Label  only visible for active tab, slides in */}
                   <AnimatePresence>
                     {active && (
                       <motion.span

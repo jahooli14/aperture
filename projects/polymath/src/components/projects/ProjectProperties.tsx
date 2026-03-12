@@ -13,9 +13,9 @@ interface ProjectPropertiesProps {
 
 export function ProjectProperties({ project, onUpdate }: ProjectPropertiesProps) {
   const energyConfig: Record<string, { label: string; color: string }> = {
-    low: { label: 'Low Energy', color: '#10b981' },
-    moderate: { label: 'Moderate', color: '#fbbf24' },
-    high: { label: 'High Energy', color: '#ef4444' },
+    low: { label: 'Low Energy', color: "var(--brand-text-secondary)" },
+    moderate: { label: 'Moderate', color: "var(--brand-text-secondary)" },
+    high: { label: 'High Energy', color: "var(--brand-text-secondary)" },
   }
 
   const currentEnergy = project.energy_level ? energyConfig[project.energy_level] : null
@@ -60,7 +60,7 @@ export function ProjectProperties({ project, onUpdate }: ProjectPropertiesProps)
                   className="px-2 py-1 text-xs rounded-md border flex-shrink-0"
                   style={{
                     backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                    color: '#3b82f6',
+                    color: "var(--brand-text-secondary)",
                     borderColor: 'rgba(59, 130, 246, 0.3)'
                   }}
                 >

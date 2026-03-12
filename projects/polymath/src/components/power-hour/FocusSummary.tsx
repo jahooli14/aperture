@@ -36,12 +36,12 @@ export function FocusSummary() {
         >
             <div className="max-w-md w-full py-12">
                 <div className="mb-12 text-center">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-500/10 mb-6">
-                        <CheckCircle2 className="h-8 w-8 text-emerald-500" />
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-primary/10 mb-6">
+                        <CheckCircle2 className="h-8 w-8 text-brand-text-secondary" />
                     </div>
                     <h2 className="text-3xl font-serif mb-2">Session Logged</h2>
                     <p className="text-[#64748b]">
-                        {durationMinutes}m focus session • {completedTasks.length} tasks completed
+                        {durationMinutes}m focus session  {completedTasks.length} tasks completed
                     </p>
                 </div>
 
@@ -55,7 +55,7 @@ export function FocusSummary() {
                         <ul className="space-y-3">
                             {completedTasks.map(task => (
                                 <li key={task.id} className="text-sm text-[#cbd5e1] leading-relaxed flex gap-3">
-                                    <span className="text-emerald-500/50">•</span>
+                                    <span className="text-brand-text-secondary/50"></span>
                                     {task.text}
                                 </li>
                             ))}

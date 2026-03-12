@@ -63,7 +63,7 @@ export function TimelinePage() {
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center">
             <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-r-transparent mb-4" style={{ borderColor: 'var(--brand-primary)' }}></div>
-            <p className="text-lg" style={{ color: 'var(--brand-text-secondary)' }}>Analyzing your patterns...</p>
+            <p className="text-lg" style={{ color: "var(--brand-primary)" }}>Analyzing your patterns...</p>
           </div>
         </div>
       </div>
@@ -78,21 +78,21 @@ export function TimelinePage() {
             <CardContent className="py-16 text-center">
               {isOffline ? (
                 <>
-                  <WifiOff className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--brand-text-muted)' }} />
-                  <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--brand-text-primary)' }}>
+                  <WifiOff className="h-16 w-16 mx-auto mb-4" style={{ color: "var(--brand-primary)" }} />
+                  <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--brand-primary)" }}>
                     Offline
                   </h2>
-                  <p style={{ color: 'var(--brand-text-secondary)' }}>
+                  <p style={{ color: "var(--brand-primary)" }}>
                     Timeline data will be available when you're back online
                   </p>
                 </>
               ) : (
                 <>
-                  <Clock className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--brand-primary)' }} />
-                  <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--brand-text-primary)' }}>
+                  <Clock className="h-16 w-16 mx-auto mb-4" style={{ color: "var(--brand-primary)" }} />
+                  <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--brand-primary)" }}>
                     Not Enough Data Yet
                   </h2>
-                  <p style={{ color: 'var(--brand-text-secondary)' }}>
+                  <p style={{ color: "var(--brand-primary)" }}>
                     Capture at least 5 memories to see your cognitive patterns
                   </p>
                 </>
@@ -110,10 +110,10 @@ export function TimelinePage() {
       {/* Header */}
       <div className="max-w-6xl mx-auto px-4 mb-12">
         <div className="text-center">
-          <h1 className="text-4xl font-bold mb-3" style={{ color: 'var(--brand-text-primary)' }}>
+          <h1 className="text-4xl font-bold mb-3" style={{ color: "var(--brand-primary)" }}>
             Your Cognitive Timeline
           </h1>
-          <p className="text-xl" style={{ color: 'var(--brand-text-secondary)' }}>
+          <p className="text-xl" style={{ color: "var(--brand-primary)" }}>
             Understanding when and how you think best
           </p>
         </div>
@@ -126,28 +126,28 @@ export function TimelinePage() {
             <CardContent className="pt-6">
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0">
-                  {pattern.type === 'thinking_time' && <Clock className="h-8 w-8" style={{ color: 'var(--brand-primary)' }} />}
-                  {pattern.type === 'velocity' && <TrendingUp className="h-8 w-8" style={{ color: 'var(--brand-primary)' }} />}
-                  {pattern.type === 'side_hustle_hours' && <Zap className="h-8 w-8" style={{ color: 'var(--premium-indigo)' }} />}
-                  {pattern.type === 'emotional_continuity' && <Calendar className="h-8 w-8" style={{ color: 'var(--premium-emerald)' }} />}
+                  {pattern.type === 'thinking_time' && <Clock className="h-8 w-8" style={{ color: "var(--brand-primary)" }} />}
+                  {pattern.type === 'velocity' && <TrendingUp className="h-8 w-8" style={{ color: "var(--brand-primary)" }} />}
+                  {pattern.type === 'side_hustle_hours' && <Zap className="h-8 w-8" style={{ color: "var(--brand-primary)" }} />}
+                  {pattern.type === 'emotional_continuity' && <Calendar className="h-8 w-8" style={{ color: "var(--brand-primary)" }} />}
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold mb-2" style={{ color: 'var(--brand-text-primary)' }}>
+                  <h3 className="text-xl font-bold mb-2" style={{ color: "var(--brand-primary)" }}>
                     {pattern.title}
                   </h3>
-                  <p className="mb-4" style={{ color: 'var(--brand-text-secondary)' }}>
+                  <p className="mb-4" style={{ color: "var(--brand-primary)" }}>
                     {pattern.description}
                   </p>
                   <div className="p-4 rounded-lg premium-glass-subtle">
-                    <p className="text-sm font-medium" style={{ color: 'var(--brand-text-primary)' }}>
-                      💡 {pattern.insight}
+                    <p className="text-sm font-medium" style={{ color: "var(--brand-primary)" }}>
+                       {pattern.insight}
                     </p>
                   </div>
 
                   {/* Data Visualization */}
                   {pattern.type === 'thinking_time' && pattern.data && (
                     <div className="mt-4">
-                      <p className="text-sm font-medium mb-3" style={{ color: 'var(--brand-text-secondary)' }}>
+                      <p className="text-sm font-medium mb-3" style={{ color: "var(--brand-primary)" }}>
                         Your top thinking times:
                       </p>
                       <div className="space-y-2">
@@ -160,14 +160,14 @@ export function TimelinePage() {
                                 className="absolute inset-y-0 left-0 rounded-full"
                                 style={{
                                   width: `${(time.count / maxCount) * 100}%`,
-                                  background: 'linear-gradient(90deg, var(--brand-primary), var(--premium-amber))'
+                                  background: 'linear-gradient(90deg, var(--brand-primary), var(--brand-primary))'
                                 }}
                               />
                               <div className="relative px-3 py-1 flex items-center justify-between">
-                                <span className="text-sm font-medium" style={{ color: 'var(--brand-text-primary)' }}>
+                                <span className="text-sm font-medium" style={{ color: "var(--brand-primary)" }}>
                                   {time.day} {time.hour === 0 ? '12am' : time.hour < 12 ? time.hour + 'am' : (time.hour === 12 ? '12pm' : (time.hour - 12) + 'pm')}
                                 </span>
-                                <span className="text-sm font-bold" style={{ color: 'var(--brand-text-primary)' }}>
+                                <span className="text-sm font-bold" style={{ color: "var(--brand-primary)" }}>
                                   {time.count}
                                 </span>
                               </div>
@@ -180,7 +180,7 @@ export function TimelinePage() {
 
                   {pattern.type === 'velocity' && pattern.data && (
                     <div className="mt-4">
-                      <p className="text-sm font-medium mb-3" style={{ color: 'var(--brand-text-secondary)' }}>
+                      <p className="text-sm font-medium mb-3" style={{ color: "var(--brand-primary)" }}>
                         Captures per week:
                       </p>
                       <div className="flex items-end gap-2 h-32">
@@ -195,7 +195,7 @@ export function TimelinePage() {
                                 }}
                               />
                             </div>
-                            <span className="text-xs" style={{ color: 'var(--brand-text-muted)' }}>
+                            <span className="text-xs" style={{ color: "var(--brand-primary)" }}>
                               {new Date(week.week).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                             </span>
                           </div>
@@ -206,13 +206,13 @@ export function TimelinePage() {
 
                   {pattern.type === 'side_hustle_hours' && pattern.data && (
                     <div className="mt-4">
-                      <p className="text-sm font-medium mb-3" style={{ color: 'var(--brand-text-secondary)' }}>
+                      <p className="text-sm font-medium mb-3" style={{ color: "var(--brand-primary)" }}>
                         Side-project hours per month:
                       </p>
                       <div className="space-y-2">
                         {pattern.data.map((month: any, i: number) => (
                           <div key={i} className="flex items-center gap-3">
-                            <span className="text-sm font-medium w-24" style={{ color: 'var(--brand-text-secondary)' }}>
+                            <span className="text-sm font-medium w-24" style={{ color: "var(--brand-primary)" }}>
                               {new Date(month.month + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                             </span>
                             <div className="flex-1 rounded-full h-8 relative overflow-hidden" style={{ backgroundColor: 'var(--glass-surface)' }}>
@@ -220,11 +220,11 @@ export function TimelinePage() {
                                 className="absolute inset-y-0 left-0 rounded-full"
                                 style={{
                                   width: `${Math.min((month.hours / 40) * 100, 100)}%`,
-                                  background: 'linear-gradient(90deg, var(--premium-indigo), var(--premium-pink))'
+                                  background: 'linear-gradient(90deg, var(--brand-primary), var(--premium-pink))'
                                 }}
                               />
                               <div className="relative px-3 py-1 flex items-center justify-end">
-                                <span className="text-sm font-bold" style={{ color: 'var(--brand-text-primary)' }}>
+                                <span className="text-sm font-bold" style={{ color: "var(--brand-primary)" }}>
                                   {month.hours}h
                                 </span>
                               </div>
@@ -243,10 +243,10 @@ export function TimelinePage() {
         {/* Summary Card */}
         <Card className="premium-card">
           <CardContent className="pt-6">
-            <h3 className="text-lg font-bold mb-3" style={{ color: 'var(--brand-text-primary)' }}>
+            <h3 className="text-lg font-bold mb-3" style={{ color: "var(--brand-primary)" }}>
               What This Means
             </h3>
-            <p style={{ color: 'var(--brand-text-secondary)' }}>
+            <p style={{ color: "var(--brand-primary)" }}>
               Your cognitive patterns reveal when you're most creative and productive.
               Use this data to schedule important work during your peak times and
               protect your side-hustle hours.

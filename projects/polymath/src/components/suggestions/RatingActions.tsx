@@ -22,7 +22,7 @@ export function RatingActions({
         className="rating-button rating-spark"
         title="This sparks interest"
       >
-        <span className="button-icon">👍</span>
+        <span className="button-icon"></span>
         <span className="button-label">Spark</span>
       </button>
 
@@ -32,7 +32,7 @@ export function RatingActions({
         className="rating-button rating-meh"
         title="Not interested"
       >
-        <span className="button-icon">👎</span>
+        <span className="button-icon"></span>
         <span className="button-label">Meh</span>
       </button>
 
@@ -42,7 +42,7 @@ export function RatingActions({
         className="rating-button rating-build primary"
         title="Build this now"
       >
-        <span className="button-icon">💡</span>
+        <span className="button-icon"></span>
         <span className="button-label">Build</span>
       </button>
 
@@ -52,7 +52,7 @@ export function RatingActions({
         className="rating-button rating-more"
         title="Learn more"
       >
-        <span className="button-icon">⋯</span>
+        <span className="button-icon"></span>
         <span className="button-label">More</span>
       </button>
     </div>

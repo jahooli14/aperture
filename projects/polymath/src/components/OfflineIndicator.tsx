@@ -35,7 +35,7 @@ export function OfflineIndicator() {
     return (
       <div className="fixed top-2 right-2 z-50 pointer-events-none">
         <div className="flex items-center gap-1.5 px-2 py-1 bg-[var(--glass-surface)] backdrop-blur-sm rounded-full border border-[var(--glass-surface)]">
-          <div className="w-1.5 h-1.5 rounded-full bg-blue-400/60 animate-pulse transition-opacity" />
+          <div className="w-1.5 h-1.5 rounded-full bg-brand-primary/60 animate-pulse transition-opacity" />
           <span className="text-[9px] font-bold text-[var(--brand-text-primary)]/20 uppercase tracking-widest invisible group-hover:visible">Sync</span>
         </div>
       </div>
@@ -46,7 +46,7 @@ export function OfflineIndicator() {
   if (wasOffline && isOnline && queueSize === 0) {
     return (
       <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-5">
-        <div className="flex items-center gap-2 px-4 py-2 bg-green-500 text-[var(--brand-text-primary)] rounded-lg shadow-lg">
+        <div className="flex items-center gap-2 px-4 py-2 bg-brand-primary text-[var(--brand-text-primary)] rounded-lg shadow-lg">
           <CheckCircle className="h-5 w-5" />
           <span className="font-medium">Back online</span>
         </div>
@@ -58,13 +58,13 @@ export function OfflineIndicator() {
   if (!isOnline) {
     return (
       <div className="fixed top-0 left-0 right-0 z-50">
-        <div className="flex items-center justify-center gap-2 px-4 py-2 bg-amber-500 text-[var(--brand-text-primary)]">
+        <div className="flex items-center justify-center gap-2 px-4 py-2 bg-brand-primary text-[var(--brand-text-primary)]">
           <WifiOff className="h-4 w-4" />
           <span className="text-sm font-medium">
             You're offline - changes will sync when reconnected
           </span>
           {queueSize > 0 && (
-            <span className="ml-2 px-2 py-0.5 bg-amber-600 rounded-full text-xs font-bold">
+            <span className="ml-2 px-2 py-0.5 bg-brand-primary rounded-full text-xs font-bold">
               {queueSize} pending
             </span>
           )}
@@ -77,7 +77,7 @@ export function OfflineIndicator() {
   if (isSyncing && queueSize > 0) {
     return (
       <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-5">
-        <div className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-[var(--brand-text-primary)] rounded-lg shadow-lg">
+        <div className="flex items-center gap-2 px-4 py-2 bg-brand-primary text-[var(--brand-text-primary)] rounded-lg shadow-lg">
           <Upload className="h-5 w-5 animate-pulse" />
           <span className="font-medium">
             Syncing {queueSize} {queueSize === 1 ? 'operation' : 'operations'}...
@@ -137,7 +137,7 @@ export function OfflineIndicator() {
               </button>
               <button
                 onClick={handleClear}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-red-600 transition-colors"
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-brand-primary transition-colors"
               >
                 <X className="h-4 w-4" />
                 <span className="text-sm font-medium">Clear queue</span>

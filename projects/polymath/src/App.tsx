@@ -213,7 +213,7 @@ export default function App() {
 
     // Set status bar style to dark content (dark icons on light background)
     StatusBar.setStyle({ style: Style.Dark }).catch(console.error)
-    StatusBar.setBackgroundColor({ color: '#ffffff' }).catch(console.error)
+    StatusBar.setBackgroundColor({ color: "var(--brand-text-secondary)" }).catch(console.error)
   }, [])
 
   // Setup deep linking for Supabase OAuth on native platforms
@@ -242,7 +242,7 @@ export default function App() {
                 access_token,
                 refresh_token
               })
-              console.log('✓ Auth session set successfully')
+              console.log(' Auth session set successfully')
             }
           }
         } catch (error) {

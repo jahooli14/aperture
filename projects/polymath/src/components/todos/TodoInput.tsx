@@ -30,7 +30,7 @@ export function TodoInput({
   onAdd,
   onCaptureThought,
   onCaptureArticle,
-  placeholder = 'Add a task…',
+  placeholder = 'Add a task',
   autoFocus = false,
   defaultScheduledDate,
 }: TodoInputProps) {
@@ -53,7 +53,7 @@ export function TodoInput({
     parsed.estimatedMinutes ||
     parsed.isSomeday
 
-  // ── Debounced classification ──
+  //  Debounced classification 
   useEffect(() => {
     if (classifyTimerRef.current) clearTimeout(classifyTimerRef.current)
 
@@ -74,7 +74,7 @@ export function TodoInput({
     }
   }, [value])
 
-  // ── Paste: detect URLs immediately ──
+  //  Paste: detect URLs immediately 
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLInputElement>) => {
     const pasted = e.clipboardData.getData('text')
     if (isLikelyUrl(pasted)) {
@@ -84,7 +84,7 @@ export function TodoInput({
     }
   }, [])
 
-  // ── Submit with smart routing ──
+  //  Submit with smart routing 
   const handleSubmit = useCallback(() => {
     if (!parsed.text.trim() && !value.trim()) return
 
@@ -140,7 +140,7 @@ export function TodoInput({
         boxShadow: focused ? '4px 4px 0 rgba(0,0,0,0.8)' : '3px 3px 0 rgba(0,0,0,0.6)',
       }}
     >
-      {/* Hint — shown when focused+empty */}
+      {/* Hint  shown when focused+empty */}
       <AnimatePresence>
         {focused && !value && (
           <motion.div
@@ -150,7 +150,7 @@ export function TodoInput({
             transition={{ duration: 0.12, ease: [0.25, 0.1, 0.25, 1] }}
             className="px-4 pt-3 pb-1"
           >
-            <p className="text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            <p className="text-[11px] leading-relaxed" style={{ color: "var(--brand-primary)" }}>
               Try{' '}
               <HintToken>tom</HintToken>,{' '}
               <HintToken>eow</HintToken>,{' '}
@@ -165,7 +165,7 @@ export function TodoInput({
         )}
       </AnimatePresence>
 
-      {/* Smart capture type hint — shown when a non-todo type is detected */}
+      {/* Smart capture type hint  shown when a non-todo type is detected */}
       <AnimatePresence>
         {showTypePill && captureType !== 'todo' && (
           <motion.div
@@ -194,22 +194,22 @@ export function TodoInput({
             className="flex flex-wrap gap-1.5 px-4 pt-3 pb-1"
           >
             {parsed.isSomeday && (
-              <Chip icon={<Clock className="h-3 w-3" />} color="text-purple-400" bg="bg-purple-500/15">
+              <Chip icon={<Clock className="h-3 w-3" />} color="text-brand-primary" bg="bg-brand-primary/15">
                 Someday
               </Chip>
             )}
             {parsed.scheduledDate && (
-              <Chip icon={<Calendar className="h-3 w-3" />} color="text-blue-400" bg="bg-blue-500/15">
+              <Chip icon={<Calendar className="h-3 w-3" />} color="text-brand-primary" bg="bg-brand-primary/15">
                 {describeDate(parsed.scheduledDate)}
               </Chip>
             )}
             {parsed.scheduledTime && (
-              <Chip icon={<Clock className="h-3 w-3" />} color="text-blue-400" bg="bg-blue-500/15">
+              <Chip icon={<Clock className="h-3 w-3" />} color="text-brand-primary" bg="bg-brand-primary/15">
                 {describeTime(parsed.scheduledTime)}
               </Chip>
             )}
             {parsed.deadlineDate && (
-              <Chip icon={<AlertCircle className="h-3 w-3" />} color="text-red-400" bg="bg-red-500/15">
+              <Chip icon={<AlertCircle className="h-3 w-3" />} color="text-brand-text-secondary" bg="bg-brand-primary/15">
                 Due {describeDate(parsed.deadlineDate)}
               </Chip>
             )}
@@ -223,17 +223,17 @@ export function TodoInput({
               </Chip>
             )}
             {parsed.tags.map(tag => (
-              <Chip key={tag} icon={<Tag className="h-3 w-3" />} color="text-emerald-400" bg="bg-emerald-500/15">
+              <Chip key={tag} icon={<Tag className="h-3 w-3" />} color="text-brand-text-secondary" bg="bg-brand-primary/15">
                 {tag}
               </Chip>
             ))}
             {parsed.areaName && (
-              <Chip icon={<MapPin className="h-3 w-3" />} color="text-amber-400" bg="bg-amber-500/15">
+              <Chip icon={<MapPin className="h-3 w-3" />} color="text-brand-text-secondary" bg="bg-brand-primary/15">
                 {parsed.areaName}
               </Chip>
             )}
             {parsed.estimatedMinutes && (
-              <Chip icon={<Clock className="h-3 w-3" />} color="text-sky-400" bg="bg-sky-500/15">
+              <Chip icon={<Clock className="h-3 w-3" />} color="text-brand-primary" bg="bg-brand-primary/15">
                 {formatMinutes(parsed.estimatedMinutes)}
               </Chip>
             )}
@@ -295,7 +295,7 @@ export function TodoInput({
           }}
         />
 
-        {/* Type pill indicator — compact, right-aligned */}
+        {/* Type pill indicator  compact, right-aligned */}
         <AnimatePresence>
           {showTypePill && (
             <motion.span
@@ -327,7 +327,7 @@ export function TodoInput({
               onClick={handleSubmit}
               className="flex-shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-black uppercase tracking-wide transition-all active:scale-95"
               style={{
-                color: 'rgba(147,197,253,0.9)',
+                color: "var(--brand-text-secondary)",
                 background: 'rgba(59,130,246,0.1)',
                 border: '2px solid rgba(99,179,237,0.35)',
                 boxShadow: '2px 2px 0 rgba(0,0,0,0.5)',
@@ -351,7 +351,7 @@ export function TodoInput({
                 boxShadow: '2px 2px 0 rgba(0,0,0,0.5)',
               }}
             >
-              ↵
+              
             </motion.button>
           )}
         </AnimatePresence>
@@ -360,7 +360,7 @@ export function TodoInput({
   )
 }
 
-// ─── Sub-components ──────────────────────────────────────────
+//  Sub-components 
 
 function Chip({
   icon, color, bg, children
@@ -380,6 +380,6 @@ function Chip({
 
 function HintToken({ children }: { children: React.ReactNode }) {
   return (
-    <span style={{ color: 'rgba(147,197,253,0.55)' }} className="font-medium">{children}</span>
+    <span style={{ color: "var(--brand-primary)" }} className="font-medium">{children}</span>
   )
 }

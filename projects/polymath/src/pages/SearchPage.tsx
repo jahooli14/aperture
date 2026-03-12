@@ -225,7 +225,7 @@ export function SearchPage() {
     }
   }
 
-  // Debounced live search — fires 600ms after the user stops typing
+  // Debounced live search  fires 600ms after the user stops typing
   const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
     setQuery(val)
@@ -274,13 +274,13 @@ export function SearchPage() {
   const getResultIcon = (type: string) => {
     switch (type) {
       case 'memory':
-        return <Brain className="h-5 w-5" style={{ color: 'var(--premium-indigo)' }} />
+        return <Brain className="h-5 w-5" style={{ color: "var(--brand-primary)" }} />
       case 'project':
-        return <Layers className="h-5 w-5" style={{ color: 'var(--brand-primary)' }} />
+        return <Layers className="h-5 w-5" style={{ color: "var(--brand-primary)" }} />
       case 'article':
-        return <BookOpen className="h-5 w-5" style={{ color: 'var(--premium-emerald)' }} />
+        return <BookOpen className="h-5 w-5" style={{ color: "var(--brand-primary)" }} />
       case 'suggestion':
-        return <Lightbulb className="h-5 w-5" style={{ color: 'var(--premium-amber)' }} />
+        return <Lightbulb className="h-5 w-5" style={{ color: "var(--brand-primary)" }} />
     }
   }
 
@@ -321,7 +321,7 @@ export function SearchPage() {
             <Search className="h-7 w-7" style={{ color: 'var(--brand-primary)', opacity: 0.7 }} />
             <h1 className="text-2xl sm:text-3xl" style={{
               fontWeight: 600,
-              letterSpacing: 'var(--premium-tracking-tight)',
+              letterSpacing: '-0.04em',
               color: 'var(--brand-text-secondary)',
               opacity: 0.7
             }}>
@@ -340,9 +340,9 @@ export function SearchPage() {
             boxShadow: '4px 4px 0 rgba(0,0,0,0.5)'
           }}>
             <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
-              Search <span style={{ color: 'var(--brand-primary)' }}>everything</span>
+              Search <span style={{ color: "var(--brand-primary)" }}>everything</span>
             </h2>
-            <p className="mt-2 text-lg" style={{ color: 'var(--brand-text-secondary)' }}>
+            <p className="mt-2 text-lg" style={{ color: "var(--brand-primary)" }}>
               Find memories, projects, articles, and suggestions instantly
             </p>
           </div>
@@ -360,7 +360,7 @@ export function SearchPage() {
               <div className="flex-1 relative">
                 <Search
                   className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5"
-                  style={{ color: 'var(--brand-text-muted)' }}
+                  style={{ color: "var(--brand-primary)" }}
                 />
                 <input
                   type="text"
@@ -412,7 +412,7 @@ export function SearchPage() {
               )}
             </AnimatePresence>
 
-            {/* Mode toggles — larger touch targets */}
+            {/* Mode toggles  larger touch targets */}
             <div className="flex items-center gap-2 mt-3">
               <button
                 onClick={() => { setSearchMode('text'); if (query.trim().length >= 2) performSearch(query.trim()) }}
@@ -425,7 +425,7 @@ export function SearchPage() {
               <button
                 onClick={() => { setSearchMode('semantic'); if (query.trim().length >= 2) performSearch(query.trim()) }}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all active:scale-95 ${
-                  searchMode === 'semantic' ? 'bg-blue-500/20 text-blue-400' : 'text-[var(--brand-text-muted)]'
+                  searchMode === 'semantic' ? 'bg-brand-primary/20 text-brand-primary' : 'text-[var(--brand-text-muted)]'
                 }`}
               >
                 Semantic
@@ -441,8 +441,8 @@ export function SearchPage() {
               boxShadow: '4px 4px 0 rgba(0,0,0,0.5)'
             }}>
               <div className="text-center py-20">
-                <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" style={{ color: 'var(--brand-primary)' }} />
-                <p style={{ color: 'var(--brand-text-secondary)' }}>Searching...</p>
+                <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" style={{ color: "var(--brand-primary)" }} />
+                <p style={{ color: "var(--brand-primary)" }}>Searching...</p>
               </div>
             </div>
           )}
@@ -458,15 +458,15 @@ export function SearchPage() {
                 <h2 className="text-xl font-semibold mb-2 premium-text-platinum">
                   {results.total} {results.total === 1 ? 'result' : 'results'} for "{results.query}"
                 </h2>
-                <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm" style={{ color: 'var(--brand-text-muted)' }}>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm" style={{ color: "var(--brand-primary)" }}>
                   <span>{results.breakdown.memories} memories</span>
-                  <span>•</span>
+                  <span></span>
                   <span>{results.breakdown.projects} projects</span>
-                  <span>•</span>
+                  <span></span>
                   <span>{results.breakdown.articles} articles</span>
                   {results.breakdown.suggestions > 0 && (
                     <>
-                      <span>•</span>
+                      <span></span>
                       <span>{results.breakdown.suggestions} suggestions</span>
                     </>
                   )}
@@ -517,7 +517,7 @@ export function SearchPage() {
 
                           {/* Description */}
                           {(result.body || result.description) && (
-                            <p className="text-sm line-clamp-2 mb-2" style={{ color: 'var(--brand-text-secondary)' }}>
+                            <p className="text-sm line-clamp-2 mb-2" style={{ color: "var(--brand-primary)" }}>
                               {result.body || result.description}
                             </p>
                           )}
@@ -543,7 +543,7 @@ export function SearchPage() {
 
                         {/* Arrow always visible on touch */}
                         <div className="flex-shrink-0 opacity-30">
-                          <ArrowRight className="h-5 w-5" style={{ color: 'var(--brand-primary)' }} />
+                          <ArrowRight className="h-5 w-5" style={{ color: "var(--brand-primary)" }} />
                         </div>
                       </div>
                     </motion.div>

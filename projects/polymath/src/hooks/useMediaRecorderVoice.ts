@@ -272,7 +272,7 @@ export function useMediaRecorderVoice({
     stopTimer()
 
     if (elapsed < MIN_RECORDING_MS) {
-      console.log('[Native] Recording too short:', elapsed, 'ms — discarding')
+      console.log('[Native] Recording too short:', elapsed, 'ms  discarding')
       window.dispatchEvent(new CustomEvent('voice-capture-too-short'))
       try { await VoiceRecorder.stopRecording() } catch (_) {}
       return
@@ -354,7 +354,7 @@ export function useMediaRecorderVoice({
     stopTimer()
 
     if (elapsed < MIN_RECORDING_MS) {
-      console.log('[Web] Recording too short:', elapsed, 'ms — discarding')
+      console.log('[Web] Recording too short:', elapsed, 'ms  discarding')
       window.dispatchEvent(new CustomEvent('voice-capture-too-short'))
       streamRef.current?.getTracks().forEach(track => track.stop())
       mediaRecorderRef.current?.stop()

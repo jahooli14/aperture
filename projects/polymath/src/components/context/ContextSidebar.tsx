@@ -210,7 +210,7 @@ export function ContextSidebar() {
                         {/* Header */}
                         <div className="p-4 border-b border-[var(--glass-surface-hover)] flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <Lightbulb className="h-5 w-5 text-purple-400" />
+                                <Lightbulb className="h-5 w-5 text-brand-primary" />
                                 <h2 className="font-bold text-[var(--brand-text-primary)]">Context Engine</h2>
                             </div>
                             <button
@@ -223,7 +223,7 @@ export function ContextSidebar() {
 
                         {/* Active Context Indicator */}
                         <div className="px-4 py-3 bg-[var(--glass-surface)] border-b border-[var(--glass-surface)]">
-                            <p className="text-xs font-medium text-purple-300 mb-1 uppercase tracking-wider">
+                            <p className="text-xs font-medium text-brand-primary mb-1 uppercase tracking-wider">
                                 Current Focus
                             </p>
                             <p className="text-sm text-[var(--brand-text-primary)] font-medium truncate">
@@ -241,8 +241,8 @@ export function ContextSidebar() {
                                 <div className="rounded-xl p-4 bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20">
                                     <div className="flex items-center justify-between mb-3">
                                         <div className="flex items-center gap-2">
-                                            <Lightbulb className="h-4 w-4 text-purple-400" />
-                                            <span className="text-xs font-semibold text-purple-300 uppercase tracking-wider">
+                                            <Lightbulb className="h-4 w-4 text-brand-primary" />
+                                            <span className="text-xs font-semibold text-brand-primary uppercase tracking-wider">
                                                 AI Analysis
                                             </span>
                                         </div>
@@ -273,7 +273,7 @@ export function ContextSidebar() {
                                                 <div className="space-y-1">
                                                     {analysisData.analysis.patterns.map((pattern, i) => (
                                                         <div key={i} className="flex items-start gap-2">
-                                                            <TrendingUp className="h-3 w-3 text-blue-400 mt-1 flex-shrink-0" />
+                                                            <TrendingUp className="h-3 w-3 text-brand-primary mt-1 flex-shrink-0" />
                                                             <span className="text-xs text-[var(--brand-text-secondary)]">{pattern}</span>
                                                         </div>
                                                     ))}
@@ -283,16 +283,16 @@ export function ContextSidebar() {
                                             {/* Insight */}
                                             {analysisData.analysis.insight && (
                                                 <div className="flex items-start gap-2 pt-2 border-t border-[var(--glass-surface)]">
-                                                    <Lightbulb className="h-3 w-3 text-amber-400 mt-1 flex-shrink-0" />
-                                                    <span className="text-xs text-amber-200/80">{analysisData.analysis.insight}</span>
+                                                    <Lightbulb className="h-3 w-3 text-brand-text-secondary mt-1 flex-shrink-0" />
+                                                    <span className="text-xs text-brand-primary/80">{analysisData.analysis.insight}</span>
                                                 </div>
                                             )}
 
                                             {/* Suggestion */}
                                             {analysisData.analysis.suggestion && (
                                                 <div className="pt-2">
-                                                    <p className="text-xs text-purple-300">
-                                                        → {analysisData.analysis.suggestion}
+                                                    <p className="text-xs text-brand-primary">
+                                                         {analysisData.analysis.suggestion}
                                                     </p>
                                                 </div>
                                             )}
@@ -323,9 +323,9 @@ export function ContextSidebar() {
                                             className="flex items-center gap-2 p-2.5 rounded-lg bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] transition-colors text-left"
                                         >
                                             {actionLoading === 'summarize' ? (
-                                                <Loader2 className="h-4 w-4 animate-spin text-blue-400" />
+                                                <Loader2 className="h-4 w-4 animate-spin text-brand-primary" />
                                             ) : (
-                                                <FileText className="h-4 w-4 text-blue-400" />
+                                                <FileText className="h-4 w-4 text-brand-primary" />
                                             )}
                                             <span className="text-xs text-[var(--brand-text-secondary)]">Summarize</span>
                                         </button>
@@ -335,9 +335,9 @@ export function ContextSidebar() {
                                             className="flex items-center gap-2 p-2.5 rounded-lg bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] transition-colors text-left"
                                         >
                                             {actionLoading === 'find-gaps' ? (
-                                                <Loader2 className="h-4 w-4 animate-spin text-amber-400" />
+                                                <Loader2 className="h-4 w-4 animate-spin text-brand-text-secondary" />
                                             ) : (
-                                                <HelpCircle className="h-4 w-4 text-amber-400" />
+                                                <HelpCircle className="h-4 w-4 text-brand-text-secondary" />
                                             )}
                                             <span className="text-xs text-[var(--brand-text-secondary)]">Find Gaps</span>
                                         </button>
@@ -347,9 +347,9 @@ export function ContextSidebar() {
                                             className="flex items-center gap-2 p-2.5 rounded-lg bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] transition-colors text-left"
                                         >
                                             {actionLoading === 'suggest-next' ? (
-                                                <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
+                                                <Loader2 className="h-4 w-4 animate-spin text-brand-text-secondary" />
                                             ) : (
-                                                <Compass className="h-4 w-4 text-emerald-400" />
+                                                <Compass className="h-4 w-4 text-brand-text-secondary" />
                                             )}
                                             <span className="text-xs text-[var(--brand-text-secondary)]">Suggest Next</span>
                                         </button>
@@ -359,9 +359,9 @@ export function ContextSidebar() {
                                             className="flex items-center gap-2 p-2.5 rounded-lg bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] transition-colors text-left"
                                         >
                                             {actionLoading === 'connect-dots' ? (
-                                                <Loader2 className="h-4 w-4 animate-spin text-purple-400" />
+                                                <Loader2 className="h-4 w-4 animate-spin text-brand-primary" />
                                             ) : (
-                                                <GitBranch className="h-4 w-4 text-purple-400" />
+                                                <GitBranch className="h-4 w-4 text-brand-primary" />
                                             )}
                                             <span className="text-xs text-[var(--brand-text-secondary)]">Connect Dots</span>
                                         </button>
@@ -387,11 +387,11 @@ export function ContextSidebar() {
                                                     if (!trimmed) return null
 
                                                     // Bullet points
-                                                    if (trimmed.startsWith('- ') || trimmed.startsWith('• ') || trimmed.match(/^\d+\./)) {
-                                                        const text = trimmed.replace(/^[-•]\s*/, '').replace(/^\d+\.\s*/, '')
+                                                    if (trimmed.startsWith('- ') || trimmed.startsWith(' ') || trimmed.match(/^\d+\./)) {
+                                                        const text = trimmed.replace(/^[-]\s*/, '').replace(/^\d+\.\s*/, '')
                                                         return (
                                                             <div key={i} className="flex items-start gap-2">
-                                                                <span className="text-purple-400 mt-0.5">•</span>
+                                                                <span className="text-brand-primary mt-0.5"></span>
                                                                 <span>{text}</span>
                                                             </div>
                                                         )
@@ -422,7 +422,7 @@ export function ContextSidebar() {
                             {/* Related Items Section */}
                             {loading ? (
                                 <div className="flex flex-col items-center justify-center py-12 text-[var(--brand-text-secondary)]">
-                                    <Loader2 className="h-8 w-8 animate-spin mb-3 text-purple-500" />
+                                    <Loader2 className="h-8 w-8 animate-spin mb-3 text-brand-primary" />
                                     <p className="text-sm">Analyzing context...</p>
                                 </div>
                             ) : relatedItems.length === 0 ? (
@@ -443,9 +443,9 @@ export function ContextSidebar() {
                                             onClick={() => handleItemClick(item)}
                                         >
                                             <div className="flex items-start gap-3">
-                                                <div className={`p-2 rounded-lg bg-black/20 ${item.type === 'project' ? 'text-blue-400' :
-                                                    item.type === 'memory' ? 'text-emerald-400' :
-                                                        'text-amber-400'
+                                                <div className={`p-2 rounded-lg bg-black/20 ${item.type === 'project' ? 'text-brand-primary' :
+                                                    item.type === 'memory' ? 'text-brand-text-secondary' :
+                                                        'text-brand-text-secondary'
                                                     }`}>
                                                     <Icon className="h-4 w-4" />
                                                 </div>
@@ -465,7 +465,7 @@ export function ContextSidebar() {
                                             <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                                                 <button
                                                     onClick={(e) => handleLinkItem(e, item)}
-                                                    className="p-1.5 bg-purple-500/20 hover:bg-purple-500 text-purple-300 hover:text-[var(--brand-text-primary)] rounded-lg transition-colors"
+                                                    className="p-1.5 bg-brand-primary/20 hover:bg-brand-primary text-brand-primary hover:text-[var(--brand-text-primary)] rounded-lg transition-colors"
                                                     title="Link to current context"
                                                 >
                                                     <LinkIcon className="h-3 w-3" />

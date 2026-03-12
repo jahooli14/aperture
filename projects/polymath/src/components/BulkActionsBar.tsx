@@ -47,13 +47,13 @@ export function BulkActionsBar({ selectedCount, onCancel, actions }: BulkActions
                 <div>
                   <h3
                     className="text-lg font-semibold"
-                    style={{ color: 'var(--brand-text-primary)' }}
+                    style={{ color: "var(--brand-primary)" }}
                   >
                     {selectedCount} selected
                   </h3>
                   <p
                     className="text-xs"
-                    style={{ color: 'var(--brand-text-muted)' }}
+                    style={{ color: "var(--brand-primary)" }}
                   >
                     Choose an action below
                   </p>
@@ -62,7 +62,7 @@ export function BulkActionsBar({ selectedCount, onCancel, actions }: BulkActions
               <button
                 onClick={onCancel}
                 className="p-2 rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.1)]"
-                style={{ color: 'var(--brand-text-secondary)' }}
+                style={{ color: "var(--brand-primary)" }}
               >
                 <X className="h-5 w-5" />
               </button>

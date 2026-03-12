@@ -136,7 +136,7 @@ export function FocusStream() {
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="p-6 relative overflow-hidden group cursor-pointer aperture-card transition-all duration-300 flex flex-col"
+                            className="p-6 relative overflow-hidden group cursor-pointer glass-card glass-card-hover transition-all duration-300 flex flex-col"
                             style={{
                                 borderColor: theme.borderColor,
                                 background: `rgba(${theme.rgb}, 0.08)`,
@@ -185,7 +185,7 @@ export function FocusStream() {
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="p-6 relative overflow-hidden group cursor-pointer aperture-card transition-all duration-300 flex flex-col"
+                            className="p-6 relative overflow-hidden group cursor-pointer glass-card glass-card-hover transition-all duration-300 flex flex-col"
                             transition={{ delay: 0.05 }}
                             style={{
                                 borderColor: theme.borderColor,
@@ -233,7 +233,7 @@ export function FocusStream() {
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="p-6 relative overflow-hidden group cursor-pointer aperture-card transition-all duration-300 md:col-span-2 flex flex-col"
+                            className="p-6 relative overflow-hidden group cursor-pointer glass-card glass-card-hover transition-all duration-300 md:col-span-2 flex flex-col"
                             onClick={() => setShowReviewDeck(true)}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.background = 'var(--glass-surface)'

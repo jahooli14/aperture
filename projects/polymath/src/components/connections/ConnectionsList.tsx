@@ -249,8 +249,8 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
     <div className="space-y-6">
       {/* AI Suggestions */}
       <div className="mb-2">
-        <h3 className="text-xs font-medium mb-3 flex items-center gap-2 uppercase tracking-wider opacity-60" style={{ color: 'var(--brand-text-secondary)' }}>
-          <Lightbulb className="h-3 w-3 text-purple-400" />
+        <h3 className="text-xs font-medium mb-3 flex items-center gap-2 uppercase tracking-wider opacity-60" style={{ color: "var(--brand-primary)" }}>
+          <Lightbulb className="h-3 w-3 text-brand-primary" />
           Smart Suggestions
         </h3>
         <ConnectionSuggestion
@@ -303,23 +303,23 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-[10px] font-bold uppercase tracking-wider opacity-60" style={{ color: 'var(--brand-text-secondary)' }}>
+                      <span className="text-[10px] font-bold uppercase tracking-wider opacity-60" style={{ color: "var(--brand-primary)" }}>
                         {item.type}
                       </span>
                       {isAI && (
-                        <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 text-[10px] font-medium">
+                        <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-brand-primary/10 text-brand-primary text-[10px] font-medium">
                           <Zap className="h-2.5 w-2.5" />
                           Auto
                         </div>
                       )}
                     </div>
 
-                    <h4 className="text-sm font-medium mb-1 line-clamp-1" style={{ color: 'var(--brand-text-primary)' }}>
+                    <h4 className="text-sm font-medium mb-1 line-clamp-1" style={{ color: "var(--brand-primary)" }}>
                       {item.title}
                     </h4>
 
                     {item.reasoning && (
-                      <p className="text-xs line-clamp-1 opacity-70" style={{ color: 'var(--brand-text-secondary)' }}>
+                      <p className="text-xs line-clamp-1 opacity-70" style={{ color: "var(--brand-primary)" }}>
                         {item.reasoning}
                       </p>
                     )}
@@ -344,9 +344,9 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
         <button
           onClick={() => setShowCreateDialog(true)}
           className="w-full py-3 rounded-xl border border-dashed border-[var(--glass-surface-hover)] flex items-center justify-center gap-2 text-xs font-medium transition-all hover:bg-[var(--glass-surface)] hover:border-white/20 group"
-          style={{ color: 'var(--brand-text-secondary)' }}
+          style={{ color: "var(--brand-primary)" }}
         >
-          <Plus className="h-4 w-4 group-hover:text-blue-400 transition-colors" />
+          <Plus className="h-4 w-4 group-hover:text-brand-primary transition-colors" />
           <span className="group-hover:text-[var(--brand-text-primary)] transition-colors">
             {displayItems.length >= 5 ? 'Override with Manual Link' : 'Add Link Yourself'}
           </span>

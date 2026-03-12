@@ -149,7 +149,7 @@ export function OnboardingPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: 'var(--brand-primary)' }}></div>
-          <p style={{ color: 'var(--brand-text-secondary)' }}>Loading your personal roadmap...</p>
+          <p style={{ color: "var(--brand-primary)" }}>Loading your personal roadmap...</p>
         </div>
       </div>
     )
@@ -160,10 +160,10 @@ export function OnboardingPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 mx-auto mb-6" style={{ borderColor: 'var(--brand-primary)' }}></div>
-          <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--brand-text-primary)' }}>
+          <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--brand-primary)" }}>
             Analyzing your responses...
           </h2>
-          <p style={{ color: 'var(--brand-text-secondary)' }}>
+          <p style={{ color: "var(--brand-primary)" }}>
             Building your first knowledge graph
           </p>
         </div>
@@ -177,12 +177,12 @@ export function OnboardingPage() {
         <div className="max-w-4xl mx-auto px-4">
           <div className="text-center mb-12">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-6" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)' }}>
-              <Check className="h-8 w-8" style={{ color: 'var(--brand-primary)' }} />
+              <Check className="h-8 w-8" style={{ color: "var(--brand-primary)" }} />
             </div>
-            <h1 className="text-4xl font-bold mb-4" style={{ color: 'var(--brand-text-primary)' }}>
+            <h1 className="text-4xl font-bold mb-4" style={{ color: "var(--brand-primary)" }}>
               Your First Patterns
             </h1>
-            <p className="text-xl" style={{ color: 'var(--brand-text-secondary)' }}>
+            <p className="text-xl" style={{ color: "var(--brand-primary)" }}>
               Here's what we found from just {questions.length} thoughts
             </p>
           </div>
@@ -190,8 +190,8 @@ export function OnboardingPage() {
           <div className="grid gap-6 mb-8">
             {/* Capabilities */}
             <div className="p-6" style={{ background: 'var(--brand-glass-bg)', backdropFilter: 'blur(12px)', borderRadius: 'var(--premium-radius-lg)' }}>
-              <h3 className="font-semibold mb-3" style={{ color: 'var(--brand-text-primary)' }}>
-                ✅ {analysis.capabilities.length} capabilities detected
+              <h3 className="font-semibold mb-3" style={{ color: "var(--brand-primary)" }}>
+                 {analysis.capabilities.length} capabilities detected
               </h3>
               <div className="flex flex-wrap gap-2">
                 {analysis.capabilities.map((cap, i) => (
@@ -204,8 +204,8 @@ export function OnboardingPage() {
 
             {/* Themes */}
             <div className="p-6" style={{ background: 'var(--brand-glass-bg)', backdropFilter: 'blur(12px)', borderRadius: 'var(--premium-radius-lg)' }}>
-              <h3 className="font-semibold mb-3" style={{ color: 'var(--brand-text-primary)' }}>
-                ✅ {analysis.themes.length} themes emerging
+              <h3 className="font-semibold mb-3" style={{ color: "var(--brand-primary)" }}>
+                 {analysis.themes.length} themes emerging
               </h3>
               <div className="flex flex-wrap gap-2">
                 {analysis.themes.map((theme, i) => (
@@ -219,13 +219,13 @@ export function OnboardingPage() {
             {/* Patterns */}
             {analysis.patterns.length > 0 && (
               <div className="p-6" style={{ background: 'var(--brand-glass-bg)', backdropFilter: 'blur(12px)', borderRadius: 'var(--premium-radius-lg)' }}>
-                <h3 className="font-semibold mb-3" style={{ color: 'var(--brand-text-primary)' }}>
-                  ✅ {analysis.patterns.length} pattern found
+                <h3 className="font-semibold mb-3" style={{ color: "var(--brand-primary)" }}>
+                   {analysis.patterns.length} pattern found
                 </h3>
                 <ul className="space-y-2">
                   {analysis.patterns.map((pattern, i) => (
-                    <li key={i} className="flex items-start gap-2" style={{ color: 'var(--brand-text-secondary)' }}>
-                      <span className="mt-1" style={{ color: 'var(--brand-primary)' }}>→</span>
+                    <li key={i} className="flex items-start gap-2" style={{ color: "var(--brand-primary)" }}>
+                      <span className="mt-1" style={{ color: "var(--brand-primary)" }}></span>
                       {pattern}
                     </li>
                   ))}
@@ -236,12 +236,12 @@ export function OnboardingPage() {
             {/* First Insight */}
             <div className="p-6" style={{ background: 'var(--glass-surface)', backdropFilter: 'blur(12px)', borderRadius: 'var(--premium-radius-lg)' }}>
               <div className="flex items-start gap-3">
-                <Lightbulb className="h-6 w-6 flex-shrink-0 mt-1" style={{ color: 'var(--brand-primary)' }} />
+                <Lightbulb className="h-6 w-6 flex-shrink-0 mt-1" style={{ color: "var(--brand-primary)" }} />
                 <div>
-                  <h3 className="font-semibold mb-2" style={{ color: 'var(--brand-text-primary)' }}>
-                    💡 First Insight
+                  <h3 className="font-semibold mb-2" style={{ color: "var(--brand-primary)" }}>
+                     First Insight
                   </h3>
-                  <p style={{ color: 'var(--brand-text-secondary)' }}>
+                  <p style={{ color: "var(--brand-primary)" }}>
                     {analysis.first_insight}
                   </p>
                 </div>
@@ -251,7 +251,7 @@ export function OnboardingPage() {
 
           {/* Graph Visualization Placeholder */}
           <div className="p-6 mb-8" style={{ background: 'var(--brand-glass-bg)', backdropFilter: 'blur(12px)', borderRadius: 'var(--premium-radius-lg)' }}>
-            <h3 className="font-semibold mb-4 text-center" style={{ color: 'var(--brand-text-primary)' }}>
+            <h3 className="font-semibold mb-4 text-center" style={{ color: "var(--brand-primary)" }}>
               Your Knowledge Graph
             </h3>
             <div className="flex items-center justify-center gap-8 py-8">
@@ -264,7 +264,7 @@ export function OnboardingPage() {
                 </div>
               ))}
             </div>
-            <p className="text-center text-sm mt-4" style={{ color: 'var(--brand-text-muted)' }}>
+            <p className="text-center text-sm mt-4" style={{ color: "var(--brand-primary)" }}>
               This is just the beginning. Imagine after 50 captures...
             </p>
           </div>
@@ -278,7 +278,7 @@ export function OnboardingPage() {
               Start capturing thoughts
               <ArrowRight className="h-5 w-5" />
             </button>
-            <p className="text-sm mt-4" style={{ color: 'var(--brand-text-muted)' }}>
+            <p className="text-sm mt-4" style={{ color: "var(--brand-primary)" }}>
               Your knowledge graph will grow with every voice note
             </p>
           </div>
@@ -291,10 +291,10 @@ export function OnboardingPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--brand-text-primary)' }}>
+          <h2 className="text-xl font-bold mb-2" style={{ color: "var(--brand-primary)" }}>
             No prompts found
           </h2>
-          <button onClick={() => navigate('/')} className="text-blue-400">Go Home</button>
+          <button onClick={() => navigate('/')} className="text-brand-primary">Go Home</button>
         </div>
       </div>
     )
@@ -314,24 +314,24 @@ export function OnboardingPage() {
         <div className="max-w-2xl w-full">
           {/* Header */}
           <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold mb-3" style={{ color: 'var(--brand-text-primary)' }}>
+            <h1 className="text-4xl font-bold mb-3" style={{ color: "var(--brand-primary)" }}>
               Let's map your creative brain
             </h1>
-            <p className="text-xl" style={{ color: 'var(--brand-text-secondary)' }}>
+            <p className="text-xl" style={{ color: "var(--brand-primary)" }}>
               Question {currentQuestion + 1} of {questions.length}
             </p>
             <button
               onClick={handleSkipOnboarding}
               className="text-sm mt-4 hover:opacity-80 transition-opacity"
-              style={{ color: 'var(--brand-text-muted)' }}
+              style={{ color: "var(--brand-primary)" }}
             >
-              Skip onboarding →
+              Skip onboarding 
             </button>
           </div>
 
           {/* Question Card */}
           <div className="p-8 mb-6" style={{ background: 'var(--brand-glass-bg)', backdropFilter: 'blur(12px)', borderRadius: 'var(--premium-radius-lg)' }}>
-            <h2 className="text-2xl font-semibold mb-6" style={{ color: 'var(--brand-text-primary)' }}>
+            <h2 className="text-2xl font-semibold mb-6" style={{ color: "var(--brand-primary)" }}>
               {question.prompt_text}
             </h2>
 
@@ -366,9 +366,9 @@ export function OnboardingPage() {
                 <button
                   onClick={handleBack}
                   className="hover:opacity-80 transition-opacity"
-                  style={{ color: 'var(--brand-text-secondary)' }}
+                  style={{ color: "var(--brand-primary)" }}
                 >
-                  ← Back
+                   Back
                 </button>
               )}
             </div>
@@ -386,14 +386,14 @@ export function OnboardingPage() {
           {/* Completed Questions */}
           {responses.length > 0 && (
             <div className="mt-8 pt-8" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
-              <h3 className="text-sm font-medium mb-3" style={{ color: 'var(--brand-text-secondary)' }}>
+              <h3 className="text-sm font-medium mb-3" style={{ color: "var(--brand-primary)" }}>
                 Your responses so far:
               </h3>
               <div className="space-y-2">
                 {responses.map((response, i) => (
                   <div key={i} className="flex items-start gap-2 text-sm">
-                    <Check className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--brand-primary)' }} />
-                    <span className="line-clamp-1" style={{ color: 'var(--brand-text-secondary)' }}>
+                    <Check className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: "var(--brand-primary)" }} />
+                    <span className="line-clamp-1" style={{ color: "var(--brand-primary)" }}>
                       {questions[i]?.prompt_text || 'Question'}: {response?.transcript?.substring(0, 60) || ''}...
                     </span>
                   </div>

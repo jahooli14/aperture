@@ -169,7 +169,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
   const totalCount = tasks.length
 
   return (
-    <div className="aperture-card" style={{ padding: '1.25rem' }}>
+    <div className="glass-card glass-card-hover" style={{ padding: '1.25rem' }}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
@@ -177,7 +177,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
             Task Checklist
           </h3>
           {totalCount > 0 && (
-            <p className="text-xs mt-0.5" style={{ color: 'var(--brand-text-muted)' }}>
+            <p className="text-xs mt-0.5" style={{ color: "var(--brand-primary)" }}>
               {completedCount} of {totalCount} completed
             </p>
           )}
@@ -201,7 +201,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
               className={cn(
                 "group relative flex items-center gap-3 p-3.5 rounded-xl transition-all cursor-move border border-[var(--glass-surface)]",
                 isHighlighted
-                  ? "border-blue-500/40 bg-blue-500/10 shadow-[0_0_20px_rgba(59,130,246,0.1)]"
+                  ? "border-blue-500/40 bg-brand-primary/10 shadow-[0_0_20px_rgba(59,130,246,0.1)]"
                   : isNextTask
                     ? "bg-brand-surface border-[var(--glass-surface-hover)]"
                     : "hover:bg-white/[0.02]"
@@ -211,13 +211,13 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
               }}
             >
               {isHighlighted && (
-                <div className="absolute -left-1 top-0 bottom-0 w-1 bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+                <div className="absolute -left-1 top-0 bottom-0 w-1 bg-brand-primary rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
               )}
 
               {/* Context Indicator (AI) */}
               {task.is_ai_suggested && !task.done && (
                 <div className="absolute right-2 top-2">
-                  <div className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse" title="AI Suggested" />
+                  <div className="h-1.5 w-1.5 rounded-full bg-brand-primary animate-pulse" title="AI Suggested" />
                 </div>
               )}
 
@@ -231,7 +231,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                 onClick={() => handleToggleTask(task.id)}
                 className={cn(
                   "flex-shrink-0 h-6 w-6 rounded-lg flex items-center justify-center transition-all border-2",
-                  isHighlighted ? "border-blue-500/50 bg-blue-500/5" : "border-white/20 bg-black/20"
+                  isHighlighted ? "border-blue-500/50 bg-brand-primary/5" : "border-white/20 bg-black/20"
                 )}
               >
                 {task.done && <Check className="h-3.5 w-3.5 text-[var(--brand-text-primary)]" />}
@@ -250,7 +250,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                       if (e.key === 'Escape') handleEditCancel()
                     }}
                     className="w-full px-2 py-1 text-sm rounded-xl bg-[rgba(255,255,255,0.1)] outline-none ring-1 ring-blue-500/50"
-                    style={{ color: 'white' }}
+                    style={{ color: "var(--brand-primary)" }}
                     autoFocus
                   />
                 ) : (
@@ -282,7 +282,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                       </button>
 
                       {task.is_ai_suggested && (
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-indigo-400 opacity-70">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-brand-primary opacity-70">
                           AI Suggested
                         </span>
                       )}
@@ -300,7 +300,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
               {/* Delete Button */}
               <button
                 onClick={() => handleDeleteTask(task.id)}
-                className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/10 text-[var(--brand-text-primary)]/20 hover:text-red-500"
+                className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-brand-primary/10 text-[var(--brand-text-primary)]/20 hover:text-brand-text-secondary"
                 aria-label="Delete task"
               >
                 <Trash2 className="h-4 w-4" />
@@ -315,7 +315,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
             <button
               onClick={() => setShowCompleted(!showCompleted)}
               className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-[var(--glass-surface)] transition-colors text-sm"
-              style={{ color: 'var(--brand-text-muted)' }}
+              style={{ color: "var(--brand-primary)" }}
             >
               {showCompleted ? (
                 <ChevronDown className="h-4 w-4" />
@@ -361,14 +361,14 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                           if (e.key === 'Escape') handleEditCancel()
                         }}
                         className="flex-1 px-2 py-1 text-sm rounded-xl focus:outline-none focus:ring-2 bg-[rgba(255,255,255,0.1)]"
-                        style={{ color: 'var(--brand-text-primary)' }}
+                        style={{ color: "var(--brand-primary)" }}
                         autoFocus
                       />
                     ) : (
                       <span
                         className="flex-1 text-sm line-through cursor-text hover:opacity-70 transition-opacity"
                         onClick={() => handleEditStart(task.id, task.text)}
-                        style={{ color: 'var(--brand-text-muted)' }}
+                        style={{ color: "var(--brand-primary)" }}
                       >
                         {task.text}
                       </span>
@@ -378,7 +378,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                     <button
                       onClick={() => handleDeleteTask(task.id)}
                       className="flex-shrink-0 h-7 w-7 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-all"
-                      style={{ color: 'var(--brand-text-muted)' }}
+                      style={{ color: "var(--brand-primary)" }}
                       aria-label="Delete task"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -409,9 +409,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
             placeholder="Task description..."
             autoFocus
             className="flex-1 px-3 py-2 text-sm rounded-lg focus:outline-none focus:ring-2 premium-glass"
-            style={{
-              color: 'var(--brand-text-primary)'
-            }}
+            style={{ color: "var(--brand-primary)" }}
           />
           <button
             onClick={handleAddTask}
@@ -433,9 +431,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
               setNewTaskText('')
             }}
             className="px-4 py-2 text-sm font-medium transition-all rounded-lg"
-            style={{
-              color: 'var(--brand-text-primary)'
-            }}
+            style={{ color: "var(--brand-primary)" }}
           >
             Cancel
           </button>
@@ -444,7 +440,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
         <button
           onClick={() => setIsAdding(true)}
           className="mt-3 flex items-center gap-2 text-sm font-medium transition-colors w-full p-2 rounded-lg hover:bg-[var(--glass-surface)]"
-          style={{ color: 'var(--brand-primary)' }}
+          style={{ color: "var(--brand-primary)" }}
         >
           <Plus className="h-4 w-4" />
           Add task
@@ -456,7 +452,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
 
       {/* Empty State */}
       {tasks.length === 0 && !isAdding && (
-        <div className="text-center py-8" style={{ color: 'var(--brand-text-muted)' }}>
+        <div className="text-center py-8" style={{ color: "var(--brand-primary)" }}>
           <p className="text-sm">No tasks yet</p>
           <p className="text-xs mt-1">Break down your project into steps</p>
         </div>
@@ -466,7 +462,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
 }
 
 /**
- * Linked Todos — shows todos with this project_id from the todo store.
+ * Linked Todos  shows todos with this project_id from the todo store.
  * Completing here syncs with the main todo system.
  */
 function LinkedTodos({ projectId }: { projectId: string }) {
@@ -488,11 +484,11 @@ function LinkedTodos({ projectId }: { projectId: string }) {
   return (
     <div className="mt-4 pt-4 border-t border-brand-border">
       <div className="flex items-center gap-2 mb-3">
-        <ListTodo className="h-3.5 w-3.5" style={{ color: 'var(--brand-primary)' }} />
-        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--brand-text-muted)' }}>
+        <ListTodo className="h-3.5 w-3.5" style={{ color: "var(--brand-primary)" }} />
+        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--brand-primary)" }}>
           Linked Todos
         </span>
-        <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(59,130,246,0.1)', color: 'rgba(96,165,250,0.8)' }}>
+        <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(59,130,246,0.1)', color: "var(--brand-text-secondary)" }}>
           {activeTodos.length}
         </span>
       </div>
@@ -505,18 +501,18 @@ function LinkedTodos({ projectId }: { projectId: string }) {
             >
               {todo.done && <Check className="h-3 w-3 text-brand-text-primary" />}
             </button>
-            <span className="text-sm" style={{ color: 'var(--brand-text-primary)' }}>
+            <span className="text-sm" style={{ color: "var(--brand-primary)" }}>
               {todo.text}
             </span>
             {todo.source_memory_id && (
-              <span className="text-[9px] px-1.5 py-0.5 rounded-full ml-auto" style={{ backgroundColor: 'rgba(6,182,212,0.1)', color: 'rgba(6,182,212,0.7)' }}>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full ml-auto" style={{ backgroundColor: 'rgba(6,182,212,0.1)', color: "var(--brand-text-secondary)" }}>
                 from thought
               </span>
             )}
           </div>
         ))}
         {doneTodos.length > 0 && (
-          <p className="text-[10px] pt-1" style={{ color: 'var(--brand-text-muted)' }}>
+          <p className="text-[10px] pt-1" style={{ color: "var(--brand-primary)" }}>
             {doneTodos.length} completed
           </p>
         )}

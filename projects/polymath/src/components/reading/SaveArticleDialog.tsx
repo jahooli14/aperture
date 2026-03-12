@@ -1,7 +1,7 @@
 /**
  * Save Article Dialog
  * Mobile-optimized bottom sheet for saving URLs to reading queue
- * Streamlined — paste URL, hit save, done
+ * Streamlined  paste URL, hit save, done
  */
 
 import { useState } from 'react'
@@ -105,7 +105,7 @@ export function SaveArticleDialog({ open, onClose, hideTrigger = false }: SaveAr
       <BottomSheetContent>
         <BottomSheetHeader>
           <div className="flex items-center gap-3 mb-2">
-            <BookmarkPlus className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
+            <BookmarkPlus className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
             <BottomSheetTitle>Save article</BottomSheetTitle>
           </div>
           <BottomSheetDescription>
@@ -114,7 +114,7 @@ export function SaveArticleDialog({ open, onClose, hideTrigger = false }: SaveAr
         </BottomSheetHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-          {/* URL Input — big and clear */}
+          {/* URL Input  big and clear */}
           <div className="pt-2">
             <div
               className="flex items-center gap-3 rounded-xl px-4 transition-all duration-200"
@@ -125,7 +125,7 @@ export function SaveArticleDialog({ open, onClose, hideTrigger = false }: SaveAr
                   : 'inset 0 0 0 1px var(--glass-surface-hover)',
               }}
             >
-              <LinkIcon className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
+              <LinkIcon className="h-5 w-5 flex-shrink-0" style={{ color: "var(--brand-primary)" }} />
               <input
                 id="url"
                 type="url"
@@ -141,7 +141,7 @@ export function SaveArticleDialog({ open, onClose, hideTrigger = false }: SaveAr
                 style={{ color: 'var(--brand-text-primary)', backgroundColor: 'transparent' }}
               />
             </div>
-            <p className="text-xs mt-2 px-1" style={{ color: 'var(--brand-text-muted)' }}>
+            <p className="text-xs mt-2 px-1" style={{ color: "var(--brand-primary)" }}>
               AI will extract the content and find connections
             </p>
           </div>

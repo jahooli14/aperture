@@ -75,8 +75,8 @@ export function BuildProjectDialog({
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <div className="flex items-center gap-2 mb-2">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Hammer className="h-5 w-5 text-blue-900" />
+              <div className="p-2 bg-brand-primary rounded-lg">
+                <Hammer className="h-5 w-5 text-brand-primary" />
               </div>
               <DialogTitle>Build this project</DialogTitle>
             </div>
@@ -89,15 +89,15 @@ export function BuildProjectDialog({
             {/* Preview Scores */}
             <div className="flex gap-2 p-3 bg-neutral-50 rounded-lg border border-neutral-200">
               <div className="flex items-center gap-1 text-sm">
-                <TrendingUp className="h-4 w-4 text-green-600" />
+                <TrendingUp className="h-4 w-4 text-brand-primary" />
                 <span className="font-medium">{Math.round(suggestion.novelty_score * 100)}% Fresh</span>
               </div>
               <div className="flex items-center gap-1 text-sm">
-                <Hammer className="h-4 w-4 text-blue-600" />
+                <Hammer className="h-4 w-4 text-brand-primary" />
                 <span className="font-medium">{Math.round(suggestion.feasibility_score * 100)}% Doable</span>
               </div>
               <div className="flex items-center gap-1 text-sm">
-                <Zap className="h-4 w-4 text-blue-900" />
+                <Zap className="h-4 w-4 text-brand-primary" />
                 <span className="font-medium">{Math.round(suggestion.interest_score * 100)}% Exciting</span>
               </div>
             </div>
@@ -133,7 +133,7 @@ export function BuildProjectDialog({
             {/* Capabilities Info */}
             {suggestion.capability_ids.length > 0 && (
               <div className="text-xs text-neutral-600 bg-blue-50 p-3 rounded-lg border border-blue-200">
-                <span className="font-semibold">✨ This will strengthen {suggestion.capability_ids.length} capability{suggestion.capability_ids.length !== 1 ? 'ies' : ''}</span>
+                <span className="font-semibold"> This will strengthen {suggestion.capability_ids.length} capability{suggestion.capability_ids.length !== 1 ? 'ies' : ''}</span>
                 <p className="mt-1">Building this project will boost the skills and tools used in the suggestion.</p>
               </div>
             )}

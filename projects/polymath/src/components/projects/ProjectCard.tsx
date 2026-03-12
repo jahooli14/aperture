@@ -76,7 +76,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
   return (
     <Link
       to={`/projects/${project.id}`}
-      className={`group block aperture-card transition-all duration-300 break-inside-avoid ${prominent ? 'p-5 scale-[1.02]' : 'p-4'}`}
+      className={`group block glass-card glass-card-hover transition-all duration-300 break-inside-avoid ${prominent ? 'p-5 scale-[1.02]' : 'p-4'}`}
       style={{
         borderColor: project.is_priority ? 'var(--brand-primary)' : theme.border,
         background: `rgba(${theme.rgb}, 0.08)`,
@@ -129,7 +129,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
               <p className="text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70 aperture-header" style={{ color: theme.text }}>
                 Immediate Next Step
               </p>
-              <p className="text-sm font-medium leading-snug text-[var(--brand-text-primary)] line-clamp-3 aperture-body">
+              <p className="text-sm font-medium leading-snug text-[var(--brand-text-primary)] line-clamp-3 aperture-body whitespace-pre-wrap">
                 {nextTask.text}
               </p>
             </div>
@@ -138,7 +138,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
       ) : (
         /* Fallback: Description if no next task */
         project.description && (
-          <p className={`mb-4 italic opacity-90 aperture-body ${prominent ? 'text-sm line-clamp-3' : 'text-xs line-clamp-4'}`} style={{ color: `rgba(${theme.rgb}, 0.9)` }}>
+          <p className={`mb-4 italic opacity-90 aperture-body whitespace-pre-wrap ${prominent ? 'text-sm line-clamp-3' : 'text-xs line-clamp-4'}`} style={{ color: `rgba(${theme.rgb}, 0.9)` }}>
             "{project.description}"
           </p>
         )

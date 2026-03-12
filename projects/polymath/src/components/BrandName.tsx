@@ -64,7 +64,7 @@ export function BrandName({ className = '', size = 'md', showLogo = false }: Bra
         </svg>
       )}
       <span className="font-black tracking-tighter lowercase">
-        aper<span style={{ color: 'var(--brand-primary)' }}>ture</span>
+        aper<span style={{ color: "var(--brand-primary)" }}>ture</span>
       </span>
     </span>
   )

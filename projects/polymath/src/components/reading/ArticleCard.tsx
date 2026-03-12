@@ -183,7 +183,7 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
             {article.title?.startsWith('http') ? (
               <div className="flex items-center gap-2 mb-1">
                 <Loader2 className="h-4 w-4 animate-spin text-[var(--brand-primary)]" />
-                <span className="text-sm font-medium text-blue-400">Extracting...</span>
+                <span className="text-sm font-medium text-brand-primary">Extracting...</span>
               </div>
             ) : (
               <h3 className="text-lg font-bold leading-tight inline text-[#f2f2f7]">
@@ -191,9 +191,9 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
               </h3>
             )}
             {is_rotting && (
-              <span className="text-[10px] px-2 py-0.5 rounded-lg font-black uppercase tracking-wide ml-2 align-middle" style={{ background: 'rgba(239,68,68,0.18)', color: 'rgb(252,165,165)', border: '1px solid rgba(248,113,113,0.3)' }}>Rotting</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-lg font-black uppercase tracking-wide ml-2 align-middle" style={{ background: 'rgba(239,68,68,0.18)', color: "var(--brand-text-secondary)" }}>Rotting</span>
             )}
-            <div className="text-xs truncate mt-1 text-zinc-500">
+            <div className="text-xs truncate mt-1 text-brand-text-muted">
               {article.source || new URL(article.url).hostname.replace('www.', '')}
             </div>
           </div>
@@ -218,18 +218,18 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
             <div className="flex items-center gap-1">
               <SuggestionBadge itemId={article.id} itemType="article" />
               {isContentFullyCached ? (
-                <div className="p-1 rounded-lg text-emerald-400" style={{ background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.25)' }} title="Available offline">
+                <div className="p-1 rounded-lg text-brand-text-secondary" style={{ background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.25)' }} title="Available offline">
                   <Download className="h-3 w-3" />
                 </div>
               ) : isMetadataCached ? (
-                <div className="p-1 rounded-lg text-amber-400" style={{ background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.25)' }} title="Partially cached">
+                <div className="p-1 rounded-lg text-brand-text-secondary" style={{ background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.25)' }} title="Partially cached">
                   <WifiOff className="h-3 w-3" />
                 </div>
               ) : null}
               <PinButton type="article" id={article.id} title={article.title || 'Article'} content={<></>} />
             </div>
 
-            <div className="flex items-center gap-3 text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">
+            <div className="flex items-center gap-3 text-[10px] text-brand-text-muted uppercase tracking-wider font-semibold">
               {article.read_time_minutes && (
                 <span className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
@@ -244,7 +244,7 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
         </div>
 
         {excerpt && (
-          <p className="text-sm text-zinc-400 line-clamp-2 mb-3 leading-relaxed">
+          <p className="text-sm text-brand-text-muted line-clamp-2 mb-3 leading-relaxed">
             {excerpt}
           </p>
         )}
@@ -252,7 +252,7 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
         {progress > 0 && (
           <div className="w-full h-[5px] mt-2 overflow-hidden" style={{ background: 'var(--glass-surface)', border: '1px solid rgba(255,255,255,0.1)' }}>
             <div
-              className="h-full bg-blue-400 transition-all duration-500"
+              className="h-full bg-brand-primary transition-all duration-500"
               style={{ width: `${progress}%` }}
             />
           </div>

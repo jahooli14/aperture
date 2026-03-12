@@ -80,7 +80,7 @@ export async function syncArticleForOffline(article: Article): Promise<void> {
         // 4. Mark as completely cached
         await readingDb.markImagesCached(article.id)
 
-        console.log(`[OfflineSync] ✓ Sync complete: ${article.title}`)
+        console.log(`[OfflineSync]  Sync complete: ${article.title}`)
     } catch (error) {
         console.error(`[OfflineSync] Failed to sync article ${article.id}:`, error)
     }

@@ -1,14 +1,14 @@
 /**
- * Streak Store — Loss aversion + momentum
+ * Streak Store  Loss aversion + momentum
  *
  * Principle: After ~7 days, the fear of LOSING a streak is stronger than
  * the motivation to GAIN one. Duolingo data: 7-day users are 3.6x more
- * retained. We exploit this via Kahneman's prospect theory — losses loom
+ * retained. We exploit this via Kahneman's prospect theory  losses loom
  * ~2x larger than equivalent gains.
  *
  * Design:
  *   - recordCompletion() called whenever a todo is marked done
- *   - streak is the number of consecutive days with ≥1 completion
+ *   - streak is the number of consecutive days with 1 completion
  *   - bestStreak tracks all-time high (shown on reset to re-motivate)
  *   - One grace day per month protects streak from single misses
  */
@@ -25,7 +25,7 @@ interface StreakStore {
   history: DayRecord[]
   streak: number
   bestStreak: number
-  graceDaysUsed: Record<string, boolean>  // month (YYYY-MM) → used
+  graceDaysUsed: Record<string, boolean>  // month (YYYY-MM)  used
 
   recordCompletion: () => void
   useGraceDay: () => void

@@ -44,7 +44,7 @@ export function PageHeader({ title, subtitle, count, action, backable }: PageHea
             }}
             aria-label="Go back"
           >
-            <ArrowLeft className="w-4 h-4" style={{ color: 'var(--premium-platinum)' }} />
+            <ArrowLeft className="w-4 h-4" style={{ color: "var(--brand-primary)" }} />
           </button>
         )}
 
@@ -52,7 +52,7 @@ export function PageHeader({ title, subtitle, count, action, backable }: PageHea
           <div className="flex items-center gap-2.5">
             <h1
               className="text-2xl font-bold tracking-tight truncate"
-              style={{ color: 'var(--brand-text-primary)' }}
+              style={{ color: "var(--brand-primary)" }}
             >
               {title}
             </h1>
@@ -62,7 +62,7 @@ export function PageHeader({ title, subtitle, count, action, backable }: PageHea
                 className="flex-shrink-0 inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2 rounded-full text-xs font-semibold"
                 style={{
                   background: 'rgba(59,130,246,0.15)',
-                  color: '#3b82f6',
+                  color: "var(--brand-text-secondary)",
                   border: '1px solid rgba(59,130,246,0.25)',
                 }}
               >
@@ -74,7 +74,7 @@ export function PageHeader({ title, subtitle, count, action, backable }: PageHea
           {subtitle && (
             <p
               className="text-xs mt-0.5 truncate"
-              style={{ color: 'var(--brand-text-muted)' }}
+              style={{ color: "var(--brand-primary)" }}
             >
               {subtitle}
             </p>

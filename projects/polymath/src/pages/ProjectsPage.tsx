@@ -208,9 +208,7 @@ export function ProjectsPage() {
               <button
                 onClick={() => navigate('/search')}
                 className="h-10 w-10 rounded-lg flex items-center justify-center transition-all hover:bg-[var(--glass-surface)]"
-                style={{
-                  color: 'var(--brand-primary)'
-                }}
+                style={{ color: "var(--brand-primary)" }}
                 title="Search everything"
               >
                 <Search className="h-5 w-5" />
@@ -238,7 +236,7 @@ export function ProjectsPage() {
               {/* Title Section */}
               <div className="mb-6">
                 <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
-                  Your <span style={{ color: 'var(--brand-primary)' }}>projects</span>
+                  Your <span style={{ color: "var(--brand-primary)" }}>projects</span>
                 </h2>
               </div>
 
@@ -247,7 +245,7 @@ export function ProjectsPage() {
                 {/* Search Box */}
                 <div className="mb-6">
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'var(--brand-text-muted)' }} />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "var(--brand-primary)" }} />
                     <input
                       type="text"
                       placeholder="Search projects..."
@@ -262,7 +260,7 @@ export function ProjectsPage() {
                     />
                   </div>
                   {debouncedSearchQuery && (
-                    <div className="mt-2 text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
+                    <div className="mt-2 text-xs" style={{ color: "var(--brand-primary)" }}>
                       Found {projects.length} project{projects.length !== 1 ? 's' : ''}
                     </div>
                   )}
@@ -271,7 +269,7 @@ export function ProjectsPage() {
                 {/* Tag Filters */}
                 {allTags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-3 mb-6">
-                    <span className="text-sm font-medium self-center" style={{ color: 'var(--brand-text-secondary)' }}>
+                    <span className="text-sm font-medium self-center" style={{ color: "var(--brand-primary)" }}>
                       Tags:
                     </span>
                     {allTags.map(tag => (
@@ -295,7 +293,7 @@ export function ProjectsPage() {
                         onClick={() => setSelectedTags([])}
                         size="sm"
                         className="text-xs underline"
-                        style={{ color: 'var(--brand-text-muted)' }}
+                        style={{ color: "var(--brand-primary)" }}
                       >
                         Clear tags
                       </Button>

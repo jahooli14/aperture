@@ -1,7 +1,7 @@
 /**
  * TodoItem - Single row in any todo view.
  *
- * Design: Neobrutalist — hard shadows, thick borders, flat fills, sharp corners.
+ * Design: Neobrutalist  hard shadows, thick borders, flat fills, sharp corners.
  */
 
 import { useState, useRef, useMemo } from 'react'
@@ -28,7 +28,7 @@ interface TodoItemProps {
   areaName?: string
 }
 
-// Priority config — neobrutalist: full-opacity colors, thick borders
+// Priority config  neobrutalist: full-opacity colors, thick borders
 const PRIORITY_CONFIG = {
   3: {
     label: 'URGENT',
@@ -158,7 +158,7 @@ export function TodoItem({
 
   const priorityCfg = PRIORITY_CONFIG[todo.priority as keyof typeof PRIORITY_CONFIG]
 
-  // Flat, opaque card backgrounds — no glass
+  // Flat, opaque card backgrounds  no glass
   const itemBackground = completingFlash
     ? 'rgba(16,185,129,0.18)'
     : todo.done
@@ -169,7 +169,7 @@ export function TodoItem({
           ? priorityCfg.cardTint
           : 'var(--glass-surface)'
 
-  // Thick left border for status/priority — neobrutalist accent
+  // Thick left border for status/priority  neobrutalist accent
   const borderLeft = todo.done || completing
     ? '1.5px solid var(--glass-surface)'
     : isInProgress
@@ -206,7 +206,7 @@ export function TodoItem({
     >
       <SwipeableCard
         leftAction={SwipeActions.delete(() => onDelete(todo.id))}
-        rightAction={{ icon: <Check className="h-5 w-5 text-[var(--brand-text-primary)]" />, color: 'bg-emerald-600', label: 'Complete', threshold: 100, onAction: handleToggle }}
+        rightAction={{ icon: <Check className="h-5 w-5 text-[var(--brand-text-primary)]" />, color: 'bg-brand-primary', label: 'Complete', threshold: 100, onAction: handleToggle }}
         className="rounded-xl"
       >
         <div
@@ -221,7 +221,7 @@ export function TodoItem({
             boxShadow,
           }}
         >
-          {/* Checkbox — 44×44 touch target, square neobrutalist */}
+          {/* Checkbox  4444 touch target, square neobrutalist */}
           <button
             onClick={handleToggle}
             className="flex-shrink-0 flex items-center justify-center"
@@ -294,11 +294,11 @@ export function TodoItem({
               </p>
             )}
 
-            {/* Metadata chips — active items only */}
+            {/* Metadata chips  active items only */}
             {!todo.done && !completing && !editing && (
               <div className="flex flex-wrap items-center gap-1.5 mt-2">
 
-                {/* Priority chip — uppercase, square, bordered */}
+                {/* Priority chip  uppercase, square, bordered */}
                 {priorityCfg && !isInProgress && (
                   <span
                     className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg tracking-wider uppercase"
@@ -322,11 +322,11 @@ export function TodoItem({
                     className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg tracking-wider uppercase"
                     style={{
                       background: 'rgba(251,146,60,0.18)',
-                      color: 'rgb(251,146,60)',
+                      color: "var(--brand-text-secondary)",
                       border: '1px solid rgba(251,146,60,0.35)',
                     }}
                   >
-                    <span className="h-1.5 w-1.5 bg-orange-400 animate-pulse flex-shrink-0" />
+                    <span className="h-1.5 w-1.5 bg-brand-primary animate-pulse flex-shrink-0" />
                     Working
                   </span>
                 )}
@@ -337,7 +337,7 @@ export function TodoItem({
                     className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg tracking-wider uppercase"
                     style={{
                       background: 'rgba(239,68,68,0.18)',
-                      color: 'rgb(252,165,165)',
+                      color: "var(--brand-text-secondary)",
                       border: '1px solid rgba(248,113,113,0.35)',
                     }}
                   >
@@ -348,7 +348,7 @@ export function TodoItem({
 
                 {/* Deadline */}
                 {todo.deadline_date && !isOverdue && showDate && (
-                  <span className="flex items-center gap-1 text-[11px]" style={{ color: 'rgba(248,113,113,0.7)' }}>
+                  <span className="flex items-center gap-1 text-[11px]" style={{ color: "var(--brand-primary)" }}>
                     <AlertCircle className="h-3 w-3" />
                     Due {describeDate(todo.deadline_date)}
                   </span>
@@ -356,7 +356,7 @@ export function TodoItem({
 
                 {/* Scheduled date */}
                 {todo.scheduled_date && showDate && (
-                  <span className="flex items-center gap-1 text-[11px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                  <span className="flex items-center gap-1 text-[11px]" style={{ color: "var(--brand-primary)" }}>
                     <Calendar className="h-3 w-3" />
                     {describeDate(todo.scheduled_date)}
                   </span>
@@ -366,7 +366,7 @@ export function TodoItem({
                 {todo.scheduled_time && (
                   <span
                     className="flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-lg"
-                    style={{ background: 'rgba(99,179,237,0.12)', color: 'rgba(147,197,253,0.85)', border: '1px solid rgba(99,179,237,0.2)' }}
+                    style={{ background: 'rgba(99,179,237,0.12)', color: "var(--brand-text-secondary)" }}
                   >
                     <Clock className="h-2.5 w-2.5" />
                     {describeTime(todo.scheduled_time)}
@@ -377,7 +377,7 @@ export function TodoItem({
                 {showArea && areaName && (
                   <span
                     className="text-[11px] font-medium px-1.5 py-0.5 rounded-lg"
-                    style={{ background: 'rgba(251,191,36,0.14)', color: 'rgba(253,224,71,0.8)', border: '1px solid rgba(251,191,36,0.2)' }}
+                    style={{ background: 'rgba(251,191,36,0.14)', color: "var(--brand-text-secondary)" }}
                   >
                     {areaName}
                   </span>
@@ -386,7 +386,7 @@ export function TodoItem({
                 {/* Tags */}
                 {todo.tags.filter(t => t !== 'someday').map(tag => (
                   <span key={tag} className="flex items-center gap-0.5 text-[11px] px-1.5 py-0.5 rounded-lg"
-                    style={{ background: 'rgba(52,211,153,0.12)', color: 'rgba(52,211,153,0.8)', border: '1px solid rgba(52,211,153,0.2)' }}
+                    style={{ background: 'rgba(52,211,153,0.12)', color: "var(--brand-text-secondary)" }}
                   >
                     <Tag className="h-2.5 w-2.5" />
                     {tag}
@@ -397,7 +397,7 @@ export function TodoItem({
                 {todo.estimated_minutes && (
                   <span
                     className="flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-lg ml-auto"
-                    style={{ background: 'var(--glass-surface)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.1)' }}
+                    style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
                   >
                     <Clock className="h-2.5 w-2.5" />
                     {formatMinutes(todo.estimated_minutes)}
@@ -408,7 +408,7 @@ export function TodoItem({
                 {isStale && !todo.estimated_minutes && (
                   <span
                     className="text-[11px] ml-auto"
-                    style={{ color: 'rgba(255,255,255,0.35)' }}
+                    style={{ color: "var(--brand-primary)" }}
                     title={`Added ${daysSinceCreated} days ago`}
                   >
                     {daysSinceCreated}d
@@ -419,18 +419,18 @@ export function TodoItem({
 
             {/* Notes */}
             {todo.notes && !editing && !completing && (
-              <p className="mt-1.5 text-[12px] leading-snug line-clamp-2" style={{ color: 'rgba(255,255,255,0.45)' }}>
+              <p className="mt-1.5 text-[12px] leading-snug line-clamp-2" style={{ color: "var(--brand-primary)" }}>
                 {todo.notes}
               </p>
             )}
 
-            {/* Context indicators — project badge, source thought, AI label */}
+            {/* Context indicators  project badge, source thought, AI label */}
             {!editing && !completing && (projectName || sourceMemoryTitle || isAiGenerated) && (
               <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                 {projectName && (
                   <span
                     className="flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-md"
-                    style={{ background: 'rgba(139,92,246,0.1)', color: 'rgba(167,139,250,0.8)' }}
+                    style={{ background: 'rgba(139,92,246,0.1)', color: "var(--brand-text-secondary)" }}
                   >
                     <FolderKanban className="h-2.5 w-2.5" />
                     {projectName}
@@ -439,7 +439,7 @@ export function TodoItem({
                 {sourceMemoryTitle && (
                   <span
                     className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md truncate max-w-[200px]"
-                    style={{ background: 'rgba(6,182,212,0.08)', color: 'rgba(6,182,212,0.7)' }}
+                    style={{ background: 'rgba(6,182,212,0.08)', color: "var(--brand-text-secondary)" }}
                     title={`From thought: ${sourceMemoryTitle}`}
                   >
                     <Brain className="h-2.5 w-2.5 flex-shrink-0" />
@@ -449,7 +449,7 @@ export function TodoItem({
                 {isAiGenerated && !sourceMemoryTitle && (
                   <span
                     className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
-                    style={{ background: 'rgba(99,102,241,0.1)', color: 'rgba(129,140,248,0.7)' }}
+                    style={{ background: 'rgba(99,102,241,0.1)', color: "var(--brand-text-secondary)" }}
                   >
                     AI suggested
                   </span>
@@ -465,11 +465,11 @@ export function TodoItem({
                 onClick={handleStartToggle}
                 className="h-7 w-7 flex items-center justify-center rounded-lg transition-all border"
                 style={isInProgress ? {
-                  color: 'rgba(251,146,60,0.9)',
+                  color: "var(--brand-text-secondary)",
                   background: 'rgba(251,146,60,0.14)',
                   borderColor: 'rgba(251,146,60,0.4)',
                 } : {
-                  color: 'rgba(255,255,255,0.35)',
+                  color: "var(--brand-text-secondary)",
                   borderColor: 'rgba(255,255,255,0.1)',
                 }}
                 aria-label={isInProgress ? 'Stop working on this' : 'Start working on this'}
@@ -484,7 +484,7 @@ export function TodoItem({
               <button
                 onClick={() => onDelete(todo.id)}
                 className="h-7 w-7 flex items-center justify-center rounded-lg transition-all border"
-                style={{ color: 'rgba(255,255,255,0.30)', borderColor: 'var(--glass-surface-hover)' }}
+                style={{ color: "var(--brand-primary)" }}
                 aria-label="Delete todo"
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -497,7 +497,7 @@ export function TodoItem({
             <button
               onClick={() => onDelete(todo.id)}
               className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-lg transition-all border"
-              style={{ color: 'rgba(255,255,255,0.35)', opacity: 0.7, borderColor: 'var(--glass-surface)' }}
+              style={{ color: "var(--brand-primary)" }}
               aria-label="Delete todo"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -509,7 +509,7 @@ export function TodoItem({
   )
 }
 
-// ─── Logbook item ─────────────────────────────────────────────
+//  Logbook item 
 
 export function LogbookItem({ todo, onUndo }: { todo: Todo; onUndo: (id: string) => void }) {
   const completedAt = todo.completed_at
@@ -529,19 +529,19 @@ export function LogbookItem({ todo, onUndo }: { todo: Todo; onUndo: (id: string)
       </div>
       <span
         className="flex-1 text-[15px] truncate"
-        style={{ textDecoration: 'line-through', color: 'rgba(255,255,255,0.65)', textDecorationColor: 'rgba(255,255,255,0.30)' }}
+        style={{ textDecoration: 'line-through', color: "var(--brand-text-secondary)" }}
       >
         {todo.text}
       </span>
       {completedAt && (
-        <span className="text-[11px] flex-shrink-0" style={{ color: 'rgba(255,255,255,0.45)' }}>
+        <span className="text-[11px] flex-shrink-0" style={{ color: "var(--brand-primary)" }}>
           {completedAt}
         </span>
       )}
       <button
         onClick={() => onUndo(todo.id)}
         className="text-[11px] flex-shrink-0 ml-1 transition-colors"
-        style={{ color: 'rgba(255,255,255,0.40)' }}
+        style={{ color: "var(--brand-primary)" }}
       >
         Undo
       </button>

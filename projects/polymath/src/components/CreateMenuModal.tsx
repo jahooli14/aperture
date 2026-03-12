@@ -16,7 +16,7 @@ const creationActions = [
         description: 'Capture a quick spark or insight',
         icon: Brain,
         color: 'from-purple-500 to-indigo-600',
-        iconColor: 'text-purple-400',
+        iconColor: 'text-brand-primary',
         delay: 0.03
     },
     {
@@ -25,7 +25,7 @@ const creationActions = [
         description: 'Launch a new focus area',
         icon: Layers,
         color: 'from-blue-500 to-cyan-600',
-        iconColor: 'text-blue-400',
+        iconColor: 'text-brand-primary',
         delay: 0.06
     },
     {
@@ -34,7 +34,7 @@ const creationActions = [
         description: 'Save content for later reading',
         icon: BookmarkPlus,
         color: 'from-emerald-500 to-teal-600',
-        iconColor: 'text-emerald-400',
+        iconColor: 'text-brand-text-secondary',
         delay: 0.09
     },
     {
@@ -43,7 +43,7 @@ const creationActions = [
         description: 'Curate your growing collections',
         icon: ListPlus,
         color: 'from-amber-500 to-orange-600',
-        iconColor: 'text-amber-400',
+        iconColor: 'text-brand-text-secondary',
         delay: 0.12
     }
 ]
@@ -77,23 +77,23 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
                     >
                         {/* Ambient Background Glows */}
                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-sky-500 to-transparent opacity-50" />
-                        <div className="absolute -top-24 -left-24 w-64 h-64 bg-sky-500/10 blur-[100px] rounded-full" />
-                        <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-purple-500/10 blur-[100px] rounded-full" />
+                        <div className="absolute -top-24 -left-24 w-64 h-64 bg-brand-primary/10 blur-[100px] rounded-full" />
+                        <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-brand-primary/10 blur-[100px] rounded-full" />
 
                         <div className="relative p-8 md:p-12">
                             <div className="flex items-center justify-between mb-10">
                                 <div>
                                     <h2 className="text-3xl font-black italic text-[var(--brand-text-primary)] flex items-center gap-3 tracking-tighter uppercase">
-                                        <Sparkles className="h-6 w-6 text-sky-400" />
+                                        <Sparkles className="h-6 w-6 text-brand-primary" />
                                         Forge New
                                     </h2>
-                                    <p className="text-zinc-500 text-sm font-medium mt-1">Select an entity to bring into existence.</p>
+                                    <p className="text-brand-text-muted text-sm font-medium mt-1">Select an entity to bring into existence.</p>
                                 </div>
                                 <button
                                     onClick={onClose}
                                     className="h-12 w-12 rounded-full bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] flex items-center justify-center transition-all border border-[var(--glass-surface)] group"
                                 >
-                                    <X className="h-6 w-6 text-zinc-400 group-hover:text-[var(--brand-text-primary)] group-hover:rotate-90 transition-all duration-300" />
+                                    <X className="h-6 w-6 text-brand-text-muted group-hover:text-[var(--brand-text-primary)] group-hover:rotate-90 transition-all duration-300" />
                                 </button>
                             </div>
 
@@ -125,11 +125,11 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
 
                                         <div className="flex-1">
                                             <div className="flex items-center justify-between">
-                                                <span className="text-xl font-bold text-[var(--brand-text-primary)] group-hover:text-sky-400 transition-colors uppercase tracking-tight">
+                                                <span className="text-xl font-bold text-[var(--brand-text-primary)] group-hover:text-brand-primary transition-colors uppercase tracking-tight">
                                                     {action.label}
                                                 </span>
                                             </div>
-                                            <p className="text-zinc-500 text-xs mt-1 leading-relaxed">
+                                            <p className="text-brand-text-muted text-xs mt-1 leading-relaxed">
                                                 {action.description}
                                             </p>
                                         </div>

@@ -325,7 +325,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
             </button>
 
             {motionPermission === 'denied' && (
-              <p className="mt-4 text-red-400 text-sm">Motion permission required for this feature.</p>
+              <p className="mt-4 text-brand-text-secondary text-sm">Motion permission required for this feature.</p>
             )}
           </motion.div>
         )}
@@ -376,7 +376,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
                 <motion.div
                   initial={{ opacity: 0, scale: 0.5 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="mb-4 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-yellow-500/20 border border-yellow-500/50 text-yellow-200 text-sm font-bold uppercase tracking-widest shadow-[0_0_20px_rgba(234,179,8,0.3)]"
+                  className="mb-4 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-primary/20 border border-yellow-500/50 text-brand-primary text-sm font-bold uppercase tracking-widest shadow-[0_0_20px_rgba(234,179,8,0.3)]"
                 >
                   <Zap className="h-4 w-4 fill-current" />
                   Jolt Detected
@@ -416,7 +416,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
                 onClick={toggleRecording}
                 disabled={isProcessing}
                 className={`p-4 rounded-full transition-all ${isRecording
-                  ? 'bg-red-500/20 text-red-400 animate-pulse border border-red-500/30'
+                  ? 'bg-brand-primary/20 text-brand-text-secondary animate-pulse border border-red-500/30'
                   : 'bg-[var(--glass-surface)] text-[var(--brand-text-secondary)] hover:bg-[rgba(255,255,255,0.1)] border border-[var(--glass-surface)]'
                   }`}
               >
@@ -443,7 +443,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
             <div className="mb-8 relative">
               <div className="absolute inset-0 bg-violet-500/20 blur-3xl rounded-full" />
               <div className="relative p-6 rounded-2xl bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)]">
-                <Zap className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+                <Zap className="h-12 w-12 text-brand-text-secondary mx-auto mb-4" />
                 <h2 className="text-3xl font-serif text-[#E2E8F0] mb-2">Session Complete</h2>
                 <p className="text-[var(--brand-text-secondary)]">Your subconscious has been primed.</p>
               </div>
@@ -452,11 +452,11 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
             <div className="space-y-4 mb-8">
               <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--glass-surface)] border border-[var(--glass-surface)]">
                 <span className="text-[var(--brand-text-secondary)]">Insights Captured</span>
-                <span className="text-2xl font-bold text-violet-400">{capturedInsightsCount}</span>
+                <span className="text-2xl font-bold text-brand-primary">{capturedInsightsCount}</span>
               </div>
 
               <div className="p-4 rounded-xl bg-violet-500/5 border border-violet-500/10 text-left">
-                <p className="text-xs uppercase tracking-widest text-violet-400 font-bold mb-2">Closing Reflection</p>
+                <p className="text-xs uppercase tracking-widest text-brand-primary font-bold mb-2">Closing Reflection</p>
                 <p className="text-sm italic text-[var(--brand-text-secondary)] leading-relaxed">
                   "The most profound connections often emerge when we stop looking for them. Sleep well, let these seeds grow."
                 </p>

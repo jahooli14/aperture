@@ -1,10 +1,10 @@
 /**
- * DailyReview — Morning planning + evening reflection container
+ * DailyReview  Morning planning + evening reflection container
  *
  * Auto-detects whether to show morning or evening flow based on time of day:
- *   Before 12pm  → Morning Review
- *   After 6pm    → Evening Review
- *   12pm–6pm     → User chooses
+ *   Before 12pm   Morning Review
+ *   After 6pm     Evening Review
+ *   12pm6pm      User chooses
  *
  * Rendered as a full-screen modal that slides up from the bottom,
  * consistent with native sheet patterns on iOS/Android.
@@ -31,7 +31,7 @@ function detectReviewType(): ReviewType | null {
   const hour = new Date().getHours()
   if (hour < 12) return 'morning'
   if (hour >= 18) return 'evening'
-  return null  // midday — user chooses
+  return null  // midday  user chooses
 }
 
 export function DailyReview({ onClose, todos, onUpdateTodo, onAddTodo, onDeleteTodo }: DailyReviewProps) {
@@ -50,7 +50,7 @@ export function DailyReview({ onClose, todos, onUpdateTodo, onAddTodo, onDeleteT
       <button
         onClick={onClose}
         className="absolute top-5 left-5 z-10 h-9 w-9 flex items-center justify-center rounded-xl transition-all"
-        style={{ background: 'var(--glass-surface)', color: 'rgba(255,255,255,0.5)' }}
+        style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
         aria-label="Close review"
       >
         <X className="h-4 w-4" />
@@ -61,13 +61,13 @@ export function DailyReview({ onClose, todos, onUpdateTodo, onAddTodo, onDeleteT
         {reviewType === null ? (
           // Midday chooser
           <div className="flex flex-col items-center justify-center h-full px-6 text-center">
-            <p className="text-[12px] font-semibold uppercase tracking-widest mb-4" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            <p className="text-[12px] font-semibold uppercase tracking-widest mb-4" style={{ color: "var(--brand-primary)" }}>
               Daily review
             </p>
-            <h2 className="text-[28px] font-bold mb-2" style={{ color: 'rgba(255,255,255,0.9)' }}>
+            <h2 className="text-[28px] font-bold mb-2" style={{ color: "var(--brand-primary)" }}>
               Which review?
             </h2>
-            <p className="text-[14px] mb-10" style={{ color: 'rgba(255,255,255,0.38)' }}>
+            <p className="text-[14px] mb-10" style={{ color: "var(--brand-primary)" }}>
               Plan your day, or reflect on what happened.
             </p>
 
@@ -82,12 +82,12 @@ export function DailyReview({ onClose, todos, onUpdateTodo, onAddTodo, onDeleteT
                   boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
                 }}
               >
-                <Sun className="h-5 w-5 flex-shrink-0" style={{ color: 'rgba(251,191,36,0.8)' }} />
+                <Sun className="h-5 w-5 flex-shrink-0" style={{ color: "var(--brand-primary)" }} />
                 <div>
-                  <p className="text-[15px] font-bold" style={{ color: 'rgba(251,191,36,0.9)' }}>
+                  <p className="text-[15px] font-bold" style={{ color: "var(--brand-primary)" }}>
                     Morning review
                   </p>
-                  <p className="text-[12px]" style={{ color: 'rgba(251,191,36,0.5)' }}>
+                  <p className="text-[12px]" style={{ color: "var(--brand-primary)" }}>
                     Plan your day, pick your MITs
                   </p>
                 </div>
@@ -103,12 +103,12 @@ export function DailyReview({ onClose, todos, onUpdateTodo, onAddTodo, onDeleteT
                   boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
                 }}
               >
-                <Moon className="h-5 w-5 flex-shrink-0" style={{ color: 'rgba(196,181,253,0.8)' }} />
+                <Moon className="h-5 w-5 flex-shrink-0" style={{ color: "var(--brand-primary)" }} />
                 <div>
-                  <p className="text-[15px] font-bold" style={{ color: 'rgba(196,181,253,0.9)' }}>
+                  <p className="text-[15px] font-bold" style={{ color: "var(--brand-primary)" }}>
                     Evening review
                   </p>
-                  <p className="text-[12px]" style={{ color: 'rgba(196,181,253,0.5)' }}>
+                  <p className="text-[12px]" style={{ color: "var(--brand-primary)" }}>
                     Reflect, capture, plan tomorrow
                   </p>
                 </div>

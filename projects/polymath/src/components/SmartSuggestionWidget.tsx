@@ -99,13 +99,13 @@ export function SmartSuggestionWidget() {
         }
       case 'reading':
         return {
-          primary: 'var(--premium-emerald)',
+          primary: 'var(--brand-primary)',
           bg: 'rgba(16, 185, 129, 0.15)',
           border: 'rgba(16, 185, 129, 0.3)'
         }
       case 'capture':
         return {
-          primary: 'var(--premium-indigo)',
+          primary: 'var(--brand-primary)',
           bg: 'rgba(99, 102, 241, 0.15)',
           border: 'rgba(99, 102, 241, 0.3)'
         }
@@ -117,7 +117,7 @@ export function SmartSuggestionWidget() {
         }
       default:
         return {
-          primary: 'var(--premium-amber)',
+          primary: 'var(--brand-primary)',
           bg: 'rgba(245, 158, 11, 0.15)',
           border: 'rgba(245, 158, 11, 0.3)'
         }
@@ -129,9 +129,9 @@ export function SmartSuggestionWidget() {
       case 'high':
         return 'var(--brand-primary)'
       case 'moderate':
-        return 'var(--premium-amber)'
+        return 'var(--brand-primary)'
       case 'low':
-        return 'var(--premium-emerald)'
+        return 'var(--brand-primary)'
       default:
         return 'var(--brand-text-muted)'
     }
@@ -141,8 +141,8 @@ export function SmartSuggestionWidget() {
     return (
       <div className="premium-card p-8">
         <div className="flex flex-col items-center justify-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--brand-primary)' }} />
-          <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>
+          <Loader2 className="h-8 w-8 animate-spin" style={{ color: "var(--brand-primary)" }} />
+          <p className="text-sm" style={{ color: "var(--brand-primary)" }}>
             Analyzing your context...
           </p>
         </div>
@@ -175,20 +175,20 @@ export function SmartSuggestionWidget() {
               >
                 {getTypeIcon(suggestion.type)}
               </div>
-              <h3 className="text-lg font-bold" style={{ color: 'var(--brand-text-primary)' }}>
+              <h3 className="text-lg font-bold" style={{ color: "var(--brand-primary)" }}>
                 What should I do right now?
               </h3>
             </div>
             <button
               onClick={handleRefresh}
               className="p-2 rounded-lg hover:bg-[var(--glass-surface)] transition-colors"
-              style={{ color: 'var(--brand-text-muted)' }}
+              style={{ color: "var(--brand-primary)" }}
               title="Refresh suggestion"
             >
               <RefreshCw className="h-4 w-4" />
             </button>
           </div>
-          <p className="text-sm leading-relaxed" style={{ color: 'var(--brand-text-secondary)' }}>
+          <p className="text-sm leading-relaxed" style={{ color: "var(--brand-primary)" }}>
             {suggestion.reasoning}
           </p>
         </div>
@@ -203,7 +203,7 @@ export function SmartSuggestionWidget() {
               <h4 className="text-xl font-bold mb-2 premium-text-platinum">
                 {suggestion.title}
               </h4>
-              <p className="text-base leading-relaxed mb-4" style={{ color: 'var(--brand-text-secondary)' }}>
+              <p className="text-base leading-relaxed mb-4" style={{ color: "var(--brand-primary)" }}>
                 {suggestion.description}
               </p>
 
@@ -284,15 +284,15 @@ export function SmartSuggestionWidget() {
                       {getTypeIcon(alt.type)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h5 className="font-bold mb-1" style={{ color: 'var(--brand-text-primary)' }}>
+                      <h5 className="font-bold mb-1" style={{ color: "var(--brand-primary)" }}>
                         {alt.title}
                       </h5>
-                      <p className="text-sm line-clamp-2" style={{ color: 'var(--brand-text-secondary)' }}>
+                      <p className="text-sm line-clamp-2" style={{ color: "var(--brand-primary)" }}>
                         {alt.description}
                       </p>
                       <div className="flex gap-2 mt-2">
                         {alt.estimatedTime && (
-                          <span className="text-xs flex items-center gap-1" style={{ color: 'var(--brand-text-muted)' }}>
+                          <span className="text-xs flex items-center gap-1" style={{ color: "var(--brand-primary)" }}>
                             <Clock className="h-3 w-3" />
                             {alt.estimatedTime}m
                           </span>

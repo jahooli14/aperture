@@ -42,18 +42,18 @@ export const ThemeClusterCard = React.memo(function ThemeClusterCard({ cluster, 
           boxShadow: '2px 2px 0 rgba(0,0,0,0.5)',
         }}
       >
-        <IconComponent className="h-5 w-5" style={{ color: 'var(--brand-primary)' }} />
+        <IconComponent className="h-5 w-5" style={{ color: "var(--brand-primary)" }} />
       </div>
 
       {/* Content */}
       <div className="flex-1 w-full min-w-0">
         {/* Theme Name */}
-        <h3 className="text-sm font-black uppercase tracking-wide mb-1 line-clamp-2" style={{ color: 'rgba(255,255,255,0.9)' }}>
+        <h3 className="text-sm font-black uppercase tracking-wide mb-1 line-clamp-2" style={{ color: "var(--brand-primary)" }}>
           {cluster.name}
         </h3>
 
         {/* Thought Count */}
-        <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--brand-text-secondary)' }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "var(--brand-primary)" }}>
           {cluster.memory_count} {cluster.memory_count === 1 ? 'thought' : 'thoughts'}
         </p>
 
@@ -65,7 +65,7 @@ export const ThemeClusterCard = React.memo(function ThemeClusterCard({ cluster, 
               className="text-[10px] px-2 py-0.5 rounded-lg font-black uppercase tracking-wide"
               style={{
                 background: 'rgba(59,130,246,0.1)',
-                color: 'rgba(96,165,250,0.85)',
+                color: "var(--brand-text-secondary)",
                 border: '1.5px solid rgba(59,130,246,0.3)',
               }}
             >
@@ -86,7 +86,7 @@ export const ThemeClusterCard = React.memo(function ThemeClusterCard({ cluster, 
 
       {/* Hover indicator */}
       <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-        <ChevronRight className="w-4 h-4" style={{ color: 'var(--brand-primary)' }} />
+        <ChevronRight className="w-4 h-4" style={{ color: "var(--brand-primary)" }} />
       </div>
     </button>
   )

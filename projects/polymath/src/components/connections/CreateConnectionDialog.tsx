@@ -239,7 +239,7 @@ export function CreateConnectionDialog({
 
         {/* Search bar */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'var(--brand-text-muted)' }} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "var(--brand-primary)" }} />
           <input
             type="text"
             placeholder="Search for an item to link..."
@@ -291,8 +291,8 @@ export function CreateConnectionDialog({
         <div className="flex-1 overflow-y-auto -mx-6 px-6">
           {loading ? (
             <div className="py-12 text-center">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-3" style={{ color: 'var(--brand-primary)' }} />
-              <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>Loading items...</p>
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-3" style={{ color: "var(--brand-primary)" }} />
+              <p className="text-sm" style={{ color: "var(--brand-primary)" }}>Loading items...</p>
             </div>
           ) : (
             <div className="space-y-4 py-2">
@@ -300,8 +300,8 @@ export function CreateConnectionDialog({
               {filteredSuggestions.length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 mb-3 px-1">
-                    <Lightbulb className="h-4 w-4" style={{ color: 'var(--brand-primary)' }} />
-                    <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--brand-primary)' }}>
+                    <Lightbulb className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
+                    <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>
                       Suggested Based on Similarity
                     </h3>
                   </div>
@@ -325,7 +325,7 @@ export function CreateConnectionDialog({
                 <div>
                   {filteredSuggestions.length > 0 && (
                     <div className="flex items-center gap-2 mb-3 px-1 mt-6">
-                      <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--brand-text-secondary)' }}>
+                      <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>
                         All Items
                       </h3>
                     </div>
@@ -348,8 +348,8 @@ export function CreateConnectionDialog({
               {filteredSuggestions.length === 0 && filteredAllItems.length === 0 && (
                 <div className="py-12 text-center">
                   <Search className="h-12 w-12 mx-auto mb-3" style={{ color: 'var(--brand-text-muted)', opacity: 0.3 }} />
-                  <p className="font-medium" style={{ color: 'var(--brand-text-primary)' }}>No items found</p>
-                  <p className="text-sm mt-1" style={{ color: 'var(--brand-text-muted)' }}>Try a different search or filter</p>
+                  <p className="font-medium" style={{ color: "var(--brand-primary)" }}>No items found</p>
+                  <p className="text-sm mt-1" style={{ color: "var(--brand-primary)" }}>Try a different search or filter</p>
                 </div>
               )}
             </div>
@@ -403,11 +403,11 @@ function ItemCard({
               </div>
             )}
           </div>
-          <div className="font-medium mb-1 line-clamp-1" style={{ color: 'var(--brand-text-primary)' }}>
+          <div className="font-medium mb-1 line-clamp-1" style={{ color: "var(--brand-primary)" }}>
             {item.title}
           </div>
           {item.preview && (
-            <div className="text-sm line-clamp-2" style={{ color: 'var(--brand-text-secondary)' }}>
+            <div className="text-sm line-clamp-2" style={{ color: "var(--brand-primary)" }}>
               {item.preview}
             </div>
           )}

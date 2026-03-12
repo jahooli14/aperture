@@ -37,12 +37,12 @@ export function useBedtimeNotifications() {
                     scheduledTime.setHours(bedtimeHour, bedtimeMinute, 0, 0)
 
                     if (now >= scheduledTime) {
-                        // Already past today's time — schedule for tomorrow
+                        // Already past today's time  schedule for tomorrow
                         scheduledTime.setDate(scheduledTime.getDate() + 1)
                     }
 
                     toSchedule.push({
-                        title: "Bedtime Ideas 🌙",
+                        title: "Bedtime Ideas ",
                         body: "Your nightly prompts are ready. Tap to reflect.",
                         id: 930,
                         schedule: {
@@ -67,7 +67,7 @@ export function useBedtimeNotifications() {
                     morningTime.setHours(morningHour, morningMinute, 0, 0)
 
                     if (now >= morningTime) {
-                        // Already past today's time — schedule for tomorrow
+                        // Already past today's time  schedule for tomorrow
                         morningTime.setDate(morningTime.getDate() + 1)
                     }
 

@@ -101,7 +101,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
     setShowOptions(false)
   }
 
-  // Auto-grow textarea — batched in rAF to avoid double-reflow per keystroke
+  // Auto-grow textarea  batched in rAF to avoid double-reflow per keystroke
   const handleBodyChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setBody(e.target.value)
     const el = e.target
@@ -120,8 +120,8 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
     const lines = body.slice(0, selectionStart).split('\n')
     const currentLine = lines[lines.length - 1]
 
-    // Match bullet patterns: "- ", "• ", "* ", "[] ", "[x] ", numbered "1. " etc.
-    const bulletMatch = currentLine.match(/^(\s*)([-•*]|\[\s?\]|\[x\]|\d+\.)\s/)
+    // Match bullet patterns: "- ", " ", "* ", "[] ", "[x] ", numbered "1. " etc.
+    const bulletMatch = currentLine.match(/^(\s*)([-*]|\[\s?\]|\[x\]|\d+\.)\s/)
     if (!bulletMatch) return
 
     const [, indent, bullet] = bulletMatch
@@ -232,7 +232,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
     try {
       const imageUrls = await uploadImages()
 
-      // Only send title if user explicitly typed one — AI will generate it otherwise
+      // Only send title if user explicitly typed one  AI will generate it otherwise
       const userTitle = formData.title.trim() || undefined
 
       const memoryData = {
@@ -307,7 +307,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
           className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-[var(--glass-surface)]"
           style={{
             boxShadow: 'inset 0 0 0 1px rgba(100,180,255,0.2)',
-            color: 'rgba(100, 180, 255, 1)'
+            color: "var(--brand-text-secondary)"
           }}
           title="New Thought"
         >
@@ -319,7 +319,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
         <BottomSheetContent>
           <BottomSheetHeader>
             <div className="flex items-center gap-3 mb-2">
-              <Brain className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
+              <Brain className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
               <BottomSheetTitle>Capture thought</BottomSheetTitle>
             </div>
             <BottomSheetDescription>
@@ -328,7 +328,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
           </BottomSheetHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-            {/* Body — primary field, auto-growing textarea */}
+            {/* Body  primary field, auto-growing textarea */}
             <div
               className="rounded-xl transition-all duration-200 px-3 py-2.5"
               style={{
@@ -341,7 +341,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
               <textarea
                 ref={bodyRef}
                 id="body"
-                placeholder="What's on your mind?&#10;&#10;Start with - or • for bullet lists"
+                placeholder="What's on your mind?&#10;&#10;Start with - or  for bullet lists"
                 value={body}
                 onChange={handleBodyChange}
                 onKeyDown={handleBodyKeyDown}
@@ -358,7 +358,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
               />
             </div>
 
-            {/* Title — secondary, optional */}
+            {/* Title  secondary, optional */}
             <div>
               <Input
                 id="title"
@@ -368,7 +368,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                 onFocus={handleInputFocus}
                 autoComplete="off"
                 className="h-10 border-0 border-b rounded-none bg-transparent px-1 text-sm focus:ring-0 focus:border-b focus:border-white/20 placeholder:text-[var(--brand-text-primary)]/20"
-                style={{ color: 'var(--brand-text-secondary)' }}
+                style={{ color: "var(--brand-primary)" }}
               />
             </div>
 
@@ -390,7 +390,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                     }}
                     className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
                       formData.tags?.split(',').map(t => t.trim()).includes(tag)
-                        ? 'bg-blue-500/20 text-blue-400'
+                        ? 'bg-brand-primary/20 text-brand-primary'
                         : 'bg-[var(--glass-surface)] text-[var(--brand-text-muted)] hover:bg-[rgba(255,255,255,0.1)]'
                     }`}
                     style={{
@@ -413,7 +413,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
               </div>
             )}
 
-            {/* Quick Actions Row — Photos + More Options */}
+            {/* Quick Actions Row  Photos + More Options */}
             <div className="flex items-center gap-2 pt-2 border-t" style={{ borderColor: 'var(--glass-surface)' }}>
               {/* Photo button */}
               <div className="relative">
@@ -428,12 +428,12 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                 <button
                   type="button"
                   className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-all hover:bg-[var(--glass-surface)]"
-                  style={{ color: 'var(--brand-text-secondary)' }}
+                  style={{ color: "var(--brand-primary)" }}
                 >
-                  <ImageIcon className="h-4 w-4" style={{ color: 'var(--brand-primary)' }} />
+                  <ImageIcon className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
                   Photo
                   {selectedFiles.length > 0 && (
-                    <span className="ml-1 px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded-full text-[10px] font-bold">
+                    <span className="ml-1 px-1.5 py-0.5 bg-brand-primary/20 text-brand-primary rounded-full text-[10px] font-bold">
                       {selectedFiles.length}
                     </span>
                   )}
@@ -445,7 +445,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                 type="button"
                 onClick={() => setShowOptions(!showOptions)}
                 className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-all hover:bg-[var(--glass-surface)]"
-                style={{ color: 'var(--brand-text-secondary)' }}
+                style={{ color: "var(--brand-primary)" }}
               >
                 <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showOptions ? 'rotate-180' : ''}`} />
                 {showOptions ? 'Less' : 'Type & Tags'}
@@ -483,11 +483,11 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                         className="w-full h-full object-cover"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
-                      {/* Always visible on touch — no hover required */}
+                      {/* Always visible on touch  no hover required */}
                       <button
                         type="button"
                         onClick={() => removeFile(index)}
-                        className="absolute top-2 right-2 p-2 rounded-full bg-black/50 backdrop-blur-md text-[var(--brand-text-primary)]/90 border border-[var(--glass-surface-hover)] active:bg-red-500/80"
+                        className="absolute top-2 right-2 p-2 rounded-full bg-black/50 backdrop-blur-md text-[var(--brand-text-primary)]/90 border border-[var(--glass-surface-hover)] active:bg-brand-primary/80"
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
@@ -508,7 +508,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                   className="overflow-hidden"
                 >
                   <div className="space-y-4 pt-2">
-                    {/* Memory Type — pill buttons instead of dropdown */}
+                    {/* Memory Type  pill buttons instead of dropdown */}
                     <div className="space-y-2">
                       <Label className="font-bold text-xs uppercase tracking-widest text-[var(--brand-text-muted)]">Type</Label>
                       <div className="flex flex-wrap gap-2">
@@ -543,7 +543,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                         onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
                         onFocus={handleInputFocus}
                         className="h-11 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/15"
-                        style={{ color: 'var(--brand-text-primary)' }}
+                        style={{ color: "var(--brand-primary)" }}
                         autoComplete="off"
                       />
                     </div>

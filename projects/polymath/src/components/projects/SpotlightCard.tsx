@@ -19,23 +19,23 @@ const typeConfig = {
   pinned: {
     label: 'Pinned',
     icon: Pin,
-    color: 'rgba(59, 130, 246, 0.1)',
+    color: "var(--brand-text-secondary)",
     borderColor: 'rgba(59, 130, 246, 0.3)',
     textColor: 'var(--brand-primary)'
   },
   recent: {
     label: 'Recent',
     icon: null,
-    color: 'rgba(168, 85, 247, 0.1)',
+    color: "var(--brand-text-secondary)",
     borderColor: 'rgba(168, 85, 247, 0.3)',
     textColor: 'rgba(168, 85, 247, 0.8)'
   },
   resurfaced: {
     label: 'Resurface',
     icon: null,
-    color: 'rgba(16, 185, 129, 0.1)',
+    color: "var(--brand-text-secondary)",
     borderColor: 'rgba(16, 185, 129, 0.3)',
-    textColor: 'var(--premium-emerald)'
+    textColor: 'var(--brand-primary)'
   }
 }
 
@@ -82,7 +82,7 @@ export function SpotlightCard({
         </div>
 
         {/* Title */}
-        <h4 className="text-base font-bold mb-2" style={{ color: 'rgba(255, 255, 255, 0.95)' }}>
+        <h4 className="text-base font-bold mb-2" style={{ color: "var(--brand-primary)" }}>
           {project.title}
         </h4>
 
@@ -90,7 +90,7 @@ export function SpotlightCard({
         {project.description && (
           <p
             className="text-xs mb-3 line-clamp-2"
-            style={{ color: 'rgba(255, 255, 255, 0.7)' }}
+            style={{ color: "var(--brand-primary)" }}
           >
             {project.description}
           </p>
@@ -104,14 +104,14 @@ export function SpotlightCard({
           >
             <p
               className="text-xs flex-1 line-clamp-1"
-              style={{ color: 'rgba(255, 255, 255, 0.8)' }}
+              style={{ color: "var(--brand-primary)" }}
             >
               {nextTask.text}
             </p>
             {totalTasks > 0 && (
               <span
                 className="text-xs font-medium flex-shrink-0"
-                style={{ color: 'rgba(255, 255, 255, 0.5)' }}
+                style={{ color: "var(--brand-primary)" }}
               >
                 {completedTasks}/{totalTasks}
               </span>
@@ -128,7 +128,7 @@ export function SpotlightCard({
             <motion.div
               className="h-full"
               style={{
-                background: 'linear-gradient(90deg, var(--brand-primary), var(--premium-emerald))'
+                background: 'linear-gradient(90deg, var(--brand-primary), var(--brand-primary))'
               }}
               initial={{ width: 0 }}
               animate={{ width: `${(completedTasks / totalTasks) * 100}%` }}

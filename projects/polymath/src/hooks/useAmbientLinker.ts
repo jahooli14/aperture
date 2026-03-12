@@ -4,7 +4,7 @@
  * Runs silently in the background. Whenever a new item is added to any store,
  * it fires the AI linker to find connections across the entire knowledge graph.
  *
- * The Gemini model is cheap enough to run on every new piece of content —
+ * The Gemini model is cheap enough to run on every new piece of content 
  * this is the "always on" linking that ties everything together.
  */
 
@@ -78,7 +78,7 @@ async function runLinker(
       })
     }
   } catch {
-    // Silent fail — ambient linking should never disrupt UX
+    // Silent fail  ambient linking should never disrupt UX
   } finally {
     processing.delete(key)
   }

@@ -46,7 +46,7 @@ export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps
         if (error) {
           console.error(`Error deleting from ${table}:`, error)
         } else {
-          console.log(`✓ Cleared ${table}`)
+          console.log(` Cleared ${table}`)
         }
       }
 
@@ -85,7 +85,7 @@ export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps
                   onClick={handleClearDemoData}
                   disabled={isClearing}
                   className="backdrop-blur-xl bg-white/90 border-2 shadow-xl rounded-lg px-4 py-2 font-medium transition-all hover:shadow-2xl disabled:opacity-50"
-                  style={{ borderColor: 'rgba(239, 68, 68, 0.5)', color: '#dc2626' }}
+                  style={{ borderColor: 'rgba(239, 68, 68, 0.5)', color: "var(--brand-text-secondary)" }}
                 >
                   {isClearing ? 'Clearing...' : 'Yes, Clear Everything'}
                 </button>
@@ -123,7 +123,7 @@ export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps
               <button
                 onClick={onDismiss}
                 className="inline-flex items-center gap-2 backdrop-blur-xl bg-white/90 border-2 shadow-xl rounded-lg px-4 py-2 font-medium transition-all hover:shadow-2xl"
-                style={{ borderColor: 'rgba(59, 130, 246, 0.5)', color: '#3b82f6' }}
+                style={{ borderColor: 'rgba(59, 130, 246, 0.5)', color: "var(--brand-text-secondary)" }}
               >
                 <Eye className="h-4 w-4" />
                 Keep Exploring
@@ -140,7 +140,7 @@ export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps
           </div>
           <button
             onClick={onDismiss}
-            className="flex-shrink-0 p-1 text-[var(--brand-text-primary)] hover:text-amber-100 transition-colors"
+            className="flex-shrink-0 p-1 text-[var(--brand-text-primary)] hover:text-brand-primary transition-colors"
             aria-label="Dismiss banner"
           >
             <X className="h-5 w-5" />

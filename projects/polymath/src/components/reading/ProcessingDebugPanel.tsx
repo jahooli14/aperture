@@ -104,20 +104,20 @@ export function ProcessingDebugPanel({ articles, onRetry, onFlushAll }: Processi
             className="flex items-center gap-3 flex-1 cursor-pointer"
             onClick={() => setIsExpanded(!isExpanded)}
           >
-            <AlertCircle className="h-5 w-5" style={{ color: 'var(--premium-red)' }} />
+            <AlertCircle className="h-5 w-5" style={{ color: "var(--brand-primary)" }} />
             <div>
-              <p className="font-semibold text-sm" style={{ color: 'var(--brand-text-primary)' }}>
+              <p className="font-semibold text-sm" style={{ color: "var(--brand-primary)" }}>
                 Share Sheet Debug ({unprocessedArticles.length} stuck)
               </p>
-              <p className="text-xs" style={{ color: 'var(--brand-text-muted)' }}>
+              <p className="text-xs" style={{ color: "var(--brand-primary)" }}>
                 {unprocessedArticles.length > 0 ? 'Tap to expand details' : 'All clear'}
               </p>
             </div>
             <div className="ml-auto">
               {isExpanded ? (
-                <ChevronDown className="h-5 w-5" style={{ color: 'var(--brand-text-muted)' }} />
+                <ChevronDown className="h-5 w-5" style={{ color: "var(--brand-primary)" }} />
               ) : (
-                <ChevronUp className="h-5 w-5" style={{ color: 'var(--brand-text-muted)' }} />
+                <ChevronUp className="h-5 w-5" style={{ color: "var(--brand-primary)" }} />
               )}
             </div>
           </div>
@@ -148,7 +148,7 @@ export function ProcessingDebugPanel({ articles, onRetry, onFlushAll }: Processi
           <div className="max-h-96 overflow-y-auto">
             {/* Unprocessed Articles */}
             <div className="p-4 space-y-3">
-              <p className="text-xs font-semibold" style={{ color: 'var(--brand-text-secondary)' }}>
+              <p className="text-xs font-semibold" style={{ color: "var(--brand-primary)" }}>
                 STUCK SHARE SHEET ARTICLES (RSS FILTERED)
               </p>
               {unprocessedArticles.map(article => {
@@ -163,13 +163,13 @@ export function ProcessingDebugPanel({ articles, onRetry, onFlushAll }: Processi
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-mono" style={{ color: 'var(--brand-text-muted)' }}>
+                        <p className="text-xs font-mono" style={{ color: "var(--brand-primary)" }}>
                           ID: {article.id.slice(0, 12)}...
                         </p>
-                        <p className="text-sm font-medium truncate mt-1" style={{ color: 'var(--brand-text-primary)' }}>
+                        <p className="text-sm font-medium truncate mt-1" style={{ color: "var(--brand-primary)" }}>
                           {article.title || 'Untitled'}
                         </p>
-                        <p className="text-xs truncate mt-1" style={{ color: 'var(--brand-text-muted)' }}>
+                        <p className="text-xs truncate mt-1" style={{ color: "var(--brand-primary)" }}>
                           {new URL(article.url).hostname}
                         </p>
                       </div>
@@ -201,8 +201,8 @@ export function ProcessingDebugPanel({ articles, onRetry, onFlushAll }: Processi
 
                     <div className="space-y-1">
                       <div className="flex items-center justify-between text-xs">
-                        <span style={{ color: 'var(--brand-text-muted)' }}>Age:</span>
-                        <span style={{ color: 'var(--brand-text-secondary)' }}>
+                        <span style={{ color: "var(--brand-primary)" }}>Age:</span>
+                        <span style={{ color: "var(--brand-primary)" }}>
                           {getArticleAge(article.created_at)}
                         </span>
                       </div>
@@ -218,14 +218,14 @@ export function ProcessingDebugPanel({ articles, onRetry, onFlushAll }: Processi
                             <div className="mt-1">Stage: {processingState.currentStage || 'Unknown'}</div>
                           </div>
                           <div className="flex items-center justify-between text-xs">
-                            <span style={{ color: 'var(--brand-text-muted)' }}>Poll Attempts:</span>
-                            <span style={{ color: 'var(--brand-primary)' }}>
+                            <span style={{ color: "var(--brand-primary)" }}>Poll Attempts:</span>
+                            <span style={{ color: "var(--brand-primary)" }}>
                               {processingState.attempts} / 180
                             </span>
                           </div>
                           <div className="flex items-center justify-between text-xs">
-                            <span style={{ color: 'var(--brand-text-muted)' }}>Time Elapsed:</span>
-                            <span style={{ color: 'var(--brand-primary)' }}>
+                            <span style={{ color: "var(--brand-primary)" }}>Time Elapsed:</span>
+                            <span style={{ color: "var(--brand-primary)" }}>
                               {Math.floor((Date.now() - processingState.startTime) / 1000)}s
                             </span>
                           </div>
@@ -236,7 +236,7 @@ export function ProcessingDebugPanel({ articles, onRetry, onFlushAll }: Processi
                         backgroundColor: 'rgba(0, 0, 0, 0.3)',
                         color: 'var(--brand-text-muted)'
                       }}>
-                        <div className="font-semibold mb-1" style={{ color: 'var(--brand-text-secondary)' }}>
+                        <div className="font-semibold mb-1" style={{ color: "var(--brand-primary)" }}>
                           Backend Status:
                         </div>
                         {article.excerpt || 'No status message from backend'}
@@ -252,12 +252,12 @@ export function ProcessingDebugPanel({ articles, onRetry, onFlushAll }: Processi
               className="p-4 border-t space-y-2"
               style={{ borderColor: 'rgba(239, 68, 68, 0.3)' }}
             >
-              <p className="text-xs font-semibold" style={{ color: 'var(--brand-text-secondary)' }}>
+              <p className="text-xs font-semibold" style={{ color: "var(--brand-primary)" }}>
                 ACTIVITY LOG
               </p>
               <div
                 className="space-y-1 text-xs font-mono max-h-40 overflow-y-auto"
-                style={{ color: 'var(--brand-text-muted)' }}
+                style={{ color: "var(--brand-primary)" }}
               >
                 {logs.length === 0 ? (
                   <p className="text-xs italic">No activity yet...</p>

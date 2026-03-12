@@ -142,7 +142,7 @@ const CompletionCelebration = ({
                     transition={{ delay: 0.1, duration: 0.4 }}
                     className="text-5xl mb-4"
                 >
-                    ✓
+                    
                 </motion.div>
 
                 <h3 className="text-lg font-black text-[var(--brand-text-primary)] uppercase tracking-tight mb-1">
@@ -160,9 +160,9 @@ const CompletionCelebration = ({
                             key={star}
                             type="button"
                             onClick={() => onRate(star)}
-                            className="p-2 rounded-xl transition-all hover:scale-110 hover:bg-amber-500/10"
+                            className="p-2 rounded-xl transition-all hover:scale-110 hover:bg-brand-primary/10"
                         >
-                            <Star className="h-7 w-7 text-amber-400/40 hover:text-amber-400 hover:fill-amber-400 transition-all" />
+                            <Star className="h-7 w-7 text-brand-text-secondary/40 hover:text-brand-text-secondary hover:fill-amber-400 transition-all" />
                         </button>
                     ))}
                 </div>
@@ -214,7 +214,7 @@ const SORT_OPTIONS: { value: SortOption; label: string }[] = [
     { value: 'added', label: 'Date Added' },
     { value: 'rating', label: 'Rating' },
     { value: 'status', label: 'Status' },
-    { value: 'alpha', label: 'A–Z' },
+    { value: 'alpha', label: 'AZ' },
 ]
 
 function sortItems(items: ListItem[], sort: SortOption): ListItem[] {
@@ -371,7 +371,7 @@ const QuoteCard = memo(({
                             <>
                                 <p className={`text-sm font-medium tracking-wider ${variant === 2 ? 'italic' : ''}`}
                                     style={{ color: `rgba(${attributionColors[variant]}, 0.7)` }}>
-                                    {variant === 3 ? '~' : '—'} {item.metadata?.specs?.Author || item.metadata?.specs?.Source || item.metadata?.subtitle || 'Me'}
+                                    {variant === 3 ? '~' : ''} {item.metadata?.specs?.Author || item.metadata?.specs?.Source || item.metadata?.subtitle || 'Me'}
                                 </p>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setIsEditingAuthor(true) }}
@@ -421,7 +421,7 @@ const QuoteCard = memo(({
                     {/* Copy button */}
                     <button
                         onClick={(e) => { e.stopPropagation(); onCopy(item.content) }}
-                        className="p-2.5 rounded-xl bg-zinc-900/50 backdrop-blur-sm border border-[var(--glass-surface-hover)] hover:bg-[rgba(255,255,255,0.1)] text-zinc-500 hover:text-[var(--brand-text-primary)] opacity-0 group-hover:opacity-100 transition-all duration-300"
+                        className="p-2.5 rounded-xl bg-zinc-900/50 backdrop-blur-sm border border-[var(--glass-surface-hover)] hover:bg-[rgba(255,255,255,0.1)] text-brand-text-muted hover:text-[var(--brand-text-primary)] opacity-0 group-hover:opacity-100 transition-all duration-300"
                         aria-label="Copy quote"
                     >
                         <Copy className="h-4 w-4" />
@@ -430,7 +430,7 @@ const QuoteCard = memo(({
                     {/* Delete */}
                     <button
                         onClick={(e) => { e.stopPropagation(); onDelete(item.id, item.list_id) }}
-                        className="p-2.5 rounded-xl bg-zinc-900/50 backdrop-blur-sm border hover:bg-red-500/20 hover:border-red-500/40 text-zinc-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all duration-300"
+                        className="p-2.5 rounded-xl bg-zinc-900/50 backdrop-blur-sm border hover:bg-brand-primary/20 hover:border-red-500/40 text-brand-text-muted hover:text-brand-text-secondary opacity-0 group-hover:opacity-100 transition-all duration-300"
                         style={{ borderColor: `rgba(${colors.rgb}, 0.2)` }}
                         aria-label="Delete phrase"
                     >
@@ -544,12 +544,12 @@ const StandardItemCard = memo(({
                             backgroundColor: isCompleted ? `rgba(${statusColor}, 0.2)` : 'transparent'
                         }}
                     >
-                        {isCompleted && <Check className="w-2.5 h-2.5 text-emerald-400" />}
+                        {isCompleted && <Check className="w-2.5 h-2.5 text-brand-text-secondary" />}
                         {item.status === 'active' && (
                             <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: `rgb(${rgb})` }} />
                         )}
                     </button>
-                    <h3 className={`text-[var(--brand-text-primary)] font-bold leading-tight group-hover:text-sky-400 transition-colors uppercase tracking-tight drop-shadow-lg text-xs mb-1 ${isCompleted ? 'line-through opacity-50' : ''}`}>
+                    <h3 className={`text-[var(--brand-text-primary)] font-bold leading-tight group-hover:text-brand-primary transition-colors uppercase tracking-tight drop-shadow-lg text-xs mb-1 ${isCompleted ? 'line-through opacity-50' : ''}`}>
                         {item.content}
                     </h3>
                 </div>
@@ -572,13 +572,13 @@ const StandardItemCard = memo(({
                             <p className="text-zinc-300 text-[10px] italic leading-relaxed">{item.metadata.subtitle}</p>
                         )}
                         {item.metadata?.description && (
-                            <p className="text-zinc-400 text-[10px] leading-relaxed line-clamp-3">{item.metadata.description}</p>
+                            <p className="text-brand-text-muted text-[10px] leading-relaxed line-clamp-3">{item.metadata.description}</p>
                         )}
                         {item.metadata?.specs && (
                             <div className="flex flex-wrap gap-2">
                                 {Object.entries(item.metadata.specs).slice(0, 3).map(([key, value]) => (
                                     <div key={key} className="flex items-baseline gap-1">
-                                        <span className="text-[8px] uppercase font-bold text-zinc-500">{key}:</span>
+                                        <span className="text-[8px] uppercase font-bold text-brand-text-muted">{key}:</span>
                                         <span className="text-[9px] text-zinc-300">{value as string}</span>
                                     </div>
                                 ))}
@@ -588,23 +588,23 @@ const StandardItemCard = memo(({
                         {(item.metadata?.year || item.metadata?.author || item.metadata?.director || item.metadata?.genre) && (
                             <div className="flex flex-wrap gap-2">
                                 {item.metadata.year && (
-                                    <span className="text-[9px] text-zinc-400">{item.metadata.year}</span>
+                                    <span className="text-[9px] text-brand-text-muted">{item.metadata.year}</span>
                                 )}
                                 {item.metadata.author && (
-                                    <span className="text-[9px] text-zinc-400">{item.metadata.author}</span>
+                                    <span className="text-[9px] text-brand-text-muted">{item.metadata.author}</span>
                                 )}
                                 {item.metadata.director && (
-                                    <span className="text-[9px] text-zinc-400">dir. {item.metadata.director}</span>
+                                    <span className="text-[9px] text-brand-text-muted">dir. {item.metadata.director}</span>
                                 )}
                                 {item.metadata.genre && (
-                                    <span className="text-[9px] bg-[rgba(255,255,255,0.1)] px-1.5 py-0.5 rounded-xl text-zinc-400">{item.metadata.genre}</span>
+                                    <span className="text-[9px] bg-[rgba(255,255,255,0.1)] px-1.5 py-0.5 rounded-xl text-brand-text-muted">{item.metadata.genre}</span>
                                 )}
                             </div>
                         )}
                         {item.metadata?.tags && item.metadata.tags.length > 0 && (
                             <div className="flex flex-wrap gap-1">
                                 {item.metadata.tags.slice(0, 3).map((tag: string) => (
-                                    <span key={tag} className="text-[8px] bg-sky-500/20 border border-sky-500/30 px-1.5 py-0.5 rounded-xl text-sky-300 font-medium">
+                                    <span key={tag} className="text-[8px] bg-brand-primary/20 border border-sky-500/30 px-1.5 py-0.5 rounded-xl text-brand-primary font-medium">
                                         {tag}
                                     </span>
                                 ))}
@@ -615,10 +615,10 @@ const StandardItemCard = memo(({
                                 href={item.metadata.link}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-[9px] font-bold text-sky-400 hover:text-[var(--brand-text-primary)] transition-colors uppercase tracking-widest flex items-center gap-1 mt-1"
+                                className="text-[9px] font-bold text-brand-primary hover:text-[var(--brand-text-primary)] transition-colors uppercase tracking-widest flex items-center gap-1 mt-1"
                                 onClick={e => e.stopPropagation()}
                             >
-                                Details →
+                                Details 
                             </a>
                         )}
                     </div>
@@ -626,8 +626,8 @@ const StandardItemCard = memo(({
 
                 {/* Enriching status */}
                 {!isExpanded && item.enrichment_status === 'pending' && (
-                    <div className="flex items-center gap-1 text-[9px] text-sky-400 font-bold animate-pulse pl-6">
-                        <div className="h-1 w-1 rounded-full bg-sky-400" />
+                    <div className="flex items-center gap-1 text-[9px] text-brand-primary font-bold animate-pulse pl-6">
+                        <div className="h-1 w-1 rounded-full bg-brand-primary" />
                         Enriching...
                     </div>
                 )}
@@ -637,7 +637,7 @@ const StandardItemCard = memo(({
             <div className="absolute top-2 right-2 flex gap-1 transform translate-y-[-120%] group-hover:translate-y-0 transition-transform duration-300">
                 <button
                     onClick={(e) => { e.stopPropagation(); onDelete(item.id, item.list_id) }}
-                    className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500 text-red-500/50 hover:text-[var(--brand-text-primary)] backdrop-blur-md border border-red-500/20 transition-all"
+                    className="p-1.5 rounded-lg bg-brand-primary/10 hover:bg-brand-primary text-brand-text-secondary/50 hover:text-[var(--brand-text-primary)] backdrop-blur-md border border-red-500/20 transition-all"
                 >
                     <Trash2 className="h-3 w-3" />
                 </button>
@@ -853,7 +853,7 @@ export default function ListDetailPage() {
         setCelebrationItem(null)
         addToast({
             title: 'Rated!',
-            description: `Marked ${celebrationItem.content} — ${rating}★`,
+            description: `Marked ${celebrationItem.content}  ${rating}`,
             variant: 'success'
         })
     }, [celebrationItem, handleRate, addToast])
@@ -886,7 +886,7 @@ export default function ListDetailPage() {
         <div className="min-h-screen bg-black flex flex-col">
             {/* Header */}
             <div className="pt-24 px-4 sm:px-6 lg:px-8 pb-4">
-                <Button variant="ghost" onClick={() => navigate('/lists')} className="text-zinc-400 mb-4 pl-0 hover:text-[var(--brand-text-primary)] hover:bg-transparent">
+                <Button variant="ghost" onClick={() => navigate('/lists')} className="text-brand-text-muted mb-4 pl-0 hover:text-[var(--brand-text-primary)] hover:bg-transparent">
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Back to Collections
                 </Button>
@@ -904,7 +904,7 @@ export default function ListDetailPage() {
                         </span>
                     </div>
                     {/* Item count badge */}
-                    <div className="px-3 py-1.5 rounded-full bg-zinc-800/50 text-xs font-mono text-zinc-400"
+                    <div className="px-3 py-1.5 rounded-full bg-zinc-800/50 text-xs font-mono text-brand-text-muted"
                         style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface)' }}>
                         {displayItems.length} {displayItems.length === 1 ? 'item' : 'items'}
                     </div>
@@ -917,7 +917,7 @@ export default function ListDetailPage() {
                         <div className="relative">
                             <button
                                 onClick={(e) => { e.stopPropagation(); setShowSortMenu(v => !v) }}
-                                className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-[var(--glass-surface-hover)] text-zinc-500 hover:text-[var(--brand-text-primary)] hover:border-white/20 transition-all"
+                                className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-[var(--glass-surface-hover)] text-brand-text-muted hover:text-[var(--brand-text-primary)] hover:border-white/20 transition-all"
                             >
                                 <SortAsc className="h-3 w-3" />
                                 <span className="text-[10px] font-black uppercase tracking-widest">Sort</span>
@@ -956,14 +956,14 @@ export default function ListDetailPage() {
                         {/* Reorder toggle */}
                         <button
                             onClick={() => setIsReordering(!isReordering)}
-                            className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all ${isReordering ? 'bg-sky-500 border-sky-400 text-[var(--brand-text-primary)]' : 'border-[var(--glass-surface-hover)] text-zinc-500 hover:text-[var(--brand-text-primary)] hover:border-white/20'}`}
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all ${isReordering ? 'bg-brand-primary border-sky-400 text-[var(--brand-text-primary)]' : 'border-[var(--glass-surface-hover)] text-brand-text-muted hover:text-[var(--brand-text-primary)] hover:border-white/20'}`}
                         >
                             {isReordering ? <Check className="h-3 w-3" /> : <ListOrdered className="h-3 w-3" />}
                             <span className="text-[10px] font-black uppercase tracking-widest">{isReordering ? 'Done' : 'Order'}</span>
                         </button>
                     </div>
                 </div>
-                {list.description && <p className="text-zinc-500 max-w-xl mb-2">{list.description}</p>}
+                {list.description && <p className="text-brand-text-muted max-w-xl mb-2">{list.description}</p>}
 
                 {/* Status Filter Tabs */}
                 {!isReordering && list.type !== 'quote' && displayItems.length > 0 && (
@@ -1014,8 +1014,8 @@ export default function ListDetailPage() {
                                     style={{ boxShadow: 'inset 0 0 0 1px rgba(56,189,248,0.25), 0 25px 50px rgba(0,0,0,0.5)' }}
                                 >
                                     <div className="flex items-center justify-between mb-3">
-                                        <span className="text-sm text-sky-400 font-medium">Voice Quick-Add</span>
-                                        <button onClick={() => setIsVoiceMode(false)} className="text-zinc-500 hover:text-[var(--brand-text-primary)] transition-colors">
+                                        <span className="text-sm text-brand-primary font-medium">Voice Quick-Add</span>
+                                        <button onClick={() => setIsVoiceMode(false)} className="text-brand-text-muted hover:text-[var(--brand-text-primary)] transition-colors">
                                             <MicOff className="h-4 w-4" />
                                         </button>
                                     </div>
@@ -1043,7 +1043,7 @@ export default function ListDetailPage() {
                                             <Button
                                                 type="button"
                                                 onClick={() => setIsVoiceMode(true)}
-                                                className="rounded-xl bg-zinc-800/50 hover:bg-zinc-800 text-zinc-400 hover:text-sky-400 h-10 w-10 p-0 shrink-0 transition-all"
+                                                className="rounded-xl bg-zinc-800/50 hover:bg-zinc-800 text-brand-text-muted hover:text-brand-primary h-10 w-10 p-0 shrink-0 transition-all"
                                                 style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface)' }}
                                             >
                                                 <Mic className="h-4 w-4" />
@@ -1093,7 +1093,7 @@ export default function ListDetailPage() {
                                         <div className="flex-1 min-w-0">
                                             <p className="text-[var(--brand-text-primary)] font-bold uppercase tracking-tight truncate">{item.content}</p>
                                             {item.metadata?.subtitle && (
-                                                <p className="text-[10px] text-zinc-500 italic truncate">{item.metadata.subtitle}</p>
+                                                <p className="text-[10px] text-brand-text-muted italic truncate">{item.metadata.subtitle}</p>
                                             )}
                                         </div>
                                         {item.user_rating && (
@@ -1125,21 +1125,21 @@ export default function ListDetailPage() {
                                 </div>
                             ) : statusFilter !== 'all' ? (
                                 <div className="flex flex-col items-center justify-center py-24 text-zinc-600">
-                                    <p className="text-zinc-500 font-medium text-base mb-1">Nothing here yet.</p>
+                                    <p className="text-brand-text-muted font-medium text-base mb-1">Nothing here yet.</p>
                                     <p className="text-sm text-zinc-600">
                                         No items with status "{statusLabels[statusFilter]}"
                                     </p>
                                     <button
                                         onClick={() => setStatusFilter('all')}
-                                        className="mt-4 text-xs font-bold uppercase tracking-widest text-zinc-500 hover:text-[var(--brand-text-primary)] transition-colors"
+                                        className="mt-4 text-xs font-bold uppercase tracking-widest text-brand-text-muted hover:text-[var(--brand-text-primary)] transition-colors"
                                     >
-                                        Show all →
+                                        Show all 
                                     </button>
                                 </div>
                             ) : (
                                 <div className="flex flex-col items-center justify-center py-40 text-zinc-600">
-                                    <p className="text-zinc-500 font-medium text-lg mb-1">Your collection is empty.</p>
-                                    <p className="text-sm text-zinc-500 opacity-60">Begin typing above to curate your list.</p>
+                                    <p className="text-brand-text-muted font-medium text-lg mb-1">Your collection is empty.</p>
+                                    <p className="text-sm text-brand-text-muted opacity-60">Begin typing above to curate your list.</p>
                                 </div>
                             )}
                         </motion.div>
@@ -1167,9 +1167,9 @@ export default function ListDetailPage() {
                         <div className="flex items-center justify-between mb-8">
                             <div>
                                 <h3 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">Synthesized Insights</h3>
-                                <p className="text-sm text-zinc-500">Connections discovered by the Aperture Engine.</p>
+                                <p className="text-sm text-brand-text-muted">Connections discovered by the Aperture Engine.</p>
                             </div>
-                            <div className="px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-[10px] font-black uppercase tracking-widest text-blue-400">
+                            <div className="px-3 py-1 bg-brand-primary/10 border border-blue-500/20 rounded-full text-[10px] font-black uppercase tracking-widest text-brand-primary">
                                 AI Connected
                             </div>
                         </div>
