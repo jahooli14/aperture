@@ -58,7 +58,7 @@ export async function generateEmbedding(text: string, retries = 3): Promise<numb
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
       const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_EMBEDDING })
-      const result = await model.embedContent({ content: { role: 'user', parts: [{ text }] }, outputDimensionality: MODELS.DEFAULT_EMBEDDING_DIMS })
+      const result = await model.embedContent({ content: { role: 'user', parts: [{ text }] } })
 
       // Track usage
       usageStats.single_embeddings++
@@ -118,7 +118,7 @@ export async function batchGenerateEmbeddings(texts: string[], retries = 3): Pro
 
       // Process in parallel (Gemini is fast)
       const embeddings = await Promise.all(
-        texts.map(text => model.embedContent({ content: { role: 'user', parts: [{ text }] }, outputDimensionality: MODELS.DEFAULT_EMBEDDING_DIMS }))
+        texts.map(text => model.embedContent({ content: { role: 'user', parts: [{ text }] } }))
       )
 
       // Track usage
