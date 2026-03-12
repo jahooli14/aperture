@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { RefreshCw, Plus, ChevronDown, ChevronUp, Zap } from 'lucide-react'
+
 import { useMultiPerspectiveAI, type PerspectiveSuggestion } from '../../hooks/useMultiPerspectiveAI'
 import { MarkdownRenderer } from '../ui/MarkdownRenderer'
 import type { Project } from '../../types'
@@ -80,8 +80,7 @@ function PerspectiveCard({
         {/* Persona header */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-base leading-none">{perspective.icon}</span>
-            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: colors.text }}>
+            <span className="text-xs font-black uppercase tracking-widest" style={{ color: colors.text }}>
               {perspective.persona}
             </span>
             {perspective.confidence === 'high' && (
@@ -89,7 +88,6 @@ function PerspectiveCard({
                 className="ml-auto px-1.5 py-0.5 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-1"
                 style={{ background: colors.bg, border: `1px solid ${colors.border}`, color: colors.text }}
               >
-                <span className="inline-block w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: colors.dot }} />
                 High
               </span>
             )}
@@ -117,13 +115,9 @@ function PerspectiveCard({
             }}
           >
             {added ? (
-              <>
-                <span></span> Added
-              </>
+              "Added"
             ) : (
-              <>
-                <Plus className="h-3 w-3" /> Add to todos
-              </>
+              "Add to todos"
             )}
           </button>
         </div>
@@ -159,45 +153,30 @@ export function MultiPerspectiveSuggestions({
   if (!hasRequested && !loading && !result) {
     return (
       <div
-        className="rounded-2xl border overflow-hidden"
+        className="rounded-3xl border overflow-hidden premium-glass shadow-2xl transition-all duration-500 hover:border-indigo-500/30"
         style={{
-          background: 'linear-gradient(135deg, rgba(139,92,246,0.06) 0%, rgba(59,130,246,0.06) 100%)',
-          borderColor: 'rgba(139,92,246,0.15)'
+          background: 'radial-gradient(circle at 0% 0%, rgba(139,92,246,0.1), transparent), radial-gradient(circle at 100% 100%, rgba(59,130,246,0.1), transparent)',
+          borderColor: 'var(--glass-border)'
         }}
       >
-        <div className="p-5">
-          <div className="flex items-center gap-3 mb-3">
-            <div
-              className="h-9 w-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
-              style={{ background: 'rgba(139,92,246,0.15)' }}
-            >
-              
-            </div>
-            <div>
-              <h3 className="font-bold text-sm" style={{ color: "var(--brand-primary)" }}>
-                Council of Advisors
-              </h3>
-              <p className="text-xs" style={{ color: "var(--brand-primary)" }}>
-                5 perspectives on your next move
-              </p>
-            </div>
+        <div className="p-8">
+          <div className="mb-6">
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 mb-2 block">Heuristic Engine</span>
+            <h3 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] mb-1">
+              The Council
+            </h3>
+            <p className="text-sm text-[var(--brand-text-muted)] leading-relaxed">
+              Summon 5 distinct perspectives to analyze your trajectory. High-fidelity synthesis of priorities and obstacles.
+            </p>
           </div>
-
-          <p className="text-sm mb-4" style={{ color: "var(--brand-primary)" }}>
-            Spawn 5 AI advisors simultaneously  each with a different lens on what you should do next. ~$0.00006 per session.
-          </p>
 
           <button
             onClick={handleGenerate}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-90"
-            style={{
-              background: 'linear-gradient(135deg, rgba(139,92,246,0.3) 0%, rgba(59,130,246,0.3) 100%)',
-              border: '1px solid rgba(139,92,246,0.3)',
-              color: "var(--brand-text-secondary)"
-            }}
+            className="group relative w-full py-4 rounded-2xl overflow-hidden transition-all active:scale-[0.98]"
           >
-            <Zap className="h-4 w-4" />
-            Ask the council
+            <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/40 to-blue-600/40 opacity-70 group-hover:opacity-100 transition-opacity" />
+            <div className="absolute inset-0 border border-white/10 rounded-2xl" />
+            <span className="relative text-xs font-black uppercase tracking-[0.2em] text-white">Assemble the Council</span>
           </button>
         </div>
       </div>
@@ -206,10 +185,10 @@ export function MultiPerspectiveSuggestions({
 
   return (
     <div
-      className="rounded-2xl border overflow-hidden"
+      className="rounded-3xl border overflow-hidden premium-glass shadow-2xl"
       style={{
-        background: 'linear-gradient(135deg, rgba(139,92,246,0.06) 0%, rgba(59,130,246,0.06) 100%)',
-        borderColor: 'rgba(139,92,246,0.15)'
+        background: 'radial-gradient(circle at 100% 0%, rgba(139,92,246,0.08), transparent)',
+        borderColor: 'var(--glass-border)'
       }}
     >
       {/* Header */}
@@ -227,8 +206,7 @@ export function MultiPerspectiveSuggestions({
           style={{ color: 'var(--brand-text-muted)', border: '1px solid var(--glass-surface)' }}
           title="Regenerate all perspectives"
         >
-          <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
-          {loading ? 'Thinking...' : 'Refresh'}
+          {loading ? 'Thinking...' : 'REGENERATE'}
         </button>
       </div>
 
@@ -279,13 +257,9 @@ export function MultiPerspectiveSuggestions({
             style={{ color: 'var(--brand-text-muted)', border: '1px solid var(--glass-surface)' }}
           >
             {showAll ? (
-              <>
-                <ChevronUp className="h-3.5 w-3.5" /> Show less
-              </>
+              "Show less"
             ) : (
-              <>
-                <ChevronDown className="h-3.5 w-3.5" /> Show all {perspectives.length} perspectives
-              </>
+              `Show all ${perspectives.length} perspectives`
             )}
           </button>
         )}

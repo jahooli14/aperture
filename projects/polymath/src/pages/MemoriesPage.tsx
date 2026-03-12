@@ -511,68 +511,61 @@ export function MemoriesPage() {
     <>
       <SubtleBackground />
       {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-40" style={{
-        backgroundColor: '#0a0f1a',
-        borderBottom: '2px solid rgba(255,255,255,0.1)',
-        boxShadow: '0 4px 0 rgba(0,0,0,0.6)',
-      }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
-          <div className="flex items-center" style={{
-            color: 'var(--brand-primary)',
-            opacity: 0.7
-          }}>
-            <Brain className="h-7 w-7" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-6 flex flex-col gap-2">
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
+                your <span className="text-brand-primary">thoughts</span>
+              </h1>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mt-1">Capture everything, loose nothing.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {view === 'all' && <CreateMemoryDialog />}
+              <button
+                onClick={() => navigate('/search')}
+                className="h-10 w-10 rounded-xl flex items-center justify-center transition-all bg-[var(--glass-surface)] border border-white/10"
+                style={{ color: "var(--brand-primary)" }}
+                title="Search everything"
+              >
+                <Search className="h-5 w-5" />
+              </button>
+            </div>
           </div>
 
-          {/* View Toggle */}
-          <PremiumTabs
-            tabs={[
-              {
-                id: 'foundational',
-                label: `Core${progress ? ` (${progress.completed_required}/${progress.total_required})` : ''}`,
-              },
-              { id: 'all', label: `All (${memories.length})` },
-              { id: 'resurfacing', label: `Resurface (${resurfacing.length})` },
-            ]}
-            activeTab={view}
-            onChange={(tabId) => setView(tabId as typeof view)}
-            className="flex-nowrap"
-          />
-
-          <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
-            {view === 'all' && <CreateMemoryDialog />}
-            <button
-              onClick={() => navigate('/search')}
-              className="h-9 w-9 rounded-lg flex items-center justify-center transition-all"
-              style={{
-                color: 'var(--brand-primary)',
-                border: '2px solid rgba(59,130,246,0.25)',
-                boxShadow: '2px 2px 0 rgba(0,0,0,0.6)',
-              }}
-              title="Search everything"
-            >
-              <Search className="h-5 w-5" />
-            </button>
+          <div className="flex items-center gap-3">
+            {/* View Toggle */}
+            <PremiumTabs
+              tabs={[
+                {
+                  id: 'foundational',
+                  label: `Core${progress ? ` (${progress.completed_required}/${progress.total_required})` : ''}`,
+                },
+                { id: 'all', label: `All (${memories.length})` },
+                { id: 'resurfacing', label: `Resurface (${resurfacing.length})` },
+              ]}
+              activeTab={view}
+              onChange={(tabId) => setView(tabId as typeof view)}
+              className="flex-nowrap"
+            />
           </div>
         </div>
-      </div>
 
-      <div className="pb-32 relative z-10" style={{ paddingTop: '5.5rem', isolation: 'isolate' }}>
+      <div className="pb-32 relative z-10" style={{ isolation: 'isolate' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 pt-2">
           {/* Outer Card Structure */}
-          <div className="p-4 sm:p-6 rounded-lg mb-6 w-full max-w-full" style={{
-            background: '#0d0f14',
-            border: '2px solid rgba(255,255,255,0.1)',
-            boxShadow: '4px 4px 0 rgba(0,0,0,0.8)',
+          <div className="p-4 sm:p-6 rounded-2xl mb-6 w-full max-w-full relative overflow-hidden premium-glass shadow-2xl" style={{
+            background: 'var(--brand-glass-bg)',
+            border: '2px solid var(--glass-surface-hover)',
             transform: 'translate3d(0,0,0)', // Force hardware acceleration boundary
             overflowX: 'hidden'
           }}>
             {/* Title Section */}
-            <div className="mb-4 flex items-center gap-2">
-              <div className="w-1 h-5 rounded-lg" style={{ background: 'var(--brand-primary)' }} />
-              <h2 className="text-sm font-black uppercase tracking-widest" style={{ color: "var(--brand-primary)" }}>
-                Your <span style={{ color: "var(--brand-primary)" }}>thoughts</span>
-              </h2>
+            <div className="mb-6 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-black uppercase tracking-tight text-[var(--brand-text-primary)]">
+                  {view === 'all' ? 'Your Graph' : view === 'resurfacing' ? 'Review Queue' : 'Core Beliefs'}
+                </h2>
+              </div>
             </div>
 
             {/* Search Bar  only shown on 'all' view */}

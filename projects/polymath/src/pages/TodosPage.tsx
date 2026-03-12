@@ -260,161 +260,153 @@ export function TodosPage() {
         style={{ backgroundColor: 'var(--brand-bg)' }}
       >
         <SubtleBackground />
-        {/* Header  view-aware, progress-focused */}
-        <div className="px-4 pt-7 pb-4 max-w-3xl mx-auto w-full">
-          {/* Date line  always visible, always contextual */}
-          <p
-            className="text-[11px] font-semibold uppercase tracking-widest mb-2"
-            style={{ color: "var(--brand-primary)" }}
-          >
-            {dayName}  {dateStr}
-          </p>
+        <div className="px-4 pt-10 pb-6 max-w-3xl mx-auto w-full">
+          <div className="mb-6">
+            <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
+              your <span className="text-brand-primary">todos</span>
+            </h1>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mt-1">
+              {dayName}, {dateStr} • {streakMessage || 'Building momentum.'}
+            </p>
+          </div>
 
-          {activeView === 'today' ? (
-            /* Today: show progress, not a title */
-            <>
-              <div className="flex items-baseline justify-between mb-2.5">
-                <div className="flex items-baseline gap-3">
-                  <h1
-                    className="text-[26px] font-bold tracking-tight leading-none"
-                    style={{ color: "var(--brand-primary)" }}
-                  >
-                    {totalTodayItems === 0
-                      ? 'Nothing today'
-                      : completedToday === totalTodayItems
-                        ? `All ${completedToday} done`
-                        : completedToday > 0
-                          ? `${completedToday} of ${totalTodayItems} done`
-                          : `${todayActive} ${todayActive === 1 ? 'task' : 'tasks'} today`}
-                  </h1>
-
-                  {/* Loss aversion streak  shown after first completion */}
-                  {streak > 0 && (
-                    <motion.div
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      className="flex items-center gap-1 pb-0.5"
+          <div className="p-6 rounded-2xl mb-6 relative overflow-hidden premium-glass shadow-2xl" style={{
+            background: 'var(--brand-glass-bg)',
+            border: '2px solid var(--glass-surface-hover)',
+          }}>
+            {activeView === 'today' ? (
+              /* Today: show progress, not a title */
+              <>
+                <div className="flex items-baseline justify-between mb-4">
+                  <div className="flex items-baseline gap-3">
+                    <h2
+                      className="text-xl font-black uppercase tracking-tight leading-none text-[var(--brand-text-primary)]"
                     >
-                      <Flame
-                        className="h-3.5 w-3.5"
-                        style={{ color: streak >= 7 ? 'rgba(251,191,36,0.9)' : 'rgba(251,146,60,0.8)' }}
-                      />
-                      <span
-                        className="text-[13px] font-bold tabular-nums"
-                        style={{ color: streak >= 7 ? 'rgba(251,191,36,0.9)' : 'rgba(251,146,60,0.8)' }}
+                      {totalTodayItems === 0
+                        ? 'Nothing today'
+                        : completedToday === totalTodayItems
+                          ? `All ${completedToday} done`
+                          : completedToday > 0
+                            ? `${completedToday} of ${totalTodayItems} done`
+                            : `${todayActive} ${todayActive === 1 ? 'task' : 'tasks'} today`}
+                    </h2>
+
+                    {/* Loss aversion streak  shown after first completion */}
+                    {streak > 0 && (
+                      <motion.div
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="flex items-center gap-1"
                       >
-                        {streak}
+                        <Flame
+                          className="h-3.5 w-3.5"
+                          style={{ color: streak >= 7 ? 'rgba(251,191,36,0.9)' : 'rgba(251,146,60,0.8)' }}
+                        />
+                        <span
+                          className="text-[13px] font-bold tabular-nums"
+                          style={{ color: streak >= 7 ? 'rgba(251,191,36,0.9)' : 'rgba(251,146,60,0.8)' }}
+                        >
+                          {streak}
+                        </span>
+                      </motion.div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {overdueCount > 0 && (
+                      <span
+                        className="text-[10px] font-black px-2 py-0.5 rounded-lg uppercase tracking-wide"
+                        style={{ background: 'rgba(239,68,68,0.15)', color: "#f87171" }}
+                      >
+                        {overdueCount} overdue
                       </span>
-                    </motion.div>
-                  )}
+                    )}
+                    {totalEstimatedMinutes > 0 && (
+                      <span className="text-[11px] font-black uppercase tracking-widest opacity-40">
+                        ~{formatMinutes(totalEstimatedMinutes)}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2 pb-0.5">
-                  {overdueCount > 0 && (
-                    <span
-                      className="text-[10px] font-black px-2 py-0.5 rounded-lg uppercase tracking-wide"
-                      style={{ background: 'rgba(239,68,68,0.15)', color: "var(--brand-text-secondary)" }}
+                {/* Progress bar  neobrutalist: rectangular, 6px tall, hard edges */}
+                {totalTodayItems > 0 && (
+                  <div
+                    className="w-full h-[6px] rounded-full overflow-hidden mb-6"
+                    style={{ background: 'var(--glass-surface)', border: '1px solid rgba(255,255,255,0.05)' }}
+                  >
+                    <motion.div
+                      className="h-full"
+                      style={{
+                        background: completedToday === totalTodayItems
+                          ? 'rgb(52,211,153)'
+                          : 'var(--brand-primary)',
+                      }}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${progressPct}%` }}
+                      transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+                    />
+                  </div>
+                )}
+
+                {/* Focus / Review buttons  neobrutalist: rectangular, thick border, hard shadow */}
+                {todayActive > 0 && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      onClick={() => setFocusMode(true)}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all active:scale-95"
+                      style={{
+                        background: 'rgba(34,211,238,0.1)',
+                        color: "var(--brand-primary)",
+                        border: '1px solid rgba(34,211,238,0.3)',
+                      }}
                     >
-                      {overdueCount} overdue
-                    </span>
-                  )}
-                  {totalEstimatedMinutes > 0 && (
-                    <span className="text-[12px]" style={{ color: "var(--brand-primary)" }}>
-                      ~{formatMinutes(totalEstimatedMinutes)}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Streak motivation copy  tightens loss aversion */}
-              {streakMessage && (
-                <p className="text-[11px] mb-2" style={{ color: "var(--brand-primary)" }}>
-                  {streakMessage}
-                </p>
-              )}
-
-              {/* Progress bar  neobrutalist: rectangular, 6px tall, hard edges */}
-              {totalTodayItems > 0 && (
-                <div
-                  className="w-full h-[6px] overflow-hidden"
-                  style={{ background: 'var(--glass-surface)', border: '1px solid rgba(255,255,255,0.1)' }}
+                      <Focus className="h-3 w-3" />
+                      Focus
+                    </button>
+                    <button
+                      onClick={() => setShowReview(true)}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all active:scale-95"
+                      style={hour < 12 ? {
+                        background: 'rgba(251,191,36,0.08)',
+                        color: "rgb(251,191,36)",
+                        border: '1px solid rgba(251,191,36,0.3)',
+                      } : {
+                        background: 'rgba(139,92,246,0.08)',
+                        color: "rgb(167,139,250)",
+                        border: '1px solid rgba(139,92,246,0.3)',
+                      }}
+                    >
+                      {hour < 12 ? <Sun className="h-3 w-3" /> : <Moon className="h-3 w-3" />}
+                      {hour < 12 ? 'Morning' : 'Evening'}
+                    </button>
+                    {inProgressIds.filter(id => todayTodos.some(t => t.id === id)).length > 0 && (
+                      <span
+                        className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest opacity-40 ml-auto"
+                      >
+                        <span className="h-1.5 w-1.5 bg-brand-primary rounded-full animate-pulse" />
+                        {inProgressIds.filter(id => todayTodos.some(t => t.id === id)).length} working
+                      </span>
+                    )}
+                  </div>
+                )}
+              </>
+            ) : (
+              /* Other views: name + count */
+              <div className="flex items-center justify-between">
+                <h2
+                  className="text-xl font-black uppercase tracking-tight text-[var(--brand-text-primary)]"
                 >
-                  <motion.div
-                    className="h-full"
-                    style={{
-                      background: completedToday === totalTodayItems
-                        ? 'rgb(52,211,153)'
-                        : 'rgb(99,179,237)',
-                    }}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progressPct}%` }}
-                    transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
-                  />
-                </div>
-              )}
-
-              {/* Focus / Review buttons  neobrutalist: rectangular, thick border, hard shadow */}
-              {todayActive > 0 && (
-                <div className="mt-3 flex items-center gap-2 flex-wrap">
-                  <button
-                    onClick={() => setFocusMode(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all active:scale-95"
-                    style={{
-                      background: 'rgba(139,92,246,0.1)',
-                      color: "var(--brand-text-secondary)",
-                      border: '2px solid rgba(139,92,246,0.45)',
-                      boxShadow: '2px 2px 0 rgba(139,92,246,0.2)',
-                    }}
-                  >
-                    <Focus className="h-3 w-3" />
-                    Focus
-                  </button>
-                  <button
-                    onClick={() => setShowReview(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all active:scale-95"
-                    style={hour < 12 ? {
-                      background: 'rgba(251,191,36,0.08)',
-                      color: "var(--brand-text-secondary)",
-                      border: '2px solid rgba(251,191,36,0.4)',
-                      boxShadow: '2px 2px 0 rgba(251,191,36,0.15)',
-                    } : {
-                      background: 'rgba(139,92,246,0.08)',
-                      color: "var(--brand-text-secondary)",
-                      border: '2px solid rgba(139,92,246,0.35)',
-                      boxShadow: '2px 2px 0 rgba(139,92,246,0.15)',
-                    }}
-                  >
-                    {hour < 12 ? <Sun className="h-3 w-3" /> : <Moon className="h-3 w-3" />}
-                    {hour < 12 ? 'Morning' : 'Evening'}
-                  </button>
-                  {inProgressIds.filter(id => todayTodos.some(t => t.id === id)).length > 0 && (
-                    <span
-                      className="flex items-center gap-1 text-[11px]"
-                      style={{ color: "var(--brand-primary)" }}
-                    >
-                      <span className="h-1.5 w-1.5 bg-brand-primary/70 animate-pulse" />
-                      {inProgressIds.filter(id => todayTodos.some(t => t.id === id)).length} working
-                    </span>
-                  )}
-                </div>
-              )}
-            </>
-          ) : (
-            /* Other views: name + count */
-            <div className="flex items-baseline gap-3">
-              <h1
-                className="text-[28px] font-bold tracking-tight"
-                style={{ color: "var(--brand-primary)" }}
-              >
-                {VIEWS.find(v => v.id === activeView)?.label ?? 'Todos'}
-              </h1>
-              {counts[activeView] > 0 && (
-                <span className="text-[15px] font-medium" style={{ color: "var(--brand-primary)" }}>
-                  {counts[activeView]}
-                </span>
-              )}
-            </div>
-          )}
+                  {VIEWS.find(v => v.id === activeView)?.label ?? 'Todos'}
+                </h2>
+                {counts[activeView] > 0 && (
+                  <span className="text-sm font-black px-2 py-1 rounded-lg bg-[var(--glass-surface)] border border-white/5 text-[var(--brand-text-secondary)]">
+                    {counts[activeView]} tasks
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* View tabs  neobrutalist: rectangular, thick underline active */}

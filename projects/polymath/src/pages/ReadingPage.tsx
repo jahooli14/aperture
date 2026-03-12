@@ -740,96 +740,81 @@ export function ReadingPage() {
   return (
     <>
       <SubtleBackground />
-      {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-40" style={{
-        backgroundColor: '#0a0f1a',
-        borderBottom: '2px solid rgba(255,255,255,0.1)',
-        boxShadow: '0 4px 0 rgba(0,0,0,0.6)',
-      }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-3 pb-2 flex flex-col gap-2">
-          {/* Top row: icon + filter tabs + search */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center flex-shrink-0" style={{
-              color: "var(--brand-text-secondary)",
-              opacity: 0.8
-            }}>
-              <BookOpen className="h-6 w-6" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-6 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
+                your <span className="text-brand-primary">reading</span>
+              </h1>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mt-1">Deep dives and quick catches.</p>
             </div>
-
-            {/* Filter Tabs */}
-            <PremiumTabs
-              tabs={tabs}
-              activeTab={activeTab}
-              onChange={handleTabChange}
-              className="flex-nowrap flex-1 min-w-0"
-            />
-
             <button
               onClick={() => navigate('/search')}
-              className="h-9 w-9 rounded-lg flex items-center justify-center transition-all flex-shrink-0"
+              className="h-10 w-10 rounded-xl flex items-center justify-center transition-all bg-[var(--glass-surface)] border border-white/10"
               style={{ color: "var(--brand-primary)" }}
               title="Search everything"
             >
-              <Search className="h-4 w-4" />
+              <Search className="h-5 w-5" />
             </button>
           </div>
 
-          {/* Inline URL save bar */}
-          <form onSubmit={handleInlineSave} className="flex items-center gap-2 pb-1">
-            <div
-              className="flex items-center gap-2 flex-1 rounded-lg px-3 h-10 transition-all duration-200"
-              style={{
-                backgroundColor: '#111113',
-                border: inlineUrlFocused ? '2px solid rgba(34,211,238,0.5)' : '2px solid var(--glass-surface-hover)',
-                boxShadow: inlineUrlFocused ? '3px 3px 0 rgba(34,211,238,0.1)' : '3px 3px 0 rgba(0,0,0,0.6)',
-              }}
-            >
-              <LinkIcon className="h-4 w-4 flex-shrink-0" style={{ color: inlineUrlFocused ? 'rgba(34,211,238,0.8)' : 'rgba(255,255,255,0.25)' }} />
-              <input
-                type="url"
-                placeholder="Paste a URL to save for later..."
-                value={inlineUrl}
-                onChange={(e) => setInlineUrl(e.target.value)}
-                onFocus={() => setInlineUrlFocused(true)}
-                onBlur={() => setInlineUrlFocused(false)}
-                autoComplete="off"
-                className="flex-1 h-full border-0 text-sm focus:outline-none focus:ring-0 placeholder:text-[var(--brand-text-primary)]/20 appearance-none bg-transparent"
-                style={{ color: "var(--brand-primary)" }}
+          <div className="flex flex-col md:flex-row items-center gap-4">
+            {/* Filter Tabs */}
+            <div className="flex-1 w-full overflow-hidden">
+              <PremiumTabs
+                tabs={tabs}
+                activeTab={activeTab}
+                onChange={handleTabChange}
+                className="flex-nowrap"
               />
-              {inlineUrl && (
-                <button
-                  type="button"
-                  onClick={() => setInlineUrl('')}
-                  className="text-xs flex-shrink-0 opacity-40 hover:opacity-70 transition-opacity px-1"
-                  style={{ color: "var(--brand-primary)" }}
-                >
-                  
-                </button>
-              )}
             </div>
-            <button
-              type="submit"
-              disabled={inlineSaving || !inlineUrl.trim()}
-              className="h-10 px-4 rounded-lg text-[11px] font-black uppercase tracking-wide flex-shrink-0 flex items-center gap-1.5 transition-all disabled:opacity-40"
-              style={{
-                backgroundColor: 'rgba(34, 211, 238, 0.1)',
-                color: "var(--brand-text-secondary)",
-                border: '2px solid rgba(34, 211, 238, 0.4)',
-                boxShadow: '3px 3px 0 rgba(0,0,0,0.6)',
-              }}
-            >
-              {inlineSaving ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <>
-                  <Plus className="h-3.5 w-3.5" />
-                  Save
-                </>
-              )}
-            </button>
-          </form>
+
+            {/* Inline URL save bar */}
+            <form onSubmit={handleInlineSave} className="flex items-center gap-2 w-full md:w-auto md:min-w-[400px]">
+              <div
+                className="flex items-center gap-2 flex-1 rounded-lg px-3 h-10 transition-all duration-200"
+                style={{
+                  backgroundColor: '#111113',
+                  border: inlineUrlFocused ? '2px solid rgba(34,211,238,0.5)' : '2px solid var(--glass-surface-hover)',
+                  boxShadow: inlineUrlFocused ? '3px 3px 0 rgba(34,211,238,0.1)' : '3px 3px 0 rgba(0,0,0,0.6)',
+                }}
+              >
+                <LinkIcon className="h-4 w-4 flex-shrink-0" style={{ color: inlineUrlFocused ? 'rgba(34,211,238,0.8)' : 'rgba(255,255,255,0.25)' }} />
+                <input
+                  type="url"
+                  placeholder="Save URL..."
+                  value={inlineUrl}
+                  onChange={(e) => setInlineUrl(e.target.value)}
+                  onFocus={() => setInlineUrlFocused(true)}
+                  onBlur={() => setInlineUrlFocused(false)}
+                  autoComplete="off"
+                  className="flex-1 h-full border-0 text-sm focus:outline-none focus:ring-0 placeholder:text-[var(--brand-text-primary)]/20 appearance-none bg-transparent"
+                  style={{ color: "var(--brand-primary)" }}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={inlineSaving || !inlineUrl.trim()}
+                className="h-10 px-4 rounded-lg text-[11px] font-black uppercase tracking-wide flex-shrink-0 flex items-center gap-1.5 transition-all disabled:opacity-40"
+                style={{
+                  backgroundColor: 'rgba(34, 211, 238, 0.1)',
+                  color: "var(--brand-text-secondary)",
+                  border: '2px solid rgba(34, 211, 238, 0.4)',
+                  boxShadow: '3px 3px 0 rgba(0,0,0,0.6)',
+                }}
+              >
+                {inlineSaving ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <>
+                    <Plus className="h-3.5 w-3.5" />
+                    Save
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
         </div>
-      </div>
 
       <PullToRefresh onRefresh={handlePullToRefresh} className="min-h-screen pb-24 relative z-10 pt-[7.5rem]">
 
@@ -961,22 +946,23 @@ export function ReadingPage() {
 
         {/* Content - Outer Card Structure */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 pt-2" style={{ marginTop: continueReadingArticles.length > 0 && activeTab !== 'reading' ? '0' : (processingArticles.size > 0 ? `${processingArticles.size * 72}px` : '0') }}>
-          <div className="p-5 rounded-lg mb-6" style={{
-            background: '#0d0f14',
-            border: '2px solid rgba(255,255,255,0.1)',
-            boxShadow: '4px 4px 0 rgba(0,0,0,0.8)',
+          <div className="p-6 rounded-2xl mb-6 relative overflow-hidden premium-glass shadow-2xl" style={{
+            background: 'var(--brand-glass-bg)',
+            border: '2px solid var(--glass-surface-hover)',
           }}>
             {/* Title Section */}
-            <div className="mb-5 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-1 h-5 flex-shrink-0" style={{ background: 'rgba(34,211,238,0.7)' }} />
-                <h2 className="text-[13px] font-black uppercase tracking-widest" style={{ color: "var(--brand-primary)" }}>
+            <div className="mb-6 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-black uppercase tracking-tight text-[var(--brand-text-primary)]">
                   {activeTab === 'updates' ? 'News feeds' :
                    activeTab === 'archived' ? 'Archive' :
                    activeTab === 'reading' ? 'In progress' :
                    activeTab === 'unread' ? 'Unread' :
-                   'Reading queue'}
+                   'Queue'}
                 </h2>
+                <div className="px-2 py-0.5 rounded-lg bg-[var(--glass-surface)] border border-white/5 text-[10px] font-bold text-brand-primary">
+                  {getTabCount(activeTab)}
+                </div>
               </div>
 
               {activeTab === 'updates' && (
@@ -1093,7 +1079,7 @@ export function ReadingPage() {
                     />
                   ) : (
                     <FocusableList>
-                      <div className="columns-2 md:columns-2 lg:columns-3 gap-4 space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         {visibleArticles.map((article) => {
                           const isSelected = bulkSelection.isSelected(article.id)
                           const isPending = article.id.startsWith('temp-')
