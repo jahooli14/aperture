@@ -21,7 +21,7 @@ const typeConfig = {
     icon: Pin,
     color: 'rgba(59, 130, 246, 0.1)',
     borderColor: 'rgba(59, 130, 246, 0.3)',
-    textColor: 'var(--premium-blue)'
+    textColor: 'var(--brand-primary)'
   },
   recent: {
     label: 'Recent',
@@ -128,7 +128,7 @@ export function SpotlightCard({
             <motion.div
               className="h-full"
               style={{
-                background: 'linear-gradient(90deg, var(--premium-blue), var(--premium-emerald))'
+                background: 'linear-gradient(90deg, var(--brand-primary), var(--premium-emerald))'
               }}
               initial={{ width: 0 }}
               animate={{ width: `${(completedTasks / totalTasks) * 100}%` }}

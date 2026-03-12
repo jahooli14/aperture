@@ -91,14 +91,14 @@ export function TodoBrief() {
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setCollapsed(c => !c)}
-                className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                className="p-1.5 rounded-lg hover:bg-brand-surface/80 transition-colors"
                 style={{ color: 'rgba(255,255,255,0.4)' }}
               >
                 {collapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
               </button>
               <button
                 onClick={handleDismiss}
-                className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                className="p-1.5 rounded-lg hover:bg-brand-surface/80 transition-colors"
                 style={{ color: 'rgba(255,255,255,0.4)' }}
               >
                 <X className="h-3.5 w-3.5" />
@@ -120,7 +120,7 @@ export function TodoBrief() {
               transition={{ delay: 0.1 }}
             >
               {/* Greeting */}
-              <p className="text-sm font-medium mb-3" style={{ color: 'var(--premium-text-primary)' }}>
+              <p className="text-sm font-medium mb-3" style={{ color: 'var(--brand-text-primary)' }}>
                 {brief.greeting}
               </p>
 
@@ -142,7 +142,7 @@ export function TodoBrief() {
 
               {/* Nudges — unactioned thoughts */}
               {brief.nudges.length > 0 && (
-                <div className="border-t border-white/5 pt-3 space-y-2">
+                <div className="border-t border-brand-border pt-3 space-y-2">
                   <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'rgba(6,182,212,0.6)' }}>
                     Worth actioning
                   </span>
@@ -154,7 +154,7 @@ export function TodoBrief() {
                       {nudge.suggested_todo_text && (
                         <button
                           onClick={() => handleCreateTodoFromNudge(nudge)}
-                          className="flex-shrink-0 p-1 rounded-md hover:bg-white/10 transition-colors"
+                          className="flex-shrink-0 p-1 rounded-md hover:bg-brand-surface/80 transition-colors"
                           style={{ color: 'rgba(6,182,212,0.7)' }}
                           title={`Create todo: ${nudge.suggested_todo_text}`}
                         >

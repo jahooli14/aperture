@@ -276,7 +276,7 @@ export function SearchPage() {
       case 'memory':
         return <Brain className="h-5 w-5" style={{ color: 'var(--premium-indigo)' }} />
       case 'project':
-        return <Layers className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
+        return <Layers className="h-5 w-5" style={{ color: 'var(--brand-primary)' }} />
       case 'article':
         return <BookOpen className="h-5 w-5" style={{ color: 'var(--premium-emerald)' }} />
       case 'suggestion':
@@ -295,7 +295,7 @@ export function SearchPage() {
       case 'suggestion':
         return 'rgba(251, 191, 36, 0.15)'
       default:
-        return 'rgba(255, 255, 255, 0.05)'
+        return 'var(--glass-surface)'
     }
   }
 
@@ -311,18 +311,18 @@ export function SearchPage() {
 
       {/* Fixed Header Bar */}
       <div
-        className="fixed top-0 left-0 right-0 z-40 border-b-2 border-[rgba(255,255,255,0.08)]"
+        className="fixed top-0 left-0 right-0 z-40 border-b-2 border-[var(--glass-surface-hover)]"
         style={{
           backgroundColor: '#0a0f1a'
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Search className="h-7 w-7" style={{ color: 'var(--premium-blue)', opacity: 0.7 }} />
+            <Search className="h-7 w-7" style={{ color: 'var(--brand-primary)', opacity: 0.7 }} />
             <h1 className="text-2xl sm:text-3xl" style={{
               fontWeight: 600,
               letterSpacing: 'var(--premium-tracking-tight)',
-              color: 'var(--premium-text-secondary)',
+              color: 'var(--brand-text-secondary)',
               opacity: 0.7
             }}>
               Search
@@ -334,15 +334,15 @@ export function SearchPage() {
       <div className="min-h-screen pb-24" style={{ paddingTop: '5.5rem' }}>
         {/* Header Section */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-          <div className="p-6 rounded-sm" style={{
-            background: 'var(--premium-bg-2)',
-            border: '2px solid rgba(255,255,255,0.08)',
+          <div className="p-6 rounded-lg" style={{
+            background: 'var(--brand-glass-bg)',
+            border: '2px solid var(--glass-surface-hover)',
             boxShadow: '4px 4px 0 rgba(0,0,0,0.5)'
           }}>
             <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
-              Search <span style={{ color: 'var(--premium-blue)' }}>everything</span>
+              Search <span style={{ color: 'var(--brand-primary)' }}>everything</span>
             </h2>
-            <p className="mt-2 text-lg" style={{ color: 'var(--premium-text-secondary)' }}>
+            <p className="mt-2 text-lg" style={{ color: 'var(--brand-text-secondary)' }}>
               Find memories, projects, articles, and suggestions instantly
             </p>
           </div>
@@ -351,16 +351,16 @@ export function SearchPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
           {/* Search Input */}
-          <div className="p-4 rounded-sm mb-6" style={{
-            background: 'var(--premium-bg-2)',
-            border: '2px solid rgba(255,255,255,0.08)',
+          <div className="p-4 rounded-lg mb-6" style={{
+            background: 'var(--brand-glass-bg)',
+            border: '2px solid var(--glass-surface-hover)',
             boxShadow: '4px 4px 0 rgba(0,0,0,0.5)'
           }}>
             <form onSubmit={handleTextSearch} className="flex gap-2">
               <div className="flex-1 relative">
                 <Search
                   className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5"
-                  style={{ color: 'var(--premium-text-tertiary)' }}
+                  style={{ color: 'var(--brand-text-muted)' }}
                 />
                 <input
                   type="text"
@@ -369,11 +369,11 @@ export function SearchPage() {
                   onFocus={(e) => { setSearchFocused(true); handleInputFocus(e) }}
                   onBlur={() => setSearchFocused(false)}
                   placeholder="Search your knowledge..."
-                  className="w-full h-12 pl-12 pr-4 rounded-sm border-2 text-base focus:outline-none transition-all duration-200"
+                  className="w-full h-12 pl-12 pr-4 rounded-lg border-2 text-base focus:outline-none transition-all duration-200"
                   style={{
-                    background: 'var(--premium-bg-3)',
+                    background: 'var(--glass-surface)',
                     borderColor: searchFocused ? 'rgba(59, 130, 246, 0.6)' : 'rgba(59, 130, 246, 0.2)',
-                    color: 'var(--premium-text-primary)',
+                    color: 'var(--brand-text-primary)',
                   }}
                 />
               </div>
@@ -381,11 +381,11 @@ export function SearchPage() {
               <button
                 type="button"
                 onClick={() => setShowVoiceSearch(v => !v)}
-                className="h-12 w-12 flex-shrink-0 rounded-sm flex items-center justify-center transition-all active:scale-95"
+                className="h-12 w-12 flex-shrink-0 rounded-lg flex items-center justify-center transition-all active:scale-95"
                 style={{
-                  background: showVoiceSearch ? 'rgba(59,130,246,0.2)' : 'var(--premium-bg-3)',
+                  background: showVoiceSearch ? 'rgba(59,130,246,0.2)' : 'var(--glass-surface)',
                   border: `1px solid ${showVoiceSearch ? 'rgba(59,130,246,0.4)' : 'rgba(59,130,246,0.2)'}`,
-                  color: showVoiceSearch ? 'var(--premium-blue)' : 'var(--premium-text-tertiary)',
+                  color: showVoiceSearch ? 'var(--brand-primary)' : 'var(--brand-text-muted)',
                 }}
                 aria-label="Voice search"
               >
@@ -416,7 +416,7 @@ export function SearchPage() {
             <div className="flex items-center gap-2 mt-3">
               <button
                 onClick={() => { setSearchMode('text'); if (query.trim().length >= 2) performSearch(query.trim()) }}
-                className={`px-4 py-2 rounded-sm text-sm font-medium transition-all active:scale-95 ${
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all active:scale-95 ${
                   searchMode === 'text' ? 'bg-[rgba(255,255,255,0.1)] text-[var(--brand-text-primary)]' : 'text-[var(--brand-text-muted)]'
                 }`}
               >
@@ -424,7 +424,7 @@ export function SearchPage() {
               </button>
               <button
                 onClick={() => { setSearchMode('semantic'); if (query.trim().length >= 2) performSearch(query.trim()) }}
-                className={`px-4 py-2 rounded-sm text-sm font-medium transition-all active:scale-95 ${
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all active:scale-95 ${
                   searchMode === 'semantic' ? 'bg-blue-500/20 text-blue-400' : 'text-[var(--brand-text-muted)]'
                 }`}
               >
@@ -435,14 +435,14 @@ export function SearchPage() {
 
           {/* Results */}
           {loading && (
-            <div className="p-6 rounded-sm" style={{
-              background: 'var(--premium-bg-2)',
-              border: '2px solid rgba(255,255,255,0.08)',
+            <div className="p-6 rounded-lg" style={{
+              background: 'var(--brand-glass-bg)',
+              border: '2px solid var(--glass-surface-hover)',
               boxShadow: '4px 4px 0 rgba(0,0,0,0.5)'
             }}>
               <div className="text-center py-20">
-                <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" style={{ color: 'var(--premium-blue)' }} />
-                <p style={{ color: 'var(--premium-text-secondary)' }}>Searching...</p>
+                <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" style={{ color: 'var(--brand-primary)' }} />
+                <p style={{ color: 'var(--brand-text-secondary)' }}>Searching...</p>
               </div>
             </div>
           )}
@@ -450,15 +450,15 @@ export function SearchPage() {
           {!loading && results && (
             <>
               {/* Results Summary */}
-              <div className="p-6 rounded-sm mb-6" style={{
-                background: 'var(--premium-bg-2)',
-                border: '2px solid rgba(255,255,255,0.08)',
+              <div className="p-6 rounded-lg mb-6" style={{
+                background: 'var(--brand-glass-bg)',
+                border: '2px solid var(--glass-surface-hover)',
                 boxShadow: '4px 4px 0 rgba(0,0,0,0.5)'
               }}>
                 <h2 className="text-xl font-semibold mb-2 premium-text-platinum">
                   {results.total} {results.total === 1 ? 'result' : 'results'} for "{results.query}"
                 </h2>
-                <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm" style={{ color: 'var(--brand-text-muted)' }}>
                   <span>{results.breakdown.memories} memories</span>
                   <span>•</span>
                   <span>{results.breakdown.projects} projects</span>
@@ -488,12 +488,12 @@ export function SearchPage() {
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
-                      whileTap={{ scale: 0.98, backgroundColor: 'var(--premium-bg-3)' }}
+                      whileTap={{ scale: 0.98, backgroundColor: 'var(--glass-surface)' }}
                       onClick={() => navigateToResult(result)}
-                      className="p-5 rounded-sm cursor-pointer"
+                      className="p-5 rounded-lg cursor-pointer"
                       style={{
-                        background: 'var(--premium-bg-2)',
-                        border: '2px solid rgba(255,255,255,0.08)',
+                        background: 'var(--brand-glass-bg)',
+                        border: '2px solid var(--glass-surface-hover)',
                         boxShadow: '4px 4px 0 rgba(0,0,0,0.5)'
                       }}
                     >
@@ -503,7 +503,7 @@ export function SearchPage() {
                           <div className="flex items-center gap-2 mb-2">
                             {getResultIcon(result.type)}
                             <span
-                              className="text-xs font-medium px-2 py-1 rounded-sm capitalize"
+                              className="text-xs font-medium px-2 py-1 rounded-lg capitalize"
                               style={{ backgroundColor: getResultBadgeColor(result.type) }}
                             >
                               {result.type}
@@ -517,7 +517,7 @@ export function SearchPage() {
 
                           {/* Description */}
                           {(result.body || result.description) && (
-                            <p className="text-sm line-clamp-2 mb-2" style={{ color: 'var(--premium-text-secondary)' }}>
+                            <p className="text-sm line-clamp-2 mb-2" style={{ color: 'var(--brand-text-secondary)' }}>
                               {result.body || result.description}
                             </p>
                           )}
@@ -528,10 +528,10 @@ export function SearchPage() {
                               {result.tags.slice(0, 3).map((tag, i) => (
                                 <span
                                   key={i}
-                                  className="text-xs px-2 py-0.5 rounded-sm"
+                                  className="text-xs px-2 py-0.5 rounded-lg"
                                   style={{
                                     backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                                    color: 'var(--premium-blue)'
+                                    color: 'var(--brand-primary)'
                                   }}
                                 >
                                   {tag}
@@ -543,7 +543,7 @@ export function SearchPage() {
 
                         {/* Arrow always visible on touch */}
                         <div className="flex-shrink-0 opacity-30">
-                          <ArrowRight className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
+                          <ArrowRight className="h-5 w-5" style={{ color: 'var(--brand-primary)' }} />
                         </div>
                       </div>
                     </motion.div>

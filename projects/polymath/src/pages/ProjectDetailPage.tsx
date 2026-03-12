@@ -537,10 +537,10 @@ export function ProjectDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900" style={{ backgroundColor: 'var(--premium-surface-base, #111)' }}>
+      <div className="min-h-screen flex items-center justify-center bg-brand-bg" style={{ backgroundColor: 'var(--brand-bg)' }}>
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-[var(--brand-primary)]" style={{ color: 'var(--premium-blue, #60a5fa)' }} />
-          <p className="text-[var(--brand-text-secondary)]" style={{ color: 'var(--premium-text-secondary, #9ca3af)' }}>Loading project...</p>
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-[var(--brand-primary)]" style={{ color: 'var(--brand-primary)' }} />
+          <p className="text-[var(--brand-text-secondary)]" style={{ color: 'var(--brand-text-secondary)' }}>Loading project...</p>
         </div>
       </div>
     )
@@ -548,9 +548,9 @@ export function ProjectDetailPage() {
 
   if (!project) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900" style={{ backgroundColor: 'var(--premium-surface-base, #111)' }}>
+      <div className="min-h-screen flex items-center justify-center bg-brand-bg" style={{ backgroundColor: 'var(--brand-bg)' }}>
         <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2 text-[var(--brand-text-primary)]" style={{ color: 'var(--premium-text-primary, #fff)' }}>Project not found</h2>
+          <h2 className="text-xl font-semibold mb-2 text-[var(--brand-text-primary)]" style={{ color: 'var(--brand-text-primary)' }}>Project not found</h2>
           <Button onClick={() => navigate('/projects')} variant="outline">
             Back to Projects
           </Button>
@@ -560,7 +560,7 @@ export function ProjectDetailPage() {
   }
 
   return (
-    <div className="min-h-screen pb-24 relative" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
+    <div className="min-h-screen pb-24 relative" style={{ backgroundColor: 'var(--brand-bg)' }}>
       <SubtleBackground />
       {/* Sticky Header */}
       <div className="sticky top-0 z-40">
@@ -587,7 +587,7 @@ export function ProjectDetailPage() {
             <button
               onClick={() => navigate('/projects')}
               className="h-10 w-10 flex items-center justify-center rounded-full transition-colors touch-manipulation"
-              style={{ color: 'var(--premium-text-secondary)' }}
+              style={{ color: 'var(--brand-text-secondary)' }}
               aria-label="Back to projects"
             >
               <ArrowLeft className="h-5 w-5" />
@@ -607,13 +607,13 @@ export function ProjectDetailPage() {
                     }}
                     className="flex-1 text-xl font-bold bg-transparent outline-none"
                     style={{
-                      color: 'var(--premium-text-primary)'
+                      color: 'var(--brand-text-primary)'
                     }}
                   />
-                  <button onClick={saveTitle} className="p-1 rounded hover:bg-[rgba(255,255,255,0.1)]">
-                    <Check className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
+                  <button onClick={saveTitle} className="p-1 rounded-xl hover:bg-[rgba(255,255,255,0.1)]">
+                    <Check className="h-5 w-5" style={{ color: 'var(--brand-primary)' }} />
                   </button>
-                  <button onClick={cancelEdit} className="p-1 rounded hover:bg-[rgba(255,255,255,0.1)]">
+                  <button onClick={cancelEdit} className="p-1 rounded-xl hover:bg-[rgba(255,255,255,0.1)]">
                     <X className="h-5 w-5" style={{ color: '#ef4444' }} />
                   </button>
                 </div>
@@ -621,7 +621,7 @@ export function ProjectDetailPage() {
                 <div>
                   <h1
                     className="text-xl font-bold truncate cursor-pointer hover:opacity-70 transition-opacity"
-                    style={{ color: 'var(--premium-text-primary)' }}
+                    style={{ color: 'var(--brand-text-primary)' }}
                     onClick={startEditTitle}
                     title="Click to edit"
                   >
@@ -638,8 +638,8 @@ export function ProjectDetailPage() {
                   onClick={() => setShowCategoryMenu(!showCategoryMenu)}
                   className="px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs font-medium transition-all hover:opacity-80"
                   style={{
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    color: 'var(--premium-text-secondary)',
+                    background: 'var(--glass-surface)',
+                    color: 'var(--brand-text-secondary)',
                     border: '1px solid rgba(255, 255, 255, 0.1)'
                   }}
                   title="Change project category"
@@ -654,7 +654,7 @@ export function ProjectDetailPage() {
                       className="fixed inset-0 z-10"
                       onClick={() => setShowCategoryMenu(false)}
                     />
-                    <div className="absolute right-0 mt-2 w-40 rounded py-1 z-20"
+                    <div className="absolute right-0 mt-2 w-40 rounded-xl py-1 z-20"
                       style={{
                         background: 'rgba(15, 24, 41, 0.9)',
                         border: '1px solid rgba(59, 130, 246, 0.3)'
@@ -666,7 +666,7 @@ export function ProjectDetailPage() {
                           onClick={() => handleCategoryChange(cat)}
                           className="w-full px-4 py-2 text-left text-xs font-medium transition-colors hover:opacity-80"
                           style={{
-                            color: project.type === cat ? 'var(--premium-blue)' : 'var(--premium-text-secondary)',
+                            color: project.type === cat ? 'var(--brand-primary)' : 'var(--brand-text-secondary)',
                             backgroundColor: project.type === cat ? 'rgba(59, 130, 246, 0.1)' : 'transparent'
                           }}
                         >
@@ -712,7 +712,7 @@ export function ProjectDetailPage() {
                 <Star
                   className="h-5 w-5 transition-colors"
                   style={{
-                    color: project.is_priority ? '#f59e0b' : 'var(--premium-text-secondary)',
+                    color: project.is_priority ? '#f59e0b' : 'var(--brand-text-secondary)',
                     fill: project.is_priority ? '#f59e0b' : 'none'
                   }}
                 />
@@ -731,7 +731,7 @@ export function ProjectDetailPage() {
               <button
                 onClick={() => setShowMenu(!showMenu)}
                 className="h-10 w-10 flex items-center justify-center rounded-full transition-colors touch-manipulation"
-                style={{ color: 'var(--premium-text-secondary)' }}
+                style={{ color: 'var(--brand-text-secondary)' }}
                 aria-label="More options"
               >
                 <MoreVertical className="h-5 w-5" />
@@ -743,7 +743,7 @@ export function ProjectDetailPage() {
                     className="fixed inset-0 z-10"
                     onClick={() => setShowMenu(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-48 rounded py-1 z-20">
+                  <div className="absolute right-0 mt-2 w-48 rounded-xl py-1 z-20">
                     <button
                       onClick={() => {
                         setShowMenu(false)
@@ -760,7 +760,7 @@ export function ProjectDetailPage() {
                         setShowEditDialog(true)
                       }}
                       className="w-full px-4 py-2 text-left text-sm transition-colors hover:bg-[rgba(255,255,255,0.1)]"
-                      style={{ color: 'var(--premium-text-primary)' }}
+                      style={{ color: 'var(--brand-text-primary)' }}
                     >
                       Edit Project Details
                     </button>
@@ -776,7 +776,7 @@ export function ProjectDetailPage() {
       {/* Content - All sections on one page */}
       {/* Tabs */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-6">
-        <div className="flex items-center gap-4 border-b border-[rgba(255,255,255,0.08)]">
+        <div className="flex items-center gap-4 border-b border-[var(--glass-surface-hover)]">
           <button
             onClick={() => setActiveTab('overview')}
             className={`pb-3 text-sm font-medium transition-colors relative ${activeTab === 'overview' ? 'text-blue-400' : 'text-[var(--brand-text-secondary)] hover:text-[var(--brand-text-primary)]'
@@ -856,7 +856,7 @@ export function ProjectDetailPage() {
                           }
                           addToast({ title: 'Focus on your hit-list below', variant: 'default' })
                         }}
-                        className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-[var(--brand-text-primary)] font-black uppercase text-xs tracking-widest rounded transition-all flex items-center gap-3 group/btn"
+                        className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-[var(--brand-text-primary)] font-black uppercase text-xs tracking-widest rounded-xl transition-all flex items-center gap-3 group/btn"
                       >
                         <Check className="h-4 w-4 group-hover/btn:scale-125 transition-transform" />
                         Execute Hit-List
@@ -878,7 +878,7 @@ export function ProjectDetailPage() {
                 {(project.description || project.metadata?.motivation) && (
                   <div className="relative group">
                     <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
-                    <div className="relative p-8 rounded-2xl bg-white/[0.03] border border-[rgba(255,255,255,0.05)] space-y-4">
+                    <div className="relative p-8 rounded-2xl bg-white/[0.03] border border-[var(--glass-surface)] space-y-4">
                       <div className="flex items-center gap-3 mb-4 opacity-50">
                         <div className="h-px bg-white/20 flex-grow" />
                         <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--brand-text-primary)]/50">The Vision</span>
@@ -906,7 +906,7 @@ export function ProjectDetailPage() {
                               }
                               if (e.key === 'Escape') cancelEdit()
                             }}
-                            className="w-full bg-black/40 border-[rgba(255,255,255,0.08)] rounded-xl p-4 text-xl sm:text-2xl font-medium text-[var(--brand-text-primary)] leading-relaxed italic font-serif text-center outline-none focus:border-blue-500/50"
+                            className="w-full bg-black/40 border-[var(--glass-surface-hover)] rounded-xl p-4 text-xl sm:text-2xl font-medium text-[var(--brand-text-primary)] leading-relaxed italic font-serif text-center outline-none focus:border-blue-500/50"
                             autoFocus
                           />
                         ) : (
@@ -939,7 +939,7 @@ export function ProjectDetailPage() {
                                   }
                                   if (e.key === 'Escape') cancelEdit()
                                 }}
-                                className="w-full bg-black/40 border-[rgba(255,255,255,0.08)] rounded-xl p-3 text-sm text-[var(--brand-text-primary)] leading-relaxed max-w-2xl mx-auto block outline-none focus:border-blue-500/50 text-center"
+                                className="w-full bg-black/40 border-[var(--glass-surface-hover)] rounded-xl p-3 text-sm text-[var(--brand-text-primary)] leading-relaxed max-w-2xl mx-auto block outline-none focus:border-blue-500/50 text-center"
                                 autoFocus
                               />
                             ) : (
@@ -958,7 +958,7 @@ export function ProjectDetailPage() {
               {/* The Finish Line (Definition of Done) */}
               <div className="grid gap-3 mt-6">
                 <div
-                  className="group relative p-6 cursor-pointer hover:bg-[rgba(255,255,255,0.05)] transition-all rounded-xl border border-[rgba(255,255,255,0.05)] hover:border-green-500/30 overflow-hidden"
+                  className="group relative p-6 cursor-pointer hover:bg-[var(--glass-surface)] transition-all rounded-xl border border-[var(--glass-surface)] hover:border-green-500/30 overflow-hidden"
                   onClick={!editingGoal ? startEditGoal : undefined}
                   title="Click to edit"
                 >
@@ -976,7 +976,7 @@ export function ProjectDetailPage() {
                         ref={goalInputRef}
                         value={tempGoal}
                         onChange={(e) => setTempGoal(e.target.value)}
-                        className="w-full bg-black/20 border border-[rgba(255,255,255,0.08)] rounded-lg p-3 text-base resize-none focus:outline-none focus:border-green-500/50 text-[var(--brand-text-primary)] leading-relaxed"
+                        className="w-full bg-black/20 border border-[var(--glass-surface-hover)] rounded-lg p-3 text-base resize-none focus:outline-none focus:border-green-500/50 text-[var(--brand-text-primary)] leading-relaxed"
                         rows={3}
                         placeholder="What does 'done' look like?"
                         onKeyDown={(e) => {
@@ -991,13 +991,13 @@ export function ProjectDetailPage() {
                       <div className="flex gap-2 justify-end">
                         <button
                           onClick={(e) => { e.stopPropagation(); cancelEdit() }}
-                          className="px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400"
+                          className="px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-400"
                         >
                           Cancel
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); saveGoal() }}
-                          className="px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded bg-green-900/50 text-green-400 border border-green-500/20 hover:bg-green-900/80"
+                          className="px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-xl bg-green-900/50 text-green-400 border border-green-500/20 hover:bg-green-900/80"
                         >
                           Set Target
                         </button>
@@ -1085,14 +1085,14 @@ export function ProjectDetailPage() {
               {/* Activity */}
               <div className="mt-12">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold" style={{ color: 'var(--premium-text-primary)' }}>
+                  <h3 className="text-lg font-semibold" style={{ color: 'var(--brand-text-primary)' }}>
                     Activity
                   </h3>
                   <Button
                     onClick={() => setShowAddNote(true)}
                     className="h-9 px-4 text-sm font-medium"
                     style={{
-                      background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
+                      background: 'linear-gradient(135deg, var(--brand-primary), var(--premium-indigo))',
                       color: 'white'
                     }}
                   >

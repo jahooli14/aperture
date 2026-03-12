@@ -351,7 +351,7 @@ const QuoteCard = memo(({
                                     type="text"
                                     value={authorValue}
                                     onChange={(e) => setAuthorValue(e.target.value)}
-                                    className="rounded px-3 py-1 text-sm text-[var(--brand-text-primary)]/90 focus:outline-none appearance-none"
+                                    className="rounded-xl px-3 py-1 text-sm text-[var(--brand-text-primary)]/90 focus:outline-none appearance-none"
                                     style={{ backgroundColor: 'rgba(255,255,255,0.1)', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.2)' }}
                                     placeholder="Author name"
                                     autoFocus
@@ -363,7 +363,7 @@ const QuoteCard = memo(({
                                         }
                                     }}
                                 />
-                                <button onClick={handleSaveAuthor} className="p-1.5 rounded bg-[rgba(255,255,255,0.1)] hover:bg-white/20 transition-colors">
+                                <button onClick={handleSaveAuthor} className="p-1.5 rounded-xl bg-[rgba(255,255,255,0.1)] hover:bg-white/20 transition-colors">
                                     <Check className="h-3.5 w-3.5 text-[var(--brand-text-primary)]/70" />
                                 </button>
                             </div>
@@ -375,7 +375,7 @@ const QuoteCard = memo(({
                                 </p>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setIsEditingAuthor(true) }}
-                                    className="p-1.5 rounded bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] opacity-0 group-hover/author:opacity-100 transition-all"
+                                    className="p-1.5 rounded-xl bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] opacity-0 group-hover/author:opacity-100 transition-all"
                                 >
                                     <Pencil className="h-3 w-3 text-[var(--brand-text-primary)]/50" />
                                 </button>
@@ -389,7 +389,7 @@ const QuoteCard = memo(({
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
                             exit={{ opacity: 0, height: 0 }}
-                            className="mt-8 pt-6 border-t border-[rgba(255,255,255,0.08)] space-y-4"
+                            className="mt-8 pt-6 border-t border-[var(--glass-surface-hover)] space-y-4"
                         >
                             {item.metadata.description && (
                                 <p className="text-base text-zinc-300/90 leading-relaxed italic">{item.metadata.description}</p>
@@ -421,7 +421,7 @@ const QuoteCard = memo(({
                     {/* Copy button */}
                     <button
                         onClick={(e) => { e.stopPropagation(); onCopy(item.content) }}
-                        className="p-2.5 rounded-xl bg-zinc-900/50 backdrop-blur-sm border border-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.1)] text-zinc-500 hover:text-[var(--brand-text-primary)] opacity-0 group-hover:opacity-100 transition-all duration-300"
+                        className="p-2.5 rounded-xl bg-zinc-900/50 backdrop-blur-sm border border-[var(--glass-surface-hover)] hover:bg-[rgba(255,255,255,0.1)] text-zinc-500 hover:text-[var(--brand-text-primary)] opacity-0 group-hover:opacity-100 transition-all duration-300"
                         aria-label="Copy quote"
                     >
                         <Copy className="h-4 w-4" />
@@ -519,7 +519,7 @@ const StandardItemCard = memo(({
                     )}
                 </div>
             ) : (
-                <div className="relative aspect-square bg-zinc-900 border border-[rgba(255,255,255,0.05)] overflow-hidden flex items-center justify-center">
+                <div className="relative aspect-square bg-zinc-900 border border-[var(--glass-surface)] overflow-hidden flex items-center justify-center">
                     <div className="absolute inset-0 opacity-10"
                         style={{ background: `linear-gradient(135deg, rgb(${rgb}), transparent)` }}
                     />
@@ -567,7 +567,7 @@ const StandardItemCard = memo(({
 
                 {/* Key metadata on expanded */}
                 {isExpanded && (
-                    <div className="pl-6 space-y-1 backdrop-blur-sm bg-black/30 p-2 rounded-lg border border-[rgba(255,255,255,0.08)]">
+                    <div className="pl-6 space-y-1 backdrop-blur-sm bg-black/30 p-2 rounded-lg border border-[var(--glass-surface-hover)]">
                         {item.metadata?.subtitle && (
                             <p className="text-zinc-300 text-[10px] italic leading-relaxed">{item.metadata.subtitle}</p>
                         )}
@@ -597,14 +597,14 @@ const StandardItemCard = memo(({
                                     <span className="text-[9px] text-zinc-400">dir. {item.metadata.director}</span>
                                 )}
                                 {item.metadata.genre && (
-                                    <span className="text-[9px] bg-[rgba(255,255,255,0.1)] px-1.5 py-0.5 rounded text-zinc-400">{item.metadata.genre}</span>
+                                    <span className="text-[9px] bg-[rgba(255,255,255,0.1)] px-1.5 py-0.5 rounded-xl text-zinc-400">{item.metadata.genre}</span>
                                 )}
                             </div>
                         )}
                         {item.metadata?.tags && item.metadata.tags.length > 0 && (
                             <div className="flex flex-wrap gap-1">
                                 {item.metadata.tags.slice(0, 3).map((tag: string) => (
-                                    <span key={tag} className="text-[8px] bg-sky-500/20 border border-sky-500/30 px-1.5 py-0.5 rounded text-sky-300 font-medium">
+                                    <span key={tag} className="text-[8px] bg-sky-500/20 border border-sky-500/30 px-1.5 py-0.5 rounded-xl text-sky-300 font-medium">
                                         {tag}
                                     </span>
                                 ))}
@@ -870,7 +870,7 @@ export default function ListDetailPage() {
         return (
             <div className="min-h-screen bg-black pt-24 px-4">
                 <div className="max-w-4xl mx-auto">
-                    <div className="shimmer h-8 w-32 rounded mb-8" />
+                    <div className="shimmer h-8 w-32 rounded-xl mb-8" />
                     <div className="shimmer h-12 w-64 rounded-lg mb-6" />
                     <div className="flex flex-wrap gap-3">
                         {[1, 2, 3, 4].map((i) => (
@@ -905,7 +905,7 @@ export default function ListDetailPage() {
                     </div>
                     {/* Item count badge */}
                     <div className="px-3 py-1.5 rounded-full bg-zinc-800/50 text-xs font-mono text-zinc-400"
-                        style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.06)' }}>
+                        style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface)' }}>
                         {displayItems.length} {displayItems.length === 1 ? 'item' : 'items'}
                     </div>
                 </div>
@@ -917,7 +917,7 @@ export default function ListDetailPage() {
                         <div className="relative">
                             <button
                                 onClick={(e) => { e.stopPropagation(); setShowSortMenu(v => !v) }}
-                                className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-[rgba(255,255,255,0.08)] text-zinc-500 hover:text-[var(--brand-text-primary)] hover:border-white/20 transition-all"
+                                className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-[var(--glass-surface-hover)] text-zinc-500 hover:text-[var(--brand-text-primary)] hover:border-white/20 transition-all"
                             >
                                 <SortAsc className="h-3 w-3" />
                                 <span className="text-[10px] font-black uppercase tracking-widest">Sort</span>
@@ -941,7 +941,7 @@ export default function ListDetailPage() {
                                             <button
                                                 key={opt.value}
                                                 onClick={() => { setSortOption(opt.value); setShowSortMenu(false) }}
-                                                className="w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-[rgba(255,255,255,0.05)] flex items-center justify-between"
+                                                className="w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-[var(--glass-surface)] flex items-center justify-between"
                                                 style={{ color: sortOption === opt.value ? `rgb(${rgb})` : 'rgba(255,255,255,0.6)' }}
                                             >
                                                 <span className="text-[11px] font-bold uppercase tracking-widest">{opt.label}</span>
@@ -956,7 +956,7 @@ export default function ListDetailPage() {
                         {/* Reorder toggle */}
                         <button
                             onClick={() => setIsReordering(!isReordering)}
-                            className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all ${isReordering ? 'bg-sky-500 border-sky-400 text-[var(--brand-text-primary)]' : 'border-[rgba(255,255,255,0.08)] text-zinc-500 hover:text-[var(--brand-text-primary)] hover:border-white/20'}`}
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all ${isReordering ? 'bg-sky-500 border-sky-400 text-[var(--brand-text-primary)]' : 'border-[var(--glass-surface-hover)] text-zinc-500 hover:text-[var(--brand-text-primary)] hover:border-white/20'}`}
                         >
                             {isReordering ? <Check className="h-3 w-3" /> : <ListOrdered className="h-3 w-3" />}
                             <span className="text-[10px] font-black uppercase tracking-widest">{isReordering ? 'Done' : 'Order'}</span>
@@ -977,10 +977,10 @@ export default function ListDetailPage() {
                                     onClick={() => setStatusFilter(tab)}
                                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full whitespace-nowrap transition-all flex-shrink-0"
                                     style={{
-                                        backgroundColor: isActive ? `rgba(${rgb}, 0.15)` : 'rgba(255,255,255,0.03)',
+                                        backgroundColor: isActive ? `rgba(${rgb}, 0.15)` : 'var(--glass-surface)',
                                         boxShadow: isActive
                                             ? `inset 0 0 0 1px rgba(${rgb}, 0.35)`
-                                            : 'inset 0 0 0 1px rgba(255,255,255,0.06)',
+                                            : 'inset 0 0 0 1px var(--glass-surface)',
                                         color: isActive ? `rgb(${rgb})` : 'rgba(255,255,255,0.35)'
                                     }}
                                 >
@@ -988,7 +988,7 @@ export default function ListDetailPage() {
                                     {count > 0 && (
                                         <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
                                             style={{
-                                                backgroundColor: isActive ? `rgba(${rgb}, 0.2)` : 'rgba(255,255,255,0.06)',
+                                                backgroundColor: isActive ? `rgba(${rgb}, 0.2)` : 'var(--glass-surface)',
                                                 color: isActive ? `rgb(${rgb})` : 'rgba(255,255,255,0.25)'
                                             }}>
                                             {count}
@@ -1028,7 +1028,7 @@ export default function ListDetailPage() {
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: 10 }}
                                     className="backdrop-blur-2xl bg-zinc-900/60 rounded-2xl p-2 flex items-center gap-2 shadow-2xl transition-all font-mono"
-                                    style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.08), 0 25px 50px rgba(0,0,0,0.5)' }}
+                                    style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface-hover), 0 25px 50px rgba(0,0,0,0.5)' }}
                                 >
                                     <form onSubmit={handleAddItem} className="flex-1 flex px-3 text-[var(--brand-text-primary)] items-center gap-2">
                                         <Input
@@ -1044,7 +1044,7 @@ export default function ListDetailPage() {
                                                 type="button"
                                                 onClick={() => setIsVoiceMode(true)}
                                                 className="rounded-xl bg-zinc-800/50 hover:bg-zinc-800 text-zinc-400 hover:text-sky-400 h-10 w-10 p-0 shrink-0 transition-all"
-                                                style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.06)' }}
+                                                style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface)' }}
                                             >
                                                 <Mic className="h-4 w-4" />
                                             </Button>
@@ -1076,11 +1076,11 @@ export default function ListDetailPage() {
                                         key={item.id}
                                         value={item}
                                         className="flex items-center gap-4 bg-zinc-900/40 p-4 rounded-xl cursor-grab active:cursor-grabbing hover:bg-zinc-900/60 transition-all"
-                                        style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.06)' }}
+                                        style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface)' }}
                                     >
                                         <GripVertical className="h-4 w-4 text-zinc-600" />
                                         {item.metadata?.image && (
-                                            <div className="h-10 w-10 rounded-lg overflow-hidden shrink-0" style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.08)' }}>
+                                            <div className="h-10 w-10 rounded-lg overflow-hidden shrink-0" style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface-hover)' }}>
                                                 <OptimizedImage
                                                     src={item.metadata.image}
                                                     alt={item.content}
@@ -1163,7 +1163,7 @@ export default function ListDetailPage() {
             {/* Smart Connections Section */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-48">
                 {(connectionCount > 0 || isLoadingConnections) && (
-                    <div className="mt-12 pt-12 border-t border-[rgba(255,255,255,0.05)] pb-20">
+                    <div className="mt-12 pt-12 border-t border-[var(--glass-surface)] pb-20">
                         <div className="flex items-center justify-between mb-8">
                             <div>
                                 <h3 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">Synthesized Insights</h3>

@@ -48,15 +48,15 @@ export function MemoryLinks({ currentMemoryId, bridges, onMemoryClick }: MemoryL
   return (
     <div className="pt-3 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
       <div className="flex items-center gap-2 mb-3">
-        <Link2 className="h-4 w-4" style={{ color: 'var(--premium-blue)' }} />
-        <span className="text-sm font-semibold" style={{ color: 'var(--premium-text-secondary)' }}>
+        <Link2 className="h-4 w-4" style={{ color: 'var(--brand-primary)' }} />
+        <span className="text-sm font-semibold" style={{ color: 'var(--brand-text-secondary)' }}>
           Connected Memories
         </span>
         <span
           className="text-xs px-2 py-0.5 rounded-full"
           style={{
             backgroundColor: 'rgba(59, 130, 246, 0.2)',
-            color: 'var(--premium-blue)',
+            color: 'var(--brand-primary)',
           }}
         >
           {linkedMemories.length}
@@ -67,7 +67,7 @@ export function MemoryLinks({ currentMemoryId, bridges, onMemoryClick }: MemoryL
         {/* Backlinks (memories that link TO this one) */}
         {backlinks.length > 0 && (
           <div className="space-y-2">
-            <div className="flex items-center gap-1.5 text-xs font-medium" style={{ color: 'var(--premium-text-tertiary)' }}>
+            <div className="flex items-center gap-1.5 text-xs font-medium" style={{ color: 'var(--brand-text-muted)' }}>
               <ArrowLeft className="h-3 w-3" />
               <span>Linked here from</span>
             </div>
@@ -85,10 +85,10 @@ export function MemoryLinks({ currentMemoryId, bridges, onMemoryClick }: MemoryL
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium line-clamp-1" style={{ color: 'var(--premium-text-primary)' }}>
+                    <div className="text-sm font-medium line-clamp-1" style={{ color: 'var(--brand-text-primary)' }}>
                       {link.memory.title}
                     </div>
-                    <div className="text-xs mt-0.5 capitalize" style={{ color: 'var(--premium-text-tertiary)' }}>
+                    <div className="text-xs mt-0.5 capitalize" style={{ color: 'var(--brand-text-muted)' }}>
                       {bridgeTypeLabels[link.bridge_type] || link.bridge_type.replace(/_/g, ' ')}
                     </div>
                   </div>
@@ -110,7 +110,7 @@ export function MemoryLinks({ currentMemoryId, bridges, onMemoryClick }: MemoryL
         {/* Forward links (memories this one links TO) */}
         {forwardLinks.length > 0 && (
           <div className="space-y-2">
-            <div className="flex items-center gap-1.5 text-xs font-medium" style={{ color: 'var(--premium-text-tertiary)' }}>
+            <div className="flex items-center gap-1.5 text-xs font-medium" style={{ color: 'var(--brand-text-muted)' }}>
               <ArrowRight className="h-3 w-3" />
               <span>Links to</span>
             </div>
@@ -128,10 +128,10 @@ export function MemoryLinks({ currentMemoryId, bridges, onMemoryClick }: MemoryL
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium line-clamp-1" style={{ color: 'var(--premium-text-primary)' }}>
+                    <div className="text-sm font-medium line-clamp-1" style={{ color: 'var(--brand-text-primary)' }}>
                       {link.memory.title}
                     </div>
-                    <div className="text-xs mt-0.5 capitalize" style={{ color: 'var(--premium-text-tertiary)' }}>
+                    <div className="text-xs mt-0.5 capitalize" style={{ color: 'var(--brand-text-muted)' }}>
                       {bridgeTypeLabels[link.bridge_type] || link.bridge_type.replace(/_/g, ' ')}
                     </div>
                   </div>

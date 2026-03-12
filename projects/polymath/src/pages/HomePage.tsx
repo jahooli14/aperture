@@ -171,14 +171,14 @@ function GetInspirationSection({
           >
             <Link
               to={inspiration.url || '/projects'}
-              className="group block p-6 rounded transition-all duration-300 border flex-1 flex flex-col relative overflow-hidden"
+              className="group block p-6 rounded-xl transition-all duration-300 border flex-1 flex flex-col relative overflow-hidden"
               style={{
                 background: inspiration.type === 'project'
                   ? getTheme(projects.find(p => p.id === inspiration.url?.split('/').pop())?.type || 'other', inspiration.title).backgroundColor
-                  : 'rgba(255, 255, 255, 0.03)',
+                  : 'var(--glass-surface)',
                 borderColor: inspiration.type === 'project'
                   ? getTheme(projects.find(p => p.id === inspiration.url?.split('/').pop())?.type || 'other', inspiration.title).borderColor
-                  : 'rgba(255, 255, 255, 0.05)'
+                  : 'var(--glass-surface)'
               }}
               onMouseEnter={(e) => {
                 const projId = inspiration.url?.split('/').pop()
@@ -188,7 +188,7 @@ function GetInspirationSection({
                   e.currentTarget.style.background = `rgba(${theme.rgb}, 0.15)`
                   e.currentTarget.style.borderColor = `rgba(${theme.rgb}, 0.4)`
                 } else {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'
+                  e.currentTarget.style.background = 'var(--glass-surface-hover)'
                 }
               }}
               onMouseLeave={(e) => {
@@ -199,7 +199,7 @@ function GetInspirationSection({
                   e.currentTarget.style.background = theme.backgroundColor
                   e.currentTarget.style.borderColor = theme.borderColor
                 } else {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)'
+                  e.currentTarget.style.background = 'var(--glass-surface)'
                 }
               }}
             >
@@ -208,22 +208,22 @@ function GetInspirationSection({
                   <h3 className="premium-text-platinum font-bold text-lg truncate">
                     {inspiration.title}
                   </h3>
-                  <span className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border aperture-header"
+                  <span className="flex-shrink-0 px-2 py-0.5 rounded-xl text-[10px] font-black uppercase tracking-widest border aperture-header"
                     style={(() => {
                       const projId = inspiration.url?.split('/').pop()
                       const project = projects.find(p => p.id === projId)
                       const theme = getTheme(project?.type || 'other', inspiration.title)
                       return {
-                        borderColor: inspiration.type === 'project' ? `rgba(${theme.rgb}, 0.3)` : 'rgba(var(--brand-primary-raw), 0.3)',
+                        borderColor: inspiration.type === 'project' ? `rgba(${theme.rgb}, 0.3)` : 'rgba(var(--brand-primary-rgb), 0.3)',
                         color: inspiration.type === 'project' ? theme.textColor : 'var(--brand-primary)',
-                        backgroundColor: inspiration.type === 'project' ? `rgba(${theme.rgb}, 0.1)` : 'rgba(var(--brand-primary-raw), 0.1)'
+                        backgroundColor: inspiration.type === 'project' ? `rgba(${theme.rgb}, 0.1)` : 'rgba(var(--brand-primary-rgb), 0.1)'
                       }
                     })()}
                   >
                     Recommended
                   </span>
                 </div>
-                <div className="p-4 rounded-xl mt-6 bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.08)] group-hover:bg-[rgba(255,255,255,0.1)] transition-colors">
+                <div className="p-4 rounded-xl mt-6 bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] group-hover:bg-[rgba(255,255,255,0.1)] transition-colors">
                   <p className="text-[10px] font-bold mb-2 text-[var(--brand-primary)] uppercase tracking-wider opacity-50">NEXT STEP</p>
                   {inspiration.type === 'project' && (() => {
                     const proj = projects.find(p => p.id === inspiration.url?.split('/').pop())
@@ -263,7 +263,7 @@ function GetInspirationSection({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="p-5 relative overflow-hidden group cursor-pointer rounded transition-all duration-300 border flex flex-col"
+                className="p-5 relative overflow-hidden group cursor-pointer rounded-xl transition-all duration-300 border flex flex-col"
                 onClick={() => navigate(`/projects/${sparkCandidate.id}`)}
                 style={{
                   background: theme.backgroundColor,
@@ -284,7 +284,7 @@ function GetInspirationSection({
                     <h3 className="text-lg font-bold text-[var(--brand-text-primary)] truncate">
                       {sparkCandidate.title}
                     </h3>
-                    <span className="flex-shrink-0 px-2 py-0.5 rounded text-xs font-medium border flex items-center gap-1" style={{
+                    <span className="flex-shrink-0 px-2 py-0.5 rounded-xl text-xs font-medium border flex items-center gap-1" style={{
                       backgroundColor: `rgba(${theme.rgb}, 0.1)`,
                       color: theme.textColor,
                       borderColor: `rgba(${theme.rgb}, 0.3)`
@@ -292,7 +292,7 @@ function GetInspirationSection({
                       <span className="inline-block w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: theme.textColor }} /> Spark
                     </span>
                   </div>
-                  <div className="p-4 rounded-xl mt-6 group-hover:bg-[rgba(255,255,255,0.05)] transition-colors" style={{
+                  <div className="p-4 rounded-xl mt-6 group-hover:bg-[var(--glass-surface)] transition-colors" style={{
                     backgroundColor: `rgba(${theme.rgb}, 0.1)`,
                     border: `1px solid rgba(${theme.rgb}, 0.2)`
                   }}>
@@ -309,10 +309,10 @@ function GetInspirationSection({
           // Placeholder if no Spark (e.g. "Suggest Projects" button could live here or be full width below)
           <Link
             to="/suggestions"
-            className="group p-5 rounded transition-all duration-300 border flex flex-col items-center justify-center text-center gap-3 h-full min-h-[200px]"
+            className="group p-5 rounded-xl transition-all duration-300 border flex flex-col items-center justify-center text-center gap-3 h-full min-h-[200px]"
             style={{
-              background: 'rgba(255, 255, 255, 0.02)',
-              borderColor: 'rgba(255, 255, 255, 0.05)'
+              background: 'var(--glass-surface)',
+              borderColor: 'var(--glass-surface)'
             }}
           >
             <div className="h-12 w-12 rounded-full bg-cyan-500/10 flex items-center justify-center text-[var(--brand-primary)] mb-2">
@@ -328,7 +328,7 @@ function GetInspirationSection({
       <div className="mt-6">
         <Link
           to="/suggestions"
-          className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all hover:bg-[rgba(255,255,255,0.1)] border border-[rgba(255,255,255,0.05)] text-[var(--brand-primary)] aperture-header"
+          className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all hover:bg-[rgba(255,255,255,0.1)] border border-[var(--glass-surface)] text-[var(--brand-primary)] aperture-header"
         >
           <Zap className="h-4 w-4" />
           {hasPendingSuggestions
@@ -352,13 +352,13 @@ function InsightDialog({ insight, open, onClose }: { insight: SynthesisInsight |
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="relative w-full max-w-lg rounded p-6 shadow-2xl overflow-y-auto max-h-[80vh]"
-        style={{ background: 'var(--premium-bg-2)' }}
+        className="relative w-full max-w-lg rounded-xl p-6 shadow-2xl overflow-y-auto max-h-[80vh]"
+        style={{ background: 'var(--brand-glass-bg)' }}
       >
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-2 rounded-full hover:bg-[rgba(255,255,255,0.1)] transition-colors"
-          style={{ color: 'var(--premium-text-tertiary)' }}
+          style={{ color: 'var(--brand-text-muted)' }}
         >
           <X className="h-5 w-5" />
         </button>
@@ -368,8 +368,8 @@ function InsightDialog({ insight, open, onClose }: { insight: SynthesisInsight |
             {insight.title}
           </h2>
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded text-xs font-medium uppercase tracking-wider"
-              style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: 'var(--premium-text-secondary)' }}>
+            <span className="px-2 py-0.5 rounded-xl text-xs font-medium uppercase tracking-wider"
+              style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: 'var(--brand-text-secondary)' }}>
               {insight.type}
             </span>
           </div>
@@ -377,28 +377,28 @@ function InsightDialog({ insight, open, onClose }: { insight: SynthesisInsight |
 
         <div className="space-y-6">
           <div className="prose prose-invert prose-sm max-w-none">
-            <p className="leading-relaxed text-base" style={{ color: 'var(--premium-text-primary)' }}>
+            <p className="leading-relaxed text-base" style={{ color: 'var(--brand-text-primary)' }}>
               {insight.description}
             </p>
           </div>
 
           {/* Render timeline if available */}
           {insight.data && insight.data.timeline && Array.isArray(insight.data.timeline) && (
-            <div className="mt-6 pt-6 border-t border-[rgba(255,255,255,0.08)]">
-              <h3 className="text-sm font-bold mb-4" style={{ color: 'var(--premium-text-secondary)' }}>Evolution Timeline</h3>
-              <div className="space-y-4 relative pl-4 border-l-2 border-[rgba(255,255,255,0.08)]">
+            <div className="mt-6 pt-6 border-t border-[var(--glass-surface-hover)]">
+              <h3 className="text-sm font-bold mb-4" style={{ color: 'var(--brand-text-secondary)' }}>Evolution Timeline</h3>
+              <div className="space-y-4 relative pl-4 border-l-2 border-[var(--glass-surface-hover)]">
                 {insight.data.timeline.map((item: any, idx: number) => (
                   <div key={idx} className="relative pl-4">
-                    <div className="absolute -left-[21px] top-1.5 h-3 w-3 rounded-full border-2 border-[var(--premium-bg-2)]"
-                      style={{ backgroundColor: idx === insight.data.timeline.length - 1 ? 'var(--premium-blue)' : 'var(--premium-text-tertiary)' }} />
-                    <div className="text-xs mb-1" style={{ color: 'var(--premium-text-tertiary)' }}>
+                    <div className="absolute -left-[21px] top-1.5 h-3 w-3 rounded-full border-2 border-[var(--brand-glass-bg)]"
+                      style={{ backgroundColor: idx === insight.data.timeline.length - 1 ? 'var(--brand-primary)' : 'var(--brand-text-muted)' }} />
+                    <div className="text-xs mb-1" style={{ color: 'var(--brand-text-muted)' }}>
                       {item.date || 'Previously'}
                     </div>
-                    <div className="text-sm font-medium mb-1" style={{ color: 'var(--premium-text-primary)' }}>
+                    <div className="text-sm font-medium mb-1" style={{ color: 'var(--brand-text-primary)' }}>
                       {item.stance}
                     </div>
                     {item.quote && (
-                      <div className="text-xs italic pl-2 border-l-2 border-[rgba(255,255,255,0.08)]" style={{ color: 'var(--premium-text-secondary)' }}>
+                      <div className="text-xs italic pl-2 border-l-2 border-[var(--glass-surface-hover)]" style={{ color: 'var(--brand-text-secondary)' }}>
                         "{item.quote}"
                       </div>
                     )}
@@ -487,8 +487,8 @@ function InsightsSection() {
         <button
           onClick={() => loadInsights(true)}
           disabled={refreshing}
-          className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-[rgba(255,255,255,0.05)]"
-          style={{ color: 'var(--premium-text-tertiary)' }}
+          className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-[var(--glass-surface)]"
+          style={{ color: 'var(--brand-text-muted)' }}
           title="Refresh insights"
         >
           <RefreshCw className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} />
@@ -502,17 +502,17 @@ function InsightsSection() {
               <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></div>
             </div>
             <div>
-              <p className="text-sm font-medium" style={{ color: 'var(--premium-text-primary)' }}>
+              <p className="text-sm font-medium" style={{ color: 'var(--brand-text-primary)' }}>
                 Analyzing your thoughts...
               </p>
-              <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+              <p className="text-xs" style={{ color: 'var(--brand-text-muted)' }}>
                 Finding patterns and connections
               </p>
             </div>
           </div>
           <div className="space-y-2">
-            <div className="h-16 rounded-lg animate-pulse" style={{ background: 'var(--premium-bg-3)' }} />
-            <div className="h-16 rounded-lg animate-pulse" style={{ background: 'var(--premium-bg-3)', animationDelay: '150ms' }} />
+            <div className="h-16 rounded-lg animate-pulse" style={{ background: 'var(--glass-surface)' }} />
+            <div className="h-16 rounded-lg animate-pulse" style={{ background: 'var(--glass-surface)', animationDelay: '150ms' }} />
           </div>
         </div>
       ) : insights.length > 0 ? (
@@ -522,7 +522,7 @@ function InsightsSection() {
             <button
               key={index}
               onClick={() => setSelectedInsight(insight)}
-              className="w-full text-left p-5 rounded transition-all hover:border-white/20 active:scale-[0.99] aperture-card mt-2"
+              className="w-full text-left p-5 rounded-xl transition-all hover:border-white/20 active:scale-[0.99] aperture-card mt-2"
               style={{
                 boxShadow: '3px 3px 0 rgba(0,0,0,0.5)'
               }}
@@ -535,11 +535,11 @@ function InsightsSection() {
                   <h3 className="font-bold text-sm mb-1 premium-text-platinum">
                     {insight.title}
                   </h3>
-                  <p className="text-sm line-clamp-2" style={{ color: 'var(--premium-text-secondary)' }}>
+                  <p className="text-sm line-clamp-2" style={{ color: 'var(--brand-text-secondary)' }}>
                     {insight.description}
                   </p>
                 </div>
-                <ArrowRight className="h-4 w-4 mt-1 opacity-50" style={{ color: 'var(--premium-text-tertiary)' }} />
+                <ArrowRight className="h-4 w-4 mt-1 opacity-50" style={{ color: 'var(--brand-text-muted)' }} />
               </div>
             </button>
           ))}
@@ -547,7 +547,7 @@ function InsightsSection() {
           {insights.length > 2 && (
             <button
               onClick={() => navigate('/insights')}
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-bold transition-all hover:bg-[rgba(255,255,255,0.1)] border border-[rgba(255,255,255,0.05)] text-[var(--brand-primary)] aperture-header"
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-bold transition-all hover:bg-[rgba(255,255,255,0.1)] border border-[var(--glass-surface)] text-[var(--brand-primary)] aperture-header"
             >
               View All Insights ({insights.length}) <ArrowRight className="h-4 w-4 ml-1" />
             </button>
@@ -555,21 +555,21 @@ function InsightsSection() {
         </div>
       ) : (
         <div className="text-center py-6">
-          <TrendingUp className="h-10 w-10 mx-auto mb-3" style={{ color: 'var(--premium-text-tertiary)', opacity: 0.5 }} />
-          <p className="text-sm mb-1" style={{ color: 'var(--premium-text-secondary)' }}>
+          <TrendingUp className="h-10 w-10 mx-auto mb-3" style={{ color: 'var(--brand-text-muted)', opacity: 0.5 }} />
+          <p className="text-sm mb-1" style={{ color: 'var(--brand-text-secondary)' }}>
             Building your insights...
           </p>
           {requirements ? (
             <>
-              <p className="text-xs mb-2" style={{ color: 'var(--premium-text-tertiary)' }}>
+              <p className="text-xs mb-2" style={{ color: 'var(--brand-text-muted)' }}>
                 {requirements.current}/{requirements.needed} {requirements.needed === 5 ? 'thoughts' : 'with themes'}
               </p>
-              <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+              <p className="text-xs" style={{ color: 'var(--brand-text-muted)' }}>
                 {requirements.tip}
               </p>
             </>
           ) : (
-            <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+            <p className="text-xs" style={{ color: 'var(--brand-text-muted)' }}>
               Add more thoughts with themes to see patterns emerge
             </p>
           )}
@@ -759,10 +759,10 @@ export function HomePage() {
   // Show error if initialization failed
   if (error) {
     return (
-      <div className="min-h-screen py-12 px-4 flex items-center justify-center" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
+      <div className="min-h-screen py-12 px-4 flex items-center justify-center" style={{ backgroundColor: 'var(--brand-bg)' }}>
         <div className="max-w-2xl w-full p-8 border-red-500/20 bg-red-500/5">
           <div className="flex items-center gap-3 mb-6">
-            <div className="h-12 w-12 rounded bg-red-500/20 flex items-center justify-center text-red-500">
+            <div className="h-12 w-12 rounded-xl bg-red-500/20 flex items-center justify-center text-red-500">
               <AlertCircle className="h-6 w-6" />
             </div>
             <h2 className="text-2xl font-bold premium-text-platinum">Initialization Error</h2>
@@ -817,7 +817,7 @@ export function HomePage() {
             initial={{ y: 100 }} animate={{ y: 0 }} exit={{ y: 100 }}
           >
             <div className="max-w-4xl mx-auto text-red-400 font-mono text-xs">
-              {storedErrors.map((e: any, i: number) => <div key={i} className="mb-2 p-2 bg-red-900/20 rounded">{e.message}</div>)}
+              {storedErrors.map((e: any, i: number) => <div key={i} className="mb-2 p-2 bg-red-900/20 rounded-xl">{e.message}</div>)}
               <button onClick={() => { localStorage.removeItem('app_errors'); window.location.reload() }} className="mt-2 text-[var(--brand-text-primary)] underline">Clear & Reload</button>
             </div>
           </motion.div>
@@ -826,9 +826,9 @@ export function HomePage() {
 
       {/* Fixed Header Bar - Brand & Search */}
       <div
-        className="fixed top-0 left-0 right-0 z-40 border-b-2 border-[rgba(255,255,255,0.08)]"
+        className="fixed top-0 left-0 right-0 z-40 border-b border-[var(--glass-border)] backdrop-blur-md"
         style={{
-          backgroundColor: '#0a0f1a'
+          backgroundColor: 'rgba(var(--brand-bg-rgb), 0.8)'
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
@@ -840,7 +840,7 @@ export function HomePage() {
           </h1>
           <button
             onClick={() => navigate('/search')}
-            className="h-10 w-10 rounded-sm flex items-center justify-center transition-all hover:bg-[rgba(255,255,255,0.05)]"
+            className="h-10 w-10 rounded-lg flex items-center justify-center transition-all hover:bg-[var(--glass-surface)]"
             style={{
               color: 'var(--brand-secondary)'
             }}
@@ -862,35 +862,29 @@ export function HomePage() {
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
               className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8"
             >
-              <div className="p-6 relative" style={{
-                background: 'rgba(6, 182, 212, 0.15)', // Cyan tint
-                boxShadow: '3px 3px 0 rgba(0,0,0,0.5)'
+              <div className="p-6 relative rounded-2xl border border-[rgba(6,182,212,0.3)]" style={{
+                background: 'rgba(6, 182, 212, 0.1)', // Cyan tint
+                boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
               }}>
                 <button
                   onClick={() => setShowOnboardingBanner(false)}
-                  className="absolute top-3 right-3 h-8 w-8 rounded-sm hover:bg-[rgba(255,255,255,0.1)] flex items-center justify-center transition-colors"
-                  style={{ color: 'var(--premium-text-tertiary)' }}
+                  className="absolute top-3 right-3 h-8 w-8 rounded-lg hover:bg-[rgba(255,255,255,0.1)] flex items-center justify-center transition-colors"
+                  style={{ color: 'var(--brand-text-muted)' }}
                 >
                   <X className="h-4 w-4" />
                 </button>
 
                 <div className="flex items-start gap-4 pr-10">
                   <div className="flex-1">
-                    <h3 className="font-bold mb-1" style={{ color: 'var(--premium-text-primary)' }}>
+                    <h3 className="font-bold mb-1" style={{ color: 'var(--brand-text-primary)' }}>
                       Complete Your Profile
                     </h3>
-                    <p className="text-sm mb-3" style={{ color: 'var(--premium-text-secondary)' }}>
+                    <p className="text-sm mb-3" style={{ color: 'var(--brand-text-secondary)' }}>
                       Answer a few questions to get personalized suggestions tailored to your interests
                     </p>
                     <Link
                       to="/onboarding"
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-sm font-medium transition-all hover:opacity-90"
-                      style={{
-                        backgroundColor: 'rgba(6, 182, 212, 0.6)',
-                        color: 'rgba(255, 255, 255, 0.95)',
-                        border: '2px solid rgba(6,182,212,0.4)',
-                        boxShadow: '3px 3px 0 rgba(0,0,0,0.4)'
-                      }}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition-all hover:opacity-90 brand-gradient text-brand-text-primary shadow-lg shadow-cyan-500/20"
                     >
                       Complete Now
                     </Link>
@@ -927,41 +921,37 @@ export function HomePage() {
                 e.stopPropagation()
                 window.dispatchEvent(new CustomEvent('openVoiceCapture'))
               }}
-              className="flex-1 h-14 rounded-sm flex items-center justify-center transition-all hover:bg-[rgba(255,255,255,0.05)]"
-              style={{ background: 'var(--brand-glass-bg)', border: '2px solid rgba(255,255,255,0.1)', boxShadow: '3px 3px 0 rgba(0,0,0,0.5)' }}
+              className="flex-1 h-14 glass-button hover:bg-brand-surface group"
               title="Voice Note"
             >
-              <Mic className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
+              <Mic className="h-6 w-6 text-brand-primary group-hover:scale-110 transition-transform" />
             </button>
 
             {/* Written Thought */}
             <button
               onClick={() => setCreateThoughtOpen(true)}
-              className="flex-1 h-14 rounded-sm flex items-center justify-center transition-all hover:bg-[rgba(255,255,255,0.05)]"
-              style={{ background: 'var(--brand-glass-bg)', border: '2px solid rgba(255,255,255,0.1)', boxShadow: '3px 3px 0 rgba(0,0,0,0.5)' }}
+              className="flex-1 h-14 glass-button hover:bg-brand-surface group"
               title="Thought"
             >
-              <Brain className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
+              <Brain className="h-6 w-6 text-brand-primary group-hover:scale-110 transition-transform" />
             </button>
 
             {/* Article */}
             <button
               onClick={() => setSaveArticleOpen(true)}
-              className="flex-1 h-14 rounded-sm flex items-center justify-center transition-all hover:bg-[rgba(255,255,255,0.05)]"
-              style={{ background: 'var(--brand-glass-bg)', border: '2px solid rgba(255,255,255,0.1)', boxShadow: '3px 3px 0 rgba(0,0,0,0.5)' }}
+              className="flex-1 h-14 glass-button hover:bg-brand-surface group"
               title="Article"
             >
-              <FileText className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
+              <FileText className="h-6 w-6 text-brand-primary group-hover:scale-110 transition-transform" />
             </button>
 
             {/* Project */}
             <button
               onClick={() => setCreateProjectOpen(true)}
-              className="flex-1 h-14 rounded-sm flex items-center justify-center transition-all hover:bg-[rgba(255,255,255,0.05)]"
-              style={{ background: 'var(--brand-glass-bg)', border: '2px solid rgba(255,255,255,0.1)', boxShadow: '3px 3px 0 rgba(0,0,0,0.5)' }}
+              className="flex-1 h-14 glass-button hover:bg-brand-surface group"
               title="Project"
             >
-              <Layers className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
+              <Layers className="h-6 w-6 text-brand-primary group-hover:scale-110 transition-transform" />
             </button>
           </div>
         </section>
@@ -1064,7 +1054,7 @@ export function HomePage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5, ease: "easeOut" }}
-              className="aperture-card p-6 relative overflow-hidden mb-6 bg-white/[0.03] border-[rgba(255,255,255,0.05)]"
+              className="aperture-card p-6 relative overflow-hidden mb-6 bg-white/[0.03] border-[var(--glass-surface)]"
               style={{
                 boxShadow: '3px 3px 0 rgba(0,0,0,0.5)'
               }}
@@ -1106,7 +1096,7 @@ export function HomePage() {
               to="/bedtime"
               className="group p-5 aperture-card transition-all"
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--premium-bg-3)'
+                e.currentTarget.style.background = 'var(--glass-surface)'
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'var(--brand-glass-bg)'
@@ -1114,7 +1104,7 @@ export function HomePage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-sm flex items-center justify-center mt-1 bg-[rgba(255,255,255,0.05)] border-2 border-[rgba(255,255,255,0.08)]">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1 bg-[var(--glass-surface)] border-2 border-[var(--glass-surface-hover)]">
                     <Moon className="h-5 w-5 text-[var(--brand-text-secondary)]" />
                   </div>
                   <div>
@@ -1133,7 +1123,7 @@ export function HomePage() {
               onClick={handleOpenDrift}
               className="group p-5 aperture-card transition-all text-left"
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--premium-bg-3)'
+                e.currentTarget.style.background = 'var(--glass-surface)'
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'var(--brand-glass-bg)'
@@ -1141,7 +1131,7 @@ export function HomePage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-sm flex items-center justify-center mt-1 bg-[rgba(255,255,255,0.05)] border-2 border-[rgba(255,255,255,0.08)]">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1 bg-[var(--glass-surface)] border-2 border-[var(--glass-surface-hover)]">
                     <Wind className="h-5 w-5 text-[var(--brand-text-secondary)]" />
                   </div>
                   <div>
@@ -1160,7 +1150,7 @@ export function HomePage() {
               to="/suggestions"
               className="group p-5 aperture-card transition-all"
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--premium-bg-3)'
+                e.currentTarget.style.background = 'var(--glass-surface)'
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'var(--brand-glass-bg)'
@@ -1168,7 +1158,7 @@ export function HomePage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-sm flex items-center justify-center mt-1 bg-[rgba(255,255,255,0.05)] border-2 border-[rgba(255,255,255,0.08)]">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1 bg-[var(--glass-surface)] border-2 border-[var(--glass-surface-hover)]">
                     <Lightbulb className="h-5 w-5 text-[var(--brand-text-secondary)]" />
                   </div>
                   <div>
@@ -1187,7 +1177,7 @@ export function HomePage() {
               to="/insights"
               className="group p-5 aperture-card transition-all"
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--premium-bg-3)'
+                e.currentTarget.style.background = 'var(--glass-surface)'
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'var(--brand-glass-bg)'
@@ -1195,7 +1185,7 @@ export function HomePage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-sm flex items-center justify-center mt-1 bg-[rgba(255,255,255,0.05)] border-2 border-[rgba(255,255,255,0.08)]">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1 bg-[var(--glass-surface)] border-2 border-[var(--glass-surface-hover)]">
                     <TrendingUp className="h-5 w-5 text-[var(--brand-text-secondary)]" />
                   </div>
                   <div>
@@ -1214,7 +1204,7 @@ export function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 flex justify-center">
           <Link
             to="/settings"
-            className="flex items-center gap-2 px-6 py-3 rounded-sm transition-all border-2 border-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.05)] aperture-card text-sm font-medium"
+            className="flex items-center gap-2 px-6 py-3 rounded-lg transition-all border-2 border-[var(--glass-surface-hover)] hover:bg-[var(--glass-surface)] aperture-card text-sm font-medium"
             style={{
               boxShadow: '3px 3px 0 rgba(0,0,0,0.5)'
             }}

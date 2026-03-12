@@ -350,8 +350,8 @@ export function VoiceFAB({
         opacity: (hidden || isMenuOpen) ? 0 : 1,
         pointerEvents: (hidden || isMenuOpen) ? 'none' : 'auto',
         backgroundColor: isStripOpen
-          ? (activeOption ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.08)')
-          : 'rgba(255, 255, 255, 0.05)',
+          ? (activeOption ? 'var(--glass-surface)' : 'var(--glass-surface-hover)')
+          : 'var(--glass-surface)',
         borderColor: isStripOpen && !activeOption
           ? 'rgba(255, 255, 255, 0.2)'
           : 'rgba(255, 255, 255, 0.1)',
@@ -374,8 +374,8 @@ export function VoiceFAB({
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
         boxShadow: isStripOpen
-          ? '0 8px 32px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.08)'
-          : '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.02)',
+          ? '0 8px 32px rgba(0,0,0,0.5), inset 0 0 0 1px var(--glass-surface-hover)'
+          : '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 0 10px var(--glass-surface)',
       }}
       aria-label="Create — tap to record, hold to choose type"
     >
@@ -389,7 +389,7 @@ export function VoiceFAB({
       ) : (
         <Plus className="h-6 w-6 text-zinc-300 transition-transform group-hover:rotate-90 group-hover:text-[var(--brand-text-primary)]" />
       )}
-      <div className="absolute inset-0 bg-[rgba(255,255,255,0.05)] opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className="absolute inset-0 bg-[var(--glass-surface)] opacity-0 group-hover:opacity-100 transition-opacity" />
     </motion.button>,
     document.body
   )
@@ -430,7 +430,7 @@ export function VoiceFAB({
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: '100%', opacity: 0 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                className="relative w-full md:w-[500px] bg-[#0A0A0B] border border-[rgba(255,255,255,0.08)] rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl z-10 overflow-hidden mb-0 md:mb-12"
+                className="relative w-full md:w-[500px] bg-[#0A0A0B] border border-[var(--glass-surface-hover)] rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl z-10 overflow-hidden mb-0 md:mb-12"
               >
                 <div style={{ paddingBottom: 'env(safe-area-inset-bottom, 20px)' }}>
                   <div className="flex justify-center pt-4 pb-2 md:hidden">
@@ -448,7 +448,7 @@ export function VoiceFAB({
                     </div>
                     <button
                       onClick={() => setIsVoiceOpen(false)}
-                      className="h-12 w-12 rounded-full bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] flex items-center justify-center transition-all border border-[rgba(255,255,255,0.05)]"
+                      className="h-12 w-12 rounded-full bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] flex items-center justify-center transition-all border border-[var(--glass-surface)]"
                     >
                       <X className="h-6 w-6 text-zinc-400" />
                     </button>

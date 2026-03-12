@@ -201,14 +201,14 @@ export function ContextSidebar() {
                         animate={{ x: 0 }}
                         exit={{ x: '100%' }}
                         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                        className="fixed right-0 top-0 bottom-0 z-50 w-80 shadow-2xl border-l border-[rgba(255,255,255,0.08)] flex flex-col"
+                        className="fixed right-0 top-0 bottom-0 z-50 w-80 shadow-2xl border-l border-[var(--glass-surface-hover)] flex flex-col"
                         style={{
                             backgroundColor: 'rgba(15, 23, 42, 0.95)',
                             backdropFilter: 'blur(20px)'
                         }}
                     >
                         {/* Header */}
-                        <div className="p-4 border-b border-[rgba(255,255,255,0.08)] flex items-center justify-between">
+                        <div className="p-4 border-b border-[var(--glass-surface-hover)] flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <Lightbulb className="h-5 w-5 text-purple-400" />
                                 <h2 className="font-bold text-[var(--brand-text-primary)]">Context Engine</h2>
@@ -222,7 +222,7 @@ export function ContextSidebar() {
                         </div>
 
                         {/* Active Context Indicator */}
-                        <div className="px-4 py-3 bg-[rgba(255,255,255,0.05)] border-b border-[rgba(255,255,255,0.05)]">
+                        <div className="px-4 py-3 bg-[var(--glass-surface)] border-b border-[var(--glass-surface)]">
                             <p className="text-xs font-medium text-purple-300 mb-1 uppercase tracking-wider">
                                 Current Focus
                             </p>
@@ -249,7 +249,7 @@ export function ContextSidebar() {
                                         <button
                                             onClick={fetchAnalysis}
                                             disabled={analysisLoading}
-                                            className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded transition-colors"
+                                            className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded-xl transition-colors"
                                             title="Refresh analysis"
                                         >
                                             <RefreshCw className={`h-3 w-3 text-[var(--brand-text-secondary)] ${analysisLoading ? 'animate-spin' : ''}`} />
@@ -282,7 +282,7 @@ export function ContextSidebar() {
 
                                             {/* Insight */}
                                             {analysisData.analysis.insight && (
-                                                <div className="flex items-start gap-2 pt-2 border-t border-[rgba(255,255,255,0.05)]">
+                                                <div className="flex items-start gap-2 pt-2 border-t border-[var(--glass-surface)]">
                                                     <Lightbulb className="h-3 w-3 text-amber-400 mt-1 flex-shrink-0" />
                                                     <span className="text-xs text-amber-200/80">{analysisData.analysis.insight}</span>
                                                 </div>
@@ -320,7 +320,7 @@ export function ContextSidebar() {
                                         <button
                                             onClick={() => executeAction('summarize')}
                                             disabled={!!actionLoading}
-                                            className="flex items-center gap-2 p-2.5 rounded-lg bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] transition-colors text-left"
+                                            className="flex items-center gap-2 p-2.5 rounded-lg bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] transition-colors text-left"
                                         >
                                             {actionLoading === 'summarize' ? (
                                                 <Loader2 className="h-4 w-4 animate-spin text-blue-400" />
@@ -332,7 +332,7 @@ export function ContextSidebar() {
                                         <button
                                             onClick={() => executeAction('find-gaps')}
                                             disabled={!!actionLoading}
-                                            className="flex items-center gap-2 p-2.5 rounded-lg bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] transition-colors text-left"
+                                            className="flex items-center gap-2 p-2.5 rounded-lg bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] transition-colors text-left"
                                         >
                                             {actionLoading === 'find-gaps' ? (
                                                 <Loader2 className="h-4 w-4 animate-spin text-amber-400" />
@@ -344,7 +344,7 @@ export function ContextSidebar() {
                                         <button
                                             onClick={() => executeAction('suggest-next')}
                                             disabled={!!actionLoading}
-                                            className="flex items-center gap-2 p-2.5 rounded-lg bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] transition-colors text-left"
+                                            className="flex items-center gap-2 p-2.5 rounded-lg bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] transition-colors text-left"
                                         >
                                             {actionLoading === 'suggest-next' ? (
                                                 <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
@@ -356,7 +356,7 @@ export function ContextSidebar() {
                                         <button
                                             onClick={() => executeAction('connect-dots')}
                                             disabled={!!actionLoading}
-                                            className="flex items-center gap-2 p-2.5 rounded-lg bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] transition-colors text-left"
+                                            className="flex items-center gap-2 p-2.5 rounded-lg bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] transition-colors text-left"
                                         >
                                             {actionLoading === 'connect-dots' ? (
                                                 <Loader2 className="h-4 w-4 animate-spin text-purple-400" />
@@ -369,14 +369,14 @@ export function ContextSidebar() {
 
                                     {/* Action Result */}
                                     {actionResult && (
-                                        <div className="rounded-lg p-3 bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.08)]">
+                                        <div className="rounded-lg p-3 bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)]">
                                             <div className="flex items-center justify-between mb-2">
                                                 <span className="text-xs font-medium text-[var(--brand-text-secondary)] capitalize">
                                                     {actionResult.type.replace('-', ' ')}
                                                 </span>
                                                 <button
                                                     onClick={() => setActionResult(null)}
-                                                    className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded transition-colors"
+                                                    className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded-xl transition-colors"
                                                 >
                                                     <X className="h-3 w-3 text-[var(--brand-text-muted)]" />
                                                 </button>
@@ -439,7 +439,7 @@ export function ContextSidebar() {
                                             layout
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            className="group relative bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] rounded-xl p-3 cursor-pointer transition-all border border-transparent hover:border-purple-500/30"
+                                            className="group relative bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] rounded-xl p-3 cursor-pointer transition-all border border-transparent hover:border-purple-500/30"
                                             onClick={() => handleItemClick(item)}
                                         >
                                             <div className="flex items-start gap-3">

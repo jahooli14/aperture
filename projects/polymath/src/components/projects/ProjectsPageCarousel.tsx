@@ -27,8 +27,8 @@ interface Task {
 }
 
 const CARD_HOVER_STYLES = {
-  enter: { background: 'var(--premium-bg-3)', boxShadow: '0 12px 32px rgba(0, 0, 0, 0.5)', transform: 'translateY(-2px)' },
-  leave: { background: 'var(--premium-bg-2)', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)', transform: 'translateY(0)' }
+  enter: { background: 'var(--glass-surface)', boxShadow: '0 12px 32px rgba(0, 0, 0, 0.5)', transform: 'translateY(-2px)' },
+  leave: { background: 'var(--brand-glass-bg)', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)', transform: 'translateY(0)' }
 }
 
 function ProjectCard({ project, prominent = false }: { project: Project, prominent?: boolean }) {
@@ -143,11 +143,11 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
       )}
 
       {/* Footer / Meta */}
-      <div className="flex items-center justify-between pt-2 border-t border-[rgba(255,255,255,0.05)]">
+      <div className="flex items-center justify-between pt-2 border-t border-[var(--glass-surface)]">
         <div className="flex items-center gap-2">
           {totalTasks > 0 ? (
             <div className="flex items-center gap-2">
-              <div className="h-1 w-16 bg-[rgba(255,255,255,0.05)] rounded-full overflow-hidden">
+              <div className="h-1 w-16 bg-[var(--glass-surface)] rounded-full overflow-hidden">
                 <div
                   className="h-full"
                   style={{
@@ -167,7 +167,7 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
         </div>
 
         {prominent && (
-          <div className="p-1.5 rounded-full bg-[rgba(255,255,255,0.05)] group-hover:bg-[var(--brand-secondary)] group-hover:text-black transition-colors text-[var(--brand-secondary)]">
+          <div className="p-1.5 rounded-full bg-[var(--glass-surface)] group-hover:bg-[var(--brand-secondary)] group-hover:text-black transition-colors text-[var(--brand-secondary)]">
             <ArrowRight className="h-4 w-4" />
           </div>
         )}
@@ -216,7 +216,7 @@ export function ProjectsPageCarousel({
       {/* SECTION 2: THE DRAWER (Masonry) */}
       {drawerList.length > 0 && (
         <section>
-          <div className="mb-4 px-1 mt-8 border-t border-[rgba(255,255,255,0.05)] pt-8">
+          <div className="mb-4 px-1 mt-8 border-t border-[var(--glass-surface)] pt-8">
             <h3 className="text-xs font-bold text-[var(--brand-text-muted)] uppercase tracking-widest aperture-header">The Drawer</h3>
           </div>
 

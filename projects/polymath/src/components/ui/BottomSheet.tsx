@@ -67,12 +67,12 @@ export function BottomSheet({ open, onClose, children, title }: BottomSheetProps
         {title && (
           <div
             className="flex items-center justify-between px-4 py-3 border-b"
-            style={{ borderColor: 'rgba(255,255,255,0.08)' }}
+            style={{ borderColor: 'var(--glass-surface-hover)' }}
           >
-            <h2 className="text-lg font-semibold" style={{ color: 'var(--premium-text-primary)' }}>{title}</h2>
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--brand-text-primary)' }}>{title}</h2>
             <button
               onClick={onClose}
-              className="p-1 rounded-sm transition-colors hover:bg-white/10"
+              className="p-1 rounded-lg transition-colors hover:bg-brand-surface/80"
               style={{ color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}
             >
               <X className="h-5 w-5" />

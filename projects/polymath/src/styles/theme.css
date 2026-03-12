@@ -5,37 +5,28 @@
 
 :root {
     /* Brand Core */
-    --brand-primary-raw: 56, 189, 248;
-    /* #38bdf8 */
-    --brand-primary: rgb(var(--brand-primary-raw));
-    /* Aperture Blue/Cyan */
+    --brand-primary-rgb: 56, 189, 248;   /* #38bdf8 */
+    --brand-primary: rgb(var(--brand-primary-rgb));
     --brand-bg: #0f1829;
-    /* Premium Surface Base */
+    --brand-bg-rgb: 15, 24, 41;
 
     /* Project Types (Raw RGB for rgba usage) */
-    --project-tech-raw: 59, 130, 246;
-    /* Blue-500 */
-    --project-art-raw: 236, 72, 153;
-    /* Pink-500 (Distinct from Red/Blue) */
-    --project-writing-raw: 6, 182, 212;
-    /* Cyan-500 */
-    --project-music-raw: 239, 68, 68;
-    /* Red-500 (High Energy) */
-    --project-business-raw: 245, 158, 11;
-    /* Amber-500 */
-    --project-life-raw: 16, 185, 129;
-    /* Emerald-500 (Life/Growth) */
-    --project-default-raw: 156, 163, 175;
-    /* Gray-400 */
+    --project-tech-rgb: 59, 130, 246;    /* Blue-500 */
+    --project-art-rgb: 236, 72, 153;     /* Pink-500 */
+    --project-writing-rgb: 6, 182, 212;   /* Cyan-500 */
+    --project-music-rgb: 239, 68, 68;     /* Red-500 */
+    --project-business-rgb: 245, 158, 11; /* Amber-500 */
+    --project-life-rgb: 16, 185, 129;     /* Emerald-500 */
+    --project-default-rgb: 156, 163, 175;  /* Gray-400 */
 
     /* Project Types (Direct Colors) */
-    --project-tech: rgb(var(--project-tech-raw));
-    --project-art: rgb(var(--project-art-raw));
-    --project-writing: rgb(var(--project-writing-raw));
-    --project-music: rgb(var(--project-music-raw));
-    --project-business: rgb(var(--project-business-raw));
-    --project-life: rgb(var(--project-life-raw));
-    --project-default: rgb(var(--project-default-raw));
+    --project-tech: rgb(var(--project-tech-rgb));
+    --project-art: rgb(var(--project-art-rgb));
+    --project-writing: rgb(var(--project-writing-rgb));
+    --project-music: rgb(var(--project-music-rgb));
+    --project-business: rgb(var(--project-business-rgb));
+    --project-life: rgb(var(--project-life-rgb));
+    --project-default: rgb(var(--project-default-rgb));
 
     /* Text Standards */
     --brand-text-primary: #ffffff;
@@ -53,13 +44,21 @@
     --brand-font-header: 'Outfit', 'Inter', sans-serif;
     --brand-font-body: 'Inter', -apple-system, sans-serif;
 
+    /* UI State Surfaces */
+    --glass-surface: rgba(255, 255, 255, 0.05);
+    --glass-surface-hover: rgba(255, 255, 255, 0.08);
+    --glass-surface-active: rgba(255, 255, 255, 0.12);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-border-bold: rgba(255, 255, 255, 0.15);
+
     /* Layout Standards */
-    --brand-border: 1px solid rgba(255, 255, 255, 0.08);
-    --brand-border-bold: 1px solid rgba(255, 255, 255, 0.15);
-    --brand-radius: 4px;
-    --brand-glass-bg: rgba(15, 23, 42, 0.4);
-    /* Neutral Slate-Dark */
-    --brand-glass-blur: none;
+    --brand-border: 1px solid var(--glass-border);
+    --brand-border-bold: 1px solid var(--glass-border-bold);
+    --brand-radius: 12px; /* Standardized rounded-xl feel */
+    --brand-radius-lg: 16px;
+    --brand-radius-sm: 8px;
+    --brand-glass-bg: rgba(var(--brand-bg-rgb), 0.4);
+    --brand-glass-blur: blur(12px);
 }
 
 /* Base Styles */
@@ -146,7 +145,59 @@
 
 /* ─── Text selection ──────────────────────────────────────── */
 
-::selection { background: rgba(59, 130, 246, 0.35); color: white; }
+::selection { background: rgba(var(--project-tech-rgb), 0.35); color: white; }
+
+/* ─── Glass System ────────────────────────────────────────── */
+
+.glass-card {
+    background: var(--brand-glass-bg);
+    backdrop-filter: var(--brand-glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--brand-radius);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.glass-card-hover:hover {
+    background: rgba(var(--brand-bg-rgb), 0.6);
+    border-color: var(--glass-border-bold);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    transform: translateY(-1px);
+}
+
+.glass-button {
+    background: var(--glass-surface);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--brand-radius-sm);
+    color: var(--brand-text-secondary);
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+}
+
+.glass-button:hover {
+    background: var(--glass-surface-hover);
+    border-color: var(--glass-border-bold);
+    color: var(--brand-text-primary);
+}
+
+.glass-button:active {
+    background: var(--glass-surface-active);
+    transform: scale(0.98);
+}
+
+.brand-gradient {
+    background: linear-gradient(135deg, var(--brand-primary), #06b6d4);
+}
+
+.brand-gradient-text {
+    background: linear-gradient(135deg, var(--brand-primary), #06b6d4);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
 /* Unified Heading Sizes */
 h1 {
     font-size: 2.5rem !important; /* 40px */

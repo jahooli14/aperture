@@ -26,7 +26,7 @@ export const ThemeClusterCard = React.memo(function ThemeClusterCard({ cluster, 
   return (
     <button
       onClick={onClick}
-      className="group relative p-4 rounded-sm text-left w-full flex flex-col items-start gap-3 transition-all duration-200"
+      className="group relative p-4 rounded-lg text-left w-full flex flex-col items-start gap-3 transition-all duration-200"
       style={{
         background: '#111113',
         border: '2px solid rgba(255,255,255,0.1)',
@@ -35,14 +35,14 @@ export const ThemeClusterCard = React.memo(function ThemeClusterCard({ cluster, 
     >
       {/* Icon */}
       <div
-        className="flex-shrink-0 w-10 h-10 rounded-sm flex items-center justify-center"
+        className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
         style={{
           background: 'rgba(59,130,246,0.12)',
           border: '2px solid rgba(59,130,246,0.3)',
           boxShadow: '2px 2px 0 rgba(0,0,0,0.5)',
         }}
       >
-        <IconComponent className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
+        <IconComponent className="h-5 w-5" style={{ color: 'var(--brand-primary)' }} />
       </div>
 
       {/* Content */}
@@ -53,7 +53,7 @@ export const ThemeClusterCard = React.memo(function ThemeClusterCard({ cluster, 
         </h3>
 
         {/* Thought Count */}
-        <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--premium-text-secondary)' }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--brand-text-secondary)' }}>
           {cluster.memory_count} {cluster.memory_count === 1 ? 'thought' : 'thoughts'}
         </p>
 
@@ -62,7 +62,7 @@ export const ThemeClusterCard = React.memo(function ThemeClusterCard({ cluster, 
           {cluster.sample_keywords.slice(0, 3).map((keyword, i) => (
             <span
               key={i}
-              className="text-[10px] px-2 py-0.5 rounded-sm font-black uppercase tracking-wide"
+              className="text-[10px] px-2 py-0.5 rounded-lg font-black uppercase tracking-wide"
               style={{
                 background: 'rgba(59,130,246,0.1)',
                 color: 'rgba(96,165,250,0.85)',
@@ -73,9 +73,9 @@ export const ThemeClusterCard = React.memo(function ThemeClusterCard({ cluster, 
             </span>
           ))}
           {cluster.sample_keywords.length > 3 && (
-            <span className="text-[10px] px-2 py-0.5 rounded-sm font-bold" style={{
-              color: 'var(--premium-text-tertiary)',
-              background: 'rgba(255,255,255,0.04)',
+            <span className="text-[10px] px-2 py-0.5 rounded-lg font-bold" style={{
+              color: 'var(--brand-text-muted)',
+              background: 'var(--glass-surface)',
               border: '1.5px solid rgba(255,255,255,0.1)',
             }}>
               +{cluster.sample_keywords.length - 3}
@@ -86,7 +86,7 @@ export const ThemeClusterCard = React.memo(function ThemeClusterCard({ cluster, 
 
       {/* Hover indicator */}
       <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-        <ChevronRight className="w-4 h-4" style={{ color: 'var(--premium-blue)' }} />
+        <ChevronRight className="w-4 h-4" style={{ color: 'var(--brand-primary)' }} />
       </div>
     </button>
   )

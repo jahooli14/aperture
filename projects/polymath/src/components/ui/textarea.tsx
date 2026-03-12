@@ -14,10 +14,10 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           // Reset native browser styling that causes white backgrounds on mobile
           "appearance-none",
           // Dark glass appearance
-          "bg-white/[0.05]",
+          "bg-brand-surface",
           "text-[var(--brand-text-primary)]/90 placeholder:text-[var(--brand-text-primary)]/25",
           // Focus — background brightens subtly
-          "focus:outline-none focus:bg-white/[0.08]",
+          "focus:outline-none focus:bg-brand-surface/80",
           // Smooth transitions
           "transition-all duration-200",
           // Resize
@@ -27,7 +27,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           className
         )}
         style={{
-          color: 'var(--premium-text-primary)',
+          color: 'var(--brand-text-primary)',
           boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1)',
           ...style,
         }}

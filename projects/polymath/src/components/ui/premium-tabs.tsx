@@ -16,7 +16,7 @@ interface PremiumTabsProps {
 
 export function PremiumTabs({ tabs, activeTab, onChange, className }: PremiumTabsProps) {
   return (
-    <div className={cn('flex border-b border-[rgba(255,255,255,0.08)]', className)} style={{ gap: 0 }}>
+    <div className={cn('flex border-b border-[var(--glass-surface-hover)]', className)} style={{ gap: 0 }}>
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id
 
@@ -34,9 +34,9 @@ export function PremiumTabs({ tabs, activeTab, onChange, className }: PremiumTab
             {tab.label}
             {tab.count !== undefined && Number(tab.count) > 0 && (
               <span
-                className="px-1.5 py-0.5 rounded-sm text-[10px] font-black"
+                className="px-1.5 py-0.5 rounded-lg text-[10px] font-black"
                 style={{
-                  backgroundColor: isActive ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.07)',
+                  backgroundColor: isActive ? 'rgba(255,255,255,0.18)' : 'var(--glass-surface)',
                   color: isActive ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.3)',
                   border: isActive ? '1px solid rgba(255,255,255,0.15)' : '1px solid transparent',
                 }}

@@ -150,7 +150,7 @@ export function FocusMode({ todos, onComplete, onClose }: FocusModeProps) {
             onClick={onClose}
             className="px-8 py-3 rounded-2xl font-semibold text-[15px] transition-all"
             style={{
-              background: 'rgba(255,255,255,0.08)',
+              background: 'var(--glass-surface-hover)',
               color: 'rgba(255,255,255,0.7)',
               border: '1px solid rgba(255,255,255,0.1)',
             }}
@@ -176,7 +176,7 @@ export function FocusMode({ todos, onComplete, onClose }: FocusModeProps) {
         <button
           onClick={onClose}
           className="h-9 w-9 flex items-center justify-center rounded-xl transition-all"
-          style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.5)' }}
+          style={{ background: 'var(--glass-surface)', color: 'rgba(255,255,255,0.5)' }}
         >
           <X className="h-4 w-4" />
         </button>
@@ -194,7 +194,7 @@ export function FocusMode({ todos, onComplete, onClose }: FocusModeProps) {
                   ? 'rgba(52,211,153,0.6)'
                   : i === currentIndex
                     ? 'rgba(147,197,253,0.9)'
-                    : 'rgba(255,255,255,0.12)',
+                    : 'var(--glass-surface-hover)',
               }}
             />
           ))}
@@ -217,7 +217,7 @@ export function FocusMode({ todos, onComplete, onClose }: FocusModeProps) {
             <div className="flex items-center gap-3 py-2">
               <div
                 className="flex-1 h-1 rounded-full overflow-hidden"
-                style={{ background: 'rgba(255,255,255,0.07)' }}
+                style={{ background: 'var(--glass-surface)' }}
               >
                 <motion.div
                   className="h-full rounded-full"
@@ -304,7 +304,7 @@ export function FocusMode({ todos, onComplete, onClose }: FocusModeProps) {
                 {current.estimated_minutes && (
                   <span
                     className="flex items-center gap-1 text-[12px] px-2.5 py-1 rounded-lg"
-                    style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}
+                    style={{ background: 'var(--glass-surface)', color: 'rgba(255,255,255,0.4)' }}
                   >
                     <Timer className="h-3 w-3" />
                     {formatMinutes(current.estimated_minutes)}
@@ -313,7 +313,7 @@ export function FocusMode({ todos, onComplete, onClose }: FocusModeProps) {
                 {current.scheduled_time && (
                   <span
                     className="text-[12px] px-2.5 py-1 rounded-lg"
-                    style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}
+                    style={{ background: 'var(--glass-surface)', color: 'rgba(255,255,255,0.4)' }}
                   >
                     {current.scheduled_time}
                   </span>
@@ -332,9 +332,9 @@ export function FocusMode({ todos, onComplete, onClose }: FocusModeProps) {
             onClick={toggleTimer}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-medium transition-all"
             style={{
-              background: timerRunning ? 'rgba(59,130,246,0.18)' : 'rgba(255,255,255,0.06)',
+              background: timerRunning ? 'rgba(59,130,246,0.18)' : 'var(--glass-surface)',
               color: timerRunning ? 'rgba(147,197,253,0.9)' : 'rgba(255,255,255,0.3)',
-              border: `1px solid ${timerRunning ? 'rgba(99,179,237,0.3)' : 'rgba(255,255,255,0.08)'}`,
+              border: `1px solid ${timerRunning ? 'rgba(99,179,237,0.3)' : 'var(--glass-surface-hover)'}`,
             }}
           >
             {timerRunning ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
@@ -345,9 +345,9 @@ export function FocusMode({ todos, onComplete, onClose }: FocusModeProps) {
               onClick={() => { setTimerDuration(25 * 60); setTimerSeconds(0); setTimerRunning(true) }}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-medium transition-all"
               style={{
-                background: 'rgba(255,255,255,0.04)',
+                background: 'var(--glass-surface)',
                 color: 'rgba(255,255,255,0.22)',
-                border: '1px solid rgba(255,255,255,0.06)',
+                border: '1px solid var(--glass-surface)',
               }}
             >
               25 min

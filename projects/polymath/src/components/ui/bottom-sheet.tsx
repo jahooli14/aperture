@@ -122,7 +122,7 @@ const BottomSheetContent = React.forwardRef<
           y,
           opacity,
           backgroundColor: 'var(--premium-surface-card)',
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12), 0 -8px 48px rgba(0,0,0,0.5)'
+          boxShadow: 'inset 0 1px 0 var(--glass-surface-hover), 0 -8px 48px rgba(0,0,0,0.5)'
         }}
         className={cn(
           'fixed inset-x-0 bottom-0 z-[10001]',
@@ -171,7 +171,7 @@ const BottomSheetContent = React.forwardRef<
           style={{
             backgroundColor: 'rgba(255, 255, 255, 0.1)',
             borderColor: 'rgba(255, 255, 255, 0.2)',
-            color: 'var(--premium-text-primary)'
+            color: 'var(--brand-text-primary)'
           }}
           whileHover={{
             scale: 1.05,
@@ -240,7 +240,7 @@ const BottomSheetTitle = React.forwardRef<
       'text-2xl font-bold leading-tight tracking-tight',
       className
     )}
-    style={{ color: 'var(--premium-text-primary)' }}
+    style={{ color: 'var(--brand-text-primary)' }}
     {...props}
   />
 ))
@@ -253,7 +253,7 @@ const BottomSheetDescription = React.forwardRef<
   <p
     ref={ref}
     className={cn('text-sm', className)}
-    style={{ color: 'var(--premium-text-secondary)' }}
+    style={{ color: 'var(--brand-text-secondary)' }}
     {...props}
   />
 ))

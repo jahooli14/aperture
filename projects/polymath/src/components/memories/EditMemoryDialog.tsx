@@ -218,7 +218,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
       <BottomSheetContent>
         <BottomSheetHeader>
           <div className="flex items-center gap-3 mb-2">
-            <Brain className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
+            <Brain className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
             <BottomSheetTitle>Edit thought</BottomSheetTitle>
           </div>
           <BottomSheetDescription>
@@ -229,7 +229,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
         <form onSubmit={handleSubmit} className="space-y-6 mt-6">
           {/* Title */}
           <div className="space-y-2">
-            <Label htmlFor="title" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
+            <Label htmlFor="title" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--brand-text-primary)' }}>
               Title <span style={{ color: '#ef4444' }}>*</span>
             </Label>
             <Input
@@ -240,9 +240,9 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
               required
               className="text-base h-11 sm:h-12"
               style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                backgroundColor: 'var(--glass-surface)',
                 borderColor: 'rgba(255, 255, 255, 0.1)',
-                color: 'var(--premium-text-primary)'
+                color: 'var(--brand-text-primary)'
               }}
               autoComplete="off"
             />
@@ -250,7 +250,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
 
           {/* Body Content */}
           <div className="space-y-2">
-            <Label htmlFor="body" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
+            <Label htmlFor="body" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--brand-text-primary)' }}>
               Content <span style={{ color: '#ef4444' }}>*</span>
             </Label>
             <Textarea
@@ -261,12 +261,12 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
               required
               className="text-base min-h-[200px] resize-y leading-relaxed p-4"
               style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                backgroundColor: 'var(--glass-surface)',
                 borderColor: 'rgba(255, 255, 255, 0.1)',
-                color: 'var(--premium-text-primary)'
+                color: 'var(--brand-text-primary)'
               }}
             />
-            <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+            <p className="text-xs" style={{ color: 'var(--brand-text-muted)' }}>
               AI will analyze this to extract entities and themes.
             </p>
           </div>
@@ -274,8 +274,8 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
           {/* Image Management */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label className="font-semibold text-sm sm:text-base cursor-pointer flex items-center gap-2 group" style={{ color: 'var(--premium-text-primary)' }}>
-                <ImageIcon className="h-4 w-4" style={{ color: 'var(--premium-blue)' }} />
+              <Label className="font-semibold text-sm sm:text-base cursor-pointer flex items-center gap-2 group" style={{ color: 'var(--brand-text-primary)' }}>
+                <ImageIcon className="h-4 w-4" style={{ color: 'var(--brand-primary)' }} />
                 Photos
               </Label>
               <div className="relative">
@@ -293,10 +293,10 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
                   size="sm"
                   className="h-8 px-3 text-xs flex items-center gap-1.5 transition-all hover:bg-[rgba(255,255,255,0.1)] active:scale-95"
                   style={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                    color: 'var(--premium-text-secondary)',
+                    backgroundColor: 'var(--glass-surface)',
+                    color: 'var(--brand-text-secondary)',
                     borderRadius: '9999px',
-                    boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.06)'
+                    boxShadow: 'inset 0 0 0 1px var(--glass-surface)'
                   }}
                 >
                   <Plus className="h-3.5 w-3.5" />
@@ -325,7 +325,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
                       exit={{ opacity: 0, scale: 0.8 }}
                       key={`existing-${url}-${index}`}
                       className="relative rounded-2xl overflow-hidden group shadow-lg aspect-square"
-                      style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.08), 0 4px 12px rgba(0,0,0,0.3)' }}
+                      style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface-hover), 0 4px 12px rgba(0,0,0,0.3)' }}
                     >
                       <img
                         src={url}
@@ -337,7 +337,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
                       <button
                         type="button"
                         onClick={() => removeExistingImage(url)}
-                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-md text-[var(--brand-text-primary)]/90 border border-[rgba(255,255,255,0.08)] opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/80 hover:text-[var(--brand-text-primary)]"
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-md text-[var(--brand-text-primary)]/90 border border-[var(--glass-surface-hover)] opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/80 hover:text-[var(--brand-text-primary)]"
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
@@ -366,7 +366,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
                       <button
                         type="button"
                         onClick={() => removeNewFile(index)}
-                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-md text-[var(--brand-text-primary)]/90 border border-[rgba(255,255,255,0.08)] opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/80 hover:text-[var(--brand-text-primary)]"
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-md text-[var(--brand-text-primary)]/90 border border-[var(--glass-surface-hover)] opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/80 hover:text-[var(--brand-text-primary)]"
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
@@ -379,7 +379,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
 
           {/* Memory Type */}
           <div className="space-y-2">
-            <Label htmlFor="memory_type" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
+            <Label htmlFor="memory_type" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--brand-text-primary)' }}>
               Type (Optional)
             </Label>
             <Select
@@ -393,9 +393,9 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
               }
               className="text-base h-11 sm:h-12"
               style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                backgroundColor: 'var(--glass-surface)',
                 borderColor: 'rgba(255, 255, 255, 0.1)',
-                color: 'var(--premium-text-primary)'
+                color: 'var(--brand-text-primary)'
               }}
             >
               <option value="">Auto-detect</option>
@@ -408,7 +408,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
 
           {/* Tags */}
           <div className="space-y-2 pb-4">
-            <Label htmlFor="tags" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
+            <Label htmlFor="tags" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--brand-text-primary)' }}>
               Tags (Optional)
             </Label>
             <Input
@@ -418,13 +418,13 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
               onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
               className="text-base h-11 sm:h-12"
               style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                backgroundColor: 'var(--glass-surface)',
                 borderColor: 'rgba(255, 255, 255, 0.1)',
-                color: 'var(--premium-text-primary)'
+                color: 'var(--brand-text-primary)'
               }}
               autoComplete="off"
             />
-            <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+            <p className="text-xs" style={{ color: 'var(--brand-text-muted)' }}>
               Comma-separated tags to categorize this memory
             </p>
           </div>

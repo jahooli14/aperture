@@ -254,8 +254,8 @@ export default function ListsPage() {
                             onClick={() => setIsReordering(!isReordering)}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all ${
                                 isReordering
-                                    ? 'bg-sky-500 text-[var(--brand-text-primary)] rounded-sm'
-                                    : 'text-[var(--brand-text-primary)] hover:bg-[rgba(255,255,255,0.05)] rounded-sm'
+                                    ? 'bg-sky-500 text-[var(--brand-text-primary)] rounded-lg'
+                                    : 'text-[var(--brand-text-primary)] hover:bg-[var(--glass-surface)] rounded-lg'
                             }`}
                             style={isReordering
                                 ? { border: '2px solid rgba(125,211,252,0.5)' }
@@ -270,7 +270,7 @@ export default function ListsPage() {
                     )}
                     <Button
                         onClick={() => setCreateOpen(true)}
-                        className="h-10 w-10 p-0 rounded-sm hover:bg-[rgba(255,255,255,0.05)] bg-transparent text-[var(--brand-text-primary)]"
+                        className="h-10 w-10 p-0 rounded-lg hover:bg-[var(--glass-surface)] bg-transparent text-[var(--brand-text-primary)]"
                         style={{ border: '2px solid rgba(255,255,255,0.1)' }}
                     >
                         <Plus className="h-4 w-4" />
@@ -285,7 +285,7 @@ export default function ListsPage() {
                         <div
                             key={`skeleton-${i}`}
                             className="overflow-hidden rounded-2xl bg-zinc-900/40"
-                            style={{ width: 'calc(50% - 6px)', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.05)' }}
+                            style={{ width: 'calc(50% - 6px)', boxShadow: 'inset 0 0 0 1px var(--glass-surface)' }}
                         >
                             <div className="aspect-[3/4] shimmer" />
                         </div>
@@ -308,7 +308,7 @@ export default function ListsPage() {
                         </p>
                         <Button
                             onClick={() => setCreateOpen(true)}
-                            className="h-11 px-6 rounded-full border border-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.05)] bg-transparent text-[var(--brand-text-primary)] font-bold uppercase tracking-widest text-xs"
+                            className="h-11 px-6 rounded-full border border-[var(--glass-surface-hover)] hover:bg-[var(--glass-surface)] bg-transparent text-[var(--brand-text-primary)] font-bold uppercase tracking-widest text-xs"
                         >
                             <Plus className="h-4 w-4 mr-2" />
                             Create First Collection
@@ -382,7 +382,7 @@ export default function ListsPage() {
                             key={list.id}
                             value={list}
                             className="flex items-center gap-4 bg-zinc-900/60 rounded-xl p-3 cursor-grab active:cursor-grabbing hover:bg-zinc-900/80 transition-colors"
-                            style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.08)' }}
+                            style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface-hover)' }}
                         >
                             <GripVertical className="h-5 w-5 text-zinc-600 flex-shrink-0" />
 
@@ -449,7 +449,7 @@ export default function ListsPage() {
                             onPointerUp={handlePointerUp}
                             onPointerCancel={handlePointerCancel}
                             className="group relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 bg-zinc-900/40 flex-shrink-0 select-none"
-                            style={{ width: 'calc(50% - 6px)', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.05), 0 4px 12px rgba(0,0,0,0.3)' }}
+                            style={{ width: 'calc(50% - 6px)', boxShadow: 'inset 0 0 0 1px var(--glass-surface), 0 4px 12px rgba(0,0,0,0.3)' }}
                             whileHover={{ y: -2 }}
                         >
                             {/* Poster / Cover Image / Quote Cover */}
@@ -506,7 +506,7 @@ export default function ListsPage() {
 
                                         {/* Main Icon */}
                                         <div className="relative z-10 flex flex-col items-center gap-4">
-                                            <div className="relative p-8 rounded-full bg-[rgba(255,255,255,0.05)] transition-all duration-300" style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1)' }}>
+                                            <div className="relative p-8 rounded-full bg-[var(--glass-surface)] transition-all duration-300" style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1)' }}>
                                                 <ListIcon type={list.type} className="h-12 w-12" style={{ color: `rgb(${rgb})` }} />
                                             </div>
 
@@ -522,7 +522,7 @@ export default function ListsPage() {
                             {/* Overlay Content */}
                             <div className="absolute inset-0 p-3 flex flex-col justify-between">
                                 <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-sm bg-black/60" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+                                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-black/60" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
                                         <ListIcon type={list.type} className="h-3 w-3" style={{ color: `rgb(${rgb})` }} />
                                         <span className="text-[8px] font-black uppercase tracking-wider text-[var(--brand-text-primary)]">
                                             {list.type}
@@ -535,7 +535,7 @@ export default function ListsPage() {
                                                 e.stopPropagation()
                                                 setQuickAddList(list)
                                             }}
-                                            className="h-6 w-6 flex items-center justify-center rounded-sm bg-black/60 text-[var(--brand-text-primary)]/50 hover:text-[var(--brand-text-primary)] transition-all opacity-0 group-hover:opacity-100"
+                                            className="h-6 w-6 flex items-center justify-center rounded-lg bg-black/60 text-[var(--brand-text-primary)]/50 hover:text-[var(--brand-text-primary)] transition-all opacity-0 group-hover:opacity-100"
                                             style={{ boxShadow: `inset 0 0 0 1px rgba(${rgb}, 0.25)` }}
                                             title="Quick add"
                                         >
@@ -548,7 +548,7 @@ export default function ListsPage() {
                                                     useListStore.getState().deleteList(list.id)
                                                 }
                                             }}
-                                            className="h-6 w-6 flex items-center justify-center rounded-sm bg-red-500/10 hover:bg-red-500/20 text-red-500/40 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
+                                            className="h-6 w-6 flex items-center justify-center rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500/40 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
                                             style={{ boxShadow: 'inset 0 0 0 1px rgba(239,68,68,0.15)' }}
                                         >
                                             <Trash2 className="h-3 w-3" />

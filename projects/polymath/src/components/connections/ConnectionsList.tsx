@@ -239,7 +239,7 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
     return (
       <div className="space-y-3">
         {[1, 2, 3].map(i => (
-          <div key={i} className="h-20 rounded-xl bg-[rgba(255,255,255,0.05)] animate-pulse" />
+          <div key={i} className="h-20 rounded-xl bg-[var(--glass-surface)] animate-pulse" />
         ))}
       </div>
     )
@@ -249,7 +249,7 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
     <div className="space-y-6">
       {/* AI Suggestions */}
       <div className="mb-2">
-        <h3 className="text-xs font-medium mb-3 flex items-center gap-2 uppercase tracking-wider opacity-60" style={{ color: 'var(--premium-text-secondary)' }}>
+        <h3 className="text-xs font-medium mb-3 flex items-center gap-2 uppercase tracking-wider opacity-60" style={{ color: 'var(--brand-text-secondary)' }}>
           <Lightbulb className="h-3 w-3 text-purple-400" />
           Smart Suggestions
         </h3>
@@ -287,9 +287,9 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
             >
               <Link
                 to={getItemUrl(item.type, item.id)}
-                className="group relative overflow-hidden rounded-xl border border-[rgba(255,255,255,0.05)] bg-[rgba(255,255,255,0.05)] p-4 block transition-all hover:bg-[rgba(255,255,255,0.1)] hover:border-[rgba(255,255,255,0.08)] premium-glass-subtle"
+                className="group relative overflow-hidden rounded-xl border border-[var(--glass-surface)] bg-[var(--glass-surface)] p-4 block transition-all hover:bg-[rgba(255,255,255,0.1)] hover:border-[var(--glass-surface-hover)] premium-glass-subtle"
                 style={{
-                  backgroundColor: isAI ? undefined : 'rgba(255, 255, 255, 0.08)' // Subtle distinction for manual?
+                  backgroundColor: isAI ? undefined : 'var(--glass-surface-hover)' // Subtle distinction for manual?
                 }}
               >
                 {/* Visual indicator for AI vs Manual if needed, but "You cannot delete" implies uniform look */}
@@ -303,7 +303,7 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-[10px] font-bold uppercase tracking-wider opacity-60" style={{ color: 'var(--premium-text-secondary)' }}>
+                      <span className="text-[10px] font-bold uppercase tracking-wider opacity-60" style={{ color: 'var(--brand-text-secondary)' }}>
                         {item.type}
                       </span>
                       {isAI && (
@@ -314,12 +314,12 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
                       )}
                     </div>
 
-                    <h4 className="text-sm font-medium mb-1 line-clamp-1" style={{ color: 'var(--premium-text-primary)' }}>
+                    <h4 className="text-sm font-medium mb-1 line-clamp-1" style={{ color: 'var(--brand-text-primary)' }}>
                       {item.title}
                     </h4>
 
                     {item.reasoning && (
-                      <p className="text-xs line-clamp-1 opacity-70" style={{ color: 'var(--premium-text-secondary)' }}>
+                      <p className="text-xs line-clamp-1 opacity-70" style={{ color: 'var(--brand-text-secondary)' }}>
                         {item.reasoning}
                       </p>
                     )}
@@ -343,8 +343,8 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
       <div className="pt-2">
         <button
           onClick={() => setShowCreateDialog(true)}
-          className="w-full py-3 rounded-xl border border-dashed border-[rgba(255,255,255,0.08)] flex items-center justify-center gap-2 text-xs font-medium transition-all hover:bg-[rgba(255,255,255,0.05)] hover:border-white/20 group"
-          style={{ color: 'var(--premium-text-secondary)' }}
+          className="w-full py-3 rounded-xl border border-dashed border-[var(--glass-surface-hover)] flex items-center justify-center gap-2 text-xs font-medium transition-all hover:bg-[var(--glass-surface)] hover:border-white/20 group"
+          style={{ color: 'var(--brand-text-secondary)' }}
         >
           <Plus className="h-4 w-4 group-hover:text-blue-400 transition-colors" />
           <span className="group-hover:text-[var(--brand-text-primary)] transition-colors">

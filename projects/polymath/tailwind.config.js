@@ -20,17 +20,21 @@ module.exports = {
         'space-12': '96px',
       },
       borderRadius: {
-        lg: 'var(--brand-radius, var(--radius))',
-        md: 'calc(var(--brand-radius, var(--radius)) - 2px)',
-        sm: 'calc(var(--brand-radius, var(--radius)) - 4px)'
+        '2xl': 'var(--brand-radius-lg)',
+        xl: 'var(--brand-radius)',
+        lg: 'var(--brand-radius-sm)',
+        md: 'calc(var(--brand-radius-sm) - 2px)',
+        sm: 'calc(var(--brand-radius-sm) - 4px)'
       },
       colors: {
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         brand: {
-          primary: 'var(--brand-primary-rgb)',
+          primary: 'rgb(var(--brand-primary-rgb))',
           bg: 'var(--brand-bg)',
           glass: 'var(--brand-glass-bg)',
+          surface: 'var(--glass-surface)',
+          border: 'var(--glass-border)',
         },
         'brand-text': {
           primary: 'var(--brand-text-primary)',

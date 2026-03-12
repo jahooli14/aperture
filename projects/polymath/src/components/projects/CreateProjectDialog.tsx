@@ -114,7 +114,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
       {!hideTrigger && (trigger || (
         <button
           onClick={() => setOpen(true)}
-          className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-[rgba(255,255,255,0.05)]"
+          className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-[var(--glass-surface)]"
           style={{
             borderColor: 'rgba(30, 42, 88, 0.2)',
             color: 'rgba(100, 180, 255, 1)'
@@ -129,7 +129,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
         <BottomSheetContent>
           <BottomSheetHeader>
             <div className="flex items-center gap-3 mb-2">
-              <Layers className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
+              <Layers className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
               <BottomSheetTitle>Start a New Project</BottomSheetTitle>
             </div>
             <BottomSheetDescription>
@@ -147,7 +147,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 onFocus={handleInputFocus}
-                className="text-2xl h-16 font-bold bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.08)] focus:border-zebra-accent focus:ring-0 transition-all placeholder:text-[var(--brand-text-primary)]/10"
+                className="text-2xl h-16 font-bold bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-zebra-accent focus:ring-0 transition-all placeholder:text-[var(--brand-text-primary)]/10"
                 autoComplete="off"
                 autoFocus
               />
@@ -164,7 +164,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 onFocus={handleInputFocus}
-                className="h-14 bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.08)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/10"
+                className="h-14 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/10"
                 autoComplete="off"
               />
               <p className="text-[10px] text-[var(--brand-text-muted)] text-right">{formData.description.length}/10 chars min</p>
@@ -181,7 +181,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                     onClick={() => setFormData({ ...formData, type: cat })}
                     className={`p-3 rounded-xl text-sm font-bold border transition-all text-center ${formData.type === cat
                       ? 'bg-white text-black border-white'
-                      : 'bg-black border-[rgba(255,255,255,0.08)] text-[var(--brand-text-secondary)] hover:border-white/30'
+                      : 'bg-black border-[var(--glass-surface-hover)] text-[var(--brand-text-secondary)] hover:border-white/30'
                       }`}
                   >
                     {cat}
@@ -201,7 +201,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                   onClick={() => setFormData({ ...formData, project_mode: 'completion' })}
                   className={`p-3 rounded-xl text-xs font-bold border transition-all text-left ${formData.project_mode === 'completion'
                     ? 'bg-white text-black border-white'
-                    : 'bg-black border-[rgba(255,255,255,0.08)] text-[var(--brand-text-secondary)] hover:border-white/30'
+                    : 'bg-black border-[var(--glass-surface-hover)] text-[var(--brand-text-secondary)] hover:border-white/30'
                     }`}
                 >
                   <div className="font-bold">Has End Goal</div>
@@ -212,7 +212,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                   onClick={() => setFormData({ ...formData, project_mode: 'recurring' })}
                   className={`p-3 rounded-xl text-xs font-bold border transition-all text-left ${formData.project_mode === 'recurring'
                     ? 'bg-white text-black border-white'
-                    : 'bg-black border-[rgba(255,255,255,0.08)] text-[var(--brand-text-secondary)] hover:border-white/30'
+                    : 'bg-black border-[var(--glass-surface-hover)] text-[var(--brand-text-secondary)] hover:border-white/30'
                     }`}
                 >
                   <div className="font-bold">Ongoing Habit</div>
@@ -233,7 +233,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                   value={formData.end_goal}
                   onChange={(e) => setFormData({ ...formData, end_goal: e.target.value })}
                   onFocus={handleInputFocus}
-                  className="h-14 bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.08)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/10"
+                  className="h-14 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/10"
                   autoComplete="off"
                 />
               </div>
@@ -250,7 +250,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                 value={formData.next_step}
                 onChange={(e) => setFormData({ ...formData, next_step: e.target.value })}
                 onFocus={handleInputFocus}
-                className="h-14 bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.08)] focus:border-zebra-accent placeholder:text-[var(--brand-text-primary)]/10"
+                className="h-14 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-zebra-accent placeholder:text-[var(--brand-text-primary)]/10"
                 autoComplete="off"
               />
             </div>
@@ -265,7 +265,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                   border: '2px solid rgba(59,130,246,0.5)',
                   borderRadius: '4px',
                   boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
-                  color: 'var(--premium-blue)',
+                  color: 'var(--brand-primary)',
                 }}
               >
                 {loading ? 'Launching...' : 'Create Project'}

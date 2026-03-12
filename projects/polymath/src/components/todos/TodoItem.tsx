@@ -167,11 +167,11 @@ export function TodoItem({
         ? 'rgba(251,146,60,0.08)'
         : priorityCfg
           ? priorityCfg.cardTint
-          : 'rgba(255,255,255,0.04)'
+          : 'var(--glass-surface)'
 
   // Thick left border for status/priority — neobrutalist accent
   const borderLeft = todo.done || completing
-    ? '1.5px solid rgba(255,255,255,0.07)'
+    ? '1.5px solid var(--glass-surface)'
     : isInProgress
       ? '4px solid rgba(251,146,60,0.95)'
       : priorityCfg
@@ -184,7 +184,7 @@ export function TodoItem({
       ? '3px 3px 0 rgba(251,146,60,0.2)'
       : priorityCfg
         ? priorityCfg.shadow
-        : '3px 3px 0 rgba(255,255,255,0.06)'
+        : '3px 3px 0 var(--glass-surface)'
 
   return (
     <motion.div
@@ -207,11 +207,11 @@ export function TodoItem({
       <SwipeableCard
         leftAction={SwipeActions.delete(() => onDelete(todo.id))}
         rightAction={{ icon: <Check className="h-5 w-5 text-[var(--brand-text-primary)]" />, color: 'bg-emerald-600', label: 'Complete', threshold: 100, onAction: handleToggle }}
-        className="rounded"
+        className="rounded-xl"
       >
         <div
           className={cn(
-            'flex items-start gap-3.5 px-4 py-3.5 rounded',
+            'flex items-start gap-3.5 px-4 py-3.5 rounded-xl',
             'active:brightness-110 transition-[background,box-shadow] duration-200',
           )}
           style={{
@@ -229,7 +229,7 @@ export function TodoItem({
             aria-label={todo.done ? 'Mark incomplete' : 'Mark complete'}
           >
             <div
-              className="h-[18px] w-[18px] rounded-sm flex items-center justify-center transition-all duration-200"
+              className="h-[18px] w-[18px] rounded-lg flex items-center justify-center transition-all duration-200"
               style={{
                 border: (todo.done || completing)
                   ? '2px solid rgb(16,185,129)'
@@ -270,10 +270,10 @@ export function TodoItem({
                 onFocus={handleInputFocus}
                 onKeyDown={handleEditKeyDown}
                 onBlur={handleEditSave}
-                className="w-full -mx-2.5 -my-0.5 px-2.5 py-0.5 rounded-sm text-[15px] outline-none"
+                className="w-full -mx-2.5 -my-0.5 px-2.5 py-0.5 rounded-lg text-[15px] outline-none"
                 style={{
-                  color: 'var(--premium-text-primary)',
-                  backgroundColor: 'rgba(255,255,255,0.06)',
+                  color: 'var(--brand-text-primary)',
+                  backgroundColor: 'var(--glass-surface)',
                   boxShadow: 'inset 0 0 0 2px rgba(99,179,237,0.5)',
                 }}
                 autoFocus
@@ -285,7 +285,7 @@ export function TodoItem({
                 style={{
                   color: (todo.done || completing)
                     ? 'rgba(255,255,255,0.45)'
-                    : 'var(--premium-text-primary)',
+                    : 'var(--brand-text-primary)',
                   textDecoration: (todo.done || completing) ? 'line-through' : 'none',
                   textDecorationColor: 'rgba(255,255,255,0.30)',
                 }}
@@ -301,7 +301,7 @@ export function TodoItem({
                 {/* Priority chip — uppercase, square, bordered */}
                 {priorityCfg && !isInProgress && (
                   <span
-                    className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-sm tracking-wider uppercase"
+                    className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg tracking-wider uppercase"
                     style={{
                       background: priorityCfg.chipBg,
                       color: priorityCfg.chipColor,
@@ -319,7 +319,7 @@ export function TodoItem({
                 {/* In-progress badge */}
                 {isInProgress && (
                   <span
-                    className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-sm tracking-wider uppercase"
+                    className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg tracking-wider uppercase"
                     style={{
                       background: 'rgba(251,146,60,0.18)',
                       color: 'rgb(251,146,60)',
@@ -334,7 +334,7 @@ export function TodoItem({
                 {/* Overdue badge */}
                 {isOverdue && (
                   <span
-                    className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-sm tracking-wider uppercase"
+                    className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg tracking-wider uppercase"
                     style={{
                       background: 'rgba(239,68,68,0.18)',
                       color: 'rgb(252,165,165)',
@@ -365,7 +365,7 @@ export function TodoItem({
                 {/* Scheduled time */}
                 {todo.scheduled_time && (
                   <span
-                    className="flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-sm"
+                    className="flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-lg"
                     style={{ background: 'rgba(99,179,237,0.12)', color: 'rgba(147,197,253,0.85)', border: '1px solid rgba(99,179,237,0.2)' }}
                   >
                     <Clock className="h-2.5 w-2.5" />
@@ -376,7 +376,7 @@ export function TodoItem({
                 {/* Area chip */}
                 {showArea && areaName && (
                   <span
-                    className="text-[11px] font-medium px-1.5 py-0.5 rounded-sm"
+                    className="text-[11px] font-medium px-1.5 py-0.5 rounded-lg"
                     style={{ background: 'rgba(251,191,36,0.14)', color: 'rgba(253,224,71,0.8)', border: '1px solid rgba(251,191,36,0.2)' }}
                   >
                     {areaName}
@@ -385,7 +385,7 @@ export function TodoItem({
 
                 {/* Tags */}
                 {todo.tags.filter(t => t !== 'someday').map(tag => (
-                  <span key={tag} className="flex items-center gap-0.5 text-[11px] px-1.5 py-0.5 rounded-sm"
+                  <span key={tag} className="flex items-center gap-0.5 text-[11px] px-1.5 py-0.5 rounded-lg"
                     style={{ background: 'rgba(52,211,153,0.12)', color: 'rgba(52,211,153,0.8)', border: '1px solid rgba(52,211,153,0.2)' }}
                   >
                     <Tag className="h-2.5 w-2.5" />
@@ -396,8 +396,8 @@ export function TodoItem({
                 {/* Estimated time chip */}
                 {todo.estimated_minutes && (
                   <span
-                    className="flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-sm ml-auto"
-                    style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.1)' }}
+                    className="flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-lg ml-auto"
+                    style={{ background: 'var(--glass-surface)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.1)' }}
                   >
                     <Clock className="h-2.5 w-2.5" />
                     {formatMinutes(todo.estimated_minutes)}
@@ -463,7 +463,7 @@ export function TodoItem({
             <div className="flex-shrink-0 flex flex-col items-end gap-1">
               <button
                 onClick={handleStartToggle}
-                className="h-7 w-7 flex items-center justify-center rounded-sm transition-all border"
+                className="h-7 w-7 flex items-center justify-center rounded-lg transition-all border"
                 style={isInProgress ? {
                   color: 'rgba(251,146,60,0.9)',
                   background: 'rgba(251,146,60,0.14)',
@@ -483,8 +483,8 @@ export function TodoItem({
 
               <button
                 onClick={() => onDelete(todo.id)}
-                className="h-7 w-7 flex items-center justify-center rounded-sm transition-all border"
-                style={{ color: 'rgba(255,255,255,0.30)', borderColor: 'rgba(255,255,255,0.08)' }}
+                className="h-7 w-7 flex items-center justify-center rounded-lg transition-all border"
+                style={{ color: 'rgba(255,255,255,0.30)', borderColor: 'var(--glass-surface-hover)' }}
                 aria-label="Delete todo"
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -496,8 +496,8 @@ export function TodoItem({
           {(todo.done || completing) && (
             <button
               onClick={() => onDelete(todo.id)}
-              className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-sm transition-all border"
-              style={{ color: 'rgba(255,255,255,0.35)', opacity: 0.7, borderColor: 'rgba(255,255,255,0.07)' }}
+              className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-lg transition-all border"
+              style={{ color: 'rgba(255,255,255,0.35)', opacity: 0.7, borderColor: 'var(--glass-surface)' }}
               aria-label="Delete todo"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -518,11 +518,11 @@ export function LogbookItem({ todo, onUndo }: { todo: Todo; onUndo: (id: string)
 
   return (
     <div
-      className="flex items-center gap-3.5 px-4 py-2.5 rounded transition-opacity"
+      className="flex items-center gap-3.5 px-4 py-2.5 rounded-xl transition-opacity"
       style={{ opacity: 0.38 }}
     >
       <div
-        className="flex-shrink-0 h-[16px] w-[16px] rounded-sm flex items-center justify-center"
+        className="flex-shrink-0 h-[16px] w-[16px] rounded-lg flex items-center justify-center"
         style={{ background: 'rgba(52,211,153,0.22)', border: '1px solid rgba(52,211,153,0.35)' }}
       >
         <Check className="h-[9px] w-[9px] text-[var(--brand-text-primary)]" strokeWidth={3} />

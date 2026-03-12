@@ -185,7 +185,7 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
               <div className="space-y-3 mb-10">
                 <div
                   className="flex items-center gap-3 px-4 py-3.5 rounded-2xl"
-                  style={{ background: 'var(--premium-surface-1)', border: '1px solid rgba(255,255,255,0.07)' }}
+                  style={{ background: 'var(--premium-surface-1)', border: '1px solid var(--glass-surface)' }}
                 >
                   <div
                     className="h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -299,7 +299,7 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
                           background: isSelected
                             ? 'rgba(59,130,246,0.15)'
                             : 'var(--premium-surface-1)',
-                          border: `1px solid ${isSelected ? 'rgba(99,179,237,0.5)' : 'rgba(255,255,255,0.07)'}`,
+                          border: `1px solid ${isSelected ? 'rgba(99,179,237,0.5)' : 'var(--glass-surface)'}`,
                           opacity: isDisabled ? 0.4 : 1,
                           cursor: isDisabled ? 'not-allowed' : 'pointer',
                         }}
@@ -337,9 +337,9 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
                 onClick={advance}
                 className="w-full py-4 rounded-2xl font-bold text-[16px] flex items-center justify-center gap-2"
                 style={{
-                  background: mitIds.length > 0 ? 'rgba(59,130,246,0.18)' : 'rgba(255,255,255,0.06)',
+                  background: mitIds.length > 0 ? 'rgba(59,130,246,0.18)' : 'var(--glass-surface)',
                   color: mitIds.length > 0 ? 'rgba(147,197,253,0.9)' : 'rgba(255,255,255,0.3)',
-                  border: `1px solid ${mitIds.length > 0 ? 'rgba(99,179,237,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                  border: `1px solid ${mitIds.length > 0 ? 'rgba(99,179,237,0.3)' : 'var(--glass-surface-hover)'}`,
                 }}
               >
                 {mitIds.length > 0 ? `${mitIds.length} MIT${mitIds.length !== 1 ? 's' : ''} set` : 'Skip'}
@@ -391,11 +391,11 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
                               style={{
                                 background: isSelected
                                   ? 'rgba(139,92,246,0.2)'
-                                  : 'rgba(255,255,255,0.06)',
+                                  : 'var(--glass-surface)',
                                 color: isSelected
                                   ? 'rgba(196,181,253,0.95)'
                                   : 'rgba(255,255,255,0.45)',
-                                border: `1px solid ${isSelected ? 'rgba(139,92,246,0.35)' : 'rgba(255,255,255,0.08)'}`,
+                                border: `1px solid ${isSelected ? 'rgba(139,92,246,0.35)' : 'var(--glass-surface-hover)'}`,
                               }}
                             >
                               {opt.label}
@@ -476,11 +476,11 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
                 style={{
                   background: intention.trim()
                     ? 'rgba(52,211,153,0.15)'
-                    : 'rgba(255,255,255,0.06)',
+                    : 'var(--glass-surface)',
                   color: intention.trim()
                     ? 'rgba(52,211,153,0.9)'
                     : 'rgba(255,255,255,0.3)',
-                  border: `1px solid ${intention.trim() ? 'rgba(52,211,153,0.25)' : 'rgba(255,255,255,0.08)'}`,
+                  border: `1px solid ${intention.trim() ? 'rgba(52,211,153,0.25)' : 'var(--glass-surface-hover)'}`,
                 }}
               >
                 {intention.trim() ? 'Set intention' : 'Skip'}
@@ -525,7 +525,7 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
                 <div className="w-full text-left space-y-3 mb-8">
                   <div
                     className="flex items-center gap-3 px-4 py-3 rounded-2xl"
-                    style={{ background: 'var(--premium-surface-1)', border: '1px solid rgba(255,255,255,0.07)' }}
+                    style={{ background: 'var(--premium-surface-1)', border: '1px solid var(--glass-surface)' }}
                   >
                     <span className="text-[20px]">📋</span>
                     <p className="text-[14px]" style={{ color: 'rgba(255,255,255,0.65)' }}>
@@ -540,7 +540,7 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
                   {timeBlockedCount > 0 && (
                     <div
                       className="flex items-center gap-3 px-4 py-3 rounded-2xl"
-                      style={{ background: 'var(--premium-surface-1)', border: '1px solid rgba(255,255,255,0.07)' }}
+                      style={{ background: 'var(--premium-surface-1)', border: '1px solid var(--glass-surface)' }}
                     >
                       <span className="text-[20px]">⏰</span>
                       <p className="text-[14px]" style={{ color: 'rgba(255,255,255,0.65)' }}>

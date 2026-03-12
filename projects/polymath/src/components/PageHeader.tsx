@@ -39,8 +39,8 @@ export function PageHeader({ title, subtitle, count, action, backable }: PageHea
             onClick={() => navigate(-1)}
             className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-colors"
             style={{
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.08)',
+              background: 'var(--glass-surface)',
+              border: '1px solid var(--glass-surface-hover)',
             }}
             aria-label="Go back"
           >
@@ -52,7 +52,7 @@ export function PageHeader({ title, subtitle, count, action, backable }: PageHea
           <div className="flex items-center gap-2.5">
             <h1
               className="text-2xl font-bold tracking-tight truncate"
-              style={{ color: 'var(--premium-text-primary)' }}
+              style={{ color: 'var(--brand-text-primary)' }}
             >
               {title}
             </h1>
@@ -74,7 +74,7 @@ export function PageHeader({ title, subtitle, count, action, backable }: PageHea
           {subtitle && (
             <p
               className="text-xs mt-0.5 truncate"
-              style={{ color: 'var(--premium-text-tertiary)' }}
+              style={{ color: 'var(--brand-text-muted)' }}
             >
               {subtitle}
             </p>

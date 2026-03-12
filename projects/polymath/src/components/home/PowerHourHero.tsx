@@ -169,7 +169,7 @@ export function PowerHourHero() {
     }
 
     if (loading) return (
-        <div className="w-full h-64 bg-zebra-gray-dark animate-pulse rounded-2xl border border-[rgba(255,255,255,0.08)] mb-8" />
+        <div className="w-full h-64 bg-zebra-gray-dark animate-pulse rounded-2xl border border-[var(--glass-surface-hover)] mb-8" />
     )
 
     if (error) return (
@@ -337,7 +337,7 @@ export function PowerHourHero() {
                 <div className="absolute top-4 right-4 z-20 flex gap-2">
                     <button
                         onClick={() => setShowProjectPicker(!showProjectPicker)}
-                        className="bg-[rgba(255,255,255,0.05)] backdrop-blur-md border border-[rgba(255,255,255,0.08)] text-[var(--brand-text-primary)] p-2 rounded-lg hover:bg-[rgba(255,255,255,0.1)] transition-all group/picker"
+                        className="bg-[var(--glass-surface)] backdrop-blur-md border border-[var(--glass-surface-hover)] text-[var(--brand-text-primary)] p-2 rounded-lg hover:bg-[rgba(255,255,255,0.1)] transition-all group/picker"
                         title="Change Project Focus"
                     >
                         {isRefreshing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Layers className="h-4 w-4" />}
@@ -358,7 +358,7 @@ export function PowerHourHero() {
                                 }}
                                 className={`px-3 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-1.5 border ${isActive
                                     ? 'bg-white text-black border-white'
-                                    : 'bg-black/40 text-[var(--brand-text-primary)]/40 border-[rgba(255,255,255,0.08)] hover:border-white/20'
+                                    : 'bg-black/40 text-[var(--brand-text-primary)]/40 border-[var(--glass-surface-hover)] hover:border-white/20'
                                     }`}
                             >
                                 <div
@@ -379,7 +379,7 @@ export function PowerHourHero() {
                             exit={{ opacity: 0, y: -10 }}
                             className="absolute top-16 right-4 z-30 w-72 aperture-card shadow-2xl max-h-80 overflow-y-auto"
                         >
-                            <div className="p-3 bg-[rgba(255,255,255,0.05)] border-b border-[rgba(255,255,255,0.08)] text-[10px] font-bold uppercase tracking-widest text-[var(--brand-text-muted)] aperture-header">
+                            <div className="p-3 bg-[var(--glass-surface)] border-b border-[var(--glass-surface-hover)] text-[10px] font-bold uppercase tracking-widest text-[var(--brand-text-muted)] aperture-header">
                                 Select Project Target
                             </div>
                             {activeProjects.map(p => {
@@ -391,7 +391,7 @@ export function PowerHourHero() {
                                             haptic.light()
                                             fetchPowerHour(p.id)
                                         }}
-                                        className="w-full p-4 text-left hover:bg-[rgba(255,255,255,0.05)] transition-colors border-b border-[rgba(255,255,255,0.05)] last:border-0 group"
+                                        className="w-full p-4 text-left hover:bg-[var(--glass-surface)] transition-colors border-b border-[var(--glass-surface)] last:border-0 group"
                                     >
                                         <div className="font-bold text-sm group-hover:text-[var(--brand-text-primary)] mt-1 flex items-center gap-2 aperture-header uppercase">
                                             <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: pTheme.text }} />
@@ -432,7 +432,7 @@ export function PowerHourHero() {
                                 </p>
 
                                 {currentProject?.metadata?.next_step && (
-                                    <div className="mb-6 p-3 rounded-lg bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.08)] flex items-start gap-3">
+                                    <div className="mb-6 p-3 rounded-lg bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] flex items-start gap-3">
                                         <div className="p-1.5 rounded-md bg-[rgba(255,255,255,0.1)]">
                                             <Bookmark className="h-3 w-3 text-[var(--brand-text-primary)]/50" />
                                         </div>
@@ -482,7 +482,7 @@ export function PowerHourHero() {
 
                                     <button
                                         onClick={() => setShowReview(true)}
-                                        className="flex items-center gap-2 px-4 py-3 border border-[rgba(255,255,255,0.08)] rounded-xl hover:bg-[rgba(255,255,255,0.05)] transition-all uppercase text-[10px] font-bold tracking-widest backdrop-blur-sm text-[var(--brand-text-primary)]/70 aperture-header"
+                                        className="flex items-center gap-2 px-4 py-3 border border-[var(--glass-surface-hover)] rounded-xl hover:bg-[var(--glass-surface)] transition-all uppercase text-[10px] font-bold tracking-widest backdrop-blur-sm text-[var(--brand-text-primary)]/70 aperture-header"
                                     >
                                         <Clock className="h-3.5 w-3.5" />
                                         <span>Adjust</span>
@@ -491,7 +491,7 @@ export function PowerHourHero() {
                                     {mainTask.fuel_id && (
                                         <button
                                             onClick={() => navigate(`/reading/${mainTask.fuel_id}`)}
-                                            className="flex items-center gap-2 px-4 py-3 border border-[rgba(255,255,255,0.08)] rounded-xl hover:bg-[rgba(255,255,255,0.05)] transition-all uppercase text-[10px] font-bold tracking-widest backdrop-blur-sm text-[var(--brand-text-primary)] aperture-header"
+                                            className="flex items-center gap-2 px-4 py-3 border border-[var(--glass-surface-hover)] rounded-xl hover:bg-[var(--glass-surface)] transition-all uppercase text-[10px] font-bold tracking-widest backdrop-blur-sm text-[var(--brand-text-primary)] aperture-header"
                                         >
                                             <BookOpen className="h-3.5 w-3.5" />
                                             <span>Read Fuel</span>
@@ -502,15 +502,15 @@ export function PowerHourHero() {
                         </AnimatePresence>
                     </div>
 
-                    <div className="hidden md:flex flex-col p-0 border-l border-[rgba(255,255,255,0.05)] relative w-48 bg-white/[0.02]">
+                    <div className="hidden md:flex flex-col p-0 border-l border-[var(--glass-surface)] relative w-48 bg-white/[0.02]">
                         <div className="flex flex-col h-full">
                             {DURATION_OPTIONS.map((opt) => (
                                 <button
                                     key={opt.value}
                                     onClick={() => handleDurationChange(opt.value)}
-                                    className={`flex-1 flex flex-col justify-center items-center gap-2 transition-all border-b border-[rgba(255,255,255,0.05)] last:border-0 ${duration === opt.value
-                                        ? 'bg-[rgba(255,255,255,0.1)] text-[var(--brand-text-primary)] shadow-[inset_0_0_20px_rgba(255,255,255,0.05)]'
-                                        : 'hover:bg-[rgba(255,255,255,0.05)] text-[var(--brand-text-primary)]/30'
+                                    className={`flex-1 flex flex-col justify-center items-center gap-2 transition-all border-b border-[var(--glass-surface)] last:border-0 ${duration === opt.value
+                                        ? 'bg-[rgba(255,255,255,0.1)] text-[var(--brand-text-primary)] shadow-[inset_0_0_20px_var(--glass-surface)]'
+                                        : 'hover:bg-[var(--glass-surface)] text-[var(--brand-text-primary)]/30'
                                         }`}
                                 >
                                     <opt.icon className={`h-4 w-4 ${duration === opt.value ? 'text-[var(--zebra-accent)]' : ''}`} />
@@ -522,7 +522,7 @@ export function PowerHourHero() {
                     </div>
                 </div>
 
-                <div className="md:hidden border-t border-[rgba(255,255,255,0.08)] flex divide-x divide-white/10">
+                <div className="md:hidden border-t border-[var(--glass-surface-hover)] flex divide-x divide-white/10">
                     {DURATION_OPTIONS.map((opt) => (
                         <button
                             key={opt.value}

@@ -62,7 +62,7 @@ export function CreateListDialog({ open, onOpenChange }: Props) {
             <BottomSheetContent>
                 <BottomSheetHeader>
                     <div className="flex items-center gap-3 mb-2">
-                        <ListPlus className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
+                        <ListPlus className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
                         <BottomSheetTitle>Create Collection</BottomSheetTitle>
                     </div>
                     <BottomSheetDescription>
@@ -78,15 +78,15 @@ export function CreateListDialog({ open, onOpenChange }: Props) {
                     )}
 
                     <div className="space-y-2">
-                        <Label className="font-bold text-xs uppercase tracking-widest" style={{ color: 'var(--premium-blue)' }}>
+                        <Label className="font-bold text-xs uppercase tracking-widest" style={{ color: 'var(--brand-primary)' }}>
                             List Title <span className="text-red-500">*</span>
                         </Label>
                         <Input
                             value={title}
                             onChange={e => setTitle(e.target.value)}
                             placeholder="e.g. Scifi Movies 2024"
-                            className="text-lg h-14 bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.08)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/10"
-                            style={{ color: 'var(--premium-text-primary)' }}
+                            className="text-lg h-14 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/10"
+                            style={{ color: 'var(--brand-text-primary)' }}
                             autoFocus
                             autoComplete="off"
                         />
@@ -105,7 +105,7 @@ export function CreateListDialog({ open, onOpenChange }: Props) {
                                         onClick={() => setType(t.id)}
                                         className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${isSelected
                                             ? 'bg-white text-black border-white'
-                                            : 'bg-black border-[rgba(255,255,255,0.08)] text-[var(--brand-text-secondary)] hover:border-white/30'
+                                            : 'bg-black border-[var(--glass-surface-hover)] text-[var(--brand-text-secondary)] hover:border-white/30'
                                             }`}
                                     >
                                         <Icon className="h-5 w-5 mb-1" />
@@ -126,7 +126,7 @@ export function CreateListDialog({ open, onOpenChange }: Props) {
                               border: '2px solid rgba(59,130,246,0.5)',
                               borderRadius: '4px',
                               boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
-                              color: 'var(--premium-blue)',
+                              color: 'var(--brand-primary)',
                             }}
                         >
                             {loading ? 'Creating...' : 'Create Collection'}

@@ -61,7 +61,7 @@ export function ZenMode({ prompts, onClose, onMarkViewed }: ZenModeProps) {
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'connection': return 'var(--premium-blue)'
+      case 'connection': return 'var(--brand-primary)'
       case 'divergent': return 'var(--premium-emerald)'
       case 'revisit': return 'var(--premium-purple)'
       case 'transform': return 'var(--premium-gold)'
@@ -116,7 +116,7 @@ export function ZenMode({ prompts, onClose, onMarkViewed }: ZenModeProps) {
       <button
         onClick={onClose}
         className="absolute top-6 right-6 p-2 rounded-full transition-all hover:bg-[rgba(255,255,255,0.1)]"
-        style={{ color: 'var(--premium-text-secondary)' }}
+        style={{ color: 'var(--brand-text-secondary)' }}
       >
         <X className="h-6 w-6" />
       </button>
@@ -130,7 +130,7 @@ export function ZenMode({ prompts, onClose, onMarkViewed }: ZenModeProps) {
             style={{
               width: index === currentIndex ? '24px' : '8px',
               backgroundColor: index === currentIndex
-                ? 'var(--premium-blue)'
+                ? 'var(--brand-primary)'
                 : index < currentIndex
                 ? 'rgba(59, 130, 246, 0.4)'
                 : 'rgba(255, 255, 255, 0.2)'
@@ -164,7 +164,7 @@ export function ZenMode({ prompts, onClose, onMarkViewed }: ZenModeProps) {
               {currentPrompt.format && (
                 <span
                   className="text-xs uppercase tracking-wide opacity-60"
-                  style={{ color: 'var(--premium-text-tertiary)' }}
+                  style={{ color: 'var(--brand-text-muted)' }}
                 >
                   {currentPrompt.format}
                 </span>
@@ -174,7 +174,7 @@ export function ZenMode({ prompts, onClose, onMarkViewed }: ZenModeProps) {
             {/* Prompt text */}
             <motion.p
               className="text-2xl md:text-3xl leading-relaxed font-light px-4"
-              style={{ color: 'var(--premium-text-primary)' }}
+              style={{ color: 'var(--brand-text-primary)' }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2, duration: 0.8 }}
@@ -191,7 +191,7 @@ export function ZenMode({ prompts, onClose, onMarkViewed }: ZenModeProps) {
                 transition={{ delay: 0.6, duration: 0.8 }}
               >
                 <Star className="h-4 w-4 mt-1 flex-shrink-0" style={{ color: 'var(--premium-gold)' }} />
-                <p className="text-base italic" style={{ color: 'var(--premium-text-secondary)' }}>
+                <p className="text-base italic" style={{ color: 'var(--brand-text-secondary)' }}>
                   {currentPrompt.metaphor}
                 </p>
               </motion.div>
@@ -205,17 +205,17 @@ export function ZenMode({ prompts, onClose, onMarkViewed }: ZenModeProps) {
             onClick={handlePrevious}
             disabled={currentIndex === 0}
             className="p-4 rounded-full transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[rgba(255,255,255,0.1)]"
-            style={{ color: 'var(--premium-text-secondary)' }}
+            style={{ color: 'var(--brand-text-secondary)' }}
           >
             <ChevronLeft className="h-6 w-6" />
           </button>
 
           <div className="flex flex-col items-center gap-2">
-            <p className="text-sm font-medium" style={{ color: 'var(--premium-text-tertiary)' }}>
+            <p className="text-sm font-medium" style={{ color: 'var(--brand-text-muted)' }}>
               {currentIndex + 1} of {sortedPrompts.length}
             </p>
             {currentIndex === sortedPrompts.length - 1 && (
-              <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+              <p className="text-xs" style={{ color: 'var(--brand-text-muted)' }}>
                 Tap → to close
               </p>
             )}
@@ -224,7 +224,7 @@ export function ZenMode({ prompts, onClose, onMarkViewed }: ZenModeProps) {
           <button
             onClick={handleNext}
             className="p-4 rounded-full transition-all hover:bg-[rgba(255,255,255,0.1)]"
-            style={{ color: 'var(--premium-text-secondary)' }}
+            style={{ color: 'var(--brand-text-secondary)' }}
           >
             <ChevronRight className="h-6 w-6" />
           </button>

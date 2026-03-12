@@ -67,10 +67,10 @@ export function TimelineConnectionEvent({
         title: toItem.title,
         content: (
           <div className="p-6">
-            <h2 className="text-xl font-bold mb-4" style={{ color: 'var(--premium-text-primary)' }}>
+            <h2 className="text-xl font-bold mb-4" style={{ color: 'var(--brand-text-primary)' }}>
               {toItem.title}
             </h2>
-            <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
+            <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>
               Click to view full details
             </p>
           </div>
@@ -90,13 +90,13 @@ export function TimelineConnectionEvent({
         className="absolute left-0 top-2 w-3 h-3 rounded-full border-2"
         style={{
           backgroundColor: 'var(--premium-cyan)',
-          borderColor: 'var(--premium-surface-base)'
+          borderColor: 'var(--brand-bg)'
         }}
       />
 
       {/* Connection card */}
       <div
-        className="premium-glass rounded-2xl p-4 cursor-pointer hover:bg-[rgba(255,255,255,0.05)] transition-all"
+        className="premium-glass rounded-2xl p-4 cursor-pointer hover:bg-[var(--glass-surface)] transition-all"
         onClick={handleSplitView}
         style={{
           border: '1px solid rgba(6, 182, 212, 0.2)'
@@ -116,7 +116,7 @@ export function TimelineConnectionEvent({
           >
             {connectionType === 'ai_suggested' ? 'AI Connected' : 'Connected'}
           </span>
-          <span className="text-xs ml-auto" style={{ color: 'var(--premium-text-tertiary)' }}>
+          <span className="text-xs ml-auto" style={{ color: 'var(--brand-text-muted)' }}>
             {formatTime(timestamp)}
           </span>
         </div>
@@ -125,7 +125,7 @@ export function TimelineConnectionEvent({
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold opacity-60">{getItemIcon(fromItem.type)}</span>
-            <span className="text-sm font-medium" style={{ color: 'var(--premium-text-primary)' }}>
+            <span className="text-sm font-medium" style={{ color: 'var(--brand-text-primary)' }}>
               {fromItem.title}
             </span>
           </div>
@@ -150,7 +150,7 @@ export function TimelineConnectionEvent({
 
           <div className="flex items-center gap-2">
             <span className="text-lg">{getItemIcon(toItem.type)}</span>
-            <span className="text-sm font-medium" style={{ color: 'var(--premium-text-primary)' }}>
+            <span className="text-sm font-medium" style={{ color: 'var(--brand-text-primary)' }}>
               {toItem.title}
             </span>
           </div>
@@ -162,7 +162,7 @@ export function TimelineConnectionEvent({
             className="mt-3 pt-3 border-t text-xs italic leading-relaxed"
             style={{
               borderColor: 'rgba(255, 255, 255, 0.1)',
-              color: 'var(--premium-text-secondary)'
+              color: 'var(--brand-text-secondary)'
             }}
           >
             "{reasoning}"

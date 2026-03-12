@@ -182,7 +182,7 @@ export function EveningReview({ todos, onUpdateTodo, onAddTodo, onDeleteTodo, on
 
               <div
                 className="flex items-center gap-3 px-4 py-4 rounded-2xl mb-4"
-                style={{ background: 'var(--premium-surface-1)', border: '1px solid rgba(255,255,255,0.07)' }}
+                style={{ background: 'var(--premium-surface-1)', border: '1px solid var(--glass-surface)' }}
               >
                 <div className="flex-1">
                   <p className="text-[14px] font-medium mb-1" style={{ color: 'rgba(255,255,255,0.7)' }}>
@@ -199,7 +199,7 @@ export function EveningReview({ todos, onUpdateTodo, onAddTodo, onDeleteTodo, on
               {/* Completion bar */}
               <div
                 className="w-full h-2.5 rounded-full overflow-hidden mb-8"
-                style={{ background: 'rgba(255,255,255,0.06)' }}
+                style={{ background: 'var(--glass-surface)' }}
               >
                 <motion.div
                   className="h-full rounded-full"
@@ -272,7 +272,7 @@ export function EveningReview({ todos, onUpdateTodo, onAddTodo, onDeleteTodo, on
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, x: 20, transition: { duration: 0.15 } }}
                         className="px-4 py-3.5 rounded-2xl"
-                        style={{ background: 'var(--premium-surface-1)', border: '1px solid rgba(255,255,255,0.07)' }}
+                        style={{ background: 'var(--premium-surface-1)', border: '1px solid var(--glass-surface)' }}
                       >
                         <p className="text-[14px] font-medium mb-3 truncate" style={{ color: 'rgba(255,255,255,0.7)' }}>
                           {todo.text}
@@ -294,9 +294,9 @@ export function EveningReview({ todos, onUpdateTodo, onAddTodo, onDeleteTodo, on
                             onClick={() => handleSomeday(todo.id)}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-medium transition-all"
                             style={{
-                              background: 'rgba(255,255,255,0.05)',
+                              background: 'var(--glass-surface)',
                               color: 'rgba(255,255,255,0.4)',
-                              border: '1px solid rgba(255,255,255,0.08)',
+                              border: '1px solid var(--glass-surface-hover)',
                             }}
                           >
                             <Archive className="h-3 w-3" />
@@ -320,7 +320,7 @@ export function EveningReview({ todos, onUpdateTodo, onAddTodo, onDeleteTodo, on
                 onClick={advance}
                 className="w-full py-4 rounded-2xl font-bold text-[16px] flex items-center justify-center gap-2"
                 style={{
-                  background: 'rgba(255,255,255,0.07)',
+                  background: 'var(--glass-surface)',
                   color: 'rgba(255,255,255,0.5)',
                   border: '1px solid rgba(255,255,255,0.1)',
                 }}
@@ -405,7 +405,7 @@ export function EveningReview({ todos, onUpdateTodo, onAddTodo, onDeleteTodo, on
                 onClick={advance}
                 className="w-full py-4 rounded-2xl font-bold text-[16px] flex items-center justify-center gap-2"
                 style={{
-                  background: 'rgba(255,255,255,0.07)',
+                  background: 'var(--glass-surface)',
                   color: 'rgba(255,255,255,0.5)',
                   border: '1px solid rgba(255,255,255,0.1)',
                 }}
@@ -443,7 +443,7 @@ export function EveningReview({ todos, onUpdateTodo, onAddTodo, onDeleteTodo, on
                     <div
                       key={todo.id}
                       className="flex items-center gap-3.5 px-4 py-3 rounded-xl"
-                      style={{ background: 'var(--premium-surface-1)', border: '1px solid rgba(255,255,255,0.06)' }}
+                      style={{ background: 'var(--premium-surface-1)', border: '1px solid var(--glass-surface)' }}
                     >
                       <div
                         className="flex-shrink-0 h-[16px] w-[16px] rounded-[5px]"
@@ -568,7 +568,7 @@ export function EveningReview({ todos, onUpdateTodo, onAddTodo, onDeleteTodo, on
                 <div className="w-full text-left space-y-2 mb-8">
                   <div
                     className="flex items-center gap-3 px-4 py-3 rounded-2xl"
-                    style={{ background: 'var(--premium-surface-1)', border: '1px solid rgba(255,255,255,0.06)' }}
+                    style={{ background: 'var(--premium-surface-1)', border: '1px solid var(--glass-surface)' }}
                   >
                     <span className="text-[18px]">✅</span>
                     <p className="text-[14px]" style={{ color: 'rgba(255,255,255,0.55)' }}>
@@ -578,7 +578,7 @@ export function EveningReview({ todos, onUpdateTodo, onAddTodo, onDeleteTodo, on
                   {tomorrowTodos.length > 0 && (
                     <div
                       className="flex items-center gap-3 px-4 py-3 rounded-2xl"
-                      style={{ background: 'var(--premium-surface-1)', border: '1px solid rgba(255,255,255,0.06)' }}
+                      style={{ background: 'var(--premium-surface-1)', border: '1px solid var(--glass-surface)' }}
                     >
                       <span className="text-[18px]">📅</span>
                       <p className="text-[14px]" style={{ color: 'rgba(255,255,255,0.55)' }}>

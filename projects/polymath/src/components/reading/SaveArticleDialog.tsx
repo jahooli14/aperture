@@ -105,7 +105,7 @@ export function SaveArticleDialog({ open, onClose, hideTrigger = false }: SaveAr
       <BottomSheetContent>
         <BottomSheetHeader>
           <div className="flex items-center gap-3 mb-2">
-            <BookmarkPlus className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
+            <BookmarkPlus className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
             <BottomSheetTitle>Save article</BottomSheetTitle>
           </div>
           <BottomSheetDescription>
@@ -119,13 +119,13 @@ export function SaveArticleDialog({ open, onClose, hideTrigger = false }: SaveAr
             <div
               className="flex items-center gap-3 rounded-xl px-4 transition-all duration-200"
               style={{
-                backgroundColor: inputFocused ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.04)',
+                backgroundColor: inputFocused ? 'var(--glass-surface)' : 'var(--glass-surface)',
                 boxShadow: inputFocused
                   ? 'inset 0 0 0 1.5px rgba(99,179,237,0.5), 0 4px 20px rgba(0,0,0,0.2)'
-                  : 'inset 0 0 0 1px rgba(255,255,255,0.08)',
+                  : 'inset 0 0 0 1px var(--glass-surface-hover)',
               }}
             >
-              <LinkIcon className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--premium-blue)' }} />
+              <LinkIcon className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
               <input
                 id="url"
                 type="url"
@@ -138,10 +138,10 @@ export function SaveArticleDialog({ open, onClose, hideTrigger = false }: SaveAr
                 autoFocus
                 autoComplete="off"
                 className="flex-1 h-14 border-0 text-[15px] focus:outline-none focus:ring-0 placeholder:text-[var(--brand-text-primary)]/20 appearance-none"
-                style={{ color: 'var(--premium-text-primary)', backgroundColor: 'transparent' }}
+                style={{ color: 'var(--brand-text-primary)', backgroundColor: 'transparent' }}
               />
             </div>
-            <p className="text-xs mt-2 px-1" style={{ color: 'var(--premium-text-tertiary)' }}>
+            <p className="text-xs mt-2 px-1" style={{ color: 'var(--brand-text-muted)' }}>
               AI will extract the content and find connections
             </p>
           </div>
@@ -156,7 +156,7 @@ export function SaveArticleDialog({ open, onClose, hideTrigger = false }: SaveAr
                 border: '2px solid rgba(59,130,246,0.5)',
                 borderRadius: '4px',
                 boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
-                color: 'var(--premium-blue)',
+                color: 'var(--brand-primary)',
               }}
             >
               {loading ? (

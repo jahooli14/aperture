@@ -177,14 +177,14 @@ export function SmartCaptureBar({
     ? typeMeta.color.replace('0.8)', '0.45)')
     : focused
     ? 'rgba(99,179,237,0.4)'
-    : 'rgba(255,255,255,0.10)'
+    : 'var(--glass-surface-hover)'
 
   return (
     <div className="w-full">
       <div
         className="rounded-2xl transition-all duration-200 overflow-hidden"
         style={{
-          background: 'rgba(255,255,255,0.04)',
+          background: 'var(--glass-surface)',
           backdropFilter: 'blur(24px)',
           boxShadow: focused
             ? `inset 0 0 0 1.5px ${borderColor}, 0 6px 32px rgba(0,0,0,0.4)`
@@ -211,8 +211,8 @@ export function SmartCaptureBar({
                       transition: 'background 0.25s, box-shadow 0.25s',
                     }
                   : {
-                      background: 'rgba(255,255,255,0.06)',
-                      boxShadow: '0 0 0 1px rgba(255,255,255,0.10)',
+                      background: 'var(--glass-surface)',
+                      boxShadow: '0 0 0 1px var(--glass-surface-hover)',
                       transition: 'background 0.25s, box-shadow 0.25s',
                     }
               }
@@ -235,7 +235,7 @@ export function SmartCaptureBar({
             placeholder={placeholder}
             className="flex-1 text-[16px] leading-snug outline-none"
             style={{
-              color: 'var(--premium-text-primary, rgba(255,255,255,0.9))',
+              color: 'var(--brand-text-primary))',
               backgroundColor: 'transparent',
             }}
           />
@@ -342,7 +342,7 @@ export function SmartCaptureBar({
                   <img
                     src={urlPreview.faviconUrl}
                     alt=""
-                    className="h-4 w-4 rounded flex-shrink-0"
+                    className="h-4 w-4 rounded-xl flex-shrink-0"
                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                   />
                 )}

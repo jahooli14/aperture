@@ -157,7 +157,7 @@ export function FocusStream() {
                                     <h3 className="text-xl font-bold text-[var(--brand-text-primary)] aperture-header truncate">
                                         {priorityProject.title}
                                     </h3>
-                                    <span className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border aperture-header" style={{
+                                    <span className="flex-shrink-0 px-2 py-0.5 rounded-xl text-[10px] font-black uppercase tracking-widest border aperture-header" style={{
                                         backgroundColor: `rgba(${theme.rgb}, 0.1)`,
                                         color: theme.textColor,
                                         borderColor: `rgba(${theme.rgb}, 0.3)`
@@ -165,7 +165,7 @@ export function FocusStream() {
                                         Priority
                                     </span>
                                 </div>
-                                <div className="p-4 rounded-xl mt-6 group-hover:bg-[rgba(255,255,255,0.05)] transition-colors" style={{
+                                <div className="p-4 rounded-xl mt-6 group-hover:bg-[var(--glass-surface)] transition-colors" style={{
                                     backgroundColor: `rgba(${theme.rgb}, 0.1)`,
                                     border: `1px solid rgba(${theme.rgb}, 0.2)`
                                 }}>
@@ -207,7 +207,7 @@ export function FocusStream() {
                                     <h3 className="text-xl font-bold text-[var(--brand-text-primary)] aperture-header truncate">
                                         {recentProject.title}
                                     </h3>
-                                    <span className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest flex items-center gap-1 border aperture-header" style={{
+                                    <span className="flex-shrink-0 px-2 py-0.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1 border aperture-header" style={{
                                         backgroundColor: `rgba(${theme.rgb}, 0.1)`,
                                         color: theme.textColor,
                                         borderColor: `rgba(${theme.rgb}, 0.3)`
@@ -215,7 +215,7 @@ export function FocusStream() {
                                         Recent
                                     </span>
                                 </div>
-                                <div className="p-4 rounded-xl mt-6 group-hover:bg-[rgba(255,255,255,0.05)] transition-colors" style={{
+                                <div className="p-4 rounded-xl mt-6 group-hover:bg-[var(--glass-surface)] transition-colors" style={{
                                     backgroundColor: `rgba(${theme.rgb}, 0.1)`,
                                     border: `1px solid rgba(${theme.rgb}, 0.2)`
                                 }}>
@@ -236,7 +236,7 @@ export function FocusStream() {
                             className="p-6 relative overflow-hidden group cursor-pointer aperture-card transition-all duration-300 md:col-span-2 flex flex-col"
                             onClick={() => setShowReviewDeck(true)}
                             onMouseEnter={(e) => {
-                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
+                                e.currentTarget.style.background = 'var(--glass-surface)'
                             }}
                             onMouseLeave={(e) => {
                                 e.currentTarget.style.background = 'var(--brand-glass-bg)'
@@ -248,7 +248,7 @@ export function FocusStream() {
 
                             <div className="relative z-10">
                                 <div className="flex items-center gap-2 mb-4">
-                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest border border-[rgba(255,255,255,0.08)] aperture-header text-[var(--brand-text-muted)] bg-[rgba(255,255,255,0.05)]">
+                                    <span className="px-2 py-0.5 rounded-xl text-[10px] font-bold uppercase tracking-widest border border-[var(--glass-surface-hover)] aperture-header text-[var(--brand-text-muted)] bg-[var(--glass-surface)]">
                                         Review Mode
                                     </span>
                                     <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--brand-text-muted)] aperture-header">
