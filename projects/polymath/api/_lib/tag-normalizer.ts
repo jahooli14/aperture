@@ -130,7 +130,7 @@ export async function normalizeTags(rawTags: string[]): Promise<string[]> {
  */
 async function generateEmbedding(text: string): Promise<number[]> {
   const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_EMBEDDING })
-  const result = await model.embedContent({ content: { role: 'user', parts: [{ text }] }, outputDimensionality: MODELS.DEFAULT_EMBEDDING_DIMS })
+  const result = await model.embedContent({ content: { role: 'user', parts: [{ text }] } })
   return result.embedding.values
 }
 

@@ -539,7 +539,7 @@ export function TodosPage() {
             <StandardView
               todos={viewTodos}
               areas={areas}
-              showDate={activeView !== 'today'}
+              showDate={false}
               showArea={true}
               inProgressIds={inProgressIds}
               onToggle={handleToggle}
@@ -946,7 +946,6 @@ function MorningBanner({ unscheduledCount }: { unscheduledCount: number }) {
           background: 'rgba(99,179,237,0.06)',
           borderLeft: '4px solid rgba(99,179,237,0.6)',
           border: '1.5px solid rgba(99,179,237,0.2)',
-          borderLeft: '4px solid rgba(99,179,237,0.6)',
           boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
         }}
       >
