@@ -122,22 +122,12 @@ export function VoiceFAB({
   const [showListDialog, setShowListDialog] = useState(false)
   const { addTodo, areas } = useTodoStore()
 
-  const [isStripOpen, setIsStripOpen] = useState(false)
-  const [activeOption, setActiveOption] = useState<StripOptionId | null>(null)
-  const [fabRect, setFabRect] = useState<{ bottom: number; right: number; size: number }>({
-    bottom: FAB_BOTTOM, right: FAB_RIGHT, size: FAB_SIZE
-  })
-
+  const [shouldStopRecording, setShouldStopRecording] = useState(false)
+  const [isLongPressRecording, setIsLongPressRecording] = useState(false)
+  const fabRef = useRef<HTMLButtonElement>(null)
   const { isOnline } = useOnlineStatus()
-
   const pressTimerRef = useRef<NodeJS.Timeout | null>(null)
   const pressStartTimeRef = useRef<number>(0)
-  const isLongPressRef = useRef<boolean>(false)
-
-  // Refs so event handlers always read fresh values without closure staleness
-  const isStripOpenRef = useRef(false)
-  const activeOptionRef = useRef<StripOptionId | null>(null)
-  const fabRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     const handleOpenVoiceCapture = () => {
@@ -160,57 +150,34 @@ export function VoiceFAB({
     setIsVoiceOpen(false)
   }
 
-  const closeStrip = useCallback(() => {
-    isStripOpenRef.current = false
-    activeOptionRef.current = null
-    setIsStripOpen(false)
-    setActiveOption(null)
-    isLongPressRef.current = false
+  const closeVoice = useCallback(() => {
+    setIsVoiceOpen(false)
+    setShouldStopRecording(false)
+    setIsLongPressRecording(false)
   }, [])
-
-  const executeOption = useCallback((option: StripOptionId | null) => {
-    closeStrip()
-    if (option === 'todo') setShowTodoQuickAdd(true)
-    else if (option === 'thought') setShowThoughtDialog(true)
-    else if (option === 'project') setShowProjectDialog(true)
-    else if (option === 'article') setShowArticleDialog(true)
-    // null = released on FAB with no slide  do nothing (prevents accidental recording)
-  }, [closeStrip])
 
   // --- Press handlers ---
 
   const onStart = useCallback((e: React.PointerEvent) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return
-    isLongPressRef.current = false
+    setIsLongPressRecording(false)
     pressStartTimeRef.current = Date.now()
     if (pressTimerRef.current) clearTimeout(pressTimerRef.current)
+    
     pressTimerRef.current = setTimeout(() => {
-      isLongPressRef.current = true
+      setIsLongPressRecording(true)
+      setShouldStopRecording(false)
       haptic.medium()
-      // Measure actual FAB position so pills align regardless of safe-area-inset
-      if (fabRef.current) {
-        const rect = fabRef.current.getBoundingClientRect()
-        setFabRect({
-          bottom: window.innerHeight - rect.bottom,
-          right: window.innerWidth - rect.right,
-          size: rect.width,
-        })
-      }
-      isStripOpenRef.current = true
-      setIsStripOpen(true)
+      setIsVoiceOpen(true)
     }, LONG_PRESS_DELAY)
   }, [])
 
   const onMove = useCallback((e: React.PointerEvent) => {
-    if (!isStripOpenRef.current || !fabRef.current) return
-    const rect = fabRef.current.getBoundingClientRect()
-    const fabCenterY = rect.top + rect.height / 2
-    const dy = e.clientY - fabCenterY
-    const detected = getOptionForDy(dy)
-    if (detected !== activeOptionRef.current) {
-      if (detected !== null) haptic.light()
-      activeOptionRef.current = detected
-      setActiveOption(detected)
+    // We can add swipe-to-cancel logic here if needed, but for now just stop the press timer if they move too far
+    if (pressTimerRef.current) {
+      if (Math.abs(e.movementX) > 10 || Math.abs(e.movementY) > 10) {
+        // Optional: cancel long press if they swipe away
+      }
     }
   }, [])
 
@@ -221,123 +188,42 @@ export function VoiceFAB({
     }
     const duration = Date.now() - pressStartTimeRef.current
 
-    if (isStripOpenRef.current) {
+    if (isLongPressRecording) {
       haptic.light()
-      executeOption(activeOptionRef.current)
+      setShouldStopRecording(true)
+      // We don't close voice open here, it will close when transcript is ready
       return
     }
 
-    // Short tap  voice capture
-    if (duration < LONG_PRESS_DELAY && !isLongPressRef.current) {
-      if (onTap) {
-        const handled = onTap()
-        if (handled) return
-      }
+    // Short tap - open menu
+    if (duration < LONG_PRESS_DELAY) {
       haptic.light()
-      setIsVoiceOpen(true)
+      setIsMenuOpen(true)
     }
-
-    isLongPressRef.current = false
-  }, [onTap, executeOption])
+  }, [isLongPressRecording])
 
   const onLeave = useCallback(() => {
     if (pressTimerRef.current) {
       clearTimeout(pressTimerRef.current)
       pressTimerRef.current = null
     }
-    if (!isStripOpenRef.current) {
-      isLongPressRef.current = false
+    // If they leave while long-press recording, we stop it
+    if (isLongPressRecording) {
+      setShouldStopRecording(true)
     }
-  }, [])
+  }, [isLongPressRecording])
 
   const onSystemCancel = useCallback(() => {
     if (pressTimerRef.current) {
       clearTimeout(pressTimerRef.current)
       pressTimerRef.current = null
     }
-    closeStrip()
-  }, [closeStrip])
+    setIsLongPressRecording(false)
+    setIsVoiceOpen(false)
+  }, [])
 
   // --- Pill positions (measured from actual FAB rect, so they work with any safe-area-inset) ---
-  const pillRight = fabRect.right
-  const pillBottoms = STRIP_OPTIONS.map((opt) =>
-    fabRect.bottom + fabRect.size / 2 + opt.centerOffsetUp - PILL_H / 2
-  )
-
-  // --- Render ---
-
-  const stripOverlay = createPortal(
-    <AnimatePresence>
-      {isStripOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            key="strip-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-[24990]"
-            style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}
-            onPointerDown={closeStrip}
-          />
-
-          {/* Option pills  pointer-events:none; touch stays on FAB */}
-          {STRIP_OPTIONS.map((opt, i) => {
-            const isActive = activeOption === opt.id
-            return (
-              <motion.div
-                key={opt.id}
-                initial={{ opacity: 0, x: 16, scale: 0.88 }}
-                animate={{ opacity: 1, x: 0, scale: 1 }}
-                exit={{ opacity: 0, x: 16, scale: 0.88 }}
-                transition={{ type: 'spring', damping: 22, stiffness: 420, delay: i * 0.04 }}
-                className="fixed z-[25000] flex items-center gap-2.5 rounded-2xl select-none"
-                style={{
-                  right: pillRight,
-                  bottom: pillBottoms[i],
-                  height: PILL_H,
-                  minWidth: 130,
-                  padding: '0 16px',
-                  background: isActive ? opt.activeColor : opt.color,
-                  border: `1px solid ${opt.border}`,
-                  backdropFilter: 'blur(20px)',
-                  WebkitBackdropFilter: 'blur(20px)',
-                  boxShadow: isActive
-                    ? `0 0 20px ${opt.glow}, 0 4px 16px rgba(0,0,0,0.4)`
-                    : '0 2px 12px rgba(0,0,0,0.3)',
-                  transform: isActive ? 'scale(1.06)' : 'scale(1)',
-                  transition: 'transform 0.12s ease, background 0.12s ease, box-shadow 0.12s ease',
-                  pointerEvents: 'none',
-                }}
-              >
-                <opt.icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-[var(--brand-text-primary)]' : 'text-[var(--brand-text-primary)]/75')} />
-                <span className={cn('text-sm font-bold tracking-tight', isActive ? 'text-[var(--brand-text-primary)]' : 'text-[var(--brand-text-primary)]/75')}>
-                  {opt.label}
-                </span>
-              </motion.div>
-            )
-          })}
-
-          {/* Hint label beneath the FAB */}
-          <motion.p
-            key="strip-hint"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ delay: 0.15 }}
-            className="fixed z-[24995] pointer-events-none text-center text-[9px] font-black uppercase tracking-[0.2em] text-[var(--brand-text-primary)]/40"
-            style={{ bottom: fabRect.bottom - 20, right: fabRect.right - 8, width: fabRect.size + 16 }}
-          >
-            {activeOption
-              ? STRIP_OPTIONS.find(o => o.id === activeOption)?.label
-              : 'Slide up'}
-          </motion.p>
-        </>
-      )}
-    </AnimatePresence>,
-    document.body
-  )
+  const stripOverlay = null; // Removed strip menu
 
   const fabButton = createPortal(
     <motion.button
@@ -349,12 +235,8 @@ export function VoiceFAB({
         scale: (hidden || isMenuOpen) ? 0 : 1,
         opacity: (hidden || isMenuOpen) ? 0 : 1,
         pointerEvents: (hidden || isMenuOpen) ? 'none' : 'auto',
-        backgroundColor: isStripOpen
-          ? (activeOption ? 'var(--glass-surface)' : 'var(--glass-surface-hover)')
-          : 'var(--glass-surface)',
-        borderColor: isStripOpen && !activeOption
-          ? 'rgba(255, 255, 255, 0.2)'
-          : 'rgba(255, 255, 255, 0.1)',
+        backgroundColor: 'var(--brand-primary)',
+        borderColor: 'rgba(255, 255, 255, 0.1)',
       }}
       transition={{ type: 'spring', damping: 20, stiffness: 300 }}
       onPointerDown={onStart}
@@ -373,22 +255,11 @@ export function VoiceFAB({
       style={{
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
-        boxShadow: isStripOpen
-          ? '0 8px 32px rgba(0,0,0,0.5), inset 0 0 0 1px var(--glass-surface-hover)'
-          : '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 0 10px var(--glass-surface)',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 0 10px var(--glass-surface)',
       }}
       aria-label="Create  tap to record, hold to choose type"
     >
-      {isStripOpen ? (
-        <motion.div
-          animate={{ rotate: activeOption ? 45 : 0 }}
-          transition={{ duration: 0.15 }}
-        >
-          <Plus className={cn('h-6 w-6', activeOption ? 'text-[var(--brand-text-primary)]' : 'text-brand-text-muted')} />
-        </motion.div>
-      ) : (
-        <Plus className="h-6 w-6 text-zinc-300 transition-transform group-hover:rotate-90 group-hover:text-[var(--brand-text-primary)]" />
-      )}
+      <Plus className="h-6 w-6 text-white transition-transform group-hover:rotate-90" />
       <div className="absolute inset-0 bg-[var(--glass-surface)] opacity-0 group-hover:opacity-100 transition-opacity" />
     </motion.button>,
     document.body
@@ -459,6 +330,7 @@ export function VoiceFAB({
                       maxDuration={maxDuration}
                       autoSubmit={true}
                       autoStart={true}
+                      shouldStop={shouldStopRecording}
                     />
                   </div>
                 </div>

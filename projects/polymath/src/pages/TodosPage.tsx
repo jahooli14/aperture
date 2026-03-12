@@ -1111,7 +1111,7 @@ function LogbookView({
 
 const EMPTY_COPY: Record<TodoView, { headline: string; sub: string; Icon: React.ElementType }> = {
   inbox:    { Icon: CheckCheck,    headline: 'Inbox clear',        sub: 'Everything has a place. Add tasks or give them a date.' },
-  today:    { Icon: Zap,      headline: 'Today is clear',     sub: 'Add something for today, or check what\'s upcoming.' },
+  today:    { Icon: Sun,      headline: 'Today is clear',     sub: 'Add something for today, or check what\'s upcoming.' },
   upcoming: { Icon: CalendarCheck, headline: 'Nothing scheduled',  sub: 'Give a task a date and it will appear here.' },
   someday:  { Icon: Layers,        headline: 'Someday is empty',   sub: 'Park ideas here  type "someday" in any task.' },
   logbook:  { Icon: BookMarked,    headline: 'Nothing done yet',   sub: 'Completed tasks appear here at the end of the day.' },
