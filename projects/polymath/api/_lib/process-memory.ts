@@ -278,8 +278,8 @@ Return only valid JSON.`
  * Generate embedding using Gemini
  */
 async function generateEmbedding(text: string): Promise<number[]> {
-  const model = genAI.getGenerativeModel({ model: 'text-embedding-004' })
-  const result = await model.embedContent(text)
+  const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_EMBEDDING })
+  const result = await model.embedContent({ content: { parts: [{ text }] }, outputDimensionality: MODELS.DEFAULT_EMBEDDING_DIMS })
   return result.embedding.values
 }
 
