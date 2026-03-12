@@ -744,8 +744,8 @@ Be specific: mention actual shared concepts. Do not say "both are about X".`
       let vector = embedding
       if (!vector && content) {
         try {
-          const model = genAI.getGenerativeModel({ model: 'text-embedding-004' })
-          const result = await model.embedContent(content)
+          const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_EMBEDDING })
+          const result = await model.embedContent({ content: { parts: [{ text: content }] }, outputDimensionality: MODELS.DEFAULT_EMBEDDING_DIMS })
           vector = result.embedding.values
         } catch (embedError) {
           console.error('[connections] Embedding generation failed:', embedError)
