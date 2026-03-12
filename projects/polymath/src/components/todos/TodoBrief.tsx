@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, X, Plus, ChevronDown, ChevronUp } from 'lucide-react'
 import { useTodoStore } from '../../stores/useTodoStore'
-import type { DailyBrief } from '../../../api/todo-brief'
+import type { DailyBrief } from '../../../api/todos'
 
 const BRIEF_DISMISS_KEY = 'polymath-brief-dismissed'
 
@@ -34,7 +34,7 @@ export function TodoBrief() {
     const fetchBrief = async () => {
       setLoading(true)
       try {
-        const res = await fetch('/api/todo-brief')
+        const res = await fetch('/api/todos?brief=true')
         if (!res.ok) throw new Error('Failed to fetch brief')
         const data: DailyBrief = await res.json()
         setBrief(data)

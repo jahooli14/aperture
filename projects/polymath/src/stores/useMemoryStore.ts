@@ -60,7 +60,7 @@ async function pollProcessing(memoryId: string) {
           // Fire steering after a short delay so ExtractionSummary shows first
           setTimeout(async () => {
             try {
-              const steerRes = await fetch('/api/steer', {
+              const steerRes = await fetch('/api/memories?action=steer', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ memory_id: memoryId }),

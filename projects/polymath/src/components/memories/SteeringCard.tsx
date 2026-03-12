@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowDown, Zap, GitBranch, CornerDownRight, CheckSquare, X, Pin, Plus } from 'lucide-react'
-import type { SteeringMove, SteeringResult } from '../../../api/steer'
+import type { SteeringMove, SteeringResult } from '../../../api/memories'
 import { useTodoStore } from '../../stores/useTodoStore'
 import { useMemoryStore } from '../../stores/useMemoryStore'
 import { useToast } from '../ui/toast'
