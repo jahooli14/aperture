@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { RefreshCw, Plus, ChevronDown, ChevronUp, Zap } from 'lucide-react'
 import { useMultiPerspectiveAI, type PerspectiveSuggestion } from '../../hooks/useMultiPerspectiveAI'
+import { MarkdownRenderer } from '../ui/MarkdownRenderer'
 import type { Project } from '../../types'
 
 interface MultiPerspectiveSuggestionsProps {
@@ -94,9 +95,11 @@ function PerspectiveCard({
             )}
           </div>
 
-          <p className="text-sm leading-relaxed aperture-body whitespace-pre-wrap" style={{ color: "var(--brand-primary)" }}>
-            {perspective.suggestion}
-          </p>
+          <MarkdownRenderer
+            content={perspective.suggestion}
+            className="text-sm aperture-body"
+            style={{ color: "var(--brand-primary)" }}
+          />
         </div>
       </div>
 
@@ -293,15 +296,17 @@ export function MultiPerspectiveSuggestions({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
-            className="mt-1 px-4 py-3 rounded-xl text-xs italic whitespace-pre-wrap"
+            className="mt-1 px-4 py-3 rounded-xl"
             style={{
               background: 'rgba(139,92,246,0.08)',
               border: '1px solid rgba(139,92,246,0.15)',
-              color: 'var(--brand-text-secondary)'
             }}
           >
-            <span className="font-bold not-italic" style={{ color: "var(--brand-primary)" }}>Council synthesis: </span>
-            {result.synthesized}
+            <MarkdownRenderer
+              content={`**Council synthesis:** ${result.synthesized}`}
+              className="text-xs italic"
+              style={{ color: 'var(--brand-text-secondary)' }}
+            />
           </motion.div>
         )}
       </div>

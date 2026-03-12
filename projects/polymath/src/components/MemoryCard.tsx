@@ -12,6 +12,7 @@ import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { MemoryDetailModal } from './memories/MemoryDetailModal'
 import { useConfirmDialog } from './ui/confirm-dialog'
 import { motion, AnimatePresence } from 'framer-motion'
+import { MarkdownRenderer } from './ui/MarkdownRenderer'
 
 // Memory type badge config
 const MEMORY_TYPE_CONFIG = {
@@ -318,13 +319,11 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
           </div>
         )}
 
-        <motion.p
-          layout="position"
-          className={`text-sm leading-relaxed mb-3 whitespace-pre-wrap ${expanded ? '' : 'line-clamp-6'}`}
+        <MarkdownRenderer
+          content={memory.body}
+          className={`text-sm mb-3 ${expanded ? '' : 'line-clamp-6'}`}
           style={{ color: "var(--brand-primary)" }}
-        >
-          {memory.body}
-        </motion.p>
+        />
 
         {/* Attached Images */}
         {memory.image_urls && memory.image_urls.length > 0 && (

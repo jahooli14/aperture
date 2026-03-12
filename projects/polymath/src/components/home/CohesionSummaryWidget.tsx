@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Brain, Zap, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { MarkdownRenderer } from '../ui/MarkdownRenderer';
 
 interface Flow {
   title: string;
@@ -66,9 +67,12 @@ export function CohesionSummaryWidget() {
             <h2 className="text-sm font-bold uppercase racking-wides ext-indigo-300">Cognitive State</h2>
           </div>
 
-          <p className="text-xl md:text-2xl font-medium text-[var(--brand-text-primary)]/90 leading-relaxed mb-8 max-w-4xl whitespace-pre-wrap">
-            {summary.overview}
-          </p>
+          <div className="mb-8 max-w-4xl text-xl md:text-2xl font-medium text-[var(--brand-text-primary)]/90 leading-relaxed">
+            <MarkdownRenderer
+              content={summary.overview}
+              className="text-xl md:text-2xl font-medium"
+            />
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {summary.flows.map((flow, idx) => (

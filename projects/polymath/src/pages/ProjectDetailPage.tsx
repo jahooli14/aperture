@@ -8,6 +8,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, Loader2, MoreVertical, Plus, Check, X, GripVertical, ChevronDown, Zap, Target, Star } from 'lucide-react'
 import { StudioTab } from '../components/projects/StudioTab'
+import { MarkdownRenderer } from '../components/ui/MarkdownRenderer'
 import { useProjectStore } from '../stores/useProjectStore'
 import { NextActionCard } from '../components/projects/NextActionCard'
 import { ProjectActivityStream } from '../components/projects/ProjectActivityStream'
@@ -908,9 +909,12 @@ export function ProjectDetailPage() {
                             autoFocus
                           />
                         ) : (
-                          <p className="text-xl sm:text-2xl font-medium text-[var(--brand-text-primary)]/90 leading-relaxed italic font-serif text-center whitespace-pre-wrap">
-                            "{project.description || 'Add a vision for this project...'}"
-                          </p>
+                          <div className="text-xl sm:text-2xl font-medium text-[var(--brand-text-primary)]/90 italic font-serif text-center">
+                            <MarkdownRenderer
+                              content={project.description ? `"${project.description}"` : '"Add a vision for this project..."'}
+                              className="text-center"
+                            />
+                          </div>
                         )}
                       </div>
 
@@ -941,9 +945,10 @@ export function ProjectDetailPage() {
                                 autoFocus
                               />
                             ) : (
-                              <p className="text-sm text-[var(--brand-text-primary)]/50 leading-relaxed max-w-2xl mx-auto text-center font-serif italic">
-                                 {project.metadata?.motivation || 'What drives this project?'}
-                              </p>
+                               <MarkdownRenderer
+                                 content={project.metadata?.motivation || 'What drives this project?'}
+                                 className="text-sm text-[var(--brand-text-primary)]/50 font-serif italic text-center"
+                               />
                             )}
                           </div>
                         </div>
@@ -1002,9 +1007,13 @@ export function ProjectDetailPage() {
                       </div>
                     </div>
                   ) : (
-                    <p className="text-lg text-[var(--brand-text-primary)]/90 leading-relaxed font-medium whitespace-pre-wrap">
-                      {project.metadata?.end_goal || <span className="text-[var(--brand-text-primary)]/30 italic">Define the clear target for completion...</span>}
-                    </p>
+                    <div className="text-lg text-[var(--brand-text-primary)]/90 font-medium leading-relaxed">
+                      {project.metadata?.end_goal ? (
+                        <MarkdownRenderer content={project.metadata.end_goal} />
+                      ) : (
+                        <span className="text-[var(--brand-text-primary)]/30 italic">Define the clear target for completion...</span>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
