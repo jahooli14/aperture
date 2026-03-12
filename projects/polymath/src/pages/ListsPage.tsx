@@ -240,10 +240,10 @@ export default function ListsPage() {
     }
 
     return (
-        <div className="min-h-screen pb-32 pt-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto aperture-shelf overflow-hidden">
+        <div className="min-h-screen pb-32 pt-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto aperture-shelf overflow-hidden">
             <div className="flex items-center justify-between mb-8">
-                <div>
-                    <h1 className="text-3xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
+                <div className="flex flex-col gap-2">
+                    <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] leading-none">
                         your <span className="text-brand-primary">collections</span>
                     </h1>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mt-1">Curate your existence.</p>

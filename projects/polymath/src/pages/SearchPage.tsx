@@ -309,52 +309,20 @@ export function SearchPage() {
       {/* Subtle Background Effect */}
       <SubtleBackground />
 
-      {/* Fixed Header Bar */}
-      <div
-        className="fixed top-0 left-0 right-0 z-40 border-b-2 border-[var(--glass-surface-hover)]"
-        style={{
-          backgroundColor: '#0a0f1a'
-        }}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Search className="h-7 w-7" style={{ color: 'var(--brand-primary)', opacity: 0.7 }} />
-            <h1 className="text-2xl sm:text-3xl" style={{
-              fontWeight: 600,
-              letterSpacing: '-0.04em',
-              color: 'var(--brand-text-secondary)',
-              opacity: 0.7
-            }}>
-              Search
-            </h1>
-          </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-6">
+          <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
+            your <span className="text-brand-primary">knowledge</span>
+          </h1>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mt-1">Search memories, projects, and articles.</p>
         </div>
-      </div>
 
-      <div className="min-h-screen pb-24" style={{ paddingTop: '5.5rem' }}>
-        {/* Header Section */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-          <div className="p-6 rounded-lg" style={{
-            background: 'var(--brand-glass-bg)',
-            border: '2px solid var(--glass-surface-hover)',
-            boxShadow: '4px 4px 0 rgba(0,0,0,0.5)'
-          }}>
-            <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
-              Search <span style={{ color: "var(--brand-primary)" }}>everything</span>
-            </h2>
-            <p className="mt-2 text-lg" style={{ color: "var(--brand-primary)" }}>
-              Find memories, projects, articles, and suggestions instantly
-            </p>
-          </div>
-        </section>
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen pb-24">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
           {/* Search Input */}
-          <div className="p-4 rounded-lg mb-6" style={{
+          <div className="p-4 rounded-2xl mb-6 relative overflow-hidden premium-glass shadow-2xl" style={{
             background: 'var(--brand-glass-bg)',
             border: '2px solid var(--glass-surface-hover)',
-            boxShadow: '4px 4px 0 rgba(0,0,0,0.5)'
           }}>
             <form onSubmit={handleTextSearch} className="flex gap-2">
               <div className="flex-1 relative">

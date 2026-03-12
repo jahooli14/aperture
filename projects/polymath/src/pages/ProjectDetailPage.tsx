@@ -563,212 +563,108 @@ export function ProjectDetailPage() {
   return (
     <div className="min-h-screen pb-24 relative" style={{ backgroundColor: 'var(--brand-bg)' }}>
       <SubtleBackground />
-      {/* Sticky Header */}
-      <div className="sticky top-0 z-40">
-        {/* Sync Progress Indicator */}
-        <AnimatePresence>
-          {isUpdating && (
-            <motion.div
-              initial={{ scaleX: 0, opacity: 0 }}
-              animate={{ scaleX: 1, opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 via-sky-400 to-blue-500 origin-left z-50 overflow-hidden"
-            >
-              <motion.div
-                animate={{ x: ['-100%', '100%'] }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-                className="w-full h-full bg-white/20"
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
-          <div className="flex items-center gap-3">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-10 pb-6 flex flex-col gap-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
             <button
               onClick={() => navigate('/projects')}
-              className="h-10 w-10 flex items-center justify-center rounded-full transition-colors touch-manipulation"
+              className="h-12 w-12 flex items-center justify-center rounded-xl bg-[var(--glass-surface)] border border-white/10 transition-all hover:scale-105"
               style={{ color: "var(--brand-primary)" }}
               aria-label="Back to projects"
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-6 w-6" />
             </button>
-
-            <div className="flex-1 min-w-0">
-              {editingTitle ? (
-                <div className="flex items-center gap-2">
-                  <input
-                    ref={titleInputRef}
-                    type="text"
-                    value={tempTitle}
-                    onChange={(e) => setTempTitle(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') saveTitle()
-                      if (e.key === 'Escape') cancelEdit()
-                    }}
-                    className="flex-1 text-xl font-bold bg-transparent outline-none"
-                    style={{ color: "var(--brand-primary)" }}
-                  />
-                  <button onClick={saveTitle} className="p-1 rounded-xl hover:bg-[rgba(255,255,255,0.1)]">
-                    <Check className="h-5 w-5" style={{ color: "var(--brand-primary)" }} />
-                  </button>
-                  <button onClick={cancelEdit} className="p-1 rounded-xl hover:bg-[rgba(255,255,255,0.1)]">
-                    <X className="h-5 w-5" style={{ color: "var(--brand-primary)" }} />
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  <h1
-                    className="text-xl font-bold truncate cursor-pointer hover:opacity-70 transition-opacity"
-                    style={{ color: "var(--brand-primary)" }}
-                    onClick={startEditTitle}
-                    title="Click to edit"
-                  >
-                    {project.title}
-                  </h1>
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              {/* Category Picker */}
-              <div className="relative">
-                <button
-                  onClick={() => setShowCategoryMenu(!showCategoryMenu)}
-                  className="px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs font-medium transition-all hover:opacity-80"
-                  style={{
-                    background: 'var(--glass-surface)',
-                    color: 'var(--brand-text-secondary)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)'
-                  }}
-                  title="Change project category"
-                >
-                  <span>{project.type || 'Uncategorized'}</span>
-                  <ChevronDown className="h-3 w-3" />
-                </button>
-
-                {showCategoryMenu && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-10"
-                      onClick={() => setShowCategoryMenu(false)}
-                    />
-                    <div className="absolute right-0 mt-2 w-40 rounded-xl py-1 z-20"
-                      style={{
-                        background: 'rgba(15, 24, 41, 0.9)',
-                        border: '1px solid rgba(59, 130, 246, 0.3)'
-                      }}
-                    >
-                      {['Writing', 'Tech', 'Art', 'Music', 'Business', 'Creative'].map((cat) => (
-                        <button
-                          key={cat}
-                          onClick={() => handleCategoryChange(cat)}
-                          className="w-full px-4 py-2 text-left text-xs font-medium transition-colors hover:opacity-80"
-                          style={{
-                            color: project.type === cat ? 'var(--brand-primary)' : 'var(--brand-text-secondary)',
-                            backgroundColor: project.type === cat ? 'rgba(59, 130, 246, 0.1)' : 'transparent'
-                          }}
-                        >
-                          {cat}
-                        </button>
-                      ))}
-                    </div>
-                  </>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="px-2 py-0.5 rounded-md bg-brand-primary/10 border border-brand-primary/20 text-[10px] font-black uppercase tracking-widest text-brand-primary">
+                  Project Detail
+                </span>
+                {project.is_priority && (
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-[10px] font-black uppercase tracking-widest text-amber-500">
+                    <Star className="h-2.5 w-2.5 fill-current" />
+                    Priority
+                  </span>
                 )}
               </div>
-
-              {/* Status Toggle (Complete/Active only) */}
-              <button
-                onClick={() => handleStatusChange(project.status === 'completed' ? 'active' : 'completed')}
-                className={`px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs font-medium transition-all hover:opacity-80 ${project.status === 'completed'
-                  ? 'bg-brand-primary/20 text-brand-text-secondary border-green-500/30'
-                  : 'bg-[var(--brand-glass-bg)] text-[var(--brand-text-secondary)] border-slate-700/50'
-                  }`}
-                style={{ border: '1px solid' }}
-                title={project.status === 'completed' ? 'Mark as Active' : 'Mark as Completed'}
-              >
-                {project.status === 'completed' ? (
-                  <>
-                    <Check className="h-3 w-3" />
-                    <span>Done</span>
-                  </>
-                ) : (
-                  <span>Mark Done</span>
-                )}
-              </button>
-
-              {/* Priority Toggle */}
-              <button
-                onClick={() => setPriority(project.id)}
-                className={`h-10 w-10 flex items-center justify-center rounded-full transition-all touch-manipulation ${
-                  project.is_priority
-                    ? 'bg-brand-primary/20 hover:bg-brand-primary/30'
-                    : 'hover:bg-[rgba(255,255,255,0.1)]'
-                }`}
-                title={project.is_priority ? 'Remove from priority' : 'Set as priority'}
-                aria-label={project.is_priority ? 'Remove from priority' : 'Set as priority'}
-              >
-                <Star
-                  className="h-5 w-5 transition-colors"
-                  style={{
-                    color: project.is_priority ? '#f59e0b' : 'var(--brand-text-secondary)',
-                    fill: project.is_priority ? '#f59e0b' : 'none'
-                  }}
-                />
-              </button>
-
-              {/* Pin Button */}
-              <PinButton
-                type="project"
-                id={project.id}
-                title={project.title}
-                currentId={id}
-                contentVersion={tasks.length}
-                content={pinnedContent}
-              />
-
-              <button
-                onClick={() => setShowMenu(!showMenu)}
-                className="h-10 w-10 flex items-center justify-center rounded-full transition-colors touch-manipulation"
-                style={{ color: "var(--brand-primary)" }}
-                aria-label="More options"
-              >
-                <MoreVertical className="h-5 w-5" />
-              </button>
-
-              {showMenu && (
-                <>
-                  <div
-                    className="fixed inset-0 z-10"
-                    onClick={() => setShowMenu(false)}
-                  />
-                  <div className="absolute right-0 mt-2 w-48 rounded-xl py-1 z-20">
-                    <button
-                      onClick={() => {
-                        setShowMenu(false)
-                        handleDelete()
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm transition-colors hover:bg-red-50"
-                      style={{ color: "var(--brand-primary)" }}
-                    >
-                      Delete Project
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowMenu(false)
-                        setShowEditDialog(true)
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm transition-colors hover:bg-[rgba(255,255,255,0.1)]"
-                      style={{ color: "var(--brand-primary)" }}
-                    >
-                      Edit Project Details
-                    </button>
-                  </div>
-                </>
-              )}
+              <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] leading-none">
+                {project.title}
+              </h1>
             </div>
           </div>
 
+          <div className="flex items-center gap-2">
+            <PinButton
+              type="project"
+              id={project.id}
+              title={project.title}
+              currentId={id}
+              contentVersion={tasks.length}
+              content={pinnedContent}
+            />
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              className="h-10 w-10 flex items-center justify-center rounded-xl bg-[var(--glass-surface)] border border-white/10 transition-all"
+              style={{ color: "var(--brand-primary)" }}
+              aria-label="More options"
+            >
+              <MoreVertical className="h-5 w-5" />
+            </button>
+
+            {showMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-50"
+                  onClick={() => setShowMenu(false)}
+                />
+                <div className="absolute right-0 top-full mt-2 w-48 rounded-xl p-1 z-[60] premium-glass border border-white/10 shadow-2xl">
+                  <button
+                    onClick={() => {
+                      setShowMenu(false)
+                      setShowEditDialog(true)
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm font-bold uppercase tracking-wide transition-colors hover:bg-white/5 rounded-lg"
+                    style={{ color: "var(--brand-primary)" }}
+                  >
+                    Edit Details
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowMenu(false)
+                      handleDelete()
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm font-bold uppercase tracking-wide transition-colors hover:bg-red-500/10 rounded-lg text-red-400"
+                  >
+                    Delete Project
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Status & Meta Bar */}
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--glass-surface)] border border-white/5">
+            <Target className="h-3.5 w-3.5 text-brand-primary" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-brand-primary">{project.status}</span>
+          </div>
+
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--glass-surface)] border border-white/5">
+            <span className="text-[10px] font-black uppercase tracking-widest text-brand-text-muted">{project.type || 'Uncategorized'}</span>
+          </div>
+
+          <div className="flex-1" />
+
+          <button
+            onClick={() => handleStatusChange(project.status === 'completed' ? 'active' : 'completed')}
+            className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+              project.status === 'completed'
+                ? 'bg-brand-primary/10 border-brand-primary/30 text-brand-primary'
+                : 'bg-white/5 border-white/10 text-brand-text-secondary hover:border-brand-primary/50'
+            }`}
+          >
+            {project.status === 'completed' ? 'Mark Active' : 'Mark Done'}
+          </button>
         </div>
       </div>
 

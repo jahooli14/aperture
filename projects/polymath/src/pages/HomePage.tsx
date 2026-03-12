@@ -958,6 +958,11 @@ export function HomePage() {
         {/* 2b. AI COUNCIL  Multi-Perspective Next-Step Suggestions */}
         {(priorityProject || recentProject) && (
           <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 aperture-shelf">
+            <div className="mb-0">
+              <h2 className="section-header">
+                council of <span>advisors</span>
+              </h2>
+            </div>
             <MultiPerspectiveSuggestions
               project={(priorityProject || recentProject)!}
               onAddTodo={async (text) => {

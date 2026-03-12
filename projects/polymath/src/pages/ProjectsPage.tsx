@@ -176,18 +176,28 @@ export function ProjectsPage() {
     <>
       <SubtleBackground />
       <div className="min-h-screen">
-        {/* Header */}
-        <div className="fixed top-0 left-0 right-0 z-40 border-b-2 border-[var(--glass-surface-hover)]" style={{
-          backgroundColor: '#0a0f1a'
-        }}>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
-            <div className="flex items-center" style={{
-              color: 'var(--brand-primary)',
-              opacity: 0.7
-            }}>
-              <Layers className="h-7 w-7" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-6 flex flex-col gap-2">
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
+                your <span className="text-brand-primary">projects</span>
+              </h1>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mt-1">Building the future, one node at a time.</p>
             </div>
+            <div className="flex items-center gap-2">
+              <CreateProjectDialog />
+              <button
+                onClick={() => navigate('/search')}
+                className="h-10 w-10 rounded-xl flex items-center justify-center transition-all bg-[var(--glass-surface)] border border-white/10"
+                style={{ color: "var(--brand-primary)" }}
+                title="Search everything"
+              >
+                <Search className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
 
+          <div className="flex items-center gap-3">
             {/* Filter Tabs */}
             <PremiumTabs
               tabs={[
@@ -202,24 +212,11 @@ export function ProjectsPage() {
               onChange={(tabId) => setFilter(tabId as typeof filter)}
               className="flex-nowrap"
             />
-
-            <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
-              <CreateProjectDialog />
-              <button
-                onClick={() => navigate('/search')}
-                className="h-10 w-10 rounded-lg flex items-center justify-center transition-all hover:bg-[var(--glass-surface)]"
-                style={{ color: "var(--brand-primary)" }}
-                title="Search everything"
-              >
-                <Search className="h-5 w-5" />
-              </button>
-            </div>
           </div>
         </div>
 
         <motion.div
           className="pb-24 relative z-10"
-          style={{ paddingTop: '5.5rem' }}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
@@ -228,16 +225,17 @@ export function ProjectsPage() {
           {/* Controls */}
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 pt-2">
             {/* Outer Card Structure */}
-            <div className="p-6 rounded-lg mb-6" style={{
+            <div className="p-6 rounded-2xl mb-6 relative overflow-hidden premium-glass shadow-2xl" style={{
               background: 'var(--brand-glass-bg)',
               border: '2px solid var(--glass-surface-hover)',
-              boxShadow: '4px 4px 0 rgba(0,0,0,0.5)'
             }}>
               {/* Title Section */}
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
-                  Your <span style={{ color: "var(--brand-primary)" }}>projects</span>
-                </h2>
+              <div className="mb-6 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-xl font-black uppercase tracking-tight text-[var(--brand-text-primary)]">
+                    Active <span className="text-brand-primary">Workstreams</span>
+                  </h2>
+                </div>
               </div>
 
               {/* Inner Content */}
