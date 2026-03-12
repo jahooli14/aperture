@@ -210,7 +210,7 @@ const SHARED_CAPABILITIES = [
   },
   {
     name: 'gemini-embeddings',
-    description: 'Gemini text-embedding-004 for vector representations. 768-dimensional embeddings for semantic search.',
+    description: 'Gemini gemini-embedding-001 for vector representations. 768-dimensional embeddings for semantic search.',
     source_project: 'shared',
     codeRefs: []
   }
@@ -220,8 +220,8 @@ const SHARED_CAPABILITIES = [
  * Generate embedding for capability description
  */
 async function generateEmbedding(text: string): Promise<number[]> {
-  const model = genAI.getGenerativeModel({ model: 'text-embedding-004' })
-  const result = await model.embedContent(text)
+  const model = genAI.getGenerativeModel({ model: 'gemini-embedding-001' })
+  const result = await model.embedContent({ content: { parts: [{ text }] }, outputDimensionality: 768 })
   return result.embedding.values
 }
 

@@ -1,9 +1,10 @@
 /**
  * Gemini Embedding Service
- * Free embeddings using Google's text-embedding-004 model
+ * Embeddings using Google's gemini-embedding-001 model
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { MODELS } from './models.js'
 
 // Validate API key at module load
 if (!process.env.GEMINI_API_KEY) {
@@ -45,8 +46,7 @@ export function resetUsageStats() {
 
 /**
  * Generate a single embedding using Gemini with retry logic
- * Model: text-embedding-004 (768 dimensions, latest model)
- * Cost: FREE (up to 1M requests/day)
+ * Model: gemini-embedding-001 (768 dimensions via MRL)
  */
 export async function generateEmbedding(text: string, retries = 3): Promise<number[]> {
   if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'dummy-key-for-initialization') {
@@ -57,8 +57,8 @@ export async function generateEmbedding(text: string, retries = 3): Promise<numb
 
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
-      const model = genAI.getGenerativeModel({ model: 'text-embedding-004' })
-      const result = await model.embedContent(text)
+      const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_EMBEDDING })
+      const result = await model.embedContent({ content: { parts: [{ text }] }, outputDimensionality: MODELS.DEFAULT_EMBEDDING_DIMS })
 
       // Track usage
       usageStats.single_embeddings++
@@ -114,11 +114,11 @@ export async function batchGenerateEmbeddings(texts: string[], retries = 3): Pro
 
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
-      const model = genAI.getGenerativeModel({ model: 'text-embedding-004' })
+      const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_EMBEDDING })
 
       // Process in parallel (Gemini is fast)
       const embeddings = await Promise.all(
-        texts.map(text => model.embedContent(text))
+        texts.map(text => model.embedContent({ content: { parts: [{ text }] }, outputDimensionality: MODELS.DEFAULT_EMBEDDING_DIMS }))
       )
 
       // Track usage
