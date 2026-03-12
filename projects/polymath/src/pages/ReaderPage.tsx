@@ -6,17 +6,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  ArrowLeft,
-  ExternalLink,
-  Archive,
-  Loader2,
-  Highlighter,
-  Clock,
-  Type,
-  Wifi,
-  WifiOff,
-} from 'lucide-react'
+import { ArrowLeft, ExternalLink, Archive, Loader2, Highlighter, Clock, Type, Wifi, WifiOff } from 'lucide-react'
 import { format } from 'date-fns'
 import DOMPurify from 'dompurify'
 import { useReadingStore } from '../stores/useReadingStore'

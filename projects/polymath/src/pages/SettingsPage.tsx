@@ -1,19 +1,7 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import {
-  Settings,
-  Palette,
-  Check,
-  Bug,
-  ToggleRight,
-  ToggleLeft,
-  Zap,
-  RefreshCw,
-  Search,
-  Type,
-  Bell
-} from 'lucide-react'
+import { Settings, Palette, Check, Bug, ToggleRight, ToggleLeft, Zap, RefreshCw, Search, Type, Bell } from 'lucide-react'
 import { useThemeStore } from '../stores/useThemeStore'
 import { getAvailableColors, getColorPreview } from '../lib/theme'
 import { SubtleBackground } from '../components/SubtleBackground'

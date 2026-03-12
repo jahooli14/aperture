@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Check, X, ChevronRight, Zap, Loader2, PenTool, Sparkles } from 'lucide-react'
+import { Check, X, ChevronRight, Zap, Loader2, PenTool } from 'lucide-react'
 import { useFocusStore } from '../../stores/useFocusStore'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useMemoryStore } from '../../stores/useMemoryStore'

@@ -11,21 +11,7 @@ import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
 import { SkeletonCard } from '../components/ui/skeleton-card'
 import { EmptyState } from '../components/ui/empty-state'
-import {
-  Database,
-  Brain,
-  X,
-  Plus,
-  Clock,
-  Zap,
-  ChevronRight,
-  ChevronLeft,
-  Sparkles,
-  Target,
-  Pen,
-  RefreshCw,
-  Shuffle
-} from 'lucide-react'
+import { Database, Brain, X, Plus, Clock, Zap, ChevronRight, ChevronLeft, Target, Pen, RefreshCw, Shuffle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '../components/ui/toast'
 import type { ProjectSuggestion } from '../types'
@@ -233,7 +219,7 @@ export function SuggestionsPage() {
         {learnedPairs.length > 0 && (
           <div className="mb-4 p-3 rounded-xl border border-emerald-500/20 bg-brand-primary/5">
             <div className="flex items-center gap-2 text-brand-text-secondary text-sm font-medium mb-1">
-              <Sparkles className="w-4 h-4" />
+              <Zap className="w-4 h-4" />
               <span>Your engine is learning</span>
             </div>
             <p className="text-xs text-[var(--brand-text-secondary)]">

@@ -1,12 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import {
-  Pin,
-  ArrowRight,
-  CheckCircle2,
-  Clock
-} from 'lucide-react'
+import { Pin, ArrowRight, CheckCircle2, Clock } from 'lucide-react'
 import type { Project } from '../../types'
 import { useContextEngineStore } from '../../stores/useContextEngineStore'
 

@@ -21,29 +21,7 @@ import { CreateMemoryDialog } from '../components/memories/CreateMemoryDialog'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
 import { SkeletonCard } from '../components/ui/skeleton-card'
 import { EmptyState } from '../components/ui/empty-state'
-import {
-  Layers,
-  ArrowRight,
-  Plus,
-  Mic,
-  FileText,
-  FolderKanban,
-  Search,
-  TrendingUp,
-  Moon,
-  Calendar,
-  Zap,
-  Brain,
-  X,
-  AlertCircle,
-  Check,
-  Lightbulb,
-  RefreshCw,
-  Wind,
-  Rss,
-  Map as MapIcon,
-  MoreHorizontal
-} from 'lucide-react'
+import { Layers, ArrowRight, Plus, Mic, FileText, FolderKanban, Search, TrendingUp, Moon, Calendar, Zap, Brain, X, AlertCircle, Check, Lightbulb, RefreshCw, Wind, Rss, Map as MapIcon, MoreHorizontal } from 'lucide-react'
 import { MultiPerspectiveSuggestions } from '../components/suggestions/MultiPerspectiveSuggestions'
 import { BrandName } from '../components/BrandName'
 import { SubtleBackground } from '../components/SubtleBackground'

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { ConnectionsList } from '../connections/ConnectionsList'
-import { Lightbulb, Brain, BookOpen, Save, Send, Sparkles, Wand2, PenTool } from 'lucide-react'
+import { Lightbulb, Brain, BookOpen, Save, Send, Zap, PenTool } from 'lucide-react'
 import { Project } from '../../types'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useToast } from '../ui/toast'
@@ -98,7 +98,7 @@ export function StudioTab({ project }: StudioTabProps) {
                                 }}
                                 className="px-3 py-1.5 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 text-brand-text-muted hover:text-[var(--brand-text-primary)] text-[10px] font-bold uppercase tracking-widest transition-all border border-[var(--glass-surface)] flex items-center gap-2 group"
                             >
-                                <Sparkles className="h-3 w-3 group-hover:text-brand-primary transition-colors" />
+                                <Zap className="h-3 w-3 group-hover:text-brand-primary transition-colors" />
                                 Make it Magic
                             </button>
                         </div>
@@ -114,7 +114,7 @@ export function StudioTab({ project }: StudioTabProps) {
                 {(connectionCount > 0 || isLoadingConnections) && (
                     <div className="premium-card p-6 border-zinc-500/10">
                         <div className="flex items-center gap-2 mb-4">
-                            <Sparkles className="h-4 w-4 text-brand-primary" />
+                            <Zap className="h-4 w-4 text-brand-primary" />
                             <h4 className="text-xs font-black uppercase tracking-[0.2em] text-brand-text-muted">Contextual Sparks</h4>
                         </div>
                         <div className="text-xs text-brand-text-muted mb-4 leading-relaxed">
