@@ -36,9 +36,9 @@ export const SuggestionCard = memo(function SuggestionCard({
     setLoadingAction('rate')
     try {
       // Map 1-3 scale to backend (-1, 1, 2)
-      // 1 (not interested) → -1 (meh)
-      // 2 (somewhat) → 1 (spark)
-      // 3 (very interested) → 2 (would build)
+      // 1 (not interested)  -1 (meh)
+      // 2 (somewhat)  1 (spark)
+      // 3 (very interested)  2 (would build)
       const backendRating = selectedRating === 1 ? -1 : selectedRating === 2 ? 1 : 2
 
       await fetch(`/api/projects?resource=suggestions&action=rate&id=${suggestion.id}`, {
@@ -123,8 +123,8 @@ export const SuggestionCard = memo(function SuggestionCard({
           </CardTitle>
 
           <CardDescription
-            className="text-base leading-relaxed mb-4"
-            style={{ color: 'var(--brand-text-secondary)' }}
+            className="text-base leading-relaxed mb-4 whitespace-pre-wrap"
+            style={{ color: "var(--brand-primary)" }}
           >
             {suggestion.description}
           </CardDescription>
@@ -133,7 +133,7 @@ export const SuggestionCard = memo(function SuggestionCard({
           <div className="flex gap-2 mb-4">
             {/* Novelty */}
             <div className="flex-1">
-              <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--brand-text-muted)' }}>
+              <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--brand-primary)" }}>
                 Novelty
               </div>
               <div className="h-1.5 rounded-full bg-[var(--glass-surface)] overflow-hidden">
@@ -148,7 +148,7 @@ export const SuggestionCard = memo(function SuggestionCard({
             </div>
             {/* Feasibility */}
             <div className="flex-1">
-              <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--brand-text-muted)' }}>
+              <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--brand-primary)" }}>
                 Feasibility
               </div>
               <div className="h-1.5 rounded-full bg-[var(--glass-surface)] overflow-hidden">
@@ -156,14 +156,14 @@ export const SuggestionCard = memo(function SuggestionCard({
                   className="h-full rounded-full transition-all duration-1000 ease-out"
                   style={{
                     width: `${(suggestion.feasibility_score || 0) * 100}%`,
-                    backgroundColor: 'var(--premium-emerald)'
+                    backgroundColor: 'var(--brand-primary)'
                   }}
                 />
               </div>
             </div>
             {/* Interest */}
             <div className="flex-1">
-              <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--brand-text-muted)' }}>
+              <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--brand-primary)" }}>
                 Interest
               </div>
               <div className="h-1.5 rounded-full bg-[var(--glass-surface)] overflow-hidden">
@@ -182,10 +182,10 @@ export const SuggestionCard = memo(function SuggestionCard({
           {suggestion.synthesis_reasoning && (
             <div className="mb-4 p-3 rounded-lg bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)]">
               <div className="flex items-center gap-2 mb-1">
-                <Lightbulb className="h-3 w-3 text-amber-400" />
-                <span className="text-xs font-bold text-amber-400 uppercase tracking-wide">Why this suggestion?</span>
+                <Lightbulb className="h-3 w-3 text-brand-text-secondary" />
+                <span className="text-xs font-bold text-brand-text-secondary uppercase tracking-wide">Why this suggestion?</span>
               </div>
-              <p className="text-sm leading-relaxed" style={{ color: 'var(--brand-text-secondary)' }}>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: "var(--brand-primary)" }}>
                 {suggestion.synthesis_reasoning}
               </p>
             </div>
@@ -194,12 +194,12 @@ export const SuggestionCard = memo(function SuggestionCard({
           {/* One-line insight based on capability overlap */}
           {suggestion.capabilities && suggestion.capabilities.length > 0 && (
             <div className="mb-4 p-3 premium-glass-subtle rounded-lg">
-              <p className="text-sm italic" style={{ color: 'var(--brand-text-secondary)' }}>
+              <p className="text-sm italic" style={{ color: "var(--brand-primary)" }}>
                 {suggestion.capabilities.length === 1
                   ? `Leverages your ${suggestion.capabilities[0].name} experience`
                   : suggestion.capabilities.length === 2
                     ? `At the intersection of ${suggestion.capabilities[0].name} and ${suggestion.capabilities[1].name}`
-                    : `Uniquely combines ${suggestion.capabilities.slice(0, 2).map(c => c.name).join(', ')}, and ${suggestion.capabilities.length - 2} more ${suggestion.capabilities.length - 2 === 1 ? 'skill' : 'skills'}—a rare convergence`
+                    : `Uniquely combines ${suggestion.capabilities.slice(0, 2).map(c => c.name).join(', ')}, and ${suggestion.capabilities.length - 2} more ${suggestion.capabilities.length - 2 === 1 ? 'skill' : 'skills'}a rare convergence`
                 }
               </p>
             </div>
@@ -211,7 +211,7 @@ export const SuggestionCard = memo(function SuggestionCard({
             <div className="space-y-2">
               <p
                 className="text-xs font-semibold uppercase tracking-wide"
-                style={{ color: 'var(--brand-text-muted)' }}
+                style={{ color: "var(--brand-primary)" }}
               >
                 Uses:
               </p>
@@ -333,11 +333,11 @@ export const SuggestionCard = memo(function SuggestionCard({
                   onClick={() => setShowRatingDialog(false)}
                   className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded-lg transition-colors"
                 >
-                  <X className="h-5 w-5" style={{ color: 'var(--brand-text-secondary)' }} />
+                  <X className="h-5 w-5" style={{ color: "var(--brand-primary)" }} />
                 </button>
               </div>
 
-              <p className="text-sm mb-6" style={{ color: 'var(--brand-text-secondary)' }}>
+              <p className="text-sm mb-6" style={{ color: "var(--brand-primary)" }}>
                 {selectedRating === 3 && "Great! What excites you about this?"}
                 {selectedRating === 2 && "Interesting but not quite right? Tell us why"}
                 {selectedRating === 1 && "Why isn't this a good fit?"}

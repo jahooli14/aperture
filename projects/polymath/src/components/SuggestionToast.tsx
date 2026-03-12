@@ -83,10 +83,10 @@ export function SuggestionToast({ itemId, itemType, itemTitle }: SuggestionToast
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'project': return '📦'
-      case 'article': return '📰'
-      case 'thought': return '💭'
-      default: return '📄'
+      case 'project': return ''
+      case 'article': return ''
+      case 'thought': return ''
+      default: return ''
     }
   }
 
@@ -114,11 +114,11 @@ export function SuggestionToast({ itemId, itemType, itemTitle }: SuggestionToast
                   animate={{ rotate: [0, 10, -10, 0] }}
                   transition={{ duration: 1, repeat: Infinity, repeatDelay: 2 }}
                 >
-                  <Zap size={18} style={{ color: 'var(--premium-purple)' }} />
+                  <Zap size={18} style={{ color: "var(--brand-primary)" }} />
                 </motion.div>
                 <span
                   className="text-sm font-medium"
-                  style={{ color: 'rgba(255, 255, 255, 0.9)' }}
+                  style={{ color: "var(--brand-primary)" }}
                 >
                   This might connect to
                 </span>
@@ -145,13 +145,13 @@ export function SuggestionToast({ itemId, itemType, itemTitle }: SuggestionToast
                 <div className="flex-1 min-w-0">
                   <h4
                     className="text-sm font-semibold mb-1 truncate"
-                    style={{ color: 'rgba(255, 255, 255, 0.95)' }}
+                    style={{ color: "var(--brand-primary)" }}
                   >
                     {currentSuggestion.toItemTitle}
                   </h4>
                   <p
                     className="text-xs leading-relaxed"
-                    style={{ color: 'rgba(255, 255, 255, 0.6)' }}
+                    style={{ color: "var(--brand-primary)" }}
                   >
                     {currentSuggestion.reasoning}
                   </p>
@@ -173,7 +173,7 @@ export function SuggestionToast({ itemId, itemType, itemTitle }: SuggestionToast
                 </div>
                 <span
                   className="text-xs font-medium"
-                  style={{ color: 'rgba(255, 255, 255, 0.5)' }}
+                  style={{ color: "var(--brand-primary)" }}
                 >
                   {Math.round(currentSuggestion.confidence * 100)}%
                 </span>
@@ -199,7 +199,7 @@ export function SuggestionToast({ itemId, itemType, itemTitle }: SuggestionToast
                 className="px-4 py-2.5 rounded-xl text-sm font-medium transition-all active:scale-95"
                 style={{
                   backgroundColor: 'var(--glass-surface)',
-                  color: 'rgba(255, 255, 255, 0.6)',
+                  color: "var(--brand-text-secondary)",
                   WebkitTapHighlightColor: 'transparent'
                 }}
               >

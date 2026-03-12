@@ -67,7 +67,7 @@ export function PinOverlay() {
             }}>
               Pinned
             </span>
-            <h3 className="font-semibold truncate" style={{ color: 'var(--brand-text-primary)' }}>
+            <h3 className="font-semibold truncate" style={{ color: "var(--brand-primary)" }}>
               {pinnedItem?.title}
             </h3>
           </div>
@@ -77,7 +77,7 @@ export function PinOverlay() {
               unpinItem()
             }}
             className="h-8 w-8 rounded-lg flex items-center justify-center transition-colors hover:bg-[rgba(255,255,255,0.1)]"
-            style={{ color: 'var(--brand-text-secondary)' }}
+            style={{ color: "var(--brand-primary)" }}
             title="Unpin"
           >
             <X className="h-4 w-4" />
@@ -120,7 +120,7 @@ export function PinOverlay() {
             }}>
               Pinned
             </span>
-            <h3 className="font-semibold truncate" style={{ color: 'var(--brand-text-primary)' }}>
+            <h3 className="font-semibold truncate" style={{ color: "var(--brand-primary)" }}>
               {pinnedItem?.title}
             </h3>
           </div>
@@ -129,7 +129,7 @@ export function PinOverlay() {
             <button
               onClick={unpinItem}
               className="h-8 w-8 rounded-lg flex items-center justify-center transition-colors hover:bg-[rgba(255,255,255,0.1)]"
-              style={{ color: 'var(--brand-text-secondary)' }}
+              style={{ color: "var(--brand-primary)" }}
               title="Unpin"
             >
               <X className="h-4 w-4" />

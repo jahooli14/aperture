@@ -62,7 +62,7 @@ export function VoiceCommandButton() {
         onClick={handleOpen}
         className="fixed bottom-24 right-6 z-40 h-14 w-14 rounded-full flex items-center justify-center shadow-2xl"
         style={{
-          background: 'linear-gradient(135deg, var(--brand-primary), var(--premium-indigo))',
+          background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-primary))',
           color: 'white'
         }}
         title="Voice commands"
@@ -93,7 +93,7 @@ export function VoiceCommandButton() {
                   <div
                     className="h-10 w-10 rounded-xl flex items-center justify-center"
                     style={{
-                      background: 'linear-gradient(135deg, var(--brand-primary), var(--premium-indigo))',
+                      background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-primary))',
                       color: 'white'
                     }}
                   >
@@ -106,7 +106,7 @@ export function VoiceCommandButton() {
                 <button
                   onClick={handleClose}
                   className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-[var(--glass-surface)] transition-colors"
-                  style={{ color: 'var(--brand-text-muted)' }}
+                  style={{ color: "var(--brand-primary)" }}
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -131,7 +131,7 @@ export function VoiceCommandButton() {
                     style={{
                       background: isListening
                         ? 'linear-gradient(135deg, #ef4444, #dc2626)'
-                        : 'linear-gradient(135deg, var(--brand-primary), var(--premium-indigo))',
+                        : 'linear-gradient(135deg, var(--brand-primary), var(--brand-primary))',
                       color: 'white'
                     }}
                   >
@@ -185,10 +185,10 @@ export function VoiceCommandButton() {
                   <div className="text-center">
                     {isListening ? (
                       <>
-                        <p className="text-lg font-semibold mb-2" style={{ color: 'var(--brand-primary)' }}>
+                        <p className="text-lg font-semibold mb-2" style={{ color: "var(--brand-primary)" }}>
                           Listening...
                         </p>
-                        <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>
+                        <p className="text-sm" style={{ color: "var(--brand-primary)" }}>
                           Say a command or tap to stop
                         </p>
                       </>
@@ -197,16 +197,16 @@ export function VoiceCommandButton() {
                         <p className="text-lg font-semibold mb-2 premium-text-platinum">
                           "{transcript}"
                         </p>
-                        <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>
+                        <p className="text-sm" style={{ color: "var(--brand-primary)" }}>
                           Command recognized
                         </p>
                       </>
                     ) : lastCommand ? (
                       <>
-                        <p className="text-lg font-semibold mb-2" style={{ color: 'var(--premium-emerald)' }}>
-                          ✓ Executed: "{lastCommand}"
+                        <p className="text-lg font-semibold mb-2" style={{ color: "var(--brand-primary)" }}>
+                           Executed: "{lastCommand}"
                         </p>
-                        <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>
+                        <p className="text-sm" style={{ color: "var(--brand-primary)" }}>
                           Tap the mic to say another command
                         </p>
                       </>
@@ -215,7 +215,7 @@ export function VoiceCommandButton() {
                         <p className="text-lg font-semibold mb-2 premium-text-platinum">
                           Tap to speak
                         </p>
-                        <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>
+                        <p className="text-sm" style={{ color: "var(--brand-primary)" }}>
                           Try saying "go to projects" or "create memory"
                         </p>
                       </>
@@ -233,7 +233,7 @@ export function VoiceCommandButton() {
                         border: '1px solid rgba(239, 68, 68, 0.3)'
                       }}
                     >
-                      <p className="text-sm" style={{ color: '#ef4444' }}>
+                      <p className="text-sm" style={{ color: "var(--brand-primary)" }}>
                         {error}
                       </p>
                     </motion.div>
@@ -243,7 +243,7 @@ export function VoiceCommandButton() {
 
               {/* Command Examples */}
               <div>
-                <h3 className="text-sm font-bold uppercase tracking-wide mb-3" style={{ color: 'var(--brand-text-muted)' }}>
+                <h3 className="text-sm font-bold uppercase tracking-wide mb-3" style={{ color: "var(--brand-primary)" }}>
                   Example Commands
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[300px] overflow-y-auto">
@@ -252,10 +252,10 @@ export function VoiceCommandButton() {
                       key={index}
                       className="premium-glass-subtle p-3 rounded-lg"
                     >
-                      <p className="text-sm font-medium mb-1" style={{ color: 'var(--brand-text-primary)' }}>
+                      <p className="text-sm font-medium mb-1" style={{ color: "var(--brand-primary)" }}>
                         {command.description}
                       </p>
-                      <p className="text-xs" style={{ color: 'var(--brand-text-muted)' }}>
+                      <p className="text-xs" style={{ color: "var(--brand-primary)" }}>
                         "{command.examples[0]}"
                       </p>
                     </div>

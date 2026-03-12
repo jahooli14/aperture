@@ -102,9 +102,9 @@ export function useCapacitorVoice({
         try {
           console.log('[Voice ONEND] Restarting immediately...');
           recognitionRef.current.start();
-          console.log('[Voice ONEND] ✓ Restart successful');
+          console.log('[Voice ONEND]  Restart successful');
         } catch (err: any) {
-          console.error('[Voice ONEND] ✗ Restart failed:', err.message);
+          console.error('[Voice ONEND]  Restart failed:', err.message);
           // If already started, that's fine - continue
           if (!err.message || !err.message.includes('already started')) {
             isRecordingRef.current = false;
@@ -119,7 +119,7 @@ export function useCapacitorVoice({
 
     recognitionRef.current = recognition;
     setHasPermission(true);
-    console.log('[Voice Init] ✓ Web Speech API initialized successfully');
+    console.log('[Voice Init]  Web Speech API initialized successfully');
   };
 
   /**

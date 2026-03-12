@@ -174,6 +174,8 @@
 /* Glass Panel - Neobrutalism */
 .premium-glass {
   background: rgba(20, 27, 38, 0.3);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-radius: 4px;
   box-shadow: 3px 3px 0 rgba(0,0,0,0.5);
   transition: all var(--premium-transition-base);
@@ -182,6 +184,8 @@
 /* Glass Panel - Extra Strong */
 .premium-glass-strong {
   background: rgba(20, 27, 38, 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-radius: 4px;
   box-shadow: 4px 4px 0 rgba(0,0,0,0.6);
   transition: all var(--premium-transition-base);
@@ -190,6 +194,8 @@
 /* Glass Panel - Subtle */
 .premium-glass-subtle {
   background: rgba(20, 27, 38, 0.2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-radius: var(--premium-radius-md);
   box-shadow: 2px 2px 0 rgba(0,0,0,0.4);
   transition: all var(--premium-transition-base);

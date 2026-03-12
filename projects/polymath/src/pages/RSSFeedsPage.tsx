@@ -142,12 +142,12 @@ export function RSSFeedsPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <Rss className="h-8 w-8" style={{ color: 'var(--premium-amber)' }} />
+              <Rss className="h-8 w-8" style={{ color: "var(--brand-primary)" }} />
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold premium-text-platinum" style={{ letterSpacing: 'var(--premium-tracking-tight)' }}>
+                <h1 className="text-2xl sm:text-3xl font-bold premium-text-platinum" style={{ letterSpacing: '-0.04em' }}>
                   Auto-Import
                 </h1>
-                <p className="text-sm sm:text-base mt-1" style={{ color: 'var(--brand-text-secondary)' }}>
+                <p className="text-sm sm:text-base mt-1" style={{ color: "var(--brand-primary)" }}>
                   RSS feeds & email newsletters
                 </p>
               </div>
@@ -160,7 +160,7 @@ export function RSSFeedsPage() {
                 className="premium-glass border px-4 py-2 rounded-lg inline-flex items-center gap-2 hover:bg-[var(--glass-surface)] transition-all disabled:opacity-50"
                 style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}
               >
-                <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} style={{ color: 'var(--brand-primary)' }} />
+                <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} style={{ color: "var(--brand-primary)" }} />
                 <span className="premium-text-platinum text-sm font-medium hidden sm:inline">Sync</span>
               </button>
 
@@ -183,13 +183,13 @@ export function RSSFeedsPage() {
         <div className="premium-card p-6 mb-6">
           <div className="flex items-start gap-4">
             <div className="p-3 rounded-xl" style={{ background: 'rgba(59, 130, 246, 0.2)' }}>
-              <Mail className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
+              <Mail className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
             </div>
             <div className="flex-1">
               <h3 className="premium-text-platinum font-bold text-lg mb-2">
                 Forward Newsletters via Email
               </h3>
-              <p className="text-sm mb-4" style={{ color: 'var(--brand-text-secondary)' }}>
+              <p className="text-sm mb-4" style={{ color: "var(--brand-primary)" }}>
                 Forward any newsletter or email to this address and it'll automatically be added to your reading queue:
               </p>
 
@@ -204,16 +204,16 @@ export function RSSFeedsPage() {
                   className="premium-glass border px-4 py-2 rounded-lg inline-flex items-center gap-2 hover:bg-[var(--glass-surface)] transition-all"
                   style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}
                 >
-                  <Copy className="h-4 w-4" style={{ color: 'var(--brand-primary)' }} />
+                  <Copy className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
                   <span className="text-sm font-medium premium-text-platinum">Copy</span>
                 </button>
               </div>
 
               <div className="mt-4 p-3 rounded-lg" style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
                 <p className="text-xs premium-text-platinum font-semibold mb-2">
-                  💡 Tip: Add this to your email contacts
+                   Tip: Add this to your email contacts
                 </p>
-                <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
+                <p className="text-xs" style={{ color: "var(--brand-primary)" }}>
                   Subscribe to newsletters from Anthropic, OpenAI, or any source, then set up an email filter to auto-forward them here. Perfect for announcements that don't have RSS feeds!
                 </p>
               </div>
@@ -224,23 +224,23 @@ export function RSSFeedsPage() {
         {/* RSS Feeds Section Header */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="premium-text-platinum font-bold text-xl">RSS Feed Subscriptions</h2>
-          <span className="text-sm" style={{ color: 'var(--brand-text-muted)' }}>
+          <span className="text-sm" style={{ color: "var(--brand-primary)" }}>
             {feeds.length} {feeds.length === 1 ? 'feed' : 'feeds'}
           </span>
         </div>
 
         {loading && feeds.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin mb-4" style={{ color: 'var(--premium-amber)' }} />
-            <p style={{ color: 'var(--brand-text-secondary)' }}>Loading feeds...</p>
+            <Loader2 className="h-8 w-8 animate-spin mb-4" style={{ color: "var(--brand-primary)" }} />
+            <p style={{ color: "var(--brand-primary)" }}>Loading feeds...</p>
           </div>
         ) : feeds.length === 0 ? (
           <div className="premium-card p-20 text-center">
-            <Rss className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--premium-amber)' }} />
+            <Rss className="h-16 w-16 mx-auto mb-4" style={{ color: "var(--brand-primary)" }} />
             <h3 className="text-xl font-semibold premium-text-platinum mb-2">
               No RSS feeds yet
             </h3>
-            <p className="text-center max-w-md mx-auto mb-6" style={{ color: 'var(--brand-text-secondary)' }}>
+            <p className="text-center max-w-md mx-auto mb-6" style={{ color: "var(--brand-primary)" }}>
               Subscribe to RSS feeds to automatically import articles to your reading queue
             </p>
             <button
@@ -274,11 +274,11 @@ export function RSSFeedsPage() {
                       )}
                     </div>
                     {feed.description && (
-                      <p className="text-sm mb-3" style={{ color: 'var(--brand-text-secondary)' }}>
+                      <p className="text-sm mb-3" style={{ color: "var(--brand-primary)" }}>
                         {feed.description}
                       </p>
                     )}
-                    <div className="flex items-center gap-4 text-xs" style={{ color: 'var(--brand-text-muted)' }}>
+                    <div className="flex items-center gap-4 text-xs" style={{ color: "var(--brand-primary)" }}>
                       <a
                         href={feed.feed_url}
                         target="_blank"
@@ -302,7 +302,7 @@ export function RSSFeedsPage() {
                       title={feed.enabled ? 'Pause feed' : 'Enable feed'}
                     >
                       <Power className="h-5 w-5" style={{
-                        color: feed.enabled ? 'var(--premium-emerald)' : 'var(--brand-text-muted)'
+                        color: feed.enabled ? 'var(--brand-primary)' : 'var(--brand-text-muted)'
                       }} />
                     </button>
                     <button
@@ -310,7 +310,7 @@ export function RSSFeedsPage() {
                       className="p-2 rounded-lg hover:bg-[rgba(255,255,255,0.1)] transition-colors"
                       title="Unsubscribe"
                     >
-                      <Trash2 className="h-5 w-5" style={{ color: 'var(--brand-text-muted)' }} />
+                      <Trash2 className="h-5 w-5" style={{ color: "var(--brand-primary)" }} />
                     </button>
                   </div>
                 </div>
@@ -338,7 +338,7 @@ export function RSSFeedsPage() {
                 onClick={() => setShowAddDialog(false)}
                 className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded-lg transition-colors"
               >
-                <X className="h-5 w-5" style={{ color: 'var(--brand-text-secondary)' }} />
+                <X className="h-5 w-5" style={{ color: "var(--brand-primary)" }} />
               </button>
             </div>
 
@@ -371,9 +371,9 @@ export function RSSFeedsPage() {
             </div>
 
             {/* Search Feeds */}
-            <div className="mb-8 p-6 rounded-xl border border-blue-500/10 bg-blue-500/[0.03]">
+            <div className="mb-8 p-6 rounded-xl border border-blue-500/10 bg-brand-primary/[0.03]">
               <div className="flex items-center gap-2 mb-4">
-                <Rss className="h-5 w-5 text-blue-400" />
+                <Rss className="h-5 w-5 text-brand-primary" />
                 <h4 className="premium-text-platinum font-bold">Search for Feeds</h4>
               </div>
 
@@ -428,7 +428,7 @@ export function RSSFeedsPage() {
                       <button
                         onClick={() => handleSubscribe(result.feed_url)}
                         disabled={subscribing}
-                        className="px-4 py-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg text-xs font-bold hover:bg-blue-600 hover:text-[var(--brand-text-primary)] transition-all whitespace-nowrap"
+                        className="px-4 py-2 bg-brand-primary/10 text-brand-primary border border-blue-500/20 rounded-lg text-xs font-bold hover:bg-brand-primary hover:text-[var(--brand-text-primary)] transition-all whitespace-nowrap"
                       >
                         {subscribing ? '...' : 'Subscribe'}
                       </button>
@@ -449,7 +449,7 @@ export function RSSFeedsPage() {
                   <h4 className="text-sm font-semibold premium-text-platinum">
                     Popular Feeds
                   </h4>
-                  <p className="text-xs mt-1" style={{ color: 'var(--brand-text-muted)' }}>
+                  <p className="text-xs mt-1" style={{ color: "var(--brand-primary)" }}>
                     Quick subscribe to curated feeds
                   </p>
                 </div>
@@ -472,7 +472,7 @@ export function RSSFeedsPage() {
                             {preset.category}
                           </span>
                         </div>
-                        <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
+                        <p className="text-xs" style={{ color: "var(--brand-primary)" }}>
                           {preset.description}
                         </p>
                       </div>
@@ -482,7 +482,7 @@ export function RSSFeedsPage() {
                         className="ml-4 premium-glass border px-4 py-2 rounded-lg inline-flex items-center gap-2 hover:bg-[var(--glass-surface)] transition-all disabled:opacity-50"
                         style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}
                       >
-                        <Plus className="h-4 w-4" style={{ color: 'var(--brand-primary)' }} />
+                        <Plus className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
                         <span className="text-sm font-medium premium-text-platinum">Subscribe</span>
                       </button>
                     </div>

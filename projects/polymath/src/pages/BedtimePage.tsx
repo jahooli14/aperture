@@ -116,7 +116,7 @@ export function BedtimePage() {
 
       setPrompts(uniquePrompts)
       addToast({
-        title: '✨ New prompts generated',
+        title: ' New prompts generated',
         description: `${uniquePrompts.length} ideas for tonight`,
         variant: 'success'
       })
@@ -208,7 +208,7 @@ export function BedtimePage() {
 
       if (newValue) {
         addToast({
-          title: '⚡ Breakthrough!',
+          title: ' Breakthrough!',
           description: 'This prompt will help improve future suggestions',
           variant: 'success'
         })
@@ -235,7 +235,7 @@ export function BedtimePage() {
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'connection': return 'var(--brand-primary)'
-      case 'divergent': return 'var(--premium-emerald)'
+      case 'divergent': return 'var(--brand-primary)'
       case 'revisit': return 'var(--premium-purple)'
       case 'transform': return 'var(--premium-gold)'
       default: return 'var(--premium-platinum)'
@@ -260,7 +260,7 @@ export function BedtimePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Moon className="h-6 w-6" style={{ color: 'var(--premium-gold)' }} />
+              <Moon className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
               <h1 className="text-xl font-bold premium-text-platinum">
                 Bedtime Ideas
               </h1>
@@ -294,7 +294,7 @@ export function BedtimePage() {
               <h2 className="premium-text-platinum text-2xl font-bold">
                 Thoughts Before Bed
               </h2>
-              <p className="text-sm mt-1" style={{ color: 'var(--brand-text-secondary)' }}>
+              <p className="text-sm mt-1" style={{ color: "var(--brand-primary)" }}>
                 Let your mind wander into tomorrow's inspiration
               </p>
             </div>
@@ -308,7 +308,7 @@ export function BedtimePage() {
                   {prompts.length > 0 ? "Tonight's Prompts Ready" : "Waiting for 9:30pm"}
                 </p>
                 {message && (
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--brand-text-muted)' }}>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--brand-primary)" }}>
                     {message}
                   </p>
                 )}
@@ -324,8 +324,8 @@ export function BedtimePage() {
                     style={{ border: '1px solid rgba(255, 255, 255, 0.1)' }}
                     title="Drift Mode (Motion Activated)"
                   >
-                    <Wind className="h-4 w-4" style={{ color: 'var(--premium-gold)' }} />
-                    <span className="text-xs font-medium" style={{ color: 'var(--premium-gold)' }}>Drift</span>
+                    <Wind className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
+                    <span className="text-xs font-medium" style={{ color: "var(--brand-primary)" }}>Drift</span>
                   </button>
                   <button
                     onClick={() => setZenModeOpen(true)}
@@ -333,8 +333,8 @@ export function BedtimePage() {
                     style={{ border: '1px solid rgba(255, 255, 255, 0.1)' }}
                     title="Zen Mode"
                   >
-                    <Maximize2 className="h-4 w-4" style={{ color: 'var(--premium-gold)' }} />
-                    <span className="text-xs font-medium" style={{ color: 'var(--premium-gold)' }}>Zen</span>
+                    <Maximize2 className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
+                    <span className="text-xs font-medium" style={{ color: "var(--brand-primary)" }}>Zen</span>
                   </button>
                 </>
               )}
@@ -345,9 +345,9 @@ export function BedtimePage() {
                 style={{ border: '1px solid rgba(255, 255, 255, 0.1)' }}
               >
                 {generating ? (
-                  <Loader2 className="h-4 w-4 animate-spin" style={{ color: 'var(--premium-platinum)' }} />
+                  <Loader2 className="h-4 w-4 animate-spin" style={{ color: "var(--brand-primary)" }} />
                 ) : (
-                  <RefreshCw className="h-4 w-4" style={{ color: 'var(--premium-platinum)' }} />
+                  <RefreshCw className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
                 )}
               </button>
             </div>
@@ -357,7 +357,7 @@ export function BedtimePage() {
         {/* Loading */}
         {loading && (
           <div className="flex justify-center items-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--premium-platinum)' }} />
+            <Loader2 className="h-8 w-8 animate-spin" style={{ color: "var(--brand-primary)" }} />
           </div>
         )}
 
@@ -415,9 +415,9 @@ export function BedtimePage() {
                           title={isViewed ? 'Viewed' : 'Mark as viewed'}
                         >
                           {isViewed ? (
-                            <EyeOff className="h-4 w-4" style={{ color: 'var(--brand-text-muted)' }} />
+                            <EyeOff className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
                           ) : (
-                            <Eye className="h-4 w-4" style={{ color: 'var(--premium-platinum)' }} />
+                            <Eye className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
                           )}
                         </button>
                       </div>
@@ -431,8 +431,8 @@ export function BedtimePage() {
                       {prompt.metaphor && (
                         <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--glass-surface)' }}>
                           <div className="flex items-start gap-2">
-                            <Star className="h-3 w-3 mt-1 flex-shrink-0" style={{ color: 'var(--premium-gold)' }} />
-                            <p className="text-xs italic" style={{ color: 'var(--brand-text-secondary)' }}>
+                            <Star className="h-3 w-3 mt-1 flex-shrink-0" style={{ color: "var(--brand-primary)" }} />
+                            <p className="text-xs italic" style={{ color: "var(--brand-primary)" }}>
                               {prompt.metaphor}
                             </p>
                           </div>
@@ -444,7 +444,7 @@ export function BedtimePage() {
                         <div className="flex items-center justify-between">
                           {/* Star Rating */}
                           <div className="flex items-center gap-1">
-                            <span className="text-xs mr-2" style={{ color: 'var(--brand-text-muted)' }}>
+                            <span className="text-xs mr-2" style={{ color: "var(--brand-primary)" }}>
                               Rate:
                             </span>
                             {[1, 2, 3, 4, 5].map((star) => (
@@ -519,17 +519,17 @@ export function BedtimePage() {
             transition={{ duration: 0.8, ease: "easeOut" }}
           >
             <div className="inline-flex items-center justify-center p-3 mb-6 rounded-full bg-[var(--glass-surface)] backdrop-blur-xl border border-[var(--glass-surface-hover)] shadow-2xl">
-              <Moon className="w-8 h-8 text-indigo-300" />
+              <Moon className="w-8 h-8 text-brand-primary" />
             </div>
 
             <h1 className="text-4xl md:text-5xl font-serif text-transparent bg-clip-text bg-gradient-to-b from-indigo-100 via-purple-200 to-indigo-400 mb-6 tracking-tight drop-shadow-[0_0_15px_rgba(165,180,252,0.3)]">
               Bedtime Ideas
             </h1>
 
-            <p className="text-lg md:text-xl text-indigo-200/80 leading-relaxed font-light max-w-lg mx-auto mb-8">
-              Gentle prompts generated from your day's activity to <span className="text-indigo-100 font-medium">prime your subconscious</span> for sleep.
+            <p className="text-lg md:text-xl text-brand-primary/80 leading-relaxed font-light max-w-lg mx-auto mb-8">
+              Gentle prompts generated from your day's activity to <span className="text-brand-primary font-medium">prime your subconscious</span> for sleep.
               <br />
-              <span className="text-sm text-indigo-300/60 mt-2 block">
+              <span className="text-sm text-brand-primary/60 mt-2 block">
                 Insights often arrive in the morning.
               </span>
             </p>
@@ -546,24 +546,24 @@ export function BedtimePage() {
             {isOffline ? (
               <>
                 <div className="p-8 rounded-full premium-glass-subtle inline-flex mb-6">
-                  <WifiOff className="h-12 w-12" style={{ color: 'var(--brand-text-muted)' }} />
+                  <WifiOff className="h-12 w-12" style={{ color: "var(--brand-primary)" }} />
                 </div>
                 <h2 className="text-xl font-semibold premium-text-platinum mb-2">
                   Offline
                 </h2>
-                <p className="text-sm mb-6" style={{ color: 'var(--brand-text-secondary)' }}>
+                <p className="text-sm mb-6" style={{ color: "var(--brand-primary)" }}>
                   Bedtime prompts will be available when you're back online
                 </p>
               </>
             ) : (
               <>
                 <div className="p-8 rounded-full premium-glass-subtle inline-flex mb-6">
-                  <Moon className="h-12 w-12" style={{ color: 'var(--premium-gold)' }} />
+                  <Moon className="h-12 w-12" style={{ color: "var(--brand-primary)" }} />
                 </div>
                 <h2 className="text-xl font-semibold premium-text-platinum mb-2">
                   No prompts yet
                 </h2>
-                <p className="text-sm mb-6" style={{ color: 'var(--brand-text-secondary)' }}>
+                <p className="text-sm mb-6" style={{ color: "var(--brand-primary)" }}>
                   {message || 'Check back at 9:30pm for tonight\'s ideas'}
                 </p>
                 <button
@@ -602,8 +602,8 @@ export function BedtimePage() {
             background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.05), rgba(139, 92, 246, 0.05))'
           }}
         >
-          <p className="text-sm leading-relaxed" style={{ color: 'var(--brand-text-secondary)' }}>
-            <strong className="premium-text-platinum">Reflection ritual:</strong> These prompts are designed to spark gentle curiosity before sleep. Let them simmer in your subconscious overnight—insights often arrive in the morning. Try Zen Mode for a peaceful, one-at-a-time experience.
+          <p className="text-sm leading-relaxed" style={{ color: "var(--brand-primary)" }}>
+            <strong className="premium-text-platinum">Reflection ritual:</strong> These prompts are designed to spark gentle curiosity before sleep. Let them simmer in your subconscious overnightinsights often arrive in the morning. Try Zen Mode for a peaceful, one-at-a-time experience.
           </p>
         </motion.div>
 

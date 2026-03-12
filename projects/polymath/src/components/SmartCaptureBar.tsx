@@ -1,5 +1,5 @@
 /**
- * SmartCaptureBar — universal capture input for the HomePage
+ * SmartCaptureBar  universal capture input for the HomePage
  *
  * More prominent than the compact TodoInput. Understands what you're
  * typing and routes it to the right destination: todo, thought, article,
@@ -7,7 +7,7 @@
  *
  * Features:
  *   - Morphing left-side icon (animates on type change)
- *   - URL paste → shows inline link preview card
+ *   - URL paste  shows inline link preview card
  *   - Keyboard hint footer
  *   - All classification is local (smartCapture.ts, no API calls)
  */
@@ -51,7 +51,7 @@ function buildUrlPreview(url: string): UrlPreview {
 }
 
 export function SmartCaptureBar({
-  placeholder = 'Capture anything — task, thought, article, idea…',
+  placeholder = 'Capture anything  task, thought, article, idea',
   onCaptureTodo,
   onCaptureThought,
   onCaptureArticle,
@@ -75,7 +75,7 @@ export function SmartCaptureBar({
   const hasText = value.trim().length > 0
   const showClassification = hasText && classification.confidence > 0.2 && captureType !== 'ambiguous'
 
-  // ── Debounced classification ──
+  //  Debounced classification 
   useEffect(() => {
     if (classifyTimerRef.current) clearTimeout(classifyTimerRef.current)
 
@@ -107,15 +107,15 @@ export function SmartCaptureBar({
     }
   }, [value])
 
-  // ── Paste: detect URLs immediately ──
+  //  Paste: detect URLs immediately 
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLInputElement>) => {
     const pasted = e.clipboardData.getData('text')
     if (isLikelyUrl(pasted)) {
-      // Immediately override — don't wait for debounce
+      // Immediately override  don't wait for debounce
       const result: CaptureClassification = {
         type: 'article',
         confidence: 0.97,
-        hint: 'Looks like a link — save to Reading?',
+        hint: 'Looks like a link  save to Reading?',
         icon: CAPTURE_TYPE_META.article.icon,
         color: CAPTURE_TYPE_META.article.color,
         alternativeType: 'todo',
@@ -125,7 +125,7 @@ export function SmartCaptureBar({
     }
   }, [])
 
-  // ── Submit with smart routing ──
+  //  Submit with smart routing 
   const handleSubmit = useCallback(() => {
     if (!value.trim()) return
 
@@ -218,7 +218,7 @@ export function SmartCaptureBar({
               }
               title={showClassification ? typeMeta.label : 'Smart Capture'}
             >
-              {showClassification ? typeMeta.icon : '✦'}
+              {showClassification ? typeMeta.icon : ''}
             </motion.div>
           </AnimatePresence>
 
@@ -279,13 +279,13 @@ export function SmartCaptureBar({
                         boxShadow: `inset 0 0 0 1px ${typeMeta.color.replace('0.8)', '0.30)')}`,
                       }
                     : {
-                        color: 'rgba(147,197,253,0.8)',
+                        color: "var(--brand-text-secondary)",
                         background: 'rgba(59,130,246,0.12)',
                         boxShadow: 'inset 0 0 0 1px rgba(99,179,237,0.2)',
                       }
                 }
               >
-                ↵
+                
               </motion.button>
             )}
           </AnimatePresence>
@@ -313,7 +313,7 @@ export function SmartCaptureBar({
                 >
                   {classification.hint}
                   {classification.alternativeType && classification.alternativeType !== captureType && (
-                    <> · or keep as {CAPTURE_TYPE_META[classification.alternativeType].label}</>
+                    <>  or keep as {CAPTURE_TYPE_META[classification.alternativeType].label}</>
                   )}
                 </p>
               </div>
@@ -349,27 +349,27 @@ export function SmartCaptureBar({
                 <div className="flex-1 min-w-0">
                   <p
                     className="text-[12px] font-medium truncate"
-                    style={{ color: 'rgba(34,211,238,0.85)' }}
+                    style={{ color: "var(--brand-primary)" }}
                   >
                     {urlPreview.hostname}
                   </p>
                   <p
                     className="text-[11px] truncate"
-                    style={{ color: 'rgba(255,255,255,0.35)' }}
+                    style={{ color: "var(--brand-primary)" }}
                   >
                     {urlPreview.url.length > 60
-                      ? urlPreview.url.substring(0, 60) + '…'
+                      ? urlPreview.url.substring(0, 60) + ''
                       : urlPreview.url}
                   </p>
                 </div>
                 <span
                   className="flex-shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full"
                   style={{
-                    color: 'rgba(34,211,238,0.7)',
+                    color: "var(--brand-text-secondary)",
                     background: 'rgba(34,211,238,0.12)',
                   }}
                 >
-                  📖 Save
+                   Save
                 </span>
               </div>
             </motion.div>
@@ -387,10 +387,10 @@ export function SmartCaptureBar({
             transition={{ duration: 0.15, delay: 0.05 }}
             className="flex items-center justify-between px-2 pt-2"
           >
-            <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.20)' }}>
+            <span className="text-[11px]" style={{ color: "var(--brand-primary)" }}>
               Press <kbd className="font-mono">Enter</kbd> to capture
             </span>
-            <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.20)' }}>
+            <span className="text-[11px]" style={{ color: "var(--brand-primary)" }}>
               <kbd className="font-mono">Esc</kbd> to clear
             </span>
           </motion.div>

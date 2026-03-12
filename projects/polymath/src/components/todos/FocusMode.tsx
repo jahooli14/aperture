@@ -1,16 +1,16 @@
 /**
- * FocusMode — Progressive disclosure + cognitive load reduction
+ * FocusMode  Progressive disclosure + cognitive load reduction
  *
  * Principles implemented:
- *   Progressive Disclosure (Miller's Law): When visible decisions drop to ONE —
- *   "should I do this task?" — the cognitive cost of acting falls below avoidance.
+ *   Progressive Disclosure (Miller's Law): When visible decisions drop to ONE 
+ *   "should I do this task?"  the cognitive cost of acting falls below avoidance.
  *   The path of least resistance becomes the task itself.
  *
  *   Activation Energy (2-min rule): The real barrier is starting. A 2-minute
  *   commitment dissolves procrastination. Once started, Zeigarnik + sunk cost
  *   carry the session forward.
  *
- *   Variable Reward: Completion animations vary — dopamine anticipation sustains
+ *   Variable Reward: Completion animations vary  dopamine anticipation sustains
  *   engagement across the session.
  */
 
@@ -26,7 +26,7 @@ interface FocusModeProps {
   onClose: () => void
 }
 
-// Variable celebrations — unpredictable reward = sustained dopamine
+// Variable celebrations  unpredictable reward = sustained dopamine
 const CELEBRATIONS = [
   'Done.',
   'Cleared.',
@@ -138,12 +138,12 @@ export function FocusMode({ todos, onComplete, onClose }: FocusModeProps) {
             className="mx-auto mb-6 h-20 w-20 rounded-3xl flex items-center justify-center"
             style={{ background: 'rgba(52,211,153,0.15)', boxShadow: '0 0 40px rgba(52,211,153,0.2)' }}
           >
-            <Check className="h-9 w-9" style={{ color: 'rgba(52,211,153,0.9)' }} strokeWidth={2.5} />
+            <Check className="h-9 w-9" style={{ color: "var(--brand-primary)" }} strokeWidth={2.5} />
           </div>
-          <p className="text-2xl font-bold mb-2" style={{ color: 'rgba(255,255,255,0.9)' }}>
+          <p className="text-2xl font-bold mb-2" style={{ color: "var(--brand-primary)" }}>
             Session done.
           </p>
-          <p className="text-[14px] mb-10" style={{ color: 'rgba(255,255,255,0.35)' }}>
+          <p className="text-[14px] mb-10" style={{ color: "var(--brand-primary)" }}>
             {todos.length} {todos.length === 1 ? 'task' : 'tasks'} cleared.
           </p>
           <button
@@ -151,7 +151,7 @@ export function FocusMode({ todos, onComplete, onClose }: FocusModeProps) {
             className="px-8 py-3 rounded-2xl font-semibold text-[15px] transition-all"
             style={{
               background: 'var(--glass-surface-hover)',
-              color: 'rgba(255,255,255,0.7)',
+              color: "var(--brand-text-secondary)",
               border: '1px solid rgba(255,255,255,0.1)',
             }}
           >
@@ -176,7 +176,7 @@ export function FocusMode({ todos, onComplete, onClose }: FocusModeProps) {
         <button
           onClick={onClose}
           className="h-9 w-9 flex items-center justify-center rounded-xl transition-all"
-          style={{ background: 'var(--glass-surface)', color: 'rgba(255,255,255,0.5)' }}
+          style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
         >
           <X className="h-4 w-4" />
         </button>
@@ -200,12 +200,12 @@ export function FocusMode({ todos, onComplete, onClose }: FocusModeProps) {
           ))}
         </div>
 
-        <span className="text-[13px] font-medium" style={{ color: 'rgba(255,255,255,0.25)' }}>
+        <span className="text-[13px] font-medium" style={{ color: "var(--brand-primary)" }}>
           {remaining} left
         </span>
       </div>
 
-      {/* Timer strip — shown when active */}
+      {/* Timer strip  shown when active */}
       <AnimatePresence>
         {(timerRunning || timerSeconds > 0) && (
           <motion.div
@@ -259,9 +259,9 @@ export function FocusMode({ todos, onComplete, onClose }: FocusModeProps) {
                 className="mx-auto mb-5 h-16 w-16 rounded-2xl flex items-center justify-center"
                 style={{ background: 'rgba(52,211,153,0.2)' }}
               >
-                <Check className="h-8 w-8" style={{ color: 'rgba(52,211,153,1)' }} strokeWidth={3} />
+                <Check className="h-8 w-8" style={{ color: "var(--brand-primary)" }} strokeWidth={3} />
               </motion.div>
-              <p className="text-xl font-semibold" style={{ color: 'rgba(52,211,153,0.9)' }}>
+              <p className="text-xl font-semibold" style={{ color: "var(--brand-primary)" }}>
                 {celebration}
               </p>
             </motion.div>
@@ -278,23 +278,23 @@ export function FocusMode({ todos, onComplete, onClose }: FocusModeProps) {
               {current.priority === 3 && (
                 <div className="flex items-center gap-1.5 mb-4">
                   <div className="h-1.5 w-1.5 rounded-full" style={{ background: 'rgba(248,113,113,0.8)' }} />
-                  <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'rgba(248,113,113,0.7)' }}>
+                  <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--brand-primary)" }}>
                     High priority
                   </span>
                 </div>
               )}
 
-              {/* Task text — the one thing you need to see */}
+              {/* Task text  the one thing you need to see */}
               <h2
                 className="text-[28px] font-bold leading-tight mb-4"
-                style={{ color: 'rgba(255,255,255,0.92)' }}
+                style={{ color: "var(--brand-primary)" }}
               >
                 {current.text}
               </h2>
 
               {/* Notes */}
               {current.notes && (
-                <p className="text-[14px] leading-relaxed mb-4" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                <p className="text-[14px] leading-relaxed mb-4" style={{ color: "var(--brand-primary)" }}>
                   {current.notes}
                 </p>
               )}
@@ -304,7 +304,7 @@ export function FocusMode({ todos, onComplete, onClose }: FocusModeProps) {
                 {current.estimated_minutes && (
                   <span
                     className="flex items-center gap-1 text-[12px] px-2.5 py-1 rounded-lg"
-                    style={{ background: 'var(--glass-surface)', color: 'rgba(255,255,255,0.4)' }}
+                    style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
                   >
                     <Timer className="h-3 w-3" />
                     {formatMinutes(current.estimated_minutes)}
@@ -313,7 +313,7 @@ export function FocusMode({ todos, onComplete, onClose }: FocusModeProps) {
                 {current.scheduled_time && (
                   <span
                     className="text-[12px] px-2.5 py-1 rounded-lg"
-                    style={{ background: 'var(--glass-surface)', color: 'rgba(255,255,255,0.4)' }}
+                    style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
                   >
                     {current.scheduled_time}
                   </span>
@@ -346,7 +346,7 @@ export function FocusMode({ todos, onComplete, onClose }: FocusModeProps) {
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-medium transition-all"
               style={{
                 background: 'var(--glass-surface)',
-                color: 'rgba(255,255,255,0.22)',
+                color: "var(--brand-text-secondary)",
                 border: '1px solid var(--glass-surface)',
               }}
             >
@@ -355,7 +355,7 @@ export function FocusMode({ todos, onComplete, onClose }: FocusModeProps) {
           )}
         </div>
 
-        {/* Done — the primary action, unavoidable */}
+        {/* Done  the primary action, unavoidable */}
         <motion.button
           onClick={handleComplete}
           disabled={completing}
@@ -366,7 +366,7 @@ export function FocusMode({ todos, onComplete, onClose }: FocusModeProps) {
             background: completing
               ? 'rgba(52,211,153,0.25)'
               : 'rgba(52,211,153,0.18)',
-            color: 'rgba(52,211,153,1)',
+            color: "var(--brand-text-secondary)",
             border: '1px solid rgba(52,211,153,0.3)',
             boxShadow: '0 0 20px rgba(52,211,153,0.1)',
           }}
@@ -375,14 +375,14 @@ export function FocusMode({ todos, onComplete, onClose }: FocusModeProps) {
           Done
         </motion.button>
 
-        {/* Skip — secondary, less prominent */}
+        {/* Skip  secondary, less prominent */}
         {currentIndex < todos.length - 1 && (
           <button
             onClick={handleSkip}
             className="w-full py-3 rounded-2xl font-medium text-[14px] flex items-center justify-center gap-1.5 transition-all"
             style={{
               background: 'transparent',
-              color: 'rgba(255,255,255,0.22)',
+              color: "var(--brand-text-secondary)",
             }}
           >
             Skip for now

@@ -200,7 +200,7 @@ export function ReadingPage() {
               if (status === 'complete') {
                 next.delete(article.id)
                 addToast({
-                  title: '✓ Graph Updated',
+                  title: ' Graph Updated',
                   description: `Extracted ${updatedArticle?.entities?.length || 5} new knowledge nodes from "${updatedArticle?.title}"`,
                   variant: 'success',
                 })
@@ -226,7 +226,7 @@ export function ReadingPage() {
 
   useEffect(() => {
     const loadData = async () => {
-      // On back navigation, just revalidate in background — don't flash loading
+      // On back navigation, just revalidate in background  don't flash loading
       const isBackNav = hasInitializedRef.current && articles.length > 0
       await fetchArticles(undefined, isBackNav)
 
@@ -274,7 +274,7 @@ export function ReadingPage() {
   const handleSaveRSSItem = async (item: RSSItem) => {
     try {
       addToast({
-        title: '📰 Fetching article...',
+        title: ' Fetching article...',
         description: 'Extracting content with Jina AI',
         variant: 'default',
       })
@@ -325,7 +325,7 @@ export function ReadingPage() {
     const shareUrl: string | undefined = sharedParam || undefined
 
     if (shareUrl && !processingRef.current.has(shareUrl)) {
-      console.log('[ReadingPage] ✓ Processing shared URL:', shareUrl)
+      console.log('[ReadingPage]  Processing shared URL:', shareUrl)
 
       // Mark as processing to prevent duplicates
       processingRef.current.add(shareUrl)
@@ -341,7 +341,7 @@ export function ReadingPage() {
         try {
           // Show loading toast
           addToast({
-            title: '📰 Saving shared article...',
+            title: ' Saving shared article...',
             description: 'Extracting content from ' + new URL(shareUrl).hostname,
             variant: 'default',
           })
@@ -358,7 +358,7 @@ export function ReadingPage() {
               if (status === 'complete') {
                 next.delete(article.id)
                 addToast({
-                  title: '✓ Article ready!',
+                  title: ' Article ready!',
                   description: updatedArticle?.title || 'Content extracted successfully',
                   variant: 'success',
                 })
@@ -378,7 +378,7 @@ export function ReadingPage() {
               } else if (status === 'retrying') {
                 next.set(article.id, { status: 'retrying', url: shareUrl })
                 addToast({
-                  title: '🔄 Retrying extraction...',
+                  title: ' Retrying extraction...',
                   description: 'First attempt timed out, trying again',
                   variant: 'default',
                 })
@@ -398,7 +398,7 @@ export function ReadingPage() {
           })
 
           addToast({
-            title: '✓ Article saved!',
+            title: ' Article saved!',
             description: 'Extracting content in background...',
             variant: 'success',
           })
@@ -441,7 +441,7 @@ export function ReadingPage() {
         const processShare = async () => {
           try {
             addToast({
-              title: '📰 Saving shared article...',
+              title: ' Saving shared article...',
               description: 'Extracting content from ' + new URL(sharedUrl).hostname,
               variant: 'default',
             })
@@ -458,7 +458,7 @@ export function ReadingPage() {
                 if (status === 'complete') {
                   next.delete(article.id)
                   addToast({
-                    title: '✓ Article ready!',
+                    title: ' Article ready!',
                     description: updatedArticle?.title || 'Content extracted successfully',
                     variant: 'success',
                   })
@@ -478,7 +478,7 @@ export function ReadingPage() {
                 } else if (status === 'retrying') {
                   next.set(article.id, { status: 'retrying', url: sharedUrl })
                   addToast({
-                    title: '🔄 Retrying extraction...',
+                    title: ' Retrying extraction...',
                     description: 'First attempt timed out, trying again',
                     variant: 'default',
                   })
@@ -498,7 +498,7 @@ export function ReadingPage() {
             })
 
             addToast({
-              title: '✓ Article saved!',
+              title: ' Article saved!',
               description: 'Extracting content in background...',
               variant: 'success',
             })
@@ -750,7 +750,7 @@ export function ReadingPage() {
           {/* Top row: icon + filter tabs + search */}
           <div className="flex items-center gap-3">
             <div className="flex items-center flex-shrink-0" style={{
-              color: 'rgba(34, 211, 238, 0.8)',
+              color: "var(--brand-text-secondary)",
               opacity: 0.8
             }}>
               <BookOpen className="h-6 w-6" />
@@ -767,7 +767,7 @@ export function ReadingPage() {
             <button
               onClick={() => navigate('/search')}
               className="h-9 w-9 rounded-lg flex items-center justify-center transition-all flex-shrink-0"
-              style={{ color: 'rgba(34,211,238,0.8)', border: '2px solid rgba(34,211,238,0.25)', boxShadow: '2px 2px 0 rgba(0,0,0,0.5)' }}
+              style={{ color: "var(--brand-primary)" }}
               title="Search everything"
             >
               <Search className="h-4 w-4" />
@@ -794,16 +794,16 @@ export function ReadingPage() {
                 onBlur={() => setInlineUrlFocused(false)}
                 autoComplete="off"
                 className="flex-1 h-full border-0 text-sm focus:outline-none focus:ring-0 placeholder:text-[var(--brand-text-primary)]/20 appearance-none bg-transparent"
-                style={{ color: 'rgba(255,255,255,0.85)' }}
+                style={{ color: "var(--brand-primary)" }}
               />
               {inlineUrl && (
                 <button
                   type="button"
                   onClick={() => setInlineUrl('')}
                   className="text-xs flex-shrink-0 opacity-40 hover:opacity-70 transition-opacity px-1"
-                  style={{ color: 'rgba(255,255,255,0.6)' }}
+                  style={{ color: "var(--brand-primary)" }}
                 >
-                  ✕
+                  
                 </button>
               )}
             </div>
@@ -813,7 +813,7 @@ export function ReadingPage() {
               className="h-10 px-4 rounded-lg text-[11px] font-black uppercase tracking-wide flex-shrink-0 flex items-center gap-1.5 transition-all disabled:opacity-40"
               style={{
                 backgroundColor: 'rgba(34, 211, 238, 0.1)',
-                color: 'rgba(34, 211, 238, 0.95)',
+                color: "var(--brand-text-secondary)",
                 border: '2px solid rgba(34, 211, 238, 0.4)',
                 boxShadow: '3px 3px 0 rgba(0,0,0,0.6)',
               }}
@@ -848,15 +848,15 @@ export function ReadingPage() {
                   }}
                 >
                   {status === 'retrying' ? (
-                    <RotateCw className="h-5 w-5 animate-spin" style={{ color: 'var(--premium-amber)' }} />
+                    <RotateCw className="h-5 w-5 animate-spin" style={{ color: "var(--brand-primary)" }} />
                   ) : (
-                    <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--brand-primary)' }} />
+                    <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--brand-primary)" }} />
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm" style={{ color: 'var(--brand-text-primary)' }}>
+                    <p className="font-medium text-sm" style={{ color: "var(--brand-primary)" }}>
                       {status === 'retrying' ? 'Retrying extraction...' : 'Extracting article...'}
                     </p>
-                    <p className="text-xs truncate" style={{ color: 'var(--brand-text-muted)' }}>
+                    <p className="text-xs truncate" style={{ color: "var(--brand-primary)" }}>
                       {new URL(url).hostname}
                     </p>
                   </div>
@@ -885,7 +885,7 @@ export function ReadingPage() {
                       })
                     }}
                     className="text-[10px] font-black uppercase tracking-wide px-3 py-1 rounded-lg transition-colors"
-                    style={{ color: 'rgba(255,255,255,0.45)', border: '1.5px solid var(--glass-surface-hover)' }}
+                    style={{ color: "var(--brand-primary)" }}
                   >
                     Cancel
                   </button>
@@ -895,7 +895,7 @@ export function ReadingPage() {
           </div>
         )}
 
-        {/* Continue Reading — Zeigarnik effect: surface in-progress articles prominently */}
+        {/* Continue Reading  Zeigarnik effect: surface in-progress articles prominently */}
         <AnimatePresence>
           {continueReadingArticles.length > 0 && activeTab !== 'reading' && (
             <motion.div
@@ -916,11 +916,11 @@ export function ReadingPage() {
                 }}
               >
                 <div className="flex items-center gap-2 mb-3">
-                  <Play className="h-4 w-4 fill-current" style={{ color: 'rgba(34,211,238,0.8)' }} />
-                  <span className="text-[11px] font-black uppercase tracking-widest" style={{ color: 'rgba(34,211,238,0.9)' }}>
+                  <Play className="h-4 w-4 fill-current" style={{ color: "var(--brand-primary)" }} />
+                  <span className="text-[11px] font-black uppercase tracking-widest" style={{ color: "var(--brand-primary)" }}>
                     Continue Reading
                   </span>
-                  <span className="text-[10px] font-black px-1.5 py-0.5 rounded-lg" style={{ background: 'rgba(34,211,238,0.15)', color: 'rgba(34,211,238,0.8)', border: '1px solid rgba(34,211,238,0.25)' }}>
+                  <span className="text-[10px] font-black px-1.5 py-0.5 rounded-lg" style={{ background: 'rgba(34,211,238,0.15)', color: "var(--brand-text-secondary)" }}>
                     {continueReadingArticles.length}
                   </span>
                 </div>
@@ -933,24 +933,24 @@ export function ReadingPage() {
                       style={{ border: '1.5px solid var(--glass-surface-hover)', background: 'var(--glass-surface)' }}
                     >
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                        <p className="text-sm font-medium truncate" style={{ color: "var(--brand-primary)" }}>
                           {article.title || 'Untitled'}
                         </p>
-                        <p className="text-xs truncate mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                        <p className="text-xs truncate mt-0.5" style={{ color: "var(--brand-primary)" }}>
                           {article.source || (article.url ? new URL(article.url).hostname.replace('www.', '') : '')}
-                          {article.read_time_minutes ? ` · ${article.read_time_minutes} min read` : ''}
+                          {article.read_time_minutes ? `  ${article.read_time_minutes} min read` : ''}
                         </p>
                       </div>
-                      <ChevronRight className="h-4 w-4 flex-shrink-0 opacity-40 group-hover:opacity-70 transition-opacity" style={{ color: 'rgba(34,211,238,0.7)' }} />
+                      <ChevronRight className="h-4 w-4 flex-shrink-0 opacity-40 group-hover:opacity-70 transition-opacity" style={{ color: "var(--brand-primary)" }} />
                     </button>
                   ))}
                   {continueReadingArticles.length > 3 && (
                     <button
                       onClick={() => handleTabChange('reading')}
                       className="text-xs font-medium transition-all hover:opacity-80 text-left pl-2.5 pt-1"
-                      style={{ color: 'rgba(34,211,238,0.6)' }}
+                      style={{ color: "var(--brand-primary)" }}
                     >
-                      +{continueReadingArticles.length - 3} more in progress →
+                      +{continueReadingArticles.length - 3} more in progress 
                     </button>
                   )}
                 </div>
@@ -970,7 +970,7 @@ export function ReadingPage() {
             <div className="mb-5 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="w-1 h-5 flex-shrink-0" style={{ background: 'rgba(34,211,238,0.7)' }} />
-                <h2 className="text-[13px] font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.75)' }}>
+                <h2 className="text-[13px] font-black uppercase tracking-widest" style={{ color: "var(--brand-primary)" }}>
                   {activeTab === 'updates' ? 'News feeds' :
                    activeTab === 'archived' ? 'Archive' :
                    activeTab === 'reading' ? 'In progress' :
@@ -984,7 +984,7 @@ export function ReadingPage() {
                   onClick={() => navigate('/rss')}
                   className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide transition-all flex items-center gap-1.5"
                   style={{
-                    color: 'rgba(255,255,255,0.6)',
+                    color: "var(--brand-text-secondary)",
                     border: '2px solid rgba(255,255,255,0.15)',
                     boxShadow: '2px 2px 0 rgba(0,0,0,0.5)',
                   }}
@@ -1080,9 +1080,9 @@ export function ReadingPage() {
                       action={
                         activeTab === 'queue' ? (
                           <div className="flex flex-col items-center gap-3">
-                            <div className="flex flex-wrap justify-center gap-2 text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                            <div className="flex flex-wrap justify-center gap-2 text-xs" style={{ color: "var(--brand-primary)" }}>
                               {['blog posts', 'essays', 'research papers', 'news articles', 'tutorials'].map(example => (
-                                <span key={example} className="px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide" style={{ background: '#111113', border: '1.5px solid var(--glass-surface-hover)', boxShadow: '2px 2px 0 rgba(0,0,0,0.5)', color: 'rgba(255,255,255,0.4)' }}>
+                                <span key={example} className="px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide" style={{ background: '#111113', border: '1.5px solid var(--glass-surface-hover)', boxShadow: '2px 2px 0 rgba(0,0,0,0.5)', color: "var(--brand-text-secondary)" }}>
                                   {example}
                                 </span>
                               ))}
@@ -1142,7 +1142,7 @@ export function ReadingPage() {
                       </div>
                       {visibleCount < filteredArticles.length && (
                         <div ref={loadMoreRef} className="flex justify-center py-4">
-                          <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--brand-text-secondary)' }} />
+                          <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--brand-primary)" }} />
                         </div>
                       )}
                     </FocusableList>
@@ -1215,7 +1215,7 @@ export function ReadingPage() {
                 if (status === 'complete') {
                   next.delete(articleId)
                   addToast({
-                    title: '✓ Article ready!',
+                    title: ' Article ready!',
                     description: updatedArticle?.title || 'Content extracted successfully',
                     variant: 'success',
                   })
@@ -1256,7 +1256,7 @@ export function ReadingPage() {
               )
 
               addToast({
-                title: '✓ Queue flushed!',
+                title: ' Queue flushed!',
                 description: `Deleted ${stuckArticles.length} stuck article(s)`,
                 variant: 'success',
               })

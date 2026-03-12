@@ -69,15 +69,15 @@ export function MorningFollowUp({ onDismiss, onCapture }: MorningFollowUpProps) 
         >
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Sun className="w-5 h-5 text-amber-400" />
-              <span className="text-sm font-medium text-amber-300">Morning follow-up</span>
+              <Sun className="w-5 h-5 text-brand-text-secondary" />
+              <span className="text-sm font-medium text-brand-primary">Morning follow-up</span>
             </div>
             <button onClick={onDismiss} className="text-[var(--brand-text-muted)] hover:text-[var(--brand-text-secondary)]">
               <X className="w-4 h-4" />
             </button>
           </div>
           <p className="text-sm text-[var(--brand-text-secondary)] mb-3">
-            Last night you explored: <span className="text-amber-200/80 italic">"{lastPrompt.prompt?.substring(0, 100)}..."</span>
+            Last night you explored: <span className="text-brand-primary/80 italic">"{lastPrompt.prompt?.substring(0, 100)}..."</span>
           </p>
           <p className="text-xs text-[var(--brand-text-secondary)] mb-3">Did anything surface overnight?</p>
           <div className="flex gap-2">
@@ -93,7 +93,7 @@ export function MorningFollowUp({ onDismiss, onCapture }: MorningFollowUpProps) 
             <button
               onClick={handleSubmit}
               disabled={!response.trim()}
-              className="px-3 py-2 rounded-xl bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 disabled:opacity-30 transition-all"
+              className="px-3 py-2 rounded-xl bg-brand-primary/20 text-brand-text-secondary hover:bg-brand-primary/30 disabled:opacity-30 transition-all"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -104,10 +104,10 @@ export function MorningFollowUp({ onDismiss, onCapture }: MorningFollowUpProps) 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="mx-4 mb-4 p-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 flex items-center gap-2"
+          className="mx-4 mb-4 p-4 rounded-2xl border border-emerald-500/20 bg-brand-primary/5 flex items-center gap-2"
         >
-          <Sparkles className="w-4 h-4 text-emerald-400" />
-          <span className="text-sm text-emerald-300">Captured. Your synthesis engine will use this.</span>
+          <Sparkles className="w-4 h-4 text-brand-text-secondary" />
+          <span className="text-sm text-brand-primary">Captured. Your synthesis engine will use this.</span>
         </motion.div>
       )}
     </AnimatePresence>

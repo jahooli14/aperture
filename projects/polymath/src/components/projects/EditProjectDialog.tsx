@@ -1,6 +1,6 @@
 /**
  * Edit Project Dialog
- * Bottom sheet for editing existing project details — single step
+ * Bottom sheet for editing existing project details  single step
  */
 
 import { useState, useEffect } from 'react'
@@ -88,7 +88,7 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
             <BottomSheetContent>
                 <BottomSheetHeader>
                     <div className="flex items-center gap-3 mb-2">
-                        <Settings2 className="h-6 w-6 text-blue-400" />
+                        <Settings2 className="h-6 w-6 text-brand-primary" />
                         <BottomSheetTitle>Edit Project</BottomSheetTitle>
                     </div>
                     <BottomSheetDescription>
@@ -99,7 +99,7 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
                 <div className="mt-6 space-y-5">
                     {/* Title */}
                     <div className="space-y-2">
-                        <Label htmlFor="title" className="font-bold text-xs uppercase tracking-widest text-blue-400">Project Name</Label>
+                        <Label htmlFor="title" className="font-bold text-xs uppercase tracking-widest text-brand-primary">Project Name</Label>
                         <Input
                             id="title"
                             value={formData.title}
@@ -133,8 +133,8 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
 
                     {/* Description */}
                     <div className="space-y-2">
-                        <Label htmlFor="description" className="font-bold text-xs uppercase tracking-widest text-blue-400">
-                            Description <span className="text-red-500">*</span>
+                        <Label htmlFor="description" className="font-bold text-xs uppercase tracking-widest text-brand-primary">
+                            Description <span className="text-brand-text-secondary">*</span>
                         </Label>
                         <Input
                             id="description"

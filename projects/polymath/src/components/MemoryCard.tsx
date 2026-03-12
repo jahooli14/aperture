@@ -15,10 +15,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 // Memory type badge config
 const MEMORY_TYPE_CONFIG = {
-  foundational: { emoji: '🏛', label: 'FOUNDATIONAL', color: 'rgba(251,191,36,0.12)', border: '1.5px solid rgba(251,191,36,0.4)', text: 'rgba(251,191,36,0.9)' },
-  insight: { emoji: '💡', label: 'INSIGHT', color: 'rgba(59,130,246,0.12)', border: '1.5px solid rgba(59,130,246,0.4)', text: 'rgba(96,165,250,0.9)' },
-  event: { emoji: '📅', label: 'EVENT', color: 'rgba(139,92,246,0.12)', border: '1.5px solid rgba(139,92,246,0.4)', text: 'rgba(167,139,250,0.9)' },
-  'quick-note': { emoji: '⚡', label: 'NOTE', color: 'rgba(148,163,184,0.08)', border: '1.5px solid rgba(148,163,184,0.25)', text: 'rgba(148,163,184,0.8)' },
+  foundational: { emoji: '', label: 'FOUNDATIONAL', color: "var(--brand-text-secondary)" },
+  insight: { emoji: '', label: 'INSIGHT', color: "var(--brand-text-secondary)" },
+  event: { emoji: '', label: 'EVENT', color: "var(--brand-text-secondary)" },
+  'quick-note': { emoji: '', label: 'NOTE', color: "var(--brand-text-secondary)" },
 } as const
 
 // Module-level cache for bridges remains, but will be managed by MemoryDetailModal
@@ -231,9 +231,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
         }}
       >
         <CardHeader className="relative z-10 flex flex-row items-start justify-between p-0 pb-2">
-          <h3 className="font-bold text-base leading-snug mb-1" style={{
-            color: 'var(--brand-text-primary)'
-          }}>
+          <h3 className="font-bold text-base leading-snug mb-1" style={{ color: "var(--brand-primary)" }}>
             {memory.title}
           </h3>
           <div className="flex items-center gap-1">
@@ -242,7 +240,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
               onClick={handleTogglePin}
               className={`p-1.5 rounded-lg transition-all ${
                 memory.is_pinned
-                  ? 'text-amber-400 hover:bg-amber-500/10'
+                  ? 'text-brand-text-secondary hover:bg-brand-primary/10'
                   : 'text-brand-text-primary0 hover:text-brand-text-secondary hover:bg-brand-surface/80 opacity-0 group-hover:opacity-100'
               }`}
               title={memory.is_pinned ? 'Unpin' : 'Pin'}
@@ -283,7 +281,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
               className="h-8 w-8 p-0 touch-manipulation hover:bg-[rgba(255,255,255,0.1)] transition-colors"
               aria-label="More options"
             >
-              <MoreVertical className="h-4 w-4" style={{ color: 'var(--brand-text-muted)' }} />
+              <MoreVertical className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
             </Button>
           </div>
         </CardHeader>
@@ -310,7 +308,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
                 style={{
                   backgroundColor: 'rgba(52,211,153,0.1)',
                   border: '1.5px solid rgba(52,211,153,0.3)',
-                  color: 'rgba(52,211,153,0.8)',
+                  color: "var(--brand-text-secondary)",
                 }}
               >
                 <Link2 className="w-2.5 h-2.5" />
@@ -322,8 +320,8 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
 
         <motion.p
           layout="position"
-          className={`text-sm leading-relaxed mb-3 ${expanded ? '' : 'line-clamp-6'}`}
-          style={{ color: 'var(--brand-text-secondary)' }}
+          className={`text-sm leading-relaxed mb-3 whitespace-pre-wrap ${expanded ? '' : 'line-clamp-6'}`}
+          style={{ color: "var(--brand-primary)" }}
         >
           {memory.body}
         </motion.p>
@@ -369,7 +367,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
                       style={{
                         backgroundColor: 'rgba(139,92,246,0.1)',
                         border: '1px solid rgba(139,92,246,0.2)',
-                        color: 'rgba(167,139,250,0.8)',
+                        color: "var(--brand-text-secondary)",
                       }}
                     >
                       {theme}
@@ -388,7 +386,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
                       style={{
                         backgroundColor: 'rgba(148,163,184,0.08)',
                         border: '1px solid rgba(148,163,184,0.2)',
-                        color: '#94a3b8'
+                        color: "var(--brand-text-secondary)"
                       }}
                     >
                       {tag}
@@ -402,7 +400,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowDetailModal(true) }}
                   className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-lg transition-colors hover:bg-brand-surface/80"
-                  style={{ color: 'var(--brand-text-secondary)' }}
+                  style={{ color: "var(--brand-primary)" }}
                 >
                   <Maximize2 className="w-3 h-3" />
                   Open
@@ -410,7 +408,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
                 <button
                   onClick={(e) => { e.stopPropagation(); handleCopyText() }}
                   className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-lg transition-colors hover:bg-brand-surface/80"
-                  style={{ color: 'var(--brand-text-secondary)' }}
+                  style={{ color: "var(--brand-primary)" }}
                 >
                   <Copy className="w-3 h-3" />
                   Copy
@@ -418,7 +416,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
                 <button
                   onClick={handleTogglePin}
                   className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-lg transition-colors hover:bg-brand-surface/80 ${
-                    memory.is_pinned ? 'text-amber-400' : ''
+                    memory.is_pinned ? 'text-brand-text-secondary' : ''
                   }`}
                   style={memory.is_pinned ? undefined : { color: 'var(--brand-text-secondary)' }}
                 >
@@ -448,14 +446,14 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
                   style={{
                     backgroundColor: 'rgba(148,163,184,0.08)',
                     border: '1px solid rgba(148,163,184,0.2)',
-                    color: '#94a3b8'
+                    color: "var(--brand-text-secondary)"
                   }}
                 >
                   {tag}
                 </span>
               ))}
               {memory.tags.length > 2 && (
-                <span className="text-[10px] opacity-40 shrink-0" style={{ color: '#94a3b8' }}>
+                <span className="text-[10px] opacity-40 shrink-0" style={{ color: "var(--brand-primary)" }}>
                   +{memory.tags.length - 2}
                 </span>
               )}

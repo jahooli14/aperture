@@ -1,7 +1,7 @@
 /**
  * Todo NLP Parser
  *
- * Parses natural language todo input à la Things 3 / Todoist.
+ * Parses natural language todo input  la Things 3 / Todoist.
  *
  * Supported syntax:
  *   - Dates:     today/tod, tomorrow/tom/tmrw/tmr/tmrow, next monday, in 3 days,
@@ -12,7 +12,7 @@
  *                named: morning (9am), afternoon (2pm), evening (6pm), night (8pm)
  *   - Relative:  in 2h, in 30m, in 2 hours, in 45 minutes
  *   - Priority:  !high, !medium, !low, !1, !2, !3, !p1, !p2, !p3,
- *                urgent/critical → high, whenever/someday/maybe/later → low/someday
+ *                urgent/critical  high, whenever/someday/maybe/later  low/someday
  *   - Tags:      #tag, #multi-word-tag
  *   - Area:      @area, @work, @home
  *   - Time est:  30min, 1h, 2h, 15m, 1.5h, 90m, half an hour
@@ -31,7 +31,7 @@ export interface ParsedTodo {
   isSomeday: boolean
 }
 
-// ─── Date helpers ───────────────────────────────────────────
+//  Date helpers 
 
 const DAY_NAMES: Record<string, number> = {
   sunday: 0, sun: 0,
@@ -78,7 +78,7 @@ function addMinutes(d: Date, n: number): Date {
   return new Date(d.getTime() + n * 60 * 1000)
 }
 
-/** Next occurrence of a weekday (0=Sun…6=Sat). If today is that day, returns next week. */
+/** Next occurrence of a weekday (0=Sun6=Sat). If today is that day, returns next week. */
 function nextWeekday(targetDay: number, fromNext = false): Date {
   const base = today()
   const diff = (targetDay - base.getDay() + 7) % 7
@@ -102,7 +102,7 @@ function endOfCurrentMonth(): Date {
   return new Date(d.getFullYear(), d.getMonth() + 1, 0)
 }
 
-// ─── Time helpers ───────────────────────────────────────────
+//  Time helpers 
 
 /** Format hours/minutes into HH:mm */
 function toHHMM(hours: number, minutes = 0): string {
@@ -133,14 +133,14 @@ function parseBareTime(s: string): string | undefined {
   if (!meridiem && (h < 0 || h > 23)) return undefined
   if (min < 0 || min > 59) return undefined
   // Bare hour without meridiem and no colon: only accept if it looks unambiguous
-  // (i.e. has a colon for 24h, or has am/pm) — single numbers like "5" are ambiguous
+  // (i.e. has a colon for 24h, or has am/pm)  single numbers like "5" are ambiguous
   // so we require either a colon or a meridiem suffix for bare times
   if (!meridiem && !m[2]) return undefined
 
   return toHHMM(h, min)
 }
 
-// ─── Parser ─────────────────────────────────────────────────
+//  Parser 
 
 export function parseTodo(raw: string): ParsedTodo {
   let input = raw
@@ -153,14 +153,14 @@ export function parseTodo(raw: string): ParsedTodo {
   let estimatedMinutes: number | undefined
   let isSomeday = false
 
-  // ── Someday keywords (including "whenever") ──
+  //  Someday keywords (including "whenever") 
   const somedayRe = /\b(someday|maybe|later|whenever)\b/i
   if (somedayRe.test(input)) {
     isSomeday = true
     input = input.replace(somedayRe, '').trim()
   }
 
-  // ── Natural priority words: urgent/critical → high, low-priority → low ──
+  //  Natural priority words: urgent/critical  high, low-priority  low 
   // These are parsed before the ! syntax so they don't interfere
   if (!priority) {
     const urgentRe = /\b(urgent|critical|asap)\b/i
@@ -170,7 +170,7 @@ export function parseTodo(raw: string): ParsedTodo {
     }
   }
 
-  // ── Deadline date: "due:friday", "due:in 3 days", "deadline:next week" ──
+  //  Deadline date: "due:friday", "due:in 3 days", "deadline:next week" 
   // Capture up to 3 words but stop at NLP-special chars (!, #, @)
   const deadlineRe = /\b(?:due|deadline):((?:[^!#@\s]+\s*){1,3})/i
   const deadlineMatch = input.match(deadlineRe)
@@ -179,7 +179,7 @@ export function parseTodo(raw: string): ParsedTodo {
     input = input.replace(deadlineMatch[0], '').trim()
   }
 
-  // ── Time estimate (must come BEFORE bare-time parsing to avoid conflicts) ──
+  //  Time estimate (must come BEFORE bare-time parsing to avoid conflicts) 
   // Handles: 30min, 1h, 2h, 15m, 1.5h, 90m, "half an hour", "half hour"
   const halfHourRe = /\bhalf(?:\s+an?)?\s+hour\b/i
   if (halfHourRe.test(input)) {
@@ -188,7 +188,7 @@ export function parseTodo(raw: string): ParsedTodo {
   }
 
   if (!estimatedMinutes) {
-    // Decimal hours: 1.5h, 0.5h — must come before integer match
+    // Decimal hours: 1.5h, 0.5h  must come before integer match
     const decimalHourRe = /\b(\d+\.\d+)\s*h(?:ours?)?\b/i
     const decHMatch = input.match(decimalHourRe)
     if (decHMatch) {
@@ -208,7 +208,7 @@ export function parseTodo(raw: string): ParsedTodo {
     }
   }
 
-  // ── "in Nh/Nm" relative time from now (e.g. "in 2h", "in 30m") ──
+  //  "in Nh/Nm" relative time from now (e.g. "in 2h", "in 30m") 
   // Must come AFTER time estimate parsing to avoid double-matching
   const inRelTimeRe = /\bin\s+(\d+)\s*(h(?:ours?)?|m(?:in(?:utes?)?)?)\b/i
   const inRelTimeMatch = input.match(inRelTimeRe)
@@ -222,11 +222,11 @@ export function parseTodo(raw: string): ParsedTodo {
     scheduledTime = toHHMM(target.getHours(), target.getMinutes())
     input = input.replace(inRelTimeMatch[0], '').trim()
   } else if (inRelTimeMatch) {
-    // Already used as estimate — remove from input anyway to avoid text leak
+    // Already used as estimate  remove from input anyway to avoid text leak
     input = input.replace(inRelTimeMatch[0], '').trim()
   }
 
-  // ── Named time-of-day phrases (morning, afternoon, evening, night) ──
+  //  Named time-of-day phrases (morning, afternoon, evening, night) 
   // These map to specific hours per Todoist conventions
   const namedTimeRe = /\b(morning|afternoon|evening|night)\b/i
   const namedTimeMatch = input.match(namedTimeRe)
@@ -239,7 +239,7 @@ export function parseTodo(raw: string): ParsedTodo {
     input = input.replace(namedTimeMatch[0], '').trim()
   }
 
-  // ── Explicit time: "at 3pm", "at 9:30am", "at noon", "at midnight", "at 14:00" ──
+  //  Explicit time: "at 3pm", "at 9:30am", "at noon", "at midnight", "at 14:00" 
   const atTimeRe = /\bat\s+(?:(noon)|(midnight)|(\d{1,2})(?::(\d{2}))?\s*(am|pm)?)\b/i
   const atTimeMatch = input.match(atTimeRe)
   if (atTimeMatch && !scheduledTime) {
@@ -258,7 +258,7 @@ export function parseTodo(raw: string): ParsedTodo {
     input = input.replace(atTimeMatch[0], '').trim()
   }
 
-  // ── Bare times (no "at"): 11am, 2pm, 9:30, 14:00, noon, midnight ──
+  //  Bare times (no "at"): 11am, 2pm, 9:30, 14:00, noon, midnight 
   // Must run after time estimate removal so "30min" isn't mistaken for a time
   if (!scheduledTime) {
     // noon / midnight as standalone words
@@ -297,9 +297,9 @@ export function parseTodo(raw: string): ParsedTodo {
     }
   }
 
-  // ── Scheduled date tokens ──
+  //  Scheduled date tokens 
 
-  // EOD — end of day → today at 5pm
+  // EOD  end of day  today at 5pm
   if (!scheduledDate) {
     if (/\beod\b/i.test(input)) {
       scheduledDate = toYMD(today())
@@ -308,7 +308,7 @@ export function parseTodo(raw: string): ParsedTodo {
     }
   }
 
-  // EOW — end of week → next Friday
+  // EOW  end of week  next Friday
   if (!scheduledDate) {
     if (/\beow\b/i.test(input)) {
       scheduledDate = toYMD(nextFriday())
@@ -316,7 +316,7 @@ export function parseTodo(raw: string): ParsedTodo {
     }
   }
 
-  // SOM — start of (next) month
+  // SOM  start of (next) month
   if (!scheduledDate) {
     if (/\bsom\b/i.test(input)) {
       scheduledDate = toYMD(startOfNextMonth())
@@ -324,7 +324,7 @@ export function parseTodo(raw: string): ParsedTodo {
     }
   }
 
-  // EOM — end of (current) month
+  // EOM  end of (current) month
   if (!scheduledDate) {
     if (/\beom\b/i.test(input)) {
       scheduledDate = toYMD(endOfCurrentMonth())
@@ -432,7 +432,7 @@ export function parseTodo(raw: string): ParsedTodo {
     }
   }
 
-  // ── Priority: !high !medium !low !1 !2 !3 !p1 !p2 !p3 ──
+  //  Priority: !high !medium !low !1 !2 !3 !p1 !p2 !p3 
   if (!priority) {
     const priorityRe = /!(high|h|medium|med|m|low|l|p?[123])\b/i
     const prioMatch = input.match(priorityRe)
@@ -445,7 +445,7 @@ export function parseTodo(raw: string): ParsedTodo {
     }
   }
 
-  // ── Tags: #tag (allow hyphens/underscores, no spaces) ──
+  //  Tags: #tag (allow hyphens/underscores, no spaces) 
   const tagRe = /#([\w-]+)/g
   let tagMatch
   while ((tagMatch = tagRe.exec(input)) !== null) {
@@ -453,7 +453,7 @@ export function parseTodo(raw: string): ParsedTodo {
   }
   input = input.replace(/#[\w-]+/g, '').trim()
 
-  // ── Area: @area ──
+  //  Area: @area 
   const areaRe = /@([\w-]+)/
   const areaMatch = input.match(areaRe)
   if (areaMatch) {
@@ -487,7 +487,7 @@ function resolveMonthDay(monthIdx: number, day: number, year?: number): string {
   const candidate = new Date(yr, monthIdx, day)
   candidate.setHours(0, 0, 0, 0)
   if (!year && candidate < t) {
-    // Already passed this year — use next year
+    // Already passed this year  use next year
     candidate.setFullYear(yr + 1)
   }
   return toYMD(candidate)
@@ -539,7 +539,7 @@ function parseDate(token: string): string | undefined {
   return undefined
 }
 
-// ─── Human-readable descriptions ─────────────────────────────
+//  Human-readable descriptions 
 
 export function describeDate(ymd: string): string {
   const t = today()
@@ -573,12 +573,12 @@ export const PRIORITY_LABELS: Record<number, string> = {
 
 export const PRIORITY_COLORS: Record<number, string> = {
   0: 'text-[var(--brand-text-primary)]/30',
-  1: 'text-blue-400',
-  2: 'text-amber-400',
-  3: 'text-red-400',
+  1: 'text-brand-primary',
+  2: 'text-brand-text-secondary',
+  3: 'text-brand-text-secondary',
 }
 
-/** Format a minute count for display: 30 → "30m", 60 → "1h", 75 → "1h 15m" */
+/** Format a minute count for display: 30  "30m", 60  "1h", 75  "1h 15m" */
 export function formatMinutes(mins: number): string {
   if (mins < 60) return `${mins}m`
   const h = Math.floor(mins / 60)

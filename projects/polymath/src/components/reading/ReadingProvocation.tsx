@@ -36,16 +36,16 @@ export function ReadingProvocation() {
         initial={{ opacity: 0, height: 0 }}
         animate={{ opacity: 1, height: 'auto' }}
         exit={{ opacity: 0, height: 0 }}
-        className="mx-4 mb-3 p-3 rounded-xl border border-amber-500/20 bg-amber-500/5"
+        className="mx-4 mb-3 p-3 rounded-xl border border-amber-500/20 bg-brand-primary/5"
       >
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-start gap-2 flex-1 min-w-0">
-            <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+            <AlertTriangle className="w-4 h-4 text-brand-text-secondary mt-0.5 flex-shrink-0" />
             <div className="min-w-0">
               <p className="text-sm text-gray-200 leading-relaxed">{provocation.message}</p>
               <button
                 onClick={() => navigate(`/reading/${provocation.article_id}`)}
-                className="flex items-center gap-1 mt-1.5 text-xs text-amber-400 hover:text-amber-300"
+                className="flex items-center gap-1 mt-1.5 text-xs text-brand-text-secondary hover:text-brand-primary"
               >
                 Read it <ChevronRight className="w-3 h-3" />
               </button>

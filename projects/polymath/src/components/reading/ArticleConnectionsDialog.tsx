@@ -69,7 +69,7 @@ export function ArticleConnectionsDialog({
 
                 aria-label="Close"
               >
-                <X className="h-5 w-5" style={{ color: 'var(--brand-text-secondary)' }} />
+                <X className="h-5 w-5" style={{ color: "var(--brand-primary)" }} />
               </button>
 
               {stage === 'prompt' ? (
@@ -89,11 +89,11 @@ export function ArticleConnectionsDialog({
                     Great read!
                   </h2>
 
-                  <p className="text-lg mb-6" style={{ color: 'var(--brand-text-secondary)' }}>
+                  <p className="text-lg mb-6" style={{ color: "var(--brand-primary)" }}>
                     "{article.title}"
                   </p>
 
-                  <p className="mb-8" style={{ color: 'var(--brand-text-muted)' }}>
+                  <p className="mb-8" style={{ color: "var(--brand-primary)" }}>
                     Want to connect this to your projects or thoughts?
                   </p>
 
@@ -121,13 +121,13 @@ export function ArticleConnectionsDialog({
                 <div className="p-6">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="p-2 rounded-lg" style={{ background: 'rgba(59, 130, 246, 0.2)' }}>
-                      <Brain className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
+                      <Brain className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
                     </div>
                     <div>
                       <h3 className="font-semibold premium-text-platinum">
                         AI-Suggested Connections
                       </h3>
-                      <p className="text-sm" style={{ color: 'var(--brand-text-muted)' }}>
+                      <p className="text-sm" style={{ color: "var(--brand-primary)" }}>
                         Based on "{article.title}"
                       </p>
                     </div>

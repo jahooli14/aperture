@@ -1,5 +1,5 @@
 /**
- * Smart Capture — client-side NLP classification
+ * Smart Capture  client-side NLP classification
  *
  * Classifies what a user is typing into one of five capture types:
  * todo, thought, article, list-item, or ambiguous.
@@ -16,8 +16,8 @@ export type CaptureType =
 
 export interface CaptureClassification {
   type: CaptureType
-  confidence: number          // 0–1
-  hint: string                // "Looks like a URL — save to Reading?"
+  confidence: number          // 01
+  hint: string                // "Looks like a URL  save to Reading?"
   icon: string                // emoji for the type
   color: string               // CSS color
   alternativeType?: CaptureType  // second best guess
@@ -28,38 +28,38 @@ export const CAPTURE_TYPE_META: Record<
   { icon: string; color: string; label: string; hint: string }
 > = {
   todo: {
-    icon: '✓',
-    color: 'rgba(52,211,153,0.8)',
+    icon: '',
+    color: "var(--brand-text-secondary)",
     label: 'Task',
     hint: 'Add to your todos',
   },
   thought: {
-    icon: '💭',
-    color: 'rgba(147,197,253,0.8)',
+    icon: '',
+    color: "var(--brand-text-secondary)",
     label: 'Thought',
     hint: 'Save to your thoughts',
   },
   article: {
-    icon: '📖',
-    color: 'rgba(34,211,238,0.8)',
+    icon: '',
+    color: "var(--brand-text-secondary)",
     label: 'Reading',
     hint: 'Save to reading queue',
   },
   'list-item': {
-    icon: '📋',
-    color: 'rgba(251,191,36,0.8)',
+    icon: '',
+    color: "var(--brand-text-secondary)",
     label: 'List',
     hint: 'Add to a list',
   },
   ambiguous: {
-    icon: '✦',
-    color: 'rgba(255,255,255,0.5)',
+    icon: '',
+    color: "var(--brand-text-secondary)",
     label: 'Capture',
     hint: 'Where should this go?',
   },
 }
 
-// ─── Signal patterns ──────────────────────────────────────────
+//  Signal patterns 
 
 /** URL: starts with http(s):// or www. */
 const RE_URL = /^https?:\/\/|^www\./i
@@ -88,11 +88,11 @@ const RE_THOUGHT_MID =
 const RE_ACTION_VERB =
   /^(buy|get|call|email|send|finish|complete|schedule|book|order|fix|write|review|update|check|follow[\s-]up|meet|ask|remind|pay|pick\s+up|drop|cancel|submit|prepare|plan|research|find|clean|organize|set\s+up|sign\s+up|register|download|install|reply|respond|contact|confirm|arrange|draft)\b/i
 
-/** Date/time markers that indicate scheduling intent → todo */
+/** Date/time markers that indicate scheduling intent  todo */
 const RE_DATE_MARKER =
   /(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|next\s+week|by\s+\w|before\s+\w|at\s+\d|@\d|eod|eow|tom\b|tmr\b)/i
 
-// ─── Scoring ──────────────────────────────────────────────────
+//  Scoring 
 
 interface Scores {
   todo: number
@@ -107,7 +107,7 @@ function scoreText(text: string): Scores {
 
   if (!trimmed) return scores
 
-  // ── Article signals ──
+  //  Article signals 
   if (RE_URL.test(trimmed)) {
     scores.article += 0.95
   }
@@ -117,31 +117,31 @@ function scoreText(text: string): Scores {
     scores.todo += 0.25
   }
 
-  // ── List-item signals ──
+  //  List-item signals 
   if (RE_LIST_ADD.test(trimmed)) {
     scores['list-item'] += 0.90
   } else if (RE_LIST_DOMAIN.test(trimmed)) {
     scores['list-item'] += 0.55
   }
 
-  // ── Thought signals ──
+  //  Thought signals 
   if (RE_THOUGHT_START.test(trimmed)) {
     scores.thought += 0.75
   } else if (RE_THOUGHT_MID.test(trimmed)) {
     scores.thought += 0.40
   }
 
-  // Long text with no action verb and no date → likely a thought
+  // Long text with no action verb and no date  likely a thought
   if (trimmed.length > 60 && !RE_ACTION_VERB.test(trimmed) && !RE_DATE_MARKER.test(trimmed)) {
     scores.thought += 0.30
   }
 
-  // Ends with a question mark → reflective thought
+  // Ends with a question mark  reflective thought
   if (trimmed.endsWith('?')) {
     scores.thought += 0.25
   }
 
-  // ── Todo signals ──
+  //  Todo signals 
   if (RE_ACTION_VERB.test(trimmed)) {
     scores.todo += 0.70
   }
@@ -156,7 +156,7 @@ function scoreText(text: string): Scores {
   return scores
 }
 
-// ─── Main export ──────────────────────────────────────────────
+//  Main export 
 
 export function classifyCapture(text: string): CaptureClassification {
   const trimmed = text.trim()
@@ -176,7 +176,7 @@ export function classifyCapture(text: string): CaptureClassification {
     return {
       type: 'article',
       confidence: 0.97,
-      hint: 'Looks like a link — save to Reading?',
+      hint: 'Looks like a link  save to Reading?',
       icon: CAPTURE_TYPE_META.article.icon,
       color: CAPTURE_TYPE_META.article.color,
       alternativeType: 'todo',
@@ -189,7 +189,7 @@ export function classifyCapture(text: string): CaptureClassification {
 
   const [[bestType, bestScore], [secondType, secondScore]] = entries
 
-  // If everything is zero → ambiguous
+  // If everything is zero  ambiguous
   if (bestScore === 0) {
     return {
       type: 'ambiguous',
@@ -200,7 +200,7 @@ export function classifyCapture(text: string): CaptureClassification {
     }
   }
 
-  // If top two are very close → ambiguous
+  // If top two are very close  ambiguous
   const gap = bestScore - secondScore
   if (gap < 0.15 && bestScore < 0.6) {
     const meta = CAPTURE_TYPE_META[bestType]
@@ -214,20 +214,20 @@ export function classifyCapture(text: string): CaptureClassification {
     }
   }
 
-  // Clamp confidence to 0–1
+  // Clamp confidence to 01
   const confidence = Math.min(bestScore, 1)
   const meta = CAPTURE_TYPE_META[bestType]
 
   // Build contextual hint
   let hint = meta.hint
   if (bestType === 'article' && RE_READ_INTENT.test(trimmed)) {
-    hint = 'Sounds like reading intent — save to queue?'
+    hint = 'Sounds like reading intent  save to queue?'
   } else if (bestType === 'thought' && trimmed.endsWith('?')) {
-    hint = 'Reflective question — save as a thought?'
+    hint = 'Reflective question  save as a thought?'
   } else if (bestType === 'list-item') {
-    hint = 'Sounds like a list item — which list?'
+    hint = 'Sounds like a list item  which list?'
   } else if (bestType === 'todo' && RE_DATE_MARKER.test(trimmed)) {
-    hint = 'Has a date — add as a scheduled task?'
+    hint = 'Has a date  add as a scheduled task?'
   }
 
   return {

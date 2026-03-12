@@ -70,9 +70,9 @@ export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProp
         <div className="flex items-start gap-3">
           {/* Feed Info & Title Container */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--brand-primary)' }}>
+            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "var(--brand-primary)" }}>
               {item.feed_title && <span className="truncate max-w-[150px]">{item.feed_title}</span>}
-              {item.feed_title && item.published_at && <span className="opacity-30">•</span>}
+              {item.feed_title && item.published_at && <span className="opacity-30"></span>}
               {item.published_at && (
                 <span className="flex items-center gap-1 shrink-0">
                   <Clock className="h-2.5 w-2.5" />
@@ -81,7 +81,7 @@ export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProp
               )}
             </div>
 
-            <h3 className="text-sm font-bold leading-snug group-hover:text-blue-400 transition-colors" style={{ color: 'var(--brand-text-primary)' }}>
+            <h3 className="text-sm font-bold leading-snug group-hover:text-brand-primary transition-colors" style={{ color: "var(--brand-primary)" }}>
               {item.title}
             </h3>
           </div>
@@ -93,7 +93,7 @@ export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProp
                 e.stopPropagation()
                 onSave()
               }}
-              className="p-1.5 rounded-lg text-blue-400 transition-all duration-200"
+              className="p-1.5 rounded-lg text-brand-primary transition-all duration-200"
               style={{ background: 'rgba(59,130,246,0.12)', border: '1.5px solid rgba(59,130,246,0.3)', boxShadow: '2px 2px 0 rgba(0,0,0,0.5)' }}
               title="Save to Read Later"
             >
@@ -106,7 +106,7 @@ export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProp
                   onDismiss()
                 }}
                 className="p-1.5 rounded-lg transition-all duration-200"
-                style={{ color: 'rgba(255,255,255,0.35)', border: '1.5px solid rgba(255,255,255,0.1)' }}
+                style={{ color: "var(--brand-primary)" }}
                 title="Dismiss"
               >
                 <X className="h-3.5 w-3.5" />
@@ -126,7 +126,7 @@ export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProp
                 e.stopPropagation()
                 onRead()
               }}
-              className="w-full bg-blue-600 hover:bg-blue-500 text-[var(--brand-text-primary)] h-8 text-xs"
+              className="w-full bg-brand-primary hover:bg-brand-primary text-[var(--brand-text-primary)] h-8 text-xs"
             >
               Read Article
             </Button>
@@ -136,7 +136,7 @@ export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProp
                 e.stopPropagation()
                 window.open(item.link, '_blank')
               }}
-              className="bg-transparent border-[var(--glass-surface-hover)] text-zinc-400 hover:text-[var(--brand-text-primary)] h-8 text-xs px-3"
+              className="bg-transparent border-[var(--glass-surface-hover)] text-brand-text-muted hover:text-[var(--brand-text-primary)] h-8 text-xs px-3"
             >
               <ExternalLink className="h-3.5 w-3.5" />
             </Button>

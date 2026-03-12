@@ -53,7 +53,7 @@ interface TodoStore {
   activeView: TodoView
 
   // Zeigarnik open loop: IDs of todos actively being worked on
-  // Keeps the open loop visible in the UI — cognitive tension drives return
+  // Keeps the open loop visible in the UI  cognitive tension drives return
   inProgressIds: string[]
 
   setActiveView: (view: TodoView) => void
@@ -97,7 +97,7 @@ export const useTodoStore = create<TodoStore>()(
         inProgressIds: s.inProgressIds.filter(x => x !== id),
       })),
 
-      // ─── Fetch ──────────────────────────────────────────────
+      //  Fetch 
 
       fetchTodos: async () => {
         const { isOnline } = useOfflineStore.getState()
@@ -182,7 +182,7 @@ export const useTodoStore = create<TodoStore>()(
         }
       },
 
-      // ─── Add (optimistic) ────────────────────────────────────
+      //  Add (optimistic) 
 
       addTodo: async (input) => {
         const { isOnline } = useOfflineStore.getState()
@@ -248,7 +248,7 @@ export const useTodoStore = create<TodoStore>()(
         }
       },
 
-      // ─── Update (optimistic) ─────────────────────────────────
+      //  Update (optimistic) 
 
       updateTodo: async (id, updates) => {
         const prev = get().todos.find(t => t.id === id)
@@ -289,14 +289,14 @@ export const useTodoStore = create<TodoStore>()(
         }
       },
 
-      // ─── Toggle complete (optimistic + undo-able via toast) ──
+      //  Toggle complete (optimistic + undo-able via toast) 
 
       toggleTodo: async (id) => {
         const todo = get().todos.find(t => t.id === id)
         if (!todo) return
 
         const nowDone = !todo.done
-        // Remove from in-progress when completed — close the open loop
+        // Remove from in-progress when completed  close the open loop
         if (nowDone) {
           set(s => ({ inProgressIds: s.inProgressIds.filter(x => x !== id) }))
         }
@@ -306,7 +306,7 @@ export const useTodoStore = create<TodoStore>()(
         })
       },
 
-      // ─── Soft delete ──────────────────────────────────────────
+      //  Soft delete 
 
       deleteTodo: async (id) => {
         const prev = get().todos.find(t => t.id === id)
@@ -332,7 +332,7 @@ export const useTodoStore = create<TodoStore>()(
         }
       },
 
-      // ─── Reorder ──────────────────────────────────────────────
+      //  Reorder 
 
       reorderTodos: async (ids) => {
         set(s => ({
@@ -369,7 +369,7 @@ export const useTodoStore = create<TodoStore>()(
   )
 )
 
-// ─── Selectors ──────────────────────────────────────────────
+//  Selectors 
 
 const YMD = () => new Date().toISOString().split('T')[0]
 

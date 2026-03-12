@@ -135,23 +135,23 @@ export function ReaperModal({ isOpen, onClose }: ReaperModalProps) {
             <button
               onClick={onClose}
               className="absolute top-4 right-4 p-2 rounded-full hover:bg-[rgba(255,255,255,0.1)] transition-colors"
-              style={{ color: 'var(--brand-text-muted)' }}
+              style={{ color: "var(--brand-primary)" }}
             >
               <X className="h-5 w-5" />
             </button>
 
             {loading ? (
               <div className="flex flex-col items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-red-500 mb-4" />
-                <p className="text-red-300">Searching for lost souls...</p>
+                <Loader2 className="h-8 w-8 animate-spin text-brand-text-secondary mb-4" />
+                <p className="text-brand-primary">Searching for lost souls...</p>
               </div>
             ) : rottingProject ? (
               <div className="text-center">
-                <Skull className="h-16 w-16 mx-auto text-red-500 mb-6" />
-                <h2 className="text-3xl font-bold text-red-400 mb-3">
+                <Skull className="h-16 w-16 mx-auto text-brand-text-secondary mb-6" />
+                <h2 className="text-3xl font-bold text-brand-text-secondary mb-3">
                   The Reaper Approaches
                 </h2>
-                <p className="text-lg text-red-200 mb-6">
+                <p className="text-lg text-brand-primary mb-6">
                   A project has fallen silent. It whispers from the void...
                 </p>
 
@@ -160,12 +160,12 @@ export function ReaperModal({ isOpen, onClose }: ReaperModalProps) {
                     "{rottingProject.title}"
                   </h3>
                   {rottingProject.description && (
-                    <p className="text-sm italic text-red-200/80 mb-4">
+                    <p className="text-sm italic text-brand-primary/80 mb-4">
                       {rottingProject.description}
                     </p>
                   )}
                   {rottingProject.eulogy && (
-                    <p className="text-base text-red-100 font-serif">
+                    <p className="text-base text-brand-primary font-serif">
                       "{rottingProject.eulogy}"
                     </p>
                   )}
@@ -175,7 +175,7 @@ export function ReaperModal({ isOpen, onClose }: ReaperModalProps) {
                   <button
                     onClick={handleResurrect}
                     disabled={submitting}
-                    className="px-6 py-3 rounded-lg bg-green-500/20 text-green-300 border border-green-500/40 hover:bg-green-500/30 transition-all flex items-center gap-2"
+                    className="px-6 py-3 rounded-lg bg-brand-primary/20 text-brand-primary border border-green-500/40 hover:bg-brand-primary/30 transition-all flex items-center gap-2"
                   >
                     {submitting ? (
                       <Loader2 className="h-5 w-5 animate-spin" />
@@ -187,7 +187,7 @@ export function ReaperModal({ isOpen, onClose }: ReaperModalProps) {
                   <button
                     onClick={handleBury}
                     disabled={submitting}
-                    className="px-6 py-3 rounded-lg bg-red-500/20 text-red-300 border border-red-500/40 hover:bg-red-500/30 transition-all flex items-center gap-2"
+                    className="px-6 py-3 rounded-lg bg-brand-primary/20 text-brand-primary border border-red-500/40 hover:bg-brand-primary/30 transition-all flex items-center gap-2"
                   >
                     {submitting ? (
                       <Loader2 className="h-5 w-5 animate-spin" />

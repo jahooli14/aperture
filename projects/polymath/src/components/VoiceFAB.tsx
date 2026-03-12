@@ -1,13 +1,13 @@
 /**
  * Universal Action FAB
  *
- * TAP   → Voice capture modal (auto-starts recording)
- * HOLD  → Slide-up option strip appears above FAB:
- *            Slide up slightly  → Thought
- *            Slide up more      → Project
- *            Slide up furthest  → Article
+ * TAP    Voice capture modal (auto-starts recording)
+ * HOLD   Slide-up option strip appears above FAB:
+ *            Slide up slightly   Thought
+ *            Slide up more       Project
+ *            Slide up furthest   Article
  *         Release over an option to open it.
- *         Release back on the FAB (no slide) → dismisses, no action.
+ *         Release back on the FAB (no slide)  dismisses, no action.
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react'
@@ -51,7 +51,7 @@ const STRIP_OPTIONS = [
     id: 'todo' as const,
     label: 'Todo',
     icon: CheckSquare,
-    color: 'rgba(59, 130, 246, 0.3)',
+    color: "var(--brand-text-secondary)",
     activeColor: 'rgba(59, 130, 246, 0.55)',
     border: 'rgba(59, 130, 246, 0.5)',
     glow: 'rgba(59, 130, 246, 0.5)',
@@ -61,7 +61,7 @@ const STRIP_OPTIONS = [
     id: 'thought' as const,
     label: 'Thought',
     icon: Brain,
-    color: 'rgba(139, 92, 246, 0.3)',
+    color: "var(--brand-text-secondary)",
     activeColor: 'rgba(139, 92, 246, 0.55)',
     border: 'rgba(139, 92, 246, 0.5)',
     glow: 'rgba(139, 92, 246, 0.5)',
@@ -71,7 +71,7 @@ const STRIP_OPTIONS = [
     id: 'project' as const,
     label: 'Project',
     icon: Layers,
-    color: 'rgba(59, 130, 246, 0.3)',
+    color: "var(--brand-text-secondary)",
     activeColor: 'rgba(59, 130, 246, 0.55)',
     border: 'rgba(59, 130, 246, 0.5)',
     glow: 'rgba(59, 130, 246, 0.5)',
@@ -81,7 +81,7 @@ const STRIP_OPTIONS = [
     id: 'article' as const,
     label: 'Article',
     icon: BookmarkPlus,
-    color: 'rgba(16, 185, 129, 0.3)',
+    color: "var(--brand-text-secondary)",
     activeColor: 'rgba(16, 185, 129, 0.55)',
     border: 'rgba(16, 185, 129, 0.5)',
     glow: 'rgba(16, 185, 129, 0.5)',
@@ -174,7 +174,7 @@ export function VoiceFAB({
     else if (option === 'thought') setShowThoughtDialog(true)
     else if (option === 'project') setShowProjectDialog(true)
     else if (option === 'article') setShowArticleDialog(true)
-    // null = released on FAB with no slide — do nothing (prevents accidental recording)
+    // null = released on FAB with no slide  do nothing (prevents accidental recording)
   }, [closeStrip])
 
   // --- Press handlers ---
@@ -227,7 +227,7 @@ export function VoiceFAB({
       return
     }
 
-    // Short tap → voice capture
+    // Short tap  voice capture
     if (duration < LONG_PRESS_DELAY && !isLongPressRef.current) {
       if (onTap) {
         const handled = onTap()
@@ -282,7 +282,7 @@ export function VoiceFAB({
             onPointerDown={closeStrip}
           />
 
-          {/* Option pills — pointer-events:none; touch stays on FAB */}
+          {/* Option pills  pointer-events:none; touch stays on FAB */}
           {STRIP_OPTIONS.map((opt, i) => {
             const isActive = activeOption === opt.id
             return (
@@ -377,14 +377,14 @@ export function VoiceFAB({
           ? '0 8px 32px rgba(0,0,0,0.5), inset 0 0 0 1px var(--glass-surface-hover)'
           : '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 0 10px var(--glass-surface)',
       }}
-      aria-label="Create — tap to record, hold to choose type"
+      aria-label="Create  tap to record, hold to choose type"
     >
       {isStripOpen ? (
         <motion.div
           animate={{ rotate: activeOption ? 45 : 0 }}
           transition={{ duration: 0.15 }}
         >
-          <Plus className={cn('h-6 w-6', activeOption ? 'text-[var(--brand-text-primary)]' : 'text-zinc-400')} />
+          <Plus className={cn('h-6 w-6', activeOption ? 'text-[var(--brand-text-primary)]' : 'text-brand-text-muted')} />
         </motion.div>
       ) : (
         <Plus className="h-6 w-6 text-zinc-300 transition-transform group-hover:rotate-90 group-hover:text-[var(--brand-text-primary)]" />
@@ -411,7 +411,7 @@ export function VoiceFAB({
         }}
       />
 
-      {/* Voice modal — opened by short tap */}
+      {/* Voice modal  opened by short tap */}
       {createPortal(
         <AnimatePresence>
           {isVoiceOpen && (
@@ -439,18 +439,18 @@ export function VoiceFAB({
                   <div className="flex items-center justify-between px-8 py-8">
                     <div>
                       <h3 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] flex items-center gap-2">
-                        <Mic className="h-6 w-6 text-sky-400" />
+                        <Mic className="h-6 w-6 text-brand-primary" />
                         Voice Capture
                       </h3>
-                      <p className="text-sm text-zinc-500 mt-1 font-medium">
-                        {isOnline ? 'Transcribing in real-time' : 'Offline mode — will sync later'}
+                      <p className="text-sm text-brand-text-muted mt-1 font-medium">
+                        {isOnline ? 'Transcribing in real-time' : 'Offline mode  will sync later'}
                       </p>
                     </div>
                     <button
                       onClick={() => setIsVoiceOpen(false)}
                       className="h-12 w-12 rounded-full bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] flex items-center justify-center transition-all border border-[var(--glass-surface)]"
                     >
-                      <X className="h-6 w-6 text-zinc-400" />
+                      <X className="h-6 w-6 text-brand-text-muted" />
                     </button>
                   </div>
                   <div className="px-8 pb-10">

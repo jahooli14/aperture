@@ -10,7 +10,7 @@ export function useOnlineStatus() {
 
   useEffect(() => {
     function handleOnline() {
-      console.log('🟢 Back online')
+      console.log(' Back online')
       setIsOnline(true)
       setWasOffline(true)
       // Reset wasOffline after 3 seconds
@@ -18,7 +18,7 @@ export function useOnlineStatus() {
     }
 
     function handleOffline() {
-      console.log('🔴 Offline')
+      console.log(' Offline')
       setIsOnline(false)
     }
 

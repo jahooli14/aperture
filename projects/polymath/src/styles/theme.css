@@ -97,20 +97,18 @@
     margin-top: 1.5rem;
 }
 
-/* Unified Card - Neobrutalism */
-.aperture-card {
+/* Unified Card - Neobrutalism (Attention) */
+.attention-card {
     background: var(--brand-glass-bg);
-    border: var(--brand-border);
-    border-radius: var(--brand-radius);
-    box-shadow: 3px 3px 0 rgba(0,0,0,0.5);
+    border: 1px solid #ffffff;
+    border-radius: var(--brand-radius-sm);
+    box-shadow: 4px 4px 0 rgba(0,0,0,0.8);
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.aperture-card:hover {
-    background: rgba(30, 42, 88, 0.25);
-    border-color: rgba(255, 255, 255, 0.2);
-    transform: translateY(-2px);
-    box-shadow: 4px 4px 0 rgba(0,0,0,0.6);
+.attention-card:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 5px 5px 0 rgba(0,0,0,0.9);
 }
 
 /* Aperture Hero Card - Neobrutalism */

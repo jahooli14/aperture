@@ -245,7 +245,7 @@ export function PowerHourReview({
                 initial={{ opacity: 0, y: 100 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 100 }}
-                className="w-full max-w-lg aperture-card overflow-hidden max-h-[90vh] flex flex-col"
+                className="w-full max-w-lg glass-card glass-card-hover overflow-hidden max-h-[90vh] flex flex-col"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
@@ -276,21 +276,21 @@ export function PowerHourReview({
                         <motion.div
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 mb-3"
+                            className="p-3 rounded-xl bg-brand-primary/10 border border-amber-500/20 mb-3"
                         >
                             <div className="flex items-start gap-2">
-                                <Sparkles className="h-4 w-4 text-amber-400 mt-0.5 flex-shrink-0" />
+                                <Sparkles className="h-4 w-4 text-brand-text-secondary mt-0.5 flex-shrink-0" />
                                 <div className="flex-1 min-w-0">
-                                    <div className="text-xs font-bold text-amber-300 mb-1">
+                                    <div className="text-xs font-bold text-brand-primary mb-1">
                                         It's been {projectContext.daysDormant} days
                                     </div>
                                     {projectContext.motivation && (
-                                        <div className="text-[11px] text-amber-200/70 leading-relaxed">
+                                        <div className="text-[11px] text-brand-primary/70 leading-relaxed">
                                             Remember: <span className="italic">"{projectContext.motivation}"</span>
                                         </div>
                                     )}
                                     {projectContext.lastCompletedTask && (
-                                        <div className="text-[10px] text-amber-300/50 mt-2 flex items-center gap-1">
+                                        <div className="text-[10px] text-brand-primary/50 mt-2 flex items-center gap-1">
                                             <History className="h-3 w-3" />
                                             Last: "{projectContext.lastCompletedTask}"
                                         </div>
@@ -305,10 +305,10 @@ export function PowerHourReview({
                         <div className="flex items-center gap-3">
                             {/* Goal Pill - tappable */}
                             {projectContext?.projectMode === 'recurring' ? (
-                                <div className="flex items-center gap-1.5 text-green-400/70 text-[10px]">
+                                <div className="flex items-center gap-1.5 text-brand-text-secondary/70 text-[10px]">
                                     <RefreshCw className="h-3 w-3" />
                                     <span className="font-medium">
-                                        Ongoing habit • {projectContext.completedCount || 0} sessions
+                                        Ongoing habit  {projectContext.completedCount || 0} sessions
                                     </span>
                                 </div>
                             ) : projectContext?.endGoal ? (
@@ -388,10 +388,10 @@ export function PowerHourReview({
                 <div className="flex-1 overflow-y-auto">
                     {/* Manual Mode Banner */}
                     {isManualMode && (
-                        <div className="px-4 py-3 bg-blue-500/10 border-b border-blue-500/20">
-                            <div className="flex items-center gap-2 text-blue-400 text-xs">
+                        <div className="px-4 py-3 bg-brand-primary/10 border-b border-blue-500/20">
+                            <div className="flex items-center gap-2 text-brand-primary text-xs">
                                 <ListTodo className="h-4 w-4" />
-                                <span className="font-medium">Manual Mode – Build your own session</span>
+                                <span className="font-medium">Manual Mode  Build your own session</span>
                             </div>
                         </div>
                     )}
@@ -399,7 +399,7 @@ export function PowerHourReview({
                     <div className="p-4 space-y-2">
                         {/* Instruction hint */}
                         <p className="text-[10px] text-[var(--brand-text-primary)]/30 mb-3">
-                            Tap to exclude • Tap time to change • Scroll for backlog
+                            Tap to exclude  Tap time to change  Scroll for backlog
                         </p>
 
                         {items.map((item, idx) => {
@@ -414,11 +414,11 @@ export function PowerHourReview({
                                     key={idx}
                                     layout
                                     className={`rounded-xl transition-all ${isPlanningTask
-                                        ? 'bg-blue-500/10 border border-blue-500/20'
+                                        ? 'bg-brand-primary/10 border border-blue-500/20'
                                         : isRemoved
                                             ? 'bg-[var(--glass-surface)] opacity-60'
                                             : isStale && !isRemoved
-                                                ? 'bg-amber-500/5 border-l-2 border-amber-400/40'
+                                                ? 'bg-brand-primary/5 border-l-2 border-amber-400/40'
                                                 : 'bg-[rgba(255,255,255,0.1)]'
                                         }`}
                                 >
@@ -452,7 +452,7 @@ export function PowerHourReview({
                                         {/* Task Content */}
                                         <div className="flex-1 min-w-0">
                                             <div className={`text-sm font-medium leading-snug ${isPlanningTask
-                                                ? 'text-blue-300'
+                                                ? 'text-brand-primary'
                                                 : isRemoved
                                                     ? 'line-through text-[var(--brand-text-primary)]/30'
                                                     : 'text-[var(--brand-text-primary)]'
@@ -463,7 +463,7 @@ export function PowerHourReview({
                                             {/* Labels Row */}
                                             <div className="flex flex-wrap items-center gap-1.5 mt-1">
                                                 {isPlanningTask && (
-                                                    <span className="text-[9px] font-bold uppercase tracking-wider text-blue-400">
+                                                    <span className="text-[9px] font-bold uppercase tracking-wider text-brand-primary">
                                                         Planning Phase
                                                     </span>
                                                 )}
@@ -476,7 +476,7 @@ export function PowerHourReview({
                                                     </span>
                                                 )}
                                                 {isStale && !isPlanningTask && (
-                                                    <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-xl bg-amber-500/20 text-amber-400">
+                                                    <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-xl bg-brand-primary/20 text-brand-text-secondary">
                                                         {taskAge}d old
                                                     </span>
                                                 )}
@@ -619,7 +619,7 @@ export function PowerHourReview({
                                 className="w-full flex items-center justify-center gap-2 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--brand-text-primary)]/30 hover:text-[var(--brand-text-primary)]/50 transition-colors"
                             >
                                 <RefreshCw className="h-3 w-3" />
-                                Start fresh – build my own plan
+                                Start fresh  build my own plan
                             </button>
                         </div>
                     )}
@@ -633,7 +633,7 @@ export function PowerHourReview({
                             <span className="text-sm text-[var(--brand-text-primary)]/70">Session Time</span>
                         </div>
                         <div className="flex items-center gap-1">
-                            <span className={`text-xl font-bold tabular-nums ${isOvertime ? 'text-red-400' : isIdeal ? 'text-green-400' : 'text-[var(--brand-text-primary)]'
+                            <span className={`text-xl font-bold tabular-nums ${isOvertime ? 'text-brand-text-secondary' : isIdeal ? 'text-brand-text-secondary' : 'text-[var(--brand-text-primary)]'
                                 }`}>
                                 {totalMinutes}
                             </span>
@@ -645,7 +645,7 @@ export function PowerHourReview({
                     <div className="relative h-2 bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden">
                         {/* Sweet spot zone */}
                         <div
-                            className="absolute h-full bg-green-500/20"
+                            className="absolute h-full bg-brand-primary/20"
                             style={{
                                 left: `${(TARGET_ZONE_MIN / MAX_MINUTES) * 100}%`,
                                 width: `${((TARGET_ZONE_MAX - TARGET_ZONE_MIN) / MAX_MINUTES) * 100}%`
@@ -654,7 +654,7 @@ export function PowerHourReview({
 
                         {/* Actual progress */}
                         <motion.div
-                            className={`h-full rounded-full transition-colors ${isOvertime ? 'bg-red-500' : isIdeal ? 'bg-green-500' : 'bg-brand-surface0'
+                            className={`h-full rounded-full transition-colors ${isOvertime ? 'bg-brand-primary' : isIdeal ? 'bg-brand-primary' : 'bg-brand-surface0'
                                 }`}
                             initial={{ width: 0 }}
                             animate={{ width: `${progressPercent}%` }}
@@ -671,13 +671,13 @@ export function PowerHourReview({
                     {/* Contextual messaging */}
                     <div className="mt-2 text-[11px] text-center">
                         {isOvertime && (
-                            <span className="text-red-400 flex items-center justify-center gap-1">
+                            <span className="text-brand-text-secondary flex items-center justify-center gap-1">
                                 <AlertTriangle className="h-3 w-3" />
                                 Remove {totalMinutes - MAX_MINUTES}m to start
                             </span>
                         )}
                         {isIdeal && (
-                            <span className="text-green-400">
+                            <span className="text-brand-text-secondary">
                                 Perfect! Right in the sweet spot
                             </span>
                         )}
@@ -699,7 +699,7 @@ export function PowerHourReview({
                                     haptic.light()
                                     onArchive()
                                 }}
-                                className="flex items-center justify-center gap-2 px-4 py-4 rounded-xl border border-amber-500/30 hover:bg-amber-500/10 transition-colors text-amber-400"
+                                className="flex items-center justify-center gap-2 px-4 py-4 rounded-xl border border-amber-500/30 hover:bg-brand-primary/10 transition-colors text-brand-text-secondary"
                             >
                                 <Archive className="h-4 w-4" />
                             </button>

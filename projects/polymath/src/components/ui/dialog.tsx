@@ -217,7 +217,7 @@ const DialogTitle = React.forwardRef<
       "text-lg font-semibold leading-none tracking-tight",
       className
     )}
-    style={{ color: 'var(--brand-text-primary)' }}
+    style={{ color: "var(--brand-primary)" }}
     {...props}
   />
 ))
@@ -230,7 +230,7 @@ const DialogDescription = React.forwardRef<
   <p
     ref={ref}
     className={cn("text-sm", className)}
-    style={{ color: 'var(--brand-text-secondary)' }}
+    style={{ color: "var(--brand-primary)" }}
     {...props}
   />
 ))

@@ -12,7 +12,7 @@ export function EmptyState() {
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         {/* Icon */}
         <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-100 to-amber-100 mb-6">
-          <Brain className="h-10 w-10 text-blue-900" />
+          <Brain className="h-10 w-10 text-brand-primary" />
         </div>
 
         {/* Heading */}
@@ -28,7 +28,7 @@ export function EmptyState() {
         <div className="space-y-6 text-left mb-8">
           {/* Step 1 */}
           <div className="flex gap-4 items-start">
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center font-bold text-blue-900">
+            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-brand-primary flex items-center justify-center font-bold text-brand-primary">
               1
             </div>
             <div>
@@ -44,7 +44,7 @@ export function EmptyState() {
 
           {/* Step 2 */}
           <div className="flex gap-4 items-start">
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center font-bold text-amber-600">
+            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-brand-primary flex items-center justify-center font-bold text-brand-primary">
               2
             </div>
             <div>
@@ -60,7 +60,7 @@ export function EmptyState() {
 
           {/* Step 3 */}
           <div className="flex gap-4 items-start">
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center font-bold text-blue-900">
+            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-brand-primary flex items-center justify-center font-bold text-brand-primary">
               3
             </div>
             <div>
@@ -102,7 +102,7 @@ export function EmptyState() {
 
         {/* Footer note */}
         <p className="mt-8 text-xs text-[var(--brand-text-muted)]">
-          💡 Tip: Record 5-10 voice notes across different topics to see the magic happen
+           Tip: Record 5-10 voice notes across different topics to see the magic happen
         </p>
       </div>
     </div>

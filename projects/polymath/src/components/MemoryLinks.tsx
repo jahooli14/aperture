@@ -48,8 +48,8 @@ export function MemoryLinks({ currentMemoryId, bridges, onMemoryClick }: MemoryL
   return (
     <div className="pt-3 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
       <div className="flex items-center gap-2 mb-3">
-        <Link2 className="h-4 w-4" style={{ color: 'var(--brand-primary)' }} />
-        <span className="text-sm font-semibold" style={{ color: 'var(--brand-text-secondary)' }}>
+        <Link2 className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
+        <span className="text-sm font-semibold" style={{ color: "var(--brand-primary)" }}>
           Connected Memories
         </span>
         <span
@@ -67,7 +67,7 @@ export function MemoryLinks({ currentMemoryId, bridges, onMemoryClick }: MemoryL
         {/* Backlinks (memories that link TO this one) */}
         {backlinks.length > 0 && (
           <div className="space-y-2">
-            <div className="flex items-center gap-1.5 text-xs font-medium" style={{ color: 'var(--brand-text-muted)' }}>
+            <div className="flex items-center gap-1.5 text-xs font-medium" style={{ color: "var(--brand-primary)" }}>
               <ArrowLeft className="h-3 w-3" />
               <span>Linked here from</span>
             </div>
@@ -85,10 +85,10 @@ export function MemoryLinks({ currentMemoryId, bridges, onMemoryClick }: MemoryL
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium line-clamp-1" style={{ color: 'var(--brand-text-primary)' }}>
+                    <div className="text-sm font-medium line-clamp-1" style={{ color: "var(--brand-primary)" }}>
                       {link.memory.title}
                     </div>
-                    <div className="text-xs mt-0.5 capitalize" style={{ color: 'var(--brand-text-muted)' }}>
+                    <div className="text-xs mt-0.5 capitalize" style={{ color: "var(--brand-primary)" }}>
                       {bridgeTypeLabels[link.bridge_type] || link.bridge_type.replace(/_/g, ' ')}
                     </div>
                   </div>
@@ -96,7 +96,7 @@ export function MemoryLinks({ currentMemoryId, bridges, onMemoryClick }: MemoryL
                     className="px-2 py-0.5 rounded-full font-bold text-xs flex-shrink-0"
                     style={{
                       background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.8), rgba(99, 102, 241, 0.8))',
-                      color: '#ffffff',
+                      color: "var(--brand-text-secondary)",
                     }}
                   >
                     {Math.round(link.strength * 100)}%
@@ -110,7 +110,7 @@ export function MemoryLinks({ currentMemoryId, bridges, onMemoryClick }: MemoryL
         {/* Forward links (memories this one links TO) */}
         {forwardLinks.length > 0 && (
           <div className="space-y-2">
-            <div className="flex items-center gap-1.5 text-xs font-medium" style={{ color: 'var(--brand-text-muted)' }}>
+            <div className="flex items-center gap-1.5 text-xs font-medium" style={{ color: "var(--brand-primary)" }}>
               <ArrowRight className="h-3 w-3" />
               <span>Links to</span>
             </div>
@@ -128,10 +128,10 @@ export function MemoryLinks({ currentMemoryId, bridges, onMemoryClick }: MemoryL
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium line-clamp-1" style={{ color: 'var(--brand-text-primary)' }}>
+                    <div className="text-sm font-medium line-clamp-1" style={{ color: "var(--brand-primary)" }}>
                       {link.memory.title}
                     </div>
-                    <div className="text-xs mt-0.5 capitalize" style={{ color: 'var(--brand-text-muted)' }}>
+                    <div className="text-xs mt-0.5 capitalize" style={{ color: "var(--brand-primary)" }}>
                       {bridgeTypeLabels[link.bridge_type] || link.bridge_type.replace(/_/g, ' ')}
                     </div>
                   </div>
@@ -139,7 +139,7 @@ export function MemoryLinks({ currentMemoryId, bridges, onMemoryClick }: MemoryL
                     className="px-2 py-0.5 rounded-full font-bold text-xs flex-shrink-0"
                     style={{
                       background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.8), rgba(14, 165, 233, 0.8))',
-                      color: '#ffffff',
+                      color: "var(--brand-text-secondary)",
                     }}
                   >
                     {Math.round(link.strength * 100)}%

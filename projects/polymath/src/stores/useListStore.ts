@@ -193,10 +193,10 @@ export const useListStore = create<ListStore>()(
                 const state = get()
 
                 if (state.currentListId === currentFetchId) {
-                    // Same list — keep showing current items while refreshing
+                    // Same list  keep showing current items while refreshing
                     set({ loading: true })
                 } else {
-                    // Different list — clear items, update ID
+                    // Different list  clear items, update ID
                     set({ currentListId: currentFetchId, currentListItems: [], loading: true })
                 }
 

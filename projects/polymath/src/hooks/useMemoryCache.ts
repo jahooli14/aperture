@@ -43,7 +43,7 @@ export function useMemoryCache() {
         })
       }
       await loadCachedMemories()
-      console.log(`✓ Cached ${memories.length} memories for offline access`)
+      console.log(` Cached ${memories.length} memories for offline access`)
     } catch (error) {
       console.error('Failed to cache memories:', error)
     }
@@ -58,7 +58,7 @@ export function useMemoryCache() {
     try {
       if (!isOnline) {
         // Offline: return cached data
-        console.log('📱 Offline - serving cached memories')
+        console.log(' Offline - serving cached memories')
         const cached = await db.getCachedMemories()
         return {
           memories: cached.map(c => ({
@@ -88,7 +88,7 @@ export function useMemoryCache() {
       // Debug: log processing status
       const unprocessedCount = memories.filter((m: Memory) => !m.processed).length
       if (unprocessedCount > 0) {
-        console.log(`⚠️ API returned ${unprocessedCount} unprocessed memories`)
+        console.log(` API returned ${unprocessedCount} unprocessed memories`)
         console.log('Sample unprocessed:', memories.find((m: Memory) => !m.processed))
       }
 
@@ -129,7 +129,7 @@ export function useMemoryCache() {
     try {
       await db.clearOldMemoryCache()
       await loadCachedMemories()
-      console.log('✓ Cache cleaned')
+      console.log(' Cache cleaned')
     } catch (error) {
       console.error('Failed to clean cache:', error)
     }

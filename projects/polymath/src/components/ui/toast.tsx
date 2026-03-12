@@ -95,7 +95,7 @@ function ToastItem({ toast, isRemoving, onClose }: { toast: Toast; isRemoving: b
       case "destructive":
         return {
           backgroundColor: 'rgba(239, 68, 68, 0.1)',
-          color: '#ef4444',
+          color: "var(--brand-text-secondary)",
           border: '1.5px solid rgba(239, 68, 68, 0.35)',
           borderRadius: '4px',
           boxShadow: '3px 3px 0 rgba(0,0,0,0.6)',

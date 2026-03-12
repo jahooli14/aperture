@@ -97,13 +97,13 @@ class ArticleProcessor {
 
       // Check if extraction is complete
       if (article.processed) {
-        this.log(`✓ Extraction complete for ${articleId.slice(0, 8)}: "${article.title}"`, 'success')
+        this.log(` Extraction complete for ${articleId.slice(0, 8)}: "${article.title}"`, 'success')
 
         // Auto-sync for offline immediately (Independent of UI)
         try {
           const { syncArticleForOffline } = await import('./offlineSync')
           syncArticleForOffline(article).then(() => {
-            this.log(`✓ Article ${articleId.slice(0, 8)} synced for offline`, 'success')
+            this.log(` Article ${articleId.slice(0, 8)} synced for offline`, 'success')
           }).catch(err => {
             console.warn('[ArticleProcessor] Offline sync failed:', err)
           })
@@ -131,8 +131,8 @@ class ArticleProcessor {
       const isZombie = articleAgeSeconds >= 90 && !article.processed && (isProcessingMessage || hasFailureMessage)
 
       if (isZombie) {
-        this.log(`🧟 ZOMBIE DETECTED: Article ${articleId.slice(0, 8)} is ${articleAgeSeconds}s old but status never updated - backend died!`, 'error')
-        processing.currentStage = '🧟 Backend: Died (Zombie - Retriggering)'
+        this.log(` ZOMBIE DETECTED: Article ${articleId.slice(0, 8)} is ${articleAgeSeconds}s old but status never updated - backend died!`, 'error')
+        processing.currentStage = ' Backend: Died (Zombie - Retriggering)'
         // Immediately trigger retry without waiting for max attempts
         await this.retryExtraction(articleId, processing.url, onProgress)
         return
@@ -140,19 +140,19 @@ class ArticleProcessor {
 
       // Detect which stage based on backend message - check failures first
       if (processing.lastLog.includes('failed') || processing.lastLog.includes('Failed')) {
-        processing.currentStage = '❌ Backend: Extraction Failed'
+        processing.currentStage = ' Backend: Extraction Failed'
       } else if (processing.lastLog.includes('blocked')) {
-        processing.currentStage = '🚫 Backend: Domain Blocked'
+        processing.currentStage = ' Backend: Domain Blocked'
       } else if (processing.lastLog.includes('timeout') || processing.lastLog.includes('timed out') || processing.lastLog.includes('take a moment')) {
-        processing.currentStage = '⏱️ Backend: Timed Out'
+        processing.currentStage = ' Backend: Timed Out'
       } else if (processing.lastLog.includes('JavaScript')) {
-        processing.currentStage = '⚠️ Backend: Needs JS Rendering'
+        processing.currentStage = ' Backend: Needs JS Rendering'
       } else if (processing.lastLog.includes('Extracting') || processing.lastLog.includes('extraction')) {
-        processing.currentStage = '🔄 Backend: Extracting (Tier 1→2→3)'
+        processing.currentStage = ' Backend: Extracting (Tier 123)'
       } else if (processing.lastLog.includes('progress')) {
-        processing.currentStage = '🔄 Backend: In Progress'
+        processing.currentStage = ' Backend: In Progress'
       } else {
-        processing.currentStage = '🔄 Backend: Processing'
+        processing.currentStage = ' Backend: Processing'
       }
 
       this.log(`Stage: ${processing.currentStage} | ${processing.lastLog.slice(0, 40)}`, 'info')

@@ -39,32 +39,32 @@ export function ExtractionSummary() {
         >
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
-              <Brain className="w-3.5 h-3.5 text-blue-400" />
-              <span className="text-xs text-blue-300 font-medium">Understood</span>
+              <Brain className="w-3.5 h-3.5 text-brand-primary" />
+              <span className="text-xs text-brand-primary font-medium">Understood</span>
             </div>
             <div className="h-3 w-px bg-[rgba(255,255,255,0.1)]" />
             <div className="flex items-center gap-2.5 text-xs text-[var(--brand-text-secondary)]">
               {extraction.topics > 0 && (
                 <span className="flex items-center gap-1">
-                  <Hash className="w-3 h-3 text-emerald-400" />
+                  <Hash className="w-3 h-3 text-brand-text-secondary" />
                   {extraction.topics} topic{extraction.topics > 1 ? 's' : ''}
                 </span>
               )}
               {extraction.people > 0 && (
                 <span className="flex items-center gap-1">
-                  <Users className="w-3 h-3 text-violet-400" />
+                  <Users className="w-3 h-3 text-brand-primary" />
                   {extraction.people} {extraction.people > 1 ? 'people' : 'person'}
                 </span>
               )}
               {extraction.tone && (
                 <span className="flex items-center gap-1">
-                  <Heart className="w-3 h-3 text-rose-400" />
+                  <Heart className="w-3 h-3 text-brand-text-secondary" />
                   {extraction.tone}
                 </span>
               )}
               {extraction.connections > 0 && (
                 <span className="flex items-center gap-1">
-                  <Link2 className="w-3 h-3 text-amber-400" />
+                  <Link2 className="w-3 h-3 text-brand-text-secondary" />
                   {extraction.connections} link{extraction.connections > 1 ? 's' : ''}
                 </span>
               )}

@@ -214,7 +214,7 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
               <button
                 onClick={onClose}
                 className="absolute top-4 right-4 p-2 rounded-full hover:bg-[rgba(255,255,255,0.1)] transition-colors"
-                style={{ color: 'var(--brand-text-muted)' }}
+                style={{ color: "var(--brand-primary)" }}
                 aria-label="Close"
               >
                 <X className="h-5 w-5" />
@@ -248,7 +248,7 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
                     }}
                     className={`p-2 rounded-full transition-colors ${
                       memory.is_pinned
-                        ? 'text-amber-400 hover:bg-amber-500/10'
+                        ? 'text-brand-text-secondary hover:bg-brand-primary/10'
                         : 'hover:bg-brand-surface/80'
                     }`}
                     style={memory.is_pinned ? undefined : { color: 'var(--brand-text-muted)' }}
@@ -260,15 +260,15 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
                   <button
                     onClick={() => setEditDialogOpen(true)}
                     className="p-2 rounded-full hover:bg-[rgba(255,255,255,0.1)] transition-colors"
-                    style={{ color: 'var(--brand-text-muted)' }}
+                    style={{ color: "var(--brand-primary)" }}
                     title="Edit Memory"
                   >
                     <Edit className="h-5 w-5" />
                   </button>
                   <button
                     onClick={handleDelete}
-                    className="p-2 rounded-full hover:bg-red-500/10 transition-colors"
-                    style={{ color: '#ef4444' }}
+                    className="p-2 rounded-full hover:bg-brand-primary/10 transition-colors"
+                    style={{ color: "var(--brand-primary)" }}
                     title="Delete Memory"
                   >
                     <Trash2 className="h-5 w-5" />
@@ -285,9 +285,9 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
                     border: '1px solid rgba(99,102,241,0.12)',
                   }}
                 >
-                  <Brain className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" style={{ color: 'rgba(129,140,248,0.7)' }} />
+                  <Brain className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" style={{ color: "var(--brand-primary)" }} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                    <p className="text-xs leading-relaxed whitespace-pre-wrap" style={{ color: "var(--brand-primary)" }}>
                       {insight.insight}
                     </p>
                   </div>
@@ -295,7 +295,7 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
                     <button
                       onClick={handleCreateTodo}
                       className="flex-shrink-0 flex items-center gap-1 text-[10px] font-medium px-2 py-1 rounded-lg transition-colors hover:bg-brand-surface/80"
-                      style={{ color: 'rgba(6,182,212,0.8)' }}
+                      style={{ color: "var(--brand-primary)" }}
                     >
                       <CheckSquare className="h-3 w-3" />
                       Todo
@@ -305,7 +305,7 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
               )}
 
               <div className="prose prose-invert prose-sm max-w-none mb-6">
-                <p className="leading-relaxed text-base" style={{ color: 'var(--brand-text-primary)' }}>
+                <p className="leading-relaxed text-base whitespace-pre-wrap" style={{ color: "var(--brand-primary)" }}>
                   {memory.body}
                 </p>
                 {memory.image_urls && memory.image_urls.length > 0 && (
@@ -328,7 +328,7 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
                       style={{
                         // Understated Slate/Gray styling
                         backgroundColor: 'rgba(148, 163, 184, 0.1)', // Slate-400 at 10% opacity
-                        color: '#94a3b8' // Slate-400
+                        color: "var(--brand-text-secondary)" // Slate-400
                       }}
                     >
                       {tag}
@@ -357,7 +357,7 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
               )}
 
               {/* Timestamp */}
-              <div className="flex items-center gap-2 text-xs pt-6 mt-6 border-t border-[var(--glass-surface-hover)]" style={{ color: 'var(--brand-text-muted)' }}>
+              <div className="flex items-center gap-2 text-xs pt-6 mt-6 border-t border-[var(--glass-surface-hover)]" style={{ color: "var(--brand-primary)" }}>
                 <Calendar className="h-3 w-3" />
                 <span>{format(new Date(memory.created_at), 'PPPp')}</span>
               </div>

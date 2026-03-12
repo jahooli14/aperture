@@ -125,7 +125,7 @@ export function ProjectListRow({
             </button>
             <h4
               className="text-sm font-semibold flex-1 line-clamp-1"
-              style={{ color: 'rgba(255, 255, 255, 0.95)' }}
+              style={{ color: "var(--brand-primary)" }}
             >
               {project.title}
             </h4>
@@ -134,7 +134,7 @@ export function ProjectListRow({
             className="text-xs font-medium px-2 py-0.5 rounded-xl whitespace-nowrap flex-shrink-0"
             style={{
               backgroundColor: statusColors[project.status] || statusColors.active,
-              color: 'rgba(255, 255, 255, 0.8)'
+              color: "var(--brand-text-secondary)"
             }}
           >
             {project.status}
@@ -145,14 +145,14 @@ export function ProjectListRow({
         {nextTask ? (
           <p
             className="text-xs line-clamp-1 mb-2"
-            style={{ color: 'rgba(255, 255, 255, 0.6)' }}
+            style={{ color: "var(--brand-primary)" }}
           >
             {nextTask.text}
           </p>
         ) : (
           <p
             className="text-xs mb-2"
-            style={{ color: 'rgba(255, 255, 255, 0.4)' }}
+            style={{ color: "var(--brand-primary)" }}
           >
             No tasks
           </p>
@@ -168,7 +168,7 @@ export function ProjectListRow({
               <motion.div
                 className="h-full"
                 style={{
-                  background: 'linear-gradient(90deg, var(--brand-primary), var(--premium-emerald))'
+                  background: 'linear-gradient(90deg, var(--brand-primary), var(--brand-primary))'
                 }}
                 initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
@@ -177,7 +177,7 @@ export function ProjectListRow({
             </div>
             <span
               className="text-xs font-medium whitespace-nowrap"
-              style={{ color: 'rgba(255, 255, 255, 0.5)' }}
+              style={{ color: "var(--brand-primary)" }}
             >
               {completedTasks}/{totalTasks}
             </span>
@@ -214,14 +214,14 @@ export function ProjectListRow({
                   style={{
                     backgroundColor: 'rgba(255, 255, 255, 0.1)',
                     border: '1px solid rgba(255, 255, 255, 0.2)',
-                    color: 'rgba(255, 255, 255, 0.95)',
+                    color: "var(--brand-text-secondary)",
                     outline: 'none'
                   }}
                 />
                 <button
                   type="submit"
                   className="p-1 rounded-xl hover:bg-white/20 transition-colors"
-                  style={{ color: 'rgba(255, 255, 255, 0.8)' }}
+                  style={{ color: "var(--brand-primary)" }}
                 >
                   <Check size={14} />
                 </button>
@@ -230,7 +230,7 @@ export function ProjectListRow({
               <button
                 onClick={handleStartAddingTask}
                 className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-xl hover:bg-[rgba(255,255,255,0.1)] transition-colors w-full"
-                style={{ color: 'rgba(255, 255, 255, 0.6)' }}
+                style={{ color: "var(--brand-primary)" }}
               >
                 <Plus size={14} />
                 <span>Add task</span>

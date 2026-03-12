@@ -145,7 +145,7 @@ class DataSynchronizer {
   private async syncLists() {
     console.log('[DataSynchronizer] Syncing lists...')
     try {
-      // 1. Fetch all lists (updates store.lists — safe, doesn't affect items)
+      // 1. Fetch all lists (updates store.lists  safe, doesn't affect items)
       await useListStore.getState().fetchLists()
 
       const lists = useListStore.getState().lists
@@ -167,7 +167,7 @@ class DataSynchronizer {
               await readingDb.cacheListItems(items)
             }
           } catch (e) {
-            // Silently fail — background cache, not critical
+            // Silently fail  background cache, not critical
           }
         }
       }
@@ -250,7 +250,7 @@ class DataSynchronizer {
         // - 20-hour cache
         // - Daily cron pre-generation
         // - On-demand refresh when user opens the page
-        // Syncing it every 5 minutes was costing £13-15/month!
+        // Syncing it every 5 minutes was costing 13-15/month!
 
         // RSS Feeds
         fetch('/api/reading?resource=rss').then(async (res) => {

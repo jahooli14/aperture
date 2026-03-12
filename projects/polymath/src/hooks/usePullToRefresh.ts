@@ -98,7 +98,7 @@ export function usePullToRefresh({
       element.removeEventListener('touchmove', handleTouchMove)
       element.removeEventListener('touchend', handleTouchEnd)
     }
-  }, [threshold, resistance]) // Stable deps only — no more listener churn
+  }, [threshold, resistance]) // Stable deps only  no more listener churn
 
   return {
     scrollableRef,

@@ -95,7 +95,7 @@ export function SettingsPage() {
             <Settings className="h-7 w-7" style={{ color: 'var(--brand-primary)', opacity: 0.8 }} />
             <h1 className="text-2xl sm:text-3xl" style={{
               fontWeight: 600,
-              letterSpacing: 'var(--premium-tracking-tight)',
+              letterSpacing: '-0.04em',
               color: 'var(--brand-text-secondary)',
               opacity: 0.9
             }}>
@@ -105,9 +105,7 @@ export function SettingsPage() {
           <button
             onClick={() => navigate('/search')}
             className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-[var(--glass-surface)]"
-            style={{
-              color: 'var(--brand-primary)'
-            }}
+            style={{ color: "var(--brand-primary)" }}
             title="Search everything"
           >
             <Search className="h-5 w-5" />
@@ -124,10 +122,10 @@ export function SettingsPage() {
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
           }}>
             <div className="flex items-center gap-3 mb-6 border-b border-[var(--glass-surface)] pb-4">
-              <Palette className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
+              <Palette className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
               <h2
                 className="text-xl font-bold"
-                style={{ color: 'var(--brand-text-primary)' }}
+                style={{ color: "var(--brand-primary)" }}
               >
                 Appearance
               </h2>
@@ -135,7 +133,7 @@ export function SettingsPage() {
 
             {/* Accent Color */}
             <div className="mb-8">
-              <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider opacity-60 flex items-center gap-2" style={{ color: 'var(--brand-text-primary)' }}>
+              <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider opacity-60 flex items-center gap-2" style={{ color: "var(--brand-primary)" }}>
                 Accent Color
               </h3>
               <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
@@ -167,7 +165,7 @@ export function SettingsPage() {
 
             {/* Intensity */}
             <div className="mb-8">
-              <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider opacity-60 flex items-center gap-2" style={{ color: 'var(--brand-text-primary)' }}>
+              <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider opacity-60 flex items-center gap-2" style={{ color: "var(--brand-primary)" }}>
                 Visual Intensity
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -187,7 +185,7 @@ export function SettingsPage() {
                       <div className={`font-semibold mb-1 ${isSelected ? '' : 'premium-text-platinum'}`} style={{ color: isSelected ? 'var(--brand-primary)' : undefined }}>
                         {option.label}
                       </div>
-                      <div className="text-xs" style={{ color: 'var(--brand-text-muted)' }}>
+                      <div className="text-xs" style={{ color: "var(--brand-primary)" }}>
                         {option.description}
                       </div>
                     </button>
@@ -198,7 +196,7 @@ export function SettingsPage() {
 
             {/* Font Size */}
             <div>
-              <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider opacity-60 flex items-center gap-2" style={{ color: 'var(--brand-text-primary)' }}>
+              <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider opacity-60 flex items-center gap-2" style={{ color: "var(--brand-primary)" }}>
                 <Type className="h-4 w-4" /> Typography Scale
               </h3>
               <div className="grid grid-cols-3 gap-3">
@@ -233,8 +231,8 @@ export function SettingsPage() {
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
           }}>
             <div className="flex items-center gap-3 mb-6 border-b border-[var(--glass-surface)] pb-4">
-              <Bell className="h-6 w-6" style={{ color: 'rgba(59,130,246,0.8)' }} />
-              <h2 className="text-xl font-bold" style={{ color: 'var(--brand-text-primary)' }}>
+              <Bell className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
+              <h2 className="text-xl font-bold" style={{ color: "var(--brand-primary)" }}>
                 Notifications
               </h2>
             </div>
@@ -245,8 +243,8 @@ export function SettingsPage() {
               <div className="rounded-xl" style={{ background: 'var(--premium-surface-1)', border: '1px solid var(--glass-surface-hover)' }}>
                 <div className="flex items-center justify-between px-4 py-3.5">
                   <div>
-                    <p className="text-[15px]" style={{ color: 'rgba(255,255,255,0.75)' }}>Bedtime reflection</p>
-                    <p className="text-[12px]" style={{ color: 'rgba(255,255,255,0.35)' }}>Daily reminder to capture the day</p>
+                    <p className="text-[15px]" style={{ color: "var(--brand-primary)" }}>Bedtime reflection</p>
+                    <p className="text-[12px]" style={{ color: "var(--brand-primary)" }}>Daily reminder to capture the day</p>
                   </div>
                   <button
                     onClick={() => toggleBedtime(!bedtimeEnabled)}
@@ -258,12 +256,12 @@ export function SettingsPage() {
                 </div>
                 {bedtimeEnabled && (
                   <div className="px-4 pb-3.5 flex items-center gap-3 border-t border-[var(--glass-surface)] pt-3">
-                    <span className="text-[12px]" style={{ color: 'rgba(255,255,255,0.4)' }}>Time</span>
+                    <span className="text-[12px]" style={{ color: "var(--brand-primary)" }}>Time</span>
                     <select
                       value={bedtimeHour}
                       onChange={e => updateBedtime(Number(e.target.value), bedtimeMinute)}
                       className="rounded-lg px-2 py-1 text-[13px] outline-none"
-                      style={{ background: 'var(--glass-surface)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.1)' }}
+                      style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
                     >
                       {Array.from({ length: 24 }, (_, i) => (
                         <option key={i} value={i} style={{ background: '#1a2740' }}>
@@ -271,12 +269,12 @@ export function SettingsPage() {
                         </option>
                       ))}
                     </select>
-                    <span style={{ color: 'rgba(255,255,255,0.4)' }}>:</span>
+                    <span style={{ color: "var(--brand-primary)" }}>:</span>
                     <select
                       value={bedtimeMinute}
                       onChange={e => updateBedtime(bedtimeHour, Number(e.target.value))}
                       className="rounded-lg px-2 py-1 text-[13px] outline-none"
-                      style={{ background: 'var(--glass-surface)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.1)' }}
+                      style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
                     >
                       {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => (
                         <option key={m} value={m} style={{ background: '#1a2740' }}>
@@ -292,8 +290,8 @@ export function SettingsPage() {
               <div className="rounded-xl" style={{ background: 'var(--premium-surface-1)', border: '1px solid var(--glass-surface-hover)' }}>
                 <div className="flex items-center justify-between px-4 py-3.5">
                   <div>
-                    <p className="text-[15px]" style={{ color: 'rgba(255,255,255,0.75)' }}>Morning planning</p>
-                    <p className="text-[12px]" style={{ color: 'rgba(255,255,255,0.35)' }}>Set your intentions for the day</p>
+                    <p className="text-[15px]" style={{ color: "var(--brand-primary)" }}>Morning planning</p>
+                    <p className="text-[12px]" style={{ color: "var(--brand-primary)" }}>Set your intentions for the day</p>
                   </div>
                   <button
                     onClick={() => toggleMorning(!morningEnabled)}
@@ -305,12 +303,12 @@ export function SettingsPage() {
                 </div>
                 {morningEnabled && (
                   <div className="px-4 pb-3.5 flex items-center gap-3 border-t border-[var(--glass-surface)] pt-3">
-                    <span className="text-[12px]" style={{ color: 'rgba(255,255,255,0.4)' }}>Time</span>
+                    <span className="text-[12px]" style={{ color: "var(--brand-primary)" }}>Time</span>
                     <select
                       value={morningHour}
                       onChange={e => updateMorning(Number(e.target.value), morningMinute)}
                       className="rounded-lg px-2 py-1 text-[13px] outline-none"
-                      style={{ background: 'var(--glass-surface)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.1)' }}
+                      style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
                     >
                       {Array.from({ length: 24 }, (_, i) => (
                         <option key={i} value={i} style={{ background: '#1a2740' }}>
@@ -318,12 +316,12 @@ export function SettingsPage() {
                         </option>
                       ))}
                     </select>
-                    <span style={{ color: 'rgba(255,255,255,0.4)' }}>:</span>
+                    <span style={{ color: "var(--brand-primary)" }}>:</span>
                     <select
                       value={morningMinute}
                       onChange={e => updateMorning(morningHour, Number(e.target.value))}
                       className="rounded-lg px-2 py-1 text-[13px] outline-none"
-                      style={{ background: 'var(--glass-surface)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.1)' }}
+                      style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
                     >
                       {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => (
                         <option key={m} value={m} style={{ background: '#1a2740' }}>
@@ -338,8 +336,8 @@ export function SettingsPage() {
               {/* Task-time notifications */}
               <div className="flex items-center justify-between px-4 py-3.5 rounded-xl" style={{ background: 'var(--premium-surface-1)', border: '1px solid var(--glass-surface-hover)' }}>
                 <div>
-                  <p className="text-[15px]" style={{ color: 'rgba(255,255,255,0.75)' }}>Task-time reminders</p>
-                  <p className="text-[12px]" style={{ color: 'rgba(255,255,255,0.35)' }}>Notify when a task's scheduled time arrives</p>
+                  <p className="text-[15px]" style={{ color: "var(--brand-primary)" }}>Task-time reminders</p>
+                  <p className="text-[12px]" style={{ color: "var(--brand-primary)" }}>Notify when a task's scheduled time arrives</p>
                 </div>
                 <button
                   onClick={() => toggleTodoNotifications(!todoTimeNotificationsEnabled)}
@@ -354,8 +352,8 @@ export function SettingsPage() {
               <div className="rounded-xl" style={{ background: 'var(--premium-surface-1)', border: '1px solid var(--glass-surface-hover)' }}>
                 <div className="flex items-center justify-between px-4 py-3.5">
                   <div>
-                    <p className="text-[15px]" style={{ color: 'rgba(255,255,255,0.75)' }}>End-of-day overdue reminder</p>
-                    <p className="text-[12px]" style={{ color: 'rgba(255,255,255,0.35)' }}>Alert when tasks are still open late in the day</p>
+                    <p className="text-[15px]" style={{ color: "var(--brand-primary)" }}>End-of-day overdue reminder</p>
+                    <p className="text-[12px]" style={{ color: "var(--brand-primary)" }}>Alert when tasks are still open late in the day</p>
                   </div>
                   <button
                     onClick={() => toggleOverdueReminder(!overdueReminderEnabled)}
@@ -367,12 +365,12 @@ export function SettingsPage() {
                 </div>
                 {overdueReminderEnabled && (
                   <div className="px-4 pb-3.5 flex items-center gap-3 border-t border-[var(--glass-surface)] pt-3">
-                    <span className="text-[12px]" style={{ color: 'rgba(255,255,255,0.4)' }}>Time</span>
+                    <span className="text-[12px]" style={{ color: "var(--brand-primary)" }}>Time</span>
                     <select
                       value={overdueReminderHour}
                       onChange={e => updateOverdueReminder(Number(e.target.value), overdueReminderMinute)}
                       className="rounded-lg px-2 py-1 text-[13px] outline-none"
-                      style={{ background: 'var(--glass-surface)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.1)' }}
+                      style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
                     >
                       {Array.from({ length: 24 }, (_, i) => (
                         <option key={i} value={i} style={{ background: '#1a2740' }}>
@@ -380,12 +378,12 @@ export function SettingsPage() {
                         </option>
                       ))}
                     </select>
-                    <span style={{ color: 'rgba(255,255,255,0.4)' }}>:</span>
+                    <span style={{ color: "var(--brand-primary)" }}>:</span>
                     <select
                       value={overdueReminderMinute}
                       onChange={e => updateOverdueReminder(overdueReminderHour, Number(e.target.value))}
                       className="rounded-lg px-2 py-1 text-[13px] outline-none"
-                      style={{ background: 'var(--glass-surface)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.1)' }}
+                      style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
                     >
                       {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => (
                         <option key={m} value={m} style={{ background: '#1a2740' }}>
@@ -408,10 +406,10 @@ export function SettingsPage() {
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
           }}>
             <div className="flex items-center gap-3 mb-6 border-b border-[var(--glass-surface)] pb-4">
-              <Zap className="h-6 w-6" style={{ color: 'var(--premium-amber)' }} />
+              <Zap className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
               <h2
                 className="text-xl font-bold"
-                style={{ color: 'var(--brand-text-primary)' }}
+                style={{ color: "var(--brand-primary)" }}
               >
                 System
               </h2>
@@ -430,7 +428,7 @@ export function SettingsPage() {
                 <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{
                   background: 'rgba(239, 68, 68, 0.15)'
                 }}>
-                  <Bug className="w-5 h-5" style={{ color: '#ef4444' }} />
+                  <Bug className="w-5 h-5" style={{ color: "var(--brand-primary)" }} />
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold premium-text-platinum text-sm">
@@ -442,9 +440,9 @@ export function SettingsPage() {
                 </div>
                 <div>
                   {showBugTracker ? (
-                    <ToggleRight className="w-6 h-6" style={{ color: 'var(--brand-primary)' }} />
+                    <ToggleRight className="w-6 h-6" style={{ color: "var(--brand-primary)" }} />
                   ) : (
-                    <ToggleLeft className="w-6 h-6" style={{ color: 'var(--brand-text-muted)' }} />
+                    <ToggleLeft className="w-6 h-6" style={{ color: "var(--brand-primary)" }} />
                   )}
                 </div>
               </button>
@@ -453,7 +451,7 @@ export function SettingsPage() {
               <button
                 onClick={handleRegenerateConnections}
                 disabled={regenerating}
-                className="w-full flex items-center gap-4 p-4 rounded-xl backdrop-blur-xl transition-all text-left group hover:bg-amber-500/5 hover:border-amber-500/20 border"
+                className="w-full flex items-center gap-4 p-4 rounded-xl backdrop-blur-xl transition-all text-left group hover:bg-brand-primary/5 hover:border-amber-500/20 border"
                 style={{
                   background: 'rgba(245, 158, 11, 0.05)',
                   borderColor: 'rgba(245, 158, 11, 0.15)'
@@ -462,7 +460,7 @@ export function SettingsPage() {
                 <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{
                   background: 'rgba(245, 158, 11, 0.15)'
                 }}>
-                  <RefreshCw className={`w-5 h-5 ${regenerating ? 'animate-spin' : ''}`} style={{ color: '#fbbf24' }} />
+                  <RefreshCw className={`w-5 h-5 ${regenerating ? 'animate-spin' : ''}`} style={{ color: "var(--brand-primary)" }} />
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold premium-text-platinum text-sm">

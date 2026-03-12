@@ -59,7 +59,7 @@ export function DebugPanel() {
           boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
         }}
       >
-        🐛
+        
       </button>
     )
   }
@@ -73,7 +73,7 @@ export function DebugPanel() {
         right: 0,
         height: '50vh',
         background: '#1a1a1a',
-        color: '#fff',
+        color: "var(--brand-text-secondary)",
         zIndex: 9999,
         display: 'flex',
         flexDirection: 'column',
@@ -90,7 +90,7 @@ export function DebugPanel() {
         alignItems: 'center',
         borderBottom: '1px solid #444'
       }}>
-        <span style={{ fontWeight: 'bold', color: '#3b82f6' }}>Debug Console</span>
+        <span style={{ fontWeight: 'bold', color: "var(--brand-text-secondary)" }}>Debug Console</span>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
             onClick={() => setLogs([])}
@@ -128,7 +128,7 @@ export function DebugPanel() {
         wordBreak: 'break-word'
       }}>
         {logs.length === 0 ? (
-          <div style={{ color: '#666', fontStyle: 'italic' }}>No logs yet...</div>
+          <div style={{ color: "var(--brand-text-secondary)", fontStyle: 'italic' }}>No logs yet...</div>
         ) : (
           logs.map((log, i) => (
             <div

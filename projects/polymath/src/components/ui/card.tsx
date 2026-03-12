@@ -8,7 +8,7 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "aperture-card",
+      "glass-card glass-card-hover",
       className
     )}
     style={{

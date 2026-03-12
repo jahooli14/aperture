@@ -240,7 +240,7 @@ const BottomSheetTitle = React.forwardRef<
       'text-2xl font-bold leading-tight tracking-tight',
       className
     )}
-    style={{ color: 'var(--brand-text-primary)' }}
+    style={{ color: "var(--brand-primary)" }}
     {...props}
   />
 ))
@@ -253,7 +253,7 @@ const BottomSheetDescription = React.forwardRef<
   <p
     ref={ref}
     className={cn('text-sm', className)}
-    style={{ color: 'var(--brand-text-secondary)' }}
+    style={{ color: "var(--brand-primary)" }}
     {...props}
   />
 ))

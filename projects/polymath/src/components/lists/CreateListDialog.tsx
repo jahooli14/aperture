@@ -62,7 +62,7 @@ export function CreateListDialog({ open, onOpenChange }: Props) {
             <BottomSheetContent>
                 <BottomSheetHeader>
                     <div className="flex items-center gap-3 mb-2">
-                        <ListPlus className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
+                        <ListPlus className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
                         <BottomSheetTitle>Create Collection</BottomSheetTitle>
                     </div>
                     <BottomSheetDescription>
@@ -72,21 +72,21 @@ export function CreateListDialog({ open, onOpenChange }: Props) {
 
                 <form onSubmit={handleSubmit} className="space-y-6 mt-6">
                     {error && (
-                        <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl text-sm">
+                        <div className="bg-brand-primary/10 border border-red-500/20 text-brand-text-secondary px-4 py-3 rounded-xl text-sm">
                             {error}
                         </div>
                     )}
 
                     <div className="space-y-2">
-                        <Label className="font-bold text-xs uppercase tracking-widest" style={{ color: 'var(--brand-primary)' }}>
-                            List Title <span className="text-red-500">*</span>
+                        <Label className="font-bold text-xs uppercase tracking-widest" style={{ color: "var(--brand-primary)" }}>
+                            List Title <span className="text-brand-text-secondary">*</span>
                         </Label>
                         <Input
                             value={title}
                             onChange={e => setTitle(e.target.value)}
                             placeholder="e.g. Scifi Movies 2024"
                             className="text-lg h-14 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/10"
-                            style={{ color: 'var(--brand-text-primary)' }}
+                            style={{ color: "var(--brand-primary)" }}
                             autoFocus
                             autoComplete="off"
                         />

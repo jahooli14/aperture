@@ -1,30 +1,30 @@
 /**
- * Todos Page — Things 3-inspired task management
+ * Todos Page  Things 3-inspired task management
  *
  * Design philosophy:
- *   Aardvark: depth on demand — the list is minimal, richness reveals on tap
+ *   Aardvark: depth on demand  the list is minimal, richness reveals on tap
  *   Border Collie: anticipate tomorrow before it arrives
  *   Crow: the app remembers what you're avoiding (age indicators in TodoItem)
  *   Sloth: every interaction requires minimum possible effort
  *
  * Behavioral UX principles embedded here:
- *   1. Fogg Behavior Model — Quick Wins surfaces sub-5min tasks. Motivation
+ *   1. Fogg Behavior Model  Quick Wins surfaces sub-5min tasks. Motivation
  *      isn't the bottleneck; friction is. Removing "I can't right now" = action.
- *   2. Implementation Intentions — Morning banner prompts WHEN, not just WHAT.
+ *   2. Implementation Intentions  Morning banner prompts WHEN, not just WHAT.
  *      "I will do X at time Y in context Z" is 3x more likely to happen.
- *   3. Goal Gradient + Endowed Progress — progress bar never starts at 0%.
+ *   3. Goal Gradient + Endowed Progress  progress bar never starts at 0%.
  *      Being "already started" accelerates pace toward the finish.
- *   4. Zeigarnik Effect — in-progress items stay visually open in the list.
+ *   4. Zeigarnik Effect  in-progress items stay visually open in the list.
  *      Cognitive tension from visible open loops drives return + completion.
- *   5. Loss Aversion Streaks — streak counter shown daily. Fear of breaking
+ *   5. Loss Aversion Streaks  streak counter shown daily. Fear of breaking
  *      the chain (Kahneman) is a stronger motivator than gaining credit.
- *   6. Habit Stacking — Focus Mode and morning banner anchor to daily rhythms.
- *   7. 2-Minute Rule — Quick Wins section. If it takes <5min, do it NOW.
- *   8. Progressive Disclosure — Focus Mode collapses the list to ONE task.
+ *   6. Habit Stacking  Focus Mode and morning banner anchor to daily rhythms.
+ *   7. 2-Minute Rule  Quick Wins section. If it takes <5min, do it NOW.
+ *   8. Progressive Disclosure  Focus Mode collapses the list to ONE task.
  *      Path of least resistance becomes the task itself.
- *   9. Variable Reward — completion toasts use randomized copy. Dopamine
+ *   9. Variable Reward  completion toasts use randomized copy. Dopamine
  *      anticipation from unpredictable rewards sustains daily engagement.
- *  10. Notifications — useTodoNotifications fires at scheduled_time each day.
+ *  10. Notifications  useTodoNotifications fires at scheduled_time each day.
  *      The environmental cue retrieves the intention without willpower.
  */
 
@@ -58,7 +58,7 @@ import { cn } from '../lib/utils'
 import { useToast } from '../components/ui/toast'
 import { SubtleBackground } from '../components/SubtleBackground'
 
-// ─── View config ─────────────────────────────────────────────
+//  View config 
 
 const VIEWS: { id: TodoView; label: string; icon: React.ElementType; hint: string }[] = [
   { id: 'inbox',    label: 'Inbox',    icon: Inbox,        hint: 'Uncategorized' },
@@ -95,7 +95,7 @@ function randomCompletionToast() {
   return COMPLETION_TOASTS[Math.floor(Math.random() * COMPLETION_TOASTS.length)]
 }
 
-// ─── Main page ───────────────────────────────────────────────
+//  Main page 
 
 export function TodosPage() {
   const {
@@ -124,7 +124,7 @@ export function TodosPage() {
 
   const todayYMD = new Date().toISOString().split('T')[0]
 
-  // ── Counts ──
+  //  Counts 
   const todayActive   = selectToday(todos).length
   const inboxCount    = selectInbox(todos).length
   const upcomingCount = selectUpcoming(todos).length
@@ -145,7 +145,7 @@ export function TodosPage() {
     logbook:  logbookCount,
   }
 
-  // ── Get todos for active view ──
+  //  Get todos for active view 
   const viewTodos = (() => {
     switch (activeView) {
       case 'today':    return selectToday(todos)
@@ -156,7 +156,7 @@ export function TodosPage() {
     }
   })()
 
-  // ── Today estimates ──
+  //  Today estimates 
   const todayTodos = selectToday(todos)
   const overdueCount = todayTodos.filter(t =>
     (t.deadline_date && t.deadline_date < todayYMD) ||
@@ -164,7 +164,7 @@ export function TodosPage() {
   ).length
   const totalEstimatedMinutes = todayTodos.reduce((sum, t) => sum + (t.estimated_minutes ?? 0), 0)
 
-  // ── Add todo from NLP input ──
+  //  Add todo from NLP input 
   const handleAdd = async (parsed: ReturnType<typeof parseTodo>) => {
     const input: Partial<Todo> & { text: string } = {
       text: parsed.text,
@@ -178,7 +178,7 @@ export function TodosPage() {
     }
 
     if (parsed.isSomeday) {
-      // no date — just tag
+      // no date  just tag
     } else if (parsed.scheduledDate) {
       input.scheduled_date = parsed.scheduledDate
     } else if (activeView === 'today') {
@@ -202,7 +202,7 @@ export function TodosPage() {
     }
   }
 
-  // ── Toggle with variable reward toast + streak recording ──
+  //  Toggle with variable reward toast + streak recording 
   const handleToggle = async (id: string) => {
     const todo = todos.find(t => t.id === id)
     if (!todo) return
@@ -215,14 +215,14 @@ export function TodosPage() {
       const toast = randomCompletionToast()
       addToast({
         title: toast.title,
-        description: todo.text.length > 40 ? todo.text.slice(0, 40) + '…' : todo.text,
+        description: todo.text.length > 40 ? todo.text.slice(0, 40) + '' : todo.text,
         variant: 'success',
         duration: 3500,
       })
     }
   }
 
-  // ── Delete with undo toast ──
+  //  Delete with undo toast 
   const handleDelete = async (id: string) => {
     const todo = todos.find(t => t.id === id)
     if (!todo) return
@@ -231,13 +231,13 @@ export function TodosPage() {
 
     addToast({
       title: 'Deleted',
-      description: todo.text.length > 40 ? todo.text.slice(0, 40) + '…' : todo.text,
+      description: todo.text.length > 40 ? todo.text.slice(0, 40) + '' : todo.text,
       variant: 'default',
       duration: 5000,
     })
   }
 
-  // ── Focus mode: today's incomplete tasks, in-progress first ──
+  //  Focus mode: today's incomplete tasks, in-progress first 
   const focusTodos = [
     ...todayTodos.filter(t => inProgressIds.includes(t.id)),
     ...todayTodos.filter(t => !inProgressIds.includes(t.id)),
@@ -248,7 +248,7 @@ export function TodosPage() {
   const hour = new Date().getHours()
 
   // Goal gradient: progress bar starts at 8% (endowed progress) so you're
-  // never at zero — the "already started" framing accelerates pace.
+  // never at zero  the "already started" framing accelerates pace.
   const progressPct = totalTodayItems === 0
     ? 0
     : completedToday === 0
@@ -264,14 +264,14 @@ export function TodosPage() {
         style={{ backgroundColor: 'var(--brand-bg)' }}
       >
         <SubtleBackground />
-        {/* Header — view-aware, progress-focused */}
+        {/* Header  view-aware, progress-focused */}
         <div className="px-4 pt-7 pb-4 max-w-3xl mx-auto w-full">
-          {/* Date line — always visible, always contextual */}
+          {/* Date line  always visible, always contextual */}
           <p
             className="text-[11px] font-semibold uppercase tracking-widest mb-2"
-            style={{ color: 'rgba(148,163,184,0.4)' }}
+            style={{ color: "var(--brand-primary)" }}
           >
-            {dayName} · {dateStr}
+            {dayName}  {dateStr}
           </p>
 
           {activeView === 'today' ? (
@@ -281,7 +281,7 @@ export function TodosPage() {
                 <div className="flex items-baseline gap-3">
                   <h1
                     className="text-[26px] font-bold tracking-tight leading-none"
-                    style={{ color: 'var(--brand-text-primary)' }}
+                    style={{ color: "var(--brand-primary)" }}
                   >
                     {totalTodayItems === 0
                       ? 'Nothing today'
@@ -292,7 +292,7 @@ export function TodosPage() {
                           : `${todayActive} ${todayActive === 1 ? 'task' : 'tasks'} today`}
                   </h1>
 
-                  {/* Loss aversion streak — shown after first completion */}
+                  {/* Loss aversion streak  shown after first completion */}
                   {streak > 0 && (
                     <motion.div
                       initial={{ scale: 0.8, opacity: 0 }}
@@ -317,27 +317,27 @@ export function TodosPage() {
                   {overdueCount > 0 && (
                     <span
                       className="text-[10px] font-black px-2 py-0.5 rounded-lg uppercase tracking-wide"
-                      style={{ background: 'rgba(239,68,68,0.15)', color: 'rgb(252,165,165)', border: '1px solid rgba(248,113,113,0.3)' }}
+                      style={{ background: 'rgba(239,68,68,0.15)', color: "var(--brand-text-secondary)" }}
                     >
                       {overdueCount} overdue
                     </span>
                   )}
                   {totalEstimatedMinutes > 0 && (
-                    <span className="text-[12px]" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                    <span className="text-[12px]" style={{ color: "var(--brand-primary)" }}>
                       ~{formatMinutes(totalEstimatedMinutes)}
                     </span>
                   )}
                 </div>
               </div>
 
-              {/* Streak motivation copy — tightens loss aversion */}
+              {/* Streak motivation copy  tightens loss aversion */}
               {streakMessage && (
-                <p className="text-[11px] mb-2" style={{ color: 'rgba(251,146,60,0.8)' }}>
+                <p className="text-[11px] mb-2" style={{ color: "var(--brand-primary)" }}>
                   {streakMessage}
                 </p>
               )}
 
-              {/* Progress bar — neobrutalist: rectangular, 6px tall, hard edges */}
+              {/* Progress bar  neobrutalist: rectangular, 6px tall, hard edges */}
               {totalTodayItems > 0 && (
                 <div
                   className="w-full h-[6px] overflow-hidden"
@@ -357,7 +357,7 @@ export function TodosPage() {
                 </div>
               )}
 
-              {/* Focus / Review buttons — neobrutalist: rectangular, thick border, hard shadow */}
+              {/* Focus / Review buttons  neobrutalist: rectangular, thick border, hard shadow */}
               {todayActive > 0 && (
                 <div className="mt-3 flex items-center gap-2 flex-wrap">
                   <button
@@ -365,7 +365,7 @@ export function TodosPage() {
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all active:scale-95"
                     style={{
                       background: 'rgba(139,92,246,0.1)',
-                      color: 'rgba(196,181,253,0.9)',
+                      color: "var(--brand-text-secondary)",
                       border: '2px solid rgba(139,92,246,0.45)',
                       boxShadow: '2px 2px 0 rgba(139,92,246,0.2)',
                     }}
@@ -378,12 +378,12 @@ export function TodosPage() {
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all active:scale-95"
                     style={hour < 12 ? {
                       background: 'rgba(251,191,36,0.08)',
-                      color: 'rgba(253,224,71,0.9)',
+                      color: "var(--brand-text-secondary)",
                       border: '2px solid rgba(251,191,36,0.4)',
                       boxShadow: '2px 2px 0 rgba(251,191,36,0.15)',
                     } : {
                       background: 'rgba(139,92,246,0.08)',
-                      color: 'rgba(196,181,253,0.9)',
+                      color: "var(--brand-text-secondary)",
                       border: '2px solid rgba(139,92,246,0.35)',
                       boxShadow: '2px 2px 0 rgba(139,92,246,0.15)',
                     }}
@@ -394,9 +394,9 @@ export function TodosPage() {
                   {inProgressIds.filter(id => todayTodos.some(t => t.id === id)).length > 0 && (
                     <span
                       className="flex items-center gap-1 text-[11px]"
-                      style={{ color: 'rgba(251,146,60,0.65)' }}
+                      style={{ color: "var(--brand-primary)" }}
                     >
-                      <span className="h-1.5 w-1.5 bg-orange-400/70 animate-pulse" />
+                      <span className="h-1.5 w-1.5 bg-brand-primary/70 animate-pulse" />
                       {inProgressIds.filter(id => todayTodos.some(t => t.id === id)).length} working
                     </span>
                   )}
@@ -408,12 +408,12 @@ export function TodosPage() {
             <div className="flex items-baseline gap-3">
               <h1
                 className="text-[28px] font-bold tracking-tight"
-                style={{ color: 'var(--brand-text-primary)' }}
+                style={{ color: "var(--brand-primary)" }}
               >
                 {VIEWS.find(v => v.id === activeView)?.label ?? 'Todos'}
               </h1>
               {counts[activeView] > 0 && (
-                <span className="text-[15px] font-medium" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                <span className="text-[15px] font-medium" style={{ color: "var(--brand-primary)" }}>
                   {counts[activeView]}
                 </span>
               )}
@@ -421,7 +421,7 @@ export function TodosPage() {
           )}
         </div>
 
-        {/* View tabs — neobrutalist: rectangular, thick underline active */}
+        {/* View tabs  neobrutalist: rectangular, thick underline active */}
         <div className="px-4 max-w-3xl mx-auto w-full">
           <div className="flex gap-0 overflow-x-auto scrollbar-hide pb-0 border-b border-[var(--glass-surface-hover)]">
             {VIEWS.map(v => {
@@ -435,11 +435,11 @@ export function TodosPage() {
                   onClick={() => setActiveView(v.id)}
                   className="relative flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 text-[13px] font-bold transition-all duration-150 uppercase tracking-wide"
                   style={isActive ? {
-                    color: 'rgba(255,255,255,0.95)',
+                    color: "var(--brand-text-secondary)",
                     borderBottom: '2px solid rgba(255,255,255,0.8)',
                     marginBottom: '-1px',
                   } : {
-                    color: 'rgba(255,255,255,0.38)',
+                    color: "var(--brand-text-secondary)",
                     borderBottom: '2px solid transparent',
                     marginBottom: '-1px',
                   }}
@@ -451,11 +451,11 @@ export function TodosPage() {
                       className="text-[10px] font-black px-1.5 py-0.5 rounded-lg min-w-[20px] text-center"
                       style={isActive ? {
                         background: 'rgba(255,255,255,0.18)',
-                        color: 'rgba(255,255,255,0.9)',
+                        color: "var(--brand-text-secondary)",
                         border: '1px solid rgba(255,255,255,0.15)',
                       } : {
                         background: 'var(--glass-surface)',
-                        color: 'rgba(255,255,255,0.3)',
+                        color: "var(--brand-text-secondary)",
                         border: '1px solid transparent',
                       }}
                     >
@@ -471,7 +471,7 @@ export function TodosPage() {
         {/* Main content */}
         <div className="flex-1 px-4 max-w-3xl mx-auto w-full pb-32">
 
-          {/* Quick input — hidden in logbook */}
+          {/* Quick input  hidden in logbook */}
           {activeView !== 'logbook' && (
             <div className="mt-1 mb-4">
               <TodoInput
@@ -482,7 +482,7 @@ export function TodosPage() {
             </div>
           )}
 
-          {/* Routing feedback — neobrutalist: thick border, hard shadow */}
+          {/* Routing feedback  neobrutalist: thick border, hard shadow */}
           <AnimatePresence>
             {addedFeedback && (
               <motion.button
@@ -501,10 +501,10 @@ export function TodosPage() {
                   boxShadow: '3px 3px 0 rgba(99,179,237,0.1)',
                 }}
               >
-                <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: 'rgba(147,197,253,0.85)' }}>
+                <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>
                   Added to {addedFeedback.label}
                 </span>
-                <ArrowRight className="h-3.5 w-3.5" style={{ color: 'rgba(147,197,253,0.55)' }} />
+                <ArrowRight className="h-3.5 w-3.5" style={{ color: "var(--brand-primary)" }} />
               </motion.button>
             )}
           </AnimatePresence>
@@ -604,7 +604,7 @@ export function TodosPage() {
   )
 }
 
-// ─── Sub-views ───────────────────────────────────────────────
+//  Sub-views 
 
 interface ViewProps {
   todos: Todo[]
@@ -692,7 +692,7 @@ function TodayView({
   const overdue = smartSortedTodos.filter(isOverdueItem)
   const onTrack = smartSortedTodos.filter(t => !isOverdueItem(t))
 
-  // 2-Minute Rule / Fogg: Quick Wins = tasks with time estimates ≤ 5 min
+  // 2-Minute Rule / Fogg: Quick Wins = tasks with time estimates  5 min
   // Only shown in the on-track section (overdue get their own urgency treatment)
   const quickWins = onTrack.filter(t =>
     t.estimated_minutes && t.estimated_minutes <= 5
@@ -702,12 +702,12 @@ function TodayView({
   )
 
   // Implementation Intentions: morning banner when there are unscheduled tasks
-  // Prompts WHEN + context, not just WHAT — 3x completion rate (Gollwitzer 1999)
+  // Prompts WHEN + context, not just WHAT  3x completion rate (Gollwitzer 1999)
   const unscheduledCount = onTrack.filter(t => !t.scheduled_time).length
   const isMorning = hour >= 6 && hour < 11
   const showMorningBanner = isMorning && unscheduledCount > 1 && onTrack.length > 0
 
-  // Habit Stacking: evening capture banner — anchor tomorrow planning to tonight's routine
+  // Habit Stacking: evening capture banner  anchor tomorrow planning to tonight's routine
   const isEvening = hour >= 20
   const showEveningBanner = isEvening
 
@@ -728,7 +728,7 @@ function TodayView({
           <div className="flex-1 h-px" style={{ background: 'var(--glass-surface)' }} />
           <span
             className="text-[10px] font-bold px-1.5 py-0.5 rounded-lg"
-            style={{ color: 'rgba(255,255,255,0.4)', background: 'var(--glass-surface)', border: '1px solid var(--glass-surface-hover)' }}
+            style={{ color: "var(--brand-primary)" }}
           >{items.length}</span>
         </div>
       )}
@@ -756,7 +756,7 @@ function TodayView({
 
   return (
     <div>
-      {/* AI Daily Brief — proposed day plan with reasoning */}
+      {/* AI Daily Brief  proposed day plan with reasoning */}
       <TodoBrief />
 
       {/* Implementation Intentions: morning planning banner */}
@@ -766,7 +766,7 @@ function TodayView({
         )}
       </AnimatePresence>
 
-      {/* Quick Wins — Fogg Behavior Model: Remove the "I can't right now" excuse */}
+      {/* Quick Wins  Fogg Behavior Model: Remove the "I can't right now" excuse */}
       {quickWins.length > 0 && (
         <QuickWinsSection
           todos={quickWins}
@@ -785,26 +785,26 @@ function TodayView({
         )
       }
 
-      {/* Habit Stacking: evening capture banner — anchor tomorrow planning to tonight's routine */}
+      {/* Habit Stacking: evening capture banner  anchor tomorrow planning to tonight's routine */}
       <AnimatePresence>
         {showEveningBanner && (
           <EveningCaptureBanner tomorrowDayName={tomorrowDayName} />
         )}
       </AnimatePresence>
 
-      {/* Tomorrow preview — Border Collie: see what's coming before it arrives */}
+      {/* Tomorrow preview  Border Collie: see what's coming before it arrives */}
       {tomorrowItems.length > 0 && (
         <div className="mt-8">
           <div className="flex items-center gap-2.5 mb-3">
             <div className="w-1 h-4 flex-shrink-0" style={{ background: 'rgba(255,255,255,0.25)' }} />
             <span
               className="text-[10px] font-black uppercase tracking-widest"
-              style={{ color: 'rgba(255,255,255,0.45)' }}
+              style={{ color: "var(--brand-primary)" }}
             >
-              Tomorrow · {tomorrowDayName}
+              Tomorrow  {tomorrowDayName}
             </span>
             <div className="flex-1 h-px" style={{ background: 'var(--glass-surface)' }} />
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-lg" style={{ color: 'rgba(255,255,255,0.35)', background: 'var(--glass-surface)', border: '1px solid var(--glass-surface)' }}>{tomorrowItems.length}</span>
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-lg" style={{ color: "var(--brand-primary)" }}>{tomorrowItems.length}</span>
           </div>
           <div className="space-y-1.5" style={{ opacity: 0.45 }}>
             {tomorrowItems.slice(0, 3).map(t => (
@@ -817,18 +817,18 @@ function TodayView({
                   className="flex-shrink-0 h-[16px] w-[16px] rounded-lg"
                   style={{ border: '2px solid rgba(255,255,255,0.18)' }}
                 />
-                <span className="flex-1 text-[14px] truncate" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                <span className="flex-1 text-[14px] truncate" style={{ color: "var(--brand-primary)" }}>
                   {t.text}
                 </span>
                 {t.scheduled_time && (
-                  <span className="text-[11px] flex-shrink-0" style={{ color: 'rgba(255,255,255,0.40)' }}>
+                  <span className="text-[11px] flex-shrink-0" style={{ color: "var(--brand-primary)" }}>
                     {t.scheduled_time}
                   </span>
                 )}
               </div>
             ))}
             {tomorrowItems.length > 3 && (
-              <p className="text-[11px] px-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+              <p className="text-[11px] px-1" style={{ color: "var(--brand-primary)" }}>
                 +{tomorrowItems.length - 3} more
               </p>
             )}
@@ -839,7 +839,7 @@ function TodayView({
   )
 }
 
-// ── Quick Wins section — 2-minute rule + Fogg ──────────────
+//  Quick Wins section  2-minute rule + Fogg 
 
 function QuickWinsSection({
   todos, onToggle, inProgressIds,
@@ -864,17 +864,17 @@ function QuickWinsSection({
           className="h-5 w-5 rounded-lg flex items-center justify-center flex-shrink-0"
           style={{ background: 'rgba(251,191,36,0.2)', border: '1px solid rgba(251,191,36,0.35)' }}
         >
-          <Zap className="h-2.5 w-2.5" style={{ color: 'rgb(251,191,36)' }} />
+          <Zap className="h-2.5 w-2.5" style={{ color: "var(--brand-primary)" }} />
         </div>
         <span
           className="text-[10px] font-black uppercase tracking-widest"
-          style={{ color: 'rgba(253,224,71,0.85)' }}
+          style={{ color: "var(--brand-primary)" }}
         >
-          Quick wins · under 5 min
+          Quick wins  under 5 min
         </span>
         <span
           className="ml-auto text-[10px] font-black px-1.5 py-0.5 rounded-lg"
-          style={{ background: 'rgba(251,191,36,0.18)', color: 'rgb(253,224,71)', border: '1px solid rgba(251,191,36,0.3)' }}
+          style={{ background: 'rgba(251,191,36,0.18)', color: "var(--brand-text-secondary)" }}
         >
           {todos.length}
         </span>
@@ -906,14 +906,14 @@ function QuickWinsSection({
               />
               <span
                 className="text-[13px] font-medium truncate"
-                style={{ color: 'rgba(255,255,255,0.8)' }}
+                style={{ color: "var(--brand-primary)" }}
               >
                 {todo.text}
               </span>
               {todo.estimated_minutes && (
                 <span
                   className="flex-shrink-0 text-[11px] font-semibold px-1.5 py-0.5 rounded-md"
-                  style={{ background: 'rgba(251,191,36,0.15)', color: 'rgba(253,224,71,0.85)' }}
+                  style={{ background: 'rgba(251,191,36,0.15)', color: "var(--brand-text-secondary)" }}
                 >
                   {todo.estimated_minutes}m
                 </span>
@@ -926,7 +926,7 @@ function QuickWinsSection({
   )
 }
 
-// ── Morning banner — Implementation Intentions ─────────────
+//  Morning banner  Implementation Intentions 
 
 function MorningBanner({ unscheduledCount }: { unscheduledCount: number }) {
   const [dismissed, setDismissed] = useState(false)
@@ -949,28 +949,28 @@ function MorningBanner({ unscheduledCount }: { unscheduledCount: number }) {
           boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
         }}
       >
-        <Sun className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: 'rgba(251,191,36,0.8)' }} />
+        <Sun className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: "var(--brand-primary)" }} />
         <div className="flex-1 min-w-0">
-          <p className="text-[13px] font-semibold mb-0.5" style={{ color: 'rgba(255,255,255,0.75)' }}>
+          <p className="text-[13px] font-semibold mb-0.5" style={{ color: "var(--brand-primary)" }}>
             Plan your morning
           </p>
-          <p className="text-[12px] leading-snug" style={{ color: 'rgba(255,255,255,0.50)' }}>
-            {unscheduledCount} tasks without a time. Add "at 9am", "at 2pm" to lock them in — tasks with a when are 3× more likely to happen.
+          <p className="text-[12px] leading-snug" style={{ color: "var(--brand-primary)" }}>
+            {unscheduledCount} tasks without a time. Add "at 9am", "at 2pm" to lock them in  tasks with a when are 3 more likely to happen.
           </p>
         </div>
         <button
           onClick={() => setDismissed(true)}
           className="flex-shrink-0 text-[11px] transition-opacity"
-          style={{ color: 'rgba(255,255,255,0.35)' }}
+          style={{ color: "var(--brand-primary)" }}
         >
-          ✕
+          
         </button>
       </div>
     </motion.div>
   )
 }
 
-// ── Evening capture banner — Habit Stacking ────────────────
+//  Evening capture banner  Habit Stacking 
 // Anchor tomorrow planning to tonight's routine (after 8pm)
 
 function EveningCaptureBanner({ tomorrowDayName }: { tomorrowDayName: string }) {
@@ -994,21 +994,21 @@ function EveningCaptureBanner({ tomorrowDayName }: { tomorrowDayName: string }) 
           boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
         }}
       >
-        <CalendarDays className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: 'rgba(196,181,253,0.6)' }} />
+        <CalendarDays className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: "var(--brand-primary)" }} />
         <div className="flex-1 min-w-0">
-          <p className="text-[13px] font-semibold mb-0.5" style={{ color: 'rgba(255,255,255,0.65)' }}>
+          <p className="text-[13px] font-semibold mb-0.5" style={{ color: "var(--brand-primary)" }}>
             Planning tomorrow?
           </p>
-          <p className="text-[12px] leading-snug" style={{ color: 'rgba(255,255,255,0.50)' }}>
-            Tap to add something for {tomorrowDayName} — tasks captured tonight are ready when you wake up.
+          <p className="text-[12px] leading-snug" style={{ color: "var(--brand-primary)" }}>
+            Tap to add something for {tomorrowDayName}  tasks captured tonight are ready when you wake up.
           </p>
         </div>
         <button
           onClick={() => setDismissed(true)}
           className="flex-shrink-0 text-[11px] transition-opacity"
-          style={{ color: 'rgba(255,255,255,0.35)' }}
+          style={{ color: "var(--brand-primary)" }}
         >
-          ✕
+          
         </button>
       </div>
     </motion.div>
@@ -1035,11 +1035,11 @@ function UpcomingView({
           <div key={dateKey}>
             <div className="flex items-center gap-2.5 mb-3">
               <div className="w-1 h-4 flex-shrink-0" style={{ background: 'rgba(255,255,255,0.35)' }} />
-              <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.55)' }}>
+              <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: "var(--brand-primary)" }}>
                 {label}
               </span>
               <div className="flex-1 h-px" style={{ background: 'var(--glass-surface)' }} />
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-lg" style={{ color: 'rgba(255,255,255,0.35)', background: 'var(--glass-surface)', border: '1px solid var(--glass-surface)' }}>{groups[dateKey].length}</span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-lg" style={{ color: "var(--brand-primary)" }}>{groups[dateKey].length}</span>
             </div>
             <div className="space-y-2">
               <AnimatePresence mode="popLayout">
@@ -1093,11 +1093,11 @@ function LogbookView({
           <div key={dateKey}>
             <div className="flex items-center gap-2.5 mb-2">
               <div className="w-1 h-4 flex-shrink-0" style={{ background: 'rgba(255,255,255,0.25)' }} />
-              <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.45)' }}>
+              <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: "var(--brand-primary)" }}>
                 {label}
               </span>
               <div className="flex-1 h-px" style={{ background: 'var(--glass-surface)' }} />
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-lg" style={{ color: 'rgba(255,255,255,0.3)', background: 'var(--glass-surface)', border: '1px solid var(--glass-surface)' }}>{groups[dateKey].length}</span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-lg" style={{ color: "var(--brand-primary)" }}>{groups[dateKey].length}</span>
             </div>
             <div className="space-y-px">
               {groups[dateKey].map(todo => (
@@ -1111,13 +1111,13 @@ function LogbookView({
   )
 }
 
-// ─── Empty states ─────────────────────────────────────────────
+//  Empty states 
 
 const EMPTY_COPY: Record<TodoView, { headline: string; sub: string; Icon: React.ElementType }> = {
   inbox:    { Icon: CheckCheck,    headline: 'Inbox clear',        sub: 'Everything has a place. Add tasks or give them a date.' },
   today:    { Icon: Sparkles,      headline: 'Today is clear',     sub: 'Add something for today, or check what\'s upcoming.' },
   upcoming: { Icon: CalendarCheck, headline: 'Nothing scheduled',  sub: 'Give a task a date and it will appear here.' },
-  someday:  { Icon: Layers,        headline: 'Someday is empty',   sub: 'Park ideas here — type "someday" in any task.' },
+  someday:  { Icon: Layers,        headline: 'Someday is empty',   sub: 'Park ideas here  type "someday" in any task.' },
   logbook:  { Icon: BookMarked,    headline: 'Nothing done yet',   sub: 'Completed tasks appear here at the end of the day.' },
 }
 
@@ -1138,22 +1138,22 @@ function EmptyState({ view }: { view: TodoView }) {
           boxShadow: '3px 3px 0 rgba(0,0,0,0.6)',
         }}
       >
-        <Icon className="h-6 w-6" style={{ color: 'rgba(147,197,253,0.5)' }} />
+        <Icon className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
       </div>
-      <p className="font-black uppercase tracking-wider text-[13px] mb-1.5" style={{ color: 'rgba(255,255,255,0.55)' }}>{headline}</p>
-      <p className="text-[13px] max-w-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.4)' }}>{sub}</p>
+      <p className="font-black uppercase tracking-wider text-[13px] mb-1.5" style={{ color: "var(--brand-primary)" }}>{headline}</p>
+      <p className="text-[13px] max-w-xs leading-relaxed" style={{ color: "var(--brand-primary)" }}>{sub}</p>
     </motion.div>
   )
 }
 
-// ─── Helpers ──────────────────────────────────────────────────
+//  Helpers 
 
 function getPlaceholder(view: TodoView): string {
   switch (view) {
     case 'today':    return 'What needs doing today?'
-    case 'upcoming': return 'Add a task with a date…'
-    case 'someday':  return 'Park an idea…'
-    default:         return 'Add a task…'
+    case 'upcoming': return 'Add a task with a date'
+    case 'someday':  return 'Park an idea'
+    default:         return 'Add a task'
   }
 }
 

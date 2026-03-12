@@ -75,10 +75,10 @@ export function SuggestionBadge({ itemId, itemType }: SuggestionBadgeProps) {
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'project': return '📦'
-      case 'article': return '📰'
-      case 'thought': return '💭'
-      default: return '📄'
+      case 'project': return ''
+      case 'article': return ''
+      case 'thought': return ''
+      default: return ''
     }
   }
 
@@ -158,10 +158,10 @@ export function SuggestionBadge({ itemId, itemType }: SuggestionBadgeProps) {
               {/* Header */}
               <div className="px-6 pb-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Zap size={20} style={{ color: 'var(--premium-purple)' }} />
+                  <Zap size={20} style={{ color: "var(--brand-primary)" }} />
                   <h3
                     className="text-lg font-semibold"
-                    style={{ color: 'rgba(255, 255, 255, 0.95)' }}
+                    style={{ color: "var(--brand-primary)" }}
                   >
                     Suggested connections
                   </h3>
@@ -194,13 +194,13 @@ export function SuggestionBadge({ itemId, itemType }: SuggestionBadgeProps) {
                       <div className="flex-1 min-w-0">
                         <h4
                           className="text-sm font-semibold mb-1"
-                          style={{ color: 'rgba(255, 255, 255, 0.95)' }}
+                          style={{ color: "var(--brand-primary)" }}
                         >
                           {suggestion.toItemTitle}
                         </h4>
                         <p
                           className="text-xs leading-relaxed"
-                          style={{ color: 'rgba(255, 255, 255, 0.6)' }}
+                          style={{ color: "var(--brand-primary)" }}
                         >
                           {suggestion.reasoning}
                         </p>
@@ -222,7 +222,7 @@ export function SuggestionBadge({ itemId, itemType }: SuggestionBadgeProps) {
                       </div>
                       <span
                         className="text-xs font-medium"
-                        style={{ color: 'rgba(255, 255, 255, 0.5)' }}
+                        style={{ color: "var(--brand-primary)" }}
                       >
                         {Math.round(suggestion.confidence * 100)}%
                       </span>
@@ -247,7 +247,7 @@ export function SuggestionBadge({ itemId, itemType }: SuggestionBadgeProps) {
                         className="px-3 py-2 rounded-xl text-sm font-medium transition-all active:scale-95"
                         style={{
                           backgroundColor: 'var(--glass-surface)',
-                          color: 'rgba(255, 255, 255, 0.6)',
+                          color: "var(--brand-text-secondary)",
                           WebkitTapHighlightColor: 'transparent'
                         }}
                       >

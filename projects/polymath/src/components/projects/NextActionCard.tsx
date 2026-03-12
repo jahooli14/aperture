@@ -33,13 +33,13 @@ export function NextActionCard({ project }: NextActionCardProps) {
         <CardContent className="py-12">
           <div className="text-center space-y-4">
             <div className="inline-flex items-center justify-center">
-              <Target className="h-12 w-12" style={{ color: 'var(--brand-text-muted)' }} />
+              <Target className="h-12 w-12" style={{ color: "var(--brand-primary)" }} />
             </div>
             <div>
               <h3 className="text-lg font-semibold mb-1 premium-text-platinum">
                 No tasks yet
               </h3>
-              <p className="text-sm max-w-md mx-auto" style={{ color: 'var(--brand-text-secondary)' }}>
+              <p className="text-sm max-w-md mx-auto" style={{ color: "var(--brand-primary)" }}>
                 Add tasks below to define your next action
               </p>
             </div>
@@ -56,16 +56,16 @@ export function NextActionCard({ project }: NextActionCardProps) {
         <CardContent className="p-5">
           <div className="flex items-start gap-3">
             <div className="h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ backgroundColor: 'rgba(16, 185, 129, 0.2)' }}>
-              <Target className="h-5 w-5" style={{ color: '#10b981' }} />
+              <Target className="h-5 w-5" style={{ color: "var(--brand-primary)" }} />
             </div>
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-2">
-                <h3 className="text-sm font-bold uppercase tracking-wide" style={{ color: '#10b981' }}>
+                <h3 className="text-sm font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>
                   All Done!
                 </h3>
               </div>
-              <p className="text-base font-medium leading-relaxed" style={{ color: 'var(--brand-text-secondary)' }}>
+              <p className="text-base font-medium leading-relaxed" style={{ color: "var(--brand-primary)" }}>
                 All tasks completed. Add more tasks or mark this project as complete.
               </p>
             </div>
@@ -80,21 +80,21 @@ export function NextActionCard({ project }: NextActionCardProps) {
     <Card className="border-2 premium-card" style={{ borderColor: 'rgba(59, 130, 246, 0.3)', backgroundColor: 'rgba(59, 130, 246, 0.05)' }}>
       <CardContent className="p-5">
         <div className="flex items-start gap-3">
-          <div className="h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: 'linear-gradient(135deg, var(--brand-primary), var(--premium-indigo))' }}>
+          <div className="h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-primary))' }}>
             <Target className="h-5 w-5 text-[var(--brand-text-primary)]" />
           </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
-              <h3 className="text-sm font-bold uppercase tracking-wide" style={{ color: 'var(--brand-primary)' }}>
+              <h3 className="text-sm font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>
                 Next Action
               </h3>
             </div>
             <p className="text-base font-medium leading-relaxed premium-text-platinum">
               {nextTask.text}
             </p>
-            <p className="text-xs mt-2" style={{ color: 'var(--brand-text-muted)' }}>
-              From task list • Edit in tasks below
+            <p className="text-xs mt-2" style={{ color: "var(--brand-primary)" }}>
+              From task list  Edit in tasks below
             </p>
           </div>
         </div>

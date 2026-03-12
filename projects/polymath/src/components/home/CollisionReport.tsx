@@ -34,22 +34,22 @@ export function CollisionReport() {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="aperture-card p-4 cursor-pointer transition-all"
-      style={{ borderColor: 'rgba(139,92,246,0.3)' }}
+      className="attention-card p-4 cursor-pointer transition-all"
+      style={{ borderColor: 'var(--brand-primary)' }}
       onClick={() => navigate('/insights')}
     >
       <div className="flex items-center gap-2 mb-2">
-        <Zap className="w-4 h-4 text-purple-400" />
-        <span className="text-xs font-medium text-purple-300 uppercase tracking-wider">Unexpected collision</span>
+        <Zap className="w-4 h-4 text-brand-primary" />
+        <span className="text-xs font-medium text-brand-primary uppercase tracking-wider">Unexpected collision</span>
       </div>
-      <p className="text-sm text-gray-200 leading-relaxed">
-        Your {top.source_type} <span className="text-purple-300 font-medium">"{top.source_title}"</span>
-        {' '}collided with {top.target_type} <span className="text-purple-300 font-medium">"{top.target_title}"</span>
+      <p className="text-sm text-brand-text-primary leading-relaxed">
+        Your {top.source_type} <span className="text-brand-primary font-medium">"{top.source_title}"</span>
+        {' '}collided with {top.target_type} <span className="text-brand-primary font-medium">"{top.target_title}"</span>
       </p>
       {top.ai_reasoning && (
         <p className="text-xs text-[var(--brand-text-secondary)] mt-1.5">{top.ai_reasoning}</p>
       )}
-      <div className="flex items-center gap-1 mt-2 text-purple-400 text-xs">
+      <div className="flex items-center gap-1 mt-2 text-brand-primary text-xs">
         <span>Explore</span>
         <ChevronRight className="w-3 h-3" />
       </div>

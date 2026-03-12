@@ -9,7 +9,7 @@ import React from 'react'
 export function WildcardBadge() {
   return (
     <div className="wildcard-badge" title="This idea is outside your usual range - try it!">
-      <span className="wildcard-icon">🎲</span>
+      <span className="wildcard-icon"></span>
       <span className="wildcard-label">Wild card</span>
     </div>
   )

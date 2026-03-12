@@ -153,10 +153,10 @@ export function ArticleCompletionDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[550px]">
         <DialogHeader className="mb-2">
-          <DialogTitle className="text-2xl font-bold mb-3" style={{ color: 'var(--brand-text-primary)' }}>
+          <DialogTitle className="text-2xl font-bold mb-3" style={{ color: "var(--brand-primary)" }}>
             Capture Your Thoughts
           </DialogTitle>
-          <DialogDescription className="text-base leading-relaxed" style={{ color: 'var(--brand-text-secondary)' }}>
+          <DialogDescription className="text-base leading-relaxed" style={{ color: "var(--brand-primary)" }}>
             What did you learn from "{article.title}"?
           </DialogDescription>
         </DialogHeader>
@@ -197,12 +197,12 @@ export function ArticleCompletionDialog({
         {mode === 'text' && (
           <div className="space-y-4">
             <div>
-              <Label htmlFor="thought-text" className="text-sm font-medium mb-2 block" style={{ color: 'var(--brand-text-primary)' }}>
+              <Label htmlFor="thought-text" className="text-sm font-medium mb-2 block" style={{ color: "var(--brand-primary)" }}>
                 Your thoughts (key takeaways, questions, connections)
               </Label>
               <textarea
                 id="thought-text"
-                placeholder={`• Main insight from the article\n• How this relates to my work\n• Questions it raised`}
+                placeholder={` Main insight from the article\n How this relates to my work\n Questions it raised`}
                 value={textInput}
                 onChange={(e) => setTextInput(e.target.value)}
                 rows={6}
@@ -233,8 +233,8 @@ export function ArticleCompletionDialog({
                 {relatedProjects.length > 0 && (
                   <div>
                     <div className="flex items-center gap-2 mb-3">
-                      <Target className="h-4 w-4" style={{ color: 'var(--brand-primary)' }} />
-                      <h4 className="text-sm font-semibold" style={{ color: 'var(--brand-text-primary)' }}>
+                      <Target className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
+                      <h4 className="text-sm font-semibold" style={{ color: "var(--brand-primary)" }}>
                         Related Projects
                       </h4>
                     </div>
@@ -247,11 +247,11 @@ export function ArticleCompletionDialog({
                           style={{ borderColor: 'rgba(59, 130, 246, 0.2)', backgroundColor: 'rgba(59, 130, 246, 0.05)' }}
                         >
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate" style={{ color: 'var(--brand-text-primary)' }}>
+                            <p className="text-sm font-medium truncate" style={{ color: "var(--brand-primary)" }}>
                               {project.title}
                             </p>
                             {project.description && (
-                              <p className="text-xs truncate" style={{ color: 'var(--brand-text-muted)' }}>
+                              <p className="text-xs truncate" style={{ color: "var(--brand-primary)" }}>
                                 {project.description}
                               </p>
                             )}
@@ -261,9 +261,7 @@ export function ArticleCompletionDialog({
                               onClick={() => handleLinkToProject(project.id)}
                               className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all hover:bg-[rgba(255,255,255,0.1)]"
 
-                              style={{
-                                color: 'var(--brand-primary)'
-                              }}
+                              style={{ color: "var(--brand-primary)" }}
                             >
                               Link
                             </button>
@@ -271,9 +269,7 @@ export function ArticleCompletionDialog({
                               onClick={() => navigate(`/projects/${project.id}`)}
                               className="p-1.5 rounded-lg transition-all hover:bg-[rgba(255,255,255,0.1)]"
 
-                              style={{
-                                color: 'var(--brand-text-secondary)'
-                              }}
+                              style={{ color: "var(--brand-primary)" }}
                             >
                               <ExternalLink className="h-3.5 w-3.5" />
                             </button>
@@ -288,8 +284,8 @@ export function ArticleCompletionDialog({
                 {relatedThoughts.length > 0 && (
                   <div>
                     <div className="flex items-center gap-2 mb-3">
-                      <Brain className="h-4 w-4" style={{ color: 'var(--premium-indigo)' }} />
-                      <h4 className="text-sm font-semibold" style={{ color: 'var(--brand-text-primary)' }}>
+                      <Brain className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
+                      <h4 className="text-sm font-semibold" style={{ color: "var(--brand-primary)" }}>
                         Related Thoughts
                       </h4>
                     </div>
@@ -302,11 +298,11 @@ export function ArticleCompletionDialog({
                           style={{ borderColor: 'rgba(99, 102, 241, 0.2)', backgroundColor: 'rgba(99, 102, 241, 0.05)' }}
                         >
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate" style={{ color: 'var(--brand-text-primary)' }}>
+                            <p className="text-sm font-medium truncate" style={{ color: "var(--brand-primary)" }}>
                               {thought.title}
                             </p>
                             {thought.body && (
-                              <p className="text-xs truncate" style={{ color: 'var(--brand-text-muted)' }}>
+                              <p className="text-xs truncate" style={{ color: "var(--brand-primary)" }}>
                                 {thought.body}
                               </p>
                             )}
@@ -316,9 +312,7 @@ export function ArticleCompletionDialog({
                               onClick={() => handleLinkToThought(thought.id)}
                               className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all hover:bg-[rgba(255,255,255,0.1)]"
 
-                              style={{
-                                color: 'var(--brand-primary)'
-                              }}
+                              style={{ color: "var(--brand-primary)" }}
                             >
                               Link
                             </button>
@@ -332,7 +326,7 @@ export function ArticleCompletionDialog({
             )}
 
             {loadingRelated && (
-              <div className="flex items-center justify-center gap-2 py-3 text-sm" style={{ color: 'var(--brand-text-muted)' }}>
+              <div className="flex items-center justify-center gap-2 py-3 text-sm" style={{ color: "var(--brand-primary)" }}>
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Finding related items...
               </div>
@@ -344,9 +338,7 @@ export function ArticleCompletionDialog({
                 disabled={loading}
                 className="px-6 py-3 rounded-xl font-medium transition-all hover:bg-[var(--glass-surface)]"
 
-                style={{
-                  color: 'var(--brand-text-secondary)'
-                }}
+                style={{ color: "var(--brand-primary)" }}
               >
                 Skip
               </button>
@@ -369,7 +361,7 @@ export function ArticleCompletionDialog({
         {/* Voice Mode */}
         {mode === 'voice' && (
           <div className="space-y-6">
-            <div className="text-sm text-center mb-4" style={{ color: 'var(--brand-text-secondary)' }}>
+            <div className="text-sm text-center mb-4" style={{ color: "var(--brand-primary)" }}>
               Record your thoughts about this article
             </div>
 
@@ -383,9 +375,7 @@ export function ArticleCompletionDialog({
                 disabled={loading}
                 className="px-6 py-3 rounded-xl font-medium transition-all hover:bg-[var(--glass-surface)]"
 
-                style={{
-                  color: 'var(--brand-text-secondary)'
-                }}
+                style={{ color: "var(--brand-primary)" }}
               >
                 Skip for now
               </button>

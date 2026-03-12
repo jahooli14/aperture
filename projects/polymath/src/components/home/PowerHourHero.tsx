@@ -174,11 +174,11 @@ export function PowerHourHero() {
 
     if (error) return (
         <div className="relative overflow-hidden mb-12">
-            <div className="zebra-card p-12 text-center border-2 border-dashed border-red-500/20 bg-red-500/5">
-                <Zap className="h-12 w-12 text-red-500/20 mx-auto mb-4" />
-                <h2 className="text-xl font-black uppercase italic mb-2 tracking-tighter text-red-500">Engine Offline</h2>
+            <div className="zebra-card p-12 text-center border-2 border-dashed border-red-500/20 bg-brand-primary/5">
+                <Zap className="h-12 w-12 text-brand-text-secondary/20 mx-auto mb-4" />
+                <h2 className="text-xl font-black uppercase italic mb-2 tracking-tighter text-brand-text-secondary">Engine Offline</h2>
                 <p className="text-[var(--brand-text-secondary)] text-sm max-w-sm mx-auto mb-6">{error}</p>
-                <button onClick={() => fetchPowerHour()} className="px-6 py-3 bg-red-500 text-[var(--brand-text-primary)] font-black uppercase text-xs tracking-widest hover:bg-black transition-colors">
+                <button onClick={() => fetchPowerHour()} className="px-6 py-3 bg-brand-primary text-[var(--brand-text-primary)] font-black uppercase text-xs tracking-widest hover:bg-black transition-colors">
                     Retry Feed
                 </button>
             </div>
@@ -322,7 +322,7 @@ export function PowerHourHero() {
 
     return (
         <div className="relative mb-2 group/hero">
-            <div className="aperture-hero-card p-0 rounded-2xl overflow-hidden relative">
+            <div className="attention-card p-0 rounded-2xl overflow-hidden relative">
                 {/* Header Overlays */}
                 <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
                     <div
@@ -377,7 +377,7 @@ export function PowerHourHero() {
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
-                            className="absolute top-16 right-4 z-30 w-72 aperture-card shadow-2xl max-h-80 overflow-y-auto"
+                            className="absolute top-16 right-4 z-30 w-72 glass-card glass-card-hover shadow-2xl max-h-80 overflow-y-auto"
                         >
                             <div className="p-3 bg-[var(--glass-surface)] border-b border-[var(--glass-surface-hover)] text-[10px] font-bold uppercase tracking-widest text-[var(--brand-text-muted)] aperture-header">
                                 Select Project Target
@@ -419,7 +419,7 @@ export function PowerHourHero() {
                                     <div className="flex items-center gap-2 font-bold text-[10px] uppercase tracking-widest aperture-header" style={{ color: theme.text }}>
                                         <Target className="h-3 w-3 fill-current" />
                                         <span>Current Objective</span>
-                                        {mainTask.overhead_type && <span className="opacity-50">• {mainTask.overhead_type} Flow</span>}
+                                        {mainTask.overhead_type && <span className="opacity-50"> {mainTask.overhead_type} Flow</span>}
                                     </div>
                                 </div>
 
@@ -445,7 +445,7 @@ export function PowerHourHero() {
 
                                 <div className="flex gap-2 mb-6 text-[10px] font-mono uppercase tracking-wide opacity-70">
                                     {(mainTask.ignition_tasks?.length || 0) > 0 && (
-                                        <div className="flex items-center gap-1 text-green-400">
+                                        <div className="flex items-center gap-1 text-brand-text-secondary">
                                             <Coffee className="h-3 w-3" />
                                             <span>Ignition</span>
                                         </div>
@@ -458,7 +458,7 @@ export function PowerHourHero() {
                                     {(mainTask.shutdown_tasks?.length || 0) > 0 && (
                                         <>
                                             <div className="w-px h-3 bg-white/20" />
-                                            <div className="flex items-center gap-1 text-blue-400">
+                                            <div className="flex items-center gap-1 text-brand-primary">
                                                 <Moon className="h-3 w-3" />
                                                 <span>Parking</span>
                                             </div>

@@ -84,10 +84,10 @@ export const useReadingStore = create<ReadingState>((set, get) => {
 
       const { readingDb } = await import('../lib/db')
 
-      // 2. Local DB check — only used for cold start (empty in-memory state).
+      // 2. Local DB check  only used for cold start (empty in-memory state).
       // When articles already exist in memory they are always fresher than the
       // Dexie cache, so reading from Dexie would replace them with a stale
-      // snapshot causing a visible flicker (e.g. 2 → 6) before the API responds.
+      // snapshot causing a visible flicker (e.g. 2  6) before the API responds.
       if (!force && state.articles.length === 0) {
         try {
           const cachedArticles = await readingDb.articles.toArray()
@@ -153,7 +153,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
           await readingDb.articles.bulkPut(cachedArticles)
 
           // Remove Dexie records that no longer exist on the server.
-          // bulkPut only adds/updates — without this cleanup, stale records
+          // bulkPut only adds/updates  without this cleanup, stale records
           // accumulate and cause wrong counts on the next cold start.
           const serverIdSet = new Set(articles.map((a: Article) => a.id))
           const allCachedKeys = await readingDb.articles.toCollection().primaryKeys()

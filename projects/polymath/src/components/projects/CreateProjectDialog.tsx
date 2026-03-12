@@ -1,6 +1,6 @@
 /**
  * Create Project Dialog
- * Mobile-optimized bottom sheet for creating new projects — single step
+ * Mobile-optimized bottom sheet for creating new projects  single step
  */
 
 import { useState } from 'react'
@@ -117,7 +117,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
           className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-[var(--glass-surface)]"
           style={{
             borderColor: 'rgba(30, 42, 88, 0.2)',
-            color: 'rgba(100, 180, 255, 1)'
+            color: "var(--brand-text-secondary)"
           }}
           title="New Project"
         >
@@ -129,7 +129,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
         <BottomSheetContent>
           <BottomSheetHeader>
             <div className="flex items-center gap-3 mb-2">
-              <Layers className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
+              <Layers className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
               <BottomSheetTitle>Start a New Project</BottomSheetTitle>
             </div>
             <BottomSheetDescription>
@@ -140,7 +140,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
           <form onSubmit={handleSubmit} className="space-y-5 mt-6">
             {/* Title */}
             <div className="space-y-2">
-              <Label htmlFor="title" className="font-bold text-xs uppercase tracking-widest text-blue-400">Project Name <span className="text-red-500">*</span></Label>
+              <Label htmlFor="title" className="font-bold text-xs uppercase tracking-widest text-brand-primary">Project Name <span className="text-brand-text-secondary">*</span></Label>
               <Input
                 id="title"
                 placeholder="Project Aperture"
@@ -155,8 +155,8 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
 
             {/* Description */}
             <div className="space-y-2">
-              <Label htmlFor="description" className="font-bold text-xs uppercase tracking-widest text-blue-400">
-                Description <span className="text-red-500">*</span>
+              <Label htmlFor="description" className="font-bold text-xs uppercase tracking-widest text-brand-primary">
+                Description <span className="text-brand-text-secondary">*</span>
               </Label>
               <Input
                 id="description"

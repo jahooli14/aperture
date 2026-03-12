@@ -21,7 +21,7 @@ export function useUndoToast() {
 
     addToast({
       title,
-      description: `${description} • Tap here to undo`,
+      description: `${description}  Tap here to undo`,
       variant: 'default',
       duration,
     })

@@ -55,9 +55,9 @@ function trackTokenUsage(operation: string, inputTokens: number, outputTokens: n
   tokenStats.total_output_tokens += outputTokens
   tokenStats.total_tokens += inputTokens + outputTokens
 
-  // Gemini Flash pricing (as of 2025): $0.075 per 1M input tokens, $0.30 per 1M output tokens
-  const inputCost = (inputTokens / 1_000_000) * 0.075
-  const outputCost = (outputTokens / 1_000_000) * 0.30
+  // Gemini 3.1 Flash-Lite pricing (as of March 2026): $0.25 per 1M input tokens, $1.50 per 1M output tokens
+  const inputCost = (inputTokens / 1_000_000) * 0.25
+  const outputCost = (outputTokens / 1_000_000) * 1.50
   tokenStats.estimated_cost_usd += inputCost + outputCost
 
   if (!tokenStats.by_operation[operation]) {
@@ -69,7 +69,7 @@ function trackTokenUsage(operation: string, inputTokens: number, outputTokens: n
 }
 
 /**
- * Generate text using Gemini (fast, cost-effective)
+ * Generate text using Gemini 3.1 Flash-Lite (fast, cost-effective)
  */
 export async function generateText(
   prompt: string,

@@ -63,20 +63,20 @@ export function useOfflineSync() {
           if (response.ok) {
             await db.deletePendingCapture(capture.id!)
             successCount++
-            console.log(`✓ Synced capture ${capture.id}`)
+            console.log(` Synced capture ${capture.id}`)
           } else {
             const contentType = response.headers.get('content-type')
             if (contentType?.includes('text/html')) {
               failCount++
-              console.error(`✗ Failed to sync capture ${capture.id}: API not available`)
+              console.error(` Failed to sync capture ${capture.id}: API not available`)
             } else {
               failCount++
-              console.error(`✗ Failed to sync capture ${capture.id}:`, response.status)
+              console.error(` Failed to sync capture ${capture.id}:`, response.status)
             }
           }
         } catch (error) {
           failCount++
-          console.error(`✗ Failed to sync capture ${capture.id}:`, error)
+          console.error(` Failed to sync capture ${capture.id}:`, error)
         }
       }
 
@@ -116,7 +116,7 @@ export function useOfflineSync() {
     try {
       await db.addPendingCapture({ transcript })
       await updatePendingCount()
-      console.log('✓ Capture queued for offline sync')
+      console.log(' Capture queued for offline sync')
 
       // If online, try to sync immediately
       if (isOnline) {
@@ -132,7 +132,7 @@ export function useOfflineSync() {
     try {
       await db.clearAllPendingCaptures()
       await updatePendingCount()
-      console.log('✓ Cleared all pending captures')
+      console.log(' Cleared all pending captures')
     } catch (error) {
       console.error('Failed to clear pending captures:', error)
       throw error

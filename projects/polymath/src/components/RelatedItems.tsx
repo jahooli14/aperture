@@ -53,7 +53,7 @@ export function RelatedItems({ sourceId, sourceType, sourceText, limit = 5 }: Re
       <Card className="pro-card">
         <CardContent className="p-5">
           <div className="flex items-center gap-2 mb-4">
-            <Lightbulb className="h-4 w-4 text-blue-900" />
+            <Lightbulb className="h-4 w-4 text-brand-primary" />
             <h3 className="font-semibold text-neutral-900">Related</h3>
           </div>
           <div className="space-y-2">
@@ -74,7 +74,7 @@ export function RelatedItems({ sourceId, sourceType, sourceText, limit = 5 }: Re
     <Card className="pro-card">
       <CardContent className="p-5">
         <div className="flex items-center gap-2 mb-4">
-          <Lightbulb className="h-4 w-4 text-blue-900" />
+          <Lightbulb className="h-4 w-4 text-brand-primary" />
           <h3 className="font-semibold text-neutral-900">Related</h3>
           <span className="text-xs text-[var(--brand-text-muted)]">({items.length})</span>
         </div>
@@ -101,8 +101,8 @@ function RelatedItemCard({ item }: { item: RelatedItem }) {
 
   const Content = (
     <div className="flex items-start gap-3 p-3 rounded-lg border border-neutral-200 hover:border-blue-300 hover:bg-blue-50/30 transition-all group">
-      <div className="flex-shrink-0 h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
-        <Icon className="h-4 w-4 text-blue-900" />
+      <div className="flex-shrink-0 h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center group-hover:bg-brand-primary transition-colors">
+        <Icon className="h-4 w-4 text-brand-primary" />
       </div>
 
       <div className="flex-1 min-w-0">
@@ -111,7 +111,7 @@ function RelatedItemCard({ item }: { item: RelatedItem }) {
             {item.title}
           </h4>
           {item.type === 'article' && item.url && (
-            <ExternalLink className="h-3 w-3 text-neutral-400 flex-shrink-0" />
+            <ExternalLink className="h-3 w-3 text-brand-text-muted flex-shrink-0" />
           )}
         </div>
 

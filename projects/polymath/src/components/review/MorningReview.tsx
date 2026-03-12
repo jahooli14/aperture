@@ -1,5 +1,5 @@
 /**
- * MorningReview — Step-by-step morning planning flow
+ * MorningReview  Step-by-step morning planning flow
  *
  * Behavioral principles:
  *   Implementation Intentions (Gollwitzer 1999): Having a specific plan (WHAT,
@@ -10,7 +10,7 @@
  *   commitment. People align behavior to prior self-declarations.
  *
  *   Constraint as freedom: Limiting to 3 MITs reduces decision fatigue and
- *   forces priority clarity — you can't cheat yourself into 8 "top priorities".
+ *   forces priority clarity  you can't cheat yourself into 8 "top priorities".
  */
 
 import { useState, useEffect } from 'react'
@@ -150,7 +150,7 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
       {/* Step indicator */}
       <div className="flex items-center justify-between px-5 pt-12 pb-6">
         <StepIndicator current={step} total={STEP_COUNT} />
-        <span className="text-[12px]" style={{ color: 'rgba(255,255,255,0.25)' }}>
+        <span className="text-[12px]" style={{ color: "var(--brand-primary)" }}>
           {step + 1} / {STEP_COUNT}
         </span>
       </div>
@@ -168,17 +168,17 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
               exit="exit"
               transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
             >
-              <p className="text-[12px] font-semibold uppercase tracking-widest mb-3" style={{ color: 'rgba(251,191,36,0.6)' }}>
+              <p className="text-[12px] font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--brand-primary)" }}>
                 Morning review
               </p>
-              <h2 className="text-[30px] font-bold leading-tight mb-1" style={{ color: 'rgba(255,255,255,0.92)' }}>
+              <h2 className="text-[30px] font-bold leading-tight mb-1" style={{ color: "var(--brand-primary)" }}>
                 Good morning,
               </h2>
-              <h2 className="text-[30px] font-bold leading-tight mb-6" style={{ color: 'rgba(251,191,36,0.85)' }}>
+              <h2 className="text-[30px] font-bold leading-tight mb-6" style={{ color: "var(--brand-primary)" }}>
                 {dayName}.
               </h2>
 
-              <p className="text-[15px] mb-8" style={{ color: 'rgba(255,255,255,0.45)' }}>
+              <p className="text-[15px] mb-8" style={{ color: "var(--brand-primary)" }}>
                 {dateStr}
               </p>
 
@@ -191,15 +191,15 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
                     className="h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0"
                     style={{ background: 'rgba(59,130,246,0.15)' }}
                   >
-                    <span className="text-[18px] font-bold" style={{ color: 'rgba(147,197,253,0.9)' }}>
+                    <span className="text-[18px] font-bold" style={{ color: "var(--brand-primary)" }}>
                       {todayTodos.length}
                     </span>
                   </div>
                   <div>
-                    <p className="text-[14px] font-semibold" style={{ color: 'rgba(255,255,255,0.75)' }}>
+                    <p className="text-[14px] font-semibold" style={{ color: "var(--brand-primary)" }}>
                       {todayTodos.length === 1 ? 'task' : 'tasks'} today
                     </p>
-                    <p className="text-[12px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                    <p className="text-[12px]" style={{ color: "var(--brand-primary)" }}>
                       scheduled for today
                     </p>
                   </div>
@@ -214,15 +214,15 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
                       className="h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0"
                       style={{ background: 'rgba(239,68,68,0.15)' }}
                     >
-                      <span className="text-[18px] font-bold" style={{ color: 'rgba(252,165,165,0.9)' }}>
+                      <span className="text-[18px] font-bold" style={{ color: "var(--brand-primary)" }}>
                         {overdueCount}
                       </span>
                     </div>
                     <div>
-                      <p className="text-[14px] font-semibold" style={{ color: 'rgba(252,165,165,0.85)' }}>
+                      <p className="text-[14px] font-semibold" style={{ color: "var(--brand-primary)" }}>
                         overdue
                       </p>
-                      <p className="text-[12px]" style={{ color: 'rgba(252,165,165,0.45)' }}>
+                      <p className="text-[12px]" style={{ color: "var(--brand-primary)" }}>
                         carried from previous days
                       </p>
                     </div>
@@ -236,7 +236,7 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
                 className="w-full py-4 rounded-2xl font-bold text-[16px] flex items-center justify-center gap-2"
                 style={{
                   background: 'rgba(251,191,36,0.15)',
-                  color: 'rgba(251,191,36,0.9)',
+                  color: "var(--brand-text-secondary)",
                   border: '1px solid rgba(251,191,36,0.25)',
                 }}
               >
@@ -256,13 +256,13 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
               exit="exit"
               transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
             >
-              <p className="text-[12px] font-semibold uppercase tracking-widest mb-3" style={{ color: 'rgba(99,179,237,0.6)' }}>
+              <p className="text-[12px] font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--brand-primary)" }}>
                 Pick your top 3
               </p>
-              <h2 className="text-[26px] font-bold leading-tight mb-2" style={{ color: 'rgba(255,255,255,0.92)' }}>
+              <h2 className="text-[26px] font-bold leading-tight mb-2" style={{ color: "var(--brand-primary)" }}>
                 Most important tasks
               </h2>
-              <p className="text-[14px] mb-6" style={{ color: 'rgba(255,255,255,0.38)' }}>
+              <p className="text-[14px] mb-6" style={{ color: "var(--brand-primary)" }}>
                 What 3 things would make today a success?
               </p>
 
@@ -273,16 +273,16 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
                   className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl"
                   style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(99,179,237,0.2)' }}
                 >
-                  <Check className="h-3.5 w-3.5 flex-shrink-0" style={{ color: 'rgba(99,179,237,0.8)' }} />
-                  <p className="text-[12px]" style={{ color: 'rgba(147,197,253,0.8)' }}>
-                    Pick just 3 — focus wins
+                  <Check className="h-3.5 w-3.5 flex-shrink-0" style={{ color: "var(--brand-primary)" }} />
+                  <p className="text-[12px]" style={{ color: "var(--brand-primary)" }}>
+                    Pick just 3  focus wins
                   </p>
                 </motion.div>
               )}
 
               <div className="space-y-2 mb-8">
                 {todayTodos.length === 0 ? (
-                  <p className="text-[14px] py-8 text-center" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                  <p className="text-[14px] py-8 text-center" style={{ color: "var(--brand-primary)" }}>
                     No tasks scheduled for today
                   </p>
                 ) : (
@@ -311,7 +311,7 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
                             background: isSelected ? 'rgba(59,130,246,0.3)' : 'transparent',
                           }}
                         >
-                          {isSelected && <Check className="h-2.5 w-2.5" style={{ color: 'rgba(147,197,253,1)' }} strokeWidth={3} />}
+                          {isSelected && <Check className="h-2.5 w-2.5" style={{ color: "var(--brand-primary)" }} strokeWidth={3} />}
                         </div>
                         <span
                           className="flex-1 text-[14px] font-medium"
@@ -322,7 +322,7 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
                         {isSelected && (
                           <span
                             className="flex-shrink-0 text-[11px] font-bold px-1.5 py-0.5 rounded-full"
-                            style={{ background: 'rgba(99,179,237,0.2)', color: 'rgba(147,197,253,0.9)' }}
+                            style={{ background: 'rgba(99,179,237,0.2)', color: "var(--brand-text-secondary)" }}
                           >
                             MIT
                           </span>
@@ -358,25 +358,25 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
               exit="exit"
               transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
             >
-              <p className="text-[12px] font-semibold uppercase tracking-widest mb-3" style={{ color: 'rgba(139,92,246,0.6)' }}>
+              <p className="text-[12px] font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--brand-primary)" }}>
                 Assign times
               </p>
-              <h2 className="text-[26px] font-bold leading-tight mb-2" style={{ color: 'rgba(255,255,255,0.92)' }}>
+              <h2 className="text-[26px] font-bold leading-tight mb-2" style={{ color: "var(--brand-primary)" }}>
                 When will you do this?
               </h2>
-              <p className="text-[14px] mb-6" style={{ color: 'rgba(255,255,255,0.38)' }}>
-                Time-blocked tasks are 3× more likely to happen.
+              <p className="text-[14px] mb-6" style={{ color: "var(--brand-primary)" }}>
+                Time-blocked tasks are 3 more likely to happen.
               </p>
 
               <div className="space-y-5 mb-8">
                 {mitTodos.length === 0 ? (
-                  <p className="text-[14px] py-8 text-center" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                  <p className="text-[14px] py-8 text-center" style={{ color: "var(--brand-primary)" }}>
                     No tasks to time-block
                   </p>
                 ) : (
                   mitTodos.map(todo => (
                     <div key={todo.id}>
-                      <p className="text-[13px] font-medium mb-2 truncate" style={{ color: 'rgba(255,255,255,0.65)' }}>
+                      <p className="text-[13px] font-medium mb-2 truncate" style={{ color: "var(--brand-primary)" }}>
                         {todo.text}
                       </p>
                       <div className="flex flex-wrap gap-1.5">
@@ -413,7 +413,7 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
                 className="w-full py-4 rounded-2xl font-bold text-[16px] flex items-center justify-center gap-2"
                 style={{
                   background: 'rgba(139,92,246,0.15)',
-                  color: 'rgba(196,181,253,0.9)',
+                  color: "var(--brand-text-secondary)",
                   border: '1px solid rgba(139,92,246,0.25)',
                 }}
               >
@@ -433,13 +433,13 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
               exit="exit"
               transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
             >
-              <p className="text-[12px] font-semibold uppercase tracking-widest mb-3" style={{ color: 'rgba(52,211,153,0.6)' }}>
+              <p className="text-[12px] font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--brand-primary)" }}>
                 Set your intention
               </p>
-              <h2 className="text-[26px] font-bold leading-tight mb-2" style={{ color: 'rgba(255,255,255,0.92)' }}>
+              <h2 className="text-[26px] font-bold leading-tight mb-2" style={{ color: "var(--brand-primary)" }}>
                 What would make today a success?
               </h2>
-              <p className="text-[14px] mb-6" style={{ color: 'rgba(255,255,255,0.38)' }}>
+              <p className="text-[14px] mb-6" style={{ color: "var(--brand-primary)" }}>
                 One sentence. Be specific.
               </p>
 
@@ -447,18 +447,18 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
                 <textarea
                   value={intention}
                   onChange={e => handleIntentionChange(e.target.value)}
-                  placeholder="Today is a success if I…"
+                  placeholder="Today is a success if I"
                   rows={4}
                   className="w-full resize-none rounded-2xl px-4 py-3.5 text-[15px] leading-relaxed outline-none"
                   style={{
                     background: 'var(--premium-surface-1)',
                     border: `1px solid ${intentionWarning ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.1)'}`,
-                    color: 'rgba(255,255,255,0.85)',
+                    color: "var(--brand-text-secondary)",
                     caretColor: 'rgba(52,211,153,0.8)',
                   }}
                 />
                 <div className="flex items-center justify-between mt-2 px-1">
-                  <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.2)' }}>
+                  <span className="text-[11px]" style={{ color: "var(--brand-primary)" }}>
                     Stored locally only
                   </span>
                   <span
@@ -512,13 +512,13 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
                     boxShadow: '0 0 40px rgba(251,191,36,0.15)',
                   }}
                 >
-                  <span className="text-4xl">☀️</span>
+                  <span className="text-4xl"></span>
                 </div>
 
-                <h2 className="text-[28px] font-bold mb-2" style={{ color: 'rgba(255,255,255,0.92)' }}>
+                <h2 className="text-[28px] font-bold mb-2" style={{ color: "var(--brand-primary)" }}>
                   You're ready.
                 </h2>
-                <p className="text-[14px] mb-8" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                <p className="text-[14px] mb-8" style={{ color: "var(--brand-primary)" }}>
                   Here's your plan for today
                 </p>
 
@@ -527,10 +527,10 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
                     className="flex items-center gap-3 px-4 py-3 rounded-2xl"
                     style={{ background: 'var(--premium-surface-1)', border: '1px solid var(--glass-surface)' }}
                   >
-                    <span className="text-[20px]">📋</span>
-                    <p className="text-[14px]" style={{ color: 'rgba(255,255,255,0.65)' }}>
+                    <span className="text-[20px]"></span>
+                    <p className="text-[14px]" style={{ color: "var(--brand-primary)" }}>
                       {mitIds.length > 0 ? (
-                        <>You've picked <span className="font-bold" style={{ color: 'rgba(147,197,253,0.9)' }}>{mitIds.length} MIT{mitIds.length !== 1 ? 's' : ''}</span></>
+                        <>You've picked <span className="font-bold" style={{ color: "var(--brand-primary)" }}>{mitIds.length} MIT{mitIds.length !== 1 ? 's' : ''}</span></>
                       ) : (
                         <>{todayTodos.length} tasks planned for today</>
                       )}
@@ -542,9 +542,9 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
                       className="flex items-center gap-3 px-4 py-3 rounded-2xl"
                       style={{ background: 'var(--premium-surface-1)', border: '1px solid var(--glass-surface)' }}
                     >
-                      <span className="text-[20px]">⏰</span>
-                      <p className="text-[14px]" style={{ color: 'rgba(255,255,255,0.65)' }}>
-                        <span className="font-bold" style={{ color: 'rgba(196,181,253,0.9)' }}>{timeBlockedCount}</span> time-blocked
+                      <span className="text-[20px]"></span>
+                      <p className="text-[14px]" style={{ color: "var(--brand-primary)" }}>
+                        <span className="font-bold" style={{ color: "var(--brand-primary)" }}>{timeBlockedCount}</span> time-blocked
                       </p>
                     </div>
                   )}
@@ -554,10 +554,10 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
                       className="px-4 py-3.5 rounded-2xl"
                       style={{ background: 'rgba(52,211,153,0.07)', border: '1px solid rgba(52,211,153,0.2)' }}
                     >
-                      <p className="text-[11px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'rgba(52,211,153,0.55)' }}>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "var(--brand-primary)" }}>
                         Your intention
                       </p>
-                      <p className="text-[14px] italic leading-snug" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                      <p className="text-[14px] italic leading-snug" style={{ color: "var(--brand-primary)" }}>
                         "{intention}"
                       </p>
                     </div>
@@ -571,7 +571,7 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
                 className="w-full py-4 rounded-2xl font-bold text-[16px] flex items-center justify-center gap-2"
                 style={{
                   background: 'rgba(251,191,36,0.18)',
-                  color: 'rgba(251,191,36,0.95)',
+                  color: "var(--brand-text-secondary)",
                   border: '1px solid rgba(251,191,36,0.3)',
                   boxShadow: '0 0 20px rgba(251,191,36,0.1)',
                 }}

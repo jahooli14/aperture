@@ -14,15 +14,15 @@ const MOVE_CONFIG: Record<
   DEEPEN: {
     label: 'Go deeper',
     icon: <ArrowDown className="w-3 h-3" />,
-    color: 'text-blue-300',
-    bg: 'bg-blue-500/15',
+    color: 'text-brand-primary',
+    bg: 'bg-brand-primary/15',
     border: 'border-blue-500/25',
   },
   COLLIDE: {
     label: 'Contradiction',
     icon: <Zap className="w-3 h-3" />,
-    color: 'text-amber-300',
-    bg: 'bg-amber-500/15',
+    color: 'text-brand-primary',
+    bg: 'bg-brand-primary/15',
     border: 'border-amber-500/25',
   },
   SURFACE: {
@@ -35,15 +35,15 @@ const MOVE_CONFIG: Record<
   REDIRECT: {
     label: 'Pattern',
     icon: <CornerDownRight className="w-3 h-3" />,
-    color: 'text-rose-300',
-    bg: 'bg-rose-500/15',
+    color: 'text-brand-primary',
+    bg: 'bg-brand-primary/15',
     border: 'border-rose-500/25',
   },
   COMMIT: {
     label: 'Make something',
     icon: <CheckSquare className="w-3 h-3" />,
-    color: 'text-emerald-300',
-    bg: 'bg-emerald-500/15',
+    color: 'text-brand-primary',
+    bg: 'bg-brand-primary/15',
     border: 'border-emerald-500/25',
   },
 }
@@ -62,7 +62,7 @@ export function SteeringCard() {
       setSteering(e.detail)
       setSourceMemoryId(e.detail.memory_id ?? null)
       setVisible(true)
-      // No auto-dismiss — user dismisses manually or card persists until next capture
+      // No auto-dismiss  user dismisses manually or card persists until next capture
     }
 
     window.addEventListener('memory-steered', handleSteering as EventListener)
@@ -142,20 +142,20 @@ export function SteeringCard() {
               {steering.message}
             </p>
 
-            {/* Evidence — subtle, below the fold */}
+            {/* Evidence  subtle, below the fold */}
             {steering.evidence && (
               <p className="text-[11px] text-[var(--brand-text-primary)]/35 mt-1.5 leading-relaxed">
                 {steering.evidence}
               </p>
             )}
 
-            {/* Action buttons — contextual to the steering move */}
+            {/* Action buttons  contextual to the steering move */}
             {(showCreateTodo || showPinThought) && (
               <div className="flex items-center gap-2 mt-2.5 pt-2 border-t border-brand-border">
                 {showCreateTodo && (
                   <button
                     onClick={handleCreateTodo}
-                    className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-lg transition-colors hover:bg-emerald-500/15 text-emerald-300/80 hover:text-emerald-300"
+                    className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-lg transition-colors hover:bg-brand-primary/15 text-brand-primary/80 hover:text-brand-primary"
                   >
                     <Plus className="w-3 h-3" />
                     Create Todo
@@ -164,7 +164,7 @@ export function SteeringCard() {
                 {showPinThought && (
                   <button
                     onClick={handlePinThought}
-                    className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-lg transition-colors hover:bg-amber-500/15 text-amber-300/80 hover:text-amber-300"
+                    className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-lg transition-colors hover:bg-brand-primary/15 text-brand-primary/80 hover:text-brand-primary"
                   >
                     <Pin className="w-3 h-3" />
                     Pin Thought

@@ -33,19 +33,19 @@ export function EmptyState({
       >
         <Icon
           className="w-8 h-8"
-          style={{ color: 'var(--brand-primary)' }}
+          style={{ color: "var(--brand-primary)" }}
         />
       </div>
       <h3
         className="text-lg font-semibold mb-2"
-        style={{ color: 'var(--brand-text-primary)' }}
+        style={{ color: "var(--brand-primary)" }}
       >
         {title}
       </h3>
       {description && (
         <p
           className="text-sm mb-6 max-w-md"
-          style={{ color: 'var(--brand-text-secondary)' }}
+          style={{ color: "var(--brand-primary)" }}
         >
           {description}
         </p>

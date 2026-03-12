@@ -171,22 +171,13 @@ function GetInspirationSection({
           >
             <Link
               to={inspiration.url || '/projects'}
-              className="group block p-6 rounded-xl transition-all duration-300 border flex-1 flex flex-col relative overflow-hidden"
-              style={{
-                background: inspiration.type === 'project'
-                  ? getTheme(projects.find(p => p.id === inspiration.url?.split('/').pop())?.type || 'other', inspiration.title).backgroundColor
-                  : 'var(--glass-surface)',
-                borderColor: inspiration.type === 'project'
-                  ? getTheme(projects.find(p => p.id === inspiration.url?.split('/').pop())?.type || 'other', inspiration.title).borderColor
-                  : 'var(--glass-surface)'
-              }}
+              className="group block p-6 attention-card transition-all duration-300 flex-1 flex flex-col relative overflow-hidden"
               onMouseEnter={(e) => {
                 const projId = inspiration.url?.split('/').pop()
                 if (inspiration.type === 'project') {
                   const project = projects.find(p => p.id === projId)
                   const theme = getTheme(project?.type || 'other', inspiration.title)
                   e.currentTarget.style.background = `rgba(${theme.rgb}, 0.15)`
-                  e.currentTarget.style.borderColor = `rgba(${theme.rgb}, 0.4)`
                 } else {
                   e.currentTarget.style.background = 'var(--glass-surface-hover)'
                 }
@@ -197,9 +188,8 @@ function GetInspirationSection({
                   const project = projects.find(p => p.id === projId)
                   const theme = getTheme(project?.type || 'other', inspiration.title)
                   e.currentTarget.style.background = theme.backgroundColor
-                  e.currentTarget.style.borderColor = theme.borderColor
                 } else {
-                  e.currentTarget.style.background = 'var(--glass-surface)'
+                  e.currentTarget.style.background = 'var(--brand-glass-bg)'
                 }
               }}
             >
@@ -315,7 +305,7 @@ function GetInspirationSection({
               borderColor: 'var(--glass-surface)'
             }}
           >
-            <div className="h-12 w-12 rounded-full bg-cyan-500/10 flex items-center justify-center text-[var(--brand-primary)] mb-2">
+            <div className="h-12 w-12 rounded-full bg-brand-primary/10 flex items-center justify-center text-[var(--brand-primary)] mb-2">
               <Lightbulb className="h-6 w-6" />
             </div>
             <h3 className="font-bold text-[var(--brand-text-primary)]">Need more ideas?</h3>
@@ -358,7 +348,7 @@ function InsightDialog({ insight, open, onClose }: { insight: SynthesisInsight |
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-2 rounded-full hover:bg-[rgba(255,255,255,0.1)] transition-colors"
-          style={{ color: 'var(--brand-text-muted)' }}
+          style={{ color: "var(--brand-primary)" }}
         >
           <X className="h-5 w-5" />
         </button>
@@ -377,7 +367,7 @@ function InsightDialog({ insight, open, onClose }: { insight: SynthesisInsight |
 
         <div className="space-y-6">
           <div className="prose prose-invert prose-sm max-w-none">
-            <p className="leading-relaxed text-base" style={{ color: 'var(--brand-text-primary)' }}>
+            <p className="leading-relaxed text-base whitespace-pre-wrap" style={{ color: "var(--brand-primary)" }}>
               {insight.description}
             </p>
           </div>
@@ -385,20 +375,20 @@ function InsightDialog({ insight, open, onClose }: { insight: SynthesisInsight |
           {/* Render timeline if available */}
           {insight.data && insight.data.timeline && Array.isArray(insight.data.timeline) && (
             <div className="mt-6 pt-6 border-t border-[var(--glass-surface-hover)]">
-              <h3 className="text-sm font-bold mb-4" style={{ color: 'var(--brand-text-secondary)' }}>Evolution Timeline</h3>
+              <h3 className="text-sm font-bold mb-4" style={{ color: "var(--brand-primary)" }}>Evolution Timeline</h3>
               <div className="space-y-4 relative pl-4 border-l-2 border-[var(--glass-surface-hover)]">
                 {insight.data.timeline.map((item: any, idx: number) => (
                   <div key={idx} className="relative pl-4">
                     <div className="absolute -left-[21px] top-1.5 h-3 w-3 rounded-full border-2 border-[var(--brand-glass-bg)]"
                       style={{ backgroundColor: idx === insight.data.timeline.length - 1 ? 'var(--brand-primary)' : 'var(--brand-text-muted)' }} />
-                    <div className="text-xs mb-1" style={{ color: 'var(--brand-text-muted)' }}>
+                    <div className="text-xs mb-1" style={{ color: "var(--brand-primary)" }}>
                       {item.date || 'Previously'}
                     </div>
-                    <div className="text-sm font-medium mb-1" style={{ color: 'var(--brand-text-primary)' }}>
+                    <div className="text-sm font-medium mb-1" style={{ color: "var(--brand-primary)" }}>
                       {item.stance}
                     </div>
                     {item.quote && (
-                      <div className="text-xs italic pl-2 border-l-2 border-[var(--glass-surface-hover)]" style={{ color: 'var(--brand-text-secondary)' }}>
+                      <div className="text-xs italic pl-2 border-l-2 border-[var(--glass-surface-hover)]" style={{ color: "var(--brand-primary)" }}>
                         "{item.quote}"
                       </div>
                     )}
@@ -409,9 +399,9 @@ function InsightDialog({ insight, open, onClose }: { insight: SynthesisInsight |
           )}
 
           {insight.actionable && insight.action && (
-            <div className="mt-4 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
-              <h4 className="text-sm font-bold text-blue-400 mb-1">Recommendation</h4>
-              <p className="text-sm text-blue-200">{insight.action}</p>
+            <div className="mt-4 p-4 rounded-lg bg-brand-primary/10 border border-blue-500/20">
+              <h4 className="text-sm font-bold text-brand-primary mb-1">Recommendation</h4>
+              <p className="text-sm text-brand-primary">{insight.action}</p>
             </div>
           )}
         </div>
@@ -472,8 +462,8 @@ function InsightsSection() {
     switch (type) {
       case 'evolution': return <TrendingUp className="h-5 w-5 text-[var(--brand-primary)]" />
       case 'pattern': return <Zap className="h-5 w-5 text-[var(--brand-primary)]" />
-      case 'collision': return <AlertCircle className="h-5 w-5 text-amber-400" />
-      case 'opportunity': return <Lightbulb className="h-5 w-5 text-emerald-400" />
+      case 'collision': return <AlertCircle className="h-5 w-5 text-brand-text-secondary" />
+      case 'opportunity': return <Lightbulb className="h-5 w-5 text-brand-text-secondary" />
       default: return <Lightbulb className="h-5 w-5 text-[var(--brand-text-secondary)]" />
     }
   }
@@ -488,7 +478,7 @@ function InsightsSection() {
           onClick={() => loadInsights(true)}
           disabled={refreshing}
           className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-[var(--glass-surface)]"
-          style={{ color: 'var(--brand-text-muted)' }}
+          style={{ color: "var(--brand-primary)" }}
           title="Refresh insights"
         >
           <RefreshCw className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} />
@@ -499,13 +489,13 @@ function InsightsSection() {
         <div className="space-y-4 py-4">
           <div className="flex items-center gap-3">
             <div>
-              <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></div>
+              <div className="w-2 h-2 rounded-full bg-brand-primary animate-pulse"></div>
             </div>
             <div>
-              <p className="text-sm font-medium" style={{ color: 'var(--brand-text-primary)' }}>
+              <p className="text-sm font-medium" style={{ color: "var(--brand-primary)" }}>
                 Analyzing your thoughts...
               </p>
-              <p className="text-xs" style={{ color: 'var(--brand-text-muted)' }}>
+              <p className="text-xs" style={{ color: "var(--brand-primary)" }}>
                 Finding patterns and connections
               </p>
             </div>
@@ -522,7 +512,7 @@ function InsightsSection() {
             <button
               key={index}
               onClick={() => setSelectedInsight(insight)}
-              className="w-full text-left p-5 rounded-xl transition-all hover:border-white/20 active:scale-[0.99] aperture-card mt-2"
+              className="w-full text-left p-5 rounded-xl transition-all hover:border-white/20 active:scale-[0.99] glass-card glass-card-hover mt-2"
               style={{
                 boxShadow: '3px 3px 0 rgba(0,0,0,0.5)'
               }}
@@ -535,11 +525,11 @@ function InsightsSection() {
                   <h3 className="font-bold text-sm mb-1 premium-text-platinum">
                     {insight.title}
                   </h3>
-                  <p className="text-sm line-clamp-2" style={{ color: 'var(--brand-text-secondary)' }}>
+                  <p className="text-sm line-clamp-2 whitespace-pre-wrap" style={{ color: "var(--brand-primary)" }}>
                     {insight.description}
                   </p>
                 </div>
-                <ArrowRight className="h-4 w-4 mt-1 opacity-50" style={{ color: 'var(--brand-text-muted)' }} />
+                <ArrowRight className="h-4 w-4 mt-1 opacity-50" style={{ color: "var(--brand-primary)" }} />
               </div>
             </button>
           ))}
@@ -556,20 +546,20 @@ function InsightsSection() {
       ) : (
         <div className="text-center py-6">
           <TrendingUp className="h-10 w-10 mx-auto mb-3" style={{ color: 'var(--brand-text-muted)', opacity: 0.5 }} />
-          <p className="text-sm mb-1" style={{ color: 'var(--brand-text-secondary)' }}>
+          <p className="text-sm mb-1" style={{ color: "var(--brand-primary)" }}>
             Building your insights...
           </p>
           {requirements ? (
             <>
-              <p className="text-xs mb-2" style={{ color: 'var(--brand-text-muted)' }}>
+              <p className="text-xs mb-2" style={{ color: "var(--brand-primary)" }}>
                 {requirements.current}/{requirements.needed} {requirements.needed === 5 ? 'thoughts' : 'with themes'}
               </p>
-              <p className="text-xs" style={{ color: 'var(--brand-text-muted)' }}>
+              <p className="text-xs" style={{ color: "var(--brand-primary)" }}>
                 {requirements.tip}
               </p>
             </>
           ) : (
-            <p className="text-xs" style={{ color: 'var(--brand-text-muted)' }}>
+            <p className="text-xs" style={{ color: "var(--brand-primary)" }}>
               Add more thoughts with themes to see patterns emerge
             </p>
           )}
@@ -760,24 +750,24 @@ export function HomePage() {
   if (error) {
     return (
       <div className="min-h-screen py-12 px-4 flex items-center justify-center" style={{ backgroundColor: 'var(--brand-bg)' }}>
-        <div className="max-w-2xl w-full p-8 border-red-500/20 bg-red-500/5">
+        <div className="max-w-2xl w-full p-8 border-red-500/20 bg-brand-primary/5">
           <div className="flex items-center gap-3 mb-6">
-            <div className="h-12 w-12 rounded-xl bg-red-500/20 flex items-center justify-center text-red-500">
+            <div className="h-12 w-12 rounded-xl bg-brand-primary/20 flex items-center justify-center text-brand-text-secondary">
               <AlertCircle className="h-6 w-6" />
             </div>
             <h2 className="text-2xl font-bold premium-text-platinum">Initialization Error</h2>
           </div>
-          <p className="text-red-400 mb-8 font-mono text-sm p-4 bg-black/30 rounded-lg border border-red-500/10">
+          <p className="text-brand-text-secondary mb-8 font-mono text-sm p-4 bg-black/30 rounded-lg border border-red-500/10">
             {error}
           </p>
           <div className="flex items-center gap-4">
             <button
               onClick={() => window.location.reload()}
-              className="px-6 py-2.5 rounded-lg bg-red-500 text-[var(--brand-text-primary)] font-bold hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20"
+              className="px-6 py-2.5 rounded-lg bg-brand-primary text-[var(--brand-text-primary)] font-bold hover:bg-brand-primary transition-colors shadow-lg shadow-red-500/20"
             >
               Try Again
             </button>
-            <Link to="/settings" className="text-red-400/70 hover:text-red-400 underline text-sm transition-colors">
+            <Link to="/settings" className="text-brand-text-secondary/70 hover:text-brand-text-secondary underline text-sm transition-colors">
               Reset Application
             </Link>
           </div>
@@ -816,8 +806,8 @@ export function HomePage() {
             className="fixed bottom-0 left-0 right-0 z-40 max-h-96 overflow-y-auto p-4 bg-black/90"
             initial={{ y: 100 }} animate={{ y: 0 }} exit={{ y: 100 }}
           >
-            <div className="max-w-4xl mx-auto text-red-400 font-mono text-xs">
-              {storedErrors.map((e: any, i: number) => <div key={i} className="mb-2 p-2 bg-red-900/20 rounded-xl">{e.message}</div>)}
+            <div className="max-w-4xl mx-auto text-brand-text-secondary font-mono text-xs">
+              {storedErrors.map((e: any, i: number) => <div key={i} className="mb-2 p-2 bg-brand-primary/20 rounded-xl">{e.message}</div>)}
               <button onClick={() => { localStorage.removeItem('app_errors'); window.location.reload() }} className="mt-2 text-[var(--brand-text-primary)] underline">Clear & Reload</button>
             </div>
           </motion.div>
@@ -841,9 +831,7 @@ export function HomePage() {
           <button
             onClick={() => navigate('/search')}
             className="h-10 w-10 rounded-lg flex items-center justify-center transition-all hover:bg-[var(--glass-surface)]"
-            style={{
-              color: 'var(--brand-secondary)'
-            }}
+            style={{ color: "var(--brand-primary)" }}
             title="Search everything"
           >
             <Search className="h-5 w-5" />
@@ -869,17 +857,17 @@ export function HomePage() {
                 <button
                   onClick={() => setShowOnboardingBanner(false)}
                   className="absolute top-3 right-3 h-8 w-8 rounded-lg hover:bg-[rgba(255,255,255,0.1)] flex items-center justify-center transition-colors"
-                  style={{ color: 'var(--brand-text-muted)' }}
+                  style={{ color: "var(--brand-primary)" }}
                 >
                   <X className="h-4 w-4" />
                 </button>
 
                 <div className="flex items-start gap-4 pr-10">
                   <div className="flex-1">
-                    <h3 className="font-bold mb-1" style={{ color: 'var(--brand-text-primary)' }}>
+                    <h3 className="font-bold mb-1" style={{ color: "var(--brand-primary)" }}>
                       Complete Your Profile
                     </h3>
-                    <p className="text-sm mb-3" style={{ color: 'var(--brand-text-secondary)' }}>
+                    <p className="text-sm mb-3" style={{ color: "var(--brand-primary)" }}>
                       Answer a few questions to get personalized suggestions tailored to your interests
                     </p>
                     <Link
@@ -984,7 +972,7 @@ export function HomePage() {
           <FocusStream />
         </div>
 
-        {/* 2b. AI COUNCIL — Multi-Perspective Next-Step Suggestions */}
+        {/* 2b. AI COUNCIL  Multi-Perspective Next-Step Suggestions */}
         {(priorityProject || recentProject) && (
           <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 aperture-shelf">
             <MultiPerspectiveSuggestions
@@ -1054,7 +1042,7 @@ export function HomePage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5, ease: "easeOut" }}
-              className="aperture-card p-6 relative overflow-hidden mb-6 bg-white/[0.03] border-[var(--glass-surface)]"
+              className="glass-card glass-card-hover p-6 relative overflow-hidden mb-6 bg-white/[0.03] border-[var(--glass-surface)]"
               style={{
                 boxShadow: '3px 3px 0 rgba(0,0,0,0.5)'
               }}
@@ -1071,7 +1059,7 @@ export function HomePage() {
               {/* Content */}
               <div className="relative z-10">
                 <div className="flex items-center gap-3 mb-4">
-                  <h3 className="font-bold text-lg aperture-header" style={{ color: 'var(--brand-text-primary)' }}>
+                  <h3 className="font-bold text-lg aperture-header" style={{ color: "var(--brand-primary)" }}>
                     Thought of the day
                   </h3>
                 </div>
@@ -1081,7 +1069,7 @@ export function HomePage() {
                 }}>
                   "{cardOfTheDay.body}"
                 </p>
-                <div className="flex items-center gap-2 text-sm aperture-body" style={{ color: 'var(--brand-text-secondary)' }}>
+                <div className="flex items-center gap-2 text-sm aperture-body" style={{ color: "var(--brand-primary)" }}>
                   <span className="inline-block h-1 w-1 rounded-full" style={{ backgroundColor: 'var(--brand-secondary)' }} />
                   <span>From {new Date(cardOfTheDay.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                 </div>
@@ -1094,7 +1082,7 @@ export function HomePage() {
             {/* Bedtime Ideas */}
             <Link
               to="/bedtime"
-              className="group p-5 aperture-card transition-all"
+              className="group p-5 glass-card glass-card-hover transition-all"
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'var(--glass-surface)'
               }}
@@ -1121,7 +1109,7 @@ export function HomePage() {
             {/* Drift Mode */}
             <button
               onClick={handleOpenDrift}
-              className="group p-5 aperture-card transition-all text-left"
+              className="group p-5 glass-card glass-card-hover transition-all text-left"
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'var(--glass-surface)'
               }}
@@ -1148,7 +1136,7 @@ export function HomePage() {
             {/* Discover Projects */}
             <Link
               to="/suggestions"
-              className="group p-5 aperture-card transition-all"
+              className="group p-5 glass-card glass-card-hover transition-all"
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'var(--glass-surface)'
               }}
@@ -1162,7 +1150,7 @@ export function HomePage() {
                     <Lightbulb className="h-5 w-5 text-[var(--brand-text-secondary)]" />
                   </div>
                   <div>
-                    <h3 className="font-bold mb-1 aperture-header">Discover Projects</h3>
+                    <h2 className="section-header !mb-1 !text-xl uppercase">Discover Projects</h2>
                     <p className="text-sm aperture-body text-[var(--brand-text-secondary)]">
                       AI recommendations
                     </p>
@@ -1175,7 +1163,7 @@ export function HomePage() {
             {/* Analysis */}
             <Link
               to="/insights"
-              className="group p-5 aperture-card transition-all"
+              className="group p-5 glass-card glass-card-hover transition-all"
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'var(--glass-surface)'
               }}
@@ -1204,7 +1192,7 @@ export function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 flex justify-center">
           <Link
             to="/settings"
-            className="flex items-center gap-2 px-6 py-3 rounded-lg transition-all border-2 border-[var(--glass-surface-hover)] hover:bg-[var(--glass-surface)] aperture-card text-sm font-medium"
+            className="flex items-center gap-2 px-6 py-3 rounded-lg transition-all border-2 border-[var(--glass-surface-hover)] hover:bg-[var(--glass-surface)] glass-card glass-card-hover text-sm font-medium"
             style={{
               boxShadow: '3px 3px 0 rgba(0,0,0,0.5)'
             }}
@@ -1216,7 +1204,7 @@ export function HomePage() {
 
       </div>
 
-      {/* Dialogs — controlled open/close via state */}
+      {/* Dialogs  controlled open/close via state */}
       <SaveArticleDialog open={saveArticleOpen} onClose={() => setSaveArticleOpen(false)} />
       <CreateMemoryDialog isOpen={createThoughtOpen} onOpenChange={setCreateThoughtOpen} hideTrigger />
       <CreateProjectDialog isOpen={createProjectOpen} onOpenChange={setCreateProjectOpen} hideTrigger />

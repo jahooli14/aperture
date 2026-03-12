@@ -33,7 +33,7 @@ export async function getCohesiveSummary(userId: string): Promise<CohesiveSummar
     supabase.from('lists').select('title, id').eq('user_id', userId).limit(3)
   ])
 
-  // 2. Build context for Gemini Flash Lite
+  // 2. Build context for Gemini 3.1 Flash-Lite
   const context = `
     ACTIVE PROJECTS: ${activeProjects?.map(p => p.title).join(', ') || 'None'}
     RECENT THOUGHTS: ${recentMemories?.map(m => m.title).join(', ') || 'None'}

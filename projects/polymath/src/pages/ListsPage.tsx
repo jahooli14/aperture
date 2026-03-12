@@ -244,9 +244,9 @@ export default function ListsPage() {
             <div className="flex items-center justify-between mb-8">
                 <div>
                     <h1 className="text-3xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
-                        your <span className="text-sky-400">collections</span>
+                        your <span className="text-brand-primary">collections</span>
                     </h1>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mt-1">Curate your existence.</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mt-1">Curate your existence.</p>
                 </div>
                 <div className="flex items-center gap-2">
                     {lists.length > 0 && (
@@ -254,7 +254,7 @@ export default function ListsPage() {
                             onClick={() => setIsReordering(!isReordering)}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all ${
                                 isReordering
-                                    ? 'bg-sky-500 text-[var(--brand-text-primary)] rounded-lg'
+                                    ? 'bg-brand-primary text-[var(--brand-text-primary)] rounded-lg'
                                     : 'text-[var(--brand-text-primary)] hover:bg-[var(--glass-surface)] rounded-lg'
                             }`}
                             style={isReordering
@@ -298,12 +298,12 @@ export default function ListsPage() {
                 <div className="pt-4 pb-20">
                     {/* Hero empty state */}
                     <div className="text-center py-10 px-4 mb-10">
-                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-sky-400/10 mb-6"
+                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-primary/10 mb-6"
                             style={{ boxShadow: 'inset 0 0 0 1px rgba(56,189,248,0.15)' }}>
-                            <Box className="h-8 w-8 text-sky-400" />
+                            <Box className="h-8 w-8 text-brand-primary" />
                         </div>
                         <h3 className="text-xl font-black uppercase tracking-tight text-[var(--brand-text-primary)] mb-2">Your trophy cabinet awaits</h3>
-                        <p className="text-sm text-zinc-400 mb-8 max-w-xs mx-auto leading-relaxed">
+                        <p className="text-sm text-brand-text-muted mb-8 max-w-xs mx-auto leading-relaxed">
                             Every great collection starts with one item. What are you keeping track of?
                         </p>
                         <Button
@@ -548,7 +548,7 @@ export default function ListsPage() {
                                                     useListStore.getState().deleteList(list.id)
                                                 }
                                             }}
-                                            className="h-6 w-6 flex items-center justify-center rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500/40 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
+                                            className="h-6 w-6 flex items-center justify-center rounded-lg bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-text-secondary/40 hover:text-brand-text-secondary transition-all opacity-0 group-hover:opacity-100"
                                             style={{ boxShadow: 'inset 0 0 0 1px rgba(239,68,68,0.15)' }}
                                         >
                                             <Trash2 className="h-3 w-3" />
@@ -561,7 +561,7 @@ export default function ListsPage() {
 
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-1.5">
-                                        <h3 className="text-xs font-black text-[var(--brand-text-primary)] uppercase tracking-tight drop-shadow-md leading-tight group-hover:text-sky-400 transition-colors">
+                                        <h3 className="text-xs font-black text-[var(--brand-text-primary)] uppercase tracking-tight drop-shadow-md leading-tight group-hover:text-brand-primary transition-colors">
                                             {list.title}
                                         </h3>
                                         {/* Recently updated dot */}

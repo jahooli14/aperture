@@ -47,7 +47,7 @@ self.addEventListener('fetch', (event) => {
 
   // Handle share target POST requests with robust multi-strategy approach
   if (url.pathname === '/share-target' && request.method === 'POST') {
-    console.log('[ServiceWorker] ✓✓✓ INTERCEPTING SHARE TARGET POST REQUEST ✓✓✓')
+    console.log('[ServiceWorker]  INTERCEPTING SHARE TARGET POST REQUEST ')
     console.log('[ServiceWorker] Request URL:', request.url)
     console.log('[ServiceWorker] Request method:', request.method)
     console.log('[ServiceWorker] Timestamp:', new Date().toISOString())

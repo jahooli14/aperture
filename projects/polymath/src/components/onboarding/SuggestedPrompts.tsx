@@ -39,7 +39,7 @@ export function SuggestedPrompts() {
   return (
     <div className="mb-6">
       <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
-        <Lightbulb className="h-5 w-5 text-purple-600" />
+        <Lightbulb className="h-5 w-5 text-brand-primary" />
         Suggested Prompts ({suggestedPrompts.length})
       </h3>
       <p className="text-sm text-gray-600 mb-4">
@@ -53,7 +53,7 @@ export function SuggestedPrompts() {
             className="p-4 rounded-lg border-2 border-purple-200 bg-purple-50"
           >
             <div className="flex items-start gap-3">
-              <Lightbulb className="h-5 w-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <Lightbulb className="h-5 w-5 text-brand-primary flex-shrink-0 mt-0.5" />
               <div className="flex-1">
                 <h4 className="font-semibold text-gray-900">{prompt.prompt_text}</h4>
                 {prompt.prompt_description && (
@@ -72,9 +72,9 @@ export function SuggestedPrompts() {
               </button>
               <button
                 onClick={() => handleAdd(prompt)}
-                className="flex-1 px-4 py-1.5 text-sm font-medium text-[var(--brand-text-primary)] bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
+                className="flex-1 px-4 py-1.5 text-sm font-medium text-[var(--brand-text-primary)] bg-brand-primary hover:bg-brand-primary rounded-lg transition-colors"
               >
-                Add →
+                Add 
               </button>
             </div>
           </div>

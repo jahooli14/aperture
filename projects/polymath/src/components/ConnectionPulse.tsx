@@ -11,12 +11,12 @@ import { Link } from 'react-router-dom'
 import { useAmbientLinker, type Discovery } from '../hooks/useAmbientLinker'
 
 const TYPE_EMOJI: Record<string, string> = {
-  thought: '💭',
-  memory: '💭',
-  project: '🔭',
-  article: '📄',
-  list_item: '📋',
-  todo: '✓'
+  thought: '',
+  memory: '',
+  project: '',
+  article: '',
+  list_item: '',
+  todo: ''
 }
 
 const TYPE_LABEL: Record<string, string> = {
@@ -101,18 +101,18 @@ export function ConnectionPulse() {
           className="flex items-center gap-3 px-4 py-3 cursor-pointer select-none"
           onClick={() => setExpanded(e => !e)}
         >
-          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
-            <Sparkles className="h-4 w-4 text-blue-400" />
+          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-brand-primary/20 flex items-center justify-center">
+            <Sparkles className="h-4 w-4 text-brand-primary" />
           </div>
 
           <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-semibold text-blue-400 uppercase tracking-widest leading-none mb-1">
+            <p className="text-[11px] font-semibold text-brand-primary uppercase tracking-widest leading-none mb-1">
               AI linked your new {TYPE_SOURCE_LABEL[current.sourceType] || 'item'}
             </p>
             <p className="text-sm text-[var(--brand-text-primary)] font-medium truncate leading-snug">
               "{current.sourceTitle}"
-              <span className="text-blue-300/70 font-normal">
-                {' '}→ {totalCount} connection{totalCount !== 1 ? 's' : ''}
+              <span className="text-brand-primary/70 font-normal">
+                {' '} {totalCount} connection{totalCount !== 1 ? 's' : ''}
               </span>
             </p>
           </div>
@@ -145,17 +145,17 @@ export function ConnectionPulse() {
                 onClick={dismiss}
                 className="flex items-start gap-3 px-4 py-2.5 hover:bg-[var(--glass-surface)] transition-colors border-b border-[var(--glass-surface)] last:border-b-0"
               >
-                <span className="text-base flex-shrink-0 mt-0.5">{TYPE_EMOJI[link.type] || '🔗'}</span>
+                <span className="text-base flex-shrink-0 mt-0.5">{TYPE_EMOJI[link.type] || ''}</span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[10px] font-medium text-blue-400/80 uppercase tracking-wide">
+                    <span className="text-[10px] font-medium text-brand-primary/80 uppercase tracking-wide">
                       {TYPE_LABEL[link.type]}
                     </span>
                     <span className="text-[10px] text-[var(--brand-text-muted)]">
                       {CONNECTION_TYPE_LABEL[link.connectionType] || link.connectionType}
                     </span>
                     {link.autoLinked && (
-                      <span className="text-[10px] bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded-full font-medium">
+                      <span className="text-[10px] bg-brand-primary/20 text-brand-primary px-1.5 py-0.5 rounded-full font-medium">
                         auto-linked
                       </span>
                     )}
@@ -173,12 +173,12 @@ export function ConnectionPulse() {
 
         {/* Footer summary */}
         {autoLinkedCount > 0 && (
-          <div className="px-4 py-2 bg-blue-500/10 border-t border-blue-500/15">
-            <p className="text-[11px] text-blue-300 font-medium">
-              ✦ {autoLinkedCount} auto-linked to your knowledge graph
+          <div className="px-4 py-2 bg-brand-primary/10 border-t border-blue-500/15">
+            <p className="text-[11px] text-brand-primary font-medium">
+               {autoLinkedCount} auto-linked to your knowledge graph
               {totalCount > autoLinkedCount && (
-                <span className="text-blue-400/60">
-                  {' '}· {totalCount - autoLinkedCount} suggested
+                <span className="text-brand-primary/60">
+                  {' '} {totalCount - autoLinkedCount} suggested
                 </span>
               )}
             </p>

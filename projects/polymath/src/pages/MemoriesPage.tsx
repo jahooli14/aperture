@@ -289,12 +289,12 @@ export function MemoriesPage() {
     }
 
     if (!isPollingRef.current) {
-      console.log(`🔄 Polling for thought updates (${unprocessedCount} unprocessed)`)
+      console.log(` Polling for thought updates (${unprocessedCount} unprocessed)`)
       isPollingRef.current = true
     }
 
     const pollInterval = setInterval(async () => {
-      console.log('⏰ Polling tick - checking for updates...')
+      console.log(' Polling tick - checking for updates...')
       try {
         // Don't force refresh - let store's smart state updates handle it
         // This prevents flickering by skipping updates when data hasn't changed
@@ -330,7 +330,7 @@ export function MemoriesPage() {
   }
 
   // Called after MemoryCard has already confirmed and deleted the memory.
-  // No need for another confirm dialog — just refresh the list.
+  // No need for another confirm dialog  just refresh the list.
   const handleDelete = async (_memory: Memory) => {
     await loadMemories(true)
   }
@@ -355,7 +355,7 @@ export function MemoriesPage() {
 
       // Show reassuring toast that data is saved
       addToast({
-        title: '✓ Voice note saved',
+        title: ' Voice note saved',
         description: 'AI is processing your transcript (may take up to 30s)...',
         variant: 'success',
       })
@@ -390,7 +390,7 @@ export function MemoriesPage() {
 
       const data = await response.json()
       const createdMemory = data.memory
-      console.log('[handleVoiceCapture] ✓ Memory created:', createdMemory)
+      console.log('[handleVoiceCapture]  Memory created:', createdMemory)
 
       // Store the ID of the newly created memory
       if (createdMemory?.id) {
@@ -404,7 +404,7 @@ export function MemoriesPage() {
 
       // Show success toast with the title - they can click to go to memories if they want
       addToast({
-        title: '✓ Thought captured!',
+        title: ' Thought captured!',
         description: createdMemory?.title || 'Your voice note is ready',
         variant: 'success',
       })
@@ -416,7 +416,7 @@ export function MemoriesPage() {
       }, 8000)
 
     } catch (error) {
-      console.error('[handleVoiceCapture] ❌ ERROR:', error)
+      console.error('[handleVoiceCapture]  ERROR:', error)
       console.error('[handleVoiceCapture] Error details:', {
         message: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined
@@ -424,7 +424,7 @@ export function MemoriesPage() {
 
       // Show prominent error toast
       addToast({
-        title: '❌ Voice capture failed',
+        title: ' Voice capture failed',
         description: error instanceof Error ? error.message : 'Unknown error occurred',
         variant: 'destructive',
       })
@@ -438,12 +438,12 @@ export function MemoriesPage() {
           description: 'Will process when API is available',
           variant: 'default',
         })
-        console.log('[handleVoiceCapture] ✓ Queued for offline sync')
+        console.log('[handleVoiceCapture]  Queued for offline sync')
         await loadMemories(true)
       } catch (offlineError) {
-        console.error('[handleVoiceCapture] ❌ Offline queue also failed:', offlineError)
+        console.error('[handleVoiceCapture]  Offline queue also failed:', offlineError)
         addToast({
-          title: '❌ Complete failure',
+          title: ' Complete failure',
           description: 'Could not save or queue your voice note. Please try again.',
           variant: 'destructive',
         })
@@ -462,7 +462,7 @@ export function MemoriesPage() {
   }, [memories])
 
   // Pick one random memory that's 30+ days old for "Resurface" section
-  // Stabilised so it doesn't re-pick on every render — only when the total count changes
+  // Stabilised so it doesn't re-pick on every render  only when the total count changes
   const resurfacedMemory = useMemo(() => {
     const oldMemories = memories.filter(m => {
       const age = (Date.now() - new Date(m.created_at).getTime()) / 86400000
@@ -498,7 +498,7 @@ export function MemoriesPage() {
     return filtered
   }, [baseMemories, searchQuery, activeTags])
 
-  // Pinned thoughts — shown as a horizontal row above the main grid
+  // Pinned thoughts  shown as a horizontal row above the main grid
   const pinnedMemories = useMemo(() => {
     return memories.filter(m => m.is_pinned)
   }, [memories])
@@ -570,19 +570,19 @@ export function MemoriesPage() {
             {/* Title Section */}
             <div className="mb-4 flex items-center gap-2">
               <div className="w-1 h-5 rounded-lg" style={{ background: 'var(--brand-primary)' }} />
-              <h2 className="text-sm font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                Your <span style={{ color: 'var(--brand-primary)' }}>thoughts</span>
+              <h2 className="text-sm font-black uppercase tracking-widest" style={{ color: "var(--brand-primary)" }}>
+                Your <span style={{ color: "var(--brand-primary)" }}>thoughts</span>
               </h2>
             </div>
 
-            {/* Search Bar — only shown on 'all' view */}
+            {/* Search Bar  only shown on 'all' view */}
             {view === 'all' && (
               <div className="mb-4 space-y-3">
                 {/* Search input */}
                 <div className="relative">
                   <Search
                     className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none"
-                    style={{ color: 'rgba(255,255,255,0.35)' }}
+                    style={{ color: "var(--brand-primary)" }}
                   />
                   <input
                     type="text"
@@ -593,7 +593,7 @@ export function MemoriesPage() {
                     style={{
                       background: '#111113',
                       border: '2px solid rgba(255,255,255,0.1)',
-                      color: 'rgba(255,255,255,0.85)',
+                      color: "var(--brand-text-secondary)",
                       caretColor: 'var(--brand-primary)',
                       boxShadow: '2px 2px 0 rgba(0,0,0,0.6)',
                     }}
@@ -604,7 +604,7 @@ export function MemoriesPage() {
                     <button
                       onClick={() => setSearchQuery('')}
                       className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.1)]"
-                      style={{ color: 'rgba(255,255,255,0.4)' }}
+                      style={{ color: "var(--brand-primary)" }}
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -613,12 +613,12 @@ export function MemoriesPage() {
 
                 {/* Result count */}
                 {isFiltered && (
-                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  <p className="text-xs" style={{ color: "var(--brand-primary)" }}>
                     {displayMemories.length} of {memories.length} thought{memories.length !== 1 ? 's' : ''}
                   </p>
                 )}
 
-                {/* Tag pills — horizontal scroll */}
+                {/* Tag pills  horizontal scroll */}
                 {allTags.length > 0 && (
                   <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
                     {allTags.map(tag => {
@@ -649,7 +649,7 @@ export function MemoriesPage() {
                         style={{
                           background: 'rgba(239,68,68,0.1)',
                           border: '1.5px solid rgba(239,68,68,0.3)',
-                          color: 'rgba(252,165,165,0.8)',
+                          color: "var(--brand-text-secondary)",
                           boxShadow: '2px 2px 0 rgba(239,68,68,0.1)',
                         }}
                       >
@@ -667,16 +667,16 @@ export function MemoriesPage() {
               {/* Demo Data Context Banner - Only show on "My Thoughts" view with demo data */}
               {view === 'all' && memories.length > 0 && memories.some(m => m.audiopen_id?.startsWith('demo-')) && (
                 <div className="mb-6 p-4 rounded-lg" style={{ background: '#111113', border: '2px solid rgba(59,130,246,0.25)', borderLeft: '4px solid rgba(59,130,246,0.6)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
-                  <h3 className="font-black text-xs uppercase tracking-widest mb-2 flex items-center gap-2" style={{ color: 'rgba(255,255,255,0.8)' }}>
-                    <Brain className="h-4 w-4" style={{ color: 'var(--brand-primary)' }} />
-                    Demo Thoughts — Cross-Domain Examples
+                  <h3 className="font-black text-xs uppercase tracking-widest mb-2 flex items-center gap-2" style={{ color: "var(--brand-primary)" }}>
+                    <Brain className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
+                    Demo Thoughts  Cross-Domain Examples
                   </h3>
-                  <p className="text-xs leading-relaxed mb-2" style={{ color: 'var(--brand-text-secondary)' }}>
+                  <p className="text-xs leading-relaxed mb-2" style={{ color: "var(--brand-primary)" }}>
                     These 8 thoughts demonstrate <strong>diverse interests</strong>: React development, woodworking, parenting, photography, ML, meditation, cooking, and design.
-                    Notice how they span <strong>technical skills AND hobbies</strong> — this is the key to powerful synthesis.
+                    Notice how they span <strong>technical skills AND hobbies</strong>  this is the key to powerful synthesis.
                   </p>
-                  <p className="text-xs" style={{ color: 'var(--brand-text-muted)' }}>
-                    💡 <strong>Tip:</strong> Real-world usage works best with 5–10 thoughts covering both your professional expertise and personal interests.
+                  <p className="text-xs" style={{ color: "var(--brand-primary)" }}>
+                     <strong>Tip:</strong> Real-world usage works best with 510 thoughts covering both your professional expertise and personal interests.
                   </p>
                 </div>
               )}
@@ -684,10 +684,10 @@ export function MemoriesPage() {
               {/* Resurfacing Info Banner */}
               {view === 'resurfacing' && resurfacing.length > 0 && (
                 <div className="mb-6 p-4 rounded-lg" style={{ background: '#111113', border: '2px solid rgba(139,92,246,0.25)', borderLeft: '4px solid rgba(139,92,246,0.5)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
-                  <h3 className="font-black text-xs uppercase tracking-widest mb-2" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                  <h3 className="font-black text-xs uppercase tracking-widest mb-2" style={{ color: "var(--brand-primary)" }}>
                     Up for review
                   </h3>
-                  <p className="text-xs leading-relaxed" style={{ color: 'var(--brand-text-secondary)' }}>
+                  <p className="text-xs leading-relaxed" style={{ color: "var(--brand-primary)" }}>
                     These thoughts are ready for review based on spaced repetition.
                     Reviewing strengthens your memory and extends the next review interval.
                   </p>
@@ -697,7 +697,7 @@ export function MemoriesPage() {
               {/* Error Banner */}
               {error && (
                 <div className="mb-6 rounded-lg p-4 sm:p-5" style={{ background: 'rgba(239,68,68,0.08)', border: '2px solid rgba(239,68,68,0.3)', boxShadow: '3px 3px 0 rgba(239,68,68,0.1)' }}>
-                  <p className="text-sm text-red-400">{error}</p>
+                  <p className="text-sm text-brand-text-secondary">{error}</p>
                 </div>
               )}
 
@@ -715,10 +715,10 @@ export function MemoriesPage() {
                       <div className="flex items-center gap-4">
                         <div className="inline-block h-8 w-8 animate-spin rounded-lg border-4 border-solid" style={{ borderColor: 'var(--brand-primary)', borderRightColor: 'transparent' }}></div>
                         <div className="flex-1">
-                          <h3 className="font-black text-sm uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.85)' }}>
-                            ✓ Voice note saved — AI processing...
+                          <h3 className="font-black text-sm uppercase tracking-widest mb-1" style={{ color: "var(--brand-primary)" }}>
+                             Voice note saved  AI processing...
                           </h3>
-                          <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
+                          <p className="text-xs" style={{ color: "var(--brand-primary)" }}>
                             Your recording is safe. Creating a formatted thought from your transcript (this may take up to 30 seconds)
                           </p>
                           <div className="mt-3 flex items-center gap-2">
@@ -728,7 +728,7 @@ export function MemoriesPage() {
                                 width: '60%',
                               }}></div>
                             </div>
-                            <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: 'var(--brand-text-muted)' }}>Processing...</span>
+                            <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: "var(--brand-primary)" }}>Processing...</span>
                           </div>
                         </div>
                       </div>
@@ -760,14 +760,14 @@ export function MemoriesPage() {
                         /* Search returned no results */
                         <>
                           <div className="inline-flex items-center justify-center mb-4 p-4 rounded-lg" style={{ background: 'var(--glass-surface)', border: '2px solid rgba(255,255,255,0.1)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
-                            <Search className="h-12 w-12" style={{ color: 'rgba(255,255,255,0.2)' }} />
+                            <Search className="h-12 w-12" style={{ color: "var(--brand-primary)" }} />
                           </div>
                           <div>
-                            <h3 className="text-xl font-black uppercase tracking-wide mb-3" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                            <h3 className="text-xl font-black uppercase tracking-wide mb-3" style={{ color: "var(--brand-primary)" }}>
                               No thoughts match
                               {searchQuery ? ` "${searchQuery}"` : ' your filters'}
                             </h3>
-                            <p className="text-sm mb-6" style={{ color: 'var(--brand-text-secondary)' }}>
+                            <p className="text-sm mb-6" style={{ color: "var(--brand-primary)" }}>
                               Try different keywords or clear your filters to see all thoughts.
                             </p>
                           </div>
@@ -777,7 +777,7 @@ export function MemoriesPage() {
                             style={{
                               background: 'rgba(59,130,246,0.12)',
                               border: '2px solid rgba(59,130,246,0.35)',
-                              color: 'rgba(147,197,253,1)',
+                              color: "var(--brand-text-secondary)",
                               boxShadow: '2px 2px 0 rgba(59,130,246,0.1)',
                             }}
                           >
@@ -789,17 +789,17 @@ export function MemoriesPage() {
                         /* No memories at all */
                         <>
                           <div className="inline-flex items-center justify-center mb-4 p-4 rounded-lg" style={{ background: 'rgba(59,130,246,0.08)', border: '2px solid rgba(59,130,246,0.25)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
-                            <Brain className="h-12 w-12" style={{ color: 'var(--brand-primary)' }} />
+                            <Brain className="h-12 w-12" style={{ color: "var(--brand-primary)" }} />
                           </div>
                           <div>
-                            <h3 className="text-xl font-black uppercase tracking-wide mb-4" style={{ color: 'rgba(255,255,255,0.85)' }}>Start capturing your thoughts</h3>
-                            <p className="text-sm mb-6" style={{ color: 'var(--brand-text-secondary)' }}>
+                            <h3 className="text-xl font-black uppercase tracking-wide mb-4" style={{ color: "var(--brand-primary)" }}>Start capturing your thoughts</h3>
+                            <p className="text-sm mb-6" style={{ color: "var(--brand-primary)" }}>
                               Thoughts are the foundation of your personal knowledge graph. Capture your ideas, insights, and interests to power AI-generated project suggestions.
                             </p>
                           </div>
 
                           <div className="rounded-lg p-6 text-left" style={{ background: '#0d0f14', border: '2px solid var(--glass-surface-hover)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
-                            <h4 className="font-black text-xs uppercase tracking-widest mb-5" style={{ color: 'rgba(255,255,255,0.6)' }}>How to Capture Thoughts</h4>
+                            <h4 className="font-black text-xs uppercase tracking-widest mb-5" style={{ color: "var(--brand-primary)" }}>How to Capture Thoughts</h4>
                             <div className="space-y-4">
                               {[
                                 { step: '1', title: 'Manually capture', desc: "Click 'New thought' to manually add ideas, insights, or observations" },
@@ -808,11 +808,11 @@ export function MemoriesPage() {
                               ].map(({ step, title, desc }) => (
                                 <div key={step} className="flex gap-3">
                                   <div className="rounded-lg w-7 h-7 flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: 'rgba(59,130,246,0.15)', border: '2px solid rgba(59,130,246,0.35)', boxShadow: '2px 2px 0 rgba(0,0,0,0.5)' }}>
-                                    <span className="text-blue-400 font-black text-xs">{step}</span>
+                                    <span className="text-brand-primary font-black text-xs">{step}</span>
                                   </div>
                                   <div>
-                                    <p className="font-black text-xs uppercase tracking-wide mb-0.5" style={{ color: 'rgba(255,255,255,0.8)' }}>{title}</p>
-                                    <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>{desc}</p>
+                                    <p className="font-black text-xs uppercase tracking-wide mb-0.5" style={{ color: "var(--brand-primary)" }}>{title}</p>
+                                    <p className="text-xs" style={{ color: "var(--brand-primary)" }}>{desc}</p>
                                   </div>
                                 </div>
                               ))}
@@ -825,17 +825,17 @@ export function MemoriesPage() {
                             </div>
                           </div>
 
-                          <p className="text-xs" style={{ color: 'var(--brand-text-muted)' }}>
+                          <p className="text-xs" style={{ color: "var(--brand-primary)" }}>
                             Tip: The more thoughts you capture, the better your AI-generated suggestions will be
                           </p>
                         </>
                       ) : (
                         <>
                           <div className="inline-flex items-center justify-center mb-4 p-4 rounded-lg" style={{ background: 'rgba(59,130,246,0.08)', border: '2px solid rgba(59,130,246,0.25)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
-                            <Zap className="h-12 w-12" style={{ color: 'var(--brand-primary)' }} />
+                            <Zap className="h-12 w-12" style={{ color: "var(--brand-primary)" }} />
                           </div>
-                          <h3 className="text-xl font-black uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.85)' }}>Nothing to review right now</h3>
-                          <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>
+                          <h3 className="text-xl font-black uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>Nothing to review right now</h3>
+                          <p className="text-sm" style={{ color: "var(--brand-primary)" }}>
                             Check back later for memories ready to resurface. Spaced repetition helps strengthen your knowledge over time.
                           </p>
                         </>
@@ -868,7 +868,7 @@ export function MemoriesPage() {
                         className="mb-6 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all"
                         style={{
                           background: 'rgba(59,130,246,0.08)',
-                          color: 'rgba(147,197,253,0.8)',
+                          color: "var(--brand-text-secondary)",
                           border: '1.5px solid rgba(59,130,246,0.25)',
                           boxShadow: '2px 2px 0 rgba(0,0,0,0.5)',
                         }}
@@ -876,7 +876,7 @@ export function MemoriesPage() {
                         <ArrowLeft className="h-3.5 w-3.5" />
                         Back to Themes
                       </button>
-                      <h2 className="text-xl font-black mb-6 flex items-center gap-3 uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.9)' }}>
+                      <h2 className="text-xl font-black mb-6 flex items-center gap-3 uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>
                         <div
                           className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
                           style={{
@@ -891,7 +891,7 @@ export function MemoriesPage() {
                           })}
                         </div>
                         {selectedCluster.name}
-                        <span className="text-sm font-normal" style={{ color: 'var(--brand-text-secondary)' }}>
+                        <span className="text-sm font-normal" style={{ color: "var(--brand-primary)" }}>
                           ({selectedCluster.memory_count} thoughts)
                         </span>
                       </h2>
@@ -915,7 +915,7 @@ export function MemoriesPage() {
                       {loadingClusters && clusters.length === 0 ? (
                         <div className="text-center py-12">
                           <div className="inline-block h-10 w-10 animate-spin rounded-lg border-4 border-solid mb-4" style={{ borderColor: 'var(--brand-primary)', borderRightColor: 'transparent' }}></div>
-                          <p className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--brand-text-secondary)' }}>Analyzing themes...</p>
+                          <p className="text-xs font-black uppercase tracking-widest" style={{ color: "var(--brand-primary)" }}>Analyzing themes...</p>
                         </div>
                       ) : clusters.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -929,7 +929,7 @@ export function MemoriesPage() {
                         </div>
                       ) : (
                         <div className="p-6 rounded-lg text-center" style={{ background: '#111113', border: '2px solid var(--glass-surface-hover)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
-                          <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>No themes detected yet. Add more thoughts with diverse topics!</p>
+                          <p className="text-xs" style={{ color: "var(--brand-primary)" }}>No themes detected yet. Add more thoughts with diverse topics!</p>
                         </div>
                       )}
                     </>
@@ -938,7 +938,7 @@ export function MemoriesPage() {
                   {/* Recent memories view - Google Keep Style Masonry (Across then Down) */}
                   {memoryView === 'recent' && (
                     <>
-                      {/* Resurface a thought — one random memory 30+ days old */}
+                      {/* Resurface a thought  one random memory 30+ days old */}
                       <AnimatePresence>
                         {!dismissedResurface && resurfacedMemory && !isFiltered && (
                           <motion.div
@@ -956,21 +956,21 @@ export function MemoriesPage() {
                             }}
                           >
                             <div className="flex items-start justify-between gap-3 mb-3">
-                              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(251,191,36,0.7)' }}>
+                              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--brand-primary)" }}>
                                 A thought from {Math.floor((Date.now() - new Date(resurfacedMemory.created_at).getTime()) / 86400000)} days ago...
                               </p>
                               <button
                                 onClick={() => setDismissedResurface(true)}
                                 className="flex-shrink-0 h-5 w-5 flex items-center justify-center rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.1)]"
-                                style={{ color: 'rgba(255,255,255,0.3)' }}
+                                style={{ color: "var(--brand-primary)" }}
                               >
                                 <X className="h-3 w-3" />
                               </button>
                             </div>
-                            <h4 className="font-semibold text-sm mb-1" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                            <h4 className="font-semibold text-sm mb-1" style={{ color: "var(--brand-primary)" }}>
                               {resurfacedMemory.title}
                             </h4>
-                            <p className="text-sm line-clamp-3 mb-4" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                            <p className="text-sm line-clamp-3 mb-4" style={{ color: "var(--brand-primary)" }}>
                               {resurfacedMemory.body}
                             </p>
                             <div className="flex items-center gap-3">
@@ -980,7 +980,7 @@ export function MemoriesPage() {
                                 style={{
                                   background: 'var(--glass-surface)',
                                   border: '1.5px solid rgba(255,255,255,0.1)',
-                                  color: 'rgba(255,255,255,0.4)',
+                                  color: "var(--brand-text-secondary)",
                                   boxShadow: '2px 2px 0 rgba(0,0,0,0.4)',
                                 }}
                               >
@@ -992,7 +992,7 @@ export function MemoriesPage() {
                                 style={{
                                   background: 'rgba(251,191,36,0.12)',
                                   border: '1.5px solid rgba(251,191,36,0.4)',
-                                  color: 'rgba(251,191,36,0.9)',
+                                  color: "var(--brand-text-secondary)",
                                   boxShadow: '2px 2px 0 rgba(251,191,36,0.1)',
                                 }}
                               >
@@ -1006,8 +1006,8 @@ export function MemoriesPage() {
                       {/* Pinned Thoughts Section */}
                       {pinnedMemories.length > 0 && !searchQuery && activeTags.length === 0 && (
                         <div className="mb-6">
-                          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--brand-text-secondary)' }}>
-                            <Pin className="w-3.5 h-3.5 text-amber-400" style={{ fill: 'currentColor' }} />
+                          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--brand-primary)" }}>
+                            <Pin className="w-3.5 h-3.5 text-brand-text-secondary" style={{ fill: 'currentColor' }} />
                             Pinned
                           </h3>
                           <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
@@ -1023,13 +1023,13 @@ export function MemoriesPage() {
                                   borderTop: '2px solid rgba(251,191,36,0.4)',
                                 }}
                               >
-                                <h4 className="text-sm font-semibold truncate mb-1" style={{ color: 'var(--brand-text-primary)' }}>
+                                <h4 className="text-sm font-semibold truncate mb-1" style={{ color: "var(--brand-primary)" }}>
                                   {memory.title}
                                 </h4>
-                                <p className="text-xs line-clamp-2 leading-relaxed" style={{ color: 'var(--brand-text-secondary)' }}>
+                                <p className="text-xs line-clamp-2 leading-relaxed" style={{ color: "var(--brand-primary)" }}>
                                   {memory.body}
                                 </p>
-                                <span className="text-[10px] mt-2 block" style={{ color: 'var(--brand-text-muted)' }}>
+                                <span className="text-[10px] mt-2 block" style={{ color: "var(--brand-primary)" }}>
                                   {new Date(memory.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                 </span>
                               </motion.div>

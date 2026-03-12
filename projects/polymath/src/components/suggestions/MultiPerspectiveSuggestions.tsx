@@ -94,7 +94,7 @@ function PerspectiveCard({
             )}
           </div>
 
-          <p className="text-sm leading-relaxed aperture-body" style={{ color: 'var(--brand-text-primary)' }}>
+          <p className="text-sm leading-relaxed aperture-body whitespace-pre-wrap" style={{ color: "var(--brand-primary)" }}>
             {perspective.suggestion}
           </p>
         </div>
@@ -115,7 +115,7 @@ function PerspectiveCard({
           >
             {added ? (
               <>
-                <span>✓</span> Added
+                <span></span> Added
               </>
             ) : (
               <>
@@ -152,7 +152,7 @@ export function MultiPerspectiveSuggestions({
   const visiblePerspectives = showAll ? perspectives : perspectives.slice(0, 3)
   const hiddenCount = perspectives.length - 3
 
-  // Initial "trigger" state — user hasn't asked yet
+  // Initial "trigger" state  user hasn't asked yet
   if (!hasRequested && !loading && !result) {
     return (
       <div
@@ -168,20 +168,20 @@ export function MultiPerspectiveSuggestions({
               className="h-9 w-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
               style={{ background: 'rgba(139,92,246,0.15)' }}
             >
-              ⚡
+              
             </div>
             <div>
-              <h3 className="font-bold text-sm" style={{ color: 'var(--brand-text-primary)' }}>
+              <h3 className="font-bold text-sm" style={{ color: "var(--brand-primary)" }}>
                 Council of Advisors
               </h3>
-              <p className="text-xs" style={{ color: 'var(--brand-text-muted)' }}>
+              <p className="text-xs" style={{ color: "var(--brand-primary)" }}>
                 5 perspectives on your next move
               </p>
             </div>
           </div>
 
-          <p className="text-sm mb-4" style={{ color: 'var(--brand-text-secondary)' }}>
-            Spawn 5 AI advisors simultaneously — each with a different lens on what you should do next. ~$0.00006 per session.
+          <p className="text-sm mb-4" style={{ color: "var(--brand-primary)" }}>
+            Spawn 5 AI advisors simultaneously  each with a different lens on what you should do next. ~$0.00006 per session.
           </p>
 
           <button
@@ -190,7 +190,7 @@ export function MultiPerspectiveSuggestions({
             style={{
               background: 'linear-gradient(135deg, rgba(139,92,246,0.3) 0%, rgba(59,130,246,0.3) 100%)',
               border: '1px solid rgba(139,92,246,0.3)',
-              color: 'rgb(196,181,253)'
+              color: "var(--brand-text-secondary)"
             }}
           >
             <Zap className="h-4 w-4" />
@@ -212,8 +212,8 @@ export function MultiPerspectiveSuggestions({
       {/* Header */}
       <div className="px-5 pt-5 pb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-base">⚡</span>
-          <h3 className="font-bold text-sm aperture-header" style={{ color: 'var(--brand-text-primary)' }}>
+          <span className="text-base"></span>
+          <h3 className="font-bold text-sm aperture-header" style={{ color: "var(--brand-primary)" }}>
             What's Next?
           </h3>
         </div>
@@ -237,7 +237,7 @@ export function MultiPerspectiveSuggestions({
             {[0, 1, 2, 3, 4].map(i => (
               <SkeletonPerspective key={i} delay={i * 0.08} />
             ))}
-            <p className="text-center text-xs py-1" style={{ color: 'var(--brand-text-muted)' }}>
+            <p className="text-center text-xs py-1" style={{ color: "var(--brand-primary)" }}>
               Your advisors are thinking...
             </p>
           </>
@@ -247,7 +247,7 @@ export function MultiPerspectiveSuggestions({
         {error && !loading && (
           <div
             className="p-4 rounded-xl text-sm"
-            style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: 'rgb(252,165,165)' }}
+            style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: "var(--brand-text-secondary)" }}
           >
             <p className="font-bold mb-1">Failed to generate suggestions</p>
             <p className="text-xs opacity-80">{error}</p>
@@ -293,14 +293,14 @@ export function MultiPerspectiveSuggestions({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
-            className="mt-1 px-4 py-3 rounded-xl text-xs italic"
+            className="mt-1 px-4 py-3 rounded-xl text-xs italic whitespace-pre-wrap"
             style={{
               background: 'rgba(139,92,246,0.08)',
               border: '1px solid rgba(139,92,246,0.15)',
               color: 'var(--brand-text-secondary)'
             }}
           >
-            <span className="font-bold not-italic" style={{ color: 'rgb(196,181,253)' }}>Council synthesis: </span>
+            <span className="font-bold not-italic" style={{ color: "var(--brand-primary)" }}>Council synthesis: </span>
             {result.synthesized}
           </motion.div>
         )}

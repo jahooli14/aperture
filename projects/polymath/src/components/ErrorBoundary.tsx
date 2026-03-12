@@ -79,21 +79,21 @@ export class ErrorBoundary extends Component<Props, State> {
               >
                 <AlertTriangle
                   className="h-8 w-8"
-                  style={{ color: '#ef4444' }}
+                  style={{ color: "var(--brand-primary)" }}
                 />
               </div>
             </div>
 
             <h2
               className="text-2xl font-bold mb-3"
-              style={{ color: 'var(--brand-text-primary)' }}
+              style={{ color: "var(--brand-primary)" }}
             >
               Something went wrong
             </h2>
 
             <p
               className="mb-6 text-sm"
-              style={{ color: 'var(--brand-text-secondary)' }}
+              style={{ color: "var(--brand-primary)" }}
             >
               We've encountered an unexpected error. Please refresh the page to continue.
             </p>
@@ -101,14 +101,14 @@ export class ErrorBoundary extends Component<Props, State> {
             {/* Always show error details for debugging */}
             {this.state.error && (
               <div className="mb-6 text-left">
-                <h3 className="text-sm font-bold mb-2" style={{ color: '#ef4444' }}>
+                <h3 className="text-sm font-bold mb-2" style={{ color: "var(--brand-primary)" }}>
                   Error Details:
                 </h3>
                 <div
                   className="p-4 rounded-lg text-xs font-mono overflow-auto max-h-64"
                   style={{
                     backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                    color: '#ef4444'
+                    color: "var(--brand-text-secondary)"
                   }}
                 >
                   <div className="mb-3">
@@ -140,9 +140,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <button
               onClick={this.handleReset}
               className="premium-glass px-6 py-3 rounded-lg font-medium transition-all hover:bg-[rgba(255,255,255,0.1)]"
-              style={{
-                color: 'var(--brand-primary)'
-              }}
+              style={{ color: "var(--brand-primary)" }}
             >
               Reload Page
             </button>

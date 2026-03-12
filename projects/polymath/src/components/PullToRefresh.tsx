@@ -80,7 +80,7 @@ export function PullToRefresh({
           className={cn(
             'flex items-center justify-center rounded-full transition-all duration-300',
             justCompleted
-              ? 'bg-green-500 shadow-2xl scale-110'
+              ? 'bg-brand-primary shadow-2xl scale-110'
               : isRefreshing
               ? 'bg-white shadow-xl'
               : isTriggered
@@ -94,14 +94,14 @@ export function PullToRefresh({
           }}
         >
           {justCompleted ? (
-            <span className="text-2xl">✓</span>
+            <span className="text-2xl"></span>
           ) : isRefreshing ? (
-            <RefreshCw className="h-6 w-6 animate-spin" style={{ color: 'var(--brand-primary)' }} />
+            <RefreshCw className="h-6 w-6 animate-spin" style={{ color: "var(--brand-primary)" }} />
           ) : (
             <ArrowDown
               className={cn(
                 'transition-all duration-200',
-                isTriggered ? 'text-blue-600' : 'text-[var(--brand-text-secondary)]'
+                isTriggered ? 'text-brand-primary' : 'text-[var(--brand-text-secondary)]'
               )}
               style={{
                 transform: `rotate(${rotation}deg)`,
@@ -117,12 +117,12 @@ export function PullToRefresh({
           <p
             className="mt-2 text-xs font-medium transition-all duration-200"
             style={{
-              color: justCompleted ? 'var(--premium-emerald)' : 'var(--brand-text-secondary)',
+              color: justCompleted ? 'var(--brand-primary)' : 'var(--brand-text-secondary)',
               opacity: justCompleted ? 1 : isRefreshing ? 0.8 : 0.6
             }}
           >
             {justCompleted
-              ? `✓ Updated ${formatRefreshTime(lastRefreshTime)}`
+              ? ` Updated ${formatRefreshTime(lastRefreshTime)}`
               : isRefreshing
               ? 'Refreshing...'
               : isTriggered
@@ -132,7 +132,7 @@ export function PullToRefresh({
         )}
       </div>
 
-      {/* Content — only apply CSS transition when snapping back, not during active pull */}
+      {/* Content  only apply CSS transition when snapping back, not during active pull */}
       <div
         className={cn(
           isPulling ? '' : 'transition-transform duration-200'

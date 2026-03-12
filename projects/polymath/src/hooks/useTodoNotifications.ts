@@ -1,12 +1,12 @@
 /**
- * useTodoNotifications — Surface at the right moment
+ * useTodoNotifications  Surface at the right moment
  *
- * Principle: Implementation Intentions (Gollwitzer, 1999) — tasks anchored
+ * Principle: Implementation Intentions (Gollwitzer, 1999)  tasks anchored
  * to specific times fire automatically without willpower. A 9am notification
  * saying "Call dentist" pre-retrieves the intention at the exact cue moment.
  *
  * The environmental cue (notification) retrieves the intention without
- * deliberation — bypassing the "I'll do it later" rationalization.
+ * deliberation  bypassing the "I'll do it later" rationalization.
  *
  * Schedules one notification per todo that has scheduled_time set for today.
  * Also schedules an overdue reminder for any tasks not yet completed.
@@ -17,7 +17,7 @@ import { isNative } from '../lib/platform'
 import type { Todo } from '../stores/useTodoStore'
 import { useNotificationSettings } from '../stores/useNotificationSettings'
 
-// Stable notification ID space for todos (1000–1999) to avoid collisions
+// Stable notification ID space for todos (10001999) to avoid collisions
 const TODO_NOTIF_BASE = 1000
 const OVERDUE_NOTIF_ID = 1999
 

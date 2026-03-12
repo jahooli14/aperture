@@ -55,18 +55,18 @@ export function CohesionSummaryWidget() {
         className="relative overflow-hidden rounded-3xl p-8 border border-[var(--glass-surface-hover)] backdrop-blur-3xl bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-transparent"
       >
         <div className="absolute top-0 right-0 p-4 opacity-20">
-          <Sparkles className="h-12 w-12 text-indigo-400" />
+          <Sparkles className="h-12 w-12 text-brand-primary" />
         </div>
 
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-4">
-            <div className="h-8 w-8 rounded-lg bg-indigo-500/20 flex items-center justify-center">
-              <Brain className="h-5 w-5 text-indigo-400" />
+            <div className="h-8 w-8 rounded-lg bg-brand-primary/20 flex items-center justify-center">
+              <Brain className="h-5 w-5 text-brand-primary" />
             </div>
             <h2 className="text-sm font-bold uppercase racking-wides ext-indigo-300">Cognitive State</h2>
           </div>
 
-          <p className="text-xl md:text-2xl font-medium text-[var(--brand-text-primary)]/90 leading-relaxed mb-8 max-w-4xl">
+          <p className="text-xl md:text-2xl font-medium text-[var(--brand-text-primary)]/90 leading-relaxed mb-8 max-w-4xl whitespace-pre-wrap">
             {summary.overview}
           </p>
 
@@ -77,7 +77,7 @@ export function CohesionSummaryWidget() {
                 to={flow.action_url}
                 className="group flex items-center gap-4 p-4 rounded-2xl bg-[var(--glass-surface)] border border-[var(--glass-surface)] hover:border-indigo-500/30 hover:bg-[rgba(255,255,255,0.1)] transition-all duration-300"
               >
-                <div className="h-10 w-10 flex-shrink-0 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform">
+                <div className="h-10 w-10 flex-shrink-0 rounded-xl bg-brand-primary/20 flex items-center justify-center text-brand-primary group-hover:scale-110 transition-transform">
                   {flow.icon === 'zap' && <Zap className="h-5 w-5" />}
                   {flow.icon === 'link' && <ArrowRight className="h-5 w-5 rotate-45" />}
                   {flow.icon === 'brain' && <Brain className="h-5 w-5" />}

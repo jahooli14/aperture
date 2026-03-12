@@ -189,11 +189,11 @@ export function SuggestionsPage() {
   if (error && pendingSuggestions.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="max-w-md w-full premium-card border-red-500/20 bg-red-500/5">
+        <Card className="max-w-md w-full premium-card border-red-500/20 bg-brand-primary/5">
           <CardContent className="pt-6 text-center">
-            <Database className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <Database className="h-12 w-12 text-brand-text-secondary mx-auto mb-4" />
             <h3 className="text-xl font-bold text-[var(--brand-text-primary)] mb-2">Error Loading Suggestions</h3>
-            <p className="text-red-400 mb-6">{error}</p>
+            <p className="text-brand-text-secondary mb-6">{error}</p>
             <Button onClick={() => fetchSuggestions()} variant="outline" className="w-full">
               Retry
             </Button>
@@ -222,7 +222,7 @@ export function SuggestionsPage() {
           <button
             onClick={handleSynthesize}
             disabled={synthesizing}
-            className="px-5 py-2.5 rounded-full bg-blue-600/20 text-blue-400 border border-blue-500/30 text-sm font-semibold hover:bg-blue-600/30 transition-all flex items-center gap-2 disabled:opacity-50"
+            className="px-5 py-2.5 rounded-full bg-brand-primary/20 text-brand-primary border border-blue-500/30 text-sm font-semibold hover:bg-brand-primary/30 transition-all flex items-center gap-2 disabled:opacity-50"
           >
             {synthesizing ? <Zap className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
             {synthesizing ? 'Synthesizing...' : 'Generate New'}
@@ -231,13 +231,13 @@ export function SuggestionsPage() {
 
         {/* Learning indicator */}
         {learnedPairs.length > 0 && (
-          <div className="mb-4 p-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
-            <div className="flex items-center gap-2 text-emerald-400 text-sm font-medium mb-1">
+          <div className="mb-4 p-3 rounded-xl border border-emerald-500/20 bg-brand-primary/5">
+            <div className="flex items-center gap-2 text-brand-text-secondary text-sm font-medium mb-1">
               <Sparkles className="w-4 h-4" />
               <span>Your engine is learning</span>
             </div>
             <p className="text-xs text-[var(--brand-text-secondary)]">
-              Based on {learnedPairs.length} preference{learnedPairs.length > 1 ? 's' : ''} detected —
+              Based on {learnedPairs.length} preference{learnedPairs.length > 1 ? 's' : ''} detected 
               you tend to prefer {learnedPairs[0].capability_a} + {learnedPairs[0].capability_b} combinations
             </p>
           </div>
@@ -258,7 +258,7 @@ export function SuggestionsPage() {
               onClick={() => setSynthesisMode(mode.id)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                 synthesisMode === mode.id
-                  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                  ? 'bg-brand-primary/20 text-brand-primary border border-blue-500/30'
                   : 'bg-[var(--glass-surface)] text-[var(--brand-text-secondary)] border border-[var(--glass-surface-hover)] hover:bg-[rgba(255,255,255,0.1)]'
               }`}
             >
@@ -279,7 +279,7 @@ export function SuggestionsPage() {
             >
               <div className="h-1.5 w-full bg-[var(--glass-surface)] rounded-full overflow-hidden border border-[var(--glass-surface-hover)]">
                 <motion.div 
-                  className="h-full bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]"
+                  className="h-full bg-brand-primary shadow-[0_0_15px_rgba(59,130,246,0.5)]"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -320,8 +320,8 @@ export function SuggestionsPage() {
                   <CardContent className="p-8 md:p-12">
                     {/* Top Meta */}
                     <div className="flex items-center gap-3 mb-6">
-                      <div className="px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold uppercase tracking-wider">
-                        {currentSuggestion.is_wildcard ? '🎲 Wildcard' : 'Recommended'}
+                      <div className="px-3 py-1 rounded-full bg-brand-primary/10 border border-blue-500/20 text-brand-primary text-xs font-bold uppercase tracking-wider">
+                        {currentSuggestion.is_wildcard ? ' Wildcard' : 'Recommended'}
                       </div>
                       <div className="text-[var(--brand-text-muted)] text-xs font-medium">
                         {currentIndex + 1} of {pendingSuggestions.length}
@@ -340,8 +340,8 @@ export function SuggestionsPage() {
                     {currentSuggestion.synthesis_reasoning && (
                       <div className="p-6 rounded-2xl bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] mb-8">
                         <div className="flex items-center gap-2 mb-3">
-                          <Brain className="h-4 w-4 text-purple-400" />
-                          <span className="text-sm font-bold text-purple-300 uppercase tracking-wide">AI Rationale</span>
+                          <Brain className="h-4 w-4 text-brand-primary" />
+                          <span className="text-sm font-bold text-brand-primary uppercase tracking-wide">AI Rationale</span>
                         </div>
                         <p className="text-[var(--brand-text-secondary)] leading-relaxed italic">
                           "{currentSuggestion.synthesis_reasoning}"
@@ -353,15 +353,15 @@ export function SuggestionsPage() {
                     <div className="grid grid-cols-3 gap-4 mb-8">
                       <div className="p-4 rounded-xl bg-[var(--glass-surface)] border border-[var(--glass-surface)] text-center">
                         <div className="text-[10px] uppercase tracking-widest text-[var(--brand-text-muted)] mb-1 font-bold">Novelty</div>
-                        <div className="text-lg font-bold text-blue-400">{Math.round(currentSuggestion.novelty_score * 100)}%</div>
+                        <div className="text-lg font-bold text-brand-primary">{Math.round(currentSuggestion.novelty_score * 100)}%</div>
                       </div>
                       <div className="p-4 rounded-xl bg-[var(--glass-surface)] border border-[var(--glass-surface)] text-center">
                         <div className="text-[10px] uppercase tracking-widest text-[var(--brand-text-muted)] mb-1 font-bold">Feasibility</div>
-                        <div className="text-lg font-bold text-emerald-400">{Math.round(currentSuggestion.feasibility_score * 100)}%</div>
+                        <div className="text-lg font-bold text-brand-text-secondary">{Math.round(currentSuggestion.feasibility_score * 100)}%</div>
                       </div>
                       <div className="p-4 rounded-xl bg-[var(--glass-surface)] border border-[var(--glass-surface)] text-center">
                         <div className="text-[10px] uppercase tracking-widest text-[var(--brand-text-muted)] mb-1 font-bold">Interest</div>
-                        <div className="text-lg font-bold text-purple-400">{Math.round(currentSuggestion.interest_score * 100)}%</div>
+                        <div className="text-lg font-bold text-brand-primary">{Math.round(currentSuggestion.interest_score * 100)}%</div>
                       </div>
                     </div>
 
@@ -380,32 +380,32 @@ export function SuggestionsPage() {
                     <div className="grid grid-cols-3 gap-4">
                       <button
                         onClick={() => handleAction('no')}
-                        className="group flex flex-col items-center gap-3 p-4 rounded-2xl bg-[var(--glass-surface)] border border-[var(--glass-surface)] hover:bg-red-500/10 hover:border-red-500/30 transition-all"
+                        className="group flex flex-col items-center gap-3 p-4 rounded-2xl bg-[var(--glass-surface)] border border-[var(--glass-surface)] hover:bg-brand-primary/10 hover:border-red-500/30 transition-all"
                       >
-                        <div className="h-12 w-12 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-red-500 group-hover:text-[var(--brand-text-primary)] transition-all">
+                        <div className="h-12 w-12 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-brand-primary group-hover:text-[var(--brand-text-primary)] transition-all">
                           <X className="h-6 w-6" />
                         </div>
-                        <span className="text-xs font-bold uppercase tracking-wider text-[var(--brand-text-muted)] group-hover:text-red-400">No</span>
+                        <span className="text-xs font-bold uppercase tracking-wider text-[var(--brand-text-muted)] group-hover:text-brand-text-secondary">No</span>
                       </button>
 
                       <button
                         onClick={() => handleAction('later')}
-                        className="group flex flex-col items-center gap-3 p-4 rounded-2xl bg-[var(--glass-surface)] border border-[var(--glass-surface)] hover:bg-amber-500/10 hover:border-amber-500/30 transition-all"
+                        className="group flex flex-col items-center gap-3 p-4 rounded-2xl bg-[var(--glass-surface)] border border-[var(--glass-surface)] hover:bg-brand-primary/10 hover:border-amber-500/30 transition-all"
                       >
-                        <div className="h-12 w-12 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-amber-500 group-hover:text-[var(--brand-text-primary)] transition-all">
+                        <div className="h-12 w-12 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-brand-primary group-hover:text-[var(--brand-text-primary)] transition-all">
                           <Clock className="h-6 w-6" />
                         </div>
-                        <span className="text-xs font-bold uppercase tracking-wider text-[var(--brand-text-muted)] group-hover:text-amber-400">Maybe Later</span>
+                        <span className="text-xs font-bold uppercase tracking-wider text-[var(--brand-text-muted)] group-hover:text-brand-text-secondary">Maybe Later</span>
                       </button>
 
                       <button
                         onClick={() => handleAction('yes')}
-                        className="group flex flex-col items-center gap-3 p-4 rounded-2xl bg-blue-600/10 border border-blue-500/20 hover:bg-blue-600/20 hover:border-blue-500/40 transition-all"
+                        className="group flex flex-col items-center gap-3 p-4 rounded-2xl bg-brand-primary/10 border border-blue-500/20 hover:bg-brand-primary/20 hover:border-blue-500/40 transition-all"
                       >
-                        <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center text-[var(--brand-text-primary)] shadow-[0_0_20px_rgba(37,99,235,0.4)] group-hover:scale-110 transition-all">
+                        <div className="h-12 w-12 rounded-full bg-brand-primary flex items-center justify-center text-[var(--brand-text-primary)] shadow-[0_0_20px_rgba(37,99,235,0.4)] group-hover:scale-110 transition-all">
                           <Plus className="h-6 w-6" />
                         </div>
-                        <span className="text-xs font-bold uppercase tracking-wider text-blue-400 group-hover:text-blue-300 text-center">Add to Projects</span>
+                        <span className="text-xs font-bold uppercase tracking-wider text-brand-primary group-hover:text-brand-primary text-center">Add to Projects</span>
                       </button>
                     </div>
                   </CardContent>
@@ -424,7 +424,7 @@ export function SuggestionsPage() {
               </button>
               <div className="h-1 w-24 bg-[var(--glass-surface)] rounded-full overflow-hidden">
                 <div 
-                  className="h-full bg-blue-500/50 transition-all duration-300"
+                  className="h-full bg-brand-primary/50 transition-all duration-300"
                   style={{ width: `${((currentIndex + 1) / pendingSuggestions.length) * 100}%` }}
                 />
               </div>
@@ -474,7 +474,7 @@ export function SuggestionsPage() {
                     className={cn(
                       "px-3 py-1.5 rounded-full text-xs font-medium transition-all border",
                       rationale === option 
-                        ? "bg-blue-600/20 border-blue-500 text-blue-400" 
+                        ? "bg-brand-primary/20 border-blue-500 text-brand-primary" 
                         : "bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] text-[var(--brand-text-secondary)] hover:bg-[rgba(255,255,255,0.1)]"
                     )}
                   >
@@ -505,8 +505,8 @@ export function SuggestionsPage() {
                   className={cn(
                     "flex-1 rounded-xl font-bold transition-all",
                     feedbackMode === 'no' 
-                      ? 'bg-red-600 hover:bg-red-700 disabled:bg-red-900/50' 
-                      : 'bg-amber-600 hover:bg-amber-700 disabled:bg-amber-900/50'
+                      ? 'bg-brand-primary hover:bg-brand-primary disabled:bg-brand-primary/50' 
+                      : 'bg-brand-primary hover:bg-brand-primary disabled:bg-brand-primary/50'
                   )}
                 >
                   {isSubmitting ? (

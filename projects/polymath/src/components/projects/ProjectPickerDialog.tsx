@@ -97,8 +97,8 @@ export function ProjectPickerDialog({
                                     onClick={() => onSelect(project)}
                                     className="w-full text-left p-3 rounded-xl hover:bg-[var(--glass-surface)] transition-colors flex items-center gap-3 group"
                                 >
-                                    <div className={`p-2 rounded-lg ${project.status === 'active' ? 'bg-blue-500/20 text-blue-400' :
-                                            project.status === 'upcoming' ? 'bg-purple-500/20 text-purple-400' :
+                                    <div className={`p-2 rounded-lg ${project.status === 'active' ? 'bg-brand-primary/20 text-brand-primary' :
+                                            project.status === 'upcoming' ? 'bg-brand-primary/20 text-brand-primary' :
                                                 'bg-gray-500/20 text-[var(--brand-text-secondary)]'
                                         }`}>
                                         <Layers className="h-4 w-4" />
@@ -108,8 +108,8 @@ export function ProjectPickerDialog({
                                             {project.title}
                                         </h3>
                                         <div className="flex items-center gap-2 mt-0.5">
-                                            <span className={`text-[10px] uppercase tracking-wider font-medium px-1.5 py-0.5 rounded-xl ${project.status === 'active' ? 'bg-blue-500/10 text-blue-400' :
-                                                    project.status === 'upcoming' ? 'bg-purple-500/10 text-purple-400' :
+                                            <span className={`text-[10px] uppercase tracking-wider font-medium px-1.5 py-0.5 rounded-xl ${project.status === 'active' ? 'bg-brand-primary/10 text-brand-primary' :
+                                                    project.status === 'upcoming' ? 'bg-brand-primary/10 text-brand-primary' :
                                                         'bg-gray-500/10 text-[var(--brand-text-secondary)]'
                                                 }`}>
                                                 {project.status}
@@ -120,7 +120,7 @@ export function ProjectPickerDialog({
                                             </span>
                                         </div>
                                     </div>
-                                    <Check className="h-4 w-4 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    <Check className="h-4 w-4 text-brand-primary opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </button>
                             ))
                         )}

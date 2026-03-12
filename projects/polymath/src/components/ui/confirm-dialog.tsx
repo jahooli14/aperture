@@ -55,7 +55,7 @@ export function ConfirmDialog({
                   boxShadow: '2px 2px 0 rgba(0,0,0,0.4)',
                 }}
               >
-                <AlertCircle className="h-6 w-6" style={{ color: 'rgba(239,68,68,0.9)' }} />
+                <AlertCircle className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
               </div>
             )}
             <div className="flex-1 pt-1">

@@ -157,8 +157,8 @@ export function VoiceSearch({
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Search className="h-5 w-5" style={{ color: 'var(--brand-primary)' }} />
-          <h3 className="text-lg font-semibold" style={{ color: 'var(--brand-text-primary)' }}>
+          <Search className="h-5 w-5" style={{ color: "var(--brand-primary)" }} />
+          <h3 className="text-lg font-semibold" style={{ color: "var(--brand-primary)" }}>
             Voice Search
           </h3>
         </div>
@@ -166,7 +166,7 @@ export function VoiceSearch({
           <button
             onClick={handleClose}
             className="p-2 rounded-lg hover:bg-[var(--glass-surface)] transition-colors"
-            style={{ color: 'var(--brand-text-muted)' }}
+            style={{ color: "var(--brand-primary)" }}
           >
             <X className="h-5 w-5" />
           </button>
@@ -182,7 +182,7 @@ export function VoiceSearch({
         }}
       >
         {displayText ? (
-          <p className="text-base leading-relaxed" style={{ color: 'var(--brand-text-primary)' }}>
+          <p className="text-base leading-relaxed" style={{ color: "var(--brand-primary)" }}>
             {displayText}
             {interimTranscript && (
               <span style={{ color: 'var(--brand-text-muted)', fontStyle: 'italic' }}>
@@ -191,7 +191,7 @@ export function VoiceSearch({
             )}
           </p>
         ) : (
-          <p className="text-center" style={{ color: 'var(--brand-text-muted)' }}>
+          <p className="text-center" style={{ color: "var(--brand-primary)" }}>
             {placeholder}
           </p>
         )}
@@ -208,7 +208,7 @@ export function VoiceSearch({
           style={{
             background: isListening
               ? 'linear-gradient(135deg, #ef4444, #dc2626)'
-              : 'linear-gradient(135deg, var(--brand-primary), var(--premium-indigo))',
+              : 'linear-gradient(135deg, var(--brand-primary), var(--brand-primary))',
             boxShadow: isListening
               ? '0 0 20px rgba(239, 68, 68, 0.5)'
               : '0 4px 12px rgba(59, 130, 246, 0.3)'
@@ -241,7 +241,7 @@ export function VoiceSearch({
             onClick={handleSearch}
             className="px-6 py-2 rounded-lg font-medium transition-all"
             style={{
-              background: 'linear-gradient(135deg, var(--brand-primary), var(--premium-indigo))',
+              background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-primary))',
               color: 'white',
               boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
             }}
@@ -252,7 +252,7 @@ export function VoiceSearch({
       </div>
 
       {/* Status */}
-      <div className="mt-4 text-center text-sm" style={{ color: 'var(--brand-text-muted)' }}>
+      <div className="mt-4 text-center text-sm" style={{ color: "var(--brand-primary)" }}>
         {isListening ? (
           <span className="flex items-center justify-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin" />

@@ -73,10 +73,10 @@ export function VoiceInput({
 
   if (!isSupported) {
     return (
-      <div className="p-6 text-center premium-card border-red-500/30 bg-red-500/10">
-        <Mic className="h-10 w-10 mx-auto mb-4 text-red-400 opacity-50" />
-        <p className="text-red-200 font-medium mb-1">Recording Unsupported</p>
-        <p className="text-sm text-red-300/70">
+      <div className="p-6 text-center premium-card border-red-500/30 bg-brand-primary/10">
+        <Mic className="h-10 w-10 mx-auto mb-4 text-brand-text-secondary opacity-50" />
+        <p className="text-brand-primary font-medium mb-1">Recording Unsupported</p>
+        <p className="text-sm text-brand-primary/70">
           Your browser doesn't support voice recording. Try using Chrome, Firefox or a recent Safari.
         </p>
       </div>
@@ -90,7 +90,7 @@ export function VoiceInput({
         onClick={toggleRecording}
         disabled={isProcessing}
         className={`w-full py-4 rounded-xl flex items-center justify-center gap-3 transition-all duration-300 ${isRecording
-          ? 'bg-red-500/20 text-red-200'
+          ? 'bg-brand-primary/20 text-brand-primary'
           : 'bg-[var(--glass-surface)] text-[var(--brand-text-secondary)] hover:bg-[rgba(255,255,255,0.1)]'
           }`}
         style={{
