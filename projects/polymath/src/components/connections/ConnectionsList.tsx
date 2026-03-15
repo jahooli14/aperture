@@ -133,51 +133,26 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
     }
   }
 
-  // Merge and Limit to 5
-  // Priority: Persisted > High Confidence Suggestions
+  // Persisted connections only (suggestions are handled separately by ConnectionSuggestion)
   const displayItems = useMemo(() => {
-    const items: DisplayItem[] = []
-    const includedIds = new Set<string>()
+    return connections.slice(0, 5).map(conn => ({
+      id: conn.related_id,
+      type: conn.related_type,
+      title: getItemTitle(conn),
+      reasoning: conn.ai_reasoning || (conn.created_by === 'ai' ? 'AI Connected' : undefined),
+      isPersisted: true,
+      connectionId: conn.connection_id,
+      connectionType: conn.connection_type,
+      direction: conn.direction,
+      createdBy: conn.created_by as 'user' | 'ai',
+      createdAt: conn.created_at
+    }))
+  }, [connections])
 
-    // 1. Add Persisted Connections
-    connections.forEach(conn => {
-      items.push({
-        id: conn.related_id,
-        type: conn.related_type,
-        title: getItemTitle(conn),
-        reasoning: conn.ai_reasoning || (conn.created_by === 'ai' ? 'AI Connected' : undefined),
-        isPersisted: true,
-        connectionId: conn.connection_id,
-        connectionType: conn.connection_type,
-        direction: conn.direction,
-        createdBy: conn.created_by as 'user' | 'ai',
-        createdAt: conn.created_at
-      })
-      includedIds.add(conn.related_id)
-    })
-
-    // 2. Add Suggestions until we hit 5
-    for (const sugg of suggestions) {
-      if (items.length >= 5) break
-      if (!includedIds.has(sugg.id)) {
-        items.push(sugg)
-        includedIds.add(sugg.id)
-      }
-    }
-
-    // Sort: Manual Persisted First, then by "relevance" (AI persisted or suggestion)
-    // Actually, keep persisted at top is usually safer UX so things don't jump around too much,
-    // but user wants "most relevant".
-    // For now, let's just stick to the order: Persisted connections first, then suggestions.
-    // Ideally we'd sort persisted ones by date or relevance too.
-
-    return items.slice(0, 5)
-  }, [connections, suggestions])
-
-  // Notify parent of connection count
+  // Notify parent of total count (persisted + suggestions)
   useEffect(() => {
-    onCountChange?.(displayItems.length)
-  }, [displayItems.length, onCountChange])
+    onCountChange?.(connections.length + suggestions.length)
+  }, [connections.length, suggestions.length, onCountChange])
 
   const handleManualConnectionCreated = async () => {
     // Called after a new manual connection is created
@@ -235,11 +210,11 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
     onConnectionCreated?.()
   }
 
-  if (loading && displayItems.length === 0) {
+  if (loading && displayItems.length === 0 && suggestions.length === 0) {
     return (
-      <div className="space-y-3">
-        {[1, 2, 3].map(i => (
-          <div key={i} className="h-20 rounded-xl bg-[var(--glass-surface)] animate-pulse" />
+      <div className="space-y-2">
+        {[1, 2].map(i => (
+          <div key={i} className="h-14 rounded-xl bg-[var(--glass-surface)] animate-pulse" />
         ))}
       </div>
     )

@@ -342,24 +342,22 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
                 </div>
               )}
 
-              {/* Connections Section */}
-              {(connectionCount > 0 || isLoadingConnections) && (
-                <div className="mt-8 pt-6 border-t border-[var(--glass-surface-hover)]">
-                  <h3 className="text-lg font-bold premium-text-platinum mb-4">
-                    Connections
-                  </h3>
-                  <MemoryLinks currentMemoryId={memory.id} bridges={bridges} />
-                  <ConnectionsList
-                    itemType="thought"
-                    itemId={memory.id}
-                    content={memoryContent}
-                    onConnectionCreated={loadMemoryBridges}
-                    onConnectionDeleted={loadMemoryBridges}
-                    onCountChange={setConnectionCount}
-                    onLoadingChange={setIsLoadingConnections}
-                  />
-                </div>
-              )}
+              {/* Connections Section — always shown so AI suggestions are visible */}
+              <div className="mt-8 pt-6 border-t border-[var(--glass-surface-hover)]">
+                <h3 className="text-sm font-semibold uppercase tracking-widest opacity-50 mb-4" style={{ color: 'var(--brand-primary)' }}>
+                  Connections
+                </h3>
+                <MemoryLinks currentMemoryId={memory.id} bridges={bridges} />
+                <ConnectionsList
+                  itemType="thought"
+                  itemId={memory.id}
+                  content={memoryContent}
+                  onConnectionCreated={loadMemoryBridges}
+                  onConnectionDeleted={loadMemoryBridges}
+                  onCountChange={setConnectionCount}
+                  onLoadingChange={setIsLoadingConnections}
+                />
+              </div>
 
               {/* Timestamp */}
               <div className="flex items-center gap-2 text-xs pt-6 mt-6 border-t border-[var(--glass-surface-hover)]" style={{ color: "var(--brand-primary)" }}>
