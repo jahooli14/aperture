@@ -151,27 +151,7 @@ function GetInspirationSection({
           >
             <Link
               to={inspiration.url || '/projects'}
-              className="group block p-6 attention-card transition-all duration-300 flex-1 flex flex-col relative overflow-hidden"
-              onMouseEnter={(e) => {
-                const projId = inspiration.url?.split('/').pop()
-                if (inspiration.type === 'project') {
-                  const project = projects.find(p => p.id === projId)
-                  const theme = getTheme(project?.type || 'other', inspiration.title)
-                  e.currentTarget.style.background = `rgba(${theme.rgb}, 0.15)`
-                } else {
-                  e.currentTarget.style.background = 'var(--glass-surface-hover)'
-                }
-              }}
-              onMouseLeave={(e) => {
-                const projId = inspiration.url?.split('/').pop()
-                if (inspiration.type === 'project') {
-                  const project = projects.find(p => p.id === projId)
-                  const theme = getTheme(project?.type || 'other', inspiration.title)
-                  e.currentTarget.style.background = theme.backgroundColor
-                } else {
-                  e.currentTarget.style.background = 'var(--brand-glass-bg)'
-                }
-              }}
+              className="group block p-6 attention-card transition-all duration-300 flex-1 flex flex-col relative overflow-hidden active:scale-[0.98]"
             >
               <div className="relative z-10 flex-1 flex flex-col h-full">
                 <div className="flex items-center justify-between gap-4 mb-4">
@@ -239,14 +219,6 @@ function GetInspirationSection({
                   background: theme.backgroundColor,
                   boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
                   borderColor: theme.borderColor
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = `rgba(${theme.rgb}, 0.15)`
-                  e.currentTarget.style.borderColor = `rgba(${theme.rgb}, 0.4)`
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = theme.backgroundColor
-                  e.currentTarget.style.borderColor = theme.borderColor
                 }}
               >
                 <div className="relative z-10 flex-1 flex flex-col h-full">

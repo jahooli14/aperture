@@ -78,14 +78,6 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
         background: `rgba(${theme.rgb}, 0.08)`,
         boxShadow: project.is_priority ? `0 8px 32px rgba(${theme.rgb}, 0.2)` : 'none'
       }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.background = `rgba(${theme.rgb}, 0.15)`
-        e.currentTarget.style.borderColor = `rgba(${theme.rgb}, 0.4)`
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.background = `rgba(${theme.rgb}, 0.08)`
-        e.currentTarget.style.borderColor = project.is_priority ? 'var(--brand-primary)' : theme.border
-      }}
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-3">

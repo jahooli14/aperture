@@ -222,7 +222,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
               )}
 
               {/* Drag Handle */}
-              <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing text-[var(--brand-text-primary)]/20">
+              <div className="flex-shrink-0 opacity-30 cursor-grab active:cursor-grabbing text-[var(--brand-text-primary)]">
                 <GripVertical className="h-4 w-4" />
               </div>
 
@@ -300,7 +300,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
               {/* Delete Button */}
               <button
                 onClick={() => handleDeleteTask(task.id)}
-                className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-brand-primary/10 text-[var(--brand-text-primary)]/20 hover:text-brand-text-secondary"
+                className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full opacity-30 active:opacity-100 transition-all active:bg-brand-primary/10 text-[var(--brand-text-primary)]"
                 aria-label="Delete task"
               >
                 <Trash2 className="h-4 w-4" />
@@ -377,7 +377,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                     {/* Delete Button */}
                     <button
                       onClick={() => handleDeleteTask(task.id)}
-                      className="flex-shrink-0 h-7 w-7 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                      className="flex-shrink-0 h-7 w-7 flex items-center justify-center rounded-full opacity-30 active:opacity-100 transition-all"
                       style={{ color: "var(--brand-primary)" }}
                       aria-label="Delete task"
                     >

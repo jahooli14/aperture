@@ -538,7 +538,7 @@ export default function ListsPage() {
                                                 e.stopPropagation()
                                                 setQuickAddList(list)
                                             }}
-                                            className="h-6 w-6 flex items-center justify-center rounded-lg bg-black/60 text-[var(--brand-text-primary)]/50 hover:text-[var(--brand-text-primary)] transition-all opacity-0 group-hover:opacity-100"
+                                            className="h-6 w-6 flex items-center justify-center rounded-lg bg-black/60 text-[var(--brand-text-primary)]/50 active:text-[var(--brand-text-primary)] transition-all opacity-50"
                                             style={{ boxShadow: `inset 0 0 0 1px rgba(${rgb}, 0.25)` }}
                                             title="Quick add"
                                         >
@@ -551,12 +551,12 @@ export default function ListsPage() {
                                                     useListStore.getState().deleteList(list.id)
                                                 }
                                             }}
-                                            className="h-6 w-6 flex items-center justify-center rounded-lg bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-text-secondary/40 hover:text-brand-text-secondary transition-all opacity-0 group-hover:opacity-100"
+                                            className="h-6 w-6 flex items-center justify-center rounded-lg bg-brand-primary/10 active:bg-brand-primary/20 text-brand-text-secondary/40 active:text-brand-text-secondary transition-all opacity-50"
                                             style={{ boxShadow: 'inset 0 0 0 1px rgba(239,68,68,0.15)' }}
                                         >
                                             <Trash2 className="h-3 w-3" />
                                         </button>
-                                        <div className="opacity-0 group-hover:opacity-40 transition-opacity">
+                                        <div className="opacity-30">
                                             <GripVertical className="h-3 w-3 text-[var(--brand-text-primary)]" />
                                         </div>
                                     </div>

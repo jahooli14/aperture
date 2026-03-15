@@ -451,7 +451,7 @@ const QuoteCard = memo(({
                                 </p>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setIsEditingAuthor(true) }}
-                                    className="p-1.5 rounded-xl bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] opacity-0 group-hover/author:opacity-100 transition-all"
+                                    className="p-1.5 rounded-xl bg-[var(--glass-surface)] active:bg-[rgba(255,255,255,0.1)] opacity-40 active:opacity-100 transition-all active:scale-95"
                                 >
                                     <Pencil className="h-3 w-3 text-[var(--brand-text-primary)]/50" />
                                 </button>
@@ -497,7 +497,7 @@ const QuoteCard = memo(({
                     {/* Copy button */}
                     <button
                         onClick={(e) => { e.stopPropagation(); onCopy(item.content) }}
-                        className="p-2.5 rounded-xl bg-zinc-900/50 backdrop-blur-sm border border-[var(--glass-surface-hover)] hover:bg-[rgba(255,255,255,0.1)] text-brand-text-muted hover:text-[var(--brand-text-primary)] opacity-0 group-hover:opacity-100 transition-all duration-300"
+                        className="p-2.5 rounded-xl bg-zinc-900/50 backdrop-blur-sm border border-[var(--glass-surface-hover)] active:bg-[rgba(255,255,255,0.1)] text-brand-text-muted active:text-[var(--brand-text-primary)] opacity-50 transition-all active:scale-95"
                         aria-label="Copy quote"
                     >
                         <Copy className="h-4 w-4" />
@@ -506,7 +506,7 @@ const QuoteCard = memo(({
                     {/* Delete */}
                     <button
                         onClick={(e) => { e.stopPropagation(); onDelete(item.id, item.list_id) }}
-                        className="p-2.5 rounded-xl bg-zinc-900/50 backdrop-blur-sm border hover:bg-brand-primary/20 hover:border-red-500/40 text-brand-text-muted hover:text-brand-text-secondary opacity-0 group-hover:opacity-100 transition-all duration-300"
+                        className="p-2.5 rounded-xl bg-zinc-900/50 backdrop-blur-sm border active:bg-brand-primary/20 active:border-red-500/40 text-brand-text-muted active:text-brand-text-secondary opacity-50 transition-all active:scale-95"
                         style={{ borderColor: `rgba(${colors.rgb}, 0.2)` }}
                         aria-label="Delete phrase"
                     >
