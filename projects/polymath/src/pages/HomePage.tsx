@@ -33,6 +33,7 @@ import { PROJECT_COLORS } from '../components/projects/ProjectCard'
 import { PowerHourHero } from '../components/home/PowerHourHero'
 import type { Memory, Project, SynthesisInsight } from '../types'
 import { CohesionSummaryWidget } from '../components/home/CohesionSummaryWidget'
+import { MemoryDetailModal } from '../components/memories/MemoryDetailModal'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { readingDb } from '../lib/db'
 
@@ -561,6 +562,43 @@ function InsightsSection() {
 
 import { FocusStream } from '../components/home/FocusStream'
 
+function RecentThoughtsSection({ memories, onOpenMemory }: { memories: Memory[], onOpenMemory: (id: string) => void }) {
+  const recent = [...memories]
+    .sort((a, b) => {
+      const aTime = new Date(a.created_at || '').getTime()
+      const bTime = new Date(b.created_at || '').getTime()
+      return bTime - aTime
+    })
+    .slice(0, 3)
+
+  if (recent.length === 0) return null
+
+  return (
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 aperture-shelf">
+      <h2 className="section-header mb-4">
+        on your <span>mind</span>
+      </h2>
+      <div className="space-y-3">
+        {recent.map((memory) => (
+          <button
+            key={memory.id}
+            onClick={() => onOpenMemory(memory.id)}
+            className="w-full text-left p-4 glass-card glass-card-hover rounded-xl transition-all"
+            style={{ boxShadow: '3px 3px 0 rgba(0,0,0,0.5)' }}
+          >
+            <p className="text-sm leading-relaxed line-clamp-2 aperture-body" style={{ color: 'var(--brand-text-primary)' }}>
+              {memory.body || memory.title}
+            </p>
+            <p className="text-xs mt-2 opacity-50 aperture-body" style={{ color: 'var(--brand-primary)' }}>
+              {new Date(memory.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            </p>
+          </button>
+        ))}
+      </div>
+    </section>
+  )
+}
+
 export function HomePage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -587,6 +625,7 @@ export function HomePage() {
   const [driftModeOpen, setDriftModeOpen] = useState(false)
   const [breakPrompts, setBreakPrompts] = useState<any[]>([])
   const [showMorningFollowUp, setShowMorningFollowUp] = useState(true)
+  const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null)
 
 
   // Refetch data whenever user navigates to this page
@@ -927,8 +966,6 @@ export function HomePage() {
           </div>
         </section>
 
-        <CohesionSummaryWidget />
-
         {/* Aperture Power Hour - The Hero Engine */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4 aperture-shelf">
           <PowerHourHero />
@@ -955,60 +992,14 @@ export function HomePage() {
           <FocusStream />
         </div>
 
-        {/* 2b. AI COUNCIL  Multi-Perspective Next-Step Suggestions */}
-        {(priorityProject || recentProject) && (
-          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 aperture-shelf">
-            <div className="mb-0">
-              <h2 className="section-header">
-                council of <span>advisors</span>
-              </h2>
-            </div>
-            <MultiPerspectiveSuggestions
-              project={(priorityProject || recentProject)!}
-              onAddTodo={async (text) => {
-                const project = (priorityProject || recentProject)!
-                // Append a new task to the project metadata and save
-                const existing = project.metadata?.tasks || []
-                const newTask = {
-                  id: `task-${Date.now()}`,
-                  text,
-                  done: false,
-                  created_at: new Date().toISOString(),
-                  order: existing.length
-                }
-                try {
-                  await fetch(`/api/projects?id=${project.id}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      metadata: {
-                        ...project.metadata,
-                        tasks: [...existing, newTask]
-                      }
-                    })
-                  })
-                  // Refresh projects in store
-                  window.dispatchEvent(new CustomEvent('projectEnriched', { detail: { projectId: project.id } }))
-                } catch (err) {
-                  console.error('[HomePage] Failed to add AI todo:', err)
-                }
-              }}
-            />
-          </section>
-        )}
-
-        {/* 3. GET INSPIRATION (Glass Cards + Spark) */}
-        <GetInspirationSection
-          excludeProjectIds={projects.filter(p => p.status === 'active').map(p => p.id)}
-          hasPendingSuggestions={pendingSuggestions.length > 0}
-          pendingSuggestionsCount={pendingSuggestions.length}
-          projectsLoading={projectsLoading}
-          sparkCandidate={sparkCandidate}
-          projects={projects}
+        {/* 3. WHAT'S ON YOUR MIND - Recent Thoughts */}
+        <RecentThoughtsSection
+          memories={memories}
+          onOpenMemory={(id) => {
+            const m = memories.find(m => m.id === id) || null
+            setSelectedMemory(m)
+          }}
         />
-
-        {/* 4. YOUR INSIGHTS (Cyan Theme) */}
-        <InsightsSection />
 
 
         {/* 6. EXPLORE (Bottom Links) */}
@@ -1196,6 +1187,11 @@ export function HomePage() {
       <SaveArticleDialog open={saveArticleOpen} onClose={() => setSaveArticleOpen(false)} />
       <CreateMemoryDialog isOpen={createThoughtOpen} onOpenChange={setCreateThoughtOpen} hideTrigger />
       <CreateProjectDialog isOpen={createProjectOpen} onOpenChange={setCreateProjectOpen} hideTrigger />
+      <MemoryDetailModal
+        memory={selectedMemory}
+        isOpen={!!selectedMemory}
+        onClose={() => setSelectedMemory(null)}
+      />
     </motion.div>
   )
 }
