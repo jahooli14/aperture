@@ -561,6 +561,14 @@ function InsightsSection() {
 }
 
 import { FocusStream } from '../components/home/FocusStream'
+import { Film, Book, Music, MapPin, Gamepad2, Monitor, FileText, Box as BoxIcon, List as ListIcon } from 'lucide-react'
+import { useListStore } from '../stores/useListStore'
+
+// List-type icon map (shared across home components)
+const LIST_ICON_MAP: Record<string, React.FC<{ className?: string; style?: React.CSSProperties }>> = {
+  film: Film, book: Book, music: Music, place: MapPin, game: Gamepad2,
+  tech: Monitor, software: Monitor, article: FileText,
+}
 
 function RecentThoughtsSection({ memories, onOpenMemory }: { memories: Memory[], onOpenMemory: (id: string) => void }) {
   const recent = [...memories]
@@ -579,23 +587,136 @@ function RecentThoughtsSection({ memories, onOpenMemory }: { memories: Memory[],
         on your <span>mind</span>
       </h2>
       <div className="space-y-3">
-        {recent.map((memory) => (
-          <button
-            key={memory.id}
-            onClick={() => onOpenMemory(memory.id)}
-            className="w-full text-left p-4 glass-card glass-card-hover rounded-xl transition-all"
-            style={{ boxShadow: '3px 3px 0 rgba(0,0,0,0.5)' }}
-          >
-            <p className="text-sm leading-relaxed line-clamp-2 aperture-body" style={{ color: 'var(--brand-text-primary)' }}>
-              {memory.body || memory.title}
-            </p>
-            <p className="text-xs mt-2 opacity-50 aperture-body" style={{ color: 'var(--brand-primary)' }}>
-              {new Date(memory.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-            </p>
-          </button>
-        ))}
+        {recent.map((memory) => {
+          const src = memory.source_reference
+          const isFromList = src?.type === 'list_item' && src.title
+          const SrcIcon = isFromList ? (LIST_ICON_MAP[src!.list_type || ''] || BoxIcon) : null
+          return (
+            <button
+              key={memory.id}
+              onClick={() => onOpenMemory(memory.id)}
+              className="w-full text-left p-4 glass-card glass-card-hover rounded-xl transition-all"
+              style={{ boxShadow: '3px 3px 0 rgba(0,0,0,0.5)' }}
+            >
+              {isFromList && SrcIcon && (
+                <div className="flex items-center gap-1 mb-1.5">
+                  <span
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-widest"
+                    style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.2)', color: 'rgba(251,191,36,0.7)' }}
+                  >
+                    <SrcIcon className="w-2.5 h-2.5" />
+                    {src!.title}
+                  </span>
+                </div>
+              )}
+              <p className="text-sm leading-relaxed line-clamp-2 aperture-body" style={{ color: 'var(--brand-text-primary)' }}>
+                {memory.body || memory.title}
+              </p>
+              <p className="text-xs mt-2 opacity-50 aperture-body" style={{ color: 'var(--brand-primary)' }}>
+                {new Date(memory.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </p>
+            </button>
+          )
+        })}
       </div>
     </section>
+  )
+}
+
+// ---- List quick-add sheet shown from home capture row ----
+function HomeListQuickAdd({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const { lists, fetchLists, addListItem } = useListStore()
+  const [selectedListId, setSelectedListId] = useState<string | null>(null)
+  const [text, setText] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const inputRef = React.useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (isOpen) { fetchLists(); setText(''); setSelectedListId(null) }
+  }, [isOpen])
+
+  useEffect(() => {
+    if (selectedListId) setTimeout(() => inputRef.current?.focus(), 80)
+  }, [selectedListId])
+
+  const selectedList = lists.find(l => l.id === selectedListId)
+
+  const handleAdd = async (e?: React.FormEvent) => {
+    e?.preventDefault()
+    if (!text.trim() || !selectedListId || submitting) return
+    setSubmitting(true)
+    try {
+      await addListItem({ list_id: selectedListId, content: text.trim(), status: 'pending' })
+      onClose()
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (!isOpen) return null
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl px-5 pt-5 pb-10"
+        style={{ background: '#141f32', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1), 0 -20px 60px rgba(0,0,0,0.5)' }}
+      >
+        <div className="w-10 h-1 rounded-full bg-white/20 mx-auto mb-5" />
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] mb-3" style={{ color: 'var(--brand-primary)' }}>
+          Add to list
+        </p>
+
+        {!selectedListId ? (
+          <div className="space-y-2 max-h-72 overflow-y-auto">
+            {lists.map(list => {
+              const Icon = LIST_ICON_MAP[list.type] || BoxIcon
+              return (
+                <button
+                  key={list.id}
+                  onClick={() => setSelectedListId(list.id)}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl text-left active:scale-[0.98] transition-all"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+                >
+                  <Icon className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
+                  <div>
+                    <p className="text-sm font-bold text-[var(--brand-text-primary)] uppercase tracking-tight">{list.title}</p>
+                    {list.description && <p className="text-[10px] text-[var(--brand-text-secondary)] truncate">{list.description}</p>}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        ) : (
+          <form onSubmit={handleAdd}>
+            <button
+              type="button"
+              onClick={() => setSelectedListId(null)}
+              className="flex items-center gap-1.5 mb-4 text-[10px] font-black uppercase tracking-widest"
+              style={{ color: 'var(--brand-primary)' }}
+            >
+              ← {selectedList?.title}
+            </button>
+            <input
+              ref={inputRef}
+              value={text}
+              onChange={e => setText(e.target.value)}
+              placeholder={`Add to ${selectedList?.title || 'list'}...`}
+              className="w-full px-4 py-3 rounded-xl text-sm text-[var(--brand-text-primary)] placeholder:text-[var(--brand-text-primary)]/20 focus:outline-none mb-3"
+              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
+            />
+            <button
+              type="submit"
+              disabled={!text.trim() || submitting}
+              className="w-full py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all disabled:opacity-40"
+              style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', color: 'var(--brand-primary)' }}
+            >
+              {submitting ? 'Adding...' : 'Add'}
+            </button>
+          </form>
+        )}
+      </div>
+    </>
   )
 }
 
@@ -620,6 +741,7 @@ export function HomePage() {
   const [saveArticleOpen, setSaveArticleOpen] = useState(false)
   const [createThoughtOpen, setCreateThoughtOpen] = useState(false)
   const [createProjectOpen, setCreateProjectOpen] = useState(false)
+  const [listQuickAddOpen, setListQuickAddOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showDebugPanel, setShowDebugPanel] = useState(false)
   const [driftModeOpen, setDriftModeOpen] = useState(false)
@@ -923,45 +1045,48 @@ export function HomePage() {
 
         {/* 1. ADD SOMETHING NEW */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6 mt-4">
-
-          <div className="flex items-center gap-3">
-            {/* Voice Note */}
+          <div className="flex items-center gap-2">
+            {/* Voice */}
             <button
               onClick={(e) => {
                 e.stopPropagation()
                 window.dispatchEvent(new CustomEvent('openVoiceCapture'))
               }}
-              className="flex-1 h-14 glass-button hover:bg-brand-surface group"
+              className="flex-1 flex flex-col items-center gap-1 py-3 glass-button active:scale-95 transition-transform"
               title="Voice Note"
             >
-              <Mic className="h-6 w-6 text-brand-primary group-hover:scale-110 transition-transform" />
+              <Mic className="h-5 w-5 text-brand-primary" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-brand-primary opacity-60">Voice</span>
             </button>
 
-            {/* Written Thought */}
+            {/* Thought */}
             <button
               onClick={() => setCreateThoughtOpen(true)}
-              className="flex-1 h-14 glass-button hover:bg-brand-surface group"
+              className="flex-1 flex flex-col items-center gap-1 py-3 glass-button active:scale-95 transition-transform"
               title="Thought"
             >
-              <Brain className="h-6 w-6 text-brand-primary group-hover:scale-110 transition-transform" />
+              <Brain className="h-5 w-5 text-brand-primary" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-brand-primary opacity-60">Thought</span>
             </button>
 
-            {/* Article */}
+            {/* List — replaces Article, which now lives in Lists */}
             <button
-              onClick={() => setSaveArticleOpen(true)}
-              className="flex-1 h-14 glass-button hover:bg-brand-surface group"
-              title="Article"
+              onClick={() => setListQuickAddOpen(true)}
+              className="flex-1 flex flex-col items-center gap-1 py-3 glass-button active:scale-95 transition-transform"
+              title="Add to list"
             >
-              <FileText className="h-6 w-6 text-brand-primary group-hover:scale-110 transition-transform" />
+              <ListIcon className="h-5 w-5 text-brand-primary" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-brand-primary opacity-60">List</span>
             </button>
 
             {/* Project */}
             <button
               onClick={() => setCreateProjectOpen(true)}
-              className="flex-1 h-14 glass-button hover:bg-brand-surface group"
+              className="flex-1 flex flex-col items-center gap-1 py-3 glass-button active:scale-95 transition-transform"
               title="Project"
             >
-              <Layers className="h-6 w-6 text-brand-primary group-hover:scale-110 transition-transform" />
+              <Layers className="h-5 w-5 text-brand-primary" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-brand-primary opacity-60">Project</span>
             </button>
           </div>
         </section>
@@ -1184,9 +1309,9 @@ export function HomePage() {
       </div>
 
       {/* Dialogs  controlled open/close via state */}
-      <SaveArticleDialog open={saveArticleOpen} onClose={() => setSaveArticleOpen(false)} />
       <CreateMemoryDialog isOpen={createThoughtOpen} onOpenChange={setCreateThoughtOpen} hideTrigger />
       <CreateProjectDialog isOpen={createProjectOpen} onOpenChange={setCreateProjectOpen} hideTrigger />
+      <HomeListQuickAdd isOpen={listQuickAddOpen} onClose={() => setListQuickAddOpen(false)} />
       <MemoryDetailModal
         memory={selectedMemory}
         isOpen={!!selectedMemory}
