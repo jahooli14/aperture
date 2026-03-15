@@ -9,16 +9,14 @@ import { Button } from '../ui/button'
 import {
   BottomSheet,
   BottomSheetContent,
-  BottomSheetDescription,
   BottomSheetFooter,
   BottomSheetHeader,
   BottomSheetTitle,
 } from '../ui/bottom-sheet'
 import { Input } from '../ui/input'
-import { Label } from '../ui/label'
 import { useMemoryStore } from '../../stores/useMemoryStore'
 import { useToast } from '../ui/toast'
-import { Plus, Brain, ChevronDown } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { celebrate, checkThoughtMilestone, getMilestoneMessage } from '../../utils/celebrations'
 import { handleInputFocus } from '../../utils/keyboard'
 import { useAutoSuggestion } from '../../contexts/AutoSuggestionContext'
@@ -317,64 +315,46 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
 
       <BottomSheet open={open} onOpenChange={setOpen}>
         <BottomSheetContent>
-          <BottomSheetHeader>
-            <div className="flex items-center gap-3 mb-2">
-              <Brain className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
-              <BottomSheetTitle>Capture thought</BottomSheetTitle>
-            </div>
-            <BottomSheetDescription>
-              What's on your mind?
-            </BottomSheetDescription>
+          {/* Visually hidden title for accessibility */}
+          <BottomSheetHeader className="sr-only">
+            <BottomSheetTitle>Capture thought</BottomSheetTitle>
           </BottomSheetHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-            {/* Body  primary field, auto-growing textarea */}
-            <div
-              className="rounded-xl transition-all duration-200 px-3 py-2.5"
+          <form onSubmit={handleSubmit} className="space-y-3 pt-2">
+            {/* Body — the hero: full writing surface */}
+            <textarea
+              ref={bodyRef}
+              id="body"
+              placeholder="What's on your mind?"
+              value={body}
+              onChange={handleBodyChange}
+              onKeyDown={handleBodyKeyDown}
+              onFocus={(e) => { setBodyFocused(true); handleInputFocus(e) }}
+              onBlur={() => setBodyFocused(false)}
+              required
+              autoFocus
+              className="w-full text-[17px] leading-relaxed border-0 focus:outline-none focus:ring-0 resize-none placeholder:opacity-20 appearance-none bg-transparent"
               style={{
-                background: bodyFocused ? 'var(--glass-surface)' : 'var(--glass-surface)',
-                boxShadow: bodyFocused
-                  ? 'inset 0 0 0 1.5px rgba(99,179,237,0.4)'
-                  : 'inset 0 0 0 1px var(--glass-surface)',
+                color: 'var(--brand-text-primary)',
+                minHeight: '160px',
               }}
-            >
-              <textarea
-                ref={bodyRef}
-                id="body"
-                placeholder="What's on your mind?&#10;&#10;Start with - or  for bullet lists"
-                value={body}
-                onChange={handleBodyChange}
-                onKeyDown={handleBodyKeyDown}
-                onFocus={(e) => { setBodyFocused(true); handleInputFocus(e) }}
-                onBlur={() => setBodyFocused(false)}
-                required
-                autoFocus
-                className="w-full text-[15px] leading-relaxed border-0 focus:outline-none focus:ring-0 resize-none placeholder:text-[var(--brand-text-primary)]/20 appearance-none"
-                style={{
-                  color: 'var(--brand-text-primary)',
-                  backgroundColor: 'transparent',
-                  minHeight: '120px',
-                }}
-              />
-            </div>
+            />
 
-            {/* Title  secondary, optional */}
-            <div>
-              <Input
-                id="title"
-                placeholder="Title (optional)"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                onFocus={handleInputFocus}
-                autoComplete="off"
-                className="h-10 border-0 border-b rounded-none bg-transparent px-1 text-sm focus:ring-0 focus:border-b focus:border-white/20 placeholder:text-[var(--brand-text-primary)]/20"
-                style={{ color: "var(--brand-primary)" }}
-              />
-            </div>
+            {/* Title — subtle underline, secondary */}
+            <Input
+              id="title"
+              placeholder="Title (optional)"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              onFocus={handleInputFocus}
+              autoComplete="off"
+              className="h-9 border-0 border-b rounded-none bg-transparent px-0 text-sm focus:ring-0 focus:border-b focus:border-white/20 placeholder:opacity-20"
+              style={{ color: "var(--brand-text-secondary)" }}
+            />
 
-            {/* Quick tags - always visible */}
+            {/* Quick tags */}
             {recentTags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-1.5 pt-1">
                 {recentTags.map(tag => (
                   <button
                     key={tag}
@@ -388,35 +368,29 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                         return { ...prev, tags: [...tagList, tag].join(', ') }
                       })
                     }}
-                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
+                    className={`px-2.5 py-1 rounded-full text-xs transition-all ${
                       formData.tags?.split(',').map(t => t.trim()).includes(tag)
-                        ? 'bg-brand-primary/20 text-brand-primary'
-                        : 'bg-[var(--glass-surface)] text-[var(--brand-text-muted)] hover:bg-[rgba(255,255,255,0.1)]'
+                        ? 'opacity-100'
+                        : 'opacity-40 hover:opacity-70'
                     }`}
                     style={{
-                      boxShadow: formData.tags?.split(',').map(t => t.trim()).includes(tag)
-                        ? 'inset 0 0 0 1px rgba(99,179,237,0.3)'
-                        : 'inset 0 0 0 1px var(--glass-surface-hover)'
+                      background: formData.tags?.split(',').map(t => t.trim()).includes(tag)
+                        ? 'rgba(99,179,237,0.15)'
+                        : 'var(--glass-surface)',
+                      color: 'var(--brand-text-secondary)',
+                      boxShadow: 'inset 0 0 0 1px var(--glass-surface-hover)'
                     }}
                   >
                     {tag}
                   </button>
                 ))}
-                <button
-                  type="button"
-                  onClick={() => setShowOptions(true)}
-                  className="px-2.5 py-1 rounded-full text-xs text-gray-600 hover:bg-[var(--glass-surface)] transition-colors"
-                  style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface)' }}
-                >
-                  + tag
-                </button>
               </div>
             )}
 
-            {/* Quick Actions Row  Photos + More Options */}
+            {/* Bottom bar: Photo + Type + Submit */}
             <div className="flex items-center gap-2 pt-2 border-t" style={{ borderColor: 'var(--glass-surface)' }}>
               {/* Photo button */}
-              <div className="relative">
+              <div className="relative flex-shrink-0">
                 <input
                   type="file"
                   multiple
@@ -427,29 +401,45 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                 />
                 <button
                   type="button"
-                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-all hover:bg-[var(--glass-surface)]"
-                  style={{ color: "var(--brand-primary)" }}
+                  className="p-2 rounded-lg transition-all hover:bg-[var(--glass-surface)] opacity-50 hover:opacity-80"
+                  style={{ color: "var(--brand-text-secondary)" }}
+                  title="Add photo"
                 >
-                  <ImageIcon className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
-                  Photo
+                  <ImageIcon className="h-4 w-4" />
                   {selectedFiles.length > 0 && (
-                    <span className="ml-1 px-1.5 py-0.5 bg-brand-primary/20 text-brand-primary rounded-full text-[10px] font-bold">
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--brand-primary)] rounded-full text-[9px] font-bold flex items-center justify-center text-black">
                       {selectedFiles.length}
                     </span>
                   )}
                 </button>
               </div>
 
-              {/* More Options toggle */}
-              <button
-                type="button"
-                onClick={() => setShowOptions(!showOptions)}
-                className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-all hover:bg-[var(--glass-surface)]"
-                style={{ color: "var(--brand-primary)" }}
-              >
-                <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showOptions ? 'rotate-180' : ''}`} />
-                {showOptions ? 'Less' : 'Type & Tags'}
-              </button>
+              {/* Type pills — compact, inline */}
+              <div className="flex items-center gap-1 flex-1 overflow-x-auto">
+                {[
+                  { value: '', label: 'Auto' },
+                  { value: 'foundational', label: 'Core' },
+                  { value: 'event', label: 'Event' },
+                  { value: 'insight', label: 'Insight' },
+                ].map((type) => (
+                  <button
+                    key={type.value}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, memory_type: type.value as any })}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-all flex-shrink-0 ${
+                      formData.memory_type === type.value
+                        ? 'opacity-100'
+                        : 'opacity-30 hover:opacity-60'
+                    }`}
+                    style={{
+                      background: formData.memory_type === type.value ? 'rgba(255,255,255,0.12)' : 'transparent',
+                      color: 'var(--brand-text-secondary)',
+                    }}
+                  >
+                    {type.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Image Preview Grid */}
@@ -460,11 +450,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  className={`grid gap-2 ${selectedFiles.length === 1 ? 'grid-cols-1' :
-                    selectedFiles.length === 2 ? 'grid-cols-2' :
-                      selectedFiles.length === 3 ? 'grid-cols-2' :
-                        'grid-cols-2'
-                    }`}
+                  className={`grid gap-2 ${selectedFiles.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}
                 >
                   {selectedFiles.map((file, index) => (
                     <motion.div
@@ -473,21 +459,17 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.8 }}
                       key={`${file.name}-${index}`}
-                      className={`relative rounded-xl overflow-hidden group border border-[var(--glass-surface-hover)] shadow-lg ${selectedFiles.length === 3 && index === 0 ? 'col-span-2 aspect-[2/1]' :
+                      className={`relative rounded-xl overflow-hidden border border-[var(--glass-surface-hover)] ${
+                        selectedFiles.length === 3 && index === 0 ? 'col-span-2 aspect-[2/1]' :
                         selectedFiles.length === 1 ? 'aspect-[16/9]' : 'aspect-square'
-                        }`}
+                      }`}
                     >
-                      <img
-                        src={previewUrls[index]}
-                        alt="Preview"
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
-                      {/* Always visible on touch  no hover required */}
+                      <img src={previewUrls[index]} alt="Preview" className="w-full h-full object-cover" />
                       <button
                         type="button"
                         onClick={() => removeFile(index)}
-                        className="absolute top-2 right-2 p-2 rounded-full bg-black/50 backdrop-blur-md text-[var(--brand-text-primary)]/90 border border-[var(--glass-surface-hover)] active:bg-brand-primary/80"
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 backdrop-blur-md active:bg-brand-primary/80"
+                        style={{ color: 'var(--brand-text-primary)' }}
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
@@ -497,87 +479,18 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
               )}
             </AnimatePresence>
 
-            {/* Collapsible Options */}
-            <AnimatePresence>
-              {showOptions && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
-                  className="overflow-hidden"
-                >
-                  <div className="space-y-4 pt-2">
-                    {/* Memory Type  pill buttons instead of dropdown */}
-                    <div className="space-y-2">
-                      <Label className="font-bold text-xs uppercase tracking-widest text-[var(--brand-text-muted)]">Type</Label>
-                      <div className="flex flex-wrap gap-2">
-                        {[
-                          { value: '', label: 'Auto' },
-                          { value: 'foundational', label: 'Core' },
-                          { value: 'event', label: 'Event' },
-                          { value: 'insight', label: 'Insight' },
-                        ].map((type) => (
-                          <button
-                            key={type.value}
-                            type="button"
-                            onClick={() => setFormData({ ...formData, memory_type: type.value as any })}
-                            className={`px-4 py-2 rounded-full text-xs font-bold border transition-all ${formData.memory_type === type.value
-                              ? 'bg-white text-black border-white'
-                              : 'bg-transparent border-[var(--glass-surface-hover)] text-[var(--brand-text-secondary)] hover:border-white/30'
-                              }`}
-                          >
-                            {type.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Tags */}
-                    <div className="space-y-2">
-                      <Label className="font-bold text-xs uppercase tracking-widest text-[var(--brand-text-muted)]">Tags</Label>
-                      <Input
-                        id="tags"
-                        placeholder="ai, programming, health"
-                        value={formData.tags}
-                        onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                        onFocus={handleInputFocus}
-                        className="h-11 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/15"
-                        style={{ color: "var(--brand-primary)" }}
-                        autoComplete="off"
-                      />
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
             <BottomSheetFooter>
               <Button
                 type="submit"
                 disabled={loading || !body.trim() || uploading}
-                className="w-full h-12 font-bold tracking-wide text-[15px] touch-manipulation"
+                className="w-full h-11 font-semibold text-sm touch-manipulation"
                 style={{
-                  background: 'rgba(59,130,246,0.15)',
-                  border: '2px solid rgba(59,130,246,0.5)',
-                  borderRadius: '4px',
-                  boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
-                  color: 'var(--brand-primary)',
+                  background: 'rgba(255,255,255,0.08)',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  color: 'var(--brand-text-primary)',
                 }}
               >
-                {uploading ? (
-                  <>
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-black border-r-transparent mr-2"></div>
-                    Uploading...
-                  </>
-                ) : loading ? (
-                  <>
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-black border-r-transparent mr-2"></div>
-                    Saving...
-                  </>
-                ) : (
-                  'Capture'
-                )}
+                {uploading ? 'Uploading...' : loading ? 'Saving...' : 'Capture'}
               </Button>
             </BottomSheetFooter>
           </form>
