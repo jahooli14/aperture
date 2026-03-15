@@ -6,7 +6,7 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Loader2, MoreVertical, Plus, Check, X, GripVertical, ChevronDown, Zap, Target, Star } from 'lucide-react'
+import { ArrowLeft, Loader2, MoreVertical, Plus, Check, X, GripVertical, ChevronDown, Zap, Target, Star, Sprout } from 'lucide-react'
 import { StudioTab } from '../components/projects/StudioTab'
 import { MarkdownRenderer } from '../components/ui/MarkdownRenderer'
 import { useProjectStore } from '../stores/useProjectStore'
@@ -24,6 +24,8 @@ import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import { handleInputFocus } from '../utils/keyboard'
 import { EditProjectDialog } from '../components/projects/EditProjectDialog'
+import { ProjectCompletionModal } from '../components/projects/ProjectCompletionModal'
+import { MultiPerspectiveSuggestions } from '../components/suggestions/MultiPerspectiveSuggestions'
 import type { Project, Memory } from '../types'
 import { supabase } from '../lib/supabase'
 import { useMemoryStore } from '../stores/useMemoryStore'
@@ -53,6 +55,7 @@ export function ProjectDetailPage() {
 
   const [notes, setNotes] = useState<ProjectNote[]>([])
   const [projectMemories, setProjectMemories] = useState<Memory[]>([])
+  const [sparkedByMemories, setSparkedByMemories] = useState<Memory[]>([])
 
   // Local-first: Only show blocking loader if we don't have the project in cache/store
   const [loading, setLoading] = useState(!project)
@@ -65,6 +68,7 @@ export function ProjectDetailPage() {
 
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [isRefining, setIsRefining] = useState(false)
+  const [showCompletionModal, setShowCompletionModal] = useState(false)
 
 
   // Listen for custom event from FloatingNav to open AddNote dialog
@@ -140,6 +144,31 @@ export function ProjectDetailPage() {
     }
 
     fetchSuggestions()
+  }, [id])
+
+  // Fetch memories that sparked this project (inspired_by connections)
+  useEffect(() => {
+    if (!id) return
+    const loadSparkedBy = async () => {
+      const { data: connections } = await supabase
+        .from('connections')
+        .select('source_id')
+        .eq('target_type', 'project')
+        .eq('target_id', id)
+        .eq('connection_type', 'inspired_by')
+        .eq('source_type', 'memory')
+
+      if (!connections?.length) return
+
+      const memoryIds = connections.map((c: any) => c.source_id)
+      const { data: memories } = await supabase
+        .from('memories')
+        .select('id, title, body, created_at')
+        .in('id', memoryIds)
+
+      setSparkedByMemories((memories as Memory[]) || [])
+    }
+    loadSparkedBy().catch(console.warn)
   }, [id])
 
   const loadProjectDetails = async () => {
@@ -481,11 +510,15 @@ export function ProjectDetailPage() {
 
     try {
       await updateProject(project.id, { status: newStatus })
-      addToast({
-        title: 'Status updated',
-        description: `Project is now ${newStatus}`,
-        variant: 'success',
-      })
+      if (newStatus === 'completed') {
+        setShowCompletionModal(true)
+      } else {
+        addToast({
+          title: 'Status updated',
+          description: `Project is now ${newStatus}`,
+          variant: 'success',
+        })
+      }
     } catch (error) {
       addToast({
         title: 'Failed to update status',
@@ -769,6 +802,28 @@ export function ProjectDetailPage() {
               )}
 
               <div className="space-y-6">
+                {/* Sparked By: Origin thoughts that inspired this project */}
+                {sparkedByMemories.length > 0 && (
+                  <div className="p-4 rounded-xl border border-[var(--glass-surface)] bg-white/[0.02]">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Sprout className="h-4 w-4" style={{ color: 'var(--brand-text-secondary)' }} />
+                      <span className="text-[10px] font-black uppercase tracking-[0.3em]" style={{ color: 'var(--brand-text-secondary)' }}>Sparked by</span>
+                    </div>
+                    <div className="space-y-2">
+                      {sparkedByMemories.map(m => (
+                        <div key={m.id} className="p-3 rounded-lg bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)]">
+                          <p className="text-sm italic leading-relaxed line-clamp-2" style={{ color: 'var(--brand-text-primary)' }}>
+                            "{m.body || m.title}"
+                          </p>
+                          <p className="text-[10px] mt-1 opacity-50" style={{ color: 'var(--brand-primary)' }}>
+                            {new Date(m.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* The Vision: Merges Description and Motivation */}
                 {(project.description || project.metadata?.motivation) && (
                   <div className="relative group">
@@ -985,6 +1040,40 @@ export function ProjectDetailPage() {
                 />
               </div>
 
+              {/* AI Perspectives - Multi-angle next step suggestions */}
+              {project.status === 'active' && (
+                <details className="mt-8 group">
+                  <summary className="cursor-pointer text-[10px] font-black uppercase tracking-[0.3em] flex items-center gap-2 list-none select-none"
+                    style={{ color: 'var(--brand-text-secondary)' }}
+                  >
+                    <span className="flex-1">AI Perspectives</span>
+                    <ChevronDown className="h-3 w-3 transition-transform group-open:rotate-180" />
+                  </summary>
+                  <div className="mt-4">
+                    <MultiPerspectiveSuggestions
+                      project={project}
+                      onAddTodo={async (text) => {
+                        const existing = project.metadata?.tasks || []
+                        const newTask = {
+                          id: crypto.randomUUID(),
+                          text,
+                          done: false,
+                          created_at: new Date().toISOString(),
+                          order: existing.length
+                        }
+                        try {
+                          await updateProject(project.id, {
+                            metadata: { ...project.metadata, tasks: [...existing, newTask] }
+                          })
+                        } catch (err) {
+                          console.error('[ProjectDetail] Failed to add AI suggestion as task:', err)
+                        }
+                      }}
+                    />
+                  </div>
+                </details>
+              )}
+
               {/* Activity */}
               <div className="mt-12">
                 <div className="flex items-center justify-between mb-4">
@@ -1073,6 +1162,16 @@ export function ProjectDetailPage() {
           project={project}
           isOpen={showEditDialog}
           onOpenChange={setShowEditDialog}
+        />
+      )}
+
+      {/* Project Completion Modal */}
+      {project && (
+        <ProjectCompletionModal
+          project={project}
+          sparkedByMemories={sparkedByMemories}
+          isOpen={showCompletionModal}
+          onClose={() => setShowCompletionModal(false)}
         />
       )}
     </div>

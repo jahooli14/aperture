@@ -3,7 +3,7 @@ import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
 import { useListStore } from '../../stores/useListStore'
-import { Film, Music, Monitor, Book, MapPin, Gamepad2, Box, Calendar, Quote, ListPlus } from 'lucide-react'
+import { Film, Music, Monitor, Book, MapPin, Gamepad2, Box, Calendar, Quote, FileText, ListPlus } from 'lucide-react'
 import {
     BottomSheet,
     BottomSheetContent,
@@ -23,6 +23,7 @@ const TYPES: { id: ListType, label: string, icon: any }[] = [
     { id: 'game', label: 'Games', icon: Gamepad2 },
     { id: 'event', label: 'Events', icon: Calendar },
     { id: 'quote', label: 'Phrases', icon: Quote },
+    { id: 'article', label: 'Articles', icon: FileText },
     { id: 'generic', label: 'General', icon: Box },
 ]
 

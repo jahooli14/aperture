@@ -446,7 +446,7 @@ export function ContextSidebar() {
                                             </div>
 
                                             {/* Hover Actions */}
-                                            <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                                            <div className="absolute right-2 top-2 opacity-60 flex gap-1">
                                                 <button
                                                     onClick={(e) => handleLinkItem(e, item)}
                                                     className="p-1.5 bg-brand-primary/20 hover:bg-brand-primary text-brand-primary hover:text-[var(--brand-text-primary)] rounded-lg transition-colors"

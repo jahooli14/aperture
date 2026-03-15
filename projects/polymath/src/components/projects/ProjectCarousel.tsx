@@ -182,14 +182,6 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
                         background: 'var(--brand-glass-bg)',
                         boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
                       }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'var(--glass-surface)'
-                        e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.5)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'var(--brand-glass-bg)'
-                        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.4)'
-                      }}
                     >
                       {/* Header with title and pin indicator */}
                       <div className="flex items-start justify-between gap-2 mb-3 flex-shrink-0">

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { Reorder, motion, AnimatePresence } from 'framer-motion'
-import { Plus, Film, Music, Monitor, Book, MapPin, Gamepad2, Box, Calendar, Quote, Trash2, GripVertical, ListOrdered, Check } from 'lucide-react'
+import { Plus, Film, Music, Monitor, Book, MapPin, Gamepad2, Box, Calendar, Quote, FileText, Trash2, GripVertical, ListOrdered, Check } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useListStore } from '../stores/useListStore'
 import { Button } from '../components/ui/button'
@@ -20,6 +20,7 @@ const ListIcon = ({ type, className, style }: { type: ListType, className?: stri
         case 'software': return <Box className={className} style={style} />
         case 'event': return <Calendar className={className} style={style} />
         case 'quote': return <Quote className={className} style={style} />
+        case 'article': return <FileText className={className} style={style} />
         default: return <Box className={className} style={style} />
     }
 }
@@ -35,6 +36,7 @@ const ListColor = (type: ListType) => {
         case 'quote': return '167, 139, 250' // Violet-light
         case 'event': return '251, 146, 60' // Orange
         case 'software': return '34, 211, 238' // Cyan
+        case 'article': return '251, 191, 36' // Amber
         default: return '148, 163, 184' // Slate
     }
 }
@@ -50,6 +52,7 @@ const ListGradient = (type: ListType) => {
         case 'quote': return 'from-violet-500/20 via-purple-500/10 to-fuchsia-500/20'
         case 'event': return 'from-orange-500/20 via-amber-500/10 to-yellow-500/20'
         case 'software': return 'from-cyan-500/20 via-blue-500/10 to-indigo-500/20'
+        case 'article': return 'from-amber-500/20 via-yellow-500/10 to-orange-500/20'
         default: return 'from-slate-500/20 via-gray-500/10 to-zinc-500/20'
     }
 }
@@ -535,7 +538,7 @@ export default function ListsPage() {
                                                 e.stopPropagation()
                                                 setQuickAddList(list)
                                             }}
-                                            className="h-6 w-6 flex items-center justify-center rounded-lg bg-black/60 text-[var(--brand-text-primary)]/50 hover:text-[var(--brand-text-primary)] transition-all opacity-0 group-hover:opacity-100"
+                                            className="h-6 w-6 flex items-center justify-center rounded-lg bg-black/60 text-[var(--brand-text-primary)]/50 active:text-[var(--brand-text-primary)] transition-all opacity-50"
                                             style={{ boxShadow: `inset 0 0 0 1px rgba(${rgb}, 0.25)` }}
                                             title="Quick add"
                                         >
@@ -548,12 +551,12 @@ export default function ListsPage() {
                                                     useListStore.getState().deleteList(list.id)
                                                 }
                                             }}
-                                            className="h-6 w-6 flex items-center justify-center rounded-lg bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-text-secondary/40 hover:text-brand-text-secondary transition-all opacity-0 group-hover:opacity-100"
+                                            className="h-6 w-6 flex items-center justify-center rounded-lg bg-brand-primary/10 active:bg-brand-primary/20 text-brand-text-secondary/40 active:text-brand-text-secondary transition-all opacity-50"
                                             style={{ boxShadow: 'inset 0 0 0 1px rgba(239,68,68,0.15)' }}
                                         >
                                             <Trash2 className="h-3 w-3" />
                                         </button>
-                                        <div className="opacity-0 group-hover:opacity-40 transition-opacity">
+                                        <div className="opacity-30">
                                             <GripVertical className="h-3 w-3 text-[var(--brand-text-primary)]" />
                                         </div>
                                     </div>

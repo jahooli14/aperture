@@ -3,7 +3,7 @@
  * Mobile-optimized bottom sheet for creating new projects  single step
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Plus, Layers } from 'lucide-react'
 import { Button } from '../ui/button'
 import { handleInputFocus } from '../../utils/keyboard'
@@ -27,9 +27,12 @@ export interface CreateProjectDialogProps {
   onOpenChange?: (open: boolean) => void
   hideTrigger?: boolean
   trigger?: React.ReactNode
+  initialTitle?: string
+  initialDescription?: string
+  onCreated?: (projectId: string) => void
 }
 
-export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false, trigger }: CreateProjectDialogProps = {}) {
+export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false, trigger, initialTitle, initialDescription, onCreated }: CreateProjectDialogProps = {}) {
   const [internalOpen, setInternalOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [lastCreatedId, setLastCreatedId] = useState<string | null>(null)
@@ -42,13 +45,24 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
   const setOpen = onOpenChange || setInternalOpen
 
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
+    title: initialTitle || '',
+    description: initialDescription || '',
     end_goal: '',
     project_mode: 'completion' as 'completion' | 'recurring',
     next_step: '',
     type: 'Creative',
   })
+
+  // Sync initial values when dialog opens with pre-filled data
+  useEffect(() => {
+    if (open && (initialTitle || initialDescription)) {
+      setFormData(prev => ({
+        ...prev,
+        title: initialTitle || prev.title,
+        description: initialDescription || prev.description,
+      }))
+    }
+  }, [open, initialTitle, initialDescription])
 
   const isFormValid = formData.title.length > 2 && formData.description.length > 10
 
@@ -76,6 +90,8 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
         order: 0
       }] : []
 
+      const titleAtCreation = formData.title
+
       await createProject({
         title: formData.title,
         description: formData.description || '',
@@ -88,6 +104,12 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
           project_mode: formData.project_mode,
         },
       })
+
+      // Call onCreated with the newly created project ID if provided
+      if (onCreated) {
+        const newProj = useProjectStore.getState().allProjects.find(p => p.title === titleAtCreation)
+        if (newProj) onCreated(newProj.id)
+      }
 
       addToast({
         title: 'Project created!',
