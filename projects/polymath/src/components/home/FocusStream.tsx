@@ -131,14 +131,6 @@ export function FocusStream() {
                                 boxShadow: `0 8px 32px rgba(${theme.rgb}, 0.15)`
                             }}
                             onClick={() => navigate(`/projects/${priorityProject.id}`)}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.background = `rgba(${theme.rgb}, 0.15)`
-                                e.currentTarget.style.borderColor = theme.textColor
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.background = `rgba(${theme.rgb}, 0.08)`
-                                e.currentTarget.style.borderColor = theme.borderColor
-                            }}
                         >
                             <div className="relative z-10 flex-1">
                                 <div className="flex items-center justify-between gap-4 mb-4">
@@ -181,14 +173,6 @@ export function FocusStream() {
                                 boxShadow: 'none'
                             }}
                             onClick={() => navigate(`/projects/${recentProject.id}`)}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.background = `rgba(${theme.rgb}, 0.15)`
-                                e.currentTarget.style.borderColor = theme.textColor
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.background = `rgba(${theme.rgb}, 0.08)`
-                                e.currentTarget.style.borderColor = theme.borderColor
-                            }}
                         >
                             <div className="relative z-10 flex-1">
                                 <div className="flex items-center justify-between gap-4 mb-4">
@@ -223,12 +207,6 @@ export function FocusStream() {
                             animate={{ opacity: 1, y: 0 }}
                             className="p-6 relative overflow-hidden group cursor-pointer glass-card glass-card-hover transition-all duration-300 md:col-span-2 flex flex-col"
                             onClick={() => setShowReviewDeck(true)}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.background = 'var(--glass-surface)'
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'var(--brand-glass-bg)'
-                            }}
                         >
                             <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
                                 <Layers className="h-24 w-24" />
