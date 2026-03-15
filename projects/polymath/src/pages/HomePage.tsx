@@ -669,7 +669,19 @@ function HomeListQuickAdd({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
 
         {!selectedListId ? (
           <div className="space-y-2 max-h-72 overflow-y-auto">
-            {lists.map(list => {
+            {lists.length === 0 ? (
+              <div className="py-8 text-center">
+                <p className="text-sm font-bold mb-1" style={{ color: 'var(--brand-text-secondary)' }}>No lists yet</p>
+                <Link
+                  to="/lists"
+                  onClick={onClose}
+                  className="text-[11px] font-black uppercase tracking-widest"
+                  style={{ color: 'var(--brand-primary)' }}
+                >
+                  Create your first list →
+                </Link>
+              </div>
+            ) : lists.map(list => {
               const Icon = LIST_ICON_MAP[list.type] || BoxIcon
               return (
                 <button
@@ -1186,13 +1198,7 @@ export function HomePage() {
             {/* Bedtime Ideas */}
             <Link
               to="/bedtime"
-              className="group p-5 glass-card glass-card-hover transition-all"
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--glass-surface)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'var(--brand-glass-bg)'
-              }}
+              className="p-5 glass-card glass-card-hover transition-all active:scale-[0.98]"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
@@ -1206,20 +1212,14 @@ export function HomePage() {
                     </p>
                   </div>
                 </div>
-                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all text-[var(--brand-primary)]" />
+                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-30 text-[var(--brand-primary)]" />
               </div>
             </Link>
 
             {/* Drift Mode */}
             <button
               onClick={handleOpenDrift}
-              className="group p-5 glass-card glass-card-hover transition-all text-left"
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--glass-surface)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'var(--brand-glass-bg)'
-              }}
+              className="p-5 glass-card glass-card-hover transition-all text-left active:scale-[0.98]"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
@@ -1233,20 +1233,14 @@ export function HomePage() {
                     </p>
                   </div>
                 </div>
-                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all text-[var(--brand-primary)]" />
+                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-30 text-[var(--brand-primary)]" />
               </div>
             </button>
 
             {/* Discover Projects */}
             <Link
               to="/suggestions"
-              className="group p-5 glass-card glass-card-hover transition-all"
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--glass-surface)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'var(--brand-glass-bg)'
-              }}
+              className="p-5 glass-card glass-card-hover transition-all active:scale-[0.98]"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
@@ -1260,20 +1254,14 @@ export function HomePage() {
                     </p>
                   </div>
                 </div>
-                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all text-[var(--brand-primary)]" />
+                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-30 text-[var(--brand-primary)]" />
               </div>
             </Link>
 
             {/* Analysis */}
             <Link
               to="/insights"
-              className="group p-5 glass-card glass-card-hover transition-all"
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--glass-surface)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'var(--brand-glass-bg)'
-              }}
+              className="p-5 glass-card glass-card-hover transition-all active:scale-[0.98]"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
@@ -1287,7 +1275,7 @@ export function HomePage() {
                     </p>
                   </div>
                 </div>
-                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all text-[var(--brand-primary)]" />
+                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-30 text-[var(--brand-primary)]" />
               </div>
             </Link>
           </div>
