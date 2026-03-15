@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useRef, useMemo, memo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, Send, Trash2, Mic, MicOff, ListOrdered, Check, GripVertical, Film, Music, Book, MapPin, Box, Quote, Pencil, Monitor, Gamepad2, Calendar, Star, SortAsc, ChevronDown, Copy, FileText } from 'lucide-react'
+import { ArrowLeft, Send, Trash2, Mic, MicOff, ListOrdered, Check, GripVertical, Film, Music, Book, MapPin, Box, Quote, Pencil, Monitor, Gamepad2, Calendar, Star, SortAsc, ChevronDown, Copy, FileText, Brain } from 'lucide-react'
 import { useListStore } from '../stores/useListStore'
+import { useMemoryStore } from '../stores/useMemoryStore'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
@@ -530,7 +531,8 @@ const StandardItemCard = memo(({
     onStatusChange,
     onRate,
     onMarkDone,
-    rgb
+    rgb,
+    hasThought
 }: {
     item: ListItem
     listType: string
@@ -541,6 +543,7 @@ const StandardItemCard = memo(({
     onRate: (id: string, rating: number) => void
     onMarkDone: (item: ListItem) => void
     rgb: string
+    hasThought?: boolean
 }) => {
     const hasImage = item.metadata?.image
     const isPosterType = listType === 'book' || listType === 'film' || listType === 'movie' || listType === 'show' || listType === 'tv'
@@ -723,6 +726,17 @@ const StandardItemCard = memo(({
                         Enriching...
                     </div>
                 )}
+
+                {/* Thought captured indicator */}
+                {hasThought && (
+                    <div
+                        className="flex items-center gap-1 mt-1 pl-6"
+                        title="You captured a thought about this"
+                    >
+                        <Brain className="w-2.5 h-2.5" style={{ color: 'rgba(251,191,36,0.7)' }} />
+                        <span className="text-[8px] font-black uppercase tracking-widest" style={{ color: 'rgba(251,191,36,0.6)' }}>thought captured</span>
+                    </div>
+                )}
             </div>
 
             {/* Quick actions on hover */}
@@ -751,7 +765,8 @@ function MasonryListGrid({
     onStatusChange,
     onRate,
     onMarkDone,
-    rgb
+    rgb,
+    thoughtCapturedIds
 }: {
     items: ListItem[]
     listType: string
@@ -762,6 +777,7 @@ function MasonryListGrid({
     onRate: (id: string, rating: number) => void
     onMarkDone: (item: ListItem) => void
     rgb: string
+    thoughtCapturedIds?: Set<string>
 }) {
     const [columns, setColumns] = useState(2)
 
@@ -815,6 +831,7 @@ function MasonryListGrid({
                             onRate={onRate}
                             onMarkDone={onMarkDone}
                             rgb={rgb}
+                            hasThought={thoughtCapturedIds?.has(item.id)}
                         />
                     ))}
                 </div>
@@ -831,9 +848,21 @@ export default function ListDetailPage() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const { lists, currentListItems, currentListId, loading, fetchListItems, addListItem, fetchLists, deleteListItem, reorderItems, updateListItemStatus, updateListItemMetadata } = useListStore()
+    const { memories } = useMemoryStore()
     const { addToast } = useToast()
 
     const list = lists.find(l => l.id === id)
+
+    // Set of list-item IDs that have at least one captured thought
+    const thoughtCapturedIds = useMemo(() => {
+        const ids = new Set<string>()
+        memories.forEach(m => {
+            if (m.source_reference?.type === 'list_item' && m.source_reference.id) {
+                ids.add(m.source_reference.id)
+            }
+        })
+        return ids
+    }, [memories])
 
     const isCorrectList = currentListId === id
     const displayItems = isCorrectList ? currentListItems : []
@@ -1208,6 +1237,7 @@ export default function ListDetailPage() {
                                     onRate={handleRate}
                                     onMarkDone={handleMarkDone}
                                     rgb={rgb}
+                                    thoughtCapturedIds={thoughtCapturedIds}
                                 />
                             ) : loading ? (
                                 <div className="flex flex-wrap gap-3">

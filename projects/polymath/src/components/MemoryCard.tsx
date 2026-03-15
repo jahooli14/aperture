@@ -472,6 +472,24 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
           <div className="flex items-center gap-2 shrink-0">
             <Calendar className="h-3 w-3" />
             <span>{new Date(memory.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+            {/* Seed as project — always-visible, low-profile */}
+            <button
+              onClick={(e) => { e.stopPropagation(); setSeedProjectOpen(true) }}
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded active:scale-95 transition-transform"
+              style={{
+                background: 'rgba(52,211,153,0.08)',
+                border: '1px solid rgba(52,211,153,0.2)',
+                color: '#34d399',
+                fontSize: '9px',
+                fontWeight: 900,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+              }}
+              title="Seed as project"
+            >
+              <Sprout className="w-2.5 h-2.5" />
+              Seed
+            </button>
           </div>
 
           {!expanded && memory.tags && memory.tags.length > 0 && (
