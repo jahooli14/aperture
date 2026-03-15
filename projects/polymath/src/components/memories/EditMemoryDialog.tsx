@@ -332,12 +332,12 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
                         alt="Existing attachment"
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
 
                       <button
                         type="button"
                         onClick={() => removeExistingImage(url)}
-                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-md text-[var(--brand-text-primary)]/90 border border-[var(--glass-surface-hover)] opacity-0 group-hover:opacity-100 transition-all hover:bg-brand-primary/80 hover:text-[var(--brand-text-primary)]"
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-md text-[var(--brand-text-primary)]/90 border border-[var(--glass-surface-hover)] opacity-70 active:opacity-100 active:bg-brand-primary/80 transition-all"
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
@@ -366,7 +366,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
                       <button
                         type="button"
                         onClick={() => removeNewFile(index)}
-                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-md text-[var(--brand-text-primary)]/90 border border-[var(--glass-surface-hover)] opacity-0 group-hover:opacity-100 transition-all hover:bg-brand-primary/80 hover:text-[var(--brand-text-primary)]"
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-md text-[var(--brand-text-primary)]/90 border border-[var(--glass-surface-hover)] opacity-70 active:opacity-100 active:bg-brand-primary/80 transition-all"
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>

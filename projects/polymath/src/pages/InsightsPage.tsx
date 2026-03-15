@@ -245,14 +245,6 @@ export function InsightsPage() {
                   boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
                   ...getInsightStyle(insight.type)
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--glass-surface)'
-                  e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.5)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'var(--brand-glass-bg)'
-                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.4)'
-                }}
               >
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0">

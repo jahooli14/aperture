@@ -389,7 +389,7 @@ export function BedtimePage() {
                   >
                     {/* Background glow - stronger on hover */}
                     <div
-                      className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700"
+                      className="absolute inset-0 opacity-20 transition-opacity duration-700"
                       style={{
                         background: `radial-gradient(circle at 50% 50%, ${getTypeColor(prompt.type)}20, transparent 70%)`
                       }}
