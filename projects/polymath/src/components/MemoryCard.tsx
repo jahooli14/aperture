@@ -1,6 +1,6 @@
 import React, { useState, memo, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MoreVertical, Edit, Trash2, Copy, Share2, Calendar, Zap, Link2, Pin, Maximize2, CheckSquare, Sprout } from 'lucide-react'
+import { MoreVertical, Edit, Trash2, Copy, Share2, Calendar, Zap, Link2, Pin, Maximize2, CheckSquare, Sprout, Film, Book, Music, MapPin, Gamepad2, Monitor, FileText, Box } from 'lucide-react'
 import { CardHeader, CardTitle, CardDescription } from './ui/card'
 import { Button } from './ui/button'
 import type { Memory, BridgeWithMemories } from '../types'
@@ -13,6 +13,13 @@ import { MemoryDetailModal } from './memories/MemoryDetailModal'
 import { useConfirmDialog } from './ui/confirm-dialog'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MarkdownRenderer } from './ui/MarkdownRenderer'
+
+// List type → icon for provenance badge
+const LIST_TYPE_ICON: Record<string, React.FC<{ className?: string }>> = {
+  film: Film, book: Book, music: Music, place: MapPin, game: Gamepad2,
+  tech: Monitor, software: Monitor, article: FileText,
+}
+const getListIcon = (type?: string) => type ? (LIST_TYPE_ICON[type] || Box) : Box
 
 // Memory type badge config
 const MEMORY_TYPE_CONFIG = {
@@ -288,6 +295,26 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
             </Button>
           </div>
         </CardHeader>
+
+        {/* List-item provenance badge */}
+        {memory.source_reference?.type === 'list_item' && memory.source_reference.title && (() => {
+          const ListIcon = getListIcon(memory.source_reference?.list_type)
+          return (
+            <div className="flex items-center gap-1 mb-2">
+              <span
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wide"
+                style={{
+                  background: 'rgba(251,191,36,0.1)',
+                  border: '1.5px solid rgba(251,191,36,0.25)',
+                  color: 'rgba(251,191,36,0.8)',
+                }}
+              >
+                <ListIcon className="w-2.5 h-2.5" />
+                {memory.source_reference.title}
+              </span>
+            </div>
+          )
+        })()}
 
         {/* Memory type badge + connection count */}
         {(memory.memory_type || (connectionCount !== undefined && connectionCount > 0)) && (

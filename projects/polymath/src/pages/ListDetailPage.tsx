@@ -105,10 +105,12 @@ const StarRating = memo(({
 
 const CompletionCelebration = ({
     item,
+    listType,
     onRate,
     onClose
 }: {
     item: ListItem
+    listType: string
     onRate: (rating: number) => void
     onClose: () => void
 }) => {
@@ -129,8 +131,13 @@ const CompletionCelebration = ({
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    transcript: `${thoughtText.trim()} [from: ${item.content}]`,
-                    source_reference: `list_item:${item.id}`
+                    transcript: thoughtText.trim(),
+                    source_reference: {
+                        type: 'list_item',
+                        id: item.id,
+                        title: item.content,
+                        list_type: listType,
+                    }
                 })
             })
         } catch { /* silent */ }
@@ -602,22 +609,39 @@ const StandardItemCard = memo(({
 
             {/* Content overlay */}
             <div className="absolute inset-0 p-3 flex flex-col justify-end">
-                {/* Status toggle circle */}
-                <div className="flex items-start gap-2 mb-1">
+                {/* Status toggle — shows "Done?" nudge when active */}
+                {item.status === 'active' && (
                     <button
                         onClick={handleStatusCycle}
-                        className="mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all"
+                        className="mb-2 self-start flex items-center gap-1 px-2 py-0.5 rounded-full active:scale-95 transition-all"
                         style={{
-                            borderColor: `rgba(${statusColor}, ${statusOpacity})`,
-                            backgroundColor: isCompleted ? `rgba(${statusColor}, 0.2)` : 'transparent'
+                            background: `rgba(${rgb}, 0.15)`,
+                            border: `1px solid rgba(${rgb}, 0.4)`,
+                            color: `rgb(${rgb})`,
+                            fontSize: '9px',
+                            fontWeight: 900,
+                            letterSpacing: '0.1em',
+                            textTransform: 'uppercase',
                         }}
                     >
-                        {isCompleted && <Check className="w-2.5 h-2.5 text-brand-text-secondary" />}
-                        {item.status === 'active' && (
-                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: `rgb(${rgb})` }} />
-                        )}
+                        <Check className="w-2.5 h-2.5" />
+                        Done?
                     </button>
-                    <h3 className={`text-[var(--brand-text-primary)] font-bold leading-tight group-hover:text-brand-primary transition-colors uppercase tracking-tight drop-shadow-lg text-xs mb-1 ${isCompleted ? 'line-through opacity-50' : ''}`}>
+                )}
+                <div className="flex items-start gap-2 mb-1">
+                    {item.status !== 'active' && (
+                        <button
+                            onClick={handleStatusCycle}
+                            className="mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all"
+                            style={{
+                                borderColor: `rgba(${statusColor}, ${statusOpacity})`,
+                                backgroundColor: isCompleted ? `rgba(${statusColor}, 0.2)` : 'transparent'
+                            }}
+                        >
+                            {isCompleted && <Check className="w-2.5 h-2.5 text-brand-text-secondary" />}
+                        </button>
+                    )}
+                    <h3 className={`text-[var(--brand-text-primary)] font-bold leading-tight uppercase tracking-tight drop-shadow-lg text-xs mb-1 ${isCompleted ? 'line-through opacity-50' : ''} ${item.status === 'active' ? 'pl-0' : ''}`}>
                         {item.content}
                     </h3>
                 </div>
@@ -1222,6 +1246,7 @@ export default function ListDetailPage() {
                 {celebrationItem && (
                     <CompletionCelebration
                         item={celebrationItem}
+                        listType={list?.type || 'generic'}
                         onRate={handleCelebrationRate}
                         onClose={() => setCelebrationItem(null)}
                     />

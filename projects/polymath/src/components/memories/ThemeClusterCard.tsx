@@ -97,19 +97,14 @@ export const ThemeClusterCard = React.memo(function ThemeClusterCard({ cluster, 
         aria-label={`Open ${cluster.name} cluster`}
       />
 
-      {/* Hover indicator */}
-      <div className="absolute top-4 right-14 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-        <ChevronRight className="w-4 h-4" style={{ color: "var(--brand-primary)" }} />
-      </div>
-
-      {/* Seed as project button */}
+      {/* Seed as project button — always visible on mobile */}
       {cluster.memory_count >= 2 && (
         <button
           onClick={(e) => { e.stopPropagation(); setSeedOpen(true) }}
-          className="absolute top-3 right-3 z-10 flex items-center gap-1 px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+          className="absolute top-3 right-3 z-10 flex items-center gap-1 px-2 py-1 rounded-lg transition-all active:scale-95"
           style={{
-            background: 'rgba(52, 211, 153, 0.12)',
-            border: '1px solid rgba(52, 211, 153, 0.3)',
+            background: 'rgba(52, 211, 153, 0.1)',
+            border: '1px solid rgba(52, 211, 153, 0.25)',
             color: '#34d399',
             fontSize: '9px',
             fontWeight: 900,
