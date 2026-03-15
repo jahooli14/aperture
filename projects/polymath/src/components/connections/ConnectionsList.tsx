@@ -326,7 +326,7 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
                   </div>
 
                   {/* Arrow Indicator */}
-                  <div className="self-center opacity-0 group-hover:opacity-50 transition-opacity">
+                  <div className="self-center opacity-30">
                     <ArrowRight className="h-4 w-4 text-[var(--brand-text-primary)]" />
                   </div>
                 </div>

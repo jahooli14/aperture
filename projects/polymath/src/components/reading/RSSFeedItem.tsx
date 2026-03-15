@@ -14,7 +14,6 @@ interface RSSFeedItemProps {
 
 export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProps) {
   const [expanded, setExpanded] = useState(false)
-  const [isHovered, setIsHovered] = useState(false)
 
   const sanitizedDescription = useMemo(() => {
     if (!item.description) return ''
@@ -28,8 +27,6 @@ export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProp
     <div
       className="group block rounded-lg transition-all duration-200 break-inside-avoid cursor-pointer relative mb-2 overflow-hidden"
       onClick={() => setExpanded(!expanded)}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
       style={{
         background: expanded ? '#111113' : 'transparent',
         border: expanded ? '2px solid rgba(59,130,246,0.4)' : '2px solid var(--glass-surface-hover)',

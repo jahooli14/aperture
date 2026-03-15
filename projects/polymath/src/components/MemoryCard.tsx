@@ -251,7 +251,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
               className={`p-1.5 rounded-lg transition-all ${
                 memory.is_pinned
                   ? 'text-brand-text-secondary hover:bg-brand-primary/10'
-                  : 'text-brand-text-primary0 hover:text-brand-text-secondary hover:bg-brand-surface/80 opacity-0 group-hover:opacity-100'
+                  : 'text-[var(--brand-text-muted)] active:text-brand-text-secondary active:bg-brand-surface/80 opacity-40'
               }`}
               title={memory.is_pinned ? 'Unpin' : 'Pin'}
             >
