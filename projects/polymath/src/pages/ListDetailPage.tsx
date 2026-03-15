@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useMemo, memo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, Send, Trash2, Mic, MicOff, ListOrdered, Check, GripVertical, Film, Music, Book, MapPin, Box, Quote, Pencil, Monitor, Gamepad2, Calendar, Star, SortAsc, ChevronDown, Copy } from 'lucide-react'
+import { ArrowLeft, Send, Trash2, Mic, MicOff, ListOrdered, Check, GripVertical, Film, Music, Book, MapPin, Box, Quote, Pencil, Monitor, Gamepad2, Calendar, Star, SortAsc, ChevronDown, Copy, FileText } from 'lucide-react'
 import { useListStore } from '../stores/useListStore'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
@@ -28,6 +28,7 @@ const ListColor = (type: ListType) => {
         case 'quote': return '167, 139, 250'
         case 'event': return '251, 146, 60'
         case 'software': return '34, 211, 238'
+        case 'article': return '251, 191, 36'
         default: return '148, 163, 184'
     }
 }
@@ -43,6 +44,7 @@ const ListIcon = ({ type, className, style }: { type: ListType, className?: stri
         case 'software': return <Box className={className} style={style} />
         case 'event': return <Calendar className={className} style={style} />
         case 'quote': return <Quote className={className} style={style} />
+        case 'article': return <FileText className={className} style={style} />
         default: return <Box className={className} style={style} />
     }
 }
@@ -110,6 +112,31 @@ const CompletionCelebration = ({
     onRate: (rating: number) => void
     onClose: () => void
 }) => {
+    const [step, setStep] = useState<'rating' | 'thought'>('rating')
+    const [thoughtText, setThoughtText] = useState('')
+    const [savingThought, setSavingThought] = useState(false)
+
+    const handleRate = (star: number) => {
+        onRate(star)
+        setStep('thought')
+    }
+
+    const handleSaveThought = async () => {
+        if (!thoughtText.trim()) { onClose(); return }
+        setSavingThought(true)
+        try {
+            await fetch('/api/memories?capture=true', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    transcript: `${thoughtText.trim()} [from: ${item.content}]`,
+                    source_reference: `list_item:${item.id}`
+                })
+            })
+        } catch { /* silent */ }
+        onClose()
+    }
+
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -131,44 +158,87 @@ const CompletionCelebration = ({
                     boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1), 0 40px 80px rgba(0,0,0,0.6)'
                 }}
             >
-                {/* Celebration burst */}
-                <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: [0, 1.3, 1] }}
-                    transition={{ delay: 0.1, duration: 0.4 }}
-                    className="text-5xl mb-4"
-                >
-                    
-                </motion.div>
+                <AnimatePresence mode="wait">
+                    {step === 'rating' ? (
+                        <motion.div key="rating" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                            {/* Celebration burst */}
+                            <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: [0, 1.3, 1] }}
+                                transition={{ delay: 0.1, duration: 0.4 }}
+                                className="text-5xl mb-4"
+                            >
 
-                <h3 className="text-lg font-black text-[var(--brand-text-primary)] uppercase tracking-tight mb-1">
-                    Marked as done!
-                </h3>
-                <p className="text-sm text-[var(--brand-text-primary)]/40 mb-6 font-mono truncate">{item.content}</p>
+                            </motion.div>
 
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--brand-text-primary)]/30 mb-3">
-                    How was it?
-                </p>
+                            <h3 className="text-lg font-black text-[var(--brand-text-primary)] uppercase tracking-tight mb-1">
+                                Marked as done!
+                            </h3>
+                            <p className="text-sm text-[var(--brand-text-primary)]/40 mb-6 font-mono truncate">{item.content}</p>
 
-                <div className="flex items-center justify-center gap-2 mb-6">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                            key={star}
-                            type="button"
-                            onClick={() => onRate(star)}
-                            className="p-2 rounded-xl transition-all hover:scale-110 hover:bg-brand-primary/10"
-                        >
-                            <Star className="h-7 w-7 text-brand-text-secondary/40 hover:text-brand-text-secondary hover:fill-amber-400 transition-all" />
-                        </button>
-                    ))}
-                </div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--brand-text-primary)]/30 mb-3">
+                                How was it?
+                            </p>
 
-                <button
-                    onClick={onClose}
-                    className="text-[11px] font-bold text-[var(--brand-text-primary)]/30 uppercase tracking-widest hover:text-[var(--brand-text-primary)]/60 transition-colors"
-                >
-                    Skip rating
-                </button>
+                            <div className="flex items-center justify-center gap-2 mb-6">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <button
+                                        key={star}
+                                        type="button"
+                                        onClick={() => handleRate(star)}
+                                        className="p-2 rounded-xl transition-all hover:scale-110 hover:bg-brand-primary/10"
+                                    >
+                                        <Star className="h-7 w-7 text-brand-text-secondary/40 hover:text-brand-text-secondary hover:fill-amber-400 transition-all" />
+                                    </button>
+                                ))}
+                            </div>
+
+                            <button
+                                onClick={() => setStep('thought')}
+                                className="text-[11px] font-bold text-[var(--brand-text-primary)]/30 uppercase tracking-widest hover:text-[var(--brand-text-primary)]/60 transition-colors"
+                            >
+                                Skip rating
+                            </button>
+                        </motion.div>
+                    ) : (
+                        <motion.div key="thought" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                            <div className="text-3xl mb-4">💭</div>
+                            <h3 className="text-base font-black text-[var(--brand-text-primary)] uppercase tracking-tight mb-1">
+                                Any thoughts?
+                            </h3>
+                            <p className="text-xs text-[var(--brand-text-primary)]/30 mb-5">
+                                Capture a reaction, insight, or feeling
+                            </p>
+                            <textarea
+                                autoFocus
+                                value={thoughtText}
+                                onChange={e => setThoughtText(e.target.value)}
+                                placeholder={`What did you think of ${item.content}?`}
+                                className="w-full rounded-2xl px-4 py-3 text-sm text-[var(--brand-text-primary)] placeholder:text-[var(--brand-text-primary)]/20 resize-none focus:outline-none mb-4"
+                                style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', minHeight: '80px' }}
+                                rows={3}
+                                onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSaveThought() }}
+                            />
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={handleSaveThought}
+                                    disabled={savingThought}
+                                    className="flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all"
+                                    style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', color: 'var(--brand-primary)' }}
+                                >
+                                    {savingThought ? 'Saving...' : thoughtText.trim() ? 'Save thought' : 'Done'}
+                                </button>
+                                <button
+                                    onClick={onClose}
+                                    className="px-4 py-2.5 rounded-xl text-[11px] font-bold text-[var(--brand-text-primary)]/30 uppercase tracking-widest hover:text-[var(--brand-text-primary)]/60 transition-colors"
+                                    style={{ border: '1px solid rgba(255,255,255,0.08)' }}
+                                >
+                                    Skip
+                                </button>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </motion.div>
         </motion.div>
     )
@@ -189,6 +259,8 @@ const getStatusLabels = (listType: string): Record<StatusFilter, string> => {
             return { all: 'All', pending: 'Want to Watch', active: 'Watching', completed: 'Watched' }
         case 'book':
             return { all: 'All', pending: 'Want to Read', active: 'Reading', completed: 'Read' }
+        case 'article':
+            return { all: 'All', pending: 'To Read', active: 'Reading', completed: 'Read' }
         case 'music':
             return { all: 'All', pending: 'Want to Listen', active: 'Listening', completed: 'Listened' }
         case 'game':

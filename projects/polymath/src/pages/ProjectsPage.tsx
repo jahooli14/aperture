@@ -8,12 +8,127 @@ import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
 import { ReaperModal } from '../components/projects/ReaperModal' // Import ReaperModal
 import { Button } from '../components/ui/button'
 import { PremiumTabs } from '../components/ui/premium-tabs'
-import { Layers, Search } from 'lucide-react'
+import { Layers, Search, Check } from 'lucide-react'
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { api } from '../lib/apiClient' // Import API client
 import type { Project } from '../types'
+
+// ============================================================================
+// Completed Projects Timeline
+// ============================================================================
+
+function formatDurationShort(createdAt: string, updatedAt?: string): string {
+  const end = updatedAt ? new Date(updatedAt).getTime() : Date.now()
+  const ms = end - new Date(createdAt).getTime()
+  const days = Math.floor(ms / (1000 * 60 * 60 * 24))
+  if (days < 1) return 'less than a day'
+  if (days === 1) return '1 day'
+  if (days < 30) return `${days} days`
+  const months = Math.floor(days / 30)
+  if (months === 1) return '1 month'
+  if (months < 12) return `${months} months`
+  const years = Math.floor(months / 12)
+  return years === 1 ? '1 year' : `${years} years`
+}
+
+function CompletedProjectsTimeline({ projects, onNavigate }: { projects: Project[], onNavigate: (id: string) => void }) {
+  const sorted = [...projects].sort((a, b) =>
+    new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime()
+  )
+
+  if (sorted.length === 0) {
+    return (
+      <div className="text-center py-24">
+        <div className="text-5xl mb-4">🏆</div>
+        <p className="text-[var(--brand-text-primary)] font-black uppercase tracking-tight text-lg mb-2">No completed projects yet</p>
+        <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>When you ship something, it'll live here.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-6 pb-32">
+      <div className="mb-8">
+        <p className="text-[10px] font-black uppercase tracking-[0.3em]" style={{ color: 'var(--brand-text-secondary)' }}>
+          {sorted.length} project{sorted.length !== 1 ? 's' : ''} shipped
+        </p>
+        <h2 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
+          What you've <span className="text-[#34d399]">built</span>
+        </h2>
+      </div>
+
+      <div className="relative">
+        {/* Vertical timeline line */}
+        <div className="absolute left-5 top-0 bottom-0 w-px" style={{ background: 'rgba(52, 211, 153, 0.15)' }} />
+
+        <div className="space-y-6">
+          {sorted.map((project, i) => {
+            const completedDate = project.updated_at ? new Date(project.updated_at) : null
+            const duration = formatDurationShort(project.created_at, project.updated_at)
+
+            return (
+              <motion.div
+                key={project.id}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.06 }}
+                className="flex gap-4"
+              >
+                {/* Timeline dot */}
+                <div className="relative flex-shrink-0 mt-1">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center z-10 relative"
+                    style={{ background: 'rgba(52, 211, 153, 0.12)', border: '2px solid rgba(52, 211, 153, 0.3)' }}
+                  >
+                    <Check className="w-4 h-4" style={{ color: '#34d399' }} />
+                  </div>
+                </div>
+
+                {/* Card */}
+                <button
+                  onClick={() => onNavigate(project.id)}
+                  className="flex-1 text-left p-4 rounded-xl transition-all hover:scale-[1.01]"
+                  style={{
+                    background: 'rgba(52, 211, 153, 0.04)',
+                    border: '1px solid rgba(52, 211, 153, 0.15)',
+                    boxShadow: '3px 3px 0 rgba(0,0,0,0.4)'
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <h3 className="font-black uppercase tracking-tight text-sm text-[var(--brand-text-primary)] line-clamp-1">
+                      {project.title}
+                    </h3>
+                    {project.type && (
+                      <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg flex-shrink-0"
+                        style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--brand-text-secondary)' }}>
+                        {project.type}
+                      </span>
+                    )}
+                  </div>
+                  {project.description && (
+                    <p className="text-xs line-clamp-2 mb-2" style={{ color: 'var(--brand-text-secondary)' }}>
+                      {project.description}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest" style={{ color: 'rgba(52, 211, 153, 0.6)' }}>
+                    <span>{duration}</span>
+                    {completedDate && (
+                      <>
+                        <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
+                        <span>{completedDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
+                      </>
+                    )}
+                  </div>
+                </button>
+              </motion.div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export function ProjectsPage() {
   const navigate = useNavigate()
@@ -222,6 +337,11 @@ export function ProjectsPage() {
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.2 }}
         >
+          {/* Completed Projects Timeline */}
+          {filter === 'completed' ? (
+            <CompletedProjectsTimeline projects={projects} onNavigate={(id) => navigate(`/projects/${id}`)} />
+          ) : (<>
+
           {/* Controls */}
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 pt-2">
             {/* Outer Card Structure */}
@@ -312,6 +432,7 @@ export function ProjectsPage() {
 
           {/* Confirmation Dialog */}
           {confirmDialog}
+          </>)}
         </motion.div>
       </div>
       {/* Reaper Modal */}
