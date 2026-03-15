@@ -110,14 +110,14 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
                                         }}
                                         className="relative group flex items-center gap-5 p-5 rounded-3xl bg-white/[0.03] border border-[var(--glass-surface-hover)] hover:bg-brand-surface/80 hover:border-white/20 transition-all text-left overflow-hidden"
                                     >
-                                        {/* Hover Gradient Background */}
+                                        {/* Tap Gradient Background */}
                                         <div className={cn(
-                                            "absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-[0.05] transition-opacity duration-500",
+                                            "absolute inset-0 bg-gradient-to-br opacity-[0.03] group-active:opacity-[0.08] transition-opacity duration-300",
                                             action.color
                                         )} />
 
                                         <div className={cn(
-                                            "h-14 w-14 rounded-2xl flex items-center justify-center shrink-0 shadow-lg border border-[var(--glass-surface-hover)] transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3",
+                                            "h-14 w-14 rounded-2xl flex items-center justify-center shrink-0 shadow-lg border border-[var(--glass-surface-hover)] transition-transform duration-300 group-active:scale-110 group-active:rotate-3",
                                             "bg-zinc-800"
                                         )}>
                                             <action.icon className={cn("h-7 w-7", action.iconColor)} />
@@ -125,7 +125,7 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
 
                                         <div className="flex-1">
                                             <div className="flex items-center justify-between">
-                                                <span className="text-xl font-bold text-[var(--brand-text-primary)] group-hover:text-brand-primary transition-colors uppercase tracking-tight">
+                                                <span className="text-xl font-bold text-[var(--brand-text-primary)] group-active:text-brand-primary transition-colors uppercase tracking-tight">
                                                     {action.label}
                                                 </span>
                                             </div>
@@ -136,7 +136,7 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
 
                                         {/* Corner Accent */}
                                         <div className={cn(
-                                            "absolute top-0 right-0 h-12 w-12 opacity-0 group-hover:opacity-100 transition-opacity duration-500",
+                                            "absolute top-0 right-0 h-12 w-12 opacity-20 group-active:opacity-100 transition-opacity duration-300",
                                             `bg-gradient-to-bl from-white/10 to-transparent pointer-events-none`
                                         )} />
                                     </motion.button>

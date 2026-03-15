@@ -65,7 +65,7 @@ export function PinnedTaskList({
                 background: isNextTask ? 'var(--glass-surface)' : 'var(--brand-glass-bg)'
               }}
             >
-              <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing" style={{ color: "var(--brand-primary)" }}>
+              <div className="flex-shrink-0 opacity-30 cursor-grab active:cursor-grabbing" style={{ color: "var(--brand-primary)" }}>
                 <GripVertical className="h-3 w-3" />
               </div>
               <button

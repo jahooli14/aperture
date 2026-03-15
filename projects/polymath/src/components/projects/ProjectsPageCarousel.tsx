@@ -76,16 +76,6 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
         borderColor: prominent || project.is_priority ? 'var(--brand-primary)' : theme.borderColor,
         background: `rgba(${theme.rgb}, 0.08)`
       }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.background = `rgba(${theme.rgb}, 0.15)`
-        e.currentTarget.style.borderColor = `rgba(${theme.rgb}, 0.4)`
-        e.currentTarget.style.transform = 'translateY(-2px)'
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.background = `rgba(${theme.rgb}, 0.08)`
-        e.currentTarget.style.borderColor = prominent || project.is_priority ? 'var(--brand-primary)' : theme.borderColor
-        e.currentTarget.style.transform = 'translateY(0)'
-      }}
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-3">

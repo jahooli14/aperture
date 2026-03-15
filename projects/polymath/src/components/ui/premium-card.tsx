@@ -32,26 +32,19 @@ export function PremiumCard({
     lg: 'p-8',
   }
 
-  const [isHovered, setIsHovered] = React.useState(false)
-
   return (
     <div
       className={cn(
         variants[variant],
         sizes[size],
         'rounded-xl transition-all duration-300',
-        hover && 'cursor-pointer',
+        hover && 'cursor-pointer active:scale-[0.98]',
         className
       )}
       onClick={onClick}
-      onMouseEnter={() => hover && setIsHovered(true)}
-      onMouseLeave={() => hover && setIsHovered(false)}
       style={{
-        background: isHovered ? 'var(--glass-surface)' : 'var(--brand-glass-bg)',
-        boxShadow: isHovered
-          ? '0 12px 32px rgba(0, 0, 0, 0.5)'
-          : '0 8px 24px rgba(0, 0, 0, 0.4)',
-        transform: isHovered ? 'scale(1.02)' : 'scale(1)',
+        background: 'var(--brand-glass-bg)',
+        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
         backdropFilter: 'blur(12px)',
         ...style,
       }}

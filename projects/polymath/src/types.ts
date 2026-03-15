@@ -28,10 +28,12 @@ export interface TriageInfo {
 }
 
 export interface SourceReference {
-  type: 'article' | 'project' | 'suggestion'
+  type: 'article' | 'project' | 'suggestion' | 'list_item'
   id: string
   title?: string
   url?: string
+  /** For list_item: the list type (film, book, etc.) for icon rendering */
+  list_type?: string
 }
 
 export interface Memory {
@@ -951,7 +953,7 @@ export interface ReadingQueueItem {
 // LISTS PILLAR
 // ============================================================================
 
-export type ListType = 'film' | 'music' | 'tech' | 'book' | 'place' | 'game' | 'software' | 'event' | 'quote' | 'generic'
+export type ListType = 'film' | 'music' | 'tech' | 'book' | 'place' | 'game' | 'software' | 'event' | 'quote' | 'article' | 'generic'
 export type ListItemStatus = 'pending' | 'active' | 'completed' | 'abandoned'
 
 export interface List {

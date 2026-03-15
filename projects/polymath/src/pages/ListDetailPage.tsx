@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useRef, useMemo, memo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, Send, Trash2, Mic, MicOff, ListOrdered, Check, GripVertical, Film, Music, Book, MapPin, Box, Quote, Pencil, Monitor, Gamepad2, Calendar, Star, SortAsc, ChevronDown, Copy } from 'lucide-react'
+import { ArrowLeft, Send, Trash2, Mic, MicOff, ListOrdered, Check, GripVertical, Film, Music, Book, MapPin, Box, Quote, Pencil, Monitor, Gamepad2, Calendar, Star, SortAsc, ChevronDown, Copy, FileText, Brain } from 'lucide-react'
 import { useListStore } from '../stores/useListStore'
+import { useMemoryStore } from '../stores/useMemoryStore'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
@@ -28,6 +29,7 @@ const ListColor = (type: ListType) => {
         case 'quote': return '167, 139, 250'
         case 'event': return '251, 146, 60'
         case 'software': return '34, 211, 238'
+        case 'article': return '251, 191, 36'
         default: return '148, 163, 184'
     }
 }
@@ -43,6 +45,7 @@ const ListIcon = ({ type, className, style }: { type: ListType, className?: stri
         case 'software': return <Box className={className} style={style} />
         case 'event': return <Calendar className={className} style={style} />
         case 'quote': return <Quote className={className} style={style} />
+        case 'article': return <FileText className={className} style={style} />
         default: return <Box className={className} style={style} />
     }
 }
@@ -103,13 +106,45 @@ const StarRating = memo(({
 
 const CompletionCelebration = ({
     item,
+    listType,
     onRate,
     onClose
 }: {
     item: ListItem
+    listType: string
     onRate: (rating: number) => void
     onClose: () => void
 }) => {
+    const [step, setStep] = useState<'rating' | 'thought'>('rating')
+    const [thoughtText, setThoughtText] = useState('')
+    const [savingThought, setSavingThought] = useState(false)
+
+    const handleRate = (star: number) => {
+        onRate(star)
+        setStep('thought')
+    }
+
+    const handleSaveThought = async () => {
+        if (!thoughtText.trim()) { onClose(); return }
+        setSavingThought(true)
+        try {
+            await fetch('/api/memories?capture=true', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    transcript: thoughtText.trim(),
+                    source_reference: {
+                        type: 'list_item',
+                        id: item.id,
+                        title: item.content,
+                        list_type: listType,
+                    }
+                })
+            })
+        } catch { /* silent */ }
+        onClose()
+    }
+
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -131,44 +166,87 @@ const CompletionCelebration = ({
                     boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1), 0 40px 80px rgba(0,0,0,0.6)'
                 }}
             >
-                {/* Celebration burst */}
-                <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: [0, 1.3, 1] }}
-                    transition={{ delay: 0.1, duration: 0.4 }}
-                    className="text-5xl mb-4"
-                >
-                    
-                </motion.div>
+                <AnimatePresence mode="wait">
+                    {step === 'rating' ? (
+                        <motion.div key="rating" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                            {/* Celebration burst */}
+                            <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: [0, 1.3, 1] }}
+                                transition={{ delay: 0.1, duration: 0.4 }}
+                                className="text-5xl mb-4"
+                            >
 
-                <h3 className="text-lg font-black text-[var(--brand-text-primary)] uppercase tracking-tight mb-1">
-                    Marked as done!
-                </h3>
-                <p className="text-sm text-[var(--brand-text-primary)]/40 mb-6 font-mono truncate">{item.content}</p>
+                            </motion.div>
 
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--brand-text-primary)]/30 mb-3">
-                    How was it?
-                </p>
+                            <h3 className="text-lg font-black text-[var(--brand-text-primary)] uppercase tracking-tight mb-1">
+                                Marked as done!
+                            </h3>
+                            <p className="text-sm text-[var(--brand-text-primary)]/40 mb-6 font-mono truncate">{item.content}</p>
 
-                <div className="flex items-center justify-center gap-2 mb-6">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                            key={star}
-                            type="button"
-                            onClick={() => onRate(star)}
-                            className="p-2 rounded-xl transition-all hover:scale-110 hover:bg-brand-primary/10"
-                        >
-                            <Star className="h-7 w-7 text-brand-text-secondary/40 hover:text-brand-text-secondary hover:fill-amber-400 transition-all" />
-                        </button>
-                    ))}
-                </div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--brand-text-primary)]/30 mb-3">
+                                How was it?
+                            </p>
 
-                <button
-                    onClick={onClose}
-                    className="text-[11px] font-bold text-[var(--brand-text-primary)]/30 uppercase tracking-widest hover:text-[var(--brand-text-primary)]/60 transition-colors"
-                >
-                    Skip rating
-                </button>
+                            <div className="flex items-center justify-center gap-2 mb-6">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <button
+                                        key={star}
+                                        type="button"
+                                        onClick={() => handleRate(star)}
+                                        className="p-2 rounded-xl transition-all hover:scale-110 hover:bg-brand-primary/10"
+                                    >
+                                        <Star className="h-7 w-7 text-brand-text-secondary/40 hover:text-brand-text-secondary hover:fill-amber-400 transition-all" />
+                                    </button>
+                                ))}
+                            </div>
+
+                            <button
+                                onClick={() => setStep('thought')}
+                                className="text-[11px] font-bold text-[var(--brand-text-primary)]/30 uppercase tracking-widest hover:text-[var(--brand-text-primary)]/60 transition-colors"
+                            >
+                                Skip rating
+                            </button>
+                        </motion.div>
+                    ) : (
+                        <motion.div key="thought" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                            <div className="text-3xl mb-4">💭</div>
+                            <h3 className="text-base font-black text-[var(--brand-text-primary)] uppercase tracking-tight mb-1">
+                                Any thoughts?
+                            </h3>
+                            <p className="text-xs text-[var(--brand-text-primary)]/30 mb-5">
+                                Capture a reaction, insight, or feeling
+                            </p>
+                            <textarea
+                                autoFocus
+                                value={thoughtText}
+                                onChange={e => setThoughtText(e.target.value)}
+                                placeholder={`What did you think of ${item.content}?`}
+                                className="w-full rounded-2xl px-4 py-3 text-sm text-[var(--brand-text-primary)] placeholder:text-[var(--brand-text-primary)]/20 resize-none focus:outline-none mb-4"
+                                style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', minHeight: '80px' }}
+                                rows={3}
+                                onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSaveThought() }}
+                            />
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={handleSaveThought}
+                                    disabled={savingThought}
+                                    className="flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all"
+                                    style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', color: 'var(--brand-primary)' }}
+                                >
+                                    {savingThought ? 'Saving...' : thoughtText.trim() ? 'Save thought' : 'Done'}
+                                </button>
+                                <button
+                                    onClick={onClose}
+                                    className="px-4 py-2.5 rounded-xl text-[11px] font-bold text-[var(--brand-text-primary)]/30 uppercase tracking-widest hover:text-[var(--brand-text-primary)]/60 transition-colors"
+                                    style={{ border: '1px solid rgba(255,255,255,0.08)' }}
+                                >
+                                    Skip
+                                </button>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </motion.div>
         </motion.div>
     )
@@ -189,6 +267,8 @@ const getStatusLabels = (listType: string): Record<StatusFilter, string> => {
             return { all: 'All', pending: 'Want to Watch', active: 'Watching', completed: 'Watched' }
         case 'book':
             return { all: 'All', pending: 'Want to Read', active: 'Reading', completed: 'Read' }
+        case 'article':
+            return { all: 'All', pending: 'To Read', active: 'Reading', completed: 'Read' }
         case 'music':
             return { all: 'All', pending: 'Want to Listen', active: 'Listening', completed: 'Listened' }
         case 'game':
@@ -371,7 +451,7 @@ const QuoteCard = memo(({
                                 </p>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setIsEditingAuthor(true) }}
-                                    className="p-1.5 rounded-xl bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] opacity-0 group-hover/author:opacity-100 transition-all"
+                                    className="p-1.5 rounded-xl bg-[var(--glass-surface)] active:bg-[rgba(255,255,255,0.1)] opacity-40 active:opacity-100 transition-all active:scale-95"
                                 >
                                     <Pencil className="h-3 w-3 text-[var(--brand-text-primary)]/50" />
                                 </button>
@@ -417,7 +497,7 @@ const QuoteCard = memo(({
                     {/* Copy button */}
                     <button
                         onClick={(e) => { e.stopPropagation(); onCopy(item.content) }}
-                        className="p-2.5 rounded-xl bg-zinc-900/50 backdrop-blur-sm border border-[var(--glass-surface-hover)] hover:bg-[rgba(255,255,255,0.1)] text-brand-text-muted hover:text-[var(--brand-text-primary)] opacity-0 group-hover:opacity-100 transition-all duration-300"
+                        className="p-2.5 rounded-xl bg-zinc-900/50 backdrop-blur-sm border border-[var(--glass-surface-hover)] active:bg-[rgba(255,255,255,0.1)] text-brand-text-muted active:text-[var(--brand-text-primary)] opacity-50 transition-all active:scale-95"
                         aria-label="Copy quote"
                     >
                         <Copy className="h-4 w-4" />
@@ -426,7 +506,7 @@ const QuoteCard = memo(({
                     {/* Delete */}
                     <button
                         onClick={(e) => { e.stopPropagation(); onDelete(item.id, item.list_id) }}
-                        className="p-2.5 rounded-xl bg-zinc-900/50 backdrop-blur-sm border hover:bg-brand-primary/20 hover:border-red-500/40 text-brand-text-muted hover:text-brand-text-secondary opacity-0 group-hover:opacity-100 transition-all duration-300"
+                        className="p-2.5 rounded-xl bg-zinc-900/50 backdrop-blur-sm border active:bg-brand-primary/20 active:border-red-500/40 text-brand-text-muted active:text-brand-text-secondary opacity-50 transition-all active:scale-95"
                         style={{ borderColor: `rgba(${colors.rgb}, 0.2)` }}
                         aria-label="Delete phrase"
                     >
@@ -451,7 +531,8 @@ const StandardItemCard = memo(({
     onStatusChange,
     onRate,
     onMarkDone,
-    rgb
+    rgb,
+    hasThought
 }: {
     item: ListItem
     listType: string
@@ -462,6 +543,7 @@ const StandardItemCard = memo(({
     onRate: (id: string, rating: number) => void
     onMarkDone: (item: ListItem) => void
     rgb: string
+    hasThought?: boolean
 }) => {
     const hasImage = item.metadata?.image
     const isPosterType = listType === 'book' || listType === 'film' || listType === 'movie' || listType === 'show' || listType === 'tv'
@@ -530,22 +612,39 @@ const StandardItemCard = memo(({
 
             {/* Content overlay */}
             <div className="absolute inset-0 p-3 flex flex-col justify-end">
-                {/* Status toggle circle */}
-                <div className="flex items-start gap-2 mb-1">
+                {/* Status toggle — shows "Done?" nudge when active */}
+                {item.status === 'active' && (
                     <button
                         onClick={handleStatusCycle}
-                        className="mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all"
+                        className="mb-2 self-start flex items-center gap-1 px-2 py-0.5 rounded-full active:scale-95 transition-all"
                         style={{
-                            borderColor: `rgba(${statusColor}, ${statusOpacity})`,
-                            backgroundColor: isCompleted ? `rgba(${statusColor}, 0.2)` : 'transparent'
+                            background: `rgba(${rgb}, 0.15)`,
+                            border: `1px solid rgba(${rgb}, 0.4)`,
+                            color: `rgb(${rgb})`,
+                            fontSize: '9px',
+                            fontWeight: 900,
+                            letterSpacing: '0.1em',
+                            textTransform: 'uppercase',
                         }}
                     >
-                        {isCompleted && <Check className="w-2.5 h-2.5 text-brand-text-secondary" />}
-                        {item.status === 'active' && (
-                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: `rgb(${rgb})` }} />
-                        )}
+                        <Check className="w-2.5 h-2.5" />
+                        Done?
                     </button>
-                    <h3 className={`text-[var(--brand-text-primary)] font-bold leading-tight group-hover:text-brand-primary transition-colors uppercase tracking-tight drop-shadow-lg text-xs mb-1 ${isCompleted ? 'line-through opacity-50' : ''}`}>
+                )}
+                <div className="flex items-start gap-2 mb-1">
+                    {item.status !== 'active' && (
+                        <button
+                            onClick={handleStatusCycle}
+                            className="mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all"
+                            style={{
+                                borderColor: `rgba(${statusColor}, ${statusOpacity})`,
+                                backgroundColor: isCompleted ? `rgba(${statusColor}, 0.2)` : 'transparent'
+                            }}
+                        >
+                            {isCompleted && <Check className="w-2.5 h-2.5 text-brand-text-secondary" />}
+                        </button>
+                    )}
+                    <h3 className={`text-[var(--brand-text-primary)] font-bold leading-tight uppercase tracking-tight drop-shadow-lg text-xs mb-1 ${isCompleted ? 'line-through opacity-50' : ''} ${item.status === 'active' ? 'pl-0' : ''}`}>
                         {item.content}
                     </h3>
                 </div>
@@ -627,6 +726,17 @@ const StandardItemCard = memo(({
                         Enriching...
                     </div>
                 )}
+
+                {/* Thought captured indicator */}
+                {hasThought && (
+                    <div
+                        className="flex items-center gap-1 mt-1 pl-6"
+                        title="You captured a thought about this"
+                    >
+                        <Brain className="w-2.5 h-2.5" style={{ color: 'rgba(251,191,36,0.7)' }} />
+                        <span className="text-[8px] font-black uppercase tracking-widest" style={{ color: 'rgba(251,191,36,0.6)' }}>thought captured</span>
+                    </div>
+                )}
             </div>
 
             {/* Quick actions on hover */}
@@ -655,7 +765,8 @@ function MasonryListGrid({
     onStatusChange,
     onRate,
     onMarkDone,
-    rgb
+    rgb,
+    thoughtCapturedIds
 }: {
     items: ListItem[]
     listType: string
@@ -666,6 +777,7 @@ function MasonryListGrid({
     onRate: (id: string, rating: number) => void
     onMarkDone: (item: ListItem) => void
     rgb: string
+    thoughtCapturedIds?: Set<string>
 }) {
     const [columns, setColumns] = useState(2)
 
@@ -719,6 +831,7 @@ function MasonryListGrid({
                             onRate={onRate}
                             onMarkDone={onMarkDone}
                             rgb={rgb}
+                            hasThought={thoughtCapturedIds?.has(item.id)}
                         />
                     ))}
                 </div>
@@ -735,9 +848,21 @@ export default function ListDetailPage() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const { lists, currentListItems, currentListId, loading, fetchListItems, addListItem, fetchLists, deleteListItem, reorderItems, updateListItemStatus, updateListItemMetadata } = useListStore()
+    const { memories } = useMemoryStore()
     const { addToast } = useToast()
 
     const list = lists.find(l => l.id === id)
+
+    // Set of list-item IDs that have at least one captured thought
+    const thoughtCapturedIds = useMemo(() => {
+        const ids = new Set<string>()
+        memories.forEach(m => {
+            if (m.source_reference?.type === 'list_item' && m.source_reference.id) {
+                ids.add(m.source_reference.id)
+            }
+        })
+        return ids
+    }, [memories])
 
     const isCorrectList = currentListId === id
     const displayItems = isCorrectList ? currentListItems : []
@@ -1112,6 +1237,7 @@ export default function ListDetailPage() {
                                     onRate={handleRate}
                                     onMarkDone={handleMarkDone}
                                     rgb={rgb}
+                                    thoughtCapturedIds={thoughtCapturedIds}
                                 />
                             ) : loading ? (
                                 <div className="flex flex-wrap gap-3">
@@ -1150,6 +1276,7 @@ export default function ListDetailPage() {
                 {celebrationItem && (
                     <CompletionCelebration
                         item={celebrationItem}
+                        listType={list?.type || 'generic'}
                         onRate={handleCelebrationRate}
                         onClose={() => setCelebrationItem(null)}
                     />

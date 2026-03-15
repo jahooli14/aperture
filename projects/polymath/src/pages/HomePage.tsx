@@ -33,6 +33,7 @@ import { PROJECT_COLORS } from '../components/projects/ProjectCard'
 import { PowerHourHero } from '../components/home/PowerHourHero'
 import type { Memory, Project, SynthesisInsight } from '../types'
 import { CohesionSummaryWidget } from '../components/home/CohesionSummaryWidget'
+import { MemoryDetailModal } from '../components/memories/MemoryDetailModal'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { readingDb } from '../lib/db'
 
@@ -150,27 +151,7 @@ function GetInspirationSection({
           >
             <Link
               to={inspiration.url || '/projects'}
-              className="group block p-6 attention-card transition-all duration-300 flex-1 flex flex-col relative overflow-hidden"
-              onMouseEnter={(e) => {
-                const projId = inspiration.url?.split('/').pop()
-                if (inspiration.type === 'project') {
-                  const project = projects.find(p => p.id === projId)
-                  const theme = getTheme(project?.type || 'other', inspiration.title)
-                  e.currentTarget.style.background = `rgba(${theme.rgb}, 0.15)`
-                } else {
-                  e.currentTarget.style.background = 'var(--glass-surface-hover)'
-                }
-              }}
-              onMouseLeave={(e) => {
-                const projId = inspiration.url?.split('/').pop()
-                if (inspiration.type === 'project') {
-                  const project = projects.find(p => p.id === projId)
-                  const theme = getTheme(project?.type || 'other', inspiration.title)
-                  e.currentTarget.style.background = theme.backgroundColor
-                } else {
-                  e.currentTarget.style.background = 'var(--brand-glass-bg)'
-                }
-              }}
+              className="group block p-6 attention-card transition-all duration-300 flex-1 flex flex-col relative overflow-hidden active:scale-[0.98]"
             >
               <div className="relative z-10 flex-1 flex flex-col h-full">
                 <div className="flex items-center justify-between gap-4 mb-4">
@@ -238,14 +219,6 @@ function GetInspirationSection({
                   background: theme.backgroundColor,
                   boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
                   borderColor: theme.borderColor
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = `rgba(${theme.rgb}, 0.15)`
-                  e.currentTarget.style.borderColor = `rgba(${theme.rgb}, 0.4)`
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = theme.backgroundColor
-                  e.currentTarget.style.borderColor = theme.borderColor
                 }}
               >
                 <div className="relative z-10 flex-1 flex flex-col h-full">
@@ -560,6 +533,176 @@ function InsightsSection() {
 }
 
 import { FocusStream } from '../components/home/FocusStream'
+import { Film, Book, Music, MapPin, Gamepad2, Monitor, FileText, Box as BoxIcon, List as ListIcon } from 'lucide-react'
+import { useListStore } from '../stores/useListStore'
+
+// List-type icon map (shared across home components)
+const LIST_ICON_MAP: Record<string, React.FC<{ className?: string; style?: React.CSSProperties }>> = {
+  film: Film, book: Book, music: Music, place: MapPin, game: Gamepad2,
+  tech: Monitor, software: Monitor, article: FileText,
+}
+
+function RecentThoughtsSection({ memories, onOpenMemory }: { memories: Memory[], onOpenMemory: (id: string) => void }) {
+  const recent = [...memories]
+    .sort((a, b) => {
+      const aTime = new Date(a.created_at || '').getTime()
+      const bTime = new Date(b.created_at || '').getTime()
+      return bTime - aTime
+    })
+    .slice(0, 3)
+
+  if (recent.length === 0) return null
+
+  return (
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 aperture-shelf">
+      <h2 className="section-header mb-4">
+        on your <span>mind</span>
+      </h2>
+      <div className="space-y-3">
+        {recent.map((memory) => {
+          const src = memory.source_reference
+          const isFromList = src?.type === 'list_item' && src.title
+          const SrcIcon = isFromList ? (LIST_ICON_MAP[src!.list_type || ''] || BoxIcon) : null
+          return (
+            <button
+              key={memory.id}
+              onClick={() => onOpenMemory(memory.id)}
+              className="w-full text-left p-4 glass-card glass-card-hover rounded-xl transition-all"
+              style={{ boxShadow: '3px 3px 0 rgba(0,0,0,0.5)' }}
+            >
+              {isFromList && SrcIcon && (
+                <div className="flex items-center gap-1 mb-1.5">
+                  <span
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-widest"
+                    style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.2)', color: 'rgba(251,191,36,0.7)' }}
+                  >
+                    <SrcIcon className="w-2.5 h-2.5" />
+                    {src!.title}
+                  </span>
+                </div>
+              )}
+              <p className="text-sm leading-relaxed line-clamp-2 aperture-body" style={{ color: 'var(--brand-text-primary)' }}>
+                {memory.body || memory.title}
+              </p>
+              <p className="text-xs mt-2 opacity-50 aperture-body" style={{ color: 'var(--brand-primary)' }}>
+                {new Date(memory.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </p>
+            </button>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
+// ---- List quick-add sheet shown from home capture row ----
+function HomeListQuickAdd({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const { lists, fetchLists, addListItem } = useListStore()
+  const [selectedListId, setSelectedListId] = useState<string | null>(null)
+  const [text, setText] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const inputRef = React.useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (isOpen) { fetchLists(); setText(''); setSelectedListId(null) }
+  }, [isOpen])
+
+  useEffect(() => {
+    if (selectedListId) setTimeout(() => inputRef.current?.focus(), 80)
+  }, [selectedListId])
+
+  const selectedList = lists.find(l => l.id === selectedListId)
+
+  const handleAdd = async (e?: React.FormEvent) => {
+    e?.preventDefault()
+    if (!text.trim() || !selectedListId || submitting) return
+    setSubmitting(true)
+    try {
+      await addListItem({ list_id: selectedListId, content: text.trim(), status: 'pending' })
+      onClose()
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (!isOpen) return null
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl px-5 pt-5 pb-10"
+        style={{ background: '#141f32', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1), 0 -20px 60px rgba(0,0,0,0.5)' }}
+      >
+        <div className="w-10 h-1 rounded-full bg-white/20 mx-auto mb-5" />
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] mb-3" style={{ color: 'var(--brand-primary)' }}>
+          Add to list
+        </p>
+
+        {!selectedListId ? (
+          <div className="space-y-2 max-h-72 overflow-y-auto">
+            {lists.length === 0 ? (
+              <div className="py-8 text-center">
+                <p className="text-sm font-bold mb-1" style={{ color: 'var(--brand-text-secondary)' }}>No lists yet</p>
+                <Link
+                  to="/lists"
+                  onClick={onClose}
+                  className="text-[11px] font-black uppercase tracking-widest"
+                  style={{ color: 'var(--brand-primary)' }}
+                >
+                  Create your first list →
+                </Link>
+              </div>
+            ) : lists.map(list => {
+              const Icon = LIST_ICON_MAP[list.type] || BoxIcon
+              return (
+                <button
+                  key={list.id}
+                  onClick={() => setSelectedListId(list.id)}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl text-left active:scale-[0.98] transition-all"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+                >
+                  <Icon className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
+                  <div>
+                    <p className="text-sm font-bold text-[var(--brand-text-primary)] uppercase tracking-tight">{list.title}</p>
+                    {list.description && <p className="text-[10px] text-[var(--brand-text-secondary)] truncate">{list.description}</p>}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        ) : (
+          <form onSubmit={handleAdd}>
+            <button
+              type="button"
+              onClick={() => setSelectedListId(null)}
+              className="flex items-center gap-1.5 mb-4 text-[10px] font-black uppercase tracking-widest"
+              style={{ color: 'var(--brand-primary)' }}
+            >
+              ← {selectedList?.title}
+            </button>
+            <input
+              ref={inputRef}
+              value={text}
+              onChange={e => setText(e.target.value)}
+              placeholder={`Add to ${selectedList?.title || 'list'}...`}
+              className="w-full px-4 py-3 rounded-xl text-sm text-[var(--brand-text-primary)] placeholder:text-[var(--brand-text-primary)]/20 focus:outline-none mb-3"
+              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
+            />
+            <button
+              type="submit"
+              disabled={!text.trim() || submitting}
+              className="w-full py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all disabled:opacity-40"
+              style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', color: 'var(--brand-primary)' }}
+            >
+              {submitting ? 'Adding...' : 'Add'}
+            </button>
+          </form>
+        )}
+      </div>
+    </>
+  )
+}
 
 export function HomePage() {
   const navigate = useNavigate()
@@ -582,11 +725,13 @@ export function HomePage() {
   const [saveArticleOpen, setSaveArticleOpen] = useState(false)
   const [createThoughtOpen, setCreateThoughtOpen] = useState(false)
   const [createProjectOpen, setCreateProjectOpen] = useState(false)
+  const [listQuickAddOpen, setListQuickAddOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showDebugPanel, setShowDebugPanel] = useState(false)
   const [driftModeOpen, setDriftModeOpen] = useState(false)
   const [breakPrompts, setBreakPrompts] = useState<any[]>([])
   const [showMorningFollowUp, setShowMorningFollowUp] = useState(true)
+  const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null)
 
 
   // Refetch data whenever user navigates to this page
@@ -884,50 +1029,51 @@ export function HomePage() {
 
         {/* 1. ADD SOMETHING NEW */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6 mt-4">
-
-          <div className="flex items-center gap-3">
-            {/* Voice Note */}
+          <div className="flex items-center gap-2">
+            {/* Voice */}
             <button
               onClick={(e) => {
                 e.stopPropagation()
                 window.dispatchEvent(new CustomEvent('openVoiceCapture'))
               }}
-              className="flex-1 h-14 glass-button hover:bg-brand-surface group"
+              className="flex-1 flex flex-col items-center gap-1 py-3 glass-button active:scale-95 transition-transform"
               title="Voice Note"
             >
-              <Mic className="h-6 w-6 text-brand-primary group-hover:scale-110 transition-transform" />
+              <Mic className="h-5 w-5 text-brand-primary" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-brand-primary opacity-60">Voice</span>
             </button>
 
-            {/* Written Thought */}
+            {/* Thought */}
             <button
               onClick={() => setCreateThoughtOpen(true)}
-              className="flex-1 h-14 glass-button hover:bg-brand-surface group"
+              className="flex-1 flex flex-col items-center gap-1 py-3 glass-button active:scale-95 transition-transform"
               title="Thought"
             >
-              <Brain className="h-6 w-6 text-brand-primary group-hover:scale-110 transition-transform" />
+              <Brain className="h-5 w-5 text-brand-primary" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-brand-primary opacity-60">Thought</span>
             </button>
 
-            {/* Article */}
+            {/* List — replaces Article, which now lives in Lists */}
             <button
-              onClick={() => setSaveArticleOpen(true)}
-              className="flex-1 h-14 glass-button hover:bg-brand-surface group"
-              title="Article"
+              onClick={() => setListQuickAddOpen(true)}
+              className="flex-1 flex flex-col items-center gap-1 py-3 glass-button active:scale-95 transition-transform"
+              title="Add to list"
             >
-              <FileText className="h-6 w-6 text-brand-primary group-hover:scale-110 transition-transform" />
+              <ListIcon className="h-5 w-5 text-brand-primary" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-brand-primary opacity-60">List</span>
             </button>
 
             {/* Project */}
             <button
               onClick={() => setCreateProjectOpen(true)}
-              className="flex-1 h-14 glass-button hover:bg-brand-surface group"
+              className="flex-1 flex flex-col items-center gap-1 py-3 glass-button active:scale-95 transition-transform"
               title="Project"
             >
-              <Layers className="h-6 w-6 text-brand-primary group-hover:scale-110 transition-transform" />
+              <Layers className="h-5 w-5 text-brand-primary" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-brand-primary opacity-60">Project</span>
             </button>
           </div>
         </section>
-
-        <CohesionSummaryWidget />
 
         {/* Aperture Power Hour - The Hero Engine */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4 aperture-shelf">
@@ -955,60 +1101,14 @@ export function HomePage() {
           <FocusStream />
         </div>
 
-        {/* 2b. AI COUNCIL  Multi-Perspective Next-Step Suggestions */}
-        {(priorityProject || recentProject) && (
-          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 aperture-shelf">
-            <div className="mb-0">
-              <h2 className="section-header">
-                council of <span>advisors</span>
-              </h2>
-            </div>
-            <MultiPerspectiveSuggestions
-              project={(priorityProject || recentProject)!}
-              onAddTodo={async (text) => {
-                const project = (priorityProject || recentProject)!
-                // Append a new task to the project metadata and save
-                const existing = project.metadata?.tasks || []
-                const newTask = {
-                  id: `task-${Date.now()}`,
-                  text,
-                  done: false,
-                  created_at: new Date().toISOString(),
-                  order: existing.length
-                }
-                try {
-                  await fetch(`/api/projects?id=${project.id}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      metadata: {
-                        ...project.metadata,
-                        tasks: [...existing, newTask]
-                      }
-                    })
-                  })
-                  // Refresh projects in store
-                  window.dispatchEvent(new CustomEvent('projectEnriched', { detail: { projectId: project.id } }))
-                } catch (err) {
-                  console.error('[HomePage] Failed to add AI todo:', err)
-                }
-              }}
-            />
-          </section>
-        )}
-
-        {/* 3. GET INSPIRATION (Glass Cards + Spark) */}
-        <GetInspirationSection
-          excludeProjectIds={projects.filter(p => p.status === 'active').map(p => p.id)}
-          hasPendingSuggestions={pendingSuggestions.length > 0}
-          pendingSuggestionsCount={pendingSuggestions.length}
-          projectsLoading={projectsLoading}
-          sparkCandidate={sparkCandidate}
-          projects={projects}
+        {/* 3. WHAT'S ON YOUR MIND - Recent Thoughts */}
+        <RecentThoughtsSection
+          memories={memories}
+          onOpenMemory={(id) => {
+            const m = memories.find(m => m.id === id) || null
+            setSelectedMemory(m)
+          }}
         />
-
-        {/* 4. YOUR INSIGHTS (Cyan Theme) */}
-        <InsightsSection />
 
 
         {/* 6. EXPLORE (Bottom Links) */}
@@ -1070,13 +1170,7 @@ export function HomePage() {
             {/* Bedtime Ideas */}
             <Link
               to="/bedtime"
-              className="group p-5 glass-card glass-card-hover transition-all"
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--glass-surface)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'var(--brand-glass-bg)'
-              }}
+              className="p-5 glass-card glass-card-hover transition-all active:scale-[0.98]"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
@@ -1090,20 +1184,14 @@ export function HomePage() {
                     </p>
                   </div>
                 </div>
-                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all text-[var(--brand-primary)]" />
+                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-30 text-[var(--brand-primary)]" />
               </div>
             </Link>
 
             {/* Drift Mode */}
             <button
               onClick={handleOpenDrift}
-              className="group p-5 glass-card glass-card-hover transition-all text-left"
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--glass-surface)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'var(--brand-glass-bg)'
-              }}
+              className="p-5 glass-card glass-card-hover transition-all text-left active:scale-[0.98]"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
@@ -1117,20 +1205,14 @@ export function HomePage() {
                     </p>
                   </div>
                 </div>
-                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all text-[var(--brand-primary)]" />
+                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-30 text-[var(--brand-primary)]" />
               </div>
             </button>
 
             {/* Discover Projects */}
             <Link
               to="/suggestions"
-              className="group p-5 glass-card glass-card-hover transition-all"
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--glass-surface)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'var(--brand-glass-bg)'
-              }}
+              className="p-5 glass-card glass-card-hover transition-all active:scale-[0.98]"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
@@ -1144,20 +1226,14 @@ export function HomePage() {
                     </p>
                   </div>
                 </div>
-                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all text-[var(--brand-primary)]" />
+                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-30 text-[var(--brand-primary)]" />
               </div>
             </Link>
 
             {/* Analysis */}
             <Link
               to="/insights"
-              className="group p-5 glass-card glass-card-hover transition-all"
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--glass-surface)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'var(--brand-glass-bg)'
-              }}
+              className="p-5 glass-card glass-card-hover transition-all active:scale-[0.98]"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
@@ -1171,7 +1247,7 @@ export function HomePage() {
                     </p>
                   </div>
                 </div>
-                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all text-[var(--brand-primary)]" />
+                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-30 text-[var(--brand-primary)]" />
               </div>
             </Link>
           </div>
@@ -1193,9 +1269,14 @@ export function HomePage() {
       </div>
 
       {/* Dialogs  controlled open/close via state */}
-      <SaveArticleDialog open={saveArticleOpen} onClose={() => setSaveArticleOpen(false)} />
       <CreateMemoryDialog isOpen={createThoughtOpen} onOpenChange={setCreateThoughtOpen} hideTrigger />
       <CreateProjectDialog isOpen={createProjectOpen} onOpenChange={setCreateProjectOpen} hideTrigger />
+      <HomeListQuickAdd isOpen={listQuickAddOpen} onClose={() => setListQuickAddOpen(false)} />
+      <MemoryDetailModal
+        memory={selectedMemory}
+        isOpen={!!selectedMemory}
+        onClose={() => setSelectedMemory(null)}
+      />
     </motion.div>
   )
 }
