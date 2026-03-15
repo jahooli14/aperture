@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { ThemeCluster } from '../../types'
-import { ChevronRight, Brain, Lightbulb, Leaf, Code, Palette, Heart, BookOpen, Zap, Users } from 'lucide-react'
+import { ChevronRight, Brain, Lightbulb, Leaf, Code, Palette, Heart, BookOpen, Zap, Users, Sprout } from 'lucide-react'
+import { CreateProjectDialog } from '../projects/CreateProjectDialog'
 
 interface ThemeClusterCardProps {
   cluster: ThemeCluster
@@ -23,9 +24,14 @@ const getIconComponent = (name: string) => {
 
 export const ThemeClusterCard = React.memo(function ThemeClusterCard({ cluster, onClick }: ThemeClusterCardProps) {
   const IconComponent = getIconComponent(cluster.name)
+  const [seedOpen, setSeedOpen] = useState(false)
+
+  const clusterDescription = cluster.memories.length > 0
+    ? cluster.memories.slice(0, 3).map(m => m.body || m.title).filter(Boolean).join(' / ').slice(0, 200)
+    : cluster.sample_keywords.join(', ')
+
   return (
-    <button
-      onClick={onClick}
+    <div
       className="group relative p-4 rounded-lg text-left w-full flex flex-col items-start gap-3 transition-all duration-200"
       style={{
         background: '#111113',
@@ -84,10 +90,62 @@ export const ThemeClusterCard = React.memo(function ThemeClusterCard({ cluster, 
         </div>
       </div>
 
+      {/* Clickable overlay for the card (opens cluster) */}
+      <button
+        onClick={onClick}
+        className="absolute inset-0 rounded-lg"
+        aria-label={`Open ${cluster.name} cluster`}
+      />
+
       {/* Hover indicator */}
-      <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute top-4 right-14 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
         <ChevronRight className="w-4 h-4" style={{ color: "var(--brand-primary)" }} />
       </div>
-    </button>
+
+      {/* Seed as project button */}
+      {cluster.memory_count >= 2 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); setSeedOpen(true) }}
+          className="absolute top-3 right-3 z-10 flex items-center gap-1 px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+          style={{
+            background: 'rgba(52, 211, 153, 0.12)',
+            border: '1px solid rgba(52, 211, 153, 0.3)',
+            color: '#34d399',
+            fontSize: '9px',
+            fontWeight: 900,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+          }}
+          title="Seed as project"
+        >
+          <Sprout className="w-3 h-3" />
+          Seed
+        </button>
+      )}
+
+      <CreateProjectDialog
+        isOpen={seedOpen}
+        onOpenChange={setSeedOpen}
+        hideTrigger
+        initialTitle={cluster.name}
+        initialDescription={clusterDescription}
+        onCreated={async (projectId) => {
+          // Link all cluster memories to the new project
+          const memoryIds = cluster.memories.map(m => m.id)
+          await Promise.allSettled(memoryIds.map(memoryId =>
+            fetch('/api/connections', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                source_type: 'memory', source_id: memoryId,
+                target_type: 'project', target_id: projectId,
+                connection_type: 'inspired_by', created_by: 'user',
+                reasoning: `Memory from "${cluster.name}" theme cluster`
+              })
+            })
+          ))
+        }}
+      />
+    </div>
   )
 })

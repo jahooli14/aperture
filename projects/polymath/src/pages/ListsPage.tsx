@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { Reorder, motion, AnimatePresence } from 'framer-motion'
-import { Plus, Film, Music, Monitor, Book, MapPin, Gamepad2, Box, Calendar, Quote, Trash2, GripVertical, ListOrdered, Check } from 'lucide-react'
+import { Plus, Film, Music, Monitor, Book, MapPin, Gamepad2, Box, Calendar, Quote, FileText, Trash2, GripVertical, ListOrdered, Check } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useListStore } from '../stores/useListStore'
 import { Button } from '../components/ui/button'
@@ -20,6 +20,7 @@ const ListIcon = ({ type, className, style }: { type: ListType, className?: stri
         case 'software': return <Box className={className} style={style} />
         case 'event': return <Calendar className={className} style={style} />
         case 'quote': return <Quote className={className} style={style} />
+        case 'article': return <FileText className={className} style={style} />
         default: return <Box className={className} style={style} />
     }
 }
@@ -35,6 +36,7 @@ const ListColor = (type: ListType) => {
         case 'quote': return '167, 139, 250' // Violet-light
         case 'event': return '251, 146, 60' // Orange
         case 'software': return '34, 211, 238' // Cyan
+        case 'article': return '251, 191, 36' // Amber
         default: return '148, 163, 184' // Slate
     }
 }
@@ -50,6 +52,7 @@ const ListGradient = (type: ListType) => {
         case 'quote': return 'from-violet-500/20 via-purple-500/10 to-fuchsia-500/20'
         case 'event': return 'from-orange-500/20 via-amber-500/10 to-yellow-500/20'
         case 'software': return 'from-cyan-500/20 via-blue-500/10 to-indigo-500/20'
+        case 'article': return 'from-amber-500/20 via-yellow-500/10 to-orange-500/20'
         default: return 'from-slate-500/20 via-gray-500/10 to-zinc-500/20'
     }
 }

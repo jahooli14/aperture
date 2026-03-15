@@ -3,6 +3,7 @@
  * Celebrates completing a project and surfaces its origin thought if seeded from one.
  */
 
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Check, Sprout, X } from 'lucide-react'
 import type { Memory, Project } from '../../types'
@@ -30,6 +31,51 @@ function formatDuration(createdAt: string): string {
 export function ProjectCompletionModal({ project, sparkedByMemories, isOpen, onClose }: ProjectCompletionModalProps) {
   const duration = formatDuration(project.created_at || new Date().toISOString())
   const firstSpark = sparkedByMemories[0]
+  const [step, setStep] = useState<'celebration' | 'reflection'>('celebration')
+  const [reflection, setReflection] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const handleDone = () => {
+    setStep('reflection')
+  }
+
+  const handleSaveReflection = async () => {
+    if (!reflection.trim()) { onClose(); return }
+    setSaving(true)
+    try {
+      const resp = await fetch('/api/memories?capture=true', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transcript: reflection.trim(),
+          source_reference: `project:${project.id}`,
+          tags: ['project-reflection']
+        })
+      })
+      if (resp.ok) {
+        const data = await resp.json()
+        // Link reflection memory to the project
+        if (data.memory?.id) {
+          await fetch('/api/connections', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              source_type: 'memory', source_id: data.memory.id,
+              target_type: 'project', target_id: project.id,
+              connection_type: 'project_reflection', created_by: 'user',
+              reasoning: 'Reflection captured at project completion'
+            })
+          }).catch(() => {})
+        }
+      }
+    } catch { /* silent */ }
+    onClose()
+  }
+
+  // Reset to celebration step whenever the modal opens
+  useEffect(() => {
+    if (isOpen) { setStep('celebration'); setReflection('') }
+  }, [isOpen])
 
   return (
     <AnimatePresence>
@@ -73,56 +119,100 @@ export function ProjectCompletionModal({ project, sparkedByMemories, isOpen, onC
                 background: 'radial-gradient(ellipse at 50% 0%, rgba(52, 211, 153, 0.12), transparent 70%)'
               }} />
 
-              <div className="relative z-10 text-center">
-                {/* Check icon */}
-                <div className="mx-auto mb-4 h-16 w-16 rounded-full flex items-center justify-center"
-                  style={{ background: 'rgba(52, 211, 153, 0.15)', border: '2px solid rgba(52, 211, 153, 0.3)' }}
-                >
-                  <Check className="h-8 w-8" style={{ color: '#34d399' }} />
-                </div>
-
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] mb-2" style={{ color: '#34d399' }}>
-                  You built this
-                </p>
-                <h2 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] mb-2">
-                  {project.title}
-                </h2>
-                <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>
-                  {duration} in the making
-                </p>
-
-                {/* Origin thought */}
-                {firstSpark && (
-                  <div className="mt-6 p-4 rounded-xl text-left"
-                    style={{ background: 'rgba(52, 211, 153, 0.06)', border: '1px solid rgba(52, 211, 153, 0.2)' }}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <Sprout className="h-3.5 w-3.5" style={{ color: '#34d399' }} />
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#34d399' }}>
-                        This started as a thought
-                      </span>
+              <AnimatePresence mode="wait">
+                {step === 'celebration' ? (
+                  <motion.div key="celebration" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="relative z-10 text-center">
+                    {/* Check icon */}
+                    <div className="mx-auto mb-4 h-16 w-16 rounded-full flex items-center justify-center"
+                      style={{ background: 'rgba(52, 211, 153, 0.15)', border: '2px solid rgba(52, 211, 153, 0.3)' }}
+                    >
+                      <Check className="h-8 w-8" style={{ color: '#34d399' }} />
                     </div>
-                    <p className="text-sm italic leading-relaxed line-clamp-3" style={{ color: 'var(--brand-text-primary)' }}>
-                      "{firstSpark.body || firstSpark.title}"
-                    </p>
-                    <p className="text-[10px] mt-1 opacity-50" style={{ color: 'var(--brand-primary)' }}>
-                      {new Date(firstSpark.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                    </p>
-                  </div>
-                )}
 
-                <button
-                  onClick={onClose}
-                  className="mt-6 w-full py-3 rounded-xl font-black uppercase text-xs tracking-widest transition-all"
-                  style={{
-                    background: 'rgba(52, 211, 153, 0.15)',
-                    border: '1px solid rgba(52, 211, 153, 0.3)',
-                    color: '#34d399'
-                  }}
-                >
-                  Done
-                </button>
-              </div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] mb-2" style={{ color: '#34d399' }}>
+                      You built this
+                    </p>
+                    <h2 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] mb-2">
+                      {project.title}
+                    </h2>
+                    <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>
+                      {duration} in the making
+                    </p>
+
+                    {/* Origin thought */}
+                    {firstSpark && (
+                      <div className="mt-6 p-4 rounded-xl text-left"
+                        style={{ background: 'rgba(52, 211, 153, 0.06)', border: '1px solid rgba(52, 211, 153, 0.2)' }}
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <Sprout className="h-3.5 w-3.5" style={{ color: '#34d399' }} />
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#34d399' }}>
+                            This started as a thought
+                          </span>
+                        </div>
+                        <p className="text-sm italic leading-relaxed line-clamp-3" style={{ color: 'var(--brand-text-primary)' }}>
+                          "{firstSpark.body || firstSpark.title}"
+                        </p>
+                        <p className="text-[10px] mt-1 opacity-50" style={{ color: 'var(--brand-primary)' }}>
+                          {new Date(firstSpark.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                        </p>
+                      </div>
+                    )}
+
+                    <button
+                      onClick={handleDone}
+                      className="mt-6 w-full py-3 rounded-xl font-black uppercase text-xs tracking-widest transition-all"
+                      style={{
+                        background: 'rgba(52, 211, 153, 0.15)',
+                        border: '1px solid rgba(52, 211, 153, 0.3)',
+                        color: '#34d399'
+                      }}
+                    >
+                      Done
+                    </button>
+                  </motion.div>
+                ) : (
+                  <motion.div key="reflection" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="relative z-10 text-center">
+                    <div className="text-4xl mb-4">🧠</div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] mb-2" style={{ color: '#34d399' }}>
+                      What did you learn?
+                    </p>
+                    <h2 className="text-lg font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] mb-1">
+                      {project.title}
+                    </h2>
+                    <p className="text-xs mb-5" style={{ color: 'var(--brand-text-secondary)' }}>
+                      Capture a reflection while it's fresh
+                    </p>
+                    <textarea
+                      autoFocus
+                      value={reflection}
+                      onChange={e => setReflection(e.target.value)}
+                      placeholder="What worked, what surprised you, what you'd do differently..."
+                      className="w-full rounded-xl px-4 py-3 text-sm text-[var(--brand-text-primary)] placeholder:text-[var(--brand-text-primary)]/20 resize-none focus:outline-none mb-4 text-left"
+                      style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', minHeight: '90px' }}
+                      rows={3}
+                      onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSaveReflection() }}
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleSaveReflection}
+                        disabled={saving}
+                        className="flex-1 py-2.5 rounded-xl font-black uppercase text-xs tracking-widest transition-all"
+                        style={{ background: 'rgba(52, 211, 153, 0.15)', border: '1px solid rgba(52, 211, 153, 0.3)', color: '#34d399' }}
+                      >
+                        {saving ? 'Saving...' : reflection.trim() ? 'Save reflection' : 'Done'}
+                      </button>
+                      <button
+                        onClick={onClose}
+                        className="px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors"
+                        style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'var(--brand-text-secondary)' }}
+                      >
+                        Skip
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </motion.div>
         </>
