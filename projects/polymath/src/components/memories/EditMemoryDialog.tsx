@@ -7,21 +7,17 @@ import { Button } from '../ui/button'
 import {
   BottomSheet,
   BottomSheetContent,
-  BottomSheetDescription,
   BottomSheetFooter,
   BottomSheetHeader,
   BottomSheetTitle,
 } from '../ui/bottom-sheet'
 import { Input } from '../ui/input'
 import { Textarea } from '../ui/textarea'
-import { Label } from '../ui/label'
-import { Select } from '../ui/select'
 import { useMemoryStore } from '../../stores/useMemoryStore'
 import { useToast } from '../ui/toast'
 import { useRef } from 'react'
-import { Brain, Image as ImageIcon, X, Plus } from 'lucide-react'
+import { Brain, Image as ImageIcon, X, Plus, ChevronDown } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { supabase } from '../../lib/supabase'
 import type { Memory } from '../../types'
 
 interface EditMemoryDialogProps {
@@ -37,6 +33,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
   const { addToast } = useToast()
 
   const [uploading, setUploading] = useState(false)
+  const [showOptions, setShowOptions] = useState(false)
 
   // Image state
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
@@ -216,248 +213,185 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
   return (
     <BottomSheet open={open} onOpenChange={onOpenChange}>
       <BottomSheetContent>
-        <BottomSheetHeader>
-          <div className="flex items-center gap-3 mb-2">
-            <Brain className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
-            <BottomSheetTitle>Edit thought</BottomSheetTitle>
-          </div>
-          <BottomSheetDescription>
-            Update your thought
-          </BottomSheetDescription>
+        <BottomSheetHeader className="sr-only">
+          <BottomSheetTitle>Edit thought</BottomSheetTitle>
         </BottomSheetHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6 mt-6">
-          {/* Title */}
-          <div className="space-y-2">
-            <Label htmlFor="title" className="font-semibold text-sm sm:text-base" style={{ color: "var(--brand-primary)" }}>
-              Title <span style={{ color: "var(--brand-primary)" }}>*</span>
-            </Label>
-            <Input
-              id="title"
-              placeholder="What's this about?"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              required
-              className="text-base h-11 sm:h-12"
-              style={{
-                backgroundColor: 'var(--glass-surface)',
-                borderColor: 'rgba(255, 255, 255, 0.1)',
-                color: 'var(--brand-text-primary)'
-              }}
-              autoComplete="off"
-            />
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-3 pt-2">
+          {/* Body — the hero */}
+          <Textarea
+            id="body"
+            placeholder="Write your thoughts..."
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            required
+            className="text-[17px] leading-relaxed resize-none border-0 focus:ring-0 bg-transparent p-0 min-h-[160px] placeholder:opacity-20"
+            style={{ color: 'var(--brand-text-primary)' }}
+          />
 
-          {/* Body Content */}
-          <div className="space-y-2">
-            <Label htmlFor="body" className="font-semibold text-sm sm:text-base" style={{ color: "var(--brand-primary)" }}>
-              Content <span style={{ color: "var(--brand-primary)" }}>*</span>
-            </Label>
-            <Textarea
-              id="body"
-              placeholder="Write your thoughts..."
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              required
-              className="text-base min-h-[200px] resize-y leading-relaxed p-4"
-              style={{
-                backgroundColor: 'var(--glass-surface)',
-                borderColor: 'rgba(255, 255, 255, 0.1)',
-                color: 'var(--brand-text-primary)'
-              }}
-            />
-            <p className="text-xs" style={{ color: "var(--brand-primary)" }}>
-              AI will analyze this to extract entities and themes.
-            </p>
-          </div>
+          {/* Title — subtle secondary */}
+          <Input
+            id="title"
+            placeholder="Title (optional)"
+            value={formData.title}
+            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+            className="h-9 border-0 border-b rounded-none bg-transparent px-0 text-sm focus:ring-0 focus:border-b focus:border-white/20 placeholder:opacity-20"
+            style={{ color: "var(--brand-text-secondary)" }}
+            autoComplete="off"
+          />
 
-          {/* Image Management */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label className="font-semibold text-sm sm:text-base cursor-pointer flex items-center gap-2 group" style={{ color: "var(--brand-primary)" }}>
-                <ImageIcon className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
-                Photos
-              </Label>
-              <div className="relative">
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleFileSelect}
-                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
-                  id="edit-image-upload"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 px-3 text-xs flex items-center gap-1.5 transition-all hover:bg-[rgba(255,255,255,0.1)] active:scale-95"
-                  style={{
-                    backgroundColor: 'var(--glass-surface)',
-                    color: 'var(--brand-text-secondary)',
-                    borderRadius: '9999px',
-                    boxShadow: 'inset 0 0 0 1px var(--glass-surface)'
-                  }}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  <span>Add</span>
-                </Button>
-              </div>
+          {/* Bottom bar: Photo + Options toggle */}
+          <div className="flex items-center gap-2 pt-2 border-t" style={{ borderColor: 'var(--glass-surface)' }}>
+            {/* Photo button */}
+            <div className="relative flex-shrink-0">
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                id="edit-image-upload"
+              />
+              <button
+                type="button"
+                className="p-2 rounded-lg transition-all hover:bg-[var(--glass-surface)] opacity-50 hover:opacity-80"
+                style={{ color: "var(--brand-text-secondary)" }}
+                title="Add photo"
+              >
+                <ImageIcon className="h-4 w-4" />
+              </button>
             </div>
 
-            {/* Combined Image Grid (Existing + New) */}
-            <AnimatePresence mode="popLayout">
-              {(existingImages.length > 0 || selectedFiles.length > 0) && (
-                <motion.div
-                  layout
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.2 }}
-                  className="grid gap-3 grid-cols-2" // Simplified to 2 cols for stability in edit mode
-                >
-                  {/* Existing Images */}
-                  {existingImages.map((url, index) => (
-                    <motion.div
-                      layout
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                      key={`existing-${url}-${index}`}
-                      className="relative rounded-2xl overflow-hidden group shadow-lg aspect-square"
-                      style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface-hover), 0 4px 12px rgba(0,0,0,0.3)' }}
-                    >
-                      <img
-                        src={url}
-                        alt="Existing attachment"
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
-
-                      <button
-                        type="button"
-                        onClick={() => removeExistingImage(url)}
-                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-md text-[var(--brand-text-primary)]/90 border border-[var(--glass-surface-hover)] opacity-70 active:opacity-100 active:bg-brand-primary/80 transition-all"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </motion.div>
-                  ))}
-
-                  {/* New Selected Files */}
-                  {selectedFiles.map((file, index) => (
-                    <motion.div
-                      layout
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                      key={`new-${file.name}-${index}`}
-                      className="relative rounded-2xl overflow-hidden group border border-dashed border-white/20 shadow-lg aspect-square"
-                    >
-                      <img
-                        src={previewUrls[index]}
-                        alt="New upload preview"
-                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all duration-500"
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <span className="bg-black/50 text-[var(--brand-text-primary)] text-[10px] px-2 py-1 rounded-full backdrop-blur-sm">New</span>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => removeNewFile(index)}
-                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-md text-[var(--brand-text-primary)]/90 border border-[var(--glass-surface-hover)] opacity-70 active:opacity-100 active:bg-brand-primary/80 transition-all"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </motion.div>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Memory Type */}
-          <div className="space-y-2">
-            <Label htmlFor="memory_type" className="font-semibold text-sm sm:text-base" style={{ color: "var(--brand-primary)" }}>
-              Type (Optional)
-            </Label>
-            <Select
-              id="memory_type"
-              value={formData.memory_type}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  memory_type: e.target.value as '' | 'foundational' | 'event' | 'insight' | 'quick-note',
-                })
-              }
-              className="text-base h-11 sm:h-12"
-              style={{
-                backgroundColor: 'var(--glass-surface)',
-                borderColor: 'rgba(255, 255, 255, 0.1)',
-                color: 'var(--brand-text-primary)'
-              }}
+            {/* More options toggle */}
+            <button
+              type="button"
+              onClick={() => setShowOptions(!showOptions)}
+              className="flex items-center gap-1 text-[11px] opacity-40 hover:opacity-70 transition-opacity"
+              style={{ color: 'var(--brand-text-secondary)' }}
             >
-              <option value="">Auto-detect</option>
-              <option value="foundational">Foundational - Core knowledge</option>
-              <option value="event">Event - Something that happened</option>
-              <option value="insight">Insight - Realization or learning</option>
-              <option value="quick-note">Quick Note - Lightweight thought</option>
-            </Select>
+              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showOptions ? 'rotate-180' : ''}`} />
+              {showOptions ? 'Less' : 'Type & Tags'}
+            </button>
           </div>
 
-          {/* Tags */}
-          <div className="space-y-2 pb-4">
-            <Label htmlFor="tags" className="font-semibold text-sm sm:text-base" style={{ color: "var(--brand-primary)" }}>
-              Tags (Optional)
-            </Label>
-            <Input
-              id="tags"
-              placeholder="ai, programming, health"
-              value={formData.tags}
-              onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-              className="text-base h-11 sm:h-12"
-              style={{
-                backgroundColor: 'var(--glass-surface)',
-                borderColor: 'rgba(255, 255, 255, 0.1)',
-                color: 'var(--brand-text-primary)'
-              }}
-              autoComplete="off"
-            />
-            <p className="text-xs" style={{ color: "var(--brand-primary)" }}>
-              Comma-separated tags to categorize this memory
-            </p>
-          </div>
+          {/* Image grid */}
+          <AnimatePresence mode="popLayout">
+            {(existingImages.length > 0 || selectedFiles.length > 0) && (
+              <motion.div
+                layout
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="grid gap-2 grid-cols-2"
+              >
+                {existingImages.map((url, index) => (
+                  <motion.div
+                    layout key={`existing-${url}-${index}`}
+                    className="relative rounded-xl overflow-hidden aspect-square"
+                    style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface-hover)' }}
+                  >
+                    <img src={url} alt="Attachment" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeExistingImage(url)}
+                      className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 backdrop-blur-md"
+                      style={{ color: 'var(--brand-text-primary)' }}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </motion.div>
+                ))}
+                {selectedFiles.map((file, index) => (
+                  <motion.div
+                    layout key={`new-${file.name}-${index}`}
+                    className="relative rounded-xl overflow-hidden aspect-square border border-dashed border-white/20"
+                  >
+                    <img src={previewUrls[index]} alt="New upload" className="w-full h-full object-cover opacity-80" />
+                    <span className="absolute bottom-2 left-2 bg-black/50 text-[var(--brand-text-primary)] text-[10px] px-1.5 py-0.5 rounded-full">New</span>
+                    <button
+                      type="button"
+                      onClick={() => removeNewFile(index)}
+                      className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 backdrop-blur-md"
+                      style={{ color: 'var(--brand-text-primary)' }}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </motion.div>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Collapsible: Type & Tags */}
+          <AnimatePresence>
+            {showOptions && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.18 }}
+                className="overflow-hidden"
+              >
+                <div className="space-y-3 pt-1">
+                  {/* Type pills */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { value: '', label: 'Auto' },
+                      { value: 'foundational', label: 'Core' },
+                      { value: 'event', label: 'Event' },
+                      { value: 'insight', label: 'Insight' },
+                      { value: 'quick-note', label: 'Note' },
+                    ].map((type) => (
+                      <button
+                        key={type.value}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, memory_type: type.value as any })}
+                        className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
+                          formData.memory_type === type.value
+                            ? 'border-white/30 bg-white/10 opacity-100'
+                            : 'border-white/10 opacity-40 hover:opacity-70'
+                        }`}
+                        style={{ color: 'var(--brand-text-secondary)' }}
+                      >
+                        {type.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Tags */}
+                  <Input
+                    id="tags"
+                    placeholder="Tags: ai, health, work"
+                    value={formData.tags}
+                    onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                    className="h-9 border-0 border-b rounded-none bg-transparent px-0 text-sm focus:ring-0 placeholder:opacity-20"
+                    style={{ color: 'var(--brand-text-secondary)' }}
+                    autoComplete="off"
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <BottomSheetFooter>
             <Button
               type="submit"
-              disabled={loading || !formData.title || !body.trim() || uploading}
-              className="btn-primary w-full h-12 touch-manipulation"
+              disabled={loading || !body.trim() || uploading}
+              className="w-full h-11 font-semibold text-sm touch-manipulation"
+              style={{
+                background: 'rgba(255,255,255,0.08)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                color: 'var(--brand-text-primary)',
+              }}
             >
-              {uploading ? (
-                <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent mr-2"></div>
-                  Uploading images...
-                </>
-              ) : loading ? (
-                <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent mr-2"></div>
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Brain className="mr-2 h-4 w-4" />
-                  Save Changes
-                </>
-              )}
+              {uploading ? 'Uploading...' : loading ? 'Saving...' : 'Save Changes'}
             </Button>
             <Button
               type="button"
               variant="ghost"
               onClick={() => onOpenChange(false)}
               disabled={loading}
-              className="w-full h-12 touch-manipulation"
+              className="w-full h-10 touch-manipulation opacity-40 hover:opacity-70 text-sm"
             >
               Cancel
             </Button>

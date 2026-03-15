@@ -240,46 +240,35 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
           opacity: isOfflinePending ? 0.6 : 1
         }}
       >
-        <CardHeader className="relative z-10 flex flex-row items-start justify-between p-0 pb-2">
-          <h3 className="font-bold text-base leading-snug mb-1" style={{ color: "var(--brand-primary)" }}>
+        <CardHeader className="relative z-10 flex flex-row items-start justify-between gap-2 p-0 pb-2">
+          <h3 className="font-bold text-base leading-snug mb-1 flex-1 min-w-0" style={{ color: "var(--brand-primary)" }}>
             {memory.title}
           </h3>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 flex-shrink-0">
             {/* Pin Button */}
             <button
               onClick={handleTogglePin}
               className={`p-1.5 rounded-lg transition-all ${
                 memory.is_pinned
-                  ? 'text-brand-text-secondary hover:bg-brand-primary/10'
-                  : 'text-[var(--brand-text-muted)] active:text-brand-text-secondary active:bg-brand-surface/80 opacity-40'
+                  ? 'text-brand-text-secondary'
+                  : 'text-[var(--brand-text-muted)] opacity-30 active:opacity-80'
               }`}
               title={memory.is_pinned ? 'Unpin' : 'Pin'}
             >
               <Pin className="w-3.5 h-3.5" style={memory.is_pinned ? { fill: 'currentColor' } : undefined} />
             </button>
 
-            {/* Find Similar Button */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                navigate(`/search?similar=${memory.id}`)
-              }}
-              className="p-1.5 rounded-lg hover:bg-[rgba(255,255,255,0.1)] text-[var(--brand-text-muted)] hover:text-[var(--brand-text-secondary)] transition-all"
-              title="Find similar"
-            >
-              <Zap className="w-3.5 h-3.5" />
-            </button>
-
             {/* AI Analysis Dot (Interactive) */}
             <button
               onClick={handleAnalyze}
-              className="w-2 h-2 rounded-full mr-2 transition-all duration-300 hover:scale-150 hover:shadow-[0_0_8px_rgba(6,182,212,0.6)] cursor-pointer"
-              style={{
-                backgroundColor: '#06b6d4', // Cyan-500
-                opacity: 1
-              }}
+              className="w-5 h-5 flex items-center justify-center rounded-full transition-all duration-300 hover:bg-[rgba(6,182,212,0.15)] cursor-pointer"
               title="Analyze with AI"
-            />
+            >
+              <span
+                className="w-2 h-2 rounded-full block"
+                style={{ backgroundColor: '#06b6d4' }}
+              />
+            </button>
 
             <Button
               onClick={(e) => {
@@ -288,7 +277,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
               }}
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 touch-manipulation hover:bg-[rgba(255,255,255,0.1)] transition-colors"
+              className="h-7 w-7 p-0 touch-manipulation hover:bg-[rgba(255,255,255,0.1)] transition-colors"
               aria-label="More options"
             >
               <MoreVertical className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
@@ -423,11 +412,11 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
                 </div>
               )}
 
-              {/* Quick actions row */}
-              <div className="flex items-center gap-2 mb-2">
+              {/* Quick actions row — wraps on narrow cards */}
+              <div className="flex flex-wrap items-center gap-1.5 mb-2">
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowDetailModal(true) }}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-lg transition-colors hover:bg-brand-surface/80"
+                  className="flex items-center gap-1 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.08)]"
                   style={{ color: "var(--brand-primary)" }}
                 >
                   <Maximize2 className="w-3 h-3" />
@@ -435,30 +424,27 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleCopyText() }}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-lg transition-colors hover:bg-brand-surface/80"
+                  className="flex items-center gap-1 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.08)]"
                   style={{ color: "var(--brand-primary)" }}
                 >
                   <Copy className="w-3 h-3" />
                   Copy
                 </button>
                 <button
-                  onClick={(e) => { e.stopPropagation(); setSeedProjectOpen(true) }}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-lg transition-colors hover:bg-brand-surface/80"
+                  onClick={(e) => { e.stopPropagation(); navigate(`/search?similar=${memory.id}`) }}
+                  className="flex items-center gap-1 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.08)]"
                   style={{ color: 'var(--brand-text-secondary)' }}
-                  title="Seed as project"
+                >
+                  <Zap className="w-3 h-3" />
+                  Similar
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setSeedProjectOpen(true) }}
+                  className="flex items-center gap-1 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.08)]"
+                  style={{ color: 'var(--brand-text-secondary)' }}
                 >
                   <Sprout className="w-3 h-3" />
                   Seed
-                </button>
-                <button
-                  onClick={handleTogglePin}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-lg transition-colors hover:bg-brand-surface/80 ${
-                    memory.is_pinned ? 'text-brand-text-secondary' : ''
-                  }`}
-                  style={memory.is_pinned ? undefined : { color: 'var(--brand-text-secondary)' }}
-                >
-                  <Pin className="w-3 h-3" style={memory.is_pinned ? { fill: 'currentColor' } : undefined} />
-                  {memory.is_pinned ? 'Unpin' : 'Pin'}
                 </button>
               </div>
             </motion.div>
