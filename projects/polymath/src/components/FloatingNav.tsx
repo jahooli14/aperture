@@ -6,14 +6,12 @@
 import React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Home, Brain, CheckSquare, BookOpen, Briefcase, List } from 'lucide-react'
+import { Home, Brain, Briefcase, List } from 'lucide-react'
 import { VoiceFAB } from './VoiceFAB'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOfflineSync } from '../hooks/useOfflineSync'
 import { useToast } from './ui/toast'
-import { useTodoStore, selectToday } from '../stores/useTodoStore'
-import { useReadingStore } from '../stores/useReadingStore'
 
 // Schema colors for each section - unified blue theme
 const SCHEMA_COLORS = {
@@ -36,14 +34,12 @@ interface NavOption {
   color: keyof typeof SCHEMA_COLORS
 }
 
-// All 6 nav sections  icon-only layout with active label
+// 4 core nav tabs: Home, Thoughts, Projects, Lists
 const NAV_OPTIONS: NavOption[] = [
-  { id: 'home',     label: 'Home',     icon: Home,         path: '/',         action: 'navigate', color: 'home' },
-  { id: 'todos',    label: 'Todos',    icon: CheckSquare,  path: '/todos',    action: 'navigate', color: 'todos' },
-  { id: 'lists',    label: 'Lists',    icon: List,         path: '/lists',    action: 'navigate', color: 'lists' },
-  { id: 'projects', label: 'Projects', icon: Briefcase,    path: '/projects', action: 'navigate', color: 'projects' },
-  { id: 'reading',  label: 'Reading',  icon: BookOpen,     path: '/reading',  action: 'navigate', color: 'reading' },
-  { id: 'thoughts', label: 'Thoughts', icon: Brain,        path: '/memories', action: 'navigate', color: 'thoughts' },
+  { id: 'home',     label: 'Home',     icon: Home,      path: '/',         action: 'navigate', color: 'home' },
+  { id: 'thoughts', label: 'Thoughts', icon: Brain,     path: '/memories', action: 'navigate', color: 'thoughts' },
+  { id: 'projects', label: 'Projects', icon: Briefcase, path: '/projects', action: 'navigate', color: 'projects' },
+  { id: 'lists',    label: 'Lists',    icon: List,      path: '/lists',    action: 'navigate', color: 'lists' },
 ]
 
 export function FloatingNav() {
@@ -55,20 +51,6 @@ export function FloatingNav() {
 
   const location = useLocation()
   const [isHidden, setIsHidden] = React.useState(false)
-
-  // Badge counts for nav tabs
-  const allTodos = useTodoStore(s => s.todos)
-  const todayTodos = selectToday(allTodos)
-  const overdueTodosCount = todayTodos.filter(t => {
-    const now = new Date().toISOString().slice(0, 10)
-    return !!(
-      (t.deadline_date && t.deadline_date < now) ||
-      (t.scheduled_date && t.scheduled_date < now)
-    )
-  }).length
-
-  const allArticles = useReadingStore(s => s.articles)
-  const hasUnreadArticles = allArticles.some(a => a.status === 'unread')
 
   const allMemories = useMemoryStore(s => s.memories)
   const hasRecentMemories = allMemories.some(m => {
@@ -139,10 +121,6 @@ export function FloatingNav() {
   }
 
   const isActive = (option: NavOption): boolean => {
-    if (option.id === 'reading') {
-      // Active on /reading list page but not on individual article reader (/reading/:id)
-      return location.pathname === '/reading'
-    }
     return location.pathname === option.path
   }
 
@@ -344,12 +322,9 @@ export function FloatingNav() {
               const colors = SCHEMA_COLORS[option.color]
               const active = isActive(option)
 
-              // Determine badge for this tab
-              const badge = option.id === 'todos' && overdueTodosCount > 0
-                ? overdueTodosCount
-                : null
-              const dot = (option.id === 'reading' && hasUnreadArticles) ||
-                          (option.id === 'thoughts' && hasRecentMemories)
+              // Dot badge for recent thoughts
+              const badge = null
+              const dot = option.id === 'thoughts' && hasRecentMemories
 
               return (
                 <motion.button

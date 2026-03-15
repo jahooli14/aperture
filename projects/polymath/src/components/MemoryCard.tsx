@@ -1,6 +1,6 @@
 import React, { useState, memo, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MoreVertical, Edit, Trash2, Copy, Share2, Calendar, Zap, Link2, Pin, Maximize2, CheckSquare } from 'lucide-react'
+import { MoreVertical, Edit, Trash2, Copy, Share2, Calendar, Zap, Link2, Pin, Maximize2, CheckSquare, Sprout } from 'lucide-react'
 import { CardHeader, CardTitle, CardDescription } from './ui/card'
 import { Button } from './ui/button'
 import type { Memory, BridgeWithMemories } from '../types'
@@ -53,12 +53,14 @@ interface MemoryCardProps {
 }
 
 import { OptimizedImage } from './ui/optimized-image'
+import { CreateProjectDialog } from './projects/CreateProjectDialog'
 
 export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, connectionCount }: MemoryCardProps) {
   const navigate = useNavigate()
   const [showContextMenu, setShowContextMenu] = useState(false)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [expanded, setExpanded] = useState(false)
+  const [seedProjectOpen, setSeedProjectOpen] = useState(false)
 
   // Long-press detection: hold > 400ms opens full modal
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -413,6 +415,15 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
                   Copy
                 </button>
                 <button
+                  onClick={(e) => { e.stopPropagation(); setSeedProjectOpen(true) }}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-lg transition-colors hover:bg-brand-surface/80"
+                  style={{ color: 'var(--brand-text-secondary)' }}
+                  title="Seed as project"
+                >
+                  <Sprout className="w-3 h-3" />
+                  Seed
+                </button>
+                <button
                   onClick={handleTogglePin}
                   className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-lg transition-colors hover:bg-brand-surface/80 ${
                     memory.is_pinned ? 'text-brand-text-secondary' : ''
@@ -466,6 +477,34 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}
       />
+
+      <CreateProjectDialog
+        isOpen={seedProjectOpen}
+        onOpenChange={setSeedProjectOpen}
+        hideTrigger
+        initialTitle={memory.title}
+        initialDescription={memory.body?.slice(0, 200)}
+        onCreated={async (projectId) => {
+          try {
+            await fetch('/api/connections', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                source_type: 'memory',
+                source_id: memory.id,
+                target_type: 'project',
+                target_id: projectId,
+                connection_type: 'inspired_by',
+                created_by: 'user',
+                reasoning: 'Project seeded from this thought'
+              })
+            })
+          } catch (err) {
+            console.warn('[MemoryCard] Failed to create inspired_by connection:', err)
+          }
+        }}
+      />
+
       {confirmDialog}
     </>
   )
