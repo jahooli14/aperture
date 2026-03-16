@@ -100,8 +100,8 @@ export function SuggestionsPage() {
       await rateSuggestion(currentSuggestion.id, rating as -1 | 1, rationale)
       
       addToast({
-        title: feedbackMode === 'no' ? 'Suggestion Dismissed' : 'Saved for later',
-        description: 'Your feedback helps improve future recommendations.',
+        title: feedbackMode === 'no' ? 'Passed' : 'Noted',
+        description: feedbackMode === 'no' ? 'Won\'t suggest this again.' : 'We\'ll come back to this.',
         variant: 'default'
       })
 
@@ -445,10 +445,10 @@ export function SuggestionsPage() {
               style={{ background: 'var(--premium-surface-1)' }}
             >
               <h3 className="text-xl font-bold premium-text-platinum mb-2">
-                {feedbackMode === 'no' ? 'Dismiss Suggestion' : 'Maybe Later'}
+                {feedbackMode === 'no' ? 'Pass on this' : 'Not right now'}
               </h3>
               <p className="text-[var(--brand-text-secondary)] text-sm mb-6">
-                Briefly, why isn't this right for you today? This helps refine future suggestions.
+                What's putting you off? (optional)
               </p>
 
               {/* Rationale Chips */}

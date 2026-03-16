@@ -7,6 +7,7 @@ import { Button } from '../components/ui/button'
 import { CreateListDialog } from '../components/lists/CreateListDialog'
 import { QuickAddSheet } from '../components/lists/QuickAddSheet'
 import { OptimizedImage } from '../components/ui/optimized-image'
+import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import type { ListType, List } from '../types'
 
 const ListIcon = ({ type, className, style }: { type: ListType, className?: string, style?: React.CSSProperties }) => {
@@ -84,6 +85,8 @@ export default function ListsPage() {
 
     // Quick-add sheet state
     const [quickAddList, setQuickAddList] = useState<List | null>(null)
+
+    const { confirm, dialog: confirmDialog } = useConfirmDialog()
 
     // Long-press detection
     const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -545,9 +548,15 @@ export default function ListsPage() {
                                             <Plus className="h-3 w-3" />
                                         </button>
                                         <button
-                                            onClick={(e) => {
+                                            onClick={async (e) => {
                                                 e.stopPropagation()
-                                                if (confirm(`Delete collection "${list.title}"?`)) {
+                                                const confirmed = await confirm({
+                                                    title: `Delete "${list.title}"?`,
+                                                    description: 'This collection and all its items will be removed.',
+                                                    confirmText: 'Delete',
+                                                    variant: 'destructive',
+                                                })
+                                                if (confirmed) {
                                                     useListStore.getState().deleteList(list.id)
                                                 }
                                             }}
@@ -611,6 +620,8 @@ export default function ListsPage() {
                     listRgb={ListColor(quickAddList.type)}
                 />
             )}
+
+            {confirmDialog}
         </div>
     )
 }

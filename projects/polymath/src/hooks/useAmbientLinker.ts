@@ -64,15 +64,11 @@ async function runLinker(
       body: JSON.stringify({ itemId, itemType, content })
     })
 
-    if (!res.ok) {
-      console.warn('[AmbientLinker] API returned', res.status, 'for', itemType, itemId)
-      return
-    }
+    if (!res.ok) return
 
     const data = await res.json()
 
     if (data.connections && data.connections.length > 0) {
-      console.log('[AmbientLinker] Found', data.connections.length, 'connections for', itemType, title)
       addDiscovery({
         sourceId: itemId,
         sourceType: itemType,
@@ -80,12 +76,9 @@ async function runLinker(
         links: data.connections,
         timestamp: Date.now()
       })
-    } else {
-      console.log('[AmbientLinker] No connections found for', itemType, title)
     }
-  } catch (err) {
-    // Don't surface errors to user - ambient linking should never disrupt UX
-    console.warn('[AmbientLinker] Network error for', itemType, itemId, err)
+  } catch {
+    // Silent fail — ambient linking should never disrupt UX
   } finally {
     processing.delete(key)
   }
