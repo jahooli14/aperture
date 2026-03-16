@@ -8,6 +8,10 @@ export interface Toast {
   description?: string
   variant?: "default" | "destructive" | "success"
   duration?: number
+  action?: {
+    label: string
+    onClick: () => void
+  }
 }
 
 interface ToastContextValue {
@@ -30,7 +34,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
     // Auto remove after duration (default 3s for quicker feedback)
     // Success messages with actionable info get slightly longer (4s)
-    const defaultDuration = toast.variant === 'success' && toast.description ? 4000 : 3000
+    const defaultDuration = toast.action ? 6000 : (toast.variant === 'success' && toast.description ? 4000 : 3000)
     const duration = toast.duration ?? defaultDuration
     if (duration > 0) {
       setTimeout(() => {
@@ -132,6 +136,15 @@ function ToastItem({ toast, isRemoving, onClose }: { toast: Toast; isRemoving: b
         {toast.title && <div className="text-sm font-semibold">{toast.title}</div>}
         {toast.description && (
           <div className="text-sm opacity-90">{toast.description}</div>
+        )}
+        {toast.action && (
+          <button
+            onClick={() => { toast.action!.onClick(); onClose() }}
+            className="text-xs font-bold mt-1 text-left opacity-80 active:opacity-60 transition-opacity"
+            style={{ color: 'var(--brand-primary)' }}
+          >
+            {toast.action.label}
+          </button>
         )}
       </div>
       <button

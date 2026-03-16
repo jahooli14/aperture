@@ -570,7 +570,7 @@ What is the non-obvious link?`
       }
 
       const AUTO_LINK_THRESHOLD = 0.82
-      const SUGGESTION_THRESHOLD = 0.52
+      const SUGGESTION_THRESHOLD = 0.45
       const MAX_CANDIDATES = 8
 
       try {

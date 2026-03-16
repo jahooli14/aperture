@@ -230,10 +230,12 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
             </div>
 
             <div className="flex items-center gap-3 text-[10px] text-brand-text-muted uppercase tracking-wider font-semibold">
-              {article.read_time_minutes && (
+              {(article.read_time_minutes || article.content) && (
                 <span className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  {article.read_time_minutes} min
+                  {article.read_time_minutes
+                    ? `${article.read_time_minutes} min`
+                    : `${Math.ceil((article.content?.split(/\s+/).length || 0) / 200) || 1} min`}
                 </span>
               )}
               <span>
@@ -257,6 +259,34 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
             />
           </div>
         )}
+
+        {/* Action strip — always visible on mobile */}
+        <div className="flex items-center gap-1 mt-3 pt-3 border-t border-[var(--glass-surface)]">
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowConnectionsDialog(true) }}
+            className="flex items-center gap-1 px-2 py-1 text-[10px] font-black uppercase tracking-widest rounded-lg active:bg-[rgba(255,255,255,0.08)] transition-colors"
+            style={{ color: 'var(--brand-text-muted)' }}
+          >
+            <Link2 className="h-3 w-3" />
+            Connect
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); openOriginal() }}
+            className="flex items-center gap-1 px-2 py-1 text-[10px] font-black uppercase tracking-widest rounded-lg active:bg-[rgba(255,255,255,0.08)] transition-colors"
+            style={{ color: 'var(--brand-text-muted)' }}
+          >
+            <ExternalLink className="h-3 w-3" />
+            Open
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleMarkAsRead() }}
+            className="ml-auto flex items-center gap-1 px-2 py-1 text-[10px] font-black uppercase tracking-widest rounded-lg active:bg-[rgba(255,255,255,0.08)] transition-colors"
+            style={{ color: 'var(--brand-text-muted)' }}
+          >
+            <Archive className="h-3 w-3" />
+            Archive
+          </button>
+        </div>
       </div>
 
       <EditArticleDialog

@@ -1028,7 +1028,13 @@ export function HomePage() {
         )}
 
         {/* 1. ADD SOMETHING NEW */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6 mt-4">
+        <motion.section
+          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6 mt-4"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: 'easeOut', delay: 0.05 }}
+        >
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--brand-text-muted)] mb-3 px-1">What's happening?</p>
           <div className="flex items-center gap-2">
             {/* Voice */}
             <button
@@ -1073,12 +1079,17 @@ export function HomePage() {
               <span className="text-[9px] font-black uppercase tracking-widest text-brand-primary opacity-60">Project</span>
             </button>
           </div>
-        </section>
+        </motion.section>
 
         {/* Aperture Power Hour - The Hero Engine */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4 aperture-shelf">
+        <motion.section
+          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4 aperture-shelf"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: 'easeOut', delay: 0.12 }}
+        >
           <PowerHourHero />
-        </section>
+        </motion.section>
 
         {/* Subtle Divider */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8 opacity-20">
@@ -1097,11 +1108,21 @@ export function HomePage() {
         }
 
         {/* 2. KEEP THE MOMENTUM (Focus Stream) */}
-        <div className="aperture-shelf">
+        <motion.div
+          className="aperture-shelf"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: 'easeOut', delay: 0.2 }}
+        >
           <FocusStream />
-        </div>
+        </motion.div>
 
         {/* 3. WHAT'S ON YOUR MIND - Recent Thoughts */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: 'easeOut', delay: 0.28 }}
+        >
         <RecentThoughtsSection
           memories={memories}
           onOpenMemory={(id) => {
@@ -1109,10 +1130,16 @@ export function HomePage() {
             setSelectedMemory(m)
           }}
         />
+        </motion.div>
 
 
         {/* 6. EXPLORE (Bottom Links) */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 aperture-shelf">
+        <motion.section
+          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 aperture-shelf"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: 'easeOut', delay: 0.36 }}
+        >
           <div className="mb-0">
             <h2 className="section-header">
               or just <span>explore</span>
@@ -1251,7 +1278,7 @@ export function HomePage() {
               </div>
             </Link>
           </div>
-        </section>
+        </motion.section>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 flex justify-center">
           <Link
