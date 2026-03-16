@@ -597,16 +597,30 @@ const StandardItemCard = memo(({
                     )}
                 </div>
             ) : (
-                <div className="relative aspect-square bg-zinc-900 border border-[var(--glass-surface)] overflow-hidden flex items-center justify-center">
-                    <div className="absolute inset-0 opacity-10"
-                        style={{ background: `linear-gradient(135deg, rgb(${rgb}), transparent)` }}
+                <div className="relative aspect-square overflow-hidden"
+                    style={{ background: `linear-gradient(145deg, #0f172a, #1e293b)` }}
+                >
+                    {/* Subtle colour wash from list type */}
+                    <div className="absolute inset-0"
+                        style={{ background: `radial-gradient(ellipse at 30% 30%, rgba(${rgb}, 0.18) 0%, transparent 70%)` }}
                     />
-                    <div className="relative z-10 flex flex-col items-center gap-2 opacity-20 group-hover:opacity-40 transition-opacity duration-500">
-                        <div className="h-8 w-8 rounded-full border border-white/20 flex items-center justify-center">
-                            <ListIcon type={listType as ListType} className="h-4 w-4" />
-                        </div>
+                    {/* Faint grid texture */}
+                    <div className="absolute inset-0 opacity-[0.03]" style={{
+                        backgroundImage: `linear-gradient(rgba(${rgb}, 1) 1px, transparent 1px), linear-gradient(90deg, rgba(${rgb}, 1) 1px, transparent 1px)`,
+                        backgroundSize: '32px 32px'
+                    }} />
+                    {/* Ghost icon watermark */}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-[0.06]">
+                        <ListIcon type={listType as ListType} className="h-24 w-24" style={{ color: `rgb(${rgb})` }} />
                     </div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    {/* Item title as the cover */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center p-4 z-10">
+                        <p className="text-center text-[var(--brand-text-primary)]/80 text-xs font-semibold leading-snug line-clamp-4"
+                            style={{ textShadow: `0 1px 8px rgba(${rgb}, 0.3)` }}>
+                            {item.content}
+                        </p>
+                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent" />
                 </div>
             )}
 
@@ -1260,8 +1274,8 @@ export default function ListDetailPage() {
                                 </div>
                             ) : (
                                 <div className="flex flex-col items-center justify-center py-40 text-zinc-600">
-                                    <p className="text-brand-text-muted font-medium text-lg mb-1">Your collection is empty.</p>
-                                    <p className="text-sm text-brand-text-muted opacity-60">Begin typing above to curate your list.</p>
+                                    <p className="text-brand-text-muted font-medium text-lg mb-1">Nothing in here yet.</p>
+                                    <p className="text-sm text-brand-text-muted opacity-60">Start adding things above.</p>
                                 </div>
                             )}
                         </motion.div>

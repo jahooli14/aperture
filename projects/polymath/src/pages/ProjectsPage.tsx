@@ -353,7 +353,7 @@ export function ProjectsPage() {
               <div className="mb-6 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <h2 className="text-xl font-black uppercase tracking-tight text-[var(--brand-text-primary)]">
-                    Active <span className="text-brand-primary">Workstreams</span>
+                    Live <span className="text-brand-primary">Projects</span>
                   </h2>
                 </div>
               </div>

@@ -64,11 +64,15 @@ async function runLinker(
       body: JSON.stringify({ itemId, itemType, content })
     })
 
-    if (!res.ok) return
+    if (!res.ok) {
+      console.warn('[AmbientLinker] API returned', res.status, 'for', itemType, itemId)
+      return
+    }
 
     const data = await res.json()
 
     if (data.connections && data.connections.length > 0) {
+      console.log('[AmbientLinker] Found', data.connections.length, 'connections for', itemType, title)
       addDiscovery({
         sourceId: itemId,
         sourceType: itemType,
@@ -76,18 +80,23 @@ async function runLinker(
         links: data.connections,
         timestamp: Date.now()
       })
+    } else {
+      console.log('[AmbientLinker] No connections found for', itemType, title)
     }
-  } catch {
-    // Silent fail  ambient linking should never disrupt UX
+  } catch (err) {
+    // Don't surface errors to user - ambient linking should never disrupt UX
+    console.warn('[AmbientLinker] Network error for', itemType, itemId, err)
   } finally {
     processing.delete(key)
   }
 }
 
-// Determines if an item is "fresh" (created within the last 60 seconds)
+// Determines if an item is "fresh" (created within the last 5 minutes)
+// Wider window ensures connections fire even if the user navigates between pages
+// or there's a brief delay in store propagation
 function isFresh(createdAt?: string | null): boolean {
   if (!createdAt) return false
-  return Date.now() - new Date(createdAt).getTime() < 60_000
+  return Date.now() - new Date(createdAt).getTime() < 300_000
 }
 
 export function useAmbientLinker() {

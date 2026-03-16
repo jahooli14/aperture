@@ -133,7 +133,7 @@ export function BuildProjectDialog({
             {/* Capabilities Info */}
             {suggestion.capability_ids.length > 0 && (
               <div className="text-xs text-neutral-600 bg-blue-50 p-3 rounded-lg border border-blue-200">
-                <span className="font-semibold"> This will strengthen {suggestion.capability_ids.length} capability{suggestion.capability_ids.length !== 1 ? 'ies' : ''}</span>
+                <span className="font-semibold"> This builds on your existing interests</span>
                 <p className="mt-1">Building this project will boost the skills and tools used in the suggestion.</p>
               </div>
             )}

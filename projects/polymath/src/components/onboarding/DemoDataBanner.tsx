@@ -117,7 +117,7 @@ export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps
             </h3>
             <p className="text-sm text-amber-50 mb-3">
               Explore <strong>8 diverse memories</strong> spanning tech, hobbies, and life insights.{' '}
-              <strong>Click "Generate Ideas"</strong> to watch AI synthesis in action - it connects your interests in unexpected ways!
+              <strong>Click "Generate Ideas"</strong> to see how it finds unexpected links between your interests!
             </p>
             <div className="flex flex-wrap gap-3">
               <button

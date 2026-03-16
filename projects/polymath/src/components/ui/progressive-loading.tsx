@@ -82,7 +82,7 @@ export function ProgressiveLoading({ messages, duration, className = '' }: Progr
 // Preset message sequences for common operations
 export const LoadingPresets = {
   synthesis: [
-    { time: 0, message: 'Analyzing your knowledge graph...', icon: '...' },
+    { time: 0, message: 'Looking for patterns in your ideas...', icon: '...' },
     { time: 5000, message: 'Finding cross-domain patterns...', icon: '...' },
     { time: 12000, message: 'Generating project ideas...', icon: '...' },
     { time: 20000, message: 'Evaluating feasibility...', icon: '...' },

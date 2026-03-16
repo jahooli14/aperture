@@ -107,7 +107,7 @@ export function MorningFollowUp({ onDismiss, onCapture }: MorningFollowUpProps) 
           className="mx-4 mb-4 p-4 rounded-2xl border border-emerald-500/20 bg-brand-primary/5 flex items-center gap-2"
         >
           <Zap className="w-4 h-4 text-brand-text-secondary" />
-          <span className="text-sm text-brand-primary">Captured. Your synthesis engine will use this.</span>
+          <span className="text-sm text-brand-primary">Captured.</span>
         </motion.div>
       )}
     </AnimatePresence>
