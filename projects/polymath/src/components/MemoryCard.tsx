@@ -444,7 +444,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
                   style={{ color: 'var(--brand-text-secondary)' }}
                 >
                   <Sprout className="w-3 h-3" />
-                  Seed
+                  Grow this
                 </button>
               </div>
             </motion.div>
@@ -471,10 +471,10 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
                 letterSpacing: '0.1em',
                 textTransform: 'uppercase',
               }}
-              title="Seed as project"
+              title="Turn into a project"
             >
               <Sprout className="w-2.5 h-2.5" />
-              Seed
+              Grow
             </button>
           </div>
 

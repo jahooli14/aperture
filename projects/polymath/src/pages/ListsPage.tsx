@@ -514,7 +514,7 @@ export default function ListsPage() {
                                             </div>
 
                                             <div className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--brand-text-primary)]/30">
-                                                Empty
+                                                Nothing yet
                                             </div>
                                         </div>
                                     </div>

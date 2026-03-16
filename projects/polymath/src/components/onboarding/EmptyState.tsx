@@ -20,7 +20,7 @@ export function EmptyState() {
           Start capturing your thoughts
         </h2>
         <p className="text-lg text-neutral-600 mb-8">
-          <BrandName size="md" /> works by turning your voice notes into a personal knowledge graph.
+          <BrandName size="md" /> connects your voice notes, ideas, and discoveries into something that thinks with you.
           Here's how to get started:
         </p>
 
