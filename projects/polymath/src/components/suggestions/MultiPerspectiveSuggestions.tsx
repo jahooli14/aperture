@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useMultiPerspectiveAI, type PerspectiveSuggestion } from '../../hooks/useMultiPerspectiveAI'
 import { MarkdownRenderer } from '../ui/MarkdownRenderer'
 import type { Project } from '../../types'
+import { Database } from 'lucide-react'
 
 interface MultiPerspectiveSuggestionsProps {
   project: Project
@@ -56,6 +57,7 @@ function PerspectiveCard({
 }) {
   const [added, setAdded] = useState(false)
   const colors = ACCENT_COLORS[perspective.accentColor] || ACCENT_COLORS.blue
+  const hasSources = perspective.sourcesCited && perspective.sourcesCited.length > 0
 
   const handleAdd = () => {
     if (onAddTodo) {
@@ -76,30 +78,43 @@ function PerspectiveCard({
         borderColor: colors.border
       }}
     >
-      <div className="flex items-start gap-2.5">
-        {/* Persona header */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-xs font-black uppercase tracking-widest" style={{ color: colors.text }}>
-              {perspective.persona}
-            </span>
-            {perspective.confidence === 'high' && (
-              <span
-                className="ml-auto px-1.5 py-0.5 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-1"
-                style={{ background: colors.bg, border: `1px solid ${colors.border}`, color: colors.text }}
-              >
-                High
-              </span>
-            )}
-          </div>
-
-          <MarkdownRenderer
-            content={perspective.suggestion}
-            className="text-sm aperture-body"
-            style={{ color: "var(--brand-primary)" }}
-          />
-        </div>
+      {/* Persona header row */}
+      <div className="flex items-center gap-2 mb-2.5">
+        <span className="text-base leading-none">{perspective.icon}</span>
+        <span className="text-xs font-black uppercase tracking-widest" style={{ color: colors.text }}>
+          {perspective.persona}
+        </span>
+        {perspective.confidence === 'high' && (
+          <span
+            className="ml-auto px-1.5 py-0.5 rounded-xl text-[9px] font-black uppercase tracking-widest"
+            style={{ background: colors.bg, border: `1px solid ${colors.border}`, color: colors.text }}
+          >
+            High
+          </span>
+        )}
       </div>
+
+      <MarkdownRenderer
+        content={perspective.suggestion}
+        className="text-sm aperture-body"
+        style={{ color: "var(--brand-primary)" }}
+      />
+
+      {/* Sources cited from knowledge lake */}
+      {hasSources && (
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
+          {perspective.sourcesCited.map((src, i) => (
+            <span
+              key={i}
+              className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium"
+              style={{ background: 'rgba(6,182,212,0.08)', border: '1px solid rgba(6,182,212,0.2)', color: 'rgb(103,232,249)' }}
+            >
+              <Database className="h-2.5 w-2.5 flex-shrink-0" />
+              {src}
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Add to todos button */}
       {onAddTodo && (
@@ -114,11 +129,7 @@ function PerspectiveCard({
               color: added ? colors.text : 'var(--brand-text-secondary)'
             }}
           >
-            {added ? (
-              "Added"
-            ) : (
-              "Add to todos"
-            )}
+            {added ? 'Added' : 'Add to todos'}
           </button>
         </div>
       )}
@@ -166,7 +177,7 @@ export function MultiPerspectiveSuggestions({
               The Council
             </h3>
             <p className="text-sm text-[var(--brand-text-muted)] leading-relaxed">
-              Five different voices on what to do next.
+              Five advisors. Each reads your full knowledge lake and gives you the advice nobody else will.
             </p>
           </div>
 
@@ -198,6 +209,18 @@ export function MultiPerspectiveSuggestions({
           <h3 className="font-bold text-sm aperture-header" style={{ color: "var(--brand-primary)" }}>
             What's Next?
           </h3>
+          {result?.lakeContext && (
+            <div
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded-md"
+              style={{ background: 'rgba(6,182,212,0.08)', border: '1px solid rgba(6,182,212,0.2)' }}
+              title={`Knowledge lake: ${result.lakeContext.memoriesUsed} notes, ${result.lakeContext.articlesUsed} articles, ${result.lakeContext.projectsUsed} projects`}
+            >
+              <Database className="h-3 w-3 text-cyan-400" />
+              <span className="text-[10px] text-cyan-400 font-semibold">
+                {result.lakeContext.memoriesUsed + result.lakeContext.articlesUsed + result.lakeContext.projectsUsed} lake items
+              </span>
+            </div>
+          )}
         </div>
         <button
           onClick={handleRefresh}
