@@ -3,6 +3,7 @@ import { getSupabaseClient } from './supabase.js'
 import type { Memory, Entities, MemoryType, ExtractedMetadata } from '../../src/types'
 import { normalizeTags } from './tag-normalizer.js'
 import { updateItemConnections } from './connection-logic.js'
+import { generateText } from './gemini-chat.js'
 import { MODELS } from './models.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
@@ -96,7 +97,24 @@ export async function processMemory(memoryId: string): Promise<void> {
     await updateItemConnections(memoryId, 'thought', embedding, userId)
     logger.info({ memory_id: memoryId }, '✅ Connections processed')
 
-    // 7. Act on Triage
+    // 7. Generate thought bridge — one sentence connecting this memory to the most relevant project.
+    // Stored inside the triage JSONB as bridge_insight (no schema change needed).
+    // Fire-and-forget: errors here never block memory processing.
+    generateThoughtBridge(memoryId, metadata.summary_title, metadata.insightful_body, metadata.triage, userId)
+      .then((bridge) => {
+        if (bridge) {
+          const updatedTriage = { ...(metadata.triage || {}), bridge_insight: bridge }
+          supabase
+            .from('memories')
+            .update({ triage: updatedTriage })
+            .eq('id', memoryId)
+            .then(() => logger.info({ memory_id: memoryId }, '✅ Bridge insight stored'))
+            .catch(() => {}) // Non-critical
+        }
+      })
+      .catch(() => {}) // Never propagate bridge errors
+
+    // 8. Act on Triage
     if (metadata.triage) {
       const { category, project_id } = metadata.triage
       if (category === 'task_update' && project_id) {
@@ -447,4 +465,73 @@ export async function storeCapabilities(memoryId: string, skills: string[], memo
       logger.warn({ skill: skillName, error }, 'Error processing capability')
     }
   }
+}
+
+/**
+ * Generate a "thought bridge" — a single sentence that makes a new memory actionable
+ * against the user's most relevant active project.
+ *
+ * Unlike connection explanations ("these are related"), a bridge translates the thought
+ * into a concrete implication: what does this insight actually unlock?
+ */
+async function generateThoughtBridge(
+  memoryId: string,
+  memoryTitle: string,
+  memoryBody: string,
+  triage: any,
+  userId: string
+): Promise<string | null> {
+  // If triage already points at a project, use it. Otherwise find the top-connected project.
+  let projectTitle = ''
+  let projectDescription = ''
+
+  if (triage?.project_id) {
+    const { data: project } = await supabase
+      .from('projects')
+      .select('title, description')
+      .eq('id', triage.project_id)
+      .single()
+    if (project) {
+      projectTitle = project.title
+      projectDescription = project.description || ''
+    }
+  }
+
+  // Fallback: find the most recently active project as context
+  if (!projectTitle) {
+    const { data: projects } = await supabase
+      .from('projects')
+      .select('title, description')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .order('last_active', { ascending: false })
+      .limit(1)
+
+    if (!projects?.length) return null
+    projectTitle = projects[0].title
+    projectDescription = projects[0].description || ''
+  }
+
+  const prompt = `You are generating a "thought bridge" for a personal knowledge app.
+
+A thought bridge is a single sentence that translates a new captured thought into a concrete implication for an active project — what does this insight actually unlock or change?
+
+NEW THOUGHT: "${memoryTitle}"
+${memoryBody ? `Detail: "${memoryBody.slice(0, 200)}"` : ''}
+
+ACTIVE PROJECT: "${projectTitle}"
+${projectDescription ? `About: "${projectDescription.slice(0, 150)}"` : ''}
+
+Write ONE sentence (max 22 words) that completes: "This thought matters for ${projectTitle} because..."
+- Be specific to the actual content of both items
+- Name the implication, not just the connection
+- Sound like a realization, not a recommendation
+Return ONLY the sentence, no preamble.`
+
+  const bridge = await generateText(prompt, {
+    maxTokens: 70,
+    temperature: 0.65,
+  })
+
+  return bridge.trim() || null
 }

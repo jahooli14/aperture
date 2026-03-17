@@ -13,12 +13,114 @@ import {
 } from '../ui/bottom-sheet'
 import { useMemoryStore } from '../../stores/useMemoryStore'
 import { useToast } from '../ui/toast'
-import { Plus, ArrowUp, Bold, Italic, List, Image as ImageIcon, X } from 'lucide-react'
+import { Plus, ArrowUp, Bold, Italic, List, Image as ImageIcon, X, Sparkles } from 'lucide-react'
 import { celebrate, checkThoughtMilestone, getMilestoneMessage } from '../../utils/celebrations'
 import { handleInputFocus } from '../../utils/keyboard'
 import { useAutoSuggestion } from '../../contexts/AutoSuggestionContext'
 import { SuggestionToast } from '../SuggestionToast'
 import { motion, AnimatePresence } from 'framer-motion'
+
+interface VoiceSeed {
+  id: string
+  text: string
+  type: 'bridge' | 'pressure' | 'neglect'
+}
+
+// Module-level cache — seeds survive between dialog opens within the same session
+let seedsCache: { seeds: VoiceSeed[]; fetchedAt: number } | null = null
+const SEEDS_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
+function VoiceSeeds({
+  onSelect,
+  hasContent,
+  isOpen,
+}: {
+  onSelect: (text: string) => void
+  hasContent: boolean
+  isOpen: boolean
+}) {
+  const [seeds, setSeeds] = useState<VoiceSeed[]>(() => seedsCache?.seeds ?? [])
+  const [dismissed, setDismissed] = useState(false)
+
+  // Reset dismissed state whenever the dialog opens fresh
+  useEffect(() => {
+    if (isOpen) setDismissed(false)
+  }, [isOpen])
+
+  // Fetch after dialog animation settles; use cache if fresh
+  useEffect(() => {
+    if (!isOpen) return
+    const cacheValid = seedsCache && Date.now() - seedsCache.fetchedAt < SEEDS_CACHE_TTL
+    if (cacheValid) {
+      setSeeds(seedsCache!.seeds)
+      return
+    }
+    const timer = setTimeout(() => {
+      fetch('/api/memories?seeds=true')
+        .then((r) => (r.ok ? r.json() : { seeds: [] }))
+        .then((data) => {
+          const fresh = data.seeds || []
+          seedsCache = { seeds: fresh, fetchedAt: Date.now() }
+          setSeeds(fresh)
+        })
+        .catch(() => {})
+    }, 350) // Let dialog animation complete first
+    return () => clearTimeout(timer)
+  }, [isOpen])
+
+  // Hide when: dismissed, no seeds, or user has started typing
+  if (dismissed || seeds.length === 0 || hasContent) return null
+
+  return (
+    <div
+      className="pt-2 pb-1"
+      style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
+    >
+      <div className="flex items-center gap-1.5 mb-2">
+        <Sparkles className="h-3 w-3 opacity-30" style={{ color: 'var(--brand-primary)' }} />
+        <span
+          className="text-[10px] font-medium tracking-widest uppercase"
+          style={{ color: 'var(--brand-text-secondary)', opacity: 0.3 }}
+        >
+          Worth thinking about
+        </span>
+        <button
+          type="button"
+          onClick={() => setDismissed(true)}
+          className="ml-auto opacity-20 hover:opacity-40 transition-opacity"
+          style={{ color: 'var(--brand-text-secondary)' }}
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </div>
+      <AnimatePresence>
+        <div className="flex flex-col gap-1">
+          {seeds.map((seed, i) => (
+            <motion.button
+              key={seed.id}
+              type="button"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: i * 0.06 }}
+              onClick={() => {
+                onSelect(seed.text)
+                setDismissed(true)
+              }}
+              className="text-left text-sm px-3 py-1.5 rounded-lg transition-all active:scale-[0.98]"
+              style={{
+                background: 'rgba(255,255,255,0.03)',
+                color: 'var(--brand-text-secondary)',
+                boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.05)',
+              }}
+            >
+              {seed.text}
+            </motion.button>
+          ))}
+        </div>
+      </AnimatePresence>
+    </div>
+  )
+}
 
 function ToolbarBtn({ title, onClick, children }: { title: string; onClick: () => void; children: React.ReactNode }) {
   return (
@@ -521,6 +623,24 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                 <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
               </button>
             </div>
+
+            {/* ── Voice seeds — below toolbar, passive, hidden once writing starts ── */}
+            <VoiceSeeds
+              hasContent={!!body.trim()}
+              isOpen={open}
+              onSelect={(text) => {
+                setBody(text)
+                requestAnimationFrame(() => {
+                  if (bodyRef.current) {
+                    bodyRef.current.style.height = 'auto'
+                    bodyRef.current.style.height =
+                      Math.max(120, bodyRef.current.scrollHeight) + 'px'
+                    bodyRef.current.focus()
+                    bodyRef.current.setSelectionRange(text.length, text.length)
+                  }
+                })
+              }}
+            />
           </form>
         </BottomSheetContent>
       </BottomSheet>
