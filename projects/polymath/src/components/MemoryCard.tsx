@@ -11,7 +11,63 @@ import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { MemoryDetailModal } from './memories/MemoryDetailModal'
 import { useConfirmDialog } from './ui/confirm-dialog'
 import { motion } from 'framer-motion'
-import { MarkdownRenderer } from './ui/MarkdownRenderer'
+
+/**
+ * Collapse markdown into a single readable prose string for card previews.
+ * - Bullet/list items → joined inline with " · "
+ * - Headers, bold, italic markers stripped
+ * - Blank lines collapsed to a single space
+ * This lets line-clamp work on actual content, not list chrome.
+ */
+function toPreviewText(md: string): string {
+  const lines = md.split('\n')
+  const segments: string[] = []
+  const bulletBuffer: string[] = []
+
+  const flushBullets = () => {
+    if (bulletBuffer.length > 0) {
+      segments.push(bulletBuffer.join(' · '))
+      bulletBuffer.length = 0
+    }
+  }
+
+  for (const raw of lines) {
+    const line = raw.trim()
+    if (!line) continue
+
+    // Bullet list line: - item / * item / • item / · item
+    const bulletMatch = line.match(/^[-*•·]\s+(.+)/)
+    if (bulletMatch) {
+      bulletBuffer.push(bulletMatch[1].replace(/\*\*|__|\*|_/g, '').trim())
+      continue
+    }
+
+    // Numbered list: 1. item
+    const numberedMatch = line.match(/^\d+\.\s+(.+)/)
+    if (numberedMatch) {
+      bulletBuffer.push(numberedMatch[1].replace(/\*\*|__|\*|_/g, '').trim())
+      continue
+    }
+
+    // Non-list line — flush any buffered bullets first
+    flushBullets()
+
+    // Strip markdown: headers, bold, italic, inline code
+    const clean = line
+      .replace(/^#{1,6}\s+/, '')
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/__(.+?)__/g, '$1')
+      .replace(/\*(.+?)\*/g, '$1')
+      .replace(/_(.+?)_/g, '$1')
+      .replace(/`(.+?)`/g, '$1')
+      .trim()
+
+    if (clean) segments.push(clean)
+  }
+
+  flushBullets()
+  return segments.join(' ')
+}
 
 // List type → icon for provenance badge
 const LIST_TYPE_ICON: Record<string, React.FC<{ className?: string }>> = {
@@ -298,14 +354,13 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
           )
         })()}
 
-        {/* Body text */}
-        <div className="px-3.5 pt-2 pb-0">
-          <MarkdownRenderer
-            content={memory.body}
-            className="text-xs leading-relaxed line-clamp-4"
-            style={{ color: 'var(--brand-text-muted)' }}
-          />
-        </div>
+        {/* Body text — plain prose preview so line-clamp works on content, not list chrome */}
+        <p
+          className="px-3.5 pt-2 pb-0 text-xs leading-relaxed line-clamp-4"
+          style={{ color: 'var(--brand-text-muted)' }}
+        >
+          {toPreviewText(memory.body)}
+        </p>
 
         {/* Attached Images */}
         {memory.image_urls && memory.image_urls.length > 0 && (
