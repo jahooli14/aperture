@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useMultiPerspectiveAI, type PerspectiveSuggestion } from '../../hooks/useMultiPerspectiveAI'
 import { MarkdownRenderer } from '../ui/MarkdownRenderer'
 import type { Project } from '../../types'
+import { Database } from 'lucide-react'
 
 interface MultiPerspectiveSuggestionsProps {
   project: Project
@@ -198,6 +199,14 @@ export function MultiPerspectiveSuggestions({
           <h3 className="font-bold text-sm aperture-header" style={{ color: "var(--brand-primary)" }}>
             What's Next?
           </h3>
+          {result?.lakeContext && (
+            <div className="flex items-center gap-1 opacity-50" title={`Knowledge lake: ${result.lakeContext.memoriesUsed} notes, ${result.lakeContext.articlesUsed} articles, ${result.lakeContext.projectsUsed} projects`}>
+              <Database className="h-3 w-3 text-cyan-400" />
+              <span className="text-[10px] text-cyan-400 font-medium">
+                {result.lakeContext.memoriesUsed + result.lakeContext.articlesUsed + result.lakeContext.projectsUsed}
+              </span>
+            </div>
+          )}
         </div>
         <button
           onClick={handleRefresh}
