@@ -141,6 +141,14 @@ export function MemoriesPage() {
   const [selectedMemoryForModal, setSelectedMemoryForModal] = useState<Memory | null>(null) // State for the detail modal
   const [showDetailModal, setShowDetailModal] = useState(false) // State to open/close the detail modal
 
+  // Always pass a live copy from the store so pin/unpin state stays fresh in the modal
+  const liveSelectedMemory = useMemo(
+    () => selectedMemoryForModal
+      ? (memories.find(m => m.id === selectedMemoryForModal.id) ?? selectedMemoryForModal)
+      : null,
+    [memories, selectedMemoryForModal]
+  )
+
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTags, setActiveTags] = useState<string[]>([])
@@ -1047,9 +1055,9 @@ export function MemoriesPage() {
       </div>
 
       {/* Detail Modal for Deep Linking or Edit */}
-      {selectedMemoryForModal && (
+      {liveSelectedMemory && (
         <MemoryDetailModal
-          memory={selectedMemoryForModal}
+          memory={liveSelectedMemory}
           isOpen={showDetailModal}
           onClose={handleCloseModal}
         />
