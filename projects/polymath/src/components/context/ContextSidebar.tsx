@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { X, Lightbulb, BookOpen, Layers, Brain, ArrowRight, Link as LinkIcon, Loader2, Zap, TrendingUp, RefreshCw, FileText, HelpCircle, Compass, GitBranch } from 'lucide-react'
+import { X, Lightbulb, BookOpen, Layers, Brain, Link as LinkIcon, Loader2, TrendingUp, RefreshCw, FileText, HelpCircle, Compass, Shuffle, Database } from 'lucide-react'
 import { useContextEngineStore, ContextItem } from '../../stores/useContextEngineStore'
 import { useToast } from '../ui/toast'
 
@@ -34,7 +34,7 @@ export function ContextSidebar() {
 
     const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null)
     const [analysisLoading, setAnalysisLoading] = useState(false)
-    const [actionResult, setActionResult] = useState<{ type: string; result: string } | null>(null)
+    const [actionResult, setActionResult] = useState<{ type: string; result: string; totalContextItems?: number; semanticCount?: number } | null>(null)
     const [actionLoading, setActionLoading] = useState<string | null>(null)
 
     const executeAction = async (actionType: string) => {
@@ -50,7 +50,12 @@ export function ContextSidebar() {
             )
             if (response.ok) {
                 const data = await response.json()
-                setActionResult({ type: actionType, result: data.result })
+                setActionResult({
+                    type: actionType,
+                    result: data.result,
+                    totalContextItems: data.totalContextItems,
+                    semanticCount: data.semanticCount
+                })
             }
         } catch (error) {
             console.error('Failed to execute action:', error)
@@ -297,70 +302,67 @@ export function ContextSidebar() {
                             {/* Quick Actions */}
                             {activeContext.type !== 'page' && activeContext.type !== 'home' && (
                                 <div className="space-y-3">
-                                    <p className="text-xs font-semibold text-[var(--brand-text-secondary)] uppercase tracking-wider">
-                                        Quick Actions
-                                    </p>
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-xs font-semibold text-[var(--brand-text-secondary)] uppercase tracking-wider">
+                                            Knowledge Actions
+                                        </p>
+                                        <div className="flex items-center gap-1 ml-auto opacity-50">
+                                            <Database className="h-3 w-3 text-cyan-400" />
+                                            <span className="text-[10px] text-cyan-400 font-medium">lake-aware</span>
+                                        </div>
+                                    </div>
                                     <div className="grid grid-cols-2 gap-2">
-                                        <button
-                                            onClick={() => executeAction('summarize')}
-                                            disabled={!!actionLoading}
-                                            className="flex items-center gap-2 p-2.5 rounded-lg bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] transition-colors text-left"
-                                        >
-                                            {actionLoading === 'summarize' ? (
-                                                <Loader2 className="h-4 w-4 animate-spin text-brand-primary" />
-                                            ) : (
-                                                <FileText className="h-4 w-4 text-brand-primary" />
-                                            )}
-                                            <span className="text-xs text-[var(--brand-text-secondary)]">Summarize</span>
-                                        </button>
-                                        <button
-                                            onClick={() => executeAction('find-gaps')}
-                                            disabled={!!actionLoading}
-                                            className="flex items-center gap-2 p-2.5 rounded-lg bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] transition-colors text-left"
-                                        >
-                                            {actionLoading === 'find-gaps' ? (
-                                                <Loader2 className="h-4 w-4 animate-spin text-brand-text-secondary" />
-                                            ) : (
-                                                <HelpCircle className="h-4 w-4 text-brand-text-secondary" />
-                                            )}
-                                            <span className="text-xs text-[var(--brand-text-secondary)]">Find Gaps</span>
-                                        </button>
-                                        <button
-                                            onClick={() => executeAction('suggest-next')}
-                                            disabled={!!actionLoading}
-                                            className="flex items-center gap-2 p-2.5 rounded-lg bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] transition-colors text-left"
-                                        >
-                                            {actionLoading === 'suggest-next' ? (
-                                                <Loader2 className="h-4 w-4 animate-spin text-brand-text-secondary" />
-                                            ) : (
-                                                <Compass className="h-4 w-4 text-brand-text-secondary" />
-                                            )}
-                                            <span className="text-xs text-[var(--brand-text-secondary)]">Suggest Next</span>
-                                        </button>
-                                        <button
-                                            onClick={() => executeAction('connect-dots')}
-                                            disabled={!!actionLoading}
-                                            className="flex items-center gap-2 p-2.5 rounded-lg bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] transition-colors text-left"
-                                        >
-                                            {actionLoading === 'connect-dots' ? (
-                                                <Loader2 className="h-4 w-4 animate-spin text-brand-primary" />
-                                            ) : (
-                                                <GitBranch className="h-4 w-4 text-brand-primary" />
-                                            )}
-                                            <span className="text-xs text-[var(--brand-text-secondary)]">Connect Dots</span>
-                                        </button>
+                                        {([
+                                            { id: 'summarize', label: 'Synthesize', icon: FileText, color: 'text-violet-400', hint: 'across corpus' },
+                                            { id: 'find-gaps', label: 'Find Gaps', icon: HelpCircle, color: 'text-amber-400', hint: 'blind spots' },
+                                            { id: 'suggest-next', label: 'What Next', icon: Compass, color: 'text-cyan-400', hint: 'with context' },
+                                            { id: 'connect-dots', label: 'Reveal Pattern', icon: Shuffle, color: 'text-pink-400', hint: 'full corpus' },
+                                        ] as const).map(({ id, label, icon: Icon, color, hint }) => (
+                                            <button
+                                                key={id}
+                                                onClick={() => executeAction(id)}
+                                                disabled={!!actionLoading}
+                                                className={`flex flex-col gap-1 p-3 rounded-xl transition-all text-left border ${
+                                                    actionLoading === id
+                                                        ? 'bg-[rgba(255,255,255,0.08)] border-[rgba(255,255,255,0.12)]'
+                                                        : 'bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.08)] border-transparent hover:border-[rgba(255,255,255,0.1)]'
+                                                }`}
+                                            >
+                                                {actionLoading === id ? (
+                                                    <Loader2 className={`h-4 w-4 animate-spin ${color}`} />
+                                                ) : (
+                                                    <Icon className={`h-4 w-4 ${color}`} />
+                                                )}
+                                                <span className="text-xs font-semibold text-[var(--brand-text-secondary)]">{label}</span>
+                                                <span className="text-[10px] text-[var(--brand-text-muted)]">{hint}</span>
+                                            </button>
+                                        ))}
                                     </div>
 
                                     {/* Action Result */}
                                     {actionResult && (
-                                        <div className="rounded-lg p-3 bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)]">
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 4 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            className="rounded-xl p-3 bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)]"
+                                        >
                                             <div className="flex items-center justify-between mb-2">
-                                                <span className="text-xs font-medium text-[var(--brand-text-secondary)] capitalize">
-                                                    {actionResult.type.replace('-', ' ')}
-                                                </span>
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="text-xs font-semibold text-[var(--brand-text-secondary)] capitalize">
+                                                        {actionResult.type === 'summarize' ? 'Synthesis'
+                                                            : actionResult.type === 'find-gaps' ? 'Gaps Found'
+                                                            : actionResult.type === 'suggest-next' ? 'What Next'
+                                                            : 'Pattern Revealed'}
+                                                    </span>
+                                                    {actionResult.totalContextItems != null && actionResult.totalContextItems > 0 && (
+                                                        <span className="text-[10px] text-cyan-500 font-medium opacity-70">
+                                                            {actionResult.totalContextItems} items
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <button
                                                     onClick={() => setActionResult(null)}
-                                                    className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded-xl transition-colors"
+                                                    className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded-lg transition-colors"
                                                 >
                                                     <X className="h-3 w-3 text-[var(--brand-text-muted)]" />
                                                 </button>
@@ -370,18 +372,16 @@ export function ContextSidebar() {
                                                     const trimmed = line.trim()
                                                     if (!trimmed) return null
 
-                                                    // Bullet points
-                                                    if (trimmed.startsWith('- ') || trimmed.startsWith(' ') || trimmed.match(/^\d+\./)) {
+                                                    if (trimmed.startsWith('- ') || trimmed.match(/^\d+\./)) {
                                                         const text = trimmed.replace(/^[-]\s*/, '').replace(/^\d+\.\s*/, '')
                                                         return (
                                                             <div key={i} className="flex items-start gap-2">
-                                                                <span className="text-brand-primary mt-0.5"></span>
+                                                                <span className="text-brand-primary mt-0.5 flex-shrink-0">›</span>
                                                                 <span>{text}</span>
                                                             </div>
                                                         )
                                                     }
 
-                                                    // Bold text (**text**)
                                                     if (trimmed.includes('**')) {
                                                         const parts = trimmed.split(/\*\*(.*?)\*\*/g)
                                                         return (
@@ -398,7 +398,7 @@ export function ContextSidebar() {
                                                     return <p key={i}>{trimmed}</p>
                                                 })}
                                             </div>
-                                        </div>
+                                        </motion.div>
                                     )}
                                 </div>
                             )}
