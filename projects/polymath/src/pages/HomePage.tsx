@@ -28,6 +28,7 @@ import { SubtleBackground } from '../components/SubtleBackground'
 import { DriftMode } from '../components/bedtime/DriftMode'
 import { MorningFollowUp } from '../components/bedtime/MorningFollowUp'
 import { CollisionReport } from '../components/home/CollisionReport'
+import { DailySpark } from '../components/home/DailySpark'
 import { PROJECT_COLORS } from '../components/projects/ProjectCard'
 import { PowerHourHero } from '../components/home/PowerHourHero'
 import type { Memory, Project, SynthesisInsight } from '../types'
@@ -1143,6 +1144,11 @@ export function HomePage() {
             <h2 className="section-header">
               or just <span>explore</span>
             </h2>
+          </div>
+
+          {/* Daily Spark — ambient synthesis from the knowledge graph */}
+          <div className="mb-4">
+            <DailySpark />
           </div>
 
           {/* Weekly Collision Report */}
