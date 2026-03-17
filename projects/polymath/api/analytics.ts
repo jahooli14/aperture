@@ -1421,5 +1421,112 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  return res.status(400).json({ error: 'Invalid resource. Use ?resource=monitoring, ?resource=inspiration, ?resource=smart-suggestion, ?resource=patterns, ?resource=evolution, ?resource=opportunities, ?resource=morning, ?resource=shadow-projects, ?resource=hygiene, or ?resource=init-tags' })
+  // DAILY SPARK — one ambient synthesis insight per day
+  if (resource === 'spark') {
+    if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
+    const userId = await getUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+    return await handleSpark(req, res, userId)
+  }
+
+  return res.status(400).json({ error: 'Invalid resource. Use ?resource=monitoring, ?resource=inspiration, ?resource=smart-suggestion, ?resource=patterns, ?resource=evolution, ?resource=opportunities, ?resource=morning, ?resource=shadow-projects, ?resource=hygiene, ?resource=spark, or ?resource=init-tags' })
+}
+
+/**
+ * Daily Ambient Spark — finds the most resonant unexpected synthesis across
+ * the user's knowledge graph. Not a recommendation. Just the connection they
+ * haven't made yet.
+ *
+ * GET /api/analytics?resource=spark
+ */
+async function handleSpark(req: VercelRequest, res: VercelResponse, userId: string) {
+  const { cosineSimilarity } = await import('./_lib/gemini-embeddings.js')
+  const { generateText } = await import('./_lib/gemini-chat.js')
+  const supabase = getSupabaseClient()
+
+  const [memoriesResult, articlesResult, projectsResult] = await Promise.all([
+    supabase
+      .from('memories')
+      .select('id, title, body, embedding')
+      .eq('user_id', userId)
+      .eq('processed', true)
+      .not('embedding', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(20),
+    supabase
+      .from('reading_queue')
+      .select('id, title, excerpt, embedding')
+      .eq('user_id', userId)
+      .in('status', ['read', 'reading'])
+      .not('embedding', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(10),
+    supabase
+      .from('projects')
+      .select('id, title, description, embedding')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .not('embedding', 'is', null)
+      .limit(10),
+  ])
+
+  type SparkItem = { id: string; title: string; type: 'thought' | 'article' | 'project'; embedding: number[]; snippet: string }
+
+  const all: SparkItem[] = [
+    ...(memoriesResult.data || []).map((m: any) => ({ id: m.id, title: m.title, type: 'thought' as const, embedding: m.embedding, snippet: (m.body || '').slice(0, 120) })),
+    ...(articlesResult.data || []).map((a: any) => ({ id: a.id, title: a.title, type: 'article' as const, embedding: a.embedding, snippet: (a.excerpt || '').slice(0, 120) })),
+    ...(projectsResult.data || []).map((p: any) => ({ id: p.id, title: p.title, type: 'project' as const, embedding: p.embedding, snippet: (p.description || '').slice(0, 120) })),
+  ].filter((i) => i.embedding?.length)
+
+  if (all.length < 4) {
+    return res.json({ spark: null, reason: 'not_enough_data' })
+  }
+
+  // Find the sweet-spot pair: similar enough to resonate, different enough to surprise.
+  // Cross-domain pairs get a bonus — thought+project and article+project are most actionable.
+  let bestPair: { a: SparkItem; b: SparkItem } | null = null
+  let bestScore = -1
+
+  for (let i = 0; i < all.length; i++) {
+    for (let j = i + 1; j < all.length; j++) {
+      const a = all[i], b = all[j]
+      if (a.type === b.type && a.type !== 'thought') continue
+      const sim = cosineSimilarity(a.embedding, b.embedding)
+      if (sim < 0.50 || sim > 0.76) continue
+      const score = sim + (a.type !== b.type ? 0.05 : 0)
+      if (score > bestScore) { bestScore = score; bestPair = { a, b } }
+    }
+  }
+
+  if (!bestPair) return res.json({ spark: null, reason: 'no_resonant_pair' })
+
+  const { a, b } = bestPair
+  const prompt = `You are generating a single synthesis insight for a personal knowledge app.
+
+Two pieces of knowledge have an unexpected resonance:
+
+ITEM A (${a.type}): "${a.title}"${a.snippet ? `\nContext: "${a.snippet}"` : ''}
+
+ITEM B (${b.type}): "${b.title}"${b.snippet ? `\nContext: "${b.snippet}"` : ''}
+
+Write ONE sentence (max 25 words) naming the hidden pattern that connects them.
+NOT: "A and B are both about X" — NOT: "You should connect A and B"
+YES: An observation that makes them see something they hadn't noticed.
+The insight should feel like an idea arriving, not information being delivered.
+Return ONLY the sentence.`
+
+  try {
+    const insight = await generateText(prompt, { maxTokens: 80, temperature: 0.75 })
+    res.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate=3600')
+    return res.json({
+      spark: {
+        insight: insight.trim(),
+        item_a: { id: a.id, title: a.title, type: a.type },
+        item_b: { id: b.id, title: b.title, type: b.type },
+        generated_at: new Date().toISOString(),
+      }
+    })
+  } catch {
+    return res.json({ spark: null, reason: 'error' })
+  }
 }

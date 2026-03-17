@@ -13,12 +13,99 @@ import {
 } from '../ui/bottom-sheet'
 import { useMemoryStore } from '../../stores/useMemoryStore'
 import { useToast } from '../ui/toast'
-import { Plus, ArrowUp, Bold, Italic, List, Image as ImageIcon, X } from 'lucide-react'
+import { Plus, ArrowUp, Bold, Italic, List, Image as ImageIcon, X, Sparkles } from 'lucide-react'
 import { celebrate, checkThoughtMilestone, getMilestoneMessage } from '../../utils/celebrations'
 import { handleInputFocus } from '../../utils/keyboard'
 import { useAutoSuggestion } from '../../contexts/AutoSuggestionContext'
 import { SuggestionToast } from '../SuggestionToast'
 import { motion, AnimatePresence } from 'framer-motion'
+
+interface VoiceSeed {
+  id: string
+  text: string
+  type: 'bridge' | 'pressure' | 'neglect'
+}
+
+function VoiceSeeds({ onSelect }: { onSelect: (text: string) => void }) {
+  const [seeds, setSeeds] = useState<VoiceSeed[]>([])
+  const [loading, setLoading] = useState(true)
+  const [dismissed, setDismissed] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/memories?seeds=true')
+      .then((r) => r.ok ? r.json() : { seeds: [] })
+      .then((data) => setSeeds(data.seeds || []))
+      .catch(() => setSeeds([]))
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (dismissed || (!loading && seeds.length === 0)) return null
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0, height: 0 }}
+        animate={{ opacity: 1, height: 'auto' }}
+        exit={{ opacity: 0, height: 0 }}
+        className="mb-3 overflow-hidden"
+      >
+        <div className="flex items-center gap-1.5 mb-2">
+          <Sparkles className="h-3 w-3 opacity-40" style={{ color: 'var(--brand-primary)' }} />
+          <span className="text-[11px] font-medium tracking-wide uppercase opacity-35"
+            style={{ color: 'var(--brand-text-secondary)' }}>
+            Worth thinking about
+          </span>
+          <button
+            type="button"
+            onClick={() => setDismissed(true)}
+            className="ml-auto opacity-25 hover:opacity-50 transition-opacity"
+            style={{ color: 'var(--brand-text-secondary)' }}
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="flex gap-2">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-7 rounded-full animate-pulse flex-1"
+                style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  animationDelay: `${i * 80}ms`,
+                }}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            {seeds.map((seed) => (
+              <motion.button
+                key={seed.id}
+                type="button"
+                initial={{ opacity: 0, x: -6 }}
+                animate={{ opacity: 1, x: 0 }}
+                onClick={() => {
+                  onSelect(seed.text)
+                  setDismissed(true)
+                }}
+                className="text-left text-sm px-3 py-2 rounded-xl transition-all active:scale-[0.98]"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  color: 'var(--brand-text-secondary)',
+                  boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.06)',
+                }}
+              >
+                {seed.text}
+              </motion.button>
+            ))}
+          </div>
+        )}
+      </motion.div>
+    </AnimatePresence>
+  )
+}
 
 function ToolbarBtn({ title, onClick, children }: { title: string; onClick: () => void; children: React.ReactNode }) {
   return (
@@ -368,6 +455,23 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
           </BottomSheetHeader>
 
           <form onSubmit={handleSubmit} className="flex flex-col pt-1">
+            {/* ── Voice seeds — context-aware thinking prompts ── */}
+            <VoiceSeeds
+              onSelect={(text) => {
+                setBody(text)
+                // Auto-grow the textarea after pre-fill
+                requestAnimationFrame(() => {
+                  if (bodyRef.current) {
+                    bodyRef.current.style.height = 'auto'
+                    bodyRef.current.style.height =
+                      Math.max(120, bodyRef.current.scrollHeight) + 'px'
+                    bodyRef.current.focus()
+                    bodyRef.current.setSelectionRange(text.length, text.length)
+                  }
+                })
+              }}
+            />
+
             {/* ── Writing surface ── */}
             <textarea
               ref={bodyRef}
