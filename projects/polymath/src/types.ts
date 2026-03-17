@@ -447,7 +447,7 @@ export interface Project {
   would_restart?: boolean
 }
 
-export type ProjectStatus = 'upcoming' | 'active' | 'dormant' | 'completed' | 'on-hold' | 'maintaining' | 'archived' | 'abandoned'
+export type ProjectStatus = 'upcoming' | 'active' | 'dormant' | 'completed' | 'on-hold' | 'maintaining' | 'archived' | 'abandoned' | 'graveyard'
 
 export interface Task {
   id: string
