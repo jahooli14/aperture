@@ -1091,21 +1091,25 @@ export function ProjectDetailPage() {
 
               {/* Activity */}
               <div className="mt-12">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold" style={{ color: "var(--brand-primary)" }}>
+                <div className="flex items-center justify-between mb-6">
+                  <h3
+                    className="text-[11px] font-black uppercase tracking-widest"
+                    style={{ color: 'rgba(255,255,255,0.3)' }}
+                  >
                     Activity
                   </h3>
-                  <Button
+                  <button
                     onClick={() => setShowAddNote(true)}
-                    className="h-9 px-4 text-sm font-medium"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold uppercase tracking-wide transition-colors active:scale-95"
                     style={{
-                      background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-primary))',
-                      color: 'white'
+                      background: 'rgba(255,255,255,0.06)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      color: 'var(--brand-primary)',
                     }}
                   >
-                    <Plus className="h-4 w-4 mr-1.5" />
+                    <Plus className="h-3 w-3" />
                     Add Update
-                  </Button>
+                  </button>
                 </div>
                 <ProjectActivityStream
                   notes={[...notes, ...projectMemories.map(m => ({

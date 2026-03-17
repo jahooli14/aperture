@@ -1,13 +1,11 @@
 /**
  * Project Activity Stream Component
- * Displays chronological list of project notes and updates
+ * Clean timeline feed of project notes and updates
  */
 
-import { useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
-import { Mic, FileText, ChevronDown, ChevronUp, RefreshCw, Image as ImageIcon } from 'lucide-react'
-import { Card, CardContent } from '../ui/card'
-import { motion } from 'framer-motion'
+import { Mic, FileText } from 'lucide-react'
+import { MarkdownRenderer } from '../ui/MarkdownRenderer'
 
 interface ProjectNote {
   id: string
@@ -22,212 +20,93 @@ interface ProjectActivityStreamProps {
   onRefresh: () => void
 }
 
-export function ProjectActivityStream({ notes, onRefresh }: ProjectActivityStreamProps) {
-  const [filter, setFilter] = useState<'all' | 'voice' | 'text'>('all')
-  const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set())
-
-  const toggleExpanded = (noteId: string) => {
-    const newExpanded = new Set(expandedNotes)
-    if (newExpanded.has(noteId)) {
-      newExpanded.delete(noteId)
-    } else {
-      newExpanded.add(noteId)
-    }
-    setExpandedNotes(newExpanded)
+export function ProjectActivityStream({ notes }: ProjectActivityStreamProps) {
+  if (notes.length === 0) {
+    return (
+      <div className="py-10 text-center">
+        <p className="text-sm font-medium uppercase tracking-widest opacity-30" style={{ color: 'var(--brand-primary)' }}>
+          No updates yet
+        </p>
+        <p className="text-xs mt-1 opacity-20" style={{ color: 'var(--brand-text-secondary)' }}>
+          Tap "Add Update" to log progress
+        </p>
+      </div>
+    )
   }
 
-  const filteredNotes = notes.filter((note) => {
-    if (filter === 'all') return true
-    return note.note_type === filter
-  })
-
   return (
-    <Card className="premium-card">
-      <CardContent className="p-4">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold premium-text-platinum">Recent updates</h2>
-          <button
-            onClick={onRefresh}
-            className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-[var(--glass-surface)] transition-colors"
-            aria-label="Refresh"
-            style={{ color: "var(--brand-primary)" }}
-          >
-            <RefreshCw className="h-4 w-4" />
-          </button>
-        </div>
+    <div className="relative">
+      {/* Timeline spine */}
+      <div
+        className="absolute left-[7px] top-2 bottom-2 w-px"
+        style={{ background: 'rgba(255,255,255,0.06)' }}
+      />
 
-        {/* Filter Tabs */}
-        <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide">
-          {[
-            { key: 'all' as const, label: 'All', count: notes.length },
-            { key: 'voice' as const, label: 'Voice', count: notes.filter(n => n.note_type === 'voice').length },
-            { key: 'text' as const, label: 'Text', count: notes.filter(n => n.note_type === 'text').length },
-          ].map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setFilter(tab.key)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap"
-              style={{
-                background: filter === tab.key
-                  ? 'linear-gradient(135deg, var(--brand-primary), var(--brand-primary))'
-                  : 'var(--glass-surface)',
-                color: filter === tab.key ? 'white' : 'var(--brand-text-secondary)'
-              }}
-            >
-              {tab.label}
-              <span className="text-xs" style={{ opacity: filter === tab.key ? 0.75 : 0.5 }}>
-                ({tab.count})
-              </span>
-            </button>
-          ))}
-        </div>
+      <div className="space-y-6">
+        {notes.map((note) => {
+          const content = note.bullets.join('\n')
 
-        {/* Notes List */}
-        {filteredNotes.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="inline-flex items-center justify-center mb-3">
-              <FileText className="h-12 w-12" style={{ color: "var(--brand-primary)" }} />
-            </div>
-            <h3 className="text-base font-semibold mb-1 premium-text-platinum">
-              No updates yet
-            </h3>
-            <p className="text-sm" style={{ color: "var(--brand-primary)" }}>
-              Get started by adding your first note
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {filteredNotes.map((note) => {
-              const isExpanded = expandedNotes.has(note.id)
-              const showPreview = note.bullets.length > 0
+          return (
+            <div key={note.id} className="relative flex gap-4 pl-6">
+              {/* Timeline dot */}
+              <div
+                className="absolute left-0 top-1.5 w-3.5 h-3.5 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{
+                  background: note.note_type === 'voice' ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.06)',
+                  border: note.note_type === 'voice' ? '1px solid rgba(59,130,246,0.4)' : '1px solid rgba(255,255,255,0.12)',
+                }}
+              >
+                {note.note_type === 'voice'
+                  ? <Mic className="w-2 h-2" style={{ color: '#60a5fa' }} />
+                  : <FileText className="w-2 h-2" style={{ color: 'rgba(255,255,255,0.3)' }} />
+                }
+              </div>
 
-              return (
-                <div
-                  key={note.id}
-                  className="group relative rounded-lg border transition-colors"
-                  style={{
-                    backgroundColor: 'var(--glass-surface)',
-                    borderColor: 'rgba(255, 255, 255, 0.1)'
-                  }}
-                >
-                  <div className="p-4">
-                    {/* Header */}
-                    <div className="flex items-start gap-3 mb-2">
-                      <div className="h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0" style={{
-                        backgroundColor: note.note_type === 'voice' ? 'rgba(59, 130, 246, 0.15)' : 'var(--glass-surface)',
-                        color: note.note_type === 'voice' ? '#3b82f6' : 'var(--brand-text-secondary)'
-                      }}>
-                        {note.note_type === 'voice' ? (
-                          <Mic className="h-4 w-4" />
-                        ) : (
-                          <FileText className="h-4 w-4" />
-                        )}
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-sm font-medium premium-text-platinum">
-                            You added {note.note_type === 'voice' ? 'a voice note' : 'a note'}
-                          </span>
-                          <span className="text-xs" style={{ color: "var(--brand-primary)" }}>
-                            {formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Content */}
-                    {showPreview && (
-                      <div className="ml-11 space-y-3">
-                        {isExpanded ? (
-                          <ul className="space-y-1.5 text-sm" style={{ color: "var(--brand-primary)" }}>
-                            {note.bullets.map((bullet, index) => (
-                              <li key={index} className="flex gap-2">
-                                <span className="flex-shrink-0" style={{ color: "var(--brand-primary)" }}></span>
-                                <span className="leading-relaxed">{bullet}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="text-sm line-clamp-2 leading-relaxed" style={{ color: "var(--brand-primary)" }}>
-                            {note.bullets[0]}
-                          </p>
-                        )}
-
-                        {note.bullets.length > 1 && (
-                          <button
-                            onClick={() => toggleExpanded(note.id)}
-                            className="mt-2 flex items-center gap-1 text-xs font-medium transition-colors"
-                            style={{ color: "var(--brand-primary)" }}
-                          >
-                            {isExpanded ? (
-                              <>
-                                <ChevronUp className="h-3 w-3" />
-                                Show less
-                              </>
-                            ) : (
-                              <>
-                                <ChevronDown className="h-3 w-3" />
-                                Show {note.bullets.length - 1} more
-                              </>
-                            )}
-                          </button>
-                        )}
-
-                        {/* Images */}
-                        {note.image_urls && note.image_urls.length > 0 && (
-                          <div className="mt-3">
-                            <div className={`grid gap-2 ${note.image_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                              {note.image_urls.slice(0, isExpanded ? undefined : 2).map((url, index) => (
-                                <motion.div
-                                  key={url}
-                                  initial={{ opacity: 0, scale: 0.95 }}
-                                  animate={{ opacity: 1, scale: 1 }}
-                                  transition={{ delay: index * 0.05 }}
-                                  className="relative rounded-xl overflow-hidden border group cursor-pointer"
-                                  style={{
-                                    borderColor: 'rgba(255, 255, 255, 0.1)',
-                                    aspectRatio: note.image_urls.length === 1 ? '16/9' : '1/1'
-                                  }}
-                                  onClick={() => window.open(url, '_blank')}
-                                >
-                                  <img
-                                    src={url}
-                                    alt={`Attachment ${index + 1}`}
-                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                    loading="lazy"
-                                  />
-                                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
-                                  <div className="absolute top-2 right-2 opacity-60">
-                                    <div className="p-1.5 rounded-full bg-black/40 backdrop-blur-sm">
-                                      <ImageIcon className="h-3 w-3 text-[var(--brand-text-primary)]" />
-                                    </div>
-                                  </div>
-                                </motion.div>
-                              ))}
-                            </div>
-                            {!isExpanded && note.image_urls.length > 2 && (
-                              <button
-                                onClick={() => toggleExpanded(note.id)}
-                                className="mt-2 flex items-center gap-1 text-xs font-medium transition-colors"
-                                style={{ color: "var(--brand-primary)" }}
-                              >
-                                <ChevronDown className="h-3 w-3" />
-                                Show {note.image_urls.length - 2} more {note.image_urls.length - 2 === 1 ? 'image' : 'images'}
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+              {/* Content */}
+              <div className="flex-1 min-w-0 pb-1">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span
+                    className="text-[10px] font-semibold uppercase tracking-widest"
+                    style={{ color: 'rgba(255,255,255,0.25)' }}
+                  >
+                    {formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}
+                  </span>
                 </div>
-              )
-            })}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+
+                <MarkdownRenderer
+                  content={content}
+                  className="text-sm leading-relaxed"
+                  style={{ color: 'var(--brand-primary)' }}
+                />
+
+                {/* Images */}
+                {note.image_urls && note.image_urls.length > 0 && (
+                  <div className={`mt-3 grid gap-2 ${note.image_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                    {note.image_urls.map((url, i) => (
+                      <div
+                        key={url}
+                        className="rounded-xl overflow-hidden cursor-pointer"
+                        style={{
+                          aspectRatio: note.image_urls!.length === 1 ? '16/9' : '1/1',
+                          boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.08)',
+                        }}
+                        onClick={() => window.open(url, '_blank')}
+                      >
+                        <img
+                          src={url}
+                          alt={`Attachment ${i + 1}`}
+                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                          loading="lazy"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
   )
 }
