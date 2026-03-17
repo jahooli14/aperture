@@ -235,7 +235,7 @@ export function SmartCaptureBar({
             placeholder={placeholder}
             className="flex-1 text-[16px] leading-snug outline-none"
             style={{
-              color: 'var(--brand-text-primary))',
+              color: 'var(--brand-text-primary)',
               backgroundColor: 'transparent',
             }}
           />

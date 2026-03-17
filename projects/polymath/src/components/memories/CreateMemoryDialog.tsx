@@ -19,6 +19,7 @@ import { handleInputFocus } from '../../utils/keyboard'
 import { useAutoSuggestion } from '../../contexts/AutoSuggestionContext'
 import { SuggestionToast } from '../SuggestionToast'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useBodyEditor } from '../../hooks/useBodyEditor'
 
 interface VoiceSeed {
   id: string
@@ -154,7 +155,11 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
   const { createMemory, memories } = useMemoryStore()
   const { addToast } = useToast()
   const { fetchSuggestions } = useAutoSuggestion()
-  const bodyRef = useRef<HTMLTextAreaElement>(null)
+
+  const {
+    body, setBody, bodyRef, bodyFocused, setBodyFocused,
+    wordCount, handleBodyChange, handleBodyKeyDown, applyFormat,
+  } = useBodyEditor({ minHeight: 160 })
 
   // Create and cleanup object URLs to prevent memory leaks
   useEffect(() => {
@@ -170,14 +175,12 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
   const open = isOpen !== undefined ? isOpen : internalOpen
   const setOpen = onOpenChange || setInternalOpen
 
-  const [body, setBody] = useState('')
   const [formData, setFormData] = useState({
     title: '',
     tags: '',
     memory_type: '' as '' | 'foundational' | 'event' | 'insight' | 'quick-note',
   })
   const [recentTags, setRecentTags] = useState<string[]>([])
-  const [bodyFocused, setBodyFocused] = useState(false)
   const titleRef = useRef<HTMLInputElement>(null)
 
   // Load recent tags from memories
@@ -187,7 +190,6 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
       .flatMap(m => m.tags || [])
       .filter(Boolean)
 
-    // Count frequency and take top 8
     const tagCounts = allTags.reduce((acc, tag) => {
       acc[tag] = (acc[tag] || 0) + 1
       return acc
@@ -202,112 +204,10 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
   }, [])
 
   const resetForm = () => {
-    setFormData({
-      title: '',
-      tags: '',
-      memory_type: '',
-    })
+    setFormData({ title: '', tags: '', memory_type: '' })
     setBody('')
     setSelectedFiles([])
     setShowOptions(false)
-  }
-
-  // Auto-grow textarea  batched in rAF to avoid double-reflow per keystroke
-  const handleBodyChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setBody(e.target.value)
-    const el = e.target
-    requestAnimationFrame(() => {
-      el.style.height = 'auto'
-      el.style.height = Math.max(120, el.scrollHeight) + 'px'
-    })
-  }
-
-  // Google Keep-style keyboard handling: auto-continue bullets on Enter
-  const handleBodyKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key !== 'Enter' || e.shiftKey) return
-
-    const el = e.currentTarget
-    const { selectionStart } = el
-    const lines = body.slice(0, selectionStart).split('\n')
-    const currentLine = lines[lines.length - 1]
-
-    // Match bullet patterns: "- ", " ", "* ", "[] ", "[x] ", numbered "1. " etc.
-    const bulletMatch = currentLine.match(/^(\s*)([-*]|\[\s?\]|\[x\]|\d+\.)\s/)
-    if (!bulletMatch) return
-
-    const [, indent, bullet] = bulletMatch
-
-    // If the current line is ONLY the bullet (empty content), remove the bullet instead
-    const contentAfterBullet = currentLine.slice(bulletMatch[0].length).trim()
-    if (!contentAfterBullet) {
-      e.preventDefault()
-      const lineStart = body.lastIndexOf('\n', selectionStart - 1) + 1
-      const newBody = body.slice(0, lineStart) + '\n' + body.slice(selectionStart)
-      setBody(newBody)
-      requestAnimationFrame(() => {
-        el.selectionStart = el.selectionEnd = lineStart + 1
-        el.style.height = 'auto'
-        el.style.height = Math.max(120, el.scrollHeight) + 'px'
-      })
-      return
-    }
-
-    e.preventDefault()
-
-    // Auto-increment numbered lists
-    let nextBullet = bullet
-    const numMatch = bullet.match(/^(\d+)\./)
-    if (numMatch) {
-      nextBullet = `${parseInt(numMatch[1]) + 1}.`
-    }
-    // Convert [x] to [] for next item
-    if (bullet === '[x]') nextBullet = '[]'
-
-    const insertion = `\n${indent}${nextBullet} `
-    const newBody = body.slice(0, selectionStart) + insertion + body.slice(selectionStart)
-    setBody(newBody)
-    requestAnimationFrame(() => {
-      const newPos = selectionStart + insertion.length
-      el.selectionStart = el.selectionEnd = newPos
-      el.style.height = 'auto'
-      el.style.height = Math.max(120, el.scrollHeight) + 'px'
-    })
-  }
-
-  const applyFormat = (type: 'bold' | 'italic' | 'bullet') => {
-    const el = bodyRef.current
-    if (!el) return
-    const { selectionStart: start, selectionEnd: end } = el
-    const selected = body.slice(start, end)
-
-    if (type === 'bullet') {
-      const lineStart = body.lastIndexOf('\n', start - 1) + 1
-      const hasBullet = body.slice(lineStart).startsWith('- ')
-      const newBody = hasBullet
-        ? body.slice(0, lineStart) + body.slice(lineStart + 2)
-        : body.slice(0, lineStart) + '- ' + body.slice(lineStart)
-      setBody(newBody)
-      requestAnimationFrame(() => {
-        const offset = hasBullet ? -2 : 2
-        el.selectionStart = el.selectionEnd = start + offset
-        el.style.height = 'auto'
-        el.style.height = Math.max(120, el.scrollHeight) + 'px'
-        el.focus()
-      })
-      return
-    }
-
-    const wrap = type === 'bold' ? '**' : '*'
-    const insertion = selected ? `${wrap}${selected}${wrap}` : `${wrap}${wrap}`
-    const newBody = body.slice(0, start) + insertion + body.slice(end)
-    setBody(newBody)
-    requestAnimationFrame(() => {
-      const cursor = selected ? start + insertion.length : start + wrap.length
-      el.selectionStart = el.selectionEnd = cursor
-      el.style.height = 'auto'
-      el.style.height = Math.max(120, el.scrollHeight) + 'px'
-      el.focus()
-    })
   }
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -582,8 +482,14 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                 </ToolbarBtn>
               </div>
 
-              {/* Spacer */}
-              <div className="flex-1" />
+              {/* Spacer + word count */}
+              <div className="flex-1 flex items-center justify-center">
+                {bodyFocused && wordCount > 0 && (
+                  <span className="text-[10px] tabular-nums" style={{ color: 'var(--brand-text-secondary)', opacity: 0.35 }}>
+                    {wordCount}w
+                  </span>
+                )}
+              </div>
 
               {/* Type pills */}
               <div className="flex items-center gap-0.5 mr-2">

@@ -12,13 +12,27 @@ import {
   BottomSheetTitle,
 } from '../ui/bottom-sheet'
 import { Input } from '../ui/input'
-import { Textarea } from '../ui/textarea'
 import { useMemoryStore } from '../../stores/useMemoryStore'
 import { useToast } from '../ui/toast'
-import { useRef } from 'react'
-import { Brain, Image as ImageIcon, X, Plus, ChevronDown } from 'lucide-react'
+import { Image as ImageIcon, X, ChevronDown, Bold, Italic, List } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { handleInputFocus } from '../../utils/keyboard'
+import { useBodyEditor } from '../../hooks/useBodyEditor'
 import type { Memory } from '../../types'
+
+function ToolbarBtn({ title, onClick, children }: { title: string; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      title={title}
+      onClick={onClick}
+      className="relative p-2 rounded-lg transition-all opacity-35 hover:opacity-70 active:opacity-100"
+      style={{ color: 'var(--brand-text-secondary)' }}
+    >
+      {children}
+    </button>
+  )
+}
 
 interface EditMemoryDialogProps {
   memory: Memory | null
@@ -35,12 +49,16 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
   const [uploading, setUploading] = useState(false)
   const [showOptions, setShowOptions] = useState(false)
 
+  const {
+    body, setBody, bodyRef, bodyFocused, setBodyFocused,
+    wordCount, handleBodyChange, handleBodyKeyDown, applyFormat, initHeight,
+  } = useBodyEditor({ minHeight: 160 })
+
   // Image state
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [previewUrls, setPreviewUrls] = useState<string[]>([])
   const [existingImages, setExistingImages] = useState<string[]>([])
 
-  const [body, setBody] = useState('')
   const [formData, setFormData] = useState({
     title: '',
     tags: '',
@@ -66,7 +84,8 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
       })
       setBody(memory.body)
       setExistingImages(memory.image_urls || [])
-      setSelectedFiles([]) // Reset new files on open
+      setSelectedFiles([])
+      initHeight()
     }
   }, [memory, open])
 
@@ -219,14 +238,24 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
 
         <form onSubmit={handleSubmit} className="space-y-3 pt-2">
           {/* Body — the hero */}
-          <Textarea
+          <textarea
+            ref={bodyRef}
             id="body"
             placeholder="Write your thoughts..."
             value={body}
-            onChange={(e) => setBody(e.target.value)}
+            onChange={handleBodyChange}
+            onKeyDown={handleBodyKeyDown}
+            onFocus={(e) => { setBodyFocused(true); handleInputFocus(e) }}
+            onBlur={() => setBodyFocused(false)}
             required
-            className="text-[17px] leading-relaxed resize-none border-0 focus:ring-0 bg-transparent p-0 min-h-[160px] placeholder:opacity-20"
-            style={{ color: 'var(--brand-text-primary)' }}
+            autoFocus
+            className="w-full border-0 focus:outline-none focus:ring-0 resize-none appearance-none bg-transparent"
+            style={{
+              color: 'var(--brand-text-primary)',
+              fontSize: '17px',
+              lineHeight: '1.65',
+              minHeight: '160px',
+            }}
           />
 
           {/* Title — subtle secondary */}
@@ -240,10 +269,21 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
             autoComplete="off"
           />
 
-          {/* Bottom bar: Photo + Options toggle */}
-          <div className="flex items-center gap-2 pt-2 border-t" style={{ borderColor: 'var(--glass-surface)' }}>
-            {/* Photo button */}
-            <div className="relative flex-shrink-0">
+          {/* Bottom bar: Formatting + Photo + Options toggle */}
+          <div className="flex items-center gap-0.5 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            {/* Formatting: Bold · Italic · List */}
+            <ToolbarBtn title="Bold" onClick={() => applyFormat('bold')}>
+              <Bold className="h-4 w-4" />
+            </ToolbarBtn>
+            <ToolbarBtn title="Italic" onClick={() => applyFormat('italic')}>
+              <Italic className="h-4 w-4" />
+            </ToolbarBtn>
+            <ToolbarBtn title="Bullet list" onClick={() => applyFormat('bullet')}>
+              <List className="h-4 w-4" />
+            </ToolbarBtn>
+
+            {/* Photo */}
+            <div className="relative ml-0.5">
               <input
                 type="file"
                 multiple
@@ -252,14 +292,18 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
                 className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
                 id="edit-image-upload"
               />
-              <button
-                type="button"
-                className="p-2 rounded-lg transition-all hover:bg-[var(--glass-surface)] opacity-50 hover:opacity-80"
-                style={{ color: "var(--brand-text-secondary)" }}
-                title="Add photo"
-              >
+              <ToolbarBtn title="Add photo" onClick={() => {}}>
                 <ImageIcon className="h-4 w-4" />
-              </button>
+              </ToolbarBtn>
+            </div>
+
+            {/* Word count */}
+            <div className="flex-1 flex items-center justify-center">
+              {bodyFocused && wordCount > 0 && (
+                <span className="text-[10px] tabular-nums" style={{ color: 'var(--brand-text-secondary)', opacity: 0.35 }}>
+                  {wordCount}w
+                </span>
+              )}
             </div>
 
             {/* More options toggle */}
