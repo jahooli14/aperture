@@ -104,12 +104,13 @@ export async function processMemory(memoryId: string): Promise<void> {
       .then((bridge) => {
         if (bridge) {
           const updatedTriage = { ...(metadata.triage || {}), bridge_insight: bridge }
-          supabase
-            .from('memories')
-            .update({ triage: updatedTriage })
-            .eq('id', memoryId)
-            .then(() => logger.info({ memory_id: memoryId }, '✅ Bridge insight stored'))
-            .catch(() => {}) // Non-critical
+          Promise.resolve(
+            supabase
+              .from('memories')
+              .update({ triage: updatedTriage })
+              .eq('id', memoryId)
+              .then(() => logger.info({ memory_id: memoryId }, '✅ Bridge insight stored'))
+          ).catch(() => {}) // Non-critical
         }
       })
       .catch(() => {}) // Never propagate bridge errors
