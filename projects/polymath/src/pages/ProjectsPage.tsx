@@ -5,7 +5,8 @@ import { useProjectStore } from '../stores/useProjectStore'
 import { useSuggestionStore } from '../stores/useSuggestionStore'
 import { ProjectsPageCarousel } from '../components/projects/ProjectsPageCarousel'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
-import { ReaperModal } from '../components/projects/ReaperModal' // Import ReaperModal
+import { ReaperModal } from '../components/projects/ReaperModal'
+import { GraveyardWalkthrough, shouldShowGraveyardWalkthrough } from '../components/projects/GraveyardWalkthrough'
 import { Button } from '../components/ui/button'
 import { PremiumTabs } from '../components/ui/premium-tabs'
 import { Layers, Search, Check } from 'lucide-react'
@@ -155,7 +156,8 @@ export function ProjectsPage() {
   const { addToast } = useToast()
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
 
-  const [reaperModalOpen, setReaperModalOpen] = useState(false) // State for ReaperModal
+  const [reaperModalOpen, setReaperModalOpen] = useState(false)
+  const [graveyardWalkthroughOpen, setGraveyardWalkthroughOpen] = useState(false)
 
   // Check for rotting projects on page load
   useEffect(() => {
@@ -172,6 +174,36 @@ export function ProjectsPage() {
     }
     checkForRottingProjects()
   }, []) // Run only once on mount
+
+  // Graveyard projects (from already-fetched allProjects)
+  const safeAllProjects = Array.isArray(allProjects) ? allProjects : []
+  const graveyardProjects = React.useMemo(
+    () => safeAllProjects.filter(p => p.status === 'graveyard'),
+    [safeAllProjects]
+  )
+
+  // Weekly spotlight: deterministic pick from graveyard (changes weekly)
+  const weeklyArchiveSpotlight = React.useMemo(() => {
+    if (graveyardProjects.length === 0) return null
+    const weekSeed = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000)).toString()
+    const seededRandom = (str: string) => {
+      let h = 0xdeadbeef
+      for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 2654435761)
+      return ((h ^ h >>> 16) >>> 0) / 4294967296
+    }
+    const sorted = [...graveyardProjects].sort((a, b) => a.id.localeCompare(b.id))
+    const idx = Math.floor(seededRandom(weekSeed) * sorted.length)
+    return sorted[idx]
+  }, [graveyardProjects])
+
+  // Monthly graveyard walkthrough trigger
+  useEffect(() => {
+    if (graveyardProjects.length > 0 && shouldShowGraveyardWalkthrough(graveyardProjects.length)) {
+      // Delay slightly so the page loads first
+      const t = setTimeout(() => setGraveyardWalkthroughOpen(true), 1200)
+      return () => clearTimeout(t)
+    }
+  }, [graveyardProjects.length])
 
   // Debounce tag selection to avoid excessive re-filtering
   useEffect(() => {
@@ -423,6 +455,7 @@ export function ProjectsPage() {
                 <ProjectsPageCarousel
                   activeProjects={activeList}
                   drawerProjects={drawerList}
+                  archiveSpotlight={filter === 'all' ? weeklyArchiveSpotlight : null}
                   loading={loading}
                   onClearSuggestions={clearSuggestions}
                 />
@@ -439,6 +472,13 @@ export function ProjectsPage() {
       <ReaperModal
         isOpen={reaperModalOpen}
         onClose={() => setReaperModalOpen(false)}
+      />
+
+      {/* Monthly Graveyard Walkthrough */}
+      <GraveyardWalkthrough
+        projects={graveyardProjects}
+        isOpen={graveyardWalkthroughOpen}
+        onClose={() => setGraveyardWalkthroughOpen(false)}
       />
     </>
   )
