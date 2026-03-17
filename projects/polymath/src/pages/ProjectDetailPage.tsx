@@ -1057,7 +1057,7 @@ export function ProjectDetailPage() {
 
               {/* AI Perspectives - Multi-angle next step suggestions */}
               {project.status === 'active' && (
-                <details className="mt-8 group">
+                <details className="mt-8 group" open>
                   <summary className="cursor-pointer text-[10px] font-black uppercase tracking-[0.3em] flex items-center gap-2 list-none select-none"
                     style={{ color: 'var(--brand-text-secondary)' }}
                   >
