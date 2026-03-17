@@ -208,7 +208,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // GET: Voice seeds — contextual thinking prompts before capture
     if (req.method === 'GET' && seeds === 'true') {
-      if (!userId) return res.status(401).json({ error: 'Unauthorized' })
       return await handleSeeds(req, res, supabase, userId)
     }
 
