@@ -4,19 +4,15 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Plus, Layers } from 'lucide-react'
-import { Button } from '../ui/button'
+import { Plus, ArrowUp, ChevronDown } from 'lucide-react'
 import { handleInputFocus } from '../../utils/keyboard'
 import {
   BottomSheet,
   BottomSheetContent,
-  BottomSheetDescription,
-  BottomSheetFooter,
   BottomSheetHeader,
   BottomSheetTitle,
 } from '../ui/bottom-sheet'
-import { Input } from '../ui/input'
-import { Label } from '../ui/label'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useToast } from '../ui/toast'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useAutoSuggestion } from '../../contexts/AutoSuggestionContext'
@@ -149,150 +145,152 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
 
       <BottomSheet open={open} onOpenChange={setOpen}>
         <BottomSheetContent>
-          <BottomSheetHeader>
-            <div className="flex items-center gap-3 mb-2">
-              <Layers className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
-              <BottomSheetTitle>Start a New Project</BottomSheetTitle>
-            </div>
-            <BottomSheetDescription>
-              Name it, describe it, and you're ready to go
-            </BottomSheetDescription>
+          <BottomSheetHeader className="sr-only">
+            <BottomSheetTitle>New project</BottomSheetTitle>
           </BottomSheetHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-5 mt-6">
+          <form onSubmit={handleSubmit} className="flex flex-col pt-1">
             {/* Title */}
-            <div className="space-y-2">
-              <Label htmlFor="title" className="font-bold text-xs uppercase tracking-widest text-brand-primary">Project Name <span className="text-brand-text-secondary">*</span></Label>
-              <Input
-                id="title"
-                placeholder="Project Aperture"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                onFocus={handleInputFocus}
-                className="text-2xl h-16 font-bold bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-zebra-accent focus:ring-0 transition-all placeholder:text-[var(--brand-text-primary)]/10"
-                autoComplete="off"
-                autoFocus
-              />
-            </div>
+            <input
+              id="title"
+              placeholder="Project name…"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              onFocus={handleInputFocus}
+              autoComplete="off"
+              autoFocus
+              required
+              className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none"
+              style={{
+                color: 'var(--brand-text-primary)',
+                fontSize: '22px',
+                fontWeight: 700,
+                lineHeight: '1.3',
+              }}
+            />
 
             {/* Description */}
-            <div className="space-y-2">
-              <Label htmlFor="description" className="font-bold text-xs uppercase tracking-widest text-brand-primary">
-                Description <span className="text-brand-text-secondary">*</span>
-              </Label>
-              <Input
-                id="description"
-                placeholder="A short sentence explaining the project..."
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                onFocus={handleInputFocus}
-                className="h-14 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/10"
-                autoComplete="off"
-              />
-              <p className="text-[10px] text-[var(--brand-text-muted)] text-right">{formData.description.length}/10 chars min</p>
-            </div>
+            <input
+              id="description"
+              placeholder="What is this about?"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onFocus={handleInputFocus}
+              autoComplete="off"
+              className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none mt-2 mb-4"
+              style={{
+                color: 'var(--brand-text-secondary)',
+                fontSize: '15px',
+                opacity: formData.description ? 0.7 : 0.4,
+              }}
+            />
 
-            {/* Classification */}
-            <div className="space-y-2">
-              <Label className="font-bold text-xs uppercase tracking-widest text-[var(--brand-text-muted)]">Classification</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {['Writing', 'Tech', 'Art', 'Music', 'Business', 'Creative'].map((cat) => (
+            {/* Optional details */}
+            <AnimatePresence>
+              {showOptions && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.18 }}
+                  className="overflow-hidden"
+                >
+                  <div className="flex flex-col gap-2 mb-4">
+                    {formData.project_mode === 'completion' && (
+                      <input
+                        id="end_goal"
+                        placeholder="End goal — what does done look like?"
+                        value={formData.end_goal}
+                        onChange={(e) => setFormData({ ...formData, end_goal: e.target.value })}
+                        onFocus={handleInputFocus}
+                        autoComplete="off"
+                        className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none"
+                        style={{ color: 'var(--brand-text-secondary)', fontSize: '14px', opacity: 0.6 }}
+                      />
+                    )}
+                    <input
+                      id="next_step"
+                      placeholder="First step to get started?"
+                      value={formData.next_step}
+                      onChange={(e) => setFormData({ ...formData, next_step: e.target.value })}
+                      onFocus={handleInputFocus}
+                      autoComplete="off"
+                      className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none"
+                      style={{ color: 'var(--brand-text-secondary)', fontSize: '14px', opacity: 0.6 }}
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Toolbar */}
+            <div className="flex items-center gap-1 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              {/* Type pills */}
+              <div className="flex items-center gap-1 overflow-x-auto scrollbar-none flex-1 min-w-0">
+                {(['Writing', 'Tech', 'Art', 'Music', 'Business', 'Creative'] as const).map((cat) => (
                   <button
                     key={cat}
                     type="button"
                     onClick={() => setFormData({ ...formData, type: cat })}
-                    className={`p-3 rounded-xl text-sm font-bold border transition-all text-center ${formData.type === cat
-                      ? 'bg-white text-black border-white'
-                      : 'bg-black border-[var(--glass-surface-hover)] text-[var(--brand-text-secondary)] hover:border-white/30'
-                      }`}
+                    className="flex-shrink-0 px-2 py-0.5 rounded-full text-[11px] font-medium whitespace-nowrap transition-all"
+                    style={{
+                      background: formData.type === cat ? 'rgba(255,255,255,0.1)' : 'transparent',
+                      color: 'var(--brand-text-secondary)',
+                      opacity: formData.type === cat ? 1 : 0.35,
+                    }}
                   >
                     {cat}
                   </button>
                 ))}
               </div>
-            </div>
 
-            {/* Project Mode Toggle */}
-            <div className="space-y-2">
-              <Label className="font-bold text-xs uppercase tracking-widest text-[var(--brand-text-muted)]">
-                Project Type
-              </Label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, project_mode: 'completion' })}
-                  className={`p-3 rounded-xl text-xs font-bold border transition-all text-left ${formData.project_mode === 'completion'
-                    ? 'bg-white text-black border-white'
-                    : 'bg-black border-[var(--glass-surface-hover)] text-[var(--brand-text-secondary)] hover:border-white/30'
-                    }`}
-                >
-                  <div className="font-bold">Has End Goal</div>
-                  <div className="text-[10px] opacity-60 mt-0.5">Ship it, complete it</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, project_mode: 'recurring' })}
-                  className={`p-3 rounded-xl text-xs font-bold border transition-all text-left ${formData.project_mode === 'recurring'
-                    ? 'bg-white text-black border-white'
-                    : 'bg-black border-[var(--glass-surface-hover)] text-[var(--brand-text-secondary)] hover:border-white/30'
-                    }`}
-                >
-                  <div className="font-bold">Ongoing Habit</div>
-                  <div className="text-[10px] opacity-60 mt-0.5">Stay fit, keep learning</div>
-                </button>
+              {/* Mode toggle */}
+              <div className="flex items-center flex-shrink-0 rounded-full overflow-hidden ml-1" style={{ background: 'rgba(255,255,255,0.05)', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.08)' }}>
+                {([
+                  { value: 'completion', label: 'Finish' },
+                  { value: 'recurring', label: 'Habit' },
+                ] as const).map((mode) => (
+                  <button
+                    key={mode.value}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, project_mode: mode.value })}
+                    className="px-2.5 py-1 text-[11px] font-medium transition-all"
+                    style={{
+                      background: formData.project_mode === mode.value ? 'rgba(255,255,255,0.12)' : 'transparent',
+                      color: 'var(--brand-text-secondary)',
+                      opacity: formData.project_mode === mode.value ? 1 : 0.4,
+                    }}
+                  >
+                    {mode.label}
+                  </button>
+                ))}
               </div>
-            </div>
 
-            {/* Definition of Done - only for completion projects */}
-            {formData.project_mode === 'completion' && (
-              <div className="space-y-2">
-                <Label htmlFor="end_goal" className="font-bold text-xs uppercase tracking-widest text-[var(--brand-text-muted)]">
-                  Definition of Done (Optional)
-                </Label>
-                <Input
-                  id="end_goal"
-                  placeholder="e.g., 'App live on App Store'"
-                  value={formData.end_goal}
-                  onChange={(e) => setFormData({ ...formData, end_goal: e.target.value })}
-                  onFocus={handleInputFocus}
-                  className="h-14 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/10"
-                  autoComplete="off"
-                />
-              </div>
-            )}
+              {/* More options */}
+              <button
+                type="button"
+                onClick={() => setShowOptions(!showOptions)}
+                className="flex-shrink-0 p-1.5 rounded-lg transition-all opacity-30 hover:opacity-60"
+                style={{ color: 'var(--brand-text-secondary)' }}
+                title={showOptions ? 'Hide options' : 'More options'}
+              >
+                <ChevronDown className={`h-4 w-4 transition-transform ${showOptions ? 'rotate-180' : ''}`} />
+              </button>
 
-            {/* First Step */}
-            <div className="space-y-2 pb-4">
-              <Label htmlFor="next_step" className="font-bold text-xs uppercase tracking-widest text-[var(--brand-text-muted)]">
-                First Step (Optional)
-              </Label>
-              <Input
-                id="next_step"
-                placeholder="e.g., Create repo, Buy domain..."
-                value={formData.next_step}
-                onChange={(e) => setFormData({ ...formData, next_step: e.target.value })}
-                onFocus={handleInputFocus}
-                className="h-14 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-zebra-accent placeholder:text-[var(--brand-text-primary)]/10"
-                autoComplete="off"
-              />
-            </div>
-
-            <BottomSheetFooter>
-              <Button
+              {/* Submit */}
+              <button
                 type="submit"
                 disabled={loading || !isFormValid}
-                className="w-full h-14 font-black uppercase tracking-widest touch-manipulation"
+                className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all touch-manipulation disabled:opacity-25 ml-1"
                 style={{
-                  background: 'rgba(59,130,246,0.15)',
-                  border: '2px solid rgba(59,130,246,0.5)',
-                  borderRadius: '4px',
-                  boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
-                  color: 'var(--brand-primary)',
+                  background: isFormValid ? 'var(--brand-primary, #63b3ed)' : 'rgba(255,255,255,0.1)',
+                  color: isFormValid ? '#000' : 'var(--brand-text-secondary)',
                 }}
+                title={loading ? 'Creating…' : 'Create project'}
               >
-                {loading ? 'Launching...' : 'Create Project'}
-              </Button>
-            </BottomSheetFooter>
+                <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
+              </button>
+            </div>
           </form>
         </BottomSheetContent>
       </BottomSheet>
