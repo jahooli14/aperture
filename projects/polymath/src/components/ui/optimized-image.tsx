@@ -76,46 +76,31 @@ export function OptimizedImage({
   return (
     <div
       ref={containerRef}
-      className={cn('relative overflow-hidden bg-neutral-100', className)}
+      className={cn('relative overflow-hidden', className)}
       style={{
         aspectRatio: aspectRatio || 'auto',
+        background: '#0f172a',
       }}
     >
-      {/* Blur placeholder - shown while loading */}
+      {/* Placeholder shimmer - shown while loading */}
       {!isLoaded && !hasError && (
         <div
-          className="absolute inset-0 animate-pulse"
+          className="absolute inset-0"
           style={{
             background: blurhash
               ? `url(data:image/svg+xml;base64,${blurhash})`
-              : 'linear-gradient(135deg, rgba(229, 231, 235, 0.8), rgba(209, 213, 219, 0.8))',
+              : 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)',
             backgroundSize: 'cover',
-            filter: 'blur(10px)',
-            transform: 'scale(1.1)', // Slightly larger to hide blur edges
           }}
         />
       )}
 
-      {/* Error state */}
+      {/* Error state — silent dark placeholder, no broken-image messaging */}
       {hasError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-neutral-100">
-          <div className="text-center p-4">
-            <svg
-              className="mx-auto h-12 w-12 text-brand-text-muted"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
-            <p className="mt-2 text-sm text-[var(--brand-text-muted)]">Failed to load image</p>
-          </div>
-        </div>
+        <div
+          className="absolute inset-0"
+          style={{ background: 'linear-gradient(145deg, #0f172a, #1e293b)' }}
+        />
       )}
 
       {/* Actual image - only load when in view */}
@@ -136,15 +121,6 @@ export function OptimizedImage({
         />
       )}
 
-      {/* Loading spinner overlay */}
-      {!isLoaded && !hasError && isInView && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div
-            className="h-8 w-8 animate-spin rounded-full border-2 border-solid border-current border-r-transparent"
-            style={{ color: "var(--brand-primary)" }}
-          />
-        </div>
-      )}
     </div>
   )
 }

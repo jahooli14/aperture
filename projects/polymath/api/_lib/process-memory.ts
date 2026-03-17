@@ -60,7 +60,6 @@ export async function processMemory(memoryId: string): Promise<void> {
       .from('memories')
       .update({
         title: metadata.summary_title,
-        body: metadata.insightful_body,
         memory_type: metadata.memory_type,
         entities: metadata.entities,
         themes: metadata.themes,

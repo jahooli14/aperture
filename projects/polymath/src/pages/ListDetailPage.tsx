@@ -1052,10 +1052,16 @@ export default function ListDetailPage() {
                         <div className="relative">
                             <button
                                 onClick={(e) => { e.stopPropagation(); setShowSortMenu(v => !v) }}
-                                className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-[var(--glass-surface-hover)] text-brand-text-muted hover:text-[var(--brand-text-primary)] hover:border-white/20 transition-all"
+                                className="flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all"
+                                style={{
+                                    borderColor: sortOption !== 'added' ? `rgba(${rgb}, 0.4)` : 'var(--glass-surface-hover)',
+                                    color: sortOption !== 'added' ? `rgb(${rgb})` : 'var(--brand-text-muted)',
+                                }}
                             >
                                 <SortAsc className="h-3 w-3" />
-                                <span className="text-[10px] font-black uppercase tracking-widest">Sort</span>
+                                <span className="text-[10px] font-black uppercase tracking-widest">
+                                    {SORT_OPTIONS.find(o => o.value === sortOption)?.label ?? 'Sort'}
+                                </span>
                                 <ChevronDown className="h-3 w-3" />
                             </button>
                             <AnimatePresence>
@@ -1242,6 +1248,7 @@ export default function ListDetailPage() {
                         <motion.div key="masonry-view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                             {filteredItems.length > 0 ? (
                                 <MasonryListGrid
+                                    key={`${sortOption}-${statusFilter}`}
                                     items={filteredItems}
                                     listType={list.type}
                                     expandedItemId={expandedItemId}

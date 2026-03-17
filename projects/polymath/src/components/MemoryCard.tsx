@@ -1,6 +1,6 @@
-import React, { useState, memo, useCallback, useMemo, useRef } from 'react'
+import React, { useState, memo, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MoreVertical, Edit, Trash2, Copy, Share2, Calendar, Zap, Link2, Pin, Maximize2, CheckSquare, Sprout, Film, Book, Music, MapPin, Gamepad2, Monitor, FileText, Box } from 'lucide-react'
+import { MoreVertical, Edit, Trash2, Copy, Share2, Calendar, Link2, Pin, Sprout, Film, Book, Music, MapPin, Gamepad2, Monitor, FileText, Box } from 'lucide-react'
 import { CardHeader, CardTitle, CardDescription } from './ui/card'
 import { Button } from './ui/button'
 import type { Memory, BridgeWithMemories } from '../types'
@@ -11,7 +11,7 @@ import { ContextMenu, type ContextMenuItem } from './ui/context-menu'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { MemoryDetailModal } from './memories/MemoryDetailModal'
 import { useConfirmDialog } from './ui/confirm-dialog'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { MarkdownRenderer } from './ui/MarkdownRenderer'
 
 // List type → icon for provenance badge
@@ -66,33 +66,11 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
   const navigate = useNavigate()
   const [showContextMenu, setShowContextMenu] = useState(false)
   const [showDetailModal, setShowDetailModal] = useState(false)
-  const [expanded, setExpanded] = useState(false)
   const [seedProjectOpen, setSeedProjectOpen] = useState(false)
 
-  // Long-press detection: hold > 400ms opens full modal
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const didLongPress = useRef(false)
-
-  const handlePointerDown = useCallback(() => {
-    didLongPress.current = false
-    longPressTimer.current = setTimeout(() => {
-      didLongPress.current = true
-      haptic.medium()
-      setShowDetailModal(true)
-    }, 400)
-  }, [])
-
-  const handlePointerUp = useCallback(() => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current)
-      longPressTimer.current = null
-    }
-  }, [])
-
   const handleCardClick = useCallback(() => {
-    // If long press already fired, don't also toggle expand
-    if (didLongPress.current) return
-    setExpanded(prev => !prev)
+    haptic.light()
+    setShowDetailModal(true)
   }, [])
 
   const { setContext, toggleSidebar } = useContextEngineStore()
@@ -223,9 +201,6 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
       <motion.div
         layout
         onClick={handleCardClick}
-        onPointerDown={handlePointerDown}
-        onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerUp}
         className="group block rounded-lg transition-all duration-200 break-inside-avoid p-4 cursor-pointer relative"
         style={{
           background: '#111113',
@@ -241,7 +216,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
         }}
       >
         <CardHeader className="relative z-10 flex flex-row items-start justify-between gap-2 p-0 pb-2">
-          <h3 className="font-bold text-base leading-snug mb-1 flex-1 min-w-0" style={{ color: "var(--brand-primary)" }}>
+          <h3 className="font-bold text-sm leading-snug mb-1 flex-1 min-w-0 line-clamp-2" style={{ color: "var(--brand-primary)" }}>
             {memory.title}
           </h3>
           <div className="flex items-center gap-0.5 flex-shrink-0">
@@ -337,35 +312,12 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
           </div>
         )}
 
-        {/* Body text with fade-out read-more on mobile */}
-        {!expanded && memory.body && memory.body.length > 280 ? (
-          <div className="relative mb-3">
-            <MarkdownRenderer
-              content={memory.body}
-              className="text-sm line-clamp-5"
-              style={{ color: "var(--brand-primary)" }}
-            />
-            {/* Fade + Read more tap target */}
-            <div
-              className="absolute bottom-0 left-0 right-0 h-10 flex items-end justify-start"
-              style={{ background: 'linear-gradient(to top, var(--brand-bg, #0a0f1e) 40%, transparent)' }}
-            >
-              <button
-                onClick={(e) => { e.stopPropagation(); setExpanded(true) }}
-                className="text-[10px] font-black uppercase tracking-widest pb-0.5 active:opacity-60 transition-opacity"
-                style={{ color: 'var(--brand-primary)', opacity: 0.6 }}
-              >
-                Read more
-              </button>
-            </div>
-          </div>
-        ) : (
-          <MarkdownRenderer
-            content={memory.body}
-            className={`text-sm mb-3 ${expanded ? '' : 'line-clamp-6'}`}
-            style={{ color: "var(--brand-primary)" }}
-          />
-        )}
+        {/* Body text preview */}
+        <MarkdownRenderer
+          content={memory.body}
+          className="text-sm mb-3 line-clamp-5"
+          style={{ color: "var(--brand-primary)" }}
+        />
 
         {/* Attached Images */}
         {memory.image_urls && memory.image_urls.length > 0 && (
@@ -387,113 +339,6 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
             ))}
           </div>
         )}
-
-        {/* Expanded: show all tags + themes + quick actions */}
-        <AnimatePresence>
-          {expanded && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden"
-            >
-              {/* Themes */}
-              {memory.themes && memory.themes.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mb-3">
-                  {memory.themes.map((theme) => (
-                    <span
-                      key={theme}
-                      className="px-2 py-0.5 text-[10px] font-medium rounded-lg uppercase tracking-wide"
-                      style={{
-                        backgroundColor: 'rgba(139,92,246,0.1)',
-                        border: '1px solid rgba(139,92,246,0.2)',
-                        color: "var(--brand-text-secondary)",
-                      }}
-                    >
-                      {theme}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {/* All tags when expanded */}
-              {memory.tags && memory.tags.length > 2 && (
-                <div className="flex flex-wrap gap-1.5 mb-3">
-                  {memory.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-2 py-0.5 text-[10px] font-bold rounded-lg uppercase tracking-wide whitespace-nowrap"
-                      style={{
-                        backgroundColor: 'rgba(148,163,184,0.08)',
-                        border: '1px solid rgba(148,163,184,0.2)',
-                        color: "var(--brand-text-secondary)"
-                      }}
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {/* Quick actions row — wraps on narrow cards */}
-              <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                <button
-                  onClick={(e) => { e.stopPropagation(); setShowDetailModal(true) }}
-                  className="flex items-center gap-1 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-lg active:bg-[rgba(255,255,255,0.08)] transition-colors"
-                  style={{ color: "var(--brand-primary)" }}
-                >
-                  <Maximize2 className="w-3 h-3" />
-                  Open
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleCopyText() }}
-                  className="flex items-center gap-1 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-lg active:bg-[rgba(255,255,255,0.08)] transition-colors"
-                  style={{ color: "var(--brand-primary)" }}
-                >
-                  <Copy className="w-3 h-3" />
-                  Copy
-                </button>
-                <button
-                  onClick={async (e) => {
-                    e.stopPropagation()
-                    const content = [memory.title, memory.body].filter(Boolean).join('. ')
-                    try {
-                      const res = await fetch('/api/connections?action=link', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ itemId: memory.id, itemType: 'thought', content })
-                      })
-                      if (res.ok) {
-                        const data = await res.json()
-                        addToast({
-                          title: data.connections?.length > 0
-                            ? `Found ${data.connections.length} connection${data.connections.length > 1 ? 's' : ''}`
-                            : 'No new connections found',
-                          description: data.connections?.length > 0 ? 'Open this thought to explore them.' : 'Try again after adding more thoughts.',
-                          variant: data.connections?.length > 0 ? 'success' : 'default'
-                        })
-                      }
-                    } catch { /* silent */ }
-                  }}
-                  className="flex items-center gap-1 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-lg active:bg-[rgba(255,255,255,0.08)] transition-colors"
-                  style={{ color: 'var(--brand-text-secondary)' }}
-                >
-                  <Link2 className="w-3 h-3" />
-                  Connect
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setSeedProjectOpen(true) }}
-                  className="flex items-center gap-1 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-lg active:bg-[rgba(255,255,255,0.08)] transition-colors"
-                  style={{ color: 'var(--brand-text-secondary)' }}
-                >
-                  <Sprout className="w-3 h-3" />
-                  Grow this
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         <div className="flex items-center justify-between gap-2 text-[10px] pt-3 mt-3 border-t font-semibold uppercase tracking-wider" style={{
           color: 'var(--brand-text-muted)',
@@ -522,7 +367,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
             </button>
           </div>
 
-          {!expanded && memory.tags && memory.tags.length > 0 && (
+          {memory.tags && memory.tags.length > 0 && (
             <div className="flex items-center gap-1.5 overflow-hidden justify-end min-w-0">
               {memory.tags.slice(0, 2).map((tag) => (
                 <span

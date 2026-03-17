@@ -21,17 +21,20 @@ export function MarkdownRenderer({ content, className, style }: MarkdownRenderer
           ol: ({ node, ...props }) => <ol className="list-decimal pl-6 mb-4 space-y-2 marker:text-brand-primary" {...props} />,
           li: ({ node, ...props }) => <li className="mb-1 leading-relaxed pl-1" {...props} />,
           p: ({ node, ...props }) => {
-            const content = props.children as string;
-            // Handle cases where AI might have used unicode bullets instead of markdown
-            if (typeof content === 'string' && (content.startsWith('•') || content.startsWith('·'))) {
-               return (
-                 <p className="mb-3 last:mb-0 leading-relaxed flex items-start gap-2">
-                   <span className="text-brand-primary mt-1 shrink-0">•</span>
-                   <span>{content.replace(/^[•·]\s*/, '')}</span>
-                 </p>
-               );
+            // Handle unicode bullets (• or ·) — children may be string or array
+            const children = props.children
+            const first = Array.isArray(children) ? children[0] : children
+            const text = typeof first === 'string' ? first : null
+            if (text && (text.startsWith('•') || text.startsWith('·'))) {
+              const rest = text.replace(/^[•·]\s*/, '')
+              return (
+                <p className="mb-2 last:mb-0 leading-relaxed flex items-start gap-2">
+                  <span className="shrink-0 select-none" style={{ color: 'var(--brand-primary)' }}>•</span>
+                  <span>{rest}{Array.isArray(children) ? children.slice(1) : null}</span>
+                </p>
+              )
             }
-            return <p className="mb-3 last:mb-0 leading-relaxed" {...props} />;
+            return <p className="mb-3 last:mb-0 leading-relaxed" {...props} />
           },
         }}
       >

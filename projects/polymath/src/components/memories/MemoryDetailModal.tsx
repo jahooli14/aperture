@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Brain, Calendar, Edit, Trash2, Copy, Share2, Link2, Plus, Pin, CheckSquare } from 'lucide-react'
+import { X, Brain, Calendar, Edit, Trash2, Copy, Share2, Link2, Plus, Pin } from 'lucide-react'
 import { MarkdownRenderer } from '../ui/MarkdownRenderer'
 import { format } from 'date-fns'
 import type { Memory, BridgeWithMemories } from '../../types'
@@ -16,7 +16,6 @@ import { SmartActionDot } from '../SmartActionDot'
 import { CACHE_TTL } from '../../lib/cacheConfig'
 
 import { useContextEngineStore } from '../../stores/useContextEngineStore'
-import { useTodoStore } from '../../stores/useTodoStore'
 import type { InsightResult } from '../../../api/memories'
 
 interface MemoryDetailModalProps {
@@ -34,9 +33,7 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
   const fetchBridgesForMemory = useMemoryStore((state) => state.fetchBridgesForMemory)
   const { setContext, toggleSidebar } = useContextEngineStore()
 
-  const addTodo = useTodoStore((state) => state.addTodo)
-
-  const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
+const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
   const [bridgesFetched, setBridgesFetched] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [connectionCount, setConnectionCount] = useState(0);
@@ -53,21 +50,6 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
       .then(data => { if (data) setInsight(data) })
       .catch(() => {})
   }, [memory?.id, isOpen])
-
-  const handleCreateTodo = useCallback(async () => {
-    if (!memory) return
-    await addTodo({
-      text: memory.title,
-      source_memory_id: memory.id,
-      tags: ['from-thought'],
-    })
-    haptic.success()
-    addToast({
-      title: 'Todo created',
-      description: `"${memory.title}" added to inbox`,
-      variant: 'success',
-    })
-  }, [memory, addTodo, addToast])
 
   // Module-level cache to prevent refetching bridges
   const bridgesCache = useMemo(() => new Map<string, { bridges: BridgeWithMemories[]; timestamp: number }>(), []);
@@ -197,7 +179,7 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-16 md:pt-24 bg-black/80 backdrop-blur-md"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
             onClick={onClose}
           >
             <motion.div
@@ -294,16 +276,6 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
                       style={{ color: "var(--brand-primary)" }}
                     />
                   </div>
-                  {insight.suggested_action?.type === 'create_todo' && (
-                    <button
-                      onClick={handleCreateTodo}
-                      className="flex-shrink-0 flex items-center gap-1 text-[10px] font-medium px-2 py-1 rounded-lg transition-colors hover:bg-brand-surface/80"
-                      style={{ color: "var(--brand-primary)" }}
-                    >
-                      <CheckSquare className="h-3 w-3" />
-                      Todo
-                    </button>
-                  )}
                 </div>
               )}
 
