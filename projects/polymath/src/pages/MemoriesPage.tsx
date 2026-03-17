@@ -67,10 +67,9 @@ function MasonryGrid({
 
   useEffect(() => {
     const updateColumns = () => {
-      if (window.innerWidth >= 1024) setColumns(3) // lg
-      else if (window.innerWidth >= 768) setColumns(2) // md
-      // else setColumns(1) // mobile - originally code was columns-2 even on mobile, keeping 2 for consistency with "tight packing" request unless screen is very small
-      else setColumns(2)
+      if (window.innerWidth >= 1024) setColumns(3) // lg: 3 col
+      else if (window.innerWidth >= 600) setColumns(2) // tablet/large phone: 2 col
+      else setColumns(1) // small phone: single column for readability
     }
 
     updateColumns()
@@ -92,9 +91,9 @@ function MasonryGrid({
   }, [memories, columns])
 
   return (
-    <div className="flex gap-4 items-start w-full">
+    <div className="flex gap-3 items-start w-full">
       {distributedColumns.map((colMemories, colIndex) => (
-        <div key={colIndex} className="flex-1 flex flex-col gap-4 min-w-0">
+        <div key={colIndex} className="flex-1 flex flex-col gap-3 min-w-0">
           {colMemories.map((memory, index) => (
             <motion.div
               key={memory.id || `memory-${colIndex}-${index}`}
