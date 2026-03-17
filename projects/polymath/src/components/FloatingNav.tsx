@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { LayoutDashboard, MessageSquare, Kanban, BookMarked } from 'lucide-react'
 import { VoiceFAB } from './VoiceFAB'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
+import { useKeyboardVisible } from '../hooks/useKeyboardVisible'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOfflineSync } from '../hooks/useOfflineSync'
 import { useToast } from './ui/toast'
@@ -44,6 +45,7 @@ const NAV_OPTIONS: NavOption[] = [
 
 export function FloatingNav() {
   const { isOnline } = useOnlineStatus()
+  const isKeyboardVisible = useKeyboardVisible()
   const { addOptimisticMemory, replaceOptimisticMemory, removeOptimisticMemory } = useMemoryStore()
   const { addOfflineCapture } = useOfflineSync()
   const { addToast } = useToast()
@@ -286,14 +288,14 @@ export function FloatingNav() {
       {/* Replaced inline FAB with Universal Action FAB */}
       <VoiceFAB
         onTranscript={handleVoiceTranscript}
-        hidden={shouldHide}
+        hidden={shouldHide || isKeyboardVisible}
         onTap={handleVoiceFABTap}
       />
 
       {/* Bottom Navigation Bar - Premium Glassmorphism */}
       <motion.nav
         initial={false}
-        animate={{ y: shouldHide ? 100 : 0, opacity: 1 }}
+        animate={{ y: (shouldHide || isKeyboardVisible) ? 100 : 0, opacity: isKeyboardVisible ? 0 : 1 }}
         transition={{ duration: 0.3 }}
         className="fixed bottom-0 left-0 right-0 z-[9999] w-full"
         style={{
