@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { X, Lightbulb, BookOpen, Layers, Brain, Link as LinkIcon, Loader2, TrendingUp, RefreshCw, FileText, HelpCircle, Compass, Shuffle, Database } from 'lucide-react'
+import { X, Lightbulb, BookOpen, Layers, Brain, Link as LinkIcon, Loader2, TrendingUp, RefreshCw, HelpCircle, Shuffle, Database, GitBranch, Zap } from 'lucide-react'
 import { useContextEngineStore, ContextItem } from '../../stores/useContextEngineStore'
 import { useToast } from '../ui/toast'
 
@@ -15,6 +15,8 @@ interface AIAnalysis {
 interface AnalysisData {
     analysis: AIAnalysis
     connectionCount: number
+    lakeItemCount?: number
+    semanticCount?: number
     itemType: string
     itemTitle: string
 }
@@ -234,6 +236,12 @@ export function ContextSidebar() {
                                             <span className="text-xs font-semibold text-brand-primary uppercase tracking-wider">
                                                 AI Analysis
                                             </span>
+                                            {analysisData?.lakeItemCount != null && analysisData.lakeItemCount > 0 && (
+                                                <div className="flex items-center gap-1" title={`${analysisData.lakeItemCount} corpus items used (${analysisData.semanticCount ?? 0} semantic)`}>
+                                                    <Database className="h-3 w-3 text-cyan-400" />
+                                                    <span className="text-[10px] text-cyan-400 font-medium">{analysisData.lakeItemCount}</span>
+                                                </div>
+                                            )}
                                         </div>
                                         <button
                                             onClick={fetchAnalysis}
@@ -313,9 +321,9 @@ export function ContextSidebar() {
                                     </div>
                                     <div className="grid grid-cols-2 gap-2">
                                         {([
-                                            { id: 'summarize', label: 'Synthesize', icon: FileText, color: 'text-violet-400', hint: 'across corpus' },
+                                            { id: 'chase-thread', label: 'Chase Thread', icon: GitBranch, color: 'text-violet-400', hint: 'follow the idea' },
                                             { id: 'find-gaps', label: 'Find Gaps', icon: HelpCircle, color: 'text-amber-400', hint: 'blind spots' },
-                                            { id: 'suggest-next', label: 'What Next', icon: Compass, color: 'text-cyan-400', hint: 'with context' },
+                                            { id: 'provoke', label: 'Provoke', icon: Zap, color: 'text-orange-400', hint: 'challenge me' },
                                             { id: 'connect-dots', label: 'Reveal Pattern', icon: Shuffle, color: 'text-pink-400', hint: 'full corpus' },
                                         ] as const).map(({ id, label, icon: Icon, color, hint }) => (
                                             <button
@@ -349,9 +357,9 @@ export function ContextSidebar() {
                                             <div className="flex items-center justify-between mb-2">
                                                 <div className="flex items-center gap-1.5">
                                                     <span className="text-xs font-semibold text-[var(--brand-text-secondary)] capitalize">
-                                                        {actionResult.type === 'summarize' ? 'Synthesis'
+                                                        {actionResult.type === 'chase-thread' ? 'Thread Traced'
                                                             : actionResult.type === 'find-gaps' ? 'Gaps Found'
-                                                            : actionResult.type === 'suggest-next' ? 'What Next'
+                                                            : actionResult.type === 'provoke' ? 'Challenge'
                                                             : 'Pattern Revealed'}
                                                     </span>
                                                     {actionResult.totalContextItems != null && actionResult.totalContextItems > 0 && (

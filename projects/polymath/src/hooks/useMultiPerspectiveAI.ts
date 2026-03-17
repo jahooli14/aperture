@@ -7,6 +7,7 @@ export interface PerspectiveSuggestion {
   accentColor: string
   suggestion: string
   confidence: 'high' | 'medium'
+  sourcesCited: string[]
 }
 
 export interface MultiPerspectiveResult {
