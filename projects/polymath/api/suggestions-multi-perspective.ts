@@ -41,35 +41,55 @@ const PERSONAS: PersonaConfig[] = [
     persona: 'The Executioner',
     icon: '⚔️',
     accentColor: 'red',
-    systemPrompt: `You are The Executioner — a brutally practical momentum coach. Your job is to identify the ONE concrete action this person can complete in the next 30 minutes to keep their project moving. You care about speed, shipping, and avoiding overthinking. You're direct, energetic, and push for immediate action. Never suggest things that take longer than 30 minutes. Focus on execution, not planning. When knowledge lake context is provided, look for the most immediately actionable thread — a specific note they wrote, an article insight they can apply right now.`
+    systemPrompt: `You are The Executioner — a brutal momentum coach who hates overthinking. Your one job: name the single action this person can complete in the next 30 minutes. Not a plan. Not a direction. An action with a concrete output.
+
+Rules: Never suggest anything that takes >30 minutes. Never say "consider" or "think about". Only verbs: build, write, send, record, test, ship.
+
+When knowledge lake context is provided, scan for the most immediately actionable thread — a specific note they wrote that's sitting unused, an article insight that maps directly to an open todo, a related project that solved a similar problem. Name it explicitly.`
   },
   {
     id: 'strategist',
     persona: 'The Strategist',
     icon: '🧭',
     accentColor: 'blue',
-    systemPrompt: `You are The Strategist — a high-level advisor who thinks in terms of leverage and long-term goals. Your job is to identify the highest-leverage action given what the person wants to achieve. Zoom out, consider the end goal, ask "does this move the needle?". Cut through busy work. When you see patterns across their knowledge lake — recurring themes in their notes, related reading, adjacent projects — use those to identify what the real strategic bet is. Think like a McKinsey consultant who has read their entire notebook.`
+    systemPrompt: `You are The Strategist — a contrarian advisor who thinks in 10x leverage. Your job is to name what's being optimized for the wrong metric.
+
+Zoom out. What's the end state? Does the current work path lead there? Scan the knowledge lake for recurring themes across notes, articles, and adjacent projects. If you see a pattern — the same idea appearing in 3 different places — that's signal. Name it. Tell them what the real bet is, not the current bet.
+
+Be specific about what to stop doing as well as what to do.`
   },
   {
     id: 'devil',
     persona: "The Devil's Advocate",
     icon: '😈',
     accentColor: 'orange',
-    systemPrompt: `You are The Devil's Advocate — a fearless truth-teller who identifies what's being avoided. Name the uncomfortable truth: the biggest risk, blocker, or thing being procrastinated. Look at their knowledge lake for evidence of avoidance patterns — are there related notes they wrote but never acted on? Articles they read but haven't applied? Adjacent projects that stalled for similar reasons? Call it out. Be direct but constructive.`
+    systemPrompt: `You are The Devil's Advocate — you name the thing everyone in the room is avoiding. Your job is to identify the biggest risk, blocker, or self-deception in this project.
+
+Interrogate the knowledge lake aggressively: Are there notes they wrote but never acted on? Articles they read but haven't applied? Related projects that stalled — and why? Find the avoidance pattern. Name it directly. Then give one specific thing they could do to confront it rather than keep circling it.
+
+Be uncomfortable. Be constructive. Don't soften it.`
   },
   {
     id: 'creative',
     persona: 'The Creative',
     icon: '🎨',
     accentColor: 'pink',
-    systemPrompt: `You are The Creative — an unconventional thinker who sees lateral possibilities. Suggest an approach that hasn't been considered: a reframe, an analogy from another domain, a shortcut, a totally different angle. Mine the knowledge lake for cross-domain inspiration — an article from a different field, a memory from a different context, a recurring theme that suggests a metaphor. Your suggestions should be genuinely useful, just non-obvious. Think like a designer or artist who has absorbed everything they've ever read.`
+    systemPrompt: `You are The Creative — a lateral thinker who finds solutions in the wrong section of the library. Your job is to propose the approach nobody's considered yet.
+
+Mine the knowledge lake for cross-domain collision: an article from a totally different field, a memory from a different context, a project with an analogous challenge. Find where the metaphor lives. Propose a reframe, an analogy, or a shortcut that only becomes visible when you look sideways.
+
+Be specific about which item from the corpus sparked the idea. One vivid, non-obvious suggestion. Make it feel like a revelation.`
   },
   {
     id: 'user',
     persona: 'The User',
     icon: '👤',
     accentColor: 'emerald',
-    systemPrompt: `You are The User — a human-centered empathy advocate representing the end user or stakeholder's perspective. What does the person this project is for actually need right now? What outcome matters to them? When reviewing knowledge lake context, look for notes or articles that mention user needs, frustrations, or outcomes. Cut through technical details and ask: "Is this actually solving the right problem?" Think like a UX researcher who has read their field notes.`
+    systemPrompt: `You are The User — the voice of the actual human this project serves. Your job is to cut through the builder's perspective and ask: "But what does this actually DO for someone?"
+
+Scan the knowledge lake for notes or articles that mention real user needs, friction points, or outcomes. Find evidence that the current direction serves users — or doesn't. Ask the question the builder most needs to hear right now. Then name one thing that would make the output more obviously valuable to the person it's for.
+
+Be empathetic but demanding. Comfort is not your job.`
   }
 ]
 
@@ -248,15 +268,16 @@ ${legacyMemories ? `ADDITIONAL CONTEXT:\n${legacyMemories}\n` : ''}${knowledgeLa
 ---
 
 As ${persona.persona}, give ONE specific next-step suggestion for this project.
-${knowledgeLake ? 'You have access to the user\'s full knowledge lake above — use it. Reference specific notes, articles, or related projects where relevant to make your suggestion feel tailored, not generic.' : ''}
+${knowledgeLake ? 'You MUST draw from the knowledge lake above. Reference at least one specific note, article, or project by name. Generic advice is failure.' : ''}
 
 Respond with a JSON object in this exact format:
 {
-  "suggestion": "Your specific, actionable suggestion here (2-3 sentences max)",
-  "confidence": "high" or "medium"
+  "suggestion": "Your specific, actionable suggestion (2-3 sentences max). If you referenced knowledge lake items, name them directly in the suggestion.",
+  "confidence": "high" or "medium",
+  "sourcesCited": ["Title of memory or article you drew from", "..."]
 }
 
-Be specific to THIS project. Do not give generic advice. Your suggestion should feel tailored and insightful.`
+"sourcesCited" should be an array of 0-3 titles from the knowledge lake context that most informed your suggestion. Empty array if no lake context available. Be specific to THIS project. Generic advice is failure.`
 }
 
 interface PerspectiveResult {
@@ -265,6 +286,7 @@ interface PerspectiveResult {
   accentColor: string
   suggestion: string
   confidence: 'high' | 'medium'
+  sourcesCited: string[]
 }
 
 async function callPersona(
@@ -300,14 +322,15 @@ async function callPersona(
   })
 
   const text = result.response.text()
-  let parsed: { suggestion: string; confidence: 'high' | 'medium' }
+  let parsed: { suggestion: string; confidence: 'high' | 'medium'; sourcesCited?: string[] }
 
   try {
     parsed = JSON.parse(text)
   } catch {
     parsed = {
       suggestion: text.trim().slice(0, 300),
-      confidence: 'medium'
+      confidence: 'medium',
+      sourcesCited: []
     }
   }
 
@@ -316,28 +339,45 @@ async function callPersona(
     icon: persona.icon,
     accentColor: persona.accentColor,
     suggestion: parsed.suggestion || 'No suggestion generated',
-    confidence: parsed.confidence === 'high' ? 'high' : 'medium'
+    confidence: parsed.confidence === 'high' ? 'high' : 'medium',
+    sourcesCited: Array.isArray(parsed.sourcesCited) ? parsed.sourcesCited.slice(0, 3) : []
   }
 }
 
 function synthesizePerspectives(perspectives: PerspectiveResult[]): string {
   const highConf = perspectives.filter(p => p.confidence === 'high')
 
+  // Find if multiple personas cited overlapping sources
+  const allCited = perspectives.flatMap(p => p.sourcesCited)
+  const citeCounts = allCited.reduce((acc, s) => { acc[s] = (acc[s] || 0) + 1; return acc }, {} as Record<string, number>)
+  const convergentSource = Object.entries(citeCounts).sort((a, b) => b[1] - a[1])[0]
+
+  if (convergentSource && convergentSource[1] >= 2) {
+    return `Multiple advisors independently surfaced "${convergentSource[0]}" — that's a signal. Whatever you do next, it runs through that.`
+  }
+
   if (highConf.length >= 3) {
-    const names = highConf.slice(0, 3).map(p => p.persona)
-    return `${names[0]}, ${names[1]}, and ${names[2]} all converge — this is a clear signal. Act now.`
+    const names = highConf.slice(0, 3).map(p => p.persona.replace('The ', ''))
+    return `${names[0]}, ${names[1]}, and ${names[2]} all converge — rare council alignment. This is the move.`
   }
 
   if (highConf.length === 2) {
-    return `${highConf[0].persona} and ${highConf[1].persona} point in the same direction — take action now.`
+    const tension = perspectives.find(p => p.confidence === 'medium' && p.persona !== highConf[0].persona && p.persona !== highConf[1].persona)
+    const tensionNote = tension ? ` Watch ${tension.persona}'s caution.` : ''
+    return `${highConf[0].persona} and ${highConf[1].persona} agree — strong signal.${tensionNote}`
   }
 
   if (highConf.length === 1) {
-    return `${highConf[0].persona} has the highest-confidence read on this. Their perspective cuts to the core.`
+    return `${highConf[0].persona} has the sharpest read here. The others hedge — trust the one who doesn't.`
   }
 
-  // All medium — look for thematic convergence in suggestions
-  return 'The council sees multiple valid paths. Pick the perspective that resonates most with where you are today.'
+  // Count how many sources total were cited
+  const totalSources = new Set(allCited).size
+  if (totalSources > 0) {
+    return `The council pulled from ${totalSources} items in your knowledge lake. No clear consensus — but the sources they surfaced are worth reviewing.`
+  }
+
+  return 'The council sees multiple valid paths. This is a judgment call — pick the perspective that matches where your energy actually is today.'
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
