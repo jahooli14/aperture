@@ -452,10 +452,10 @@ export function SettingsPage() {
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold premium-text-platinum text-sm">
-                    Regenerate Knowledge Graph
+                    Rediscover Connections
                   </h3>
                   <p style={{ color: 'var(--brand-text-secondary)', fontSize: '0.8rem' }}>
-                    Re-scan library to find new semantic connections
+                    Re-scan everything to find new links between your ideas
                   </p>
                 </div>
               </button>

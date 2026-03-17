@@ -1048,31 +1048,29 @@ export function ReadingPage() {
                     <EmptyState
                       icon={BookOpen}
                       title={
-                        activeTab === 'queue' ? 'Your reading queue is empty' :
-                        activeTab === 'unread' ? 'No unread articles' :
-                        activeTab === 'reading' ? 'Nothing in progress' :
-                        activeTab === 'archived' ? 'No archived articles' :
+                        activeTab === 'queue' ? 'Nothing queued up.' :
+                        activeTab === 'unread' ? 'All clear.' :
+                        activeTab === 'reading' ? 'Nothing in progress.' :
+                        activeTab === 'archived' ? 'Archive is empty.' :
                         `No ${activeTab} articles`
                       }
                       description={
                         activeTab === 'queue'
-                          ? 'Paste any URL in the bar above to save articles, blog posts, or essays for later reading'
+                          ? 'Drop a URL in the bar above. Articles, essays, research — anything worth reading.'
                           : activeTab === 'unread'
-                          ? 'All caught up! Articles you save will appear here'
+                          ? 'You\'re up to date. Save something new to read next.'
                           : activeTab === 'reading'
-                          ? 'Start reading an article and it will appear here so you can continue where you left off'
-                          : `You don't have any ${activeTab} articles yet`
+                          ? 'Open an article to start reading. It\'ll show here so you can pick up where you left off.'
+                          : 'Articles you archive will live here.'
                       }
                       action={
                         activeTab === 'queue' ? (
-                          <div className="flex flex-col items-center gap-3">
-                            <div className="flex flex-wrap justify-center gap-2 text-xs" style={{ color: "var(--brand-primary)" }}>
-                              {['blog posts', 'essays', 'research papers', 'news articles', 'tutorials'].map(example => (
-                                <span key={example} className="px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide" style={{ background: '#111113', border: '1.5px solid var(--glass-surface-hover)', boxShadow: '2px 2px 0 rgba(0,0,0,0.5)', color: "var(--brand-text-secondary)" }}>
-                                  {example}
-                                </span>
-                              ))}
-                            </div>
+                          <div className="flex flex-wrap justify-center gap-2">
+                            {['essays', 'research', 'long reads', 'tutorials', 'news'].map(example => (
+                              <span key={example} className="px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide" style={{ background: '#111113', border: '1.5px solid var(--glass-surface-hover)', boxShadow: '2px 2px 0 rgba(0,0,0,0.5)', color: "var(--brand-text-secondary)" }}>
+                                {example}
+                              </span>
+                            ))}
                           </div>
                         ) : undefined
                       }

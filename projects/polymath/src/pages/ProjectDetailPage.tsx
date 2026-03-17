@@ -755,7 +755,7 @@ export function ProjectDetailPage() {
                   <div className="relative z-10">
                     <div className="flex items-center gap-2 mb-4 text-brand-primary font-black uppercase tracking-[0.2em] text-[10px]">
                       <Zap className="h-4 w-4 fill-current" />
-                      Power Hour Session
+                      Focus Session
                     </div>
 
                     <h2 className="text-3xl font-black text-[var(--brand-text-primary)] mb-3 uppercase italic tracking-tighter leading-none">
@@ -907,6 +907,21 @@ export function ProjectDetailPage() {
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Connected Ideas — surfaces AI-linked memories, articles, and list items */}
+              <div className="mt-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="h-px bg-[var(--glass-surface)] flex-1" />
+                  <span className="text-[9px] font-black uppercase tracking-[0.35em] text-[var(--brand-text-primary)]/30">Connected</span>
+                  <div className="h-px bg-[var(--glass-surface)] flex-1" />
+                </div>
+                <ConnectionsList
+                  sourceType="project"
+                  sourceId={id || ''}
+                  sourceContent={[project.title, project.description].filter(Boolean).join('. ')}
+                  sourceTitle={project.title}
+                />
               </div>
 
               {/* The Finish Line (Definition of Done) */}

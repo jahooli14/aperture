@@ -78,16 +78,18 @@ async function runLinker(
       })
     }
   } catch {
-    // Silent fail  ambient linking should never disrupt UX
+    // Silent fail — ambient linking should never disrupt UX
   } finally {
     processing.delete(key)
   }
 }
 
-// Determines if an item is "fresh" (created within the last 60 seconds)
+// Determines if an item is "fresh" (created within the last 5 minutes)
+// Wider window ensures connections fire even if the user navigates between pages
+// or there's a brief delay in store propagation
 function isFresh(createdAt?: string | null): boolean {
   if (!createdAt) return false
-  return Date.now() - new Date(createdAt).getTime() < 60_000
+  return Date.now() - new Date(createdAt).getTime() < 300_000
 }
 
 export function useAmbientLinker() {

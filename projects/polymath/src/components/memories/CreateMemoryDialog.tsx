@@ -322,7 +322,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
         } else {
           addToast({
             title: 'Thought captured!',
-            description: 'Your thought has been saved to your knowledge graph',
+            description: 'Your thought is saved',
             variant: 'success',
           })
         }

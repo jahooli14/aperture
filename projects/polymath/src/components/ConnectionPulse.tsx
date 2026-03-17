@@ -11,37 +11,37 @@ import { Link } from 'react-router-dom'
 import { useAmbientLinker, type Discovery } from '../hooks/useAmbientLinker'
 
 const TYPE_EMOJI: Record<string, string> = {
-  thought: '',
-  memory: '',
-  project: '',
-  article: '',
-  list_item: '',
-  todo: ''
+  thought: '💭',
+  memory: '💭',
+  project: '✦',
+  article: '📖',
+  list_item: '📋',
+  todo: '◎'
 }
 
 const TYPE_LABEL: Record<string, string> = {
-  thought: 'Memory',
-  memory: 'Memory',
+  thought: 'Thought',
+  memory: 'Thought',
   project: 'Project',
   article: 'Article',
-  list_item: 'List',
-  todo: 'Todo'
+  list_item: 'Collection',
+  todo: 'Task'
 }
 
 const TYPE_SOURCE_LABEL: Record<string, string> = {
-  thought: 'memory',
-  memory: 'memory',
+  thought: 'thought',
+  memory: 'thought',
   project: 'project',
   article: 'article',
-  list_item: 'list item',
-  todo: 'todo'
+  list_item: 'collection item',
+  todo: 'task'
 }
 
 function getItemLink(id: string, type: string): string {
   if (type === 'project') return `/projects/${id}`
   if (type === 'article') return `/reading/${id}`
   if (type === 'thought' || type === 'memory') return `/memories`
-  if (type === 'todo') return `/todos`
+  if (type === 'todo') return `/`
   if (type === 'list_item') return `/lists`
   return '/'
 }
@@ -107,13 +107,10 @@ export function ConnectionPulse() {
 
           <div className="flex-1 min-w-0">
             <p className="text-[11px] font-semibold text-brand-primary uppercase tracking-widest leading-none mb-1">
-              AI linked your new {TYPE_SOURCE_LABEL[current.sourceType] || 'item'}
+              {totalCount === 1 ? 'Found a connection' : `Found ${totalCount} connections`}
             </p>
             <p className="text-sm text-[var(--brand-text-primary)] font-medium truncate leading-snug">
               "{current.sourceTitle}"
-              <span className="text-brand-primary/70 font-normal">
-                {' '} {totalCount} connection{totalCount !== 1 ? 's' : ''}
-              </span>
             </p>
           </div>
 
@@ -175,10 +172,10 @@ export function ConnectionPulse() {
         {autoLinkedCount > 0 && (
           <div className="px-4 py-2 bg-brand-primary/10 border-t border-blue-500/15">
             <p className="text-[11px] text-brand-primary font-medium">
-               {autoLinkedCount} auto-linked to your knowledge graph
+              ✦ {autoLinkedCount} woven into your web
               {totalCount > autoLinkedCount && (
                 <span className="text-brand-primary/60">
-                  {' '} {totalCount - autoLinkedCount} suggested
+                  {' '}· {totalCount - autoLinkedCount} more suggested
                 </span>
               )}
             </p>

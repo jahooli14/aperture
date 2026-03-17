@@ -222,8 +222,33 @@ export function ProjectsPageCarousel({
       )}
 
       {activeList.length === 0 && drawerList.length === 0 && (
-        <div className="text-center py-20 text-[var(--brand-text-muted)] aperture-body italic">
-          <p>No projects yet. Capture a thought to start.</p>
+        <div className="py-16 px-6 text-center">
+          <div className="max-w-sm mx-auto">
+            {/* Ghost project card */}
+            <div className="mb-8 p-5 rounded-2xl text-left opacity-30"
+              style={{ background: 'rgba(59,130,246,0.06)', border: '1px dashed rgba(59,130,246,0.3)' }}>
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="space-y-2 flex-1">
+                  <div className="h-4 w-2/3 rounded-lg bg-[var(--glass-surface)]" />
+                  <div className="h-3 w-full rounded-lg bg-[var(--glass-surface)]" />
+                  <div className="h-3 w-4/5 rounded-lg bg-[var(--glass-surface)]" />
+                </div>
+                <Star className="h-4 w-4 text-[var(--brand-primary)] flex-shrink-0 mt-1" />
+              </div>
+              <div className="p-3 rounded-xl" style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)' }}>
+                <div className="h-3 w-1/2 rounded bg-[var(--glass-surface)] mb-1" />
+                <div className="h-3 w-4/5 rounded bg-[var(--glass-surface)]" />
+              </div>
+            </div>
+
+            <h3 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] leading-tight mb-2">
+              Nothing in motion<br />
+              <span className="text-brand-primary">yet.</span>
+            </h3>
+            <p className="text-sm text-[var(--brand-text-muted)] leading-relaxed mb-6">
+              Projects grow from your thoughts. Capture something with the mic, then turn it into a project.
+            </p>
+          </div>
         </div>
       )}
     </div>

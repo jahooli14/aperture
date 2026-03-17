@@ -746,95 +746,79 @@ export function MemoriesPage() {
 
               {/* Empty State */}
               {!isLoading && displayMemories.length === 0 && (
-                <div className="mb-8 rounded-lg p-8" style={{ background: '#111113', border: '2px solid rgba(255,255,255,0.1)', boxShadow: '3px 3px 0 rgba(0,0,0,0.8)' }}>
-                  <div className="py-8">
-                    <div className="max-w-2xl mx-auto text-center space-y-6">
-                      {view === 'all' && isFiltered ? (
-                        /* Search returned no results */
-                        <>
-                          <div className="inline-flex items-center justify-center mb-4 p-4 rounded-lg" style={{ background: 'var(--glass-surface)', border: '2px solid rgba(255,255,255,0.1)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
-                            <Search className="h-12 w-12" style={{ color: "var(--brand-primary)" }} />
-                          </div>
-                          <div>
-                            <h3 className="text-xl font-black uppercase tracking-wide mb-3" style={{ color: "var(--brand-primary)" }}>
-                              No thoughts match
-                              {searchQuery ? ` "${searchQuery}"` : ' your filters'}
-                            </h3>
-                            <p className="text-sm mb-6" style={{ color: "var(--brand-primary)" }}>
-                              Try different keywords or clear your filters to see all thoughts.
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => { setSearchQuery(''); setActiveTags([]) }}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all"
-                            style={{
-                              background: 'rgba(59,130,246,0.12)',
-                              border: '2px solid rgba(59,130,246,0.35)',
-                              color: "var(--brand-text-secondary)",
-                              boxShadow: '2px 2px 0 rgba(59,130,246,0.1)',
-                            }}
-                          >
-                            <X className="h-3.5 w-3.5" />
-                            Clear search
-                          </button>
-                        </>
-                      ) : view === 'all' ? (
-                        /* No memories at all */
-                        <>
-                          <div className="inline-flex items-center justify-center mb-4 p-4 rounded-lg" style={{ background: 'rgba(59,130,246,0.08)', border: '2px solid rgba(59,130,246,0.25)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
-                            <Brain className="h-12 w-12" style={{ color: "var(--brand-primary)" }} />
-                          </div>
-                          <div>
-                            <h3 className="text-xl font-black uppercase tracking-wide mb-4" style={{ color: "var(--brand-primary)" }}>Start capturing your thoughts</h3>
-                            <p className="text-sm mb-6" style={{ color: "var(--brand-primary)" }}>
-                              Thoughts are the foundation of your personal knowledge graph. Capture your ideas, insights, and interests to power AI-generated project suggestions.
-                            </p>
-                          </div>
-
-                          <div className="rounded-lg p-6 text-left" style={{ background: '#0d0f14', border: '2px solid var(--glass-surface-hover)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
-                            <h4 className="font-black text-xs uppercase tracking-widest mb-5" style={{ color: "var(--brand-primary)" }}>How to Capture Thoughts</h4>
-                            <div className="space-y-4">
-                              {[
-                                { step: '1', title: 'Manually capture', desc: "Click 'New thought' to manually add ideas, insights, or observations" },
-                                { step: '2', title: 'Connect Audiopen', desc: 'Link your Audiopen account to automatically capture voice notes as thoughts' },
-                                { step: '3', title: 'AI Extracts Insights', desc: 'Polymath automatically identifies entities, topics, and connections' },
-                              ].map(({ step, title, desc }) => (
-                                <div key={step} className="flex gap-3">
-                                  <div className="rounded-lg w-7 h-7 flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: 'rgba(59,130,246,0.15)', border: '2px solid rgba(59,130,246,0.35)', boxShadow: '2px 2px 0 rgba(0,0,0,0.5)' }}>
-                                    <span className="text-brand-primary font-black text-xs">{step}</span>
-                                  </div>
-                                  <div>
-                                    <p className="font-black text-xs uppercase tracking-wide mb-0.5" style={{ color: "var(--brand-primary)" }}>{title}</p>
-                                    <p className="text-xs" style={{ color: "var(--brand-primary)" }}>{desc}</p>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div className="flex justify-center px-4 sm:px-0">
-                            <div className="w-full sm:w-auto">
-                              <CreateMemoryDialog />
-                            </div>
-                          </div>
-
-                          <p className="text-xs" style={{ color: "var(--brand-primary)" }}>
-                            Tip: The more thoughts you capture, the better your AI-generated suggestions will be
-                          </p>
-                        </>
-                      ) : (
-                        <>
-                          <div className="inline-flex items-center justify-center mb-4 p-4 rounded-lg" style={{ background: 'rgba(59,130,246,0.08)', border: '2px solid rgba(59,130,246,0.25)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
-                            <Zap className="h-12 w-12" style={{ color: "var(--brand-primary)" }} />
-                          </div>
-                          <h3 className="text-xl font-black uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>Nothing to review right now</h3>
-                          <p className="text-sm" style={{ color: "var(--brand-primary)" }}>
-                            Check back later for memories ready to resurface. Spaced repetition helps strengthen your knowledge over time.
-                          </p>
-                        </>
-                      )}
+                <div className="mb-8 py-16 px-6 text-center">
+                  {view === 'all' && isFiltered ? (
+                    /* Search returned no results */
+                    <div className="max-w-xs mx-auto space-y-4">
+                      <div className="inline-flex items-center justify-center w-14 h-14 rounded-full"
+                        style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)' }}>
+                        <Search className="h-6 w-6 text-brand-primary opacity-50" />
+                      </div>
+                      <h3 className="text-lg font-black uppercase tracking-tight text-[var(--brand-text-primary)]">
+                        Nothing matches
+                      </h3>
+                      <p className="text-sm text-[var(--brand-text-muted)] leading-relaxed">
+                        {searchQuery ? `No thoughts containing "${searchQuery}"` : 'No thoughts match your current filters'}
+                      </p>
+                      <button
+                        onClick={() => { setSearchQuery(''); setActiveTags([]) }}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-95"
+                        style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)', color: 'var(--brand-primary)' }}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                        Clear filters
+                      </button>
                     </div>
-                  </div>
+                  ) : view === 'all' ? (
+                    /* No memories at all — rich inspirational state */
+                    <div className="max-w-sm mx-auto">
+                      {/* Decorative orb */}
+                      <div className="relative mx-auto w-28 h-28 mb-8">
+                        <div className="absolute inset-0 rounded-full opacity-20 blur-2xl" style={{ background: 'radial-gradient(circle, var(--brand-primary), transparent)' }} />
+                        <div className="relative flex items-center justify-center w-28 h-28 rounded-full"
+                          style={{ background: 'radial-gradient(circle at 35% 35%, rgba(59,130,246,0.15), rgba(139,92,246,0.08))', border: '1px solid rgba(59,130,246,0.2)' }}>
+                          <Brain className="h-10 w-10 text-brand-primary opacity-60" />
+                        </div>
+                      </div>
+
+                      <h3 className="text-3xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] leading-none mb-3">
+                        Every great idea<br />
+                        <span className="text-brand-primary">starts here.</span>
+                      </h3>
+                      <p className="text-sm text-[var(--brand-text-muted)] leading-relaxed mb-8">
+                        Tap the mic below, say something interesting — and watch it become part of your universe.
+                      </p>
+
+                      {/* Three gentle prompts */}
+                      <div className="space-y-2 mb-8 text-left">
+                        {[
+                          'Something you noticed today',
+                          'An idea you keep coming back to',
+                          'A question you can\'t stop asking',
+                        ].map((prompt) => (
+                          <div key={prompt} className="flex items-start gap-3 px-4 py-3 rounded-xl"
+                            style={{ background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.1)' }}>
+                            <span className="text-brand-primary opacity-50 mt-0.5 text-xs">✦</span>
+                            <p className="text-sm text-[var(--brand-text-muted)] italic">{prompt}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <CreateMemoryDialog />
+                    </div>
+                  ) : (
+                    /* Nothing to resurface */
+                    <div className="max-w-xs mx-auto space-y-4">
+                      <div className="inline-flex items-center justify-center w-14 h-14 rounded-full"
+                        style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)' }}>
+                        <Zap className="h-6 w-6 text-brand-primary opacity-50" />
+                      </div>
+                      <h3 className="text-lg font-black uppercase tracking-tight text-[var(--brand-text-primary)]">All caught up</h3>
+                      <p className="text-sm text-[var(--brand-text-muted)] leading-relaxed">
+                        Nothing to revisit right now. Keep capturing thoughts and they'll resurface when the time is right.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
