@@ -6,7 +6,7 @@
 import React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Home, Brain, Briefcase, List } from 'lucide-react'
+import { LayoutDashboard, MessageSquare, Kanban, BookMarked } from 'lucide-react'
 import { VoiceFAB } from './VoiceFAB'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useMemoryStore } from '../stores/useMemoryStore'
@@ -36,10 +36,10 @@ interface NavOption {
 
 // 4 core nav tabs: Home, Thoughts, Projects, Lists
 const NAV_OPTIONS: NavOption[] = [
-  { id: 'home',     label: 'Home',     icon: Home,      path: '/',         action: 'navigate', color: 'home' },
-  { id: 'thoughts', label: 'Thoughts', icon: Brain,     path: '/memories', action: 'navigate', color: 'thoughts' },
-  { id: 'projects', label: 'Projects', icon: Briefcase, path: '/projects', action: 'navigate', color: 'projects' },
-  { id: 'lists',    label: 'Lists',    icon: List,      path: '/lists',    action: 'navigate', color: 'lists' },
+  { id: 'home',     label: 'Home',     icon: LayoutDashboard, path: '/',         action: 'navigate', color: 'home' },
+  { id: 'thoughts', label: 'Thoughts', icon: MessageSquare,  path: '/memories', action: 'navigate', color: 'thoughts' },
+  { id: 'projects', label: 'Projects', icon: Kanban,         path: '/projects', action: 'navigate', color: 'projects' },
+  { id: 'lists',    label: 'Lists',    icon: BookMarked,     path: '/lists',    action: 'navigate', color: 'lists' },
 ]
 
 export function FloatingNav() {
