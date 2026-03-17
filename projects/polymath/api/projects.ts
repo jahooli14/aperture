@@ -13,7 +13,7 @@ import { generateBedtimePrompts, generateCatalystPrompts, generateBreakPrompts }
 import { extractCapabilities } from './_lib/capabilities-extraction.js'
 import { analyzeTaskEnergy } from './_lib/task-energy-analyzer.js'
 import { generatePowerHourPlan } from './_lib/power-hour-generator.js'
-import { identifyRottingProjects, generateZebraReport, buryProject, resurrectProject } from './_lib/project-maintenance.js'
+import { identifyRottingProjects, generateZebraReport, buryProject, resurrectProject, pickSynthesisResurfaceCandidate } from './_lib/project-maintenance.js'
 import { updateItemConnections } from './_lib/connection-logic.js'
 import { invalidateProjectCache } from './_lib/power-hour-cache.js'
 
@@ -608,9 +608,17 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
     const action = req.query.action as string
     const id = req.query.id as string
 
-    // GET: Get rotting projects or generate eulogy
+    // GET: Get rotting projects, generate eulogy, or pick synthesis candidate
     if (req.method === 'GET') {
-      if (action === 'rotting') {
+      if (action === 'synthesis-pick') {
+        try {
+          const candidate = await pickSynthesisResurfaceCandidate(userId)
+          return res.status(200).json({ project: candidate })
+        } catch (error) {
+          console.error('[reaper] Failed to pick synthesis candidate:', error)
+          return res.status(500).json({ error: 'Failed to pick synthesis candidate' })
+        }
+      } else if (action === 'rotting') {
         try {
           const rottingProjects = await identifyRottingProjects(userId)
           return res.status(200).json(rottingProjects)
