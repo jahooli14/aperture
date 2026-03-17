@@ -1424,8 +1424,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // DAILY SPARK — one ambient synthesis insight per day
   if (resource === 'spark') {
     if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
-    const userId = await getUserId(req)
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+    const userId = getUserId(req)
     return await handleSpark(req, res, userId)
   }
 
