@@ -2,7 +2,7 @@
  * EditMemoryDialog - Edit existing memories (Bottom Sheet)
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '../ui/button'
 import {
   BottomSheet,
@@ -12,13 +12,26 @@ import {
   BottomSheetTitle,
 } from '../ui/bottom-sheet'
 import { Input } from '../ui/input'
-import { Textarea } from '../ui/textarea'
 import { useMemoryStore } from '../../stores/useMemoryStore'
 import { useToast } from '../ui/toast'
-import { useRef } from 'react'
-import { Brain, Image as ImageIcon, X, Plus, ChevronDown } from 'lucide-react'
+import { Brain, Image as ImageIcon, X, Plus, ChevronDown, Bold, Italic, List } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { handleInputFocus } from '../../utils/keyboard'
 import type { Memory } from '../../types'
+
+function ToolbarBtn({ title, onClick, children }: { title: string; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      title={title}
+      onClick={onClick}
+      className="relative p-2 rounded-lg transition-all opacity-35 hover:opacity-70 active:opacity-100"
+      style={{ color: 'var(--brand-text-secondary)' }}
+    >
+      {children}
+    </button>
+  )
+}
 
 interface EditMemoryDialogProps {
   memory: Memory | null
@@ -34,6 +47,99 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
 
   const [uploading, setUploading] = useState(false)
   const [showOptions, setShowOptions] = useState(false)
+  const bodyRef = useRef<HTMLTextAreaElement>(null)
+
+  // Auto-grow textarea batched in rAF to avoid double-reflow per keystroke
+  const handleBodyChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setBody(e.target.value)
+    const el = e.target
+    requestAnimationFrame(() => {
+      el.style.height = 'auto'
+      el.style.height = Math.max(160, el.scrollHeight) + 'px'
+    })
+  }
+
+  // Google Keep-style keyboard handling: auto-continue bullets on Enter
+  const handleBodyKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key !== 'Enter' || e.shiftKey) return
+
+    const el = e.currentTarget
+    const { selectionStart } = el
+    const lines = body.slice(0, selectionStart).split('\n')
+    const currentLine = lines[lines.length - 1]
+
+    const bulletMatch = currentLine.match(/^(\s*)([-*]|\[\s?\]|\[x\]|\d+\.)\s/)
+    if (!bulletMatch) return
+
+    const [, indent, bullet] = bulletMatch
+
+    const contentAfterBullet = currentLine.slice(bulletMatch[0].length).trim()
+    if (!contentAfterBullet) {
+      e.preventDefault()
+      const lineStart = body.lastIndexOf('\n', selectionStart - 1) + 1
+      const newBody = body.slice(0, lineStart) + '\n' + body.slice(selectionStart)
+      setBody(newBody)
+      requestAnimationFrame(() => {
+        el.selectionStart = el.selectionEnd = lineStart + 1
+        el.style.height = 'auto'
+        el.style.height = Math.max(160, el.scrollHeight) + 'px'
+      })
+      return
+    }
+
+    e.preventDefault()
+
+    let nextBullet = bullet
+    const numMatch = bullet.match(/^(\d+)\./)
+    if (numMatch) nextBullet = `${parseInt(numMatch[1]) + 1}.`
+    if (bullet === '[x]') nextBullet = '[]'
+
+    const insertion = `\n${indent}${nextBullet} `
+    const newBody = body.slice(0, selectionStart) + insertion + body.slice(selectionStart)
+    setBody(newBody)
+    requestAnimationFrame(() => {
+      const newPos = selectionStart + insertion.length
+      el.selectionStart = el.selectionEnd = newPos
+      el.style.height = 'auto'
+      el.style.height = Math.max(160, el.scrollHeight) + 'px'
+    })
+  }
+
+  const applyFormat = (type: 'bold' | 'italic' | 'bullet') => {
+    const el = bodyRef.current
+    if (!el) return
+    const { selectionStart: start, selectionEnd: end } = el
+    const selected = body.slice(start, end)
+
+    if (type === 'bullet') {
+      const lineStart = body.lastIndexOf('\n', start - 1) + 1
+      const hasBullet = body.slice(lineStart).startsWith('- ')
+      const newBody = hasBullet
+        ? body.slice(0, lineStart) + body.slice(lineStart + 2)
+        : body.slice(0, lineStart) + '- ' + body.slice(lineStart)
+      setBody(newBody)
+      requestAnimationFrame(() => {
+        const offset = hasBullet ? -2 : 2
+        el.selectionStart = el.selectionEnd = start + offset
+        el.style.height = 'auto'
+        el.style.height = Math.max(160, el.scrollHeight) + 'px'
+        el.focus()
+      })
+      return
+    }
+
+    const wrap = type === 'bold' ? '**' : '*'
+    const insertion = selected ? `${wrap}${selected}${wrap}` : `${wrap}${wrap}`
+    const newBody = body.slice(0, start) + insertion + body.slice(end)
+    setBody(newBody)
+    requestAnimationFrame(() => {
+      const cursor = selected ? start + insertion.length : start + wrap.length
+      el.selectionStart = el.selectionEnd = cursor
+      el.style.height = 'auto'
+      el.style.height = Math.max(160, el.scrollHeight) + 'px'
+      el.focus()
+    })
+  }
 
   // Image state
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
@@ -67,6 +173,15 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
       setBody(memory.body)
       setExistingImages(memory.image_urls || [])
       setSelectedFiles([]) // Reset new files on open
+
+      // Resize textarea to fit existing content after render
+      requestAnimationFrame(() => {
+        const el = bodyRef.current
+        if (el) {
+          el.style.height = 'auto'
+          el.style.height = Math.max(160, el.scrollHeight) + 'px'
+        }
+      })
     }
   }, [memory, open])
 
@@ -219,14 +334,23 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
 
         <form onSubmit={handleSubmit} className="space-y-3 pt-2">
           {/* Body — the hero */}
-          <Textarea
+          <textarea
+            ref={bodyRef}
             id="body"
             placeholder="Write your thoughts..."
             value={body}
-            onChange={(e) => setBody(e.target.value)}
+            onChange={handleBodyChange}
+            onKeyDown={handleBodyKeyDown}
+            onFocus={handleInputFocus}
             required
-            className="text-[17px] leading-relaxed resize-none border-0 focus:ring-0 bg-transparent p-0 min-h-[160px] placeholder:opacity-20"
-            style={{ color: 'var(--brand-text-primary)' }}
+            autoFocus
+            className="w-full border-0 focus:outline-none focus:ring-0 resize-none appearance-none bg-transparent"
+            style={{
+              color: 'var(--brand-text-primary)',
+              fontSize: '17px',
+              lineHeight: '1.65',
+              minHeight: '160px',
+            }}
           />
 
           {/* Title — subtle secondary */}
@@ -240,10 +364,21 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
             autoComplete="off"
           />
 
-          {/* Bottom bar: Photo + Options toggle */}
-          <div className="flex items-center gap-2 pt-2 border-t" style={{ borderColor: 'var(--glass-surface)' }}>
-            {/* Photo button */}
-            <div className="relative flex-shrink-0">
+          {/* Bottom bar: Formatting + Photo + Options toggle */}
+          <div className="flex items-center gap-0.5 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            {/* Formatting: Bold · Italic · List */}
+            <ToolbarBtn title="Bold" onClick={() => applyFormat('bold')}>
+              <Bold className="h-4 w-4" />
+            </ToolbarBtn>
+            <ToolbarBtn title="Italic" onClick={() => applyFormat('italic')}>
+              <Italic className="h-4 w-4" />
+            </ToolbarBtn>
+            <ToolbarBtn title="Bullet list" onClick={() => applyFormat('bullet')}>
+              <List className="h-4 w-4" />
+            </ToolbarBtn>
+
+            {/* Photo */}
+            <div className="relative ml-0.5">
               <input
                 type="file"
                 multiple
@@ -252,21 +387,16 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
                 className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
                 id="edit-image-upload"
               />
-              <button
-                type="button"
-                className="p-2 rounded-lg transition-all hover:bg-[var(--glass-surface)] opacity-50 hover:opacity-80"
-                style={{ color: "var(--brand-text-secondary)" }}
-                title="Add photo"
-              >
+              <ToolbarBtn title="Add photo" onClick={() => {}}>
                 <ImageIcon className="h-4 w-4" />
-              </button>
+              </ToolbarBtn>
             </div>
 
             {/* More options toggle */}
             <button
               type="button"
               onClick={() => setShowOptions(!showOptions)}
-              className="flex items-center gap-1 text-[11px] opacity-40 hover:opacity-70 transition-opacity"
+              className="flex items-center gap-1 text-[11px] opacity-40 hover:opacity-70 transition-opacity ml-1"
               style={{ color: 'var(--brand-text-secondary)' }}
             >
               <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showOptions ? 'rotate-180' : ''}`} />
