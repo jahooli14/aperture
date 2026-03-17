@@ -7,6 +7,7 @@ import type { File as FormidableFile } from 'formidable'
 import fs from 'fs'
 import { generateEmbedding, cosineSimilarity } from './_lib/gemini-embeddings.js'
 import { processMemory } from './_lib/process-memory.js'
+import { generateText } from './_lib/gemini-chat.js'
 import { MODELS } from './_lib/models.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
@@ -111,7 +112,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const userId = getUserId(req)
 
   try {
-    const { resurfacing, bridges, themes, prompts, id, capture, submit_response, q, action } = req.query
+    const { resurfacing, bridges, themes, prompts, id, capture, submit_response, q, action, seeds } = req.query
 
     // POST: Media analysis (audio transcription or image description)
     if (req.method === 'POST' && (action === 'transcribe' || action === 'analyze-media')) {
@@ -203,6 +204,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // GET: Theme clusters
     if (req.method === 'GET' && themes === 'true') {
       return await handleThemes(res, supabase)
+    }
+
+    // GET: Voice seeds — contextual thinking prompts before capture
+    if (req.method === 'GET' && seeds === 'true') {
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+      return await handleSeeds(req, res, supabase, userId)
     }
 
     // GET: Bridges for memory
@@ -1897,4 +1904,115 @@ async function handleMediaAnalysis(req: VercelRequest, res: VercelResponse) {
       details: error instanceof Error ? error.message : 'Unknown error'
     })
   }
+}
+
+/**
+ * Voice Seeds — generate 3 contextual thinking prompts before capture.
+ * Solves the blank-page problem by surfacing what the knowledge graph already
+ * knows is worth thinking about. Fails silently; seeds are an enhancement only.
+ *
+ * GET /api/memories?seeds=true
+ */
+async function handleSeeds(
+  req: VercelRequest,
+  res: VercelResponse,
+  supabase: any,
+  userId: string
+) {
+  try {
+    const [memoriesResult, articlesResult, projectsResult] = await Promise.all([
+      supabase
+        .from('memories')
+        .select('title, themes, emotional_tone, created_at')
+        .eq('user_id', userId)
+        .eq('processed', true)
+        .order('created_at', { ascending: false })
+        .limit(6),
+      supabase
+        .from('reading_queue')
+        .select('title, created_at')
+        .eq('user_id', userId)
+        .in('status', ['read', 'reading'])
+        .order('created_at', { ascending: false })
+        .limit(4),
+      supabase
+        .from('projects')
+        .select('title, description, last_active')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .order('last_active', { ascending: true })
+        .limit(5),
+    ])
+
+    const memories = memoriesResult.data || []
+    const articles = articlesResult.data || []
+    const projects = projectsResult.data || []
+
+    if (memories.length < 2 && articles.length < 2) {
+      return res.json({ seeds: [] })
+    }
+
+    const now = Date.now()
+    const context = [
+      memories.length > 0 &&
+        `RECENT THOUGHTS:\n${memories
+          .slice(0, 5)
+          .map(
+            (m: any) =>
+              `- "${m.title}"${m.emotional_tone ? ` [${m.emotional_tone}]` : ''}${
+                m.themes?.length ? ` — ${m.themes.slice(0, 2).join(', ')}` : ''
+              }`
+          )
+          .join('\n')}`,
+      articles.length > 0 &&
+        `RECENTLY READ:\n${articles
+          .slice(0, 3)
+          .map((a: any) => `- "${a.title}"`)
+          .join('\n')}`,
+      projects.length > 0 &&
+        `ACTIVE PROJECTS (least-touched first):\n${projects
+          .map((p: any) => {
+            const daysAgo = Math.floor(
+              (now - new Date(p.last_active || now).getTime()) / 86_400_000
+            )
+            const staleness = daysAgo > 7 ? ` [${daysAgo}d untouched]` : ''
+            return `- "${p.title}"${staleness}: ${(p.description || '').slice(0, 70)}`
+          })
+          .join('\n')}`,
+    ]
+      .filter(Boolean)
+      .join('\n\n')
+
+    const prompt = `You are a thinking partner generating capture prompts for a knowledge worker.
+
+THEIR RECENT ACTIVITY:
+${context}
+
+Generate exactly 3 short, sharp thinking prompts. These should feel like the app noticed something the user hasn't said yet.
+
+RULES:
+- Each must reference SPECIFIC titles, themes, or project names from the data above — no generic prompts
+- Phrased as questions or provocations (not instructions)
+- Max 12 words each — shorter is better
+- seed type "bridge": connects two items in their recent activity
+- seed type "pressure": presses on something they keep circling
+- seed type "neglect": about a project or topic they haven't touched lately
+
+Return ONLY this JSON, no markdown:
+{"seeds":[{"id":"s1","text":"...","type":"bridge"},{"id":"s2","text":"...","type":"pressure"},{"id":"s3","text":"...","type":"neglect"}]}`
+
+    const raw = await generateText(prompt, {
+      maxTokens: 250,
+      temperature: 0.9,
+      responseFormat: 'json',
+    })
+
+    const parsed = JSON.parse(raw)
+    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=60')
+    return res.json(parsed)
+  } catch (err) {
+    console.error('[handleSeeds] Error:', err)
+    return res.json({ seeds: [] })
+  }
+}
 }
