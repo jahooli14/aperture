@@ -216,7 +216,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
         }}
       >
         <CardHeader className="relative z-10 flex flex-row items-start justify-between gap-2 p-0 pb-2">
-          <h3 className="font-bold text-base leading-snug mb-1 flex-1 min-w-0 line-clamp-2" style={{ color: "var(--brand-primary)" }}>
+          <h3 className="font-bold text-sm leading-snug mb-1 flex-1 min-w-0 line-clamp-2" style={{ color: "var(--brand-primary)" }}>
             {memory.title}
           </h3>
           <div className="flex items-center gap-0.5 flex-shrink-0">
