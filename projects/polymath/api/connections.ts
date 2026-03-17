@@ -190,22 +190,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           return res.status(400).json({ error: 'id and type are required' })
         }
 
-        // Get the source item
+        // Get the source item including embedding for semantic search
         let sourceItem: any = null
         let sourceContent = ''
+        let sourceEmbedding: number[] | null = null
 
         if (type === 'project') {
           const { data } = await supabase.from('projects').select('*').eq('id', id).single()
           sourceItem = data
           sourceContent = `Project: ${data?.title}\n${data?.description || ''}`
+          sourceEmbedding = data?.embedding || null
         } else if (type === 'thought' || type === 'memory') {
           const { data } = await supabase.from('memories').select('*').eq('id', id).single()
           sourceItem = data
           sourceContent = `Thought: ${data?.title || ''}\n${data?.body || ''}`
+          sourceEmbedding = data?.embedding || null
         } else if (type === 'article') {
           const { data } = await supabase.from('reading_queue').select('*').eq('id', id).single()
           sourceItem = data
           sourceContent = `Article: ${data?.title}\n${data?.excerpt || data?.summary || ''}`
+          sourceEmbedding = data?.embedding || null
         } else if (type === 'list') {
           const { data } = await supabase.from('lists').select('*').eq('id', id).single()
           sourceItem = data
@@ -216,17 +220,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           return res.status(404).json({ error: 'Item not found' })
         }
 
-        // Get connections for this item
+        // Get saved connections for this item
         const { data: connections } = await supabase
           .from('connections')
           .select('*')
-          .eq('user_id', userId) // Added user_id filter
+          .eq('user_id', userId)
           .or(`and(source_type.eq.${type === 'memory' ? 'thought' : type},source_id.eq.${id}),and(target_type.eq.${type === 'memory' ? 'thought' : type},target_id.eq.${id})`)
           .limit(10)
 
-        // Fetch details for connected items
         const connectedItems: string[] = []
-        // Deduplicate connections (e.g. if both A->B and B->A exist for item A)
         const uniqueRelatedItems = new Map<string, string>()
 
         for (const conn of connections || []) {
@@ -240,13 +242,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           let itemText = ''
           if (relatedType === 'thought') {
             const { data } = await supabase.from('memories').select('title, body, themes').eq('user_id', userId).eq('id', relatedId).single()
-            itemText = `[Thought] ${data?.title || data?.body?.slice(0, 100) || 'Untitled'} (themes: ${(data?.themes || []).join(', ')})`
+            itemText = `[Thought] "${data?.title || data?.body?.slice(0, 100) || 'Untitled'}"${data?.themes?.length ? ` (themes: ${(data.themes as string[]).join(', ')})` : ''}`
           } else if (relatedType === 'project') {
             const { data } = await supabase.from('projects').select('title, description').eq('user_id', userId).eq('id', relatedId).single()
-            itemText = `[Project] ${data?.title}: ${data?.description?.slice(0, 100) || ''}`
+            itemText = `[Project] "${data?.title}": ${data?.description?.slice(0, 100) || ''}`
           } else if (relatedType === 'article') {
             const { data } = await supabase.from('reading_queue').select('title, excerpt').eq('user_id', userId).eq('id', relatedId).single()
-            itemText = `[Article] ${data?.title}: ${data?.excerpt?.slice(0, 100) || ''}`
+            itemText = `[Article] "${data?.title}": ${data?.excerpt?.slice(0, 100) || ''}`
           }
           if (itemText) {
             connectedItems.push(itemText)
@@ -254,27 +256,69 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
         }
 
+        // --- Semantic similarity search across knowledge lake (same as ai-action) ---
+        const semanticItems: string[] = []
+        if (sourceEmbedding) {
+          const normType = type === 'memory' ? 'thought' : type
+          const [memoriesRes, articlesRes, projectsRes] = await Promise.all([
+            normType !== 'thought'
+              ? supabase.from('memories').select('id, title, body, themes, embedding').eq('user_id', userId).not('embedding', 'is', null).limit(80)
+              : Promise.resolve({ data: [] as any[] }),
+            normType !== 'article'
+              ? supabase.from('reading_queue').select('id, title, excerpt, embedding').eq('user_id', userId).not('embedding', 'is', null).limit(50)
+              : Promise.resolve({ data: [] as any[] }),
+            normType !== 'project'
+              ? supabase.from('projects').select('id, title, description, embedding').eq('user_id', userId).not('embedding', 'is', null).limit(50)
+              : Promise.resolve({ data: [] as any[] })
+          ])
+
+          interface ScoredItem { label: string; score: number }
+          const scored: ScoredItem[] = []
+
+          for (const m of (memoriesRes.data || [])) {
+            if (!m.embedding || m.id === id) continue
+            const sim = cosineSimilarity(sourceEmbedding, m.embedding)
+            if (sim > 0.46) scored.push({ label: `[Thought] "${m.title || m.body?.slice(0, 80) || 'Untitled'}"${m.themes?.length ? ` (${(m.themes as string[]).slice(0, 3).join(', ')})` : ''}`, score: sim })
+          }
+          for (const a of (articlesRes.data || [])) {
+            if (!a.embedding || a.id === id) continue
+            const sim = cosineSimilarity(sourceEmbedding, a.embedding)
+            if (sim > 0.46) scored.push({ label: `[Article] "${a.title}": ${a.excerpt?.slice(0, 80) || ''}`, score: sim })
+          }
+          for (const p of (projectsRes.data || [])) {
+            if (!p.embedding || p.id === id) continue
+            const sim = cosineSimilarity(sourceEmbedding, p.embedding)
+            if (sim > 0.46) scored.push({ label: `[Project] "${p.title}": ${p.description?.slice(0, 80) || ''}`, score: sim })
+          }
+
+          scored.sort((a, b) => b.score - a.score)
+          for (const item of scored.slice(0, 10)) {
+            if (!uniqueRelatedItems.has(item.label)) semanticItems.push(item.label)
+          }
+        }
+
+        const allContextItems = [...connectedItems, ...semanticItems.slice(0, Math.max(0, 12 - connectedItems.length))]
         const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
-
-        // Truncate content to prevent token overflow/timeouts
         const truncatedSource = sourceContent.slice(0, 1000)
-        const truncatedConnections = connectedItems.map(i => i.slice(0, 500)).join('\n')
+        const contextBlock = allContextItems.length > 0
+          ? allContextItems.map(i => `- ${i.slice(0, 200)}`).join('\n')
+          : '(no related items found in knowledge lake)'
 
-        const analysisPrompt = `You are an insight engine. Analyze this item and its connections to find the "So What?".
+        const analysisPrompt = `You are an insight engine with access to a personal knowledge graph. Find the "So What?" by reasoning across the full corpus — not just this item in isolation.
 
-CURRENT ITEM:
-${truncatedSource}...
+FOCUS ITEM:
+${truncatedSource}
 
-CONNECTED ITEMS (${connectedItems.length}):
-${connectedItems.length > 0 ? truncatedConnections : 'No connections yet'}
+KNOWLEDGE LAKE CONTEXT (${connectedItems.length} saved connections + ${semanticItems.length} semantic matches from corpus):
+${contextBlock}
 
-Output valid JSON with:
-1. "summary": One punchy sentence on the core idea.
-2. "patterns": Array of 1-2 unexpected patterns across items.
-3. "insight": One "Aha!" moment. How do these connect to reveal a bigger truth?
-4. "suggestion": One concrete next step to advance this thinking.
+Output valid JSON:
+1. "summary": One sharp, specific sentence — what is this ACTUALLY about, given the broader context?
+2. "patterns": Array of 1-2 non-obvious patterns you see across items. Reference specific titles.
+3. "insight": The "Aha!" — what does the corpus reveal about this item that isn't visible from the item alone?
+4. "suggestion": One concrete next step that bridges this item to something else in the corpus.
 
-Keep it brief and high-impact. No fluff.`
+Be specific. Name actual items. Surface what's invisible without the lake context. No generic observations.`
 
         let responseText = ''
         try {
@@ -285,18 +329,16 @@ Keep it brief and high-impact. No fluff.`
           return res.status(502).json({ error: 'AI Service unavailable', details: apiError.message })
         }
 
-        // Parse JSON from response
         let analysis
         try {
           const jsonMatch = responseText.match(/```json\n?([\s\S]*?)\n?```/)
           analysis = jsonMatch ? JSON.parse(jsonMatch[1]) : JSON.parse(responseText)
         } catch {
           console.warn('[connections] Failed to parse JSON analysis, using fallback')
-          // Fallback if JSON parsing fails
           analysis = {
             summary: 'Analysis generated but formatting failed.',
             patterns: [],
-            insight: responseText.slice(0, 100) + '...', // Try to show some text
+            insight: responseText.slice(0, 200),
             suggestion: 'Try again.'
           }
         }
@@ -304,6 +346,8 @@ Keep it brief and high-impact. No fluff.`
         return res.status(200).json({
           analysis,
           connectionCount: connections?.length || 0,
+          lakeItemCount: allContextItems.length,
+          semanticCount: semanticItems.length,
           itemType: type,
           itemTitle: sourceItem.title || sourceItem.body?.slice(0, 50) || 'Untitled'
         })
@@ -314,7 +358,7 @@ Keep it brief and high-impact. No fluff.`
       }
     }
 
-    // On-demand AI actions
+    // On-demand AI actions — knowledge-lake-aware
     if (action === 'ai-action') {
       try {
         const { actionType } = req.query
@@ -322,33 +366,37 @@ Keep it brief and high-impact. No fluff.`
           return res.status(400).json({ error: 'id, type, and actionType are required' })
         }
 
-        // Get the source item
+        // Get the source item including its embedding
         let sourceContent = ''
         let sourceTitle = ''
+        let sourceEmbedding: number[] | null = null
 
         if (type === 'project') {
           const { data } = await supabase.from('projects').select('*').eq('user_id', userId).eq('id', id).single()
           sourceTitle = data?.title || 'Untitled'
           sourceContent = `Project: ${data?.title}\nDescription: ${data?.description || ''}\nStatus: ${data?.status || 'unknown'}`
+          sourceEmbedding = data?.embedding || null
         } else if (type === 'thought' || type === 'memory') {
           const { data } = await supabase.from('memories').select('*').eq('user_id', userId).eq('id', id).single()
           sourceTitle = data?.title || data?.body?.slice(0, 50) || 'Untitled'
           sourceContent = `Thought: ${data?.title || ''}\n${data?.body || ''}\nThemes: ${(data?.themes || []).join(', ')}`
+          sourceEmbedding = data?.embedding || null
         } else if (type === 'article') {
           const { data } = await supabase.from('reading_queue').select('*').eq('user_id', userId).eq('id', id).single()
           sourceTitle = data?.title || 'Untitled'
           sourceContent = `Article: ${data?.title}\n${data?.excerpt || data?.summary || ''}`
+          sourceEmbedding = data?.embedding || null
         } else if (type === 'list') {
           const { data } = await supabase.from('lists').select('*').eq('user_id', userId).eq('id', id).single()
           sourceTitle = data?.title || 'Untitled'
           sourceContent = `List: ${data?.title}\n${data?.description || ''}`
         }
 
-        // Get connections
+        // --- Fetch saved connections ---
         const { data: connections } = await supabase
           .from('connections')
           .select('*')
-          .eq('user_id', userId) // Added user_id filter
+          .eq('user_id', userId)
           .or(`and(source_type.eq.${type === 'memory' ? 'thought' : type},source_id.eq.${id}),and(target_type.eq.${type === 'memory' ? 'thought' : type},target_id.eq.${id})`)
           .limit(10)
 
@@ -366,13 +414,13 @@ Keep it brief and high-impact. No fluff.`
           let itemText = ''
           if (relatedType === 'thought') {
             const { data } = await supabase.from('memories').select('title, body, themes').eq('user_id', userId).eq('id', relatedId).single()
-            itemText = `[Thought] ${data?.title || data?.body?.slice(0, 100) || 'Untitled'} (themes: ${(data?.themes || []).join(', ')})`
+            itemText = `[Thought] "${data?.title || data?.body?.slice(0, 100) || 'Untitled'}"${data?.themes?.length ? ` (themes: ${data.themes.join(', ')})` : ''}`
           } else if (relatedType === 'project') {
             const { data } = await supabase.from('projects').select('title, description').eq('user_id', userId).eq('id', relatedId).single()
-            itemText = `[Project] ${data?.title}: ${data?.description?.slice(0, 100) || ''}`
+            itemText = `[Project] "${data?.title}": ${data?.description?.slice(0, 100) || ''}`
           } else if (relatedType === 'article') {
             const { data } = await supabase.from('reading_queue').select('title, excerpt').eq('user_id', userId).eq('id', relatedId).single()
-            itemText = `[Article] ${data?.title}: ${data?.excerpt?.slice(0, 100) || ''}`
+            itemText = `[Article] "${data?.title}": ${data?.excerpt?.slice(0, 100) || ''}`
           }
           if (itemText) {
             connectedItems.push(itemText)
@@ -380,58 +428,185 @@ Keep it brief and high-impact. No fluff.`
           }
         }
 
-        const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
+        // --- Semantic similarity search across full knowledge lake ---
+        // This surfaces relevant items even without explicit saved connections
+        const semanticItems: string[] = []
+        if (sourceEmbedding) {
+          const normType = type === 'memory' ? 'thought' : type
+          const [memoriesRes, articlesRes, projectsRes] = await Promise.all([
+            normType !== 'thought'
+              ? supabase.from('memories').select('id, title, body, themes, embedding').eq('user_id', userId).not('embedding', 'is', null).limit(80)
+              : Promise.resolve({ data: [] as any[] }),
+            normType !== 'article'
+              ? supabase.from('reading_queue').select('id, title, excerpt, embedding').eq('user_id', userId).not('embedding', 'is', null).limit(50)
+              : Promise.resolve({ data: [] as any[] }),
+            normType !== 'project'
+              ? supabase.from('projects').select('id, title, description, embedding').eq('user_id', userId).not('embedding', 'is', null).limit(50)
+              : Promise.resolve({ data: [] as any[] })
+          ])
 
-        // Truncate content
-        const truncatedSource = sourceContent.slice(0, 1000)
-        const truncatedConnections = connectedItems.map(i => i.slice(0, 500)).join('\n')
+          interface ScoredItem { label: string; score: number }
+          const scored: ScoredItem[] = []
+
+          for (const m of (memoriesRes.data || [])) {
+            if (!m.embedding || m.id === id) continue
+            const sim = cosineSimilarity(sourceEmbedding, m.embedding)
+            if (sim > 0.48) {
+              scored.push({
+                label: `[Thought] "${m.title || m.body?.slice(0, 80) || 'Untitled'}"${m.themes?.length ? ` (${m.themes.slice(0, 3).join(', ')})` : ''}`,
+                score: sim
+              })
+            }
+          }
+          for (const a of (articlesRes.data || [])) {
+            if (!a.embedding || a.id === id) continue
+            const sim = cosineSimilarity(sourceEmbedding, a.embedding)
+            if (sim > 0.48) {
+              scored.push({
+                label: `[Article] "${a.title}": ${a.excerpt?.slice(0, 80) || ''}`,
+                score: sim
+              })
+            }
+          }
+          for (const p of (projectsRes.data || [])) {
+            if (!p.embedding || p.id === id) continue
+            const sim = cosineSimilarity(sourceEmbedding, p.embedding)
+            if (sim > 0.48) {
+              scored.push({
+                label: `[Project] "${p.title}": ${p.description?.slice(0, 80) || ''}`,
+                score: sim
+              })
+            }
+          }
+
+          scored.sort((a, b) => b.score - a.score)
+
+          // Add semantic items not already in saved connections
+          for (const item of scored.slice(0, 10)) {
+            if (!uniqueRelatedItems.has(item.label)) {
+              semanticItems.push(item.label)
+            }
+          }
+        }
+
+        // Combine saved connections + semantic corpus items
+        const allContextItems = [...connectedItems, ...semanticItems.slice(0, Math.max(0, 12 - connectedItems.length))]
+
+        const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
+        const truncatedSource = sourceContent.slice(0, 1200)
+        const contextBlock = allContextItems.length > 0
+          ? allContextItems.map(i => `- ${i}`).join('\n')
+          : '(no related items found in knowledge lake)'
+
+        const corpusSize = allContextItems.length
+        const savedCount = connectedItems.length
+        const semanticCount = semanticItems.length
 
         let prompt = ''
         switch (actionType) {
           case 'summarize':
-            prompt = `Synthesize this item and its connections into 2 sentences. What is the core message when viewed together?
+            prompt = `You are synthesizing a personal knowledge graph for insight.
 
-ITEM:
+FOCUS ITEM:
 ${truncatedSource}
 
-CONNECTED ITEMS:
-${connectedItems.length > 0 ? truncatedConnections : 'No connections'}`
+KNOWLEDGE LAKE CONTEXT (${savedCount} saved connections + ${semanticCount} semantic matches):
+${contextBlock}
+
+Your task: Write a synthesis that goes beyond what the item says in isolation.
+1. Name the central idea in ONE punchy sentence.
+2. Identify 2-3 ways this idea echoes or extends what appears elsewhere in the knowledge lake — reference specific items by name.
+3. Name what this cluster of ideas is collectively building toward.
+
+Be specific. Mention actual titles. Surface what's non-obvious. 3-5 sentences total.`
             break
 
           case 'find-gaps':
-            prompt = `Identify knowledge gaps in this cluster of ideas.
+            prompt = `You are a knowledge architect auditing a personal knowledge graph for blind spots.
 
-ITEM:
+FOCUS ITEM:
 ${truncatedSource}
 
-CONNECTED ITEMS:
-${connectedItems.length > 0 ? truncatedConnections : 'No connections'}
+KNOWLEDGE LAKE CONTEXT (${corpusSize} related items from the user's corpus):
+${contextBlock}
 
-What key question remains unanswered? Provide 2-3 specific gaps.`
+Analyze what's missing from this cluster of knowledge:
+1. What perspectives, domains, or viewpoints are conspicuously absent given what's here?
+2. What questions does this existing corpus raise but never answer?
+3. What's the ONE most valuable gap to fill next — and what would filling it unlock?
+
+Reference specific items when naming gaps. Be precise, not vague.`
             break
 
           case 'suggest-next':
-            prompt = `Suggest the single most high-impact next step for this topic.
+            prompt = `You are a knowledge-to-action translator working with a personal knowledge graph.
 
-ITEM:
+FOCUS ITEM:
 ${truncatedSource}
 
-CONNECTED ITEMS:
-${connectedItems.length > 0 ? truncatedConnections : 'No connections'}
+KNOWLEDGE LAKE CONTEXT (${corpusSize} related items spanning notes, articles, and projects):
+${contextBlock}
 
-Be concrete and actionable.`
+Suggest ONE next action that:
+- Bridges theory from their reading into practice in their work
+- Builds on a recurring thread across multiple items in this corpus
+- Moves the highest-signal idea forward in a concrete way
+
+Reference actual items from the knowledge lake to justify your recommendation. No generic advice. Name specific connections between what they've been thinking about and what they should do next.`
             break
 
           case 'connect-dots':
-            prompt = `Find the hidden pattern connecting these items.
+            prompt = `You are a pattern recognition engine for a personal knowledge graph.
 
-ITEM:
+FOCUS ITEM:
 ${truncatedSource}
 
-CONNECTED ITEMS:
-${connectedItems.length > 0 ? truncatedConnections : 'No connections'}
+KNOWLEDGE LAKE CONTEXT (${corpusSize} related items from across the user's entire corpus):
+${contextBlock}
 
-What is the non-obvious link?`
+Find the non-obvious through-line that connects this item to the broader corpus.
+
+1. Name the hidden pattern in one sharp sentence.
+2. Show HOW it manifests — cite 2-3 specific items from the knowledge lake with direct quotes or paraphrases.
+3. Explain why this synthesis matters: what does it reveal that no single item shows alone?
+
+This should feel like a genuine insight, not a summary. Surface what the user couldn't see without seeing everything at once.`
+            break
+
+          case 'chase-thread':
+            prompt = `You are a thread-tracker for a personal knowledge graph. Your job is to identify and follow a single recurring theme through the user's corpus like a detective following a lead.
+
+FOCUS ITEM:
+${truncatedSource}
+
+KNOWLEDGE LAKE CONTEXT (${corpusSize} items from their corpus):
+${contextBlock}
+
+Chase the most interesting thread that runs through this item and the rest of the corpus:
+
+1. Name the thread in one vivid, specific phrase (not generic — make it THIS person's version of the idea).
+2. Show exactly where it appears — trace it through at least 3 specific items from the lake, noting how the idea evolves or mutates across each one.
+3. Where does this thread lead? What's it converging toward? What would be the natural culmination of this recurring preoccupation?
+
+Be a literary critic reading someone's intellectual diary. Name what they keep returning to and why it matters.`
+            break
+
+          case 'provoke':
+            prompt = `You are an intellectual sparring partner assigned to challenge the user's thinking. Your job is to construct the strongest possible counter-argument using evidence from their own knowledge base — and make them uncomfortable in a productive way.
+
+FOCUS ITEM:
+${truncatedSource}
+
+KNOWLEDGE LAKE CONTEXT (${corpusSize} items from their own reading, notes, and projects):
+${contextBlock}
+
+Construct a steel-man challenge:
+
+1. Identify the core assumption or claim in the focus item.
+2. Find evidence from their own knowledge lake that complicates, contradicts, or undermines that assumption. Quote specific titles.
+3. Pose the ONE question they most need to sit with — the one that, if answered honestly, would force them to update their thinking.
+
+Be direct. Be uncomfortable. Use their own words and reading against them constructively. Don't soften it.`
             break
 
           default:
@@ -445,7 +620,9 @@ What is the non-obvious link?`
           result: responseText,
           actionType,
           itemTitle: sourceTitle,
-          connectionCount: connections?.length || 0
+          connectionCount: connections?.length || 0,
+          semanticCount,
+          totalContextItems: corpusSize
         })
 
       } catch (error) {

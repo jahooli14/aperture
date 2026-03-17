@@ -7,12 +7,18 @@ export interface PerspectiveSuggestion {
   accentColor: string
   suggestion: string
   confidence: 'high' | 'medium'
+  sourcesCited: string[]
 }
 
 export interface MultiPerspectiveResult {
   perspectives: PerspectiveSuggestion[]
   synthesized: string
   generatedAt: number
+  lakeContext?: {
+    memoriesUsed: number
+    articlesUsed: number
+    projectsUsed: number
+  } | null
 }
 
 export interface ProjectContext {
@@ -94,7 +100,8 @@ export function useMultiPerspectiveAI() {
       const perspectiveResult: MultiPerspectiveResult = {
         perspectives: data.perspectives,
         synthesized: data.synthesized,
-        generatedAt: data.generatedAt || Date.now()
+        generatedAt: data.generatedAt || Date.now(),
+        lakeContext: data.lakeContext || null
       }
 
       // Cache the result
