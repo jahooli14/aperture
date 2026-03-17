@@ -3,7 +3,7 @@
  * Celebrates completing a project and surfaces its origin thought if seeded from one.
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Check, Sprout, X } from 'lucide-react'
 import type { Memory, Project } from '../../types'
@@ -34,6 +34,16 @@ export function ProjectCompletionModal({ project, sparkedByMemories, isOpen, onC
   const [step, setStep] = useState<'celebration' | 'reflection'>('celebration')
   const [reflection, setReflection] = useState('')
   const [saving, setSaving] = useState(false)
+  const reflectionRef = useRef<HTMLTextAreaElement>(null)
+
+  const handleReflectionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setReflection(e.target.value)
+    const el = e.target
+    requestAnimationFrame(() => {
+      el.style.height = 'auto'
+      el.style.height = Math.max(90, el.scrollHeight) + 'px'
+    })
+  }
 
   const handleDone = () => {
     setStep('reflection')
@@ -184,13 +194,13 @@ export function ProjectCompletionModal({ project, sparkedByMemories, isOpen, onC
                       Capture a reflection while it's fresh
                     </p>
                     <textarea
+                      ref={reflectionRef}
                       autoFocus
                       value={reflection}
-                      onChange={e => setReflection(e.target.value)}
+                      onChange={handleReflectionChange}
                       placeholder="What worked, what surprised you, what you'd do differently..."
                       className="w-full rounded-xl px-4 py-3 text-sm text-[var(--brand-text-primary)] placeholder:text-[var(--brand-text-primary)]/20 resize-none focus:outline-none mb-4 text-left"
                       style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', minHeight: '90px' }}
-                      rows={3}
                       onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSaveReflection() }}
                     />
                     <div className="flex gap-2">
