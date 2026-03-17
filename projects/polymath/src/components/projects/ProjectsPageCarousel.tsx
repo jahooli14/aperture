@@ -1,17 +1,20 @@
 import React, { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Star, ArrowRight, CheckCircle2, Clock } from 'lucide-react'
+import { Star, ArrowRight, CheckCircle2, Clock, Snowflake, Archive, Sprout, Loader2 } from 'lucide-react'
 import type { Project } from '../../types'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useSuggestionStore } from '../../stores/useSuggestionStore'
 import { useContextEngineStore } from '../../stores/useContextEngineStore'
 import { PROJECT_COLORS } from './ProjectCard'
+import { api } from '../../lib/apiClient'
+import { useToast } from '../ui/toast'
 
 interface ProjectsPageCarouselProps {
   loading?: boolean
   activeProjects: Project[]
   drawerProjects: Project[]
+  archiveSpotlight?: Project | null
   onClearSuggestions?: () => void
 }
 
@@ -151,13 +154,82 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
           )}
         </div>
 
-        {prominent && (
-          <div className="p-1.5 rounded-full bg-[var(--glass-surface)] group-hover:bg-[var(--brand-secondary)] group-hover:text-black transition-colors text-[var(--brand-secondary)]">
-            <ArrowRight className="h-4 w-4" />
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {project.status === 'dormant' && (
+            <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md"
+              style={{ color: 'rgba(148,163,184,0.7)', background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.15)' }}>
+              <Snowflake className="h-2.5 w-2.5" />
+              cooling
+            </span>
+          )}
+          {prominent && (
+            <div className="p-1.5 rounded-full bg-[var(--glass-surface)] group-hover:bg-[var(--brand-secondary)] group-hover:text-black transition-colors text-[var(--brand-secondary)]">
+              <ArrowRight className="h-4 w-4" />
+            </div>
+          )}
+        </div>
       </div>
     </Link>
+  )
+}
+
+function ArchivesSpotlightCard({ project }: { project: Project }) {
+  const { addToast } = useToast()
+  const { fetchProjects } = useProjectStore()
+  const [resurrecting, setResurrecting] = React.useState(false)
+
+  const daysBuried = Math.floor(
+    (Date.now() - new Date(project.updated_at || project.created_at).getTime()) / (1000 * 60 * 60 * 24)
+  )
+
+  const handleResurrect = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setResurrecting(true)
+    try {
+      await api.post(`projects?resource=reaper&action=resurrect&id=${project.id}`, {})
+      addToast({ title: `Resurrected "${project.title}"`, description: 'Back from the archives.', variant: 'success' })
+      fetchProjects()
+    } catch {
+      addToast({ title: 'Error', description: 'Failed to resurrect project.', variant: 'destructive' })
+    } finally {
+      setResurrecting(false)
+    }
+  }
+
+  return (
+    <div className="rounded-2xl p-4 flex items-center gap-4"
+      style={{
+        background: 'rgba(148,163,184,0.04)',
+        border: '1px solid rgba(148,163,184,0.12)',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+      }}
+    >
+      <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
+        style={{ background: 'rgba(148,163,184,0.1)', border: '1px solid rgba(148,163,184,0.2)' }}>
+        <Archive className="h-4 w-4" style={{ color: 'rgba(148,163,184,0.7)' }} />
+      </div>
+
+      <Link to={`/projects/${project.id}`} className="flex-1 min-w-0 hover:opacity-80 transition-opacity">
+        <p className="text-[9px] font-black uppercase tracking-[0.25em] mb-0.5" style={{ color: 'rgba(148,163,184,0.5)' }}>
+          From the archives · {daysBuried}d ago
+        </p>
+        <p className="text-sm font-bold text-[var(--brand-text-primary)] truncate">{project.title}</p>
+        {project.description && (
+          <p className="text-xs line-clamp-1 mt-0.5" style={{ color: 'var(--brand-text-secondary)' }}>{project.description}</p>
+        )}
+      </Link>
+
+      <button
+        onClick={handleResurrect}
+        disabled={resurrecting}
+        className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all hover:scale-105"
+        style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)', color: '#34d399' }}
+      >
+        {resurrecting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sprout className="h-3 w-3" />}
+        Revive
+      </button>
+    </div>
   )
 }
 
@@ -165,6 +237,7 @@ export function ProjectsPageCarousel({
   loading = false,
   activeProjects: activeList,
   drawerProjects: drawerList,
+  archiveSpotlight,
   onClearSuggestions
 }: ProjectsPageCarouselProps) {
   // const { projects } = useProjectStore() // Removed internal fetching
@@ -218,6 +291,19 @@ export function ProjectsPageCarousel({
               </motion.div>
             ))}
           </div>
+        </section>
+      )}
+
+      {/* SECTION 3: FROM THE ARCHIVES (weekly graveyard spotlight) */}
+      {archiveSpotlight && (
+        <section>
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <ArchivesSpotlightCard project={archiveSpotlight} />
+          </motion.div>
         </section>
       )}
 

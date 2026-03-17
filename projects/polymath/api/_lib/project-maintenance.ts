@@ -75,3 +75,37 @@ export async function resurrectProject(projectId: string, userId: string): Promi
     throw error
   }
 }
+
+/**
+ * Picks the best graveyard project candidate to surface in synthesis.
+ * Scoring: older burial = higher priority (they've been forgotten longest),
+ * with a recency boost if the project has relevant metadata (capabilities/tags).
+ * Returns null if no graveyard projects exist.
+ */
+export async function pickSynthesisResurfaceCandidate(userId: string): Promise<any | null> {
+  const { data: projects, error } = await supabase
+    .from('projects')
+    .select('id, title, description, metadata, updated_at, created_at, status')
+    .eq('user_id', userId)
+    .eq('status', 'graveyard')
+
+  if (error) {
+    console.error('[pickSynthesisResurfaceCandidate] Error fetching graveyard projects:', error)
+    return null
+  }
+
+  if (!projects || projects.length === 0) return null
+
+  // Score each project: older burial wins (longest forgotten), capped at 365 days
+  const now = Date.now()
+  const scored = projects.map(p => {
+    const buriedMs = now - new Date(p.updated_at || p.created_at).getTime()
+    const daysBuried = Math.min(buriedMs / (1000 * 60 * 60 * 24), 365)
+    // Bonus if project has capabilities or tags (more context = better synthesis)
+    const hasContext = (p.metadata?.capabilities?.length > 0 || p.metadata?.tags?.length > 0) ? 20 : 0
+    return { project: p, score: daysBuried + hasContext }
+  })
+
+  scored.sort((a, b) => b.score - a.score)
+  return scored[0].project
+}
