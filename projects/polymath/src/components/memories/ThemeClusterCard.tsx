@@ -97,7 +97,7 @@ export const ThemeClusterCard = React.memo(function ThemeClusterCard({ cluster, 
         aria-label={`Open ${cluster.name} cluster`}
       />
 
-      {/* Seed as project button — always visible on mobile */}
+      {/* Start project button — always visible on mobile */}
       {cluster.memory_count >= 2 && (
         <button
           onClick={(e) => { e.stopPropagation(); setSeedOpen(true) }}
@@ -111,10 +111,10 @@ export const ThemeClusterCard = React.memo(function ThemeClusterCard({ cluster, 
             letterSpacing: '0.1em',
             textTransform: 'uppercase',
           }}
-          title="Seed as project"
+          title="Turn into a project"
         >
           <Sprout className="w-3 h-3" />
-          Seed
+          Start project
         </button>
       )}
 

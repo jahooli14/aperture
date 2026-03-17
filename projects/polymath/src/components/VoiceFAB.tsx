@@ -49,7 +49,7 @@ const PILL_GAP = 10
 const STRIP_OPTIONS = [
   {
     id: 'todo' as const,
-    label: 'Todo',
+    label: 'Task',
     icon: CheckSquare,
     color: "var(--brand-text-secondary)",
     activeColor: 'rgba(59, 130, 246, 0.55)',

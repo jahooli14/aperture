@@ -166,7 +166,7 @@ export function MultiPerspectiveSuggestions({
               The Council
             </h3>
             <p className="text-sm text-[var(--brand-text-muted)] leading-relaxed">
-              Summon 5 distinct perspectives to analyze your trajectory. High-fidelity synthesis of priorities and obstacles.
+              Five different voices on what to do next.
             </p>
           </div>
 
@@ -206,7 +206,7 @@ export function MultiPerspectiveSuggestions({
           style={{ color: 'var(--brand-text-muted)', border: '1px solid var(--glass-surface)' }}
           title="Regenerate all perspectives"
         >
-          {loading ? 'Thinking...' : 'REGENERATE'}
+          {loading ? 'Thinking...' : 'Refresh'}
         </button>
       </div>
 

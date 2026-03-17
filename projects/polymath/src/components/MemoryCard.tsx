@@ -337,11 +337,35 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
           </div>
         )}
 
-        <MarkdownRenderer
-          content={memory.body}
-          className={`text-sm mb-3 ${expanded ? '' : 'line-clamp-6'}`}
-          style={{ color: "var(--brand-primary)" }}
-        />
+        {/* Body text with fade-out read-more on mobile */}
+        {!expanded && memory.body && memory.body.length > 280 ? (
+          <div className="relative mb-3">
+            <MarkdownRenderer
+              content={memory.body}
+              className="text-sm line-clamp-5"
+              style={{ color: "var(--brand-primary)" }}
+            />
+            {/* Fade + Read more tap target */}
+            <div
+              className="absolute bottom-0 left-0 right-0 h-10 flex items-end justify-start"
+              style={{ background: 'linear-gradient(to top, var(--brand-bg, #0a0f1e) 40%, transparent)' }}
+            >
+              <button
+                onClick={(e) => { e.stopPropagation(); setExpanded(true) }}
+                className="text-[10px] font-black uppercase tracking-widest pb-0.5 active:opacity-60 transition-opacity"
+                style={{ color: 'var(--brand-primary)', opacity: 0.6 }}
+              >
+                Read more
+              </button>
+            </div>
+          </div>
+        ) : (
+          <MarkdownRenderer
+            content={memory.body}
+            className={`text-sm mb-3 ${expanded ? '' : 'line-clamp-6'}`}
+            style={{ color: "var(--brand-primary)" }}
+          />
+        )}
 
         {/* Attached Images */}
         {memory.image_urls && memory.image_urls.length > 0 && (
@@ -416,7 +440,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
               <div className="flex flex-wrap items-center gap-1.5 mb-2">
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowDetailModal(true) }}
-                  className="flex items-center gap-1 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.08)]"
+                  className="flex items-center gap-1 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-lg active:bg-[rgba(255,255,255,0.08)] transition-colors"
                   style={{ color: "var(--brand-primary)" }}
                 >
                   <Maximize2 className="w-3 h-3" />
@@ -424,27 +448,47 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleCopyText() }}
-                  className="flex items-center gap-1 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.08)]"
+                  className="flex items-center gap-1 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-lg active:bg-[rgba(255,255,255,0.08)] transition-colors"
                   style={{ color: "var(--brand-primary)" }}
                 >
                   <Copy className="w-3 h-3" />
                   Copy
                 </button>
                 <button
-                  onClick={(e) => { e.stopPropagation(); navigate(`/search?similar=${memory.id}`) }}
-                  className="flex items-center gap-1 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.08)]"
+                  onClick={async (e) => {
+                    e.stopPropagation()
+                    const content = [memory.title, memory.body].filter(Boolean).join('. ')
+                    try {
+                      const res = await fetch('/api/connections?action=link', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ itemId: memory.id, itemType: 'thought', content })
+                      })
+                      if (res.ok) {
+                        const data = await res.json()
+                        addToast({
+                          title: data.connections?.length > 0
+                            ? `Found ${data.connections.length} connection${data.connections.length > 1 ? 's' : ''}`
+                            : 'No new connections found',
+                          description: data.connections?.length > 0 ? 'Open this thought to explore them.' : 'Try again after adding more thoughts.',
+                          variant: data.connections?.length > 0 ? 'success' : 'default'
+                        })
+                      }
+                    } catch { /* silent */ }
+                  }}
+                  className="flex items-center gap-1 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-lg active:bg-[rgba(255,255,255,0.08)] transition-colors"
                   style={{ color: 'var(--brand-text-secondary)' }}
                 >
-                  <Zap className="w-3 h-3" />
-                  Similar
+                  <Link2 className="w-3 h-3" />
+                  Connect
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); setSeedProjectOpen(true) }}
-                  className="flex items-center gap-1 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.08)]"
+                  className="flex items-center gap-1 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-lg active:bg-[rgba(255,255,255,0.08)] transition-colors"
                   style={{ color: 'var(--brand-text-secondary)' }}
                 >
                   <Sprout className="w-3 h-3" />
-                  Seed
+                  Grow this
                 </button>
               </div>
             </motion.div>
@@ -471,10 +515,10 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
                 letterSpacing: '0.1em',
                 textTransform: 'uppercase',
               }}
-              title="Seed as project"
+              title="Turn into a project"
             >
               <Sprout className="w-2.5 h-2.5" />
-              Seed
+              Grow
             </button>
           </div>
 
@@ -514,8 +558,17 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
         onOpenChange={setSeedProjectOpen}
         hideTrigger
         initialTitle={memory.title}
-        initialDescription={memory.body?.slice(0, 200)}
+        initialDescription={memory.body?.slice(0, 500)}
         onCreated={async (projectId) => {
+          addToast({
+            title: 'Project created',
+            description: 'Your thought has been grown into a project.',
+            variant: 'success',
+            action: {
+              label: 'View project →',
+              onClick: () => navigate(`/projects/${projectId}`)
+            }
+          })
           try {
             await fetch('/api/connections', {
               method: 'POST',
@@ -531,7 +584,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
               })
             })
           } catch (err) {
-            console.warn('[MemoryCard] Failed to create inspired_by connection:', err)
+            // silent fail
           }
         }}
       />

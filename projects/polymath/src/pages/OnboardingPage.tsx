@@ -164,7 +164,7 @@ export function OnboardingPage() {
             Analyzing your responses...
           </h2>
           <p style={{ color: "var(--brand-primary)" }}>
-            Building your first knowledge graph
+            Setting up your personal space
           </p>
         </div>
       </div>
@@ -252,7 +252,7 @@ export function OnboardingPage() {
           {/* Graph Visualization Placeholder */}
           <div className="p-6 mb-8" style={{ background: 'var(--brand-glass-bg)', backdropFilter: 'blur(12px)', borderRadius: 'var(--premium-radius-lg)' }}>
             <h3 className="font-semibold mb-4 text-center" style={{ color: "var(--brand-primary)" }}>
-              Your Knowledge Graph
+              Your web of ideas
             </h3>
             <div className="flex items-center justify-center gap-8 py-8">
               {analysis.graph_preview.nodes.map((node, i) => (
