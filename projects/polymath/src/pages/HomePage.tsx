@@ -22,7 +22,6 @@ import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
 import { SkeletonCard } from '../components/ui/skeleton-card'
 import { EmptyState } from '../components/ui/empty-state'
 import { Layers, ArrowRight, Plus, Mic, FileText, FolderKanban, Search, TrendingUp, Moon, Calendar, Zap, Brain, X, AlertCircle, Check, Lightbulb, RefreshCw, Wind, Rss, Map as MapIcon, MoreHorizontal } from 'lucide-react'
-import { MultiPerspectiveSuggestions } from '../components/suggestions/MultiPerspectiveSuggestions'
 import { BrandName } from '../components/BrandName'
 import { MarkdownRenderer } from '../components/ui/MarkdownRenderer'
 import { SubtleBackground } from '../components/SubtleBackground'
@@ -1247,7 +1246,7 @@ export function HomePage() {
                     <Lightbulb className="h-5 w-5 text-[var(--brand-text-secondary)]" />
                   </div>
                   <div>
-                    <h2 className="section-header !mb-1 !text-xl uppercase">Discover Projects</h2>
+                    <h2 className="section-header !mb-1 !text-xl">Discover Projects</h2>
                     <p className="text-sm aperture-body text-[var(--brand-text-secondary)]">
                       AI recommendations
                     </p>
