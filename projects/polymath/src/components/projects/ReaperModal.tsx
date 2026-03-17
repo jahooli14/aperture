@@ -147,27 +147,33 @@ export function ReaperModal({ isOpen, onClose }: ReaperModalProps) {
               </div>
             ) : rottingProject ? (
               <div className="text-center">
-                <Skull className="h-16 w-16 mx-auto text-brand-text-secondary mb-6" />
-                <h2 className="text-3xl font-bold text-brand-text-secondary mb-3">
+                <Skull className="h-12 w-12 mx-auto text-brand-text-secondary mb-4" />
+                <h2 className="text-2xl font-bold text-brand-text-secondary mb-1">
                   The Reaper Approaches
                 </h2>
-                <p className="text-lg text-brand-primary mb-6">
-                  A project has fallen silent. It whispers from the void...
+                <p className="text-sm text-brand-primary/70 mb-5">
+                  A project has fallen silent.
                 </p>
 
-                <div className="bg-black/20 p-5 rounded-lg mb-8" style={{ border: '1px solid rgba(239, 68, 68, 0.3)' }}>
-                  <h3 className="text-xl font-semibold text-[var(--brand-text-primary)] mb-2">
-                    "{rottingProject.title}"
-                  </h3>
-                  {rottingProject.description && (
-                    <p className="text-sm italic text-brand-primary/80 mb-4">
-                      {rottingProject.description}
-                    </p>
-                  )}
+                <div className="bg-black/20 rounded-lg mb-6 text-left overflow-hidden" style={{ border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                  <div className="px-4 py-3 border-b border-red-500/20">
+                    <h3 className="text-base font-semibold text-[var(--brand-text-primary)]">
+                      {rottingProject.title}
+                    </h3>
+                    {rottingProject.description && (
+                      <p className="text-xs text-brand-primary/60 mt-0.5">
+                        {rottingProject.description}
+                      </p>
+                    )}
+                  </div>
                   {rottingProject.eulogy && (
-                    <p className="text-base text-brand-primary font-serif">
-                      "{rottingProject.eulogy}"
-                    </p>
+                    <div className="px-4 py-3 max-h-48 overflow-y-auto">
+                      {rottingProject.eulogy.split(/(?<=[.!?])\s+/).map((sentence, i) => (
+                        <p key={i} className="text-sm text-brand-primary/80 font-serif leading-relaxed mb-2 last:mb-0">
+                          {sentence}
+                        </p>
+                      ))}
+                    </div>
                   )}
                 </div>
 
