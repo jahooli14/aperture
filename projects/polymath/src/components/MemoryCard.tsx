@@ -316,16 +316,16 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
         }}
       >
         {/* Title row — pin dot when pinned, no buttons */}
-        <div className="flex items-start gap-2 px-3.5 pt-3.5 pb-0">
+        <div className="flex items-start gap-1.5 px-3 pt-3 pb-0">
           <h3
-            className="flex-1 min-w-0 font-semibold text-sm leading-snug line-clamp-2"
+            className="flex-1 min-w-0 font-medium text-xs leading-snug line-clamp-2"
             style={{ color: 'var(--brand-text-primary)' }}
           >
             {memory.title}
           </h3>
           {memory.is_pinned && (
             <Pin
-              className="w-2.5 h-2.5 flex-shrink-0 mt-0.5"
+              className="w-2 h-2 flex-shrink-0 mt-0.5"
               style={{ color: 'rgba(251,191,36,0.7)', fill: 'rgba(251,191,36,0.7)' }}
             />
           )}
@@ -335,7 +335,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
         {memory.source_reference?.type === 'list_item' && memory.source_reference.title && (() => {
           const ListIcon = getListIcon(memory.source_reference?.list_type)
           return (
-            <div className="px-3.5 pt-1.5">
+            <div className="px-3 pt-1">
               <span
                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium"
                 style={{
@@ -353,7 +353,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
 
         {/* Body preview — plain prose so line-clamp uses real content */}
         <p
-          className="px-3.5 pt-2 pb-0 text-xs leading-relaxed line-clamp-4"
+          className="px-3 pt-1.5 pb-0 text-[11px] leading-relaxed line-clamp-3"
           style={{ color: 'var(--brand-text-muted)' }}
         >
           {toPreviewText(memory.body)}
@@ -361,7 +361,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
 
         {/* Attached Images */}
         {memory.image_urls && memory.image_urls.length > 0 && (
-          <div className="mx-3.5 mt-2.5 rounded-lg overflow-hidden" style={{ height: '96px' }}>
+          <div className="mx-3 mt-2 rounded-lg overflow-hidden" style={{ height: '80px' }}>
             <div className={`grid h-full gap-0.5 ${memory.image_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
               {memory.image_urls.slice(0, 2).map((url, i) => (
                 <div key={url} className="relative h-full overflow-hidden">
@@ -379,7 +379,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
 
         {/* Footer: date + badges */}
         <div
-          className="flex items-center justify-between gap-2 px-3.5 pt-2 pb-3 mt-2"
+          className="flex items-center justify-between gap-2 px-3 pt-1.5 pb-2.5 mt-1.5"
           style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
         >
           <span
