@@ -275,13 +275,19 @@ export default function App() {
             <RouteTracker />
 
             {/* Floating Navigation - Placed high in DOM for robust fixed positioning */}
-            <FloatingNav />
+            <ErrorBoundary fallback={null}>
+              <FloatingNav />
+            </ErrorBoundary>
 
             {/* Extraction Summary - Shows AI processing results after memory creation */}
-            <ExtractionSummary />
+            <ErrorBoundary fallback={null}>
+              <ExtractionSummary />
+            </ErrorBoundary>
 
             {/* Steering Card - Shows live mind steering after extraction completes */}
-            <SteeringCard />
+            <ErrorBoundary fallback={null}>
+              <SteeringCard />
+            </ErrorBoundary>
 
             <div className="min-h-screen flex flex-col overflow-x-hidden">
               <OfflineIndicator />
@@ -318,19 +324,29 @@ export default function App() {
               </main>
 
               {/* Context Engine Sidebar */}
-              <ContextSidebar />
+              <ErrorBoundary fallback={null}>
+                <ContextSidebar />
+              </ErrorBoundary>
 
               {/* Pin Overlay - Split Screen */}
-              <PinOverlay />
+              <ErrorBoundary fallback={null}>
+                <PinOverlay />
+              </ErrorBoundary>
 
               {/* Focus Session Overlay (Zen Mode) */}
-              <FocusSession />
+              <ErrorBoundary fallback={null}>
+                <FocusSession />
+              </ErrorBoundary>
 
               {/* Connection Pulse - Live AI linking notifications */}
-              <ConnectionPulse />
+              <ErrorBoundary fallback={null}>
+                <ConnectionPulse />
+              </ErrorBoundary>
 
               {/* Debug Panel - Shows console logs on screen */}
-              <DebugPanel />
+              <ErrorBoundary fallback={null}>
+                <DebugPanel />
+              </ErrorBoundary>
             </div>
           </Router>
         </ToastProvider>
