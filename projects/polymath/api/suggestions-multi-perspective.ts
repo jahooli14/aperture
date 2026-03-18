@@ -443,7 +443,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           icon: PERSONAS[i].icon,
           accentColor: PERSONAS[i].accentColor,
           suggestion: 'Unable to generate suggestion at this time.',
-          confidence: 'medium' as const
+          confidence: 'medium' as const,
+          sourcesCited: []
         }
       }
     })
