@@ -139,6 +139,9 @@ export default function App() {
   // Apply theme on mount and when preferences change
   useTheme()
 
+  // Schedule bedtime/morning notifications on native platforms
+  useBedtimeNotifications()
+
   // Setup online/offline tracking and auto-sync
   useEffect(() => {
     const { setOnlineStatus, setSyncResult, updateQueueSize } = useOfflineStore.getState()

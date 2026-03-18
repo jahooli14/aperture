@@ -32,6 +32,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
   const [internalOpen, setInternalOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [lastCreatedId, setLastCreatedId] = useState<string | null>(null)
+  const [showOptions, setShowOptions] = useState(false)
   const { createProject } = useProjectStore()
   const { addToast } = useToast()
   const { fetchSuggestions } = useAutoSuggestion()
