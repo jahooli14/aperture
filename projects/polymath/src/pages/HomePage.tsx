@@ -533,7 +533,7 @@ function InsightsSection() {
 }
 
 import { FocusStream } from '../components/home/FocusStream'
-import { Film, Book, Music, MapPin, Gamepad2, Monitor, FileText, Box as BoxIcon, List as ListIcon } from 'lucide-react'
+import { Film, Book, Music, MapPin, Gamepad2, Monitor, Box as BoxIcon, List as ListIcon } from 'lucide-react'
 import { useListStore } from '../stores/useListStore'
 
 // List-type icon map (shared across home components)
