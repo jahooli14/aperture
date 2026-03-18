@@ -67,8 +67,7 @@ function MasonryGrid({
 
   useEffect(() => {
     const updateColumns = () => {
-      if (window.innerWidth >= 1024) setColumns(3) // lg: 3 col
-      else if (window.innerWidth >= 600) setColumns(2) // tablet/large phone: 2 col
+      if (window.innerWidth >= 600) setColumns(2) // tablet+: always 2 col
       else setColumns(1) // small phone: single column for readability
     }
 
