@@ -196,7 +196,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
     }, {} as Record<string, number>)
 
     const topTags = Object.entries(tagCounts)
-      .sort((a, b) => b[1] - a[1])
+      .sort((a, b) => (b[1] as number) - (a[1] as number))
       .slice(0, 8)
       .map(([tag]) => tag)
 

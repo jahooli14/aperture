@@ -78,8 +78,8 @@ export async function extractCapabilities(userId: string) {
     }
 
     // 2. Select diverse representatives (15 each)
-    const projects = selectDiverseItems(allProjects || [], 15)
-    const memories = selectDiverseItems(allMemories || [], 15)
+    const projects = selectDiverseItems((allProjects || []) as { embedding: number[]; title: string; description: string | null }[], 15)
+    const memories = selectDiverseItems((allMemories || []) as { embedding: number[]; title: string | null; body: string | null }[], 15)
 
     console.log(`[capabilities] Selected ${projects.length} diverse projects and ${memories.length} diverse memories from ${allProjects?.length || 0} and ${allMemories?.length || 0} candidates`)
 
