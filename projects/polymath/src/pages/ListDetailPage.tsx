@@ -891,7 +891,7 @@ export default function ListDetailPage() {
     const [sortOption, setSortOption] = useState<SortOption>('added')
     const [showSortMenu, setShowSortMenu] = useState(false)
     const [celebrationItem, setCelebrationItem] = useState<ListItem | null>(null)
-    const inputRef = useRef<HTMLTextAreaElement>(null)
+    const inputRef = useRef<HTMLInputElement>(null)
     const { confirm, dialog: confirmDialog } = useConfirmDialog()
 
     const rgb = list ? ListColor(list.type) : '148, 163, 184'

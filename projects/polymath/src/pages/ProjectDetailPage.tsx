@@ -917,10 +917,9 @@ export function ProjectDetailPage() {
                   <div className="h-px bg-[var(--glass-surface)] flex-1" />
                 </div>
                 <ConnectionsList
-                  sourceType="project"
-                  sourceId={id || ''}
-                  sourceContent={[project.title, project.description].filter(Boolean).join('. ')}
-                  sourceTitle={project.title}
+                  itemType="project"
+                  itemId={id || ''}
+                  content={[project.title, project.description].filter(Boolean).join('. ')}
                 />
               </div>
 

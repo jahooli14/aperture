@@ -245,7 +245,7 @@ export function TodoInput({
       <div className="flex items-center gap-3 px-4 py-4">
         {/* Fake checkbox / morphing type icon */}
         <AnimatePresence mode="wait">
-          {showTypePill && captureType !== 'todo' && captureType !== 'ambiguous' ? (
+          {showTypePill && captureType !== 'todo' ? (
             <motion.div
               key={captureType}
               initial={{ opacity: 0, scale: 0.7 }}

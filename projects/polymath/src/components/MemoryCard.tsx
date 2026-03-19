@@ -1,4 +1,5 @@
 import React, { useState, memo, useCallback, useMemo, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { Edit, Trash2, Copy, Share2, Link2, Pin, Sprout, Film, Book, Music, MapPin, Gamepad2, Monitor, FileText, Box } from 'lucide-react'
 import type { Memory, BridgeWithMemories } from '../types'
@@ -319,12 +320,12 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
       >
         {/* Title row — pin dot when pinned, no buttons */}
         <div className="flex items-start gap-1.5 px-3 pt-3 pb-0">
-          <h3
+          <p
             className="flex-1 min-w-0 font-medium text-[11.5px] leading-snug line-clamp-2"
             style={{ color: 'var(--brand-text-primary)' }}
           >
             {memory.title}
-          </h3>
+          </p>
           {memory.is_pinned && (
             <Pin
               className="w-2 h-2 flex-shrink-0 mt-0.5"
@@ -429,11 +430,14 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
         </div>
       </motion.div>
 
-      <MemoryDetailModal
-        memory={memory}
-        isOpen={showDetailModal}
-        onClose={() => setShowDetailModal(false)}
-      />
+      {createPortal(
+        <MemoryDetailModal
+          memory={memory}
+          isOpen={showDetailModal}
+          onClose={() => setShowDetailModal(false)}
+        />,
+        document.body
+      )}
 
       <CreateProjectDialog
         isOpen={seedProjectOpen}
