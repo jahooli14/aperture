@@ -46,11 +46,11 @@ export function MemoryLinks({ currentMemoryId, bridges, onMemoryClick }: MemoryL
   }
 
   return (
-    <div className="pt-3 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
+    <div className="mb-4">
       <div className="flex items-center gap-2 mb-3">
         <Link2 className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
-        <span className="text-sm font-semibold" style={{ color: "var(--brand-primary)" }}>
-          Connected Memories
+        <span className="text-xs font-medium uppercase tracking-wider opacity-60" style={{ color: "var(--brand-primary)" }}>
+          Linked Memories
         </span>
         <span
           className="text-xs px-2 py-0.5 rounded-full"
@@ -85,10 +85,10 @@ export function MemoryLinks({ currentMemoryId, bridges, onMemoryClick }: MemoryL
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium line-clamp-1" style={{ color: "var(--brand-primary)" }}>
+                    <div className="text-sm font-medium line-clamp-1" style={{ color: "#ffffff" }}>
                       {link.memory.title}
                     </div>
-                    <div className="text-xs mt-0.5 capitalize" style={{ color: "var(--brand-primary)" }}>
+                    <div className="text-xs mt-0.5 capitalize" style={{ color: "var(--brand-text-muted)" }}>
                       {bridgeTypeLabels[link.bridge_type] || link.bridge_type.replace(/_/g, ' ')}
                     </div>
                   </div>
@@ -128,10 +128,10 @@ export function MemoryLinks({ currentMemoryId, bridges, onMemoryClick }: MemoryL
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium line-clamp-1" style={{ color: "var(--brand-primary)" }}>
+                    <div className="text-sm font-medium line-clamp-1" style={{ color: "#ffffff" }}>
                       {link.memory.title}
                     </div>
-                    <div className="text-xs mt-0.5 capitalize" style={{ color: "var(--brand-primary)" }}>
+                    <div className="text-xs mt-0.5 capitalize" style={{ color: "var(--brand-text-muted)" }}>
                       {bridgeTypeLabels[link.bridge_type] || link.bridge_type.replace(/_/g, ' ')}
                     </div>
                   </div>
