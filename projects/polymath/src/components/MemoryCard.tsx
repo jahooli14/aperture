@@ -318,7 +318,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
         {/* Title row — pin dot when pinned, no buttons */}
         <div className="flex items-start gap-1.5 px-3 pt-3 pb-0">
           <h3
-            className="flex-1 min-w-0 font-semibold text-[11px] leading-snug line-clamp-1"
+            className="flex-1 min-w-0 font-semibold text-[10px] leading-snug line-clamp-1"
             style={{ color: 'var(--brand-text-primary)' }}
           >
             {memory.title}
