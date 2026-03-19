@@ -319,12 +319,12 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
       >
         {/* Title row — pin dot when pinned, no buttons */}
         <div className="flex items-start gap-1.5 px-3 pt-3 pb-0">
-          <h3
+          <p
             className="flex-1 min-w-0 font-medium text-[11.5px] leading-snug line-clamp-2"
             style={{ color: 'var(--brand-text-primary)' }}
           >
             {memory.title}
-          </h3>
+          </p>
           {memory.is_pinned && (
             <Pin
               className="w-2 h-2 flex-shrink-0 mt-0.5"
