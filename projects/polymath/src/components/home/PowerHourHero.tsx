@@ -76,6 +76,7 @@ export function PowerHourHero() {
 
     async function fetchPowerHour(targetProjectId?: string, newDuration?: number) {
         const targetDuration = newDuration || duration
+        const currentProjectId = tasks[selectedIndex]?.project_id
 
         // 0. Instant Switch Logic: If we already have this project in our task list, just switch to it
         if (targetProjectId) {
@@ -109,8 +110,15 @@ export function PowerHourHero() {
             }
         }
 
-        if (targetProjectId) setIsRefreshing(true)
-        else setLoading(true)
+        // Only show the full skeleton on true initial load (no tasks yet).
+        // For duration changes, keep existing content visible and use isRefreshing instead.
+        if (targetProjectId) {
+            setIsRefreshing(true)
+        } else if (tasks.length === 0) {
+            setLoading(true)
+        } else {
+            setIsRefreshing(true)
+        }
 
         try {
             // 1. Load from client-side cache first (Instant) if not forcing a specific project
@@ -121,6 +129,11 @@ export function PowerHourHero() {
                     if (cachedDuration === targetDuration) {
                         setTasks(cached.tasks)
                         setLoading(false)
+                        // Restore selection to same project if possible
+                        if (currentProjectId) {
+                            const idx = (cached.tasks as PowerTask[]).findIndex(t => t.project_id === currentProjectId)
+                            setSelectedIndex(idx !== -1 ? idx : 0)
+                        }
                     }
                 }
             }
@@ -140,12 +153,16 @@ export function PowerHourHero() {
                         const filtered = prev.filter(t => t.project_id !== targetProjectId || t.task_title !== "Planning session...")
                         return [...filtered, ...data.tasks]
                     })
-                    // Select the newly added task from the results
-                    const newIdxForTarget = tasks.length // It was recently added to end
                     // Note: selectedIndex is already pointing to the end due to optimistic update
                 } else {
                     setTasks(data.tasks)
-                    setSelectedIndex(0)
+                    // Maintain selection on same project; fall back to first
+                    if (currentProjectId) {
+                        const idx = (data.tasks as PowerTask[]).findIndex(t => t.project_id === currentProjectId)
+                        setSelectedIndex(idx !== -1 ? idx : 0)
+                    } else {
+                        setSelectedIndex(0)
+                    }
                 }
                 await readingDb.cacheDashboard('power-hour', { tasks: data.tasks })
             }
@@ -323,6 +340,10 @@ export function PowerHourHero() {
     return (
         <div className="relative mb-2 group/hero">
             <div className="attention-card p-0 rounded-2xl overflow-hidden relative">
+                {/* Subtle duration-refresh overlay — keeps content visible */}
+                {isRefreshing && !tasks.some(t => t.task_title === 'Planning session...') && (
+                    <div className="absolute inset-0 z-50 pointer-events-none rounded-2xl ring-1 ring-inset ring-white/10 animate-pulse" />
+                )}
                 {/* Header Overlays */}
                 <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
                     <div
@@ -409,7 +430,7 @@ export function PowerHourHero() {
                     <div className="p-6 md:p-8 flex-1 relative z-10 flex flex-col h-full justify-between pt-24 md:pt-32">
                         <AnimatePresence mode="wait">
                             <motion.div
-                                key={mainTask.project_id + mainTask.task_title + duration}
+                                key={mainTask.project_id + mainTask.task_title}
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: 20 }}
