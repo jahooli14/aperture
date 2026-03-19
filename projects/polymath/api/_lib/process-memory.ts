@@ -61,6 +61,8 @@ export async function processMemory(memoryId: string): Promise<void> {
       .from('memories')
       .update({
         title: metadata.summary_title,
+        // For voice notes: store lightly-cleaned body (fillers removed). Text notes: body unchanged.
+        ...(memory.orig_transcript ? { body: metadata.insightful_body } : {}),
         memory_type: metadata.memory_type,
         entities: metadata.entities,
         themes: metadata.themes,
@@ -286,12 +288,12 @@ WRONG (verbatim copying):
 
 TASK:
 - summary_title: A SHORT, SUMMARIZED title (5-10 words). NEVER copy the input text.
-- insightful_body: Clean up the content - remove fillers, fix grammar, keep meaning intact.
+- insightful_body: ${bodyFormat === 'prose' ? 'Light cleanup only — remove filler words (um, uh, you know, like, sort of, kind of) and stutters, but preserve ALL original words and meaning exactly. Do NOT rephrase, restructure, or add anything.' : 'The key points as concise bullet points, each line starting with •'}
 
 Return JSON:
 {
   "summary_title": "SHORT SUMMARIZED title - NOT verbatim",
-  "insightful_body": "${bodyFormat === 'bullets' ? 'The key points as concise bullet points, each line starting with •' : 'The cleaned-up content in first person, natural prose'}",
+  "insightful_body": "${bodyFormat === 'prose' ? 'Voice transcript with only filler words removed — no other changes' : 'The key points as concise bullet points, each line starting with •'}",
   "memory_type": "foundational|event|insight",
   "entities": {
     "people": ["actual names mentioned"],

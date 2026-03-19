@@ -735,10 +735,9 @@ Remember: BE CREATIVE. SUMMARIZE. DO NOT COPY THE BEGINNING OF THE TEXT.`
   // Always create memory with raw transcript
   try {
     const now = new Date().toISOString()
-    // Voice → prose (raw transcript); text → bullets (AI-generated bullet points)
-    const memoryBody = isVoice
-      ? text
-      : parsedBullets.map((b: string) => `• ${b}`).join('\n')
+    // Voice → raw transcript (light cleanup happens in background processMemory)
+    // Text → original body preserved exactly as typed (AI only generates the title)
+    const memoryBody = text
 
     // Generate unique ID with timestamp + random component to prevent collisions on retry
     const uniqueId = isManualEntry

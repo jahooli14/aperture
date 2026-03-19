@@ -31,6 +31,7 @@ const CARD_HOVER_STYLES = {
 
 function ProjectCard({ project, prominent = false }: { project: Project, prominent?: boolean }) {
   const { setContext, toggleSidebar } = useContextEngineStore()
+  const { setPriority } = useProjectStore()
   const tasks = (project.metadata?.tasks || []) as Task[]
   const nextTask = tasks.sort((a, b) => a.order - b.order).find(task => !task.done)
   const totalTasks = tasks.length
@@ -96,9 +97,23 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
             title="AI Analysis"
           >
           </button>
-          {project.is_priority && (
-            <Star className="h-4 w-4 fill-current text-[var(--brand-primary)]" />
-          )}
+          <button
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              setPriority(project.id)
+            }}
+            className="flex-shrink-0 p-0.5 rounded-lg hover:bg-white/10 transition-colors"
+            title={project.is_priority ? 'Remove priority' : 'Set as priority'}
+          >
+            <Star
+              className="h-4 w-4"
+              style={{
+                color: project.is_priority ? 'var(--brand-primary)' : 'rgba(255,255,255,0.25)',
+                fill: project.is_priority ? 'var(--brand-primary)' : 'none'
+              }}
+            />
+          </button>
         </div>
       </div>
 
