@@ -302,7 +302,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
         onPointerLeave={handlePointerUp}
         onPointerCancel={handlePointerUp}
         onClick={handleClick}
-        className="rounded-xl break-inside-avoid cursor-pointer select-none touch-none"
+        className="rounded-xl break-inside-avoid cursor-pointer select-none touch-pan-y"
         style={{
           background: '#111113',
           border: isOfflinePending
@@ -318,7 +318,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
         {/* Title row — pin dot when pinned, no buttons */}
         <div className="flex items-start gap-1.5 px-3 pt-3 pb-0">
           <h3
-            className="flex-1 min-w-0 font-medium text-xs leading-snug line-clamp-2"
+            className="flex-1 min-w-0 font-semibold text-[11px] leading-snug line-clamp-1"
             style={{ color: 'var(--brand-text-primary)' }}
           >
             {memory.title}
@@ -353,7 +353,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
 
         {/* Body preview — plain prose so line-clamp uses real content */}
         <p
-          className="px-3 pt-1.5 pb-0 text-[11px] leading-relaxed line-clamp-3"
+          className="px-3 pt-1.5 pb-0 text-[11px] leading-relaxed line-clamp-4"
           style={{ color: 'var(--brand-text-muted)' }}
         >
           {toPreviewText(memory.body)}
@@ -361,11 +361,11 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
 
         {/* Attached Images */}
         {memory.image_urls && memory.image_urls.length > 0 && (
-          <div className="mx-3 mt-2 rounded-lg overflow-hidden" style={{ height: '80px' }}>
-            <div className={`grid h-full gap-0.5 ${memory.image_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+          <div className="mx-3 mt-2 rounded-lg overflow-hidden">
+            <div className={`grid gap-0.5 ${memory.image_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
               {memory.image_urls.slice(0, 2).map((url, i) => (
-                <div key={url} className="relative h-full overflow-hidden">
-                  <OptimizedImage src={url} alt="Attachment" className="w-full h-full object-cover" aspectRatio="1/1" />
+                <div key={url} className="relative aspect-[4/3] overflow-hidden">
+                  <OptimizedImage src={url} alt="Attachment" className="w-full h-full object-cover" aspectRatio="4/3" />
                   {i === 1 && memory.image_urls!.length > 2 && (
                     <div className="absolute inset-0 bg-black/55 flex items-center justify-center">
                       <span className="text-white font-semibold text-xs">+{memory.image_urls!.length - 2}</span>
