@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Brain, Calendar, Edit, Trash2, Copy, Share2, Link2, Plus, Pin } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { MarkdownRenderer } from '../ui/MarkdownRenderer'
 import { format } from 'date-fns'
 import type { Memory, BridgeWithMemories } from '../../types'
@@ -25,6 +26,7 @@ interface MemoryDetailModalProps {
 }
 
 export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, isOpen, onClose }) => {
+  const navigate = useNavigate()
   const { addToast } = useToast()
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
   const deleteMemory = useMemoryStore((state) => state.deleteMemory)
@@ -90,6 +92,11 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
     setBridges(fetchedBridges);
     setBridgesFetched(true);
   }, [memory, fetchBridgesForMemory, bridgesCache]);
+
+  const handleMemoryClick = useCallback((memoryId: string) => {
+    onClose()
+    navigate(`/memories?highlight=${memoryId}`)
+  }, [onClose, navigate])
 
   const handleAnalyze = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -283,7 +290,7 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
                 <MarkdownRenderer
                   content={memory.body}
                   className="text-base"
-                  style={{ color: "var(--brand-primary)" }}
+                  style={{ color: "#ffffff" }}
                 />
                 {memory.image_urls && memory.image_urls.length > 0 && (
                   <div className={`mt-4 grid gap-4 ${memory.image_urls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
@@ -316,10 +323,7 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
 
               {/* Connections Section — always shown so AI suggestions are visible */}
               <div className="mt-8 pt-6 border-t border-[var(--glass-surface-hover)]">
-                <h3 className="text-sm font-semibold uppercase tracking-widest opacity-50 mb-4" style={{ color: 'var(--brand-primary)' }}>
-                  Connections
-                </h3>
-                <MemoryLinks currentMemoryId={memory.id} bridges={bridges} />
+                <MemoryLinks currentMemoryId={memory.id} bridges={bridges} onMemoryClick={handleMemoryClick} />
                 <ConnectionsList
                   itemType="thought"
                   itemId={memory.id}
@@ -332,7 +336,7 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
               </div>
 
               {/* Timestamp */}
-              <div className="flex items-center gap-2 text-xs pt-6 mt-6 border-t border-[var(--glass-surface-hover)]" style={{ color: "var(--brand-primary)" }}>
+              <div className="flex items-center gap-2 text-xs pt-6 mt-6 border-t border-[var(--glass-surface-hover)]" style={{ color: "var(--brand-text-muted)" }}>
                 <Calendar className="h-3 w-3" />
                 <span>{format(new Date(memory.created_at), 'PPPp')}</span>
               </div>
