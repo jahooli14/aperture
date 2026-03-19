@@ -222,30 +222,7 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
 
   return (
     <div className="space-y-6">
-      {/* AI Suggestions */}
-      <div className="mb-2">
-        <h3 className="text-xs font-medium mb-3 flex items-center gap-2 uppercase tracking-wider opacity-60" style={{ color: "var(--brand-primary)" }}>
-          <Lightbulb className="h-3 w-3 text-brand-primary" />
-          Smart Suggestions
-        </h3>
-        <ConnectionSuggestion
-          suggestions={suggestions.map(s => ({
-            targetId: s.id,
-            targetType: s.type as any,
-            targetTitle: s.title,
-            reason: s.reasoning || '',
-            confidence: s.similarity || 0
-          }))}
-          sourceId={itemId}
-          sourceType={itemType === 'thought' ? 'memory' : itemType as any}
-          onLinkCreated={() => {
-            invalidateConnections(itemType, itemId)
-            loadData()
-          }}
-        />
-      </div>
-
-      {/* List */}
+      {/* Persisted Connections */}
       <div className="space-y-3">
         {displayItems.map((item, index) => {
           const schema = SCHEMA_COLORS[item.type as keyof typeof SCHEMA_COLORS] || SCHEMA_COLORS.project
@@ -289,12 +266,12 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
                       )}
                     </div>
 
-                    <h4 className="text-sm font-medium mb-1 line-clamp-1" style={{ color: "var(--brand-primary)" }}>
+                    <h4 className="text-sm font-medium mb-1 line-clamp-1" style={{ color: "#ffffff" }}>
                       {item.title}
                     </h4>
 
                     {item.reasoning && (
-                      <p className="text-xs line-clamp-1 opacity-70" style={{ color: "var(--brand-primary)" }}>
+                      <p className="text-xs line-clamp-1 opacity-70" style={{ color: "var(--brand-text-muted)" }}>
                         {item.reasoning}
                       </p>
                     )}
@@ -310,11 +287,34 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
           )
         })}
 
-        {/* Empty Slots Fillers (Optional - if we want to show 5 empty slots? No, "auto filled" means we supply content) */}
       </div>
 
-      {/* Manual Override Button */}
-      {/* "just a simple 'or add a link yourself button'" */}
+      {/* AI Suggestions — shown after persisted connections */}
+      {suggestions.length > 0 && (
+        <div>
+          <h3 className="text-xs font-medium mb-3 flex items-center gap-2 uppercase tracking-wider opacity-60" style={{ color: "var(--brand-primary)" }}>
+            <Lightbulb className="h-3 w-3 text-brand-primary" />
+            Smart Suggestions
+          </h3>
+          <ConnectionSuggestion
+            suggestions={suggestions.map(s => ({
+              targetId: s.id,
+              targetType: s.type as any,
+              targetTitle: s.title,
+              reason: s.reasoning || '',
+              confidence: s.similarity || 0
+            }))}
+            sourceId={itemId}
+            sourceType={itemType === 'thought' ? 'memory' : itemType as any}
+            onLinkCreated={() => {
+              invalidateConnections(itemType, itemId)
+              loadData()
+            }}
+          />
+        </div>
+      )}
+
+      {/* Manual Link Button */}
       <div className="pt-2">
         <button
           onClick={() => setShowCreateDialog(true)}
