@@ -166,6 +166,8 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
     if (dx > 6 || dy > 6) {
       pointerMoved.current = true
       cancelLongPress()
+      // Release pointer capture so native scroll can take over
+      try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId) } catch { /* ignore */ }
     }
   }, [cancelLongPress])
 
@@ -318,7 +320,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
         {/* Title row — pin dot when pinned, no buttons */}
         <div className="flex items-start gap-1.5 px-3 pt-3 pb-0">
           <h3
-            className="flex-1 min-w-0 font-semibold text-[10px] leading-snug line-clamp-1"
+            className="flex-1 min-w-0 font-medium text-[11.5px] leading-snug line-clamp-2"
             style={{ color: 'var(--brand-text-primary)' }}
           >
             {memory.title}
@@ -364,8 +366,8 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
           <div className="mx-3 mt-2 rounded-lg overflow-hidden">
             <div className={`grid gap-0.5 ${memory.image_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
               {memory.image_urls.slice(0, 2).map((url, i) => (
-                <div key={url} className="relative aspect-[4/3] overflow-hidden">
-                  <OptimizedImage src={url} alt="Attachment" className="w-full h-full object-cover" aspectRatio="4/3" />
+                <div key={url} className="relative">
+                  <img src={url} alt="Attachment" className="w-full h-auto block" loading="lazy" decoding="async" />
                   {i === 1 && memory.image_urls!.length > 2 && (
                     <div className="absolute inset-0 bg-black/55 flex items-center justify-center">
                       <span className="text-white font-semibold text-xs">+{memory.image_urls!.length - 2}</span>
