@@ -63,19 +63,7 @@ function MasonryGrid({
   renderExtra?: (m: Memory) => React.ReactNode,
   connectionCounts?: Record<string, number>
 }) {
-  const [columns, setColumns] = useState(2)
-
-  useEffect(() => {
-    const updateColumns = () => {
-      if (window.innerWidth >= 600) setColumns(2) // tablet+: always 2 col
-      else setColumns(1) // small phone: single column for readability
-    }
-
-    updateColumns()
-    const debouncedResize = debounce(updateColumns, 150)
-    window.addEventListener('resize', debouncedResize)
-    return () => window.removeEventListener('resize', debouncedResize)
-  }, [])
+  const columns = 2
 
   // Distribute memories into columns:
   // Col 1: Index 0, 3, 6...
@@ -559,11 +547,9 @@ export function MemoriesPage() {
       <div className="pb-32 relative z-10" style={{ isolation: 'isolate' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 pt-2">
           {/* Outer Card Structure */}
-          <div className="p-4 sm:p-6 rounded-2xl mb-6 w-full max-w-full relative overflow-hidden premium-glass shadow-2xl" style={{
+          <div className="p-4 sm:p-6 rounded-2xl mb-6 w-full max-w-full relative premium-glass shadow-2xl" style={{
             background: 'var(--brand-glass-bg)',
             border: '2px solid var(--glass-surface-hover)',
-            transform: 'translate3d(0,0,0)', // Force hardware acceleration boundary
-            overflowX: 'hidden'
           }}>
             {/* Title Section */}
             <div className="mb-6 flex items-center justify-between">
