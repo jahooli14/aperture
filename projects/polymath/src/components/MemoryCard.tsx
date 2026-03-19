@@ -1,4 +1,5 @@
 import React, { useState, memo, useCallback, useMemo, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { Edit, Trash2, Copy, Share2, Link2, Pin, Sprout, Film, Book, Music, MapPin, Gamepad2, Monitor, FileText, Box } from 'lucide-react'
 import type { Memory, BridgeWithMemories } from '../types'
@@ -429,11 +430,14 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
         </div>
       </motion.div>
 
-      <MemoryDetailModal
-        memory={memory}
-        isOpen={showDetailModal}
-        onClose={() => setShowDetailModal(false)}
-      />
+      {createPortal(
+        <MemoryDetailModal
+          memory={memory}
+          isOpen={showDetailModal}
+          onClose={() => setShowDetailModal(false)}
+        />,
+        document.body
+      )}
 
       <CreateProjectDialog
         isOpen={seedProjectOpen}
