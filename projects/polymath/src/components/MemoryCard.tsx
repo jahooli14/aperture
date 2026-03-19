@@ -307,7 +307,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
         onClick={handleClick}
         className="rounded-xl break-inside-avoid cursor-pointer select-none touch-pan-y"
         style={{
-          background: '#111113',
+          background: 'rgba(30, 32, 38, 0.9)',
           border: isOfflinePending
             ? '1px solid rgba(255,255,255,0.06)'
             : memory.is_pinned
