@@ -152,8 +152,6 @@ function ChecklistEditor({
   items: ChecklistItem[]
   onChange: (items: ChecklistItem[]) => void
 }) {
-  const newItemRef = useRef<HTMLInputElement>(null)
-
   const addItem = () => {
     const newItem: ChecklistItem = {
       id: `item_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -249,7 +247,6 @@ function ChecklistEditor({
       <button
         type="button"
         onClick={addItem}
-        ref={newItemRef}
         className="flex items-center gap-2 py-1 transition-opacity opacity-30 hover:opacity-60 w-fit"
         style={{ color: 'var(--brand-text-secondary)' }}
       >
