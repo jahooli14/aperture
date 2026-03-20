@@ -315,6 +315,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       audiopen_created_at: now,
       memory_type: input.memory_type || null,
       image_urls: input.image_urls || null,
+      checklist_items: input.checklist_items || null,
       entities: null,
       themes: null,
       emotional_tone: null,
