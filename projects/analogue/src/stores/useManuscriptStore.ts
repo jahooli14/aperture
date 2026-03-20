@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { db, generateId, queueForSync } from '../lib/db'
-import { generateChecklist, validateScene } from '../lib/validation'
+import { validateScene } from '../lib/validation'
 import type {
   ManuscriptState,
   SceneNode,
@@ -297,13 +297,6 @@ export const useManuscriptStore = create<ManuscriptStore>()(
         // Recalculate word count
         if (updates.prose !== undefined) {
           updatedScene.wordCount = updates.prose.trim().split(/\s+/).filter(Boolean).length
-        }
-
-        // Regenerate checklist if pulse check fields changed
-        if (updates.identityType !== undefined ||
-            updates.sensoryFocus !== undefined ||
-            updates.awarenessLevel !== undefined) {
-          updatedScene.checklist = generateChecklist(updatedScene)
         }
 
         // Revalidate scene

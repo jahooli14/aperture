@@ -9,25 +9,25 @@ import {
   Menu,
   ChevronLeft,
   ChevronRight,
+  Bot,
 } from 'lucide-react'
 import { useManuscriptStore } from '../stores/useManuscriptStore'
 import { useEditorStore } from '../stores/useEditorStore'
 import { applyMask, getStorageText } from '../lib/mask'
-import { flagGlassesMention } from '../lib/validation'
-import PulseCheck from '../components/PulseCheck'
 import ReverbTagModal from '../components/ReverbTagModal'
 import ExportModal from '../components/ExportModal'
 import MetadataDrawer from '../components/MetadataDrawer'
 import { TagDrawer } from '../components/TagDrawer'
 import { WordTagList } from '../components/WordTagList'
 import { TaggedProseView } from '../components/TaggedProseView'
+import AIAssistantDrawer from '../components/AIAssistantDrawer'
 
 const AVAILABLE_TAGS = ['glasses', 'door', 'drift', 'postman', 'villager', 'identity', 'recovery', 'threshold', 'mask', 'anchor']
 
 export default function EditorPage() {
   const { sceneId } = useParams<{ sceneId: string }>()
   const navigate = useNavigate()
-  const { manuscript, updateScene, addGlassesMention, addWordTag, removeWordTag } = useManuscriptStore()
+  const { manuscript, updateScene, addWordTag, removeWordTag } = useManuscriptStore()
   const {
     footnoteDrawerOpen,
     footnoteDrawerHeight,
@@ -38,8 +38,6 @@ export default function EditorPage() {
     openTagDrawer,
     closeTagDrawer,
     setActiveTag,
-    showPulseCheck,
-    setShowPulseCheck,
     showReverbTagging,
     setShowReverbTagging,
     selectedText,
@@ -49,7 +47,12 @@ export default function EditorPage() {
     toggleFocusMode,
     markSaved,
     textSize,
-    cycleTextSize
+    cycleTextSize,
+    showAIAssistant,
+    setShowAIAssistant,
+    sessionWordsAdded,
+    startSession,
+    updateSessionWords,
   } = useEditorStore()
 
   const proseRef = useRef<HTMLTextAreaElement>(null)
@@ -80,7 +83,6 @@ export default function EditorPage() {
 
   // Swipe handlers - only trigger if not interacting with textarea
   const handleTouchStart = (e: React.TouchEvent) => {
-    // Don't trigger swipe if user is interacting with a textarea or input
     const target = e.target as HTMLElement
     if (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT') {
       setTouchStart(null)
@@ -92,7 +94,6 @@ export default function EditorPage() {
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStart === null) return
 
-    // Don't trigger swipe if user is interacting with a textarea or input
     const target = e.target as HTMLElement
     if (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT') {
       setTouchStart(null)
@@ -123,7 +124,14 @@ export default function EditorPage() {
     }
   }, [scene?.id, manuscript?.protagonistRealName, manuscript?.maskModeEnabled])
 
-  // Auto-save indicator - mark as saved after update
+  // Start session tracking when scene loads
+  useEffect(() => {
+    if (scene) {
+      startSession(scene.wordCount)
+    }
+  }, [scene?.id])
+
+  // Auto-save indicator
   useEffect(() => {
     if (scene) {
       const timer = setTimeout(() => markSaved(), 500)
@@ -131,7 +139,7 @@ export default function EditorPage() {
     }
   }, [scene?.prose, scene?.footnotes, markSaved])
 
-  // Redirect if no manuscript after a brief delay
+  // Redirect if no manuscript
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!manuscript) {
@@ -143,14 +151,7 @@ export default function EditorPage() {
     return () => clearTimeout(timer)
   }, [manuscript, scene, navigate])
 
-  // Check for first-time opening (needs Pulse Check)
-  useEffect(() => {
-    if (scene && !scene.pulseCheckCompletedAt) {
-      setShowPulseCheck(true)
-    }
-  }, [scene, setShowPulseCheck])
-
-  // Track cursor position with selectionchange event (more reliable than onChange)
+  // Track cursor position
   useEffect(() => {
     const textarea = proseRef.current
     if (!textarea) return
@@ -165,7 +166,7 @@ export default function EditorPage() {
     return () => document.removeEventListener('selectionchange', handleSelectionChange)
   }, [isComposing])
 
-  // Restore cursor position using useLayoutEffect (before paint, prevents visible jumps)
+  // Restore cursor position
   useLayoutEffect(() => {
     if (!isReadMode && proseRef.current && cursorPositionRef.current > 0) {
       const textarea = proseRef.current
@@ -174,7 +175,7 @@ export default function EditorPage() {
     }
   }, [localProse, isReadMode])
 
-  // Handle mobile keyboard viewport changes
+  // Handle mobile keyboard viewport
   useEffect(() => {
     if (!window.visualViewport) return
 
@@ -188,18 +189,14 @@ export default function EditorPage() {
       const windowHeight = window.innerHeight
       const heightDiff = windowHeight - viewportHeight
 
-      // Keyboard appeared
       if (heightDiff > 150 && document.activeElement === proseRef.current) {
         keyboardVisible = true
 
-        // Scroll cursor into view after keyboard settles
         requestAnimationFrame(() => {
           if (proseRef.current && keyboardVisible) {
             const { selectionStart } = proseRef.current
             const lines = proseRef.current.value.substring(0, selectionStart).split('\n').length
             const lineHeight = parseInt(getComputedStyle(proseRef.current).lineHeight) || 24
-
-            // Scroll to show cursor with padding
             proseRef.current.scrollTop = Math.max(0, (lines - 2) * lineHeight)
           }
         })
@@ -212,52 +209,19 @@ export default function EditorPage() {
     return () => window.visualViewport?.removeEventListener('resize', handleViewportResize)
   }, [])
 
-  // Check for glasses mentions on prose change
-  const checkForGlasses = useCallback((text: string) => {
-    if (!scene || !manuscript) return
-
-    const glassesPatterns = /\b(glasses|spectacles|lenses|frames)\b/gi
-    let match
-    while ((match = glassesPatterns.exec(text)) !== null) {
-      const start = Math.max(0, match.index - 50)
-      const end = Math.min(text.length, match.index + match[0].length + 50)
-      const context = text.slice(start, end)
-
-      // Check if this mention is already tracked
-      const alreadyTracked = scene.glassesmentions.some(m =>
-        m.text.includes(match![0]) && m.text === context
-      )
-
-      if (!alreadyTracked) {
-        const validation = flagGlassesMention(context)
-        addGlassesMention({
-          sceneId: scene.id,
-          text: context,
-          isValidDraw: validation.isValidDraw,
-          flagged: !validation.isValidDraw
-        })
-      }
-    }
-  }, [scene, manuscript, addGlassesMention])
-
   const handleProseChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     if (!scene || !manuscript) return
-
-    // Don't update during IME composition
     if (isComposing) return
 
     const newValue = e.target.value
     cursorPositionRef.current = e.target.selectionStart
 
-    // Update local state immediately for responsive UI
     setLocalProse(newValue)
 
-    // Clear previous debounce timer
     if (debounceTimerRef.current !== null) {
       clearTimeout(debounceTimerRef.current)
     }
 
-    // Debounce store update to reduce re-renders and improve performance
     debounceTimerRef.current = window.setTimeout(() => {
       const rawText = getStorageText(
         newValue,
@@ -265,7 +229,10 @@ export default function EditorPage() {
         manuscript.maskModeEnabled
       )
       updateScene(scene.id, { prose: rawText })
-      checkForGlasses(rawText)
+
+      // Update session word count
+      const newWordCount = rawText.trim().split(/\s+/).filter(Boolean).length
+      updateSessionWords(newWordCount)
     }, 200)
   }
 
@@ -275,7 +242,6 @@ export default function EditorPage() {
 
   const handleCompositionEnd = (e: React.CompositionEvent<HTMLTextAreaElement>) => {
     setIsComposing(false)
-    // Process the final composed text
     if (scene && manuscript) {
       const newValue = e.currentTarget.value
       cursorPositionRef.current = e.currentTarget.selectionStart
@@ -287,7 +253,9 @@ export default function EditorPage() {
         manuscript.maskModeEnabled
       )
       updateScene(scene.id, { prose: rawText })
-      checkForGlasses(rawText)
+
+      const newWordCount = rawText.trim().split(/\s+/).filter(Boolean).length
+      updateSessionWords(newWordCount)
     }
   }
 
@@ -296,23 +264,18 @@ export default function EditorPage() {
     updateScene(scene.id, { footnotes: e.target.value })
   }
 
-  const handleTextSelect = () => {
+  const handleTextSelect = useCallback(() => {
     const textarea = proseRef.current
     if (!textarea || !scene) return
 
     const start = textarea.selectionStart
     const end = textarea.selectionEnd
 
-    // Only show selection toolbar if there's actual selected text (more than a few characters)
-    // and the user has finished selecting (not just placing cursor)
     if (start !== end && end - start > 3) {
       const text = textarea.value.slice(start, end)
 
-      // Debounce to avoid interference while user is still selecting
       setTimeout(() => {
-        // Check selection is still valid after delay
         if (textarea.selectionStart === start && textarea.selectionEnd === end) {
-          // If a tag is active, immediately create a word tag
           if (activeTag) {
             addWordTag({
               sceneId: scene.id,
@@ -322,7 +285,6 @@ export default function EditorPage() {
               end
             })
             clearSelection()
-            // Reset the textarea selection
             textarea.setSelectionRange(start, start)
           } else {
             setSelection(text, start, end)
@@ -332,15 +294,7 @@ export default function EditorPage() {
     } else {
       clearSelection()
     }
-  }
-
-  const handleMouseDown = () => {
-    clearSelection()
-  }
-
-  const handleMouseUp = () => {
-    // Text selection will be handled by onSelect event
-  }
+  }, [scene, activeTag, addWordTag, clearSelection, setSelection])
 
   const handleTagWisdom = () => {
     if (selectedText) {
@@ -356,25 +310,32 @@ export default function EditorPage() {
     )
   }
 
-  // Use localProse for edit mode (immediate updates), applyMask for read mode
   const displayProse = isReadMode
     ? applyMask(scene.prose, manuscript.protagonistRealName, manuscript.maskModeEnabled)
     : localProse
 
-  // Parse footnotes into numbered array
   const parseFootnotes = (footnotesText: string): string[] => {
     if (!footnotesText.trim()) return []
-
-    // Split by double newlines to get individual footnotes
-    const footnotes = footnotesText
+    return footnotesText
       .split(/\n\n+/)
       .map(note => note.trim())
       .filter(note => note.length > 0)
-
-    return footnotes
   }
 
   const footnotes = parseFootnotes(scene.footnotes)
+
+  // Build section label for AI context
+  const sectionLabel = manuscript.scenes.find(s => s.section === scene.section)
+    ? scene.section.charAt(0).toUpperCase() + scene.section.slice(1)
+    : scene.section
+
+  const aiContext = {
+    manuscriptTitle: manuscript.title,
+    sectionLabel,
+    sceneTitle: scene.title,
+    sceneBeat: scene.sceneBeat,
+    prose: scene.prose,
+  }
 
   return (
     <div
@@ -383,7 +344,7 @@ export default function EditorPage() {
       onTouchEnd={handleTouchEnd}
     >
       {/* Minimal Header */}
-      <header className="flex items-center justify-between px-3 py-3 border-b border-ink-800">
+      <header className={`flex items-center justify-between px-3 py-3 border-b border-ink-800 focus-fade ${focusMode ? 'opacity-0' : 'opacity-100'}`}>
         <div className="flex items-center gap-1">
           <button onClick={() => navigate('/toc')} className="p-2 -ml-2">
             <ArrowLeft className="w-5 h-5 text-ink-400" />
@@ -405,9 +366,28 @@ export default function EditorPage() {
           {scene.title}
         </h1>
 
-        <button onClick={() => setShowDrawer(true)} className="p-2 -mr-2">
-          <Menu className="w-5 h-5 text-ink-400" />
-        </button>
+        <div className="flex items-center gap-1">
+          {/* Session words counter */}
+          {sessionWordsAdded > 0 && (
+            <motion.span
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="text-xs text-green-400 font-medium px-1"
+            >
+              +{sessionWordsAdded}
+            </motion.span>
+          )}
+          {/* AI button */}
+          <button
+            onClick={() => setShowAIAssistant(!showAIAssistant)}
+            className={`p-2 rounded-lg transition-colors ${showAIAssistant ? 'bg-purple-600/20 text-purple-400' : 'text-ink-400'}`}
+          >
+            <Bot className="w-5 h-5" />
+          </button>
+          <button onClick={() => setShowDrawer(true)} className="p-2 -mr-2">
+            <Menu className="w-5 h-5 text-ink-400" />
+          </button>
+        </div>
       </header>
 
       {/* Prose Pane */}
@@ -416,7 +396,6 @@ export default function EditorPage() {
         style={footnoteDrawerOpen ? { height: `${100 - footnoteDrawerHeight}%` } : undefined}
       >
         {isReadMode ? (
-          /* Read mode - formatted paragraphs with tag highlights */
           <div className="absolute inset-0 overflow-y-auto p-3 pb-24">
             {!displayProse ? (
               <p className="text-ink-600 italic">No content yet. Switch to Edit mode to start writing.</p>
@@ -451,7 +430,6 @@ export default function EditorPage() {
               </div>
             )}
 
-            {/* Footnotes section */}
             {footnotes.length > 0 && (
               <div className="mt-6 pt-4 border-t border-ink-700">
                 <div className="space-y-2">
@@ -465,7 +443,6 @@ export default function EditorPage() {
             )}
           </div>
         ) : (
-          /* Edit mode - textarea with serif font and footnotes display */
           <div className="absolute inset-0 overflow-y-auto pb-24" style={{ scrollPaddingBottom: '150px', scrollPaddingTop: '100px' }}>
             <textarea
               ref={proseRef}
@@ -474,10 +451,7 @@ export default function EditorPage() {
               onCompositionStart={handleCompositionStart}
               onCompositionEnd={handleCompositionEnd}
               onSelect={handleTextSelect}
-              onMouseDown={handleMouseDown}
-              onMouseUp={handleMouseUp}
-              onTouchStart={handleMouseDown}
-              onTouchEnd={handleMouseUp}
+              onMouseDown={() => clearSelection()}
               placeholder="Begin writing...
 
 Start a new paragraph by pressing Enter twice.
@@ -494,12 +468,11 @@ The Read mode will show your text with proper paragraph formatting."
               autoCapitalize="sentences"
               autoCorrect="on"
               autoComplete="off"
-              spellCheck="true"
+              spellCheck={true}
               inputMode="text"
               enterKeyHint="enter"
             />
 
-            {/* Footnotes section in edit mode */}
             {footnotes.length > 0 && (
               <div className="px-3 pb-3">
                 <div className="mt-6 pt-4 border-t border-ink-700">
@@ -574,7 +547,6 @@ The Read mode will show your text with proper paragraph formatting."
             exit={{ height: 0 }}
             className="footnote-drawer border-t border-ink-700 bg-ink-900 flex flex-col"
           >
-            {/* Drag handle */}
             <div
               className="flex items-center justify-center py-2 cursor-ns-resize"
               onPointerDown={(e) => dragControls.start(e)}
@@ -585,7 +557,7 @@ The Read mode will show your text with proper paragraph formatting."
             <div className="flex items-center gap-2 px-4 pb-2">
               <MessageSquare className="w-4 h-4 text-ink-500" />
               <span className="text-xs text-ink-500 uppercase tracking-wider">
-                Subconscious / Meta Voice
+                Notes / Inner Voice
               </span>
               <button
                 onClick={closeFootnoteDrawer}
@@ -599,7 +571,7 @@ The Read mode will show your text with proper paragraph formatting."
               ref={footnoteRef}
               value={scene.footnotes}
               onChange={handleFootnoteChange}
-              placeholder="The acerbic inner voice..."
+              placeholder="Scene notes, inner voice, ideas..."
               className="flex-1 w-full px-4 pb-4 bg-transparent text-ink-300 text-sm leading-relaxed placeholder:text-ink-600 resize-none"
             />
           </motion.div>
@@ -617,7 +589,7 @@ The Read mode will show your text with proper paragraph formatting."
       </AnimatePresence>
 
       {/* Scene Navigation */}
-      <div className="focus-fade fixed bottom-4 left-0 right-0 flex items-center justify-center gap-4 px-4 pb-safe">
+      <div className={`focus-fade fixed bottom-4 left-0 right-0 flex items-center justify-center gap-4 px-4 pb-safe ${focusMode ? 'opacity-0' : 'opacity-100'}`}>
         <button
           onClick={() => prevScene && navigate(`/edit/${prevScene.id}`)}
           disabled={!prevScene}
@@ -638,13 +610,6 @@ The Read mode will show your text with proper paragraph formatting."
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
-
-      {/* Pulse Check Modal */}
-      <AnimatePresence>
-        {showPulseCheck && (
-          <PulseCheck scene={scene} onComplete={() => setShowPulseCheck(false)} />
-        )}
-      </AnimatePresence>
 
       {/* Reverberation Tag Modal */}
       <AnimatePresence>
@@ -679,7 +644,6 @@ The Read mode will show your text with proper paragraph formatting."
         onModeChange={(mode) => setIsReadMode(mode === 'read')}
         textSize={textSize}
         onTextSizeChange={(size) => {
-          // Manually set text size - we'll need to add this to the store
           const sizes = ['small', 'medium', 'large'] as const
           const currentIndex = sizes.indexOf(textSize)
           const targetIndex = sizes.indexOf(size)
@@ -691,7 +655,6 @@ The Read mode will show your text with proper paragraph formatting."
         focusMode={focusMode}
         onFocusMode={toggleFocusMode}
         onExport={() => setShowExport(true)}
-        onRedoPulseCheck={() => setShowPulseCheck(true)}
         currentSceneIndex={currentIndex}
         totalScenes={sortedScenes.length}
         allScenes={sortedScenes}
@@ -704,6 +667,13 @@ The Read mode will show your text with proper paragraph formatting."
         activeTag={activeTag}
         onTagSelect={setActiveTag}
         availableTags={AVAILABLE_TAGS}
+      />
+
+      {/* AI Assistant Drawer */}
+      <AIAssistantDrawer
+        isOpen={showAIAssistant}
+        onClose={() => setShowAIAssistant(false)}
+        ctx={aiContext}
       />
     </div>
   )
