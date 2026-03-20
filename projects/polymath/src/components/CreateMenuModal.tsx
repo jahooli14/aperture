@@ -1,6 +1,6 @@
 import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Brain, Layers, BookmarkPlus, ListPlus, X, Zap } from 'lucide-react'
+import { Brain, Layers, BookmarkPlus, ListPlus, X } from 'lucide-react'
 import { cn } from '../lib/utils'
 
 interface CreateMenuModalProps {
@@ -13,142 +13,139 @@ const creationActions = [
     {
         id: 'thought',
         label: 'Thought',
-        description: 'Capture a quick spark or insight',
+        description: 'Capture a spark or insight',
         icon: Brain,
-        color: 'from-purple-500 to-indigo-600',
-        iconColor: 'text-brand-primary',
-        delay: 0.03
+        accent: '139, 92, 246',
     },
     {
         id: 'project',
         label: 'Project',
         description: 'Launch a new focus area',
         icon: Layers,
-        color: 'from-blue-500 to-cyan-600',
-        iconColor: 'text-brand-primary',
-        delay: 0.06
+        accent: '59, 130, 246',
     },
     {
         id: 'article',
-        label: 'Article',
-        description: 'Save content for later reading',
+        label: 'Short Read',
+        description: 'Save a URL to your reading queue',
         icon: BookmarkPlus,
-        color: 'from-emerald-500 to-teal-600',
-        iconColor: 'text-brand-text-secondary',
-        delay: 0.09
+        accent: '16, 185, 129',
     },
     {
         id: 'list',
-        label: 'Item to List',
-        description: 'Curate your growing collections',
+        label: 'List Item',
+        description: 'Add to a curated collection',
         icon: ListPlus,
-        color: 'from-amber-500 to-orange-600',
-        iconColor: 'text-brand-text-secondary',
-        delay: 0.12
-    }
-]
+        accent: '245, 158, 11',
+    },
+] as const
 
 export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalProps) {
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[25000] flex items-center justify-center p-4 md:p-6">
+                <div className="fixed inset-0 z-[25000] flex items-end">
                     {/* Backdrop */}
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="absolute inset-0 bg-black/80 backdrop-blur-xl"
+                        transition={{ duration: 0.2 }}
+                        className="absolute inset-0 bg-black/70 backdrop-blur-md"
                         onClick={onClose}
                     />
 
-                    {/* Modal Content */}
+                    {/* Bottom Sheet */}
                     <motion.div
-                        initial={{ scale: 0.95, opacity: 0, y: 10 }}
-                        animate={{ scale: 1, opacity: 1, y: 0 }}
-                        exit={{ scale: 0.95, opacity: 0, y: 10 }}
-                        transition={{
-                            type: 'spring',
-                            damping: 30,
-                            stiffness: 500,
-                            mass: 0.5,
+                        initial={{ y: '100%' }}
+                        animate={{ y: 0 }}
+                        exit={{ y: '100%' }}
+                        transition={{ type: 'spring', damping: 30, stiffness: 400, mass: 0.6 }}
+                        className="relative w-full z-10 overflow-hidden"
+                        style={{
+                            background: 'linear-gradient(to top, #0d0d10, #111116)',
+                            borderTop: '1px solid rgba(255,255,255,0.08)',
+                            borderRadius: '24px 24px 0 0',
+                            paddingBottom: 'env(safe-area-inset-bottom, 20px)',
                         }}
-                        className="relative w-full max-w-2xl overflow-hidden rounded-[2.5rem] border border-[var(--glass-surface-hover)] bg-zinc-900/50 shadow-2xl"
                     >
-                        {/* Ambient Background Glows */}
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-sky-500 to-transparent opacity-50" />
-                        <div className="absolute -top-24 -left-24 w-64 h-64 bg-brand-primary/10 blur-[100px] rounded-full" />
-                        <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-brand-primary/10 blur-[100px] rounded-full" />
+                        {/* Drag handle */}
+                        <div className="flex justify-center pt-3 pb-1">
+                            <div className="w-10 h-1 rounded-full bg-white/20" />
+                        </div>
 
-                        <div className="relative p-8 md:p-12">
-                            <div className="flex items-center justify-between mb-10">
-                                <div>
-                                    <h2 className="text-3xl font-black italic text-[var(--brand-text-primary)] flex items-center gap-3 tracking-tighter uppercase">
-                                        <Zap className="h-6 w-6 text-brand-primary" />
-                                        Forge New
-                                    </h2>
-                                    <p className="text-brand-text-muted text-sm font-medium mt-1">Select an entity to bring into existence.</p>
-                                </div>
-                                <button
-                                    onClick={onClose}
-                                    className="h-12 w-12 rounded-full bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] flex items-center justify-center transition-all border border-[var(--glass-surface)] group"
-                                >
-                                    <X className="h-6 w-6 text-brand-text-muted group-hover:text-[var(--brand-text-primary)] group-hover:rotate-90 transition-all duration-300" />
-                                </button>
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-5 pt-3 pb-5">
+                            <div>
+                                <h2 className="text-lg font-black uppercase tracking-tighter text-white">
+                                    Create New
+                                </h2>
+                                <p className="text-xs text-white/30 font-medium mt-0.5">What would you like to add?</p>
                             </div>
+                            <button
+                                onClick={onClose}
+                                className="h-9 w-9 rounded-full flex items-center justify-center transition-all"
+                                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}
+                            >
+                                <X className="h-4 w-4 text-white/50" />
+                            </button>
+                        </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {creationActions.map((action) => (
+                        {/* 2×2 Action Grid */}
+                        <div className="grid grid-cols-2 gap-3 px-4 pb-5">
+                            {creationActions.map((action, i) => {
+                                const Icon = action.icon
+                                const rgb = action.accent
+                                return (
                                     <motion.button
                                         key={action.id}
-                                        initial={{ opacity: 0, y: 20 }}
+                                        initial={{ opacity: 0, y: 16 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: action.delay }}
+                                        transition={{ delay: i * 0.04, type: 'spring', damping: 20, stiffness: 300 }}
                                         onClick={() => {
                                             onAction(action.id as any)
                                             onClose()
                                         }}
-                                        className="relative group flex items-center gap-5 p-5 rounded-3xl bg-white/[0.03] border border-[var(--glass-surface-hover)] hover:bg-brand-surface/80 hover:border-white/20 transition-all text-left overflow-hidden"
+                                        className="relative flex flex-col items-start gap-3 p-4 rounded-2xl text-left overflow-hidden active:scale-[0.97] transition-transform"
+                                        style={{
+                                            background: `rgba(${rgb}, 0.06)`,
+                                            border: `1px solid rgba(${rgb}, 0.15)`,
+                                        }}
                                     >
-                                        {/* Tap Gradient Background */}
-                                        <div className={cn(
-                                            "absolute inset-0 bg-gradient-to-br opacity-[0.03] group-active:opacity-[0.08] transition-opacity duration-300",
-                                            action.color
-                                        )} />
-
-                                        <div className={cn(
-                                            "h-14 w-14 rounded-2xl flex items-center justify-center shrink-0 shadow-lg border border-[var(--glass-surface-hover)] transition-transform duration-300 group-active:scale-110 group-active:rotate-3",
-                                            "bg-zinc-800"
-                                        )}>
-                                            <action.icon className={cn("h-7 w-7", action.iconColor)} />
+                                        {/* Icon */}
+                                        <div
+                                            className="h-11 w-11 rounded-xl flex items-center justify-center"
+                                            style={{ background: `rgba(${rgb}, 0.12)` }}
+                                        >
+                                            <Icon className="h-5 w-5" style={{ color: `rgb(${rgb})` }} />
                                         </div>
 
-                                        <div className="flex-1">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-xl font-bold text-[var(--brand-text-primary)] group-active:text-brand-primary transition-colors uppercase tracking-tight">
-                                                    {action.label}
-                                                </span>
-                                            </div>
-                                            <p className="text-brand-text-muted text-xs mt-1 leading-relaxed">
+                                        {/* Text */}
+                                        <div>
+                                            <p className="text-sm font-black uppercase tracking-tight text-white leading-tight">
+                                                {action.label}
+                                            </p>
+                                            <p className="text-[10px] text-white/35 mt-0.5 leading-snug">
                                                 {action.description}
                                             </p>
                                         </div>
 
-                                        {/* Corner Accent */}
-                                        <div className={cn(
-                                            "absolute top-0 right-0 h-12 w-12 opacity-20 group-active:opacity-100 transition-opacity duration-300",
-                                            `bg-gradient-to-bl from-white/10 to-transparent pointer-events-none`
-                                        )} />
+                                        {/* Corner glow */}
+                                        <div
+                                            className="absolute top-0 right-0 w-16 h-16 rounded-full opacity-20 pointer-events-none"
+                                            style={{
+                                                background: `radial-gradient(circle at top right, rgba(${rgb}, 0.6), transparent 70%)`,
+                                            }}
+                                        />
                                     </motion.button>
-                                ))}
-                            </div>
-
-                            <div className="mt-12 text-center">
-                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600">
-                                    Hold the button to dictate directly
-                                </p>
-                            </div>
+                                )
+                            })}
                         </div>
+
+                        {/* Footer hint */}
+                        <p className="text-center text-[9px] font-bold uppercase tracking-[0.2em] text-white/20 pb-4">
+                            Hold the FAB to dictate directly
+                        </p>
                     </motion.div>
                 </div>
             )}

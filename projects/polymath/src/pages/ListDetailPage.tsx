@@ -1,15 +1,17 @@
 import React, { useEffect, useState, useRef, useMemo, memo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, Send, Trash2, Mic, MicOff, ListOrdered, Check, GripVertical, Film, Music, Book, MapPin, Box, Quote, Pencil, Monitor, Gamepad2, Calendar, Star, SortAsc, ChevronDown, Copy, FileText, Brain } from 'lucide-react'
+import { ArrowLeft, Send, Trash2, Mic, MicOff, ListOrdered, Check, GripVertical, Film, Music, Book, MapPin, Box, Quote, Pencil, Monitor, Gamepad2, Calendar, Star, SortAsc, ChevronDown, Copy, FileText, Brain, Link as LinkIcon, BookOpen, Loader2, RefreshCw } from 'lucide-react'
 import { useListStore } from '../stores/useListStore'
 import { useMemoryStore } from '../stores/useMemoryStore'
+import { useReadingStore } from '../stores/useReadingStore'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import { ConnectionsList } from '../components/connections/ConnectionsList'
 import { VoiceInput } from '../components/VoiceInput'
 import { OptimizedImage } from '../components/ui/optimized-image'
+import { ArticleCard } from '../components/reading/ArticleCard'
 import { Reorder } from 'framer-motion'
 import type { ListItem, ListType } from '../types'
 import { useToast } from '../components/ui/toast'
@@ -855,6 +857,152 @@ function MasonryListGrid({
 }
 
 // ============================================================================
+// Article List Mode — renders when list.type === 'article'
+// Shows the reading queue with full reading infrastructure
+// ============================================================================
+
+interface ArticleListModeProps {
+    list: { id: string; title: string; type: ListType; description?: string | null }
+    navigate: ReturnType<typeof useNavigate>
+}
+
+function ArticleListMode({ list, navigate }: ArticleListModeProps) {
+    const { articles, loading, fetchArticles, saveArticle } = useReadingStore()
+    const { addToast } = useToast()
+    const [urlInput, setUrlInput] = useState('')
+    const [saving, setSaving] = useState(false)
+    const inputRef = useRef<HTMLInputElement>(null)
+
+    // Show unread + in-progress articles (not archived)
+    const readingArticles = useMemo(
+        () => articles.filter(a => a.status !== 'archived').sort((a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        ),
+        [articles]
+    )
+
+    useEffect(() => {
+        fetchArticles(undefined, true)
+    }, [])
+
+    const handleAddUrl = async (e: React.FormEvent) => {
+        e.preventDefault()
+        const url = urlInput.trim()
+        if (!url) return
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            addToast({ title: 'Invalid URL', description: 'Please enter a full URL starting with https://', variant: 'destructive' })
+            return
+        }
+        setSaving(true)
+        setUrlInput('')
+        try {
+            await saveArticle({ url })
+            await fetchArticles(undefined, true)
+            addToast({ title: 'Saved!', description: 'Article added to your reading queue.', variant: 'success' })
+        } catch {
+            addToast({ title: 'Failed to save', description: 'Could not save the article. Try again.', variant: 'destructive' })
+        } finally {
+            setSaving(false)
+            inputRef.current?.focus()
+        }
+    }
+
+    return (
+        <div className="min-h-screen bg-black flex flex-col">
+            {/* Header */}
+            <div className="pt-24 px-4 sm:px-6 lg:px-8 pb-4">
+                <Button variant="ghost" onClick={() => navigate('/lists')} className="text-brand-text-muted mb-4 pl-0 hover:text-[var(--brand-text-primary)] hover:bg-transparent">
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back to Collections
+                </Button>
+
+                <div className="flex items-center gap-3 mb-3">
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full"
+                        style={{ backgroundColor: 'rgba(251,191,36,0.1)', boxShadow: 'inset 0 0 0 1px rgba(251,191,36,0.2)' }}>
+                        <BookOpen className="h-3.5 w-3.5" style={{ color: 'rgb(251,191,36)' }} />
+                        <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'rgb(251,191,36)' }}>
+                            Short Reads
+                        </span>
+                    </div>
+                    <div className="px-3 py-1.5 rounded-full bg-zinc-800/50 text-xs font-mono text-brand-text-muted"
+                        style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface)' }}>
+                        {readingArticles.length} {readingArticles.length === 1 ? 'article' : 'articles'}
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-between mb-2">
+                    <h1 className="text-3xl font-bold text-[var(--brand-text-primary)] uppercase tracking-tight italic">{list.title}</h1>
+                    <button
+                        onClick={() => fetchArticles(undefined, true)}
+                        className="h-9 w-9 rounded-full flex items-center justify-center transition-all text-brand-text-muted hover:text-[var(--brand-text-primary)]"
+                        style={{ border: '1px solid var(--glass-surface-hover)' }}
+                        title="Refresh"
+                    >
+                        <RefreshCw className="h-4 w-4" />
+                    </button>
+                </div>
+                {list.description && <p className="text-brand-text-muted text-sm max-w-xl mb-4">{list.description}</p>}
+
+                {/* URL Add Input */}
+                <div className="mt-4 mb-8 max-w-2xl">
+                    <motion.div
+                        className="backdrop-blur-2xl bg-zinc-900/60 rounded-2xl p-2 flex items-center gap-2 shadow-2xl"
+                        style={{ boxShadow: 'inset 0 0 0 1px rgba(251,191,36,0.15), 0 25px 50px rgba(0,0,0,0.5)' }}
+                    >
+                        <form onSubmit={handleAddUrl} className="flex-1 flex px-3 items-center gap-2">
+                            <LinkIcon className="h-4 w-4 text-zinc-500 shrink-0" />
+                            <Input
+                                ref={inputRef}
+                                value={urlInput}
+                                onChange={e => setUrlInput(e.target.value)}
+                                placeholder="Paste a URL to save for reading..."
+                                className="border-0 bg-transparent focus-visible:ring-0 text-base text-[var(--brand-text-primary)] placeholder:text-zinc-600 h-12"
+                                type="url"
+                                autoComplete="off"
+                            />
+                            <Button
+                                type="submit"
+                                disabled={!urlInput.trim() || saving}
+                                className="rounded-xl bg-white text-black hover:bg-zinc-200 h-10 px-4 gap-2 font-bold shrink-0 transition-all uppercase text-xs tracking-widest"
+                            >
+                                {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <><span>Save</span><Send className="h-3 w-3" /></>}
+                            </Button>
+                        </form>
+                    </motion.div>
+                </div>
+            </div>
+
+            {/* Articles List */}
+            <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-48 max-w-3xl">
+                {loading && readingArticles.length === 0 ? (
+                    <div className="space-y-3">
+                        {[1, 2, 3].map(i => (
+                            <div key={i} className="shimmer h-28 rounded-2xl" />
+                        ))}
+                    </div>
+                ) : readingArticles.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-40 text-zinc-600">
+                        <BookOpen className="h-12 w-12 mb-4 opacity-20" />
+                        <p className="text-brand-text-muted font-medium text-lg mb-1">Your queue is empty.</p>
+                        <p className="text-sm text-brand-text-muted opacity-60">Paste a URL above to start reading.</p>
+                    </div>
+                ) : (
+                    <div className="space-y-3">
+                        {readingArticles.map(article => (
+                            <ArticleCard
+                                key={article.id}
+                                article={article}
+                                onClick={() => navigate(`/reading/${article.id}`)}
+                            />
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    )
+}
+
+// ============================================================================
 // Main Page
 // ============================================================================
 
@@ -1015,6 +1163,11 @@ export default function ListDetailPage() {
                 </div>
             </div>
         )
+    }
+
+    // Article-type lists get the full reading experience
+    if (list.type === 'article') {
+        return <ArticleListMode list={list} navigate={navigate} />
     }
 
     return (
