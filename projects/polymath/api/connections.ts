@@ -256,69 +256,76 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
         }
 
-        // --- Semantic similarity search across knowledge lake (same as ai-action) ---
+        // --- Semantic similarity search across the FULL knowledge lake ---
+        // Fetches ALL entity types (including same-type as source) — excluding only the source item itself
         const semanticItems: string[] = []
         if (sourceEmbedding) {
-          const normType = type === 'memory' ? 'thought' : type
-          const [memoriesRes, articlesRes, projectsRes] = await Promise.all([
-            normType !== 'thought'
-              ? supabase.from('memories').select('id, title, body, themes, embedding').eq('user_id', userId).not('embedding', 'is', null).limit(80)
-              : Promise.resolve({ data: [] as any[] }),
-            normType !== 'article'
-              ? supabase.from('reading_queue').select('id, title, excerpt, embedding').eq('user_id', userId).not('embedding', 'is', null).limit(50)
-              : Promise.resolve({ data: [] as any[] }),
-            normType !== 'project'
-              ? supabase.from('projects').select('id, title, description, embedding').eq('user_id', userId).not('embedding', 'is', null).limit(50)
-              : Promise.resolve({ data: [] as any[] })
+          const [memoriesRes, articlesRes, projectsRes, listItemsRes] = await Promise.all([
+            supabase.from('memories').select('id, title, body, themes, embedding').eq('user_id', userId).neq('id', id).not('embedding', 'is', null).limit(150),
+            supabase.from('reading_queue').select('id, title, excerpt, embedding').eq('user_id', userId).neq('id', id).not('embedding', 'is', null).limit(100),
+            supabase.from('projects').select('id, title, description, embedding').eq('user_id', userId).neq('id', id).not('embedding', 'is', null).limit(100),
+            supabase.from('list_items').select('id, content, metadata, embedding').eq('user_id', userId).not('embedding', 'is', null).limit(100),
           ])
 
           interface ScoredItem { label: string; score: number }
           const scored: ScoredItem[] = []
 
           for (const m of (memoriesRes.data || [])) {
-            if (!m.embedding || m.id === id) continue
+            if (!m.embedding) continue
             const sim = cosineSimilarity(sourceEmbedding, m.embedding)
-            if (sim > 0.46) scored.push({ label: `[Thought] "${m.title || m.body?.slice(0, 80) || 'Untitled'}"${m.themes?.length ? ` (${(m.themes as string[]).slice(0, 3).join(', ')})` : ''}`, score: sim })
+            if (sim > 0.3) scored.push({ label: `[Thought] "${m.title || m.body?.slice(0, 80) || 'Untitled'}"${m.themes?.length ? ` (${(m.themes as string[]).slice(0, 3).join(', ')})` : ''}`, score: sim })
           }
           for (const a of (articlesRes.data || [])) {
-            if (!a.embedding || a.id === id) continue
+            if (!a.embedding) continue
             const sim = cosineSimilarity(sourceEmbedding, a.embedding)
-            if (sim > 0.46) scored.push({ label: `[Article] "${a.title}": ${a.excerpt?.slice(0, 80) || ''}`, score: sim })
+            if (sim > 0.3) scored.push({ label: `[Article] "${a.title}": ${a.excerpt?.slice(0, 80) || ''}`, score: sim })
           }
           for (const p of (projectsRes.data || [])) {
-            if (!p.embedding || p.id === id) continue
+            if (!p.embedding) continue
             const sim = cosineSimilarity(sourceEmbedding, p.embedding)
-            if (sim > 0.46) scored.push({ label: `[Project] "${p.title}": ${p.description?.slice(0, 80) || ''}`, score: sim })
+            if (sim > 0.3) scored.push({ label: `[Project] "${p.title}": ${p.description?.slice(0, 80) || ''}`, score: sim })
+          }
+          for (const li of (listItemsRes.data || [])) {
+            if (!li.embedding) continue
+            const sim = cosineSimilarity(sourceEmbedding, li.embedding)
+            const label = li.content || li.metadata?.title || 'Untitled'
+            const listName = li.metadata?.list_title || li.metadata?.list_name || ''
+            if (sim > 0.3) scored.push({ label: `[List Item] "${label}"${listName ? ` (from ${listName})` : ''}`, score: sim })
           }
 
           scored.sort((a, b) => b.score - a.score)
-          for (const item of scored.slice(0, 10)) {
+          for (const item of scored.slice(0, 20)) {
             if (!uniqueRelatedItems.has(item.label)) semanticItems.push(item.label)
           }
         }
 
-        const allContextItems = [...connectedItems, ...semanticItems.slice(0, Math.max(0, 12 - connectedItems.length))]
+        const allContextItems = [...connectedItems, ...semanticItems.slice(0, Math.max(0, 20 - connectedItems.length))]
         const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
         const truncatedSource = sourceContent.slice(0, 1000)
         const contextBlock = allContextItems.length > 0
           ? allContextItems.map(i => `- ${i.slice(0, 200)}`).join('\n')
           : '(no related items found in knowledge lake)'
 
-        const analysisPrompt = `You are an insight engine with access to a personal knowledge graph. Find the "So What?" by reasoning across the full corpus — not just this item in isolation.
+        const analysisPrompt = `You are a world-class knowledge analyst with access to someone's entire personal knowledge graph. Your job is to be a brilliant thinking partner — not a summarizer. You see patterns they can't. You connect dots across their whole life of learning, projects, and ideas.
 
 FOCUS ITEM:
 ${truncatedSource}
 
-KNOWLEDGE LAKE CONTEXT (${connectedItems.length} saved connections + ${semanticItems.length} semantic matches from corpus):
+KNOWLEDGE LAKE — ${allContextItems.length} items from their entire corpus (thoughts, articles, projects, lists):
 ${contextBlock}
 
-Output valid JSON:
-1. "summary": One sharp, specific sentence — what is this ACTUALLY about, given the broader context?
-2. "patterns": Array of 1-2 non-obvious patterns you see across items. Reference specific titles.
-3. "insight": The "Aha!" — what does the corpus reveal about this item that isn't visible from the item alone?
-4. "suggestion": One concrete next step that bridges this item to something else in the corpus.
+${allContextItems.length === 0 ? 'NOTE: This is a fresh item with no prior context yet — analyze it on its own merits and suggest what territory it opens up.\n\n' : ''}
+Output ONLY valid JSON with exactly these 4 keys:
 
-Be specific. Name actual items. Surface what's invisible without the lake context. No generic observations.`
+1. "summary": One razor-sharp sentence. Not what the item says — what it MEANS in the context of everything else. What is this person actually working on, thinking about, or moving toward?
+
+2. "patterns": Array of 2-3 non-obvious patterns. Each must name SPECIFIC items from the lake and explain the connection. Don't say "both relate to X" — say WHY these two things appearing together in the same mind is surprising and what it reveals.
+
+3. "insight": The "Aha!" that would make this person stop and say "I hadn't seen it that way." What does the corpus reveal about this item that the person couldn't see without having everything in front of them? Reference specific items. Be bold. Be specific.
+
+4. "suggestion": One concrete, actionable next step. Not "explore more" — name exactly what they should make, write, build, or decide based on what you see in their corpus. Reference specific items and why.
+
+Rules: Name actual titles. No generic observations. No hedging. Write like someone who has read every note they've ever taken and has something urgent to say.`
 
         let responseText = ''
         try {
@@ -428,61 +435,46 @@ Be specific. Name actual items. Surface what's invisible without the lake contex
           }
         }
 
-        // --- Semantic similarity search across full knowledge lake ---
-        // This surfaces relevant items even without explicit saved connections
+        // --- Semantic similarity search across the FULL knowledge lake ---
+        // Fetches ALL entity types (including same-type as source) — excluding only the source item itself
         const semanticItems: string[] = []
         if (sourceEmbedding) {
-          const normType = type === 'memory' ? 'thought' : type
-          const [memoriesRes, articlesRes, projectsRes] = await Promise.all([
-            normType !== 'thought'
-              ? supabase.from('memories').select('id, title, body, themes, embedding').eq('user_id', userId).not('embedding', 'is', null).limit(80)
-              : Promise.resolve({ data: [] as any[] }),
-            normType !== 'article'
-              ? supabase.from('reading_queue').select('id, title, excerpt, embedding').eq('user_id', userId).not('embedding', 'is', null).limit(50)
-              : Promise.resolve({ data: [] as any[] }),
-            normType !== 'project'
-              ? supabase.from('projects').select('id, title, description, embedding').eq('user_id', userId).not('embedding', 'is', null).limit(50)
-              : Promise.resolve({ data: [] as any[] })
+          const [memoriesRes, articlesRes, projectsRes, listItemsRes] = await Promise.all([
+            supabase.from('memories').select('id, title, body, themes, embedding').eq('user_id', userId).neq('id', id).not('embedding', 'is', null).limit(150),
+            supabase.from('reading_queue').select('id, title, excerpt, embedding').eq('user_id', userId).neq('id', id).not('embedding', 'is', null).limit(100),
+            supabase.from('projects').select('id, title, description, embedding').eq('user_id', userId).neq('id', id).not('embedding', 'is', null).limit(100),
+            supabase.from('list_items').select('id, content, metadata, embedding').eq('user_id', userId).not('embedding', 'is', null).limit(100),
           ])
 
           interface ScoredItem { label: string; score: number }
           const scored: ScoredItem[] = []
 
           for (const m of (memoriesRes.data || [])) {
-            if (!m.embedding || m.id === id) continue
+            if (!m.embedding) continue
             const sim = cosineSimilarity(sourceEmbedding, m.embedding)
-            if (sim > 0.48) {
-              scored.push({
-                label: `[Thought] "${m.title || m.body?.slice(0, 80) || 'Untitled'}"${m.themes?.length ? ` (${m.themes.slice(0, 3).join(', ')})` : ''}`,
-                score: sim
-              })
-            }
+            if (sim > 0.3) scored.push({ label: `[Thought] "${m.title || m.body?.slice(0, 80) || 'Untitled'}"${m.themes?.length ? ` (${m.themes.slice(0, 3).join(', ')})` : ''}`, score: sim })
           }
           for (const a of (articlesRes.data || [])) {
-            if (!a.embedding || a.id === id) continue
+            if (!a.embedding) continue
             const sim = cosineSimilarity(sourceEmbedding, a.embedding)
-            if (sim > 0.48) {
-              scored.push({
-                label: `[Article] "${a.title}": ${a.excerpt?.slice(0, 80) || ''}`,
-                score: sim
-              })
-            }
+            if (sim > 0.3) scored.push({ label: `[Article] "${a.title}": ${a.excerpt?.slice(0, 80) || ''}`, score: sim })
           }
           for (const p of (projectsRes.data || [])) {
-            if (!p.embedding || p.id === id) continue
+            if (!p.embedding) continue
             const sim = cosineSimilarity(sourceEmbedding, p.embedding)
-            if (sim > 0.48) {
-              scored.push({
-                label: `[Project] "${p.title}": ${p.description?.slice(0, 80) || ''}`,
-                score: sim
-              })
-            }
+            if (sim > 0.3) scored.push({ label: `[Project] "${p.title}": ${p.description?.slice(0, 80) || ''}`, score: sim })
+          }
+          for (const li of (listItemsRes.data || [])) {
+            if (!li.embedding) continue
+            const sim = cosineSimilarity(sourceEmbedding, li.embedding)
+            const label = li.content || li.metadata?.title || 'Untitled'
+            const listName = li.metadata?.list_title || li.metadata?.list_name || ''
+            if (sim > 0.3) scored.push({ label: `[List Item] "${label}"${listName ? ` (from ${listName})` : ''}`, score: sim })
           }
 
           scored.sort((a, b) => b.score - a.score)
 
-          // Add semantic items not already in saved connections
-          for (const item of scored.slice(0, 10)) {
+          for (const item of scored.slice(0, 20)) {
             if (!uniqueRelatedItems.has(item.label)) {
               semanticItems.push(item.label)
             }
@@ -490,7 +482,7 @@ Be specific. Name actual items. Surface what's invisible without the lake contex
         }
 
         // Combine saved connections + semantic corpus items
-        const allContextItems = [...connectedItems, ...semanticItems.slice(0, Math.max(0, 12 - connectedItems.length))]
+        const allContextItems = [...connectedItems, ...semanticItems.slice(0, Math.max(0, 20 - connectedItems.length))]
 
         const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
         const truncatedSource = sourceContent.slice(0, 1200)
@@ -505,108 +497,110 @@ Be specific. Name actual items. Surface what's invisible without the lake contex
         let prompt = ''
         switch (actionType) {
           case 'summarize':
-            prompt = `You are synthesizing a personal knowledge graph for insight.
+            prompt = `You are a brilliant synthesizer reading someone's entire personal knowledge graph.
 
 FOCUS ITEM:
 ${truncatedSource}
 
-KNOWLEDGE LAKE CONTEXT (${savedCount} saved connections + ${semanticCount} semantic matches):
+KNOWLEDGE LAKE — ${corpusSize} items from their complete corpus (thoughts, articles, projects, lists):
 ${contextBlock}
 
-Your task: Write a synthesis that goes beyond what the item says in isolation.
-1. Name the central idea in ONE punchy sentence.
-2. Identify 2-3 ways this idea echoes or extends what appears elsewhere in the knowledge lake — reference specific items by name.
-3. Name what this cluster of ideas is collectively building toward.
+Write a synthesis that reveals what this item ACTUALLY means in context — not what it says.
 
-Be specific. Mention actual titles. Surface what's non-obvious. 3-5 sentences total.`
+1. Open with ONE punchy sentence: what is the central idea, given everything else in their corpus?
+2. Show 2-3 ways this idea echoes, extends, or evolves across specific items in the lake. Name titles directly. Make the connection feel inevitable in retrospect.
+3. Close with what this entire cluster is building toward — the emergent thing they're working on without quite naming it yet.
+
+Be specific. Be bold. Name actual titles. 3-5 tight sentences. No hedging, no generic observations.`
             break
 
           case 'find-gaps':
-            prompt = `You are a knowledge architect auditing a personal knowledge graph for blind spots.
+            prompt = `You are a ruthless knowledge architect auditing someone's corpus for critical blind spots.
 
 FOCUS ITEM:
 ${truncatedSource}
 
-KNOWLEDGE LAKE CONTEXT (${corpusSize} related items from the user's corpus):
+KNOWLEDGE LAKE — ${corpusSize} items from their complete corpus (thoughts, articles, projects, lists):
 ${contextBlock}
 
-Analyze what's missing from this cluster of knowledge:
-1. What perspectives, domains, or viewpoints are conspicuously absent given what's here?
-2. What questions does this existing corpus raise but never answer?
-3. What's the ONE most valuable gap to fill next — and what would filling it unlock?
+You can see what's there. Now find what's missing.
 
-Reference specific items when naming gaps. Be precise, not vague.`
+1. What domains, perspectives, or voices are conspicuously absent given what they're working on? Name 2 specific gaps and why each matters given specific items in the lake.
+2. What question does this corpus raise loudly but never answers? Name the exact tension you see in the items.
+3. The ONE most valuable gap to fill next — what specific book, experiment, conversation, or deep-dive would unlock the most, and why (reference specific items to justify)?
+
+Be a doctor reading a chart, not a cheerleader. Name what's missing precisely.`
             break
 
           case 'suggest-next':
-            prompt = `You are a knowledge-to-action translator working with a personal knowledge graph.
+            prompt = `You are a world-class knowledge-to-action translator. You've read this person's entire corpus and you see exactly what they should do next.
 
 FOCUS ITEM:
 ${truncatedSource}
 
-KNOWLEDGE LAKE CONTEXT (${corpusSize} related items spanning notes, articles, and projects):
+KNOWLEDGE LAKE — ${corpusSize} items from their complete corpus (thoughts, articles, projects, lists):
 ${contextBlock}
 
-Suggest ONE next action that:
-- Bridges theory from their reading into practice in their work
-- Builds on a recurring thread across multiple items in this corpus
-- Moves the highest-signal idea forward in a concrete way
+Give them ONE next action that is:
+- Specific enough to start today (not "explore more" — name exactly what)
+- Grounded in their corpus (reference 2-3 specific items that make this the obvious move)
+- The highest-leverage thing: where theory meets practice, where a recurring thought can become something real
 
-Reference actual items from the knowledge lake to justify your recommendation. No generic advice. Name specific connections between what they've been thinking about and what they should do next.`
+Tell them exactly: WHAT to do, WHY this specific moment calls for it (based on their corpus), and WHAT it will unlock. Reference actual titles. Be concrete. Be urgent.`
             break
 
           case 'connect-dots':
-            prompt = `You are a pattern recognition engine for a personal knowledge graph.
+            prompt = `You are a pattern recognition engine reading someone's intellectual fingerprint across their entire corpus.
 
 FOCUS ITEM:
 ${truncatedSource}
 
-KNOWLEDGE LAKE CONTEXT (${corpusSize} related items from across the user's entire corpus):
+KNOWLEDGE LAKE — ${corpusSize} items from their complete corpus (thoughts, articles, projects, lists):
 ${contextBlock}
 
-Find the non-obvious through-line that connects this item to the broader corpus.
+Find the single most surprising, non-obvious connection between this item and their broader corpus.
 
-1. Name the hidden pattern in one sharp sentence.
-2. Show HOW it manifests — cite 2-3 specific items from the knowledge lake with direct quotes or paraphrases.
-3. Explain why this synthesis matters: what does it reveal that no single item shows alone?
+1. Name the hidden through-line in one sharp, specific sentence — not "they're interested in X" but the precise way X appears in THIS person's mind.
+2. Show the evidence: trace the pattern through 3 specific items, noting exactly how the idea mutates or deepens each time. Quote or closely paraphrase the specific items.
+3. Why does this synthesis matter? What does it reveal that they couldn't see from inside any single item? What does it change about how they should think about this?
 
-This should feel like a genuine insight, not a summary. Surface what the user couldn't see without seeing everything at once.`
+Make it feel like a revelation. They should read this and think: "I didn't know I was thinking about that."`
             break
 
           case 'chase-thread':
-            prompt = `You are a thread-tracker for a personal knowledge graph. Your job is to identify and follow a single recurring theme through the user's corpus like a detective following a lead.
+            prompt = `You are a literary detective reading someone's intellectual diary, following a single obsession like a bloodhound.
 
 FOCUS ITEM:
 ${truncatedSource}
 
-KNOWLEDGE LAKE CONTEXT (${corpusSize} items from their corpus):
+KNOWLEDGE LAKE — ${corpusSize} items from their complete corpus (thoughts, articles, projects, lists):
 ${contextBlock}
 
-Chase the most interesting thread that runs through this item and the rest of the corpus:
+Find the single most compelling recurring thread — the idea this person keeps returning to without fully naming.
 
-1. Name the thread in one vivid, specific phrase (not generic — make it THIS person's version of the idea).
-2. Show exactly where it appears — trace it through at least 3 specific items from the lake, noting how the idea evolves or mutates across each one.
-3. Where does this thread lead? What's it converging toward? What would be the natural culmination of this recurring preoccupation?
+1. Name it in one vivid, specific phrase. Not "creativity" — but "the moment when structure makes spontaneity possible" or whatever this person's actual version is. Make it feel THEIRS.
+2. Track it through at least 3 specific items in the lake, showing exactly how the idea evolves: where it starts hesitant, where it gets confident, where it contradicts itself, where it resurfaces in a new domain.
+3. Where is this thread leading? What's the natural culmination of this preoccupation — the project, idea, or decision that would represent arriving where they've been heading?
 
-Be a literary critic reading someone's intellectual diary. Name what they keep returning to and why it matters.`
+Write like a biographer who has found the hidden theme of someone's intellectual life.`
             break
 
           case 'provoke':
-            prompt = `You are an intellectual sparring partner assigned to challenge the user's thinking. Your job is to construct the strongest possible counter-argument using evidence from their own knowledge base — and make them uncomfortable in a productive way.
+            prompt = `You are an intellectual sparring partner who has memorized this person's entire corpus. Your job is to make them think harder by using their own material against them.
 
 FOCUS ITEM:
 ${truncatedSource}
 
-KNOWLEDGE LAKE CONTEXT (${corpusSize} items from their own reading, notes, and projects):
+KNOWLEDGE LAKE — ${corpusSize} items from their complete corpus (thoughts, articles, projects, lists):
 ${contextBlock}
 
-Construct a steel-man challenge:
+Construct the sharpest possible challenge using THEIR OWN knowledge base:
 
-1. Identify the core assumption or claim in the focus item.
-2. Find evidence from their own knowledge lake that complicates, contradicts, or undermines that assumption. Quote specific titles.
-3. Pose the ONE question they most need to sit with — the one that, if answered honestly, would force them to update their thinking.
+1. Identify the core assumption embedded in this item — the thing they're taking for granted.
+2. Find 2-3 specific items in their own corpus that complicate, contradict, or create genuine tension with that assumption. Quote titles. Show exactly why their own thinking creates the problem.
+3. Pose the ONE question they most need to sit with. Not rhetorical — a real question that, if answered honestly, would force an update. Make it sharp enough to be uncomfortable.
 
-Be direct. Be uncomfortable. Use their own words and reading against them constructively. Don't soften it.`
+Don't soften it. Don't end with encouragement. Just the challenge. Use their own words and reading against them — constructively, but without mercy.`
             break
 
           default:
