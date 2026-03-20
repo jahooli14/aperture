@@ -428,7 +428,7 @@ export function PowerHourHero() {
 
                 <div className="flex flex-col md:flex-row relative">
                     <div className="p-6 md:p-8 flex-1 relative z-10 flex flex-col h-full justify-between pt-24 md:pt-32">
-                        <AnimatePresence mode="wait">
+                        <AnimatePresence>
                             <motion.div
                                 key={mainTask.project_id + mainTask.task_title}
                                 initial={{ opacity: 0, x: -20 }}
