@@ -1,7 +1,7 @@
 /**
  * CreateMemoryDialog - Manual Memory Creation
  * Mobile-optimized bottom sheet for capturing thoughts manually
- * Streamlined for fast, pleasant typing experience
+ * Supports both freeform text and checklist (Apple Notes-style)
  */
 
 import { useState, useEffect, useRef } from 'react'
@@ -13,13 +13,14 @@ import {
 } from '../ui/bottom-sheet'
 import { useMemoryStore } from '../../stores/useMemoryStore'
 import { useToast } from '../ui/toast'
-import { Plus, ArrowUp, Bold, Italic, List, Image as ImageIcon, X, Sparkles } from 'lucide-react'
+import { Plus, ArrowUp, Bold, Italic, List, Image as ImageIcon, X, Sparkles, CheckSquare, Square } from 'lucide-react'
 import { celebrate, checkThoughtMilestone, getMilestoneMessage } from '../../utils/celebrations'
 import { handleInputFocus } from '../../utils/keyboard'
 import { useAutoSuggestion } from '../../contexts/AutoSuggestionContext'
 import { SuggestionToast } from '../SuggestionToast'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useBodyEditor } from '../../hooks/useBodyEditor'
+import type { ChecklistItem } from '../../types'
 
 interface VoiceSeed {
   id: string
@@ -123,17 +124,139 @@ function VoiceSeeds({
   )
 }
 
-function ToolbarBtn({ title, onClick, children }: { title: string; onClick: () => void; children: React.ReactNode }) {
+function ToolbarBtn({
+  title, onClick, children, active
+}: {
+  title: string; onClick: () => void; children: React.ReactNode; active?: boolean
+}) {
   return (
     <button
       type="button"
       title={title}
       onClick={onClick}
-      className="relative p-2 rounded-lg transition-all opacity-35 hover:opacity-70 active:opacity-100"
-      style={{ color: 'var(--brand-text-secondary)' }}
+      className="relative p-2 rounded-lg transition-all"
+      style={{
+        color: active ? 'var(--brand-primary)' : 'var(--brand-text-secondary)',
+        opacity: active ? 1 : 0.35,
+      }}
     >
       {children}
     </button>
+  )
+}
+
+function ChecklistEditor({
+  items,
+  onChange,
+}: {
+  items: ChecklistItem[]
+  onChange: (items: ChecklistItem[]) => void
+}) {
+  const newItemRef = useRef<HTMLInputElement>(null)
+
+  const addItem = () => {
+    const newItem: ChecklistItem = {
+      id: `item_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      text: '',
+      checked: false,
+    }
+    onChange([...items, newItem])
+    // Focus the new input after render
+    setTimeout(() => {
+      const inputs = document.querySelectorAll('[data-checklist-item]')
+      const last = inputs[inputs.length - 1] as HTMLInputElement
+      last?.focus()
+    }, 50)
+  }
+
+  const updateItem = (id: string, text: string) => {
+    onChange(items.map((item) => item.id === id ? { ...item, text } : item))
+  }
+
+  const toggleItem = (id: string) => {
+    onChange(items.map((item) => item.id === id ? { ...item, checked: !item.checked } : item))
+  }
+
+  const removeItem = (id: string) => {
+    onChange(items.filter((item) => item.id !== id))
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, id: string, index: number) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      addItem()
+    } else if (e.key === 'Backspace' && (e.target as HTMLInputElement).value === '' && items.length > 1) {
+      e.preventDefault()
+      removeItem(id)
+      // Focus previous item
+      setTimeout(() => {
+        const inputs = document.querySelectorAll('[data-checklist-item]')
+        const prev = inputs[Math.max(0, index - 1)] as HTMLInputElement
+        prev?.focus()
+      }, 50)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-1 min-h-[120px]" style={{ paddingBottom: '8px' }}>
+      <AnimatePresence initial={false}>
+        {items.map((item, index) => (
+          <motion.div
+            key={item.id}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.15 }}
+            className="flex items-center gap-2 group"
+          >
+            <button
+              type="button"
+              onClick={() => toggleItem(item.id)}
+              className="flex-shrink-0 transition-all"
+              style={{ color: item.checked ? 'var(--brand-primary)' : 'rgba(255,255,255,0.25)' }}
+            >
+              {item.checked
+                ? <CheckSquare className="h-4 w-4" />
+                : <Square className="h-4 w-4" />
+              }
+            </button>
+            <input
+              data-checklist-item
+              type="text"
+              value={item.text}
+              placeholder="List item…"
+              onChange={(e) => updateItem(item.id, e.target.value)}
+              onKeyDown={(e) => handleKeyDown(e, item.id, index)}
+              className="flex-1 bg-transparent border-0 focus:outline-none focus:ring-0 py-1"
+              style={{
+                color: item.checked ? 'rgba(255,255,255,0.3)' : 'var(--brand-text-primary)',
+                fontSize: '17px',
+                lineHeight: '1.5',
+                textDecoration: item.checked ? 'line-through' : 'none',
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => removeItem(item.id)}
+              className="flex-shrink-0 opacity-0 group-hover:opacity-40 transition-opacity p-1"
+              style={{ color: 'var(--brand-text-secondary)' }}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </motion.div>
+        ))}
+      </AnimatePresence>
+      <button
+        type="button"
+        onClick={addItem}
+        ref={newItemRef}
+        className="flex items-center gap-2 py-1 transition-opacity opacity-30 hover:opacity-60 w-fit"
+        style={{ color: 'var(--brand-text-secondary)' }}
+      >
+        <Plus className="h-4 w-4" />
+        <span style={{ fontSize: '15px' }}>New item</span>
+      </button>
+    </div>
   )
 }
 
@@ -142,9 +265,10 @@ export interface CreateMemoryDialogProps {
   onOpenChange?: (open: boolean) => void
   hideTrigger?: boolean
   trigger?: React.ReactNode
+  initialMode?: 'text' | 'checklist'
 }
 
-export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, trigger }: CreateMemoryDialogProps = {}) {
+export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, trigger, initialMode = 'text' }: CreateMemoryDialogProps = {}) {
   const [internalOpen, setInternalOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [lastCreatedId, setLastCreatedId] = useState<string | null>(null)
@@ -152,6 +276,10 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
   const [previewUrls, setPreviewUrls] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
   const [showOptions, setShowOptions] = useState(false)
+  const [isChecklistMode, setIsChecklistMode] = useState(initialMode === 'checklist')
+  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([
+    { id: `item_${Date.now()}`, text: '', checked: false }
+  ])
   const { createMemory, memories } = useMemoryStore()
   const { addToast } = useToast()
   const { fetchSuggestions } = useAutoSuggestion()
@@ -208,6 +336,8 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
     setBody('')
     setSelectedFiles([])
     setShowOptions(false)
+    setIsChecklistMode(initialMode === 'checklist')
+    setChecklistItems([{ id: `item_${Date.now()}`, text: '', checked: false }])
   }
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -267,6 +397,9 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
     }
   }
 
+  const hasChecklistContent = checklistItems.some(item => item.text.trim().length > 0)
+  const canSubmit = isChecklistMode ? hasChecklistContent : body.trim().length > 0
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -278,19 +411,29 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
 
     try {
       const imageUrls = await uploadImages()
-
-      // Only send title if user explicitly typed one  AI will generate it otherwise
       const userTitle = formData.title.trim() || undefined
 
-      const memoryData = {
-        ...(userTitle && { title: userTitle }),
-        body: body.trim(),
-        tags: tags.length > 0 ? tags : undefined,
-        memory_type: formData.memory_type || undefined,
-        image_urls: imageUrls.length > 0 ? imageUrls : undefined,
+      let memoryData: Parameters<typeof createMemory>[0]
+
+      if (isChecklistMode) {
+        const validItems = checklistItems.filter(item => item.text.trim().length > 0)
+        memoryData = {
+          title: userTitle || 'Checklist',
+          checklist_items: validItems,
+          tags: tags.length > 0 ? tags : undefined,
+          memory_type: 'quick-note',
+        }
+      } else {
+        memoryData = {
+          ...(userTitle && { title: userTitle }),
+          body: body.trim(),
+          tags: tags.length > 0 ? tags : undefined,
+          memory_type: formData.memory_type || undefined,
+          image_urls: imageUrls.length > 0 ? imageUrls : undefined,
+        }
       }
 
-      const savedTitle = userTitle || body.trim().substring(0, 60) || 'Quick thought'
+      const savedTitle = userTitle || (isChecklistMode ? 'Checklist' : body.trim().substring(0, 60)) || 'Quick thought'
 
       // Close dialog immediately for better UX
       resetForm()
@@ -303,7 +446,9 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
 
         if (newMemory?.id) {
           setLastCreatedId(newMemory.id)
-          fetchSuggestions('thought', newMemory.id, `${savedTitle} ${body}`)
+          if (!isChecklistMode) {
+            fetchSuggestions('thought', newMemory.id, `${savedTitle} ${body}`)
+          }
         }
 
         const newCount = memories.length + 1
@@ -317,20 +462,20 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
           else if (newCount === 100) celebrate.hundredthThought()
 
           addToast({
-            title: milestoneMessage || 'Thought captured!',
+            title: milestoneMessage || 'Note saved!',
             description: newCount === 1 ? 'Keep going!' : 'You\'re building an incredible knowledge base',
             variant: 'success',
           })
         } else {
           addToast({
-            title: 'Thought captured!',
-            description: 'Your thought is saved',
+            title: isChecklistMode ? 'Checklist saved!' : 'Thought captured!',
+            description: 'Your note is saved',
             variant: 'success',
           })
         }
       } catch (error) {
         addToast({
-          title: 'Failed to create thought',
+          title: 'Failed to save',
           description: error instanceof Error ? error.message : 'Unknown error',
           variant: 'destructive',
         })
@@ -371,31 +516,34 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
 
           <form onSubmit={handleSubmit} className="flex flex-col pt-1">
             {/* ── Writing surface ── */}
-            <textarea
-              ref={bodyRef}
-              id="body"
-              placeholder="What's on your mind?"
-              value={body}
-              onChange={handleBodyChange}
-              onKeyDown={handleBodyKeyDown}
-              onFocus={(e) => { setBodyFocused(true); handleInputFocus(e) }}
-              onBlur={() => setBodyFocused(false)}
-              required
-              autoFocus
-              className="w-full border-0 focus:outline-none focus:ring-0 resize-none appearance-none bg-transparent"
-              style={{
-                color: 'var(--brand-text-primary)',
-                fontSize: '18px',
-                lineHeight: '1.65',
-                minHeight: '160px',
-              }}
-            />
+            {isChecklistMode ? (
+              <ChecklistEditor items={checklistItems} onChange={setChecklistItems} />
+            ) : (
+              <textarea
+                ref={bodyRef}
+                id="body"
+                placeholder="What's on your mind?"
+                value={body}
+                onChange={handleBodyChange}
+                onKeyDown={handleBodyKeyDown}
+                onFocus={(e) => { setBodyFocused(true); handleInputFocus(e) }}
+                onBlur={() => setBodyFocused(false)}
+                autoFocus
+                className="w-full border-0 focus:outline-none focus:ring-0 resize-none appearance-none bg-transparent"
+                style={{
+                  color: 'var(--brand-text-primary)',
+                  fontSize: '18px',
+                  lineHeight: '1.65',
+                  minHeight: '160px',
+                }}
+              />
+            )}
 
             {/* ── Title — ghost, secondary ── */}
             <input
               ref={titleRef}
               id="title"
-              placeholder="Add a title…"
+              placeholder={isChecklistMode ? 'Checklist title…' : 'Add a title…'}
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               onFocus={handleInputFocus}
@@ -451,16 +599,29 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
               className="flex items-center gap-0.5 pt-2"
               style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
             >
-              {/* Formatting: Bold · Italic · List */}
-              <ToolbarBtn title="Bold" onClick={() => applyFormat('bold')}>
-                <Bold className="h-4 w-4" />
+              {/* Checklist toggle */}
+              <ToolbarBtn
+                title={isChecklistMode ? 'Switch to text' : 'Switch to checklist'}
+                onClick={() => setIsChecklistMode(!isChecklistMode)}
+                active={isChecklistMode}
+              >
+                <CheckSquare className="h-4 w-4" />
               </ToolbarBtn>
-              <ToolbarBtn title="Italic" onClick={() => applyFormat('italic')}>
-                <Italic className="h-4 w-4" />
-              </ToolbarBtn>
-              <ToolbarBtn title="Bullet list" onClick={() => applyFormat('bullet')}>
-                <List className="h-4 w-4" />
-              </ToolbarBtn>
+
+              {/* Formatting (text mode only) */}
+              {!isChecklistMode && (
+                <>
+                  <ToolbarBtn title="Bold" onClick={() => applyFormat('bold')}>
+                    <Bold className="h-4 w-4" />
+                  </ToolbarBtn>
+                  <ToolbarBtn title="Italic" onClick={() => applyFormat('italic')}>
+                    <Italic className="h-4 w-4" />
+                  </ToolbarBtn>
+                  <ToolbarBtn title="Bullet list" onClick={() => applyFormat('bullet')}>
+                    <List className="h-4 w-4" />
+                  </ToolbarBtn>
+                </>
+              )}
 
               {/* Photo */}
               <div className="relative ml-0.5">
@@ -484,45 +645,52 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
 
               {/* Spacer + word count */}
               <div className="flex-1 flex items-center justify-center">
-                {bodyFocused && wordCount > 0 && (
+                {bodyFocused && wordCount > 0 && !isChecklistMode && (
                   <span className="text-[10px] tabular-nums" style={{ color: 'var(--brand-text-secondary)', opacity: 0.35 }}>
                     {wordCount}w
                   </span>
                 )}
+                {isChecklistMode && (
+                  <span className="text-[10px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.25 }}>
+                    {checklistItems.filter(i => i.checked).length}/{checklistItems.filter(i => i.text).length} done
+                  </span>
+                )}
               </div>
 
-              {/* Type pills */}
-              <div className="flex items-center gap-0.5 mr-2">
-                {([
-                  { value: '', label: 'Auto' },
-                  { value: 'foundational', label: 'Core' },
-                  { value: 'event', label: 'Event' },
-                  { value: 'insight', label: 'Insight' },
-                ] as const).map((type) => (
-                  <button
-                    key={type.value}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, memory_type: type.value as '' | 'foundational' | 'event' | 'insight' | 'quick-note' })}
-                    className="px-2 py-0.5 rounded-full text-[11px] font-medium whitespace-nowrap transition-all flex-shrink-0"
-                    style={{
-                      background: formData.memory_type === type.value ? 'rgba(255,255,255,0.1)' : 'transparent',
-                      color: 'var(--brand-text-secondary)',
-                      opacity: formData.memory_type === type.value ? 1 : 0.35,
-                    }}
-                  >
-                    {type.label}
-                  </button>
-                ))}
-              </div>
+              {/* Type pills (text mode only) */}
+              {!isChecklistMode && (
+                <div className="flex items-center gap-0.5 mr-2">
+                  {([
+                    { value: '', label: 'Auto' },
+                    { value: 'foundational', label: 'Core' },
+                    { value: 'event', label: 'Event' },
+                    { value: 'insight', label: 'Insight' },
+                  ] as const).map((type) => (
+                    <button
+                      key={type.value}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, memory_type: type.value as '' | 'foundational' | 'event' | 'insight' | 'quick-note' })}
+                      className="px-2 py-0.5 rounded-full text-[11px] font-medium whitespace-nowrap transition-all flex-shrink-0"
+                      style={{
+                        background: formData.memory_type === type.value ? 'rgba(255,255,255,0.1)' : 'transparent',
+                        color: 'var(--brand-text-secondary)',
+                        opacity: formData.memory_type === type.value ? 1 : 0.35,
+                      }}
+                    >
+                      {type.label}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {/* Submit */}
               <button
                 type="submit"
-                disabled={loading || !body.trim() || uploading}
+                disabled={loading || !canSubmit || uploading}
                 className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all touch-manipulation disabled:opacity-25"
                 style={{
-                  background: body.trim() ? 'var(--brand-primary, #63b3ed)' : 'rgba(255,255,255,0.1)',
-                  color: body.trim() ? '#000' : 'var(--brand-text-secondary)',
+                  background: canSubmit ? 'var(--brand-primary, #63b3ed)' : 'rgba(255,255,255,0.1)',
+                  color: canSubmit ? '#000' : 'var(--brand-text-secondary)',
                 }}
                 title={uploading ? 'Uploading…' : loading ? 'Saving…' : 'Capture'}
               >
@@ -530,23 +698,25 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
               </button>
             </div>
 
-            {/* ── Voice seeds — below toolbar, passive, hidden once writing starts ── */}
-            <VoiceSeeds
-              hasContent={!!body.trim()}
-              isOpen={open}
-              onSelect={(text) => {
-                setBody(text)
-                requestAnimationFrame(() => {
-                  if (bodyRef.current) {
-                    bodyRef.current.style.height = 'auto'
-                    bodyRef.current.style.height =
-                      Math.max(120, bodyRef.current.scrollHeight) + 'px'
-                    bodyRef.current.focus()
-                    bodyRef.current.setSelectionRange(text.length, text.length)
-                  }
-                })
-              }}
-            />
+            {/* ── Voice seeds — below toolbar, passive, hidden once writing starts (text mode only) ── */}
+            {!isChecklistMode && (
+              <VoiceSeeds
+                hasContent={!!body.trim()}
+                isOpen={open}
+                onSelect={(text) => {
+                  setBody(text)
+                  requestAnimationFrame(() => {
+                    if (bodyRef.current) {
+                      bodyRef.current.style.height = 'auto'
+                      bodyRef.current.style.height =
+                        Math.max(120, bodyRef.current.scrollHeight) + 'px'
+                      bodyRef.current.focus()
+                      bodyRef.current.setSelectionRange(text.length, text.length)
+                    }
+                  })
+                }}
+              />
+            )}
           </form>
         </BottomSheetContent>
       </BottomSheet>

@@ -551,13 +551,54 @@ Return ONLY valid JSON, no markdown:
  */
 async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: any, userId: string) {
   const startTime = Date.now()
-  const { transcript, body, title: providedTitle, source_reference, tags, memory_type, image_urls } = req.body
+  const { transcript, body, title: providedTitle, source_reference, tags, memory_type, image_urls, checklist_items } = req.body
 
   // Accept both 'transcript' (voice) and 'body' (manual text) field names
   const text = transcript || body
 
-  if (!text || typeof text !== 'string') {
-    return res.status(400).json({ error: 'transcript or body field required' })
+  if (!text && !checklist_items) {
+    return res.status(400).json({ error: 'transcript, body, or checklist_items field required' })
+  }
+
+  // Checklist-only note: no body/transcript needed, skip AI processing
+  if (!text && checklist_items) {
+    try {
+      const now = new Date().toISOString()
+      const uniqueId = `checklist_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+      const noteTitle = providedTitle || 'Checklist'
+      const newMemory: any = {
+        audiopen_id: uniqueId,
+        title: noteTitle,
+        body: '',
+        orig_transcript: null,
+        tags: tags && Array.isArray(tags) ? tags : [],
+        audiopen_created_at: now,
+        memory_type: memory_type || 'quick-note',
+        image_urls: null,
+        checklist_items,
+        entities: null,
+        themes: null,
+        emotional_tone: null,
+        source_reference: source_reference || null,
+        embedding: null,
+        processed: true,
+        processed_at: now,
+        error: null,
+      }
+      if (userId) newMemory.user_id = userId
+
+      const { data: memory, error: insertError } = await supabase
+        .from('memories')
+        .insert(newMemory)
+        .select()
+        .single()
+
+      if (insertError) throw insertError
+      return res.status(200).json({ success: true, memory })
+    } catch (error) {
+      console.error('[handleCapture] Checklist insert error:', error)
+      return res.status(500).json({ error: 'Failed to create checklist note' })
+    }
   }
 
   console.log('[handleCapture] Starting capture processing', { hasProvidedTitle: !!providedTitle })
@@ -758,6 +799,7 @@ Remember: BE CREATIVE. SUMMARIZE. DO NOT COPY THE BEGINNING OF THE TEXT.`
       audiopen_created_at: now,
       memory_type: memory_type || null,
       image_urls: image_urls || null,
+      checklist_items: checklist_items || null,
       entities: null,
       themes: null,
       emotional_tone: null,
@@ -1751,11 +1793,11 @@ async function handleUpdate(memoryId: string, req: VercelRequest, res: VercelRes
     return res.status(400).json({ error: 'Memory ID required' })
   }
 
-  const { title, body, tags, memory_type, image_urls, is_pinned } = req.body
+  const { title, body, tags, memory_type, image_urls, is_pinned, checklist_items } = req.body
 
   try {
     // Pin/unpin is a lightweight metadata update — no reprocessing needed
-    if (is_pinned !== undefined && title === undefined && body === undefined) {
+    if (is_pinned !== undefined && title === undefined && body === undefined && checklist_items === undefined) {
       const { data: memory, error } = await supabase
         .from('memories')
         .update({ is_pinned })
@@ -1766,6 +1808,23 @@ async function handleUpdate(memoryId: string, req: VercelRequest, res: VercelRes
       if (error) {
         console.error('[handleUpdate] Pin update error:', error)
         return res.status(500).json({ error: 'Failed to update pin state', details: error.message })
+      }
+
+      return res.status(200).json({ success: true, memory })
+    }
+
+    // Checklist-only update — no reprocessing needed
+    if (checklist_items !== undefined && title === undefined && body === undefined) {
+      const { data: memory, error } = await supabase
+        .from('memories')
+        .update({ checklist_items })
+        .eq('id', memoryId)
+        .select()
+        .single()
+
+      if (error) {
+        console.error('[handleUpdate] Checklist update error:', error)
+        return res.status(500).json({ error: 'Failed to update checklist', details: error.message })
       }
 
       return res.status(200).json({ success: true, memory })
@@ -1782,6 +1841,7 @@ async function handleUpdate(memoryId: string, req: VercelRequest, res: VercelRes
     if (memory_type !== undefined) updateData.memory_type = memory_type
     if (image_urls !== undefined) updateData.image_urls = image_urls
     if (is_pinned !== undefined) updateData.is_pinned = is_pinned
+    if (checklist_items !== undefined) updateData.checklist_items = checklist_items
 
     const { data: memory, error } = await supabase
       .from('memories')
