@@ -1,9 +1,8 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Eye, Ear, Wind, Cookie, Hand, CheckCircle2, Circle } from 'lucide-react'
+import { ArrowLeft, Eye, Ear, Wind, Cookie, Hand, CheckCircle2 } from 'lucide-react'
 import { useManuscriptStore } from '../stores/useManuscriptStore'
-import { canEnterRupture } from '../lib/validation'
 import type { Sense } from '../types/manuscript'
 
 const SENSE_CONFIG: Record<Sense, { icon: typeof Eye; label: string; color: string }> = {
@@ -42,7 +41,8 @@ export default function SensoryAuditPage() {
   }
 
   const { sensoryAudit } = manuscript
-  const ruptureCheck = canEnterRupture(sensoryAudit)
+
+  const activatedCount = (Object.keys(sensoryAudit) as Sense[]).filter(s => sensoryAudit[s].activated).length
 
   return (
     <div className="flex-1 flex flex-col bg-ink-950 pt-safe">
@@ -53,36 +53,9 @@ export default function SensoryAuditPage() {
         </button>
         <div>
           <h1 className="text-lg font-medium text-ink-100">Sensory Audit</h1>
-          <p className="text-xs text-ink-500">Recovery tracking for Sections 1 & 2</p>
+          <p className="text-xs text-ink-500">{activatedCount} / 5 senses activated</p>
         </div>
       </header>
-
-      {/* Rupture gate status */}
-      <div className={`mx-4 mt-4 p-4 rounded-lg border ${
-        ruptureCheck.allowed
-          ? 'bg-status-green/10 border-status-green/30'
-          : 'bg-status-yellow/10 border-status-yellow/30'
-      }`}>
-        <div className="flex items-center gap-2 mb-2">
-          {ruptureCheck.allowed ? (
-            <CheckCircle2 className="w-5 h-5 text-status-green" />
-          ) : (
-            <Circle className="w-5 h-5 text-status-yellow" />
-          )}
-          <span className={`text-sm font-medium ${
-            ruptureCheck.allowed ? 'text-status-green' : 'text-status-yellow'
-          }`}>
-            {ruptureCheck.allowed
-              ? 'Ready for The Rupture'
-              : 'Rupture section locked'}
-          </span>
-        </div>
-        {!ruptureCheck.allowed && (
-          <p className="text-xs text-ink-400">
-            Missing senses: {ruptureCheck.missingSenses.map(s => SENSE_CONFIG[s].label).join(', ')}
-          </p>
-        )}
-      </div>
 
       {/* Sense cards */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-safe">
