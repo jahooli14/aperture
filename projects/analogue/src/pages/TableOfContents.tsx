@@ -8,7 +8,7 @@ import {
   ArrowLeft,
   Ear,
   BookOpen,
-  Sparkles,
+  Repeat2,
   CheckCircle2,
   AlertCircle,
   Circle,
@@ -27,7 +27,7 @@ const SECTIONS: { id: NarrativeSection; label: string; icon: typeof Eye }[] = [
   { id: 'departure', label: 'Departure', icon: Eye },
   { id: 'escape', label: 'The Escape', icon: Eye },
   { id: 'rupture', label: 'The Rupture', icon: AlertCircle },
-  { id: 'alignment', label: 'The Alignment', icon: Sparkles },
+  { id: 'alignment', label: 'The Alignment', icon: Repeat2 },
   { id: 'reveal', label: 'The Reveal', icon: BookOpen }
 ]
 
@@ -245,7 +245,7 @@ export default function TableOfContents() {
           onClick={() => navigate('/reverberations')}
           className="flex items-center gap-2 px-3 py-2 bg-ink-900 rounded-lg text-xs text-ink-300 whitespace-nowrap"
         >
-          <Sparkles className="w-4 h-4" />
+          <Repeat2 className="w-4 h-4" />
           Reverberations
         </button>
         {manuscript.revealAuditUnlocked && (
