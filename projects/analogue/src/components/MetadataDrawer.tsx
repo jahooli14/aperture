@@ -1,20 +1,11 @@
 import { useState } from 'react'
 import { X } from 'lucide-react'
-import { SceneNode, NarrativeSection } from '../types/manuscript'
+import { SceneNode } from '../types/manuscript'
 import { useManuscriptStore } from '../stores/useManuscriptStore'
 import QuickBeatInput from './QuickBeatInput'
 import CharacterChips from './CharacterChips'
 import MotifTagSelector from './MotifTagSelector'
 import SceneTimeline from './SceneTimeline'
-import ChecklistHeader from './ChecklistHeader'
-
-const SECTIONS: { id: NarrativeSection; label: string }[] = [
-  { id: 'departure', label: 'Departure' },
-  { id: 'escape', label: 'The Escape' },
-  { id: 'rupture', label: 'The Rupture' },
-  { id: 'alignment', label: 'The Alignment' },
-  { id: 'reveal', label: 'The Reveal' }
-]
 
 interface MetadataDrawerProps {
   isOpen: boolean
@@ -27,7 +18,6 @@ interface MetadataDrawerProps {
   focusMode: boolean
   onFocusMode: (enabled: boolean) => void
   onExport: () => void
-  onRedoPulseCheck: () => void
   currentSceneIndex: number
   totalScenes: number
   allScenes: SceneNode[]
@@ -44,16 +34,13 @@ export default function MetadataDrawer({
   focusMode,
   onFocusMode,
   onExport,
-  onRedoPulseCheck,
   currentSceneIndex,
   totalScenes,
   allScenes,
 }: MetadataDrawerProps) {
-  const [activeTab, setActiveTab] = useState<'scene' | 'review' | 'settings'>('scene')
+  const [activeTab, setActiveTab] = useState<'scene' | 'settings'>('scene')
   const [timelineExpanded, setTimelineExpanded] = useState(false)
   const { updateScene } = useManuscriptStore()
-
-  const flaggedGlasses = scene.glassesmentions?.filter(m => m.flagged) || []
 
   return (
     <>
@@ -95,19 +82,6 @@ export default function MetadataDrawer({
             Scene
           </button>
           <button
-            onClick={() => setActiveTab('review')}
-            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors relative ${
-              activeTab === 'review'
-                ? 'text-ink-50 border-b-2 border-ink-50'
-                : 'text-ink-400 hover:text-ink-200'
-            }`}
-          >
-            Review
-            {flaggedGlasses.length > 0 && (
-              <span className="absolute top-2 right-2 w-2 h-2 bg-yellow-500 rounded-full" />
-            )}
-          </button>
-          <button
             onClick={() => setActiveTab('settings')}
             className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
               activeTab === 'settings'
@@ -130,15 +104,37 @@ export default function MetadataDrawer({
                 </label>
                 <select
                   value={scene.section}
-                  onChange={(e) => updateScene(scene.id, { section: e.target.value as NarrativeSection })}
+                  onChange={(e) => updateScene(scene.id, { section: e.target.value as SceneNode['section'] })}
                   className="w-full px-3 py-2 bg-ink-800 border border-ink-700 rounded text-ink-100 text-sm"
                 >
-                  {SECTIONS.map(sect => (
-                    <option key={sect.id} value={sect.id}>
-                      {sect.label}
+                  {['departure', 'escape', 'rupture', 'alignment', 'reveal'].map(id => (
+                    <option key={id} value={id}>
+                      {id.charAt(0).toUpperCase() + id.slice(1)}
                     </option>
                   ))}
                 </select>
+              </div>
+
+              {/* Scene status */}
+              <div>
+                <label className="block text-xs font-medium text-ink-400 mb-1.5">
+                  Status
+                </label>
+                <div className="flex gap-2">
+                  {(['draft', 'in-progress', 'complete'] as const).map(s => (
+                    <button
+                      key={s}
+                      onClick={() => updateScene(scene.id, { status: s })}
+                      className={`flex-1 py-1.5 rounded text-xs font-medium transition-colors ${
+                        scene.status === s
+                          ? 'bg-ink-600 text-ink-50'
+                          : 'bg-ink-800 text-ink-400 hover:text-ink-200'
+                      }`}
+                    >
+                      {s === 'in-progress' ? 'In Progress' : s.charAt(0).toUpperCase() + s.slice(1)}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* What happens */}
@@ -173,73 +169,6 @@ export default function MetadataDrawer({
                     />
                   </div>
                 )}
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'review' && (
-            <div className="p-4 space-y-4">
-              {/* Checklist */}
-              <div>
-                <label className="block text-sm font-medium text-ink-300 mb-2">
-                  Quality Checklist
-                </label>
-                <ChecklistHeader scene={scene} />
-              </div>
-
-              {/* Glasses Mentions */}
-              {flaggedGlasses.length > 0 && (
-                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
-                  <h3 className="text-sm font-semibold text-yellow-200 mb-2">
-                    Glasses Mentions Review
-                  </h3>
-                  <p className="text-xs text-yellow-100/80 mb-3">
-                    Glasses should be used as a <strong>draw/anchor</strong> (desire, reach for, tempt),
-                    not as an <strong>active tool</strong> (wear, look through, see through).
-                  </p>
-
-                  <div className="space-y-3">
-                    {flaggedGlasses.map((mention) => (
-                      <div
-                        key={mention.id}
-                        className="bg-ink-900/50 rounded p-3 text-sm"
-                      >
-                        <p className="text-ink-100 italic mb-2">
-                          "...{mention.text}..."
-                        </p>
-                        <p className="text-xs text-yellow-200">
-                          This usage may treat glasses as an active tool rather than a metaphorical draw.
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {flaggedGlasses.length === 0 && scene.glassesmentions?.length > 0 && (
-                <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
-                  <p className="text-sm text-green-200">
-                    ✓ All glasses mentions are used correctly as draws/anchors
-                  </p>
-                </div>
-              )}
-
-              {scene.glassesmentions?.length === 0 && (
-                <div className="bg-ink-800 rounded-lg p-4">
-                  <p className="text-sm text-ink-400">
-                    No glasses mentions in this scene
-                  </p>
-                </div>
-              )}
-
-              {/* Pulse Check */}
-              <div>
-                <button
-                  onClick={onRedoPulseCheck}
-                  className="w-full px-4 py-2 bg-ink-700 hover:bg-ink-600 text-ink-50 rounded font-medium transition-colors"
-                >
-                  Redo Pulse Check
-                </button>
               </div>
             </div>
           )}
@@ -281,36 +210,19 @@ export default function MetadataDrawer({
                   Text Size
                 </label>
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => onTextSizeChange('small')}
-                    className={`flex-1 px-4 py-2 rounded font-medium transition-colors ${
-                      textSize === 'small'
-                        ? 'bg-ink-700 text-ink-50'
-                        : 'bg-ink-800 text-ink-400 hover:text-ink-200'
-                    }`}
-                  >
-                    Small
-                  </button>
-                  <button
-                    onClick={() => onTextSizeChange('medium')}
-                    className={`flex-1 px-4 py-2 rounded font-medium transition-colors ${
-                      textSize === 'medium'
-                        ? 'bg-ink-700 text-ink-50'
-                        : 'bg-ink-800 text-ink-400 hover:text-ink-200'
-                    }`}
-                  >
-                    Medium
-                  </button>
-                  <button
-                    onClick={() => onTextSizeChange('large')}
-                    className={`flex-1 px-4 py-2 rounded font-medium transition-colors ${
-                      textSize === 'large'
-                        ? 'bg-ink-700 text-ink-50'
-                        : 'bg-ink-800 text-ink-400 hover:text-ink-200'
-                    }`}
-                  >
-                    Large
-                  </button>
+                  {(['small', 'medium', 'large'] as const).map(size => (
+                    <button
+                      key={size}
+                      onClick={() => onTextSizeChange(size)}
+                      className={`flex-1 px-4 py-2 rounded font-medium transition-colors ${
+                        textSize === size
+                          ? 'bg-ink-700 text-ink-50'
+                          : 'bg-ink-800 text-ink-400 hover:text-ink-200'
+                      }`}
+                    >
+                      {size.charAt(0).toUpperCase() + size.slice(1)}
+                    </button>
+                  ))}
                 </div>
               </div>
 
