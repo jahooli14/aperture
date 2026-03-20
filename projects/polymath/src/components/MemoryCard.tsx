@@ -1,8 +1,8 @@
 import React, { useState, memo, useCallback, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { Edit, Trash2, Copy, Share2, Link2, Pin, Sprout, Film, Book, Music, MapPin, Gamepad2, Monitor, FileText, Box } from 'lucide-react'
-import type { Memory, BridgeWithMemories } from '../types'
+import { Edit, Trash2, Copy, Share2, Link2, Pin, Sprout, Film, Book, Music, MapPin, Gamepad2, Monitor, FileText, Box, CheckSquare, Square } from 'lucide-react'
+import type { Memory, BridgeWithMemories, ChecklistItem } from '../types'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useToast } from './ui/toast'
 import { haptic } from '../utils/haptics'
@@ -132,6 +132,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
   const deleteMemory = useMemoryStore((state) => state.deleteMemory)
   const pinMemory = useMemoryStore((state) => state.pinMemory)
   const unpinMemory = useMemoryStore((state) => state.unpinMemory)
+  const updateChecklistItems = useMemoryStore((state) => state.updateChecklistItems)
   const { addToast } = useToast()
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
 
@@ -184,6 +185,14 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
     haptic.light()
     setShowDetailModal(true)
   }, [])
+
+  const handleToggleChecklistItem = useCallback((itemId: string) => {
+    if (!memory.checklist_items) return
+    const updated = memory.checklist_items.map((item) =>
+      item.id === itemId ? { ...item, checked: !item.checked } : item
+    )
+    updateChecklistItems(memory.id, updated)
+  }, [memory.id, memory.checklist_items, updateChecklistItems])
 
   const handleTogglePin = useCallback(() => {
     if (memory.is_pinned) {
@@ -354,13 +363,49 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
           )
         })()}
 
-        {/* Body preview — plain prose so line-clamp uses real content */}
-        <p
-          className="px-3 pt-1.5 pb-0 text-[11px] leading-relaxed line-clamp-4"
-          style={{ color: 'var(--brand-text-muted)' }}
-        >
-          {toPreviewText(memory.body)}
-        </p>
+        {/* Checklist or body preview */}
+        {memory.checklist_items && memory.checklist_items.length > 0 ? (
+          <div className="px-3 pt-1.5 pb-0 flex flex-col gap-0.5">
+            {memory.checklist_items.slice(0, 5).map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleToggleChecklistItem(item.id)
+                }}
+                className="flex items-center gap-1.5 text-left w-full group"
+              >
+                {item.checked
+                  ? <CheckSquare className="h-3 w-3 flex-shrink-0" style={{ color: 'rgba(99,179,237,0.7)' }} />
+                  : <Square className="h-3 w-3 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.2)' }} />
+                }
+                <span
+                  className="text-[11px] leading-relaxed truncate"
+                  style={{
+                    color: item.checked ? 'var(--brand-text-muted)' : 'var(--brand-text-muted)',
+                    opacity: item.checked ? 0.4 : 0.8,
+                    textDecoration: item.checked ? 'line-through' : 'none',
+                  }}
+                >
+                  {item.text}
+                </span>
+              </button>
+            ))}
+            {memory.checklist_items.length > 5 && (
+              <p className="text-[10px] pl-[18px]" style={{ color: 'var(--brand-text-muted)', opacity: 0.35 }}>
+                +{memory.checklist_items.length - 5} more
+              </p>
+            )}
+          </div>
+        ) : (
+          <p
+            className="px-3 pt-1.5 pb-0 text-[11px] leading-relaxed line-clamp-4"
+            style={{ color: 'var(--brand-text-muted)' }}
+          >
+            {toPreviewText(memory.body)}
+          </p>
+        )}
 
         {/* Attached Images */}
         {memory.image_urls && memory.image_urls.length > 0 && (
@@ -404,6 +449,20 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
               >
                 <Link2 className="w-2 h-2" />
                 {connectionCount}
+              </span>
+            )}
+
+            {memory.checklist_items && memory.checklist_items.length > 0 && (
+              <span
+                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-medium"
+                style={{
+                  background: 'rgba(99,179,237,0.08)',
+                  border: '1px solid rgba(99,179,237,0.2)',
+                  color: 'rgba(99,179,237,0.65)',
+                }}
+              >
+                <CheckSquare className="w-2.5 h-2.5" />
+                {memory.checklist_items.filter(i => i.checked).length}/{memory.checklist_items.length}
               </span>
             )}
 

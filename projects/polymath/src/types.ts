@@ -71,6 +71,15 @@ export interface Memory {
 
   // Quick access
   is_pinned?: boolean
+
+  // Checklist (for Apple Notes-style checklists)
+  checklist_items?: ChecklistItem[] | null
+}
+
+export interface ChecklistItem {
+  id: string
+  text: string
+  checked: boolean
 }
 
 // ============================================================================

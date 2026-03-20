@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Brain, Calendar, Edit, Trash2, Copy, Share2, Link2, Plus, Pin } from 'lucide-react'
+import { X, Brain, Calendar, Edit, Trash2, Copy, Share2, Link2, Plus, Pin, CheckSquare, Square } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { MarkdownRenderer } from '../ui/MarkdownRenderer'
 import { format } from 'date-fns'
@@ -32,6 +32,7 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
   const deleteMemory = useMemoryStore((state) => state.deleteMemory)
   const pinMemory = useMemoryStore((state) => state.pinMemory)
   const unpinMemory = useMemoryStore((state) => state.unpinMemory)
+  const updateChecklistItems = useMemoryStore((state) => state.updateChecklistItems)
   const fetchBridgesForMemory = useMemoryStore((state) => state.fetchBridgesForMemory)
   const { setContext, toggleSidebar } = useContextEngineStore()
 
@@ -287,11 +288,44 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
               )}
 
               <div className="mb-6">
-                <MarkdownRenderer
-                  content={memory.body}
-                  className="text-base"
-                  style={{ color: "#ffffff" }}
-                />
+                {memory.checklist_items && memory.checklist_items.length > 0 ? (
+                  <div className="flex flex-col gap-2">
+                    {memory.checklist_items.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => {
+                          if (!memory.checklist_items) return
+                          const updated = memory.checklist_items.map((i) =>
+                            i.id === item.id ? { ...i, checked: !i.checked } : i
+                          )
+                          updateChecklistItems(memory.id, updated)
+                        }}
+                        className="flex items-start gap-3 text-left w-full group py-0.5"
+                      >
+                        {item.checked
+                          ? <CheckSquare className="h-5 w-5 flex-shrink-0 mt-0.5" style={{ color: 'rgba(99,179,237,0.8)' }} />
+                          : <Square className="h-5 w-5 flex-shrink-0 mt-0.5" style={{ color: 'rgba(255,255,255,0.25)' }} />
+                        }
+                        <span
+                          className="text-base"
+                          style={{
+                            color: item.checked ? 'rgba(255,255,255,0.35)' : '#ffffff',
+                            textDecoration: item.checked ? 'line-through' : 'none',
+                          }}
+                        >
+                          {item.text}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <MarkdownRenderer
+                    content={memory.body}
+                    className="text-base"
+                    style={{ color: "#ffffff" }}
+                  />
+                )}
                 {memory.image_urls && memory.image_urls.length > 0 && (
                   <div className={`mt-4 grid gap-4 ${memory.image_urls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                     {memory.image_urls.map((url, i) => (

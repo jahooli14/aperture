@@ -1,17 +1,18 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
-import type { Memory, Bridge, BridgeWithMemories, SourceReference } from '../types'
+import type { Memory, Bridge, BridgeWithMemories, SourceReference, ChecklistItem } from '../types'
 import { queueOperation } from '../lib/offlineQueue'
 import { useOfflineStore } from './useOfflineStore'
 import { CACHE_TTL } from '../lib/cacheConfig'
 
 interface CreateMemoryInput {
-  title: string
-  body: string
+  title?: string
+  body?: string
   tags?: string[]
   memory_type?: 'foundational' | 'event' | 'insight' | 'quick-note'
   image_urls?: string[]
   source_reference?: SourceReference
+  checklist_items?: ChecklistItem[]
 }
 
 interface MemoryStore {
@@ -28,6 +29,7 @@ interface MemoryStore {
   fetchBridgesForMemory: (memoryId: string) => Promise<BridgeWithMemories[]>
   createMemory: (input: CreateMemoryInput) => Promise<Memory>
   updateMemory: (id: string, input: CreateMemoryInput) => Promise<Memory>
+  updateChecklistItems: (id: string, items: ChecklistItem[]) => Promise<void>
   deleteMemory: (id: string) => Promise<void>
   addOptimisticMemory: (transcript: string) => string
   replaceOptimisticMemory: (tempId: string, realMemory: Memory) => void
@@ -363,7 +365,8 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
           tags: input.tags,
           memory_type: input.memory_type,
           image_urls: input.image_urls,
-          source_reference: input.source_reference
+          source_reference: input.source_reference,
+          checklist_items: input.checklist_items,
         })
       })
 
@@ -490,6 +493,30 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       // Rollback on error
       set({ memories: previousMemories })
       throw error instanceof Error ? error : new Error('Failed to update memory')
+    }
+  },
+
+  updateChecklistItems: async (id: string, items: ChecklistItem[]) => {
+    // Optimistic update
+    set((state) => ({
+      memories: Array.isArray(state.memories)
+        ? state.memories.map((m) => m.id === id ? { ...m, checklist_items: items } : m)
+        : state.memories,
+    }))
+
+    try {
+      const response = await fetch(`/api/memories?id=${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ checklist_items: items })
+      })
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Failed to update checklist (${response.status})`)
+      }
+    } catch (error) {
+      console.error('[MemoryStore] updateChecklistItems failed:', error)
+      // Silently fail — optimistic state is good enough for checklists
     }
   },
 

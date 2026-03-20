@@ -995,9 +995,23 @@ export function MemoriesPage() {
                                 <h4 className="text-sm font-semibold truncate mb-1" style={{ color: "var(--brand-primary)" }}>
                                   {memory.title}
                                 </h4>
-                                <p className="text-xs line-clamp-2 leading-relaxed" style={{ color: "var(--brand-primary)" }}>
-                                  {memory.body}
-                                </p>
+                                {memory.checklist_items && memory.checklist_items.length > 0 ? (
+                                  <div className="flex flex-col gap-0.5">
+                                    {memory.checklist_items.slice(0, 3).map((item) => (
+                                      <div key={item.id} className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--brand-primary)', opacity: item.checked ? 0.4 : 0.8 }}>
+                                        <span style={{ fontSize: '9px' }}>{item.checked ? '☑' : '☐'}</span>
+                                        <span style={{ textDecoration: item.checked ? 'line-through' : 'none' }} className="truncate">{item.text}</span>
+                                      </div>
+                                    ))}
+                                    {memory.checklist_items.length > 3 && (
+                                      <span className="text-[10px]" style={{ color: 'var(--brand-primary)', opacity: 0.4 }}>+{memory.checklist_items.length - 3} more</span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <p className="text-xs line-clamp-2 leading-relaxed" style={{ color: "var(--brand-primary)" }}>
+                                    {memory.body}
+                                  </p>
+                                )}
                                 <span className="text-[10px] mt-2 block" style={{ color: "var(--brand-primary)" }}>
                                   {new Date(memory.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                 </span>
