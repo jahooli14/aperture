@@ -8,7 +8,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.query.scope === 'items') {
         return handleListItems(req, res)
     }
-    const userId = getUserId()
+    const userId = getUserId(req)
 
     if (!userId) return res.status(401).json({ error: 'Unauthorized' })
 
@@ -171,7 +171,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 }
 
 async function handleListItems(req: VercelRequest, res: VercelResponse) {
-    const userId = getUserId()
+    const userId = getUserId(req)
     if (!userId) return res.status(401).json({ error: 'Unauthorized' })
 
     const supabase = getSupabaseClient()
