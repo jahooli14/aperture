@@ -2,52 +2,71 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   ChevronRight,
-  Clock,
-  Target,
   TrendingUp,
   BookOpen,
   Edit3,
-  ArrowLeft
+  Target,
 } from 'lucide-react'
-import type { ManuscriptState, NarrativeSection } from '../types/manuscript'
+import type { ManuscriptState } from '../types/manuscript'
 
 interface StoryDashboardProps {
   manuscript: ManuscriptState
   onBack: () => void
 }
 
-const SECTION_INFO: Record<NarrativeSection, { label: string; color: string; target: number }> = {
-  departure: { label: 'Departure', color: 'text-blue-400', target: 15000 },
-  escape: { label: 'The Escape', color: 'text-green-400', target: 12000 },
-  rupture: { label: 'The Rupture', color: 'text-red-400', target: 8000 },
-  alignment: { label: 'The Alignment', color: 'text-purple-400', target: 10000 },
-  reveal: { label: 'The Reveal', color: 'text-amber-400', target: 10000 }
+const SECTION_IDS = ['departure', 'escape', 'rupture', 'alignment', 'reveal'] as const
+const SECTION_LABELS: Record<string, string> = {
+  departure: 'Departure',
+  escape: 'The Escape',
+  rupture: 'The Rupture',
+  alignment: 'The Alignment',
+  reveal: 'The Reveal',
+}
+const SECTION_TARGETS: Record<string, number> = {
+  departure: 15000,
+  escape: 12000,
+  rupture: 8000,
+  alignment: 10000,
+  reveal: 10000,
+}
+const SECTION_COLORS: Record<string, string> = {
+  departure: 'from-blue-500 to-blue-400',
+  escape: 'from-green-500 to-green-400',
+  rupture: 'from-red-500 to-red-400',
+  alignment: 'from-purple-500 to-purple-400',
+  reveal: 'from-amber-500 to-amber-400',
+}
+const SECTION_TEXT_COLORS: Record<string, string> = {
+  departure: 'text-blue-400',
+  escape: 'text-green-400',
+  rupture: 'text-red-400',
+  alignment: 'text-purple-400',
+  reveal: 'text-amber-400',
 }
 
 export default function StoryDashboard({ manuscript, onBack }: StoryDashboardProps) {
   const navigate = useNavigate()
 
-  // Calculate progress by section
-  const sectionProgress = (['departure', 'escape', 'rupture', 'alignment', 'reveal'] as NarrativeSection[]).map(section => {
+  const sectionProgress = SECTION_IDS.map(section => {
     const scenesInSection = manuscript.scenes.filter(s => s.section === section)
     const words = scenesInSection.reduce((sum, s) => sum + s.wordCount, 0)
-    const target = SECTION_INFO[section].target
+    const target = SECTION_TARGETS[section]
     const progress = Math.min(100, (words / target) * 100)
     const completed = scenesInSection.filter(s => s.status === 'complete').length
 
     return {
       section,
-      label: SECTION_INFO[section].label,
-      color: SECTION_INFO[section].color,
+      label: SECTION_LABELS[section],
+      color: SECTION_COLORS[section],
+      textColor: SECTION_TEXT_COLORS[section],
       words,
       target,
       progress,
       sceneCount: scenesInSection.length,
-      completedScenes: completed
+      completedScenes: completed,
     }
   })
 
-  // Last edited info
   const lastEditedScene = manuscript.lastEditedSceneId
     ? manuscript.scenes.find(s => s.id === manuscript.lastEditedSceneId)
     : null
@@ -69,27 +88,23 @@ export default function StoryDashboard({ manuscript, onBack }: StoryDashboardPro
     return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
   }
 
-  // This week's writing
   const thisWeekWords = (manuscript.sessions || [])
     .filter(s => {
       const sessionDate = new Date(s.date)
-      const now = new Date()
-      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
       return sessionDate >= weekAgo
     })
     .reduce((sum, s) => sum + s.wordsAdded, 0)
 
-  // Quick win: find scenes that need attention
-  const needsAttention = manuscript.scenes
-    .filter(s => s.validationStatus === 'red' || s.validationStatus === 'yellow')
-    .slice(0, 3)
+  const totalTarget = SECTION_IDS.reduce((sum, s) => sum + SECTION_TARGETS[s], 0)
+  const overallProgress = Math.min(100, (manuscript.totalWordCount / totalTarget) * 100)
 
   return (
     <div className="flex-1 flex flex-col overflow-y-auto">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-4 border-b border-ink-800">
-        <button onClick={onBack} className="p-2 -ml-2">
-          <ArrowLeft className="w-5 h-5 text-ink-400" />
+        <button onClick={onBack} className="p-2 -ml-2 text-ink-400">
+          ←
         </button>
         <div className="flex-1 min-w-0">
           <h1 className="text-lg font-semibold text-ink-50 truncate">{manuscript.title}</h1>
@@ -103,7 +118,7 @@ export default function StoryDashboard({ manuscript, onBack }: StoryDashboardPro
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-safe">
+      <div className="flex-1 overflow-y-auto p-4 space-y-5 pb-safe">
         {/* Quick Resume */}
         {lastEditedScene && (
           <motion.button
@@ -122,7 +137,7 @@ export default function StoryDashboard({ manuscript, onBack }: StoryDashboardPro
                   {lastEditedScene.title}
                 </h3>
                 <div className="text-xs text-ink-500">
-                  {formatLastEdited()} • {lastEditedScene.wordCount} words
+                  {formatLastEdited()} · {lastEditedScene.wordCount.toLocaleString()} words
                 </div>
               </div>
               <ChevronRight className="w-5 h-5 text-blue-400 flex-shrink-0" />
@@ -130,10 +145,32 @@ export default function StoryDashboard({ manuscript, onBack }: StoryDashboardPro
           </motion.button>
         )}
 
+        {/* Overall progress */}
+        <div className="p-4 bg-ink-900/50 border border-ink-800 rounded-xl space-y-2">
+          <div className="flex items-center justify-between text-xs mb-1">
+            <div className="flex items-center gap-2">
+              <Target className="w-4 h-4 text-ink-500" />
+              <span className="text-ink-300 font-medium">Overall</span>
+            </div>
+            <span className="text-ink-400">{Math.round(overallProgress)}%</span>
+          </div>
+          <div className="h-3 bg-ink-800 rounded-full overflow-hidden">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${overallProgress}%` }}
+              transition={{ duration: 0.8, ease: 'easeOut' }}
+              className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-amber-500 rounded-full"
+            />
+          </div>
+          <p className="text-xs text-ink-500">
+            {manuscript.totalWordCount.toLocaleString()} / {totalTarget.toLocaleString()} words
+          </p>
+        </div>
+
         {/* This Week */}
         {thisWeekWords > 0 && (
           <div className="p-4 bg-ink-900/50 border border-ink-800 rounded-xl">
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-1">
               <TrendingUp className="w-4 h-4 text-green-400" />
               <h3 className="text-sm font-medium text-ink-300">This Week</h3>
             </div>
@@ -144,73 +181,42 @@ export default function StoryDashboard({ manuscript, onBack }: StoryDashboardPro
           </div>
         )}
 
-        {/* Progress by Section */}
+        {/* Section Progress */}
         <div>
-          <div className="flex items-center gap-2 mb-3 px-1">
-            <Target className="w-4 h-4 text-ink-500" />
-            <h3 className="text-sm font-medium text-ink-300">Progress</h3>
-          </div>
-          <div className="space-y-3">
-            {sectionProgress.map((section) => (
-              <div key={section.section} className="space-y-1.5">
+          <h3 className="text-sm font-medium text-ink-300 mb-3 px-1">By Section</h3>
+          <div className="space-y-4">
+            {sectionProgress.map((section, i) => (
+              <motion.div
+                key={section.section}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className="space-y-1.5"
+              >
                 <div className="flex items-center justify-between text-xs">
-                  <span className={section.color}>{section.label}</span>
+                  <span className={section.textColor}>{section.label}</span>
                   <span className="text-ink-500">
                     {section.words.toLocaleString()} / {section.target.toLocaleString()}
                   </span>
                 </div>
-                <div className="h-2 bg-ink-900 rounded-full overflow-hidden">
+                <div className="h-2.5 bg-ink-900 rounded-full overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${section.progress}%` }}
-                    transition={{ duration: 0.5, delay: 0.1 }}
-                    className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
-                    style={{
-                      opacity: section.progress > 0 ? 1 : 0
-                    }}
+                    transition={{ duration: 0.7, delay: i * 0.08, ease: 'easeOut' }}
+                    className={`h-full bg-gradient-to-r ${section.color} rounded-full`}
                   />
                 </div>
                 <div className="flex items-center gap-3 text-xs text-ink-600">
-                  <span>{section.sceneCount} scenes</span>
+                  <span>{section.sceneCount} scene{section.sceneCount !== 1 ? 's' : ''}</span>
                   {section.completedScenes > 0 && (
-                    <span>• {section.completedScenes} complete</span>
+                    <span>· {section.completedScenes} complete</span>
                   )}
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
-
-        {/* Quick Wins - Needs Attention */}
-        {needsAttention.length > 0 && (
-          <div>
-            <div className="flex items-center gap-2 mb-3 px-1">
-              <Clock className="w-4 h-4 text-ink-500" />
-              <h3 className="text-sm font-medium text-ink-300">Quick Fixes</h3>
-            </div>
-            <div className="space-y-2">
-              {needsAttention.map((scene) => (
-                <button
-                  key={scene.id}
-                  onClick={() => navigate(`/edit/${scene.id}`)}
-                  className="w-full p-3 bg-ink-900/50 border border-ink-800 rounded-lg text-left hover:bg-ink-800/50 transition-colors"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-sm text-ink-200 truncate mb-1">{scene.title}</h4>
-                      <p className="text-xs text-ink-500">
-                        {scene.validationStatus === 'red' ? 'Needs work' : 'Almost there'}
-                      </p>
-                    </div>
-                    <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-1.5 ${
-                      scene.validationStatus === 'red' ? 'bg-red-500' : 'bg-yellow-500'
-                    }`} />
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* All Scenes */}
         <button

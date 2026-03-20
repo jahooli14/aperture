@@ -19,7 +19,6 @@ interface EditorStore {
   selectionEnd: number
 
   // UI state
-  showPulseCheck: boolean
   showReverbTagging: boolean
   showSensoryAudit: boolean
   showRevealAudit: boolean
@@ -27,6 +26,13 @@ interface EditorStore {
   lastSavedAt: number | null
   isSaving: boolean
   textSize: TextSize
+
+  // AI assistant
+  showAIAssistant: boolean
+
+  // Session tracking
+  sessionStartWordCount: number
+  sessionWordsAdded: number
 
   // Actions
   openFootnoteDrawer: () => void
@@ -42,7 +48,6 @@ interface EditorStore {
   setSelection: (text: string, start: number, end: number) => void
   clearSelection: () => void
 
-  setShowPulseCheck: (show: boolean) => void
   setShowReverbTagging: (show: boolean) => void
   setShowSensoryAudit: (show: boolean) => void
   setShowRevealAudit: (show: boolean) => void
@@ -50,6 +55,11 @@ interface EditorStore {
   setSaving: (saving: boolean) => void
   markSaved: () => void
   cycleTextSize: () => void
+  setShowAIAssistant: (show: boolean) => void
+
+  startSession: (initialWordCount: number) => void
+  updateSessionWords: (currentWordCount: number) => void
+  resetSession: () => void
 }
 
 export const useEditorStore = create<EditorStore>()(
@@ -64,7 +74,6 @@ export const useEditorStore = create<EditorStore>()(
       selectedText: '',
       selectionStart: 0,
       selectionEnd: 0,
-      showPulseCheck: false,
       showReverbTagging: false,
       showSensoryAudit: false,
       showRevealAudit: false,
@@ -72,6 +81,9 @@ export const useEditorStore = create<EditorStore>()(
       lastSavedAt: null,
       isSaving: false,
       textSize: 'medium',
+      showAIAssistant: false,
+      sessionStartWordCount: 0,
+      sessionWordsAdded: 0,
 
       // Actions
       openFootnoteDrawer: () => set({ footnoteDrawerOpen: true }),
@@ -99,7 +111,6 @@ export const useEditorStore = create<EditorStore>()(
         selectionEnd: 0
       }),
 
-      setShowPulseCheck: (show) => set({ showPulseCheck: show }),
       setShowReverbTagging: (show) => set({ showReverbTagging: show }),
       setShowSensoryAudit: (show) => set({ showSensoryAudit: show }),
       setShowRevealAudit: (show) => set({ showRevealAudit: show }),
@@ -111,7 +122,17 @@ export const useEditorStore = create<EditorStore>()(
         const currentIndex = sizes.indexOf(state.textSize)
         const nextIndex = (currentIndex + 1) % sizes.length
         return { textSize: sizes[nextIndex] }
-      })
+      }),
+      setShowAIAssistant: (show) => set({ showAIAssistant: show }),
+
+      startSession: (initialWordCount) => set({
+        sessionStartWordCount: initialWordCount,
+        sessionWordsAdded: 0
+      }),
+      updateSessionWords: (currentWordCount) => set((state) => ({
+        sessionWordsAdded: Math.max(0, currentWordCount - state.sessionStartWordCount)
+      })),
+      resetSession: () => set({ sessionStartWordCount: 0, sessionWordsAdded: 0 }),
     }),
     {
       name: 'analogue-editor-settings',
