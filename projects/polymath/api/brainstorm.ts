@@ -312,11 +312,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     switch (body.step) {
       case 'chat':
-        return res.json(await handleChat(body as Parameters<typeof handleChat>[0], userId))
+        return res.json(await handleChat(body as unknown as Parameters<typeof handleChat>[0], userId))
       case 'extract':
-        return res.json(await handleExtract(body as Parameters<typeof handleExtract>[0], userId))
+        return res.json(await handleExtract(body as unknown as Parameters<typeof handleExtract>[0], userId))
       case 'studio-magic':
-        return res.json(await handleStudioMagic(body as Parameters<typeof handleStudioMagic>[0], userId))
+        return res.json(await handleStudioMagic(body as unknown as Parameters<typeof handleStudioMagic>[0], userId))
       default:
         return res.status(400).json({ error: `Unknown step: ${body.step}` })
     }
