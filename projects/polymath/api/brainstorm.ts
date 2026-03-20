@@ -133,7 +133,7 @@ function buildContextBlock(results: LakeResults): string {
 async function handleChat(
   body: { message: string; history?: ConversationMessage[] },
   userId: string
-): Promise<{ reply: string; echoes: EchoItem[] }> {
+): Promise<{ reply: string; echoes: EchoItem[]; readyToExtract: boolean }> {
   const { message, history = [] } = body
 
   const lakeResults = await searchKnowledgeLake(message, userId)
@@ -143,30 +143,53 @@ async function handleChat(
     .map(m => `${m.role === 'user' ? 'USER' : 'THINKING PARTNER'}: ${m.content}`)
     .join('\n')
 
-  const prompt = `You are a thinking partner helping someone figure out what they want to build. You have access to their knowledge lake — notes they've written, articles they've saved, and projects they're already working on.
+  const prompt = `You are a thinking partner. Someone is figuring out what they want to build. You have their knowledge lake — notes, saved articles, existing projects.
 
-Your job: engage genuinely with what they said. Not with a list of questions. One real response — an observation, a connection you actually see, something that pushes the thinking one step forward.
+Respond to what they just said. One response: an observation, a connection, something that moves the thinking forward. Not a list. Not encouragement.
 
-Rules:
-- Keep it under 4 sentences
-- Never say "great idea", "interesting", or "that sounds exciting"
-- If you see something in their knowledge lake that connects, mention it by name: "You wrote about X..." or "You have a project called Y..."
-- If there's a related existing project, ask if this is the same territory or something new — don't assume
-- If you don't see a real connection, don't invent one
-- Don't ask multiple questions. One, at most.
-- Write like a thoughtful person, not an AI assistant
+Rules for your reply:
+- Short. 2-4 sentences.
+- No filler: never start with "Great", "Interesting", "That sounds exciting", "I see", or any variant.
+- Plain language. Short sentences. Say the thing directly.
+- If you spot something in their knowledge lake that connects, name it: "You wrote about X" or "You have a project called Y".
+- If there's an existing project in the same territory, ask whether this is the same thing or something new.
+- If nothing connects, say nothing about the lake.
+- At most one question. Often none is better.
+- Write like a person, not software.
 ${contextBlock ? `\n${contextBlock}\n` : ''}
 ${priorTurns ? `\nCONVERSATION SO FAR:\n${priorTurns}\n` : ''}
 USER: ${message}
 
-THINKING PARTNER:`
+Now assess whether this conversation has enough to turn into a project definition. Check all four:
+1. Core idea — is what they're building clearly named?
+2. Motivation — do you know why this matters to them?
+3. Shape — is it a one-time finish or an ongoing practice?
+4. Starting point — is there any sense of where it begins?
 
-  const raw = await generateText(prompt, { temperature: 0.75, maxTokens: 200 })
-  const reply = raw.trim()
+Even if all four are covered, set readyToExtract to false if the person is mid-tangent, building energy, or if the last message opened something new. Only mark ready when the conversation feels like it has reached a natural resting point and more talking wouldn't change the shape of the project.
 
-  return {
-    reply,
-    echoes: lakeResults.all.slice(0, 4),
+Return JSON only:
+{
+  "reply": "your response as thinking partner",
+  "readyToExtract": false
+}`
+
+  const raw = await generateText(prompt, { temperature: 0.75, maxTokens: 300, responseFormat: 'json' })
+
+  try {
+    const parsed = JSON.parse(raw)
+    return {
+      reply: (parsed.reply || '').trim(),
+      echoes: lakeResults.all.slice(0, 4),
+      readyToExtract: parsed.readyToExtract === true,
+    }
+  } catch {
+    // Fallback: treat raw as plain reply, no ready signal
+    return {
+      reply: raw.trim(),
+      echoes: lakeResults.all.slice(0, 4),
+      readyToExtract: false,
+    }
   }
 }
 

@@ -77,6 +77,7 @@ export function CreateProjectDialog({
   ])
   const [chatInput, setChatInput] = useState('')
   const [thinking, setThinking] = useState(false)
+  const [isReady, setIsReady] = useState(false)
   const [genesisDraft, setGenesisDraft] = useState('')
   const threadRef = useRef<HTMLDivElement>(null)
 
@@ -117,6 +118,7 @@ export function CreateProjectDialog({
     setHistory([{ role: 'model', content: 'What are you working on?' }])
     setChatInput('')
     setThinking(false)
+    setIsReady(false)
     setGenesisDraft('')
     setFormData({
       title: initialTitle || '',
@@ -159,6 +161,7 @@ export function CreateProjectDialog({
         ...newHistory,
         { role: 'model', content: data.reply, echoes: data.echoes || [] },
       ])
+      if (data.readyToExtract) setIsReady(true)
     } catch {
       setHistory([
         ...newHistory,
@@ -394,22 +397,28 @@ export function CreateProjectDialog({
                       I know what I'm building →
                     </button>
 
-                    <button
+                    <motion.button
                       type="button"
                       onClick={handleExtract}
                       disabled={!hasExchange || mode === 'extracting'}
                       className="flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-full transition-all disabled:opacity-25"
+                      animate={isReady ? { opacity: [0.7, 1, 0.7] } : {}}
+                      transition={isReady ? { duration: 2.4, repeat: Infinity, ease: 'easeInOut' } : {}}
                       style={{
-                        background: hasExchange ? 'rgba(255,255,255,0.08)' : 'transparent',
+                        background: isReady
+                          ? 'rgba(255,255,255,0.14)'
+                          : hasExchange ? 'rgba(255,255,255,0.08)' : 'transparent',
                         color: 'var(--brand-text-primary)',
-                        border: '1px solid rgba(255,255,255,0.1)',
+                        border: isReady
+                          ? '1px solid rgba(255,255,255,0.22)'
+                          : '1px solid rgba(255,255,255,0.1)',
                       }}
                     >
                       {mode === 'extracting'
                         ? <><Loader2 className="h-3 w-3 animate-spin" /> Thinking…</>
                         : 'Make this a project →'
                       }
-                    </button>
+                    </motion.button>
                   </div>
                 </div>
               </motion.div>
