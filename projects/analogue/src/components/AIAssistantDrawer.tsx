@@ -147,7 +147,7 @@ export default function AIAssistantDrawer({ isOpen, onClose, ctx }: Props) {
             </AnimatePresence>
 
             {/* No API key prompt */}
-            {!apiKey && !showKeyInput && (
+            {!apiKey && !import.meta.env.VITE_GEMINI_API_KEY && !showKeyInput && (
               <div className="flex-1 flex flex-col items-center justify-center p-6 text-center gap-3">
                 <Bot className="w-8 h-8 text-purple-400/50" />
                 <p className="text-ink-300 text-sm">Add your Google AI Studio key to start chatting with your manuscript.</p>
@@ -161,7 +161,7 @@ export default function AIAssistantDrawer({ isOpen, onClose, ctx }: Props) {
             )}
 
             {/* Messages */}
-            {apiKey && (
+            {(apiKey || import.meta.env.VITE_GEMINI_API_KEY) && (
               <>
                 <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
                   {messages.length === 0 && !isLoading && (

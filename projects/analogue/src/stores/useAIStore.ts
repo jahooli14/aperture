@@ -38,7 +38,8 @@ export const useAIStore = create<AIStore>()(
       clearError: () => set({ error: null }),
 
       sendMessage: async (userMessage, ctx) => {
-        const { apiKey, messages } = get()
+        const { messages } = get()
+        const apiKey = get().apiKey || import.meta.env.VITE_GEMINI_API_KEY || null
         if (!apiKey) {
           set({ error: 'No API key set. Please add your Google AI Studio key.' })
           return
