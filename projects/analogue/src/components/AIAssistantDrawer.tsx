@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Send, Sparkles, AlertCircle, Key, Loader2 } from 'lucide-react'
+import { X, Send, Bot, AlertCircle, Key, Loader2 } from 'lucide-react'
 import { useAIStore } from '../stores/useAIStore'
 import type { GeminiContext } from '../lib/gemini'
 
@@ -79,7 +79,7 @@ export default function AIAssistantDrawer({ isOpen, onClose, ctx }: Props) {
           >
             {/* Header */}
             <div className="flex items-center gap-2 px-4 py-3 border-b border-ink-700 flex-shrink-0">
-              <Sparkles className="w-4 h-4 text-purple-400" />
+              <Bot className="w-4 h-4 text-purple-400" />
               <span className="text-sm font-medium text-ink-100 flex-1">AI Assistant</span>
               <span className="text-xs text-ink-500 mr-2">gemini-3.1-flash-lite</span>
               <button
@@ -149,7 +149,7 @@ export default function AIAssistantDrawer({ isOpen, onClose, ctx }: Props) {
             {/* No API key prompt */}
             {!apiKey && !showKeyInput && (
               <div className="flex-1 flex flex-col items-center justify-center p-6 text-center gap-3">
-                <Sparkles className="w-8 h-8 text-purple-400/50" />
+                <Bot className="w-8 h-8 text-purple-400/50" />
                 <p className="text-ink-300 text-sm">Add your Google AI Studio key to start chatting with your manuscript.</p>
                 <button
                   onClick={() => setShowKeyInput(true)}

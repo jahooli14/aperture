@@ -9,7 +9,7 @@ import {
   Menu,
   ChevronLeft,
   ChevronRight,
-  Sparkles,
+  Bot,
 } from 'lucide-react'
 import { useManuscriptStore } from '../stores/useManuscriptStore'
 import { useEditorStore } from '../stores/useEditorStore'
@@ -382,7 +382,7 @@ export default function EditorPage() {
             onClick={() => setShowAIAssistant(!showAIAssistant)}
             className={`p-2 rounded-lg transition-colors ${showAIAssistant ? 'bg-purple-600/20 text-purple-400' : 'text-ink-400'}`}
           >
-            <Sparkles className="w-5 h-5" />
+            <Bot className="w-5 h-5" />
           </button>
           <button onClick={() => setShowDrawer(true)} className="p-2 -mr-2">
             <Menu className="w-5 h-5 text-ink-400" />
