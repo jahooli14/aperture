@@ -5,9 +5,9 @@ import { useAIStore } from './useAIStore'
 
 export interface StructuralMessage {
   role: 'user' | 'model'
-  content: string      // display text (action block stripped out)
-  rawContent: string   // full response including action block
-  action: StructuralAction | null
+  content: string       // display text (actions block stripped)
+  rawContent: string    // full response including actions block
+  actions: StructuralAction[]
   timestamp: number
 }
 
@@ -15,39 +15,53 @@ interface StructuralAIStore {
   messages: StructuralMessage[]
   isLoading: boolean
   streamingContent: string
-  pendingAction: StructuralAction | null
+  pendingActions: StructuralAction[]
   error: string | null
 
   sendMessage: (userMessage: string, ctx: StructuralContext) => Promise<void>
   clearMessages: () => void
-  clearPendingAction: () => void
+  dismissAction: (index: number) => void
+  clearAllPending: () => void
   clearError: () => void
 }
 
-// Extract action block from model response
-function parseAction(raw: string): { display: string; action: StructuralAction | null } {
-  const match = raw.match(/<action>\s*([\s\S]*?)\s*<\/action>/)
-  if (!match) return { display: raw.trim(), action: null }
+const ACTIONS_RE = /<actions>\s*([\s\S]*?)\s*<\/actions>/
+
+function parseActions(raw: string): { display: string; actions: StructuralAction[] } {
+  const match = raw.match(ACTIONS_RE)
+  if (!match) return { display: raw.trim(), actions: [] }
 
   try {
-    const action = JSON.parse(match[1]) as StructuralAction
-    const display = raw.replace(/<action>[\s\S]*?<\/action>/, '').trim()
-    return { display, action }
+    const actions = JSON.parse(match[1]) as StructuralAction[]
+    const display = raw.replace(ACTIONS_RE, '').trim()
+    return { display, actions: Array.isArray(actions) ? actions : [actions] }
   } catch {
-    return { display: raw.trim(), action: null }
+    return { display: raw.trim(), actions: [] }
   }
+}
+
+function stripActionsFromStreaming(raw: string): string {
+  // Strip complete block
+  let s = raw.replace(ACTIONS_RE, '')
+  // Strip partial opening tag that may be mid-stream
+  s = s.replace(/<actions>[\s\S]*$/, '')
+  return s.trimEnd()
 }
 
 export const useStructuralAIStore = create<StructuralAIStore>()((set, get) => ({
   messages: [],
   isLoading: false,
   streamingContent: '',
-  pendingAction: null,
+  pendingActions: [],
   error: null,
 
-  clearMessages: () => set({ messages: [], streamingContent: '', pendingAction: null, error: null }),
-  clearPendingAction: () => set({ pendingAction: null }),
+  clearMessages: () => set({ messages: [], streamingContent: '', pendingActions: [], error: null }),
+  clearAllPending: () => set({ pendingActions: [] }),
   clearError: () => set({ error: null }),
+
+  dismissAction: (index) => set(state => ({
+    pendingActions: state.pendingActions.filter((_, i) => i !== index)
+  })),
 
   sendMessage: async (userMessage, ctx) => {
     const apiKey = useAIStore.getState().apiKey || import.meta.env.VITE_GEMINI_API_KEY || null
@@ -62,7 +76,7 @@ export const useStructuralAIStore = create<StructuralAIStore>()((set, get) => ({
       role: 'user',
       content: userMessage,
       rawContent: userMessage,
-      action: null,
+      actions: [],
       timestamp: Date.now()
     }
 
@@ -70,30 +84,26 @@ export const useStructuralAIStore = create<StructuralAIStore>()((set, get) => ({
       messages: [...messages, userMsg],
       isLoading: true,
       streamingContent: '',
-      pendingAction: null,
+      pendingActions: [],
       error: null
     })
 
     try {
       let fullRaw = ''
-
-      // Build history from prior turns (excluding the new user message)
       const history = messages.map(m => ({ role: m.role, content: m.rawContent }))
 
       for await (const chunk of streamStructuralResponse(apiKey, userMessage, ctx, history)) {
         fullRaw += chunk
-        // Strip action block from streaming display
-        const displayChunk = fullRaw.replace(/<action>[\s\S]*?<\/action>/, '').trimEnd()
-        set({ streamingContent: displayChunk })
+        set({ streamingContent: stripActionsFromStreaming(fullRaw) })
       }
 
-      const { display, action } = parseAction(fullRaw)
+      const { display, actions } = parseActions(fullRaw)
 
       const modelMsg: StructuralMessage = {
         role: 'model',
         content: display,
         rawContent: fullRaw,
-        action,
+        actions,
         timestamp: Date.now()
       }
 
@@ -101,7 +111,7 @@ export const useStructuralAIStore = create<StructuralAIStore>()((set, get) => ({
         messages: [...state.messages, modelMsg],
         isLoading: false,
         streamingContent: '',
-        pendingAction: action && action.type !== 'none' ? action : null
+        pendingActions: actions
       }))
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Something went wrong'
