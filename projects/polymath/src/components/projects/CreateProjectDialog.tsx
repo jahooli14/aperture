@@ -73,7 +73,7 @@ export function CreateProjectDialog({
   const hasPrefill = !!(initialTitle && initialDescription)
   const [mode, setMode] = useState<DialogMode>(hasPrefill ? 'commit' : 'chat')
   const [history, setHistory] = useState<ConversationMessage[]>([
-    { role: 'model', content: "What's the thing pulling at you right now?" },
+    { role: 'model', content: "What's next?" },
   ])
   const [chatInput, setChatInput] = useState('')
   const [thinking, setThinking] = useState(false)
@@ -115,7 +115,7 @@ export function CreateProjectDialog({
 
   const resetAll = () => {
     setMode(hasPrefill ? 'commit' : 'chat')
-    setHistory([{ role: 'model', content: "What's the thing pulling at you right now?" }])
+    setHistory([{ role: 'model', content: "What's next?" }])
     setChatInput('')
     setThinking(false)
     setIsReady(false)
