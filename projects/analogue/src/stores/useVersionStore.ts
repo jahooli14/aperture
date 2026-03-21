@@ -16,7 +16,7 @@ interface VersionStore {
   clearError: () => void
 }
 
-export const useVersionStore = create<VersionStore>()((set, get) => ({
+export const useVersionStore = create<VersionStore>()((set) => ({
   versions: [],
   isLoading: false,
   error: null,
