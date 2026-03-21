@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useMemo, memo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, Send, Trash2, Mic, MicOff, ListOrdered, Check, GripVertical, Film, Music, Book, MapPin, Box, Quote, Pencil, Monitor, Gamepad2, Calendar, Star, SortAsc, ChevronDown, Copy, FileText, Brain, Link as LinkIcon, BookOpen, Loader2, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Send, Trash2, Mic, MicOff, ListOrdered, Check, ChevronRight, GripVertical, Film, Music, Book, MapPin, Box, Quote, Pencil, Monitor, Gamepad2, Calendar, Star, SortAsc, ChevronDown, Copy, FileText, Brain, Link as LinkIcon, BookOpen, Loader2, RefreshCw, Settings2, ToggleLeft, ToggleRight } from 'lucide-react'
 import { useListStore } from '../stores/useListStore'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useReadingStore } from '../stores/useReadingStore'
@@ -13,8 +13,10 @@ import { VoiceInput } from '../components/VoiceInput'
 import { OptimizedImage } from '../components/ui/optimized-image'
 import { ArticleCard } from '../components/reading/ArticleCard'
 import { Reorder } from 'framer-motion'
-import type { ListItem, ListType } from '../types'
+import type { ListItem, ListType, ListSettings } from '../types'
+import { listHasStatus } from '../types'
 import { useToast } from '../components/ui/toast'
+import { BottomSheet, BottomSheetContent, BottomSheetHeader, BottomSheetTitle } from '../components/ui/bottom-sheet'
 
 // ============================================================================
 // Color / Icon helpers (duplicated from ListsPage to keep files self-contained)
@@ -258,7 +260,7 @@ const CompletionCelebration = ({
 // Status tab labels per list type
 // ============================================================================
 
-type StatusFilter = 'all' | 'pending' | 'active' | 'completed'
+type StatusFilter = 'all' | 'queue' | 'pending' | 'active' | 'completed'
 
 const getStatusLabels = (listType: string): Record<StatusFilter, string> => {
     switch (listType) {
@@ -266,19 +268,19 @@ const getStatusLabels = (listType: string): Record<StatusFilter, string> => {
         case 'movie':
         case 'show':
         case 'tv':
-            return { all: 'All', pending: 'Want to Watch', active: 'Watching', completed: 'Watched' }
+            return { all: 'All', queue: 'To Watch', pending: 'Want to Watch', active: 'Watching', completed: 'Watched' }
         case 'book':
-            return { all: 'All', pending: 'Want to Read', active: 'Reading', completed: 'Read' }
+            return { all: 'All', queue: 'To Read', pending: 'Want to Read', active: 'Reading', completed: 'Read' }
         case 'article':
-            return { all: 'All', pending: 'To Read', active: 'Reading', completed: 'Read' }
+            return { all: 'All', queue: 'To Read', pending: 'To Read', active: 'Reading', completed: 'Read' }
         case 'music':
-            return { all: 'All', pending: 'Want to Listen', active: 'Listening', completed: 'Listened' }
+            return { all: 'All', queue: 'Queue', pending: 'Want to Listen', active: 'Listening', completed: 'Listened' }
         case 'game':
-            return { all: 'All', pending: 'Want to Play', active: 'Playing', completed: 'Played' }
+            return { all: 'All', queue: 'To Play', pending: 'Want to Play', active: 'Playing', completed: 'Played' }
         case 'place':
-            return { all: 'All', pending: 'Want to Visit', active: 'Been Once', completed: 'Visited' }
+            return { all: 'All', queue: 'To Visit', pending: 'Want to Visit', active: 'Been Once', completed: 'Visited' }
         default:
-            return { all: 'All', pending: 'Pending', active: 'In Progress', completed: 'Done' }
+            return { all: 'All', queue: 'Queue', pending: 'Pending', active: 'In Progress', completed: 'Done' }
     }
 }
 
@@ -534,7 +536,8 @@ const StandardItemCard = memo(({
     onRate,
     onMarkDone,
     rgb,
-    hasThought
+    hasThought,
+    hasStatus = true
 }: {
     item: ListItem
     listType: string
@@ -546,6 +549,7 @@ const StandardItemCard = memo(({
     onMarkDone: (item: ListItem) => void
     rgb: string
     hasThought?: boolean
+    hasStatus?: boolean
 }) => {
     const hasImage = item.metadata?.image
     const isPosterType = listType === 'book' || listType === 'film' || listType === 'movie' || listType === 'show' || listType === 'tv'
@@ -562,15 +566,6 @@ const StandardItemCard = memo(({
             onStatusChange?.(item.id, 'pending')
         }
     }
-
-    // Status ring color
-    const statusColor = item.status === 'completed'
-        ? '16, 185, 129'
-        : item.status === 'active'
-            ? rgb
-            : '255, 255, 255'
-
-    const statusOpacity = item.status === 'pending' ? '0.2' : '0.7'
 
     return (
         <motion.div
@@ -628,46 +623,38 @@ const StandardItemCard = memo(({
 
             {/* Content overlay */}
             <div className="absolute inset-0 p-3 flex flex-col justify-end">
-                {/* Status toggle — shows "Done?" nudge when active */}
-                {item.status === 'active' && (
-                    <button
-                        onClick={handleStatusCycle}
-                        className="mb-2 self-start flex items-center gap-1 px-2 py-0.5 rounded-full active:scale-95 transition-all"
-                        style={{
-                            background: `rgba(${rgb}, 0.15)`,
-                            border: `1px solid rgba(${rgb}, 0.4)`,
-                            color: `rgb(${rgb})`,
-                            fontSize: '9px',
-                            fontWeight: 900,
-                            letterSpacing: '0.1em',
-                            textTransform: 'uppercase',
-                        }}
-                    >
-                        <Check className="w-2.5 h-2.5" />
-                        Done?
-                    </button>
-                )}
-                <div className="flex items-start gap-2 mb-1">
-                    {item.status !== 'active' && (
+                <h3 className={`text-[var(--brand-text-primary)] font-bold leading-tight uppercase tracking-tight drop-shadow-lg text-xs mb-2 ${isCompleted ? 'line-through opacity-50' : ''}`}>
+                    {item.content}
+                </h3>
+                {/* Status pill — always visible, tap to cycle (only when status tracking is on) */}
+                {hasStatus && (() => {
+                    const labels = getStatusLabels(listType)
+                    const label = item.status === 'abandoned' ? labels['pending'] : labels[item.status as 'pending' | 'active' | 'completed'] ?? labels['pending']
+                    const pillColor = isCompleted ? '16, 185, 129' : item.status === 'active' ? rgb : '255, 255, 255'
+                    const pillBg = isCompleted ? 'rgba(16,185,129,0.15)' : item.status === 'active' ? `rgba(${rgb}, 0.15)` : 'rgba(255,255,255,0.08)'
+                    const pillBorder = isCompleted ? 'rgba(16,185,129,0.4)' : item.status === 'active' ? `rgba(${rgb}, 0.4)` : 'rgba(255,255,255,0.2)'
+                    return (
                         <button
                             onClick={handleStatusCycle}
-                            className="mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all"
+                            className="self-start flex items-center gap-1.5 px-2.5 py-1 rounded-full active:scale-95 transition-all min-h-[28px]"
                             style={{
-                                borderColor: `rgba(${statusColor}, ${statusOpacity})`,
-                                backgroundColor: isCompleted ? `rgba(${statusColor}, 0.2)` : 'transparent'
+                                background: pillBg,
+                                border: `1px solid ${pillBorder}`,
+                                color: `rgb(${pillColor})`,
+                                fontSize: '9px',
+                                fontWeight: 900,
+                                letterSpacing: '0.08em',
+                                textTransform: 'uppercase',
                             }}
                         >
-                            {isCompleted && <Check className="w-2.5 h-2.5 text-brand-text-secondary" />}
+                            {isCompleted ? <Check className="w-2.5 h-2.5 flex-shrink-0" /> : <ChevronRight className="w-2.5 h-2.5 flex-shrink-0" />}
+                            {label}
                         </button>
-                    )}
-                    <h3 className={`text-[var(--brand-text-primary)] font-bold leading-tight uppercase tracking-tight drop-shadow-lg text-xs mb-1 ${isCompleted ? 'line-through opacity-50' : ''} ${item.status === 'active' ? 'pl-0' : ''}`}>
-                        {item.content}
-                    </h3>
-                </div>
-
+                    )
+                })()}
                 {/* Rating stars */}
                 {(item.user_rating || isExpanded) && (
-                    <div className="mb-1 pl-6">
+                    <div className="mb-1 mt-1">
                         <StarRating
                             rating={item.user_rating}
                             onRate={(r) => onRate(item.id, r)}
@@ -678,7 +665,7 @@ const StandardItemCard = memo(({
 
                 {/* Key metadata on expanded */}
                 {isExpanded && (
-                    <div className="pl-6 space-y-1 backdrop-blur-sm bg-black/30 p-2 rounded-lg border border-[var(--glass-surface-hover)]">
+                    <div className="space-y-1 backdrop-blur-sm bg-black/30 p-2 rounded-lg border border-[var(--glass-surface-hover)] mt-1">
                         {item.metadata?.subtitle && (
                             <p className="text-zinc-300 text-[10px] italic leading-relaxed">{item.metadata.subtitle}</p>
                         )}
@@ -737,7 +724,7 @@ const StandardItemCard = memo(({
 
                 {/* Enriching status */}
                 {!isExpanded && item.enrichment_status === 'pending' && (
-                    <div className="flex items-center gap-1 text-[9px] text-brand-primary font-bold animate-pulse pl-6">
+                    <div className="flex items-center gap-1 text-[9px] text-brand-primary font-bold animate-pulse">
                         <div className="h-1 w-1 rounded-full bg-brand-primary" />
                         Enriching...
                     </div>
@@ -746,7 +733,7 @@ const StandardItemCard = memo(({
                 {/* Thought captured indicator */}
                 {hasThought && (
                     <div
-                        className="flex items-center gap-1 mt-1 pl-6"
+                        className="flex items-center gap-1 mt-1"
                         title="You captured a thought about this"
                     >
                         <Brain className="w-2.5 h-2.5" style={{ color: 'rgba(251,191,36,0.7)' }} />
@@ -782,7 +769,8 @@ function MasonryListGrid({
     onRate,
     onMarkDone,
     rgb,
-    thoughtCapturedIds
+    thoughtCapturedIds,
+    hasStatus = true
 }: {
     items: ListItem[]
     listType: string
@@ -794,6 +782,7 @@ function MasonryListGrid({
     onMarkDone: (item: ListItem) => void
     rgb: string
     thoughtCapturedIds?: Set<string>
+    hasStatus?: boolean
 }) {
     const [columns, setColumns] = useState(2)
 
@@ -848,6 +837,7 @@ function MasonryListGrid({
                             onMarkDone={onMarkDone}
                             rgb={rgb}
                             hasThought={thoughtCapturedIds?.has(item.id)}
+                            hasStatus={hasStatus}
                         />
                     ))}
                 </div>
@@ -1009,7 +999,7 @@ function ArticleListMode({ list, navigate }: ArticleListModeProps) {
 export default function ListDetailPage() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
-    const { lists, currentListItems, currentListId, loading, fetchListItems, addListItem, fetchLists, deleteListItem, reorderItems, updateListItemStatus, updateListItemMetadata } = useListStore()
+    const { lists, currentListItems, currentListId, loading, fetchListItems, addListItem, fetchLists, deleteListItem, reorderItems, updateListItemStatus, updateListItemMetadata, updateListSettings } = useListStore()
     const { memories } = useMemoryStore()
     const { addToast } = useToast()
 
@@ -1035,15 +1025,28 @@ export default function ListDetailPage() {
     const [isVoiceMode, setIsVoiceMode] = useState(false)
     const [isReordering, setIsReordering] = useState(false)
     const [expandedItemId, setExpandedItemId] = useState<string | null>(null)
-    const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>('queue')
     const [sortOption, setSortOption] = useState<SortOption>('added')
     const [showSortMenu, setShowSortMenu] = useState(false)
+    const [showListSettings, setShowListSettings] = useState(false)
     const [celebrationItem, setCelebrationItem] = useState<ListItem | null>(null)
     const inputRef = useRef<HTMLInputElement>(null)
     const { confirm, dialog: confirmDialog } = useConfirmDialog()
 
     const rgb = list ? ListColor(list.type) : '148, 163, 184'
-    const statusLabels = list ? getStatusLabels(list.type) : getStatusLabels('generic')
+    const hasStatus = list ? listHasStatus(list) : false
+
+    // Merge type defaults with per-list custom labels
+    const statusLabels = useMemo(() => {
+        const defaults = list ? getStatusLabels(list.type) : getStatusLabels('generic')
+        const custom = list?.settings?.status_labels ?? {}
+        return {
+            ...defaults,
+            pending: custom.pending ?? defaults.pending,
+            active: custom.active ?? defaults.active,
+            completed: custom.completed ?? defaults.completed,
+        }
+    }, [list?.type, list?.settings?.status_labels])
 
     const handleDeleteItem = useCallback(async (itemId: string, listId: string) => {
         const item = displayItems.find(i => i.id === itemId)
@@ -1080,11 +1083,19 @@ export default function ListDetailPage() {
     // Filter + sort items
     const filteredItems = useMemo(() => {
         let items = displayItems
-        if (statusFilter !== 'all') {
+        // When status is disabled, show all items regardless of filter
+        if (!hasStatus) return sortItems(items, sortOption)
+        if (statusFilter === 'queue') {
+            // Queue view: active items pinned to top, then pending
+            const activeItems = sortItems(items.filter(i => i.status === 'active'), sortOption)
+            const pendingItems = sortItems(items.filter(i => i.status === 'pending' || i.status === 'abandoned'), sortOption)
+            return [...activeItems, ...pendingItems]
+        } else if (statusFilter !== 'all') {
             items = items.filter(i => i.status === statusFilter)
+            return sortItems(items, sortOption)
         }
         return sortItems(items, sortOption)
-    }, [displayItems, statusFilter, sortOption])
+    }, [displayItems, statusFilter, sortOption, hasStatus])
 
     const handleAddItem = async (e?: React.FormEvent) => {
         e?.preventDefault()
@@ -1144,6 +1155,7 @@ export default function ListDetailPage() {
     // Count per status tab
     const counts = useMemo(() => ({
         all: displayItems.length,
+        queue: displayItems.filter(i => i.status === 'active' || i.status === 'pending' || i.status === 'abandoned').length,
         pending: displayItems.filter(i => i.status === 'pending').length,
         active: displayItems.filter(i => i.status === 'active').length,
         completed: displayItems.filter(i => i.status === 'completed').length,
@@ -1255,14 +1267,22 @@ export default function ListDetailPage() {
                             {isReordering ? <Check className="h-3 w-3" /> : <ListOrdered className="h-3 w-3" />}
                             <span className="text-[10px] font-black uppercase tracking-widest">{isReordering ? 'Done' : 'Order'}</span>
                         </button>
+
+                        {/* List settings */}
+                        <button
+                            onClick={() => setShowListSettings(true)}
+                            className="flex items-center justify-center w-7 h-7 rounded-full border transition-all border-[var(--glass-surface-hover)] text-brand-text-muted hover:text-[var(--brand-text-primary)] hover:border-white/20"
+                        >
+                            <Settings2 className="h-3 w-3" />
+                        </button>
                     </div>
                 </div>
                 {list.description && <p className="text-brand-text-muted max-w-xl mb-2">{list.description}</p>}
 
                 {/* Status Filter Tabs */}
-                {!isReordering && list.type !== 'quote' && displayItems.length > 0 && (
+                {!isReordering && hasStatus && displayItems.length > 0 && (
                     <div className="flex items-center gap-1 mt-4 overflow-x-auto pb-1 scrollbar-hide">
-                        {(['all', 'pending', 'active', 'completed'] as StatusFilter[]).map(tab => {
+                        {(['queue', 'completed', 'all'] as StatusFilter[]).map(tab => {
                             const isActive = statusFilter === tab
                             const count = counts[tab]
                             return (
@@ -1412,6 +1432,7 @@ export default function ListDetailPage() {
                                     onMarkDone={handleMarkDone}
                                     rgb={rgb}
                                     thoughtCapturedIds={thoughtCapturedIds}
+                                    hasStatus={hasStatus}
                                 />
                             ) : loading ? (
                                 <div className="flex flex-wrap gap-3">
@@ -1444,6 +1465,78 @@ export default function ListDetailPage() {
             </div>
 
             {confirmDialog}
+
+            {/* List Settings Panel */}
+            <BottomSheet open={showListSettings} onOpenChange={setShowListSettings}>
+                <BottomSheetContent>
+                    <BottomSheetHeader>
+                        <div className="flex items-center gap-3 mb-1">
+                            <Settings2 className="h-5 w-5" style={{ color: `rgb(${rgb})` }} />
+                            <BottomSheetTitle>Collection Settings</BottomSheetTitle>
+                        </div>
+                    </BottomSheetHeader>
+                    <div className="mt-6 space-y-6">
+                        {/* Status tracking toggle */}
+                        <div>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-bold text-[var(--brand-text-primary)] uppercase tracking-widest">Progress Tracking</p>
+                                    <p className="text-xs text-brand-text-muted mt-0.5">
+                                        {hasStatus ? 'Items have a status you can advance' : 'Collection only — no status on items'}
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        if (list) updateListSettings(list.id, { status_enabled: !hasStatus })
+                                    }}
+                                    className="transition-colors"
+                                    style={{ color: hasStatus ? `rgb(${rgb})` : 'rgba(255,255,255,0.25)' }}
+                                >
+                                    {hasStatus
+                                        ? <ToggleRight className="h-8 w-8" />
+                                        : <ToggleLeft className="h-8 w-8" />
+                                    }
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Custom status labels — only shown when status is enabled */}
+                        {hasStatus && (
+                            <div>
+                                <p className="text-xs font-bold text-brand-text-muted uppercase tracking-widest mb-3">Status Labels</p>
+                                <div className="space-y-2">
+                                    {(['pending', 'active', 'completed'] as const).map(key => (
+                                        <div key={key} className="flex items-center gap-3">
+                                            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted w-20 flex-shrink-0">
+                                                {key === 'pending' ? 'Backlog' : key === 'active' ? 'In Progress' : 'Done'}
+                                            </span>
+                                            <input
+                                                type="text"
+                                                defaultValue={statusLabels[key]}
+                                                key={`${list?.id}-${key}`}
+                                                onBlur={(e) => {
+                                                    const val = e.target.value.trim()
+                                                    if (val && val !== statusLabels[key] && list) {
+                                                        updateListSettings(list.id, {
+                                                            status_labels: {
+                                                                ...list.settings?.status_labels,
+                                                                [key]: val
+                                                            }
+                                                        })
+                                                    }
+                                                }}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
+                                                className="flex-1 bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] rounded-lg px-3 py-2 text-sm text-[var(--brand-text-primary)] focus:outline-none focus:border-white/30 transition-colors"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                                <p className="text-[10px] text-brand-text-muted mt-3 opacity-60">Tap a label to edit. Press Enter or tap away to save.</p>
+                            </div>
+                        )}
+                    </div>
+                </BottomSheetContent>
+            </BottomSheet>
 
             {/* Completion celebration */}
             <AnimatePresence>
