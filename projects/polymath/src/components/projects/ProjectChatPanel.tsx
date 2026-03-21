@@ -62,6 +62,7 @@ interface ProjectChatPanelProps {
     estimated_minutes?: number
     reasoning?: string
   }) => void
+  onRefinePlan?: () => Promise<void>
 }
 
 const TASK_TYPE_LABELS: Record<string, string> = {
@@ -101,17 +102,25 @@ function buildOpeningMessage(
   return messages
 }
 
+const QUICK_PROMPTS = [
+  { label: 'What direction should I take this?', icon: '→' },
+  { label: 'Suggest tasks for my next session', icon: '⊕' },
+  { label: 'What am I avoiding?', icon: '◎' },
+]
+
 export function ProjectChatPanel({
   isOpen,
   onClose,
   project,
   recentCompletions,
   onAddTask,
+  onRefinePlan,
 }: ProjectChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [thinking, setThinking] = useState(false)
   const [addedTasks, setAddedTasks] = useState<Set<string>>(new Set())
+  const [isRefining, setIsRefining] = useState(false)
   const threadRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -224,6 +233,83 @@ export function ProjectChatPanel({
     setAddedTasks(prev => new Set(prev).add(key))
   }
 
+  const handleQuickPrompt = (prompt: string) => {
+    setInput(prompt)
+    setTimeout(() => {
+      setInput('')
+      const message = prompt
+      const tasks: Task[] = (project.metadata?.tasks as Task[] | undefined) || []
+      const powerHourSuggestions: PowerHourSuggestion[] =
+        (project.metadata?.suggested_power_hour_tasks as PowerHourSuggestion[] | undefined) || []
+
+      setMessages(prev => [...prev, { kind: 'user', content: message }])
+      setThinking(true)
+
+      supabase.auth.getSession().then(({ data }) => {
+        const token = data.session?.access_token
+        fetch(`${import.meta.env.VITE_API_URL}/api/project-chat`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            projectId: project.id,
+            projectTitle: project.title,
+            projectDescription: project.description,
+            projectMotivation: project.metadata?.motivation,
+            projectGoal: project.metadata?.end_goal,
+            tasks: tasks.map(t => ({
+              text: t.text,
+              done: t.done,
+              is_ai_suggested: t.is_ai_suggested,
+              task_type: t.task_type,
+            })),
+            powerHourSuggestions,
+            message,
+            history: [],
+          }),
+        })
+          .then(res => res.json())
+          .then(data => {
+            setMessages(prev => [
+              ...prev,
+              {
+                kind: 'model',
+                content: data.reply || "Couldn't reach the server — try again.",
+                suggestedTasks: data.suggestedTasks || [],
+                echoes: data.echoes || [],
+              },
+            ])
+          })
+          .catch(() => {
+            setMessages(prev => [
+              ...prev,
+              { kind: 'model', content: "Couldn't reach the server — try again." },
+            ])
+          })
+          .finally(() => setThinking(false))
+      })
+    }, 0)
+  }
+
+  const handleRefinePlan = async () => {
+    if (!onRefinePlan || isRefining) return
+    setIsRefining(true)
+    setMessages(prev => [...prev, { kind: 'system', content: 'Refreshing task plan…' }])
+    try {
+      await onRefinePlan()
+      setMessages(prev => [...prev, {
+        kind: 'model',
+        content: `I've refreshed the task suggestions for ${project.title}. Open the task list to see the new ideas — or ask me anything about the direction.`,
+      }])
+    } catch {
+      setMessages(prev => [...prev, { kind: 'model', content: "Couldn't refresh the plan right now." }])
+    } finally {
+      setIsRefining(false)
+    }
+  }
+
   return (
     <BottomSheet open={isOpen} onOpenChange={open => { if (!open) onClose() }}>
       <BottomSheetContent className="flex flex-col" style={{ maxHeight: '85vh' }}>
@@ -248,12 +334,48 @@ export function ProjectChatPanel({
           style={{ minHeight: 0 }}
         >
           {messages.length === 0 && (
-            <p
-              className="text-[15px] pt-2"
-              style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
-            >
-              What are you thinking about?
-            </p>
+            <div className="pt-2 space-y-4">
+              <p
+                className="text-[15px]"
+                style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
+              >
+                What are you thinking about?
+              </p>
+              <div className="flex flex-col gap-2">
+                {QUICK_PROMPTS.map((p, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleQuickPrompt(p.label)}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-all"
+                    style={{
+                      background: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(255,255,255,0.07)',
+                      color: 'var(--brand-text-secondary)',
+                    }}
+                  >
+                    <span style={{ opacity: 0.4, fontSize: '11px' }}>{p.icon}</span>
+                    <span className="text-[13px]" style={{ opacity: 0.6 }}>{p.label}</span>
+                  </button>
+                ))}
+                {onRefinePlan && (
+                  <button
+                    onClick={handleRefinePlan}
+                    disabled={isRefining}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-all disabled:opacity-40"
+                    style={{
+                      background: 'rgba(99,102,241,0.05)',
+                      border: '1px solid rgba(99,102,241,0.15)',
+                      color: 'var(--brand-text-secondary)',
+                    }}
+                  >
+                    <span style={{ opacity: 0.4, fontSize: '11px' }}><Zap className="h-3 w-3 inline" /></span>
+                    <span className="text-[13px]" style={{ opacity: 0.6 }}>
+                      {isRefining ? 'Refreshing…' : 'Refresh my task plan'}
+                    </span>
+                  </button>
+                )}
+              </div>
+            </div>
           )}
 
           <AnimatePresence initial={false}>
