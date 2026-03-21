@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { v4 as uuidv4 } from 'uuid'
-import type { List, ListItem, CreateListInput, CreateListItemInput, ListType } from '../types'
+import type { List, ListItem, ListSettings, CreateListInput, CreateListItemInput, ListType } from '../types'
 import { queueOperation } from '../lib/offlineQueue'
 import { useOfflineStore } from './useOfflineStore'
 
@@ -20,6 +20,7 @@ interface ListStore {
     deleteListItem: (itemId: string, listId: string) => Promise<void>
     updateListItemStatus: (itemId: string, status: ListItem['status']) => Promise<void>
     updateListItemMetadata: (itemId: string, metadata: any) => Promise<void>
+    updateListSettings: (listId: string, settings: ListSettings) => Promise<void>
     deleteList: (listId: string) => Promise<void>
     reorderItems: (listId: string, itemIds: string[]) => Promise<void>
     reorderLists: (listIds: string[]) => Promise<void>
@@ -397,7 +398,29 @@ export const useListStore = create<ListStore>()(
                     return
                 }
 
-                // TODO: Implement API call for update when online
+                // Update via API when online
+                try {
+                    const response = await fetch(`/api/lists?scope=items&id=${itemId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status })
+                    })
+
+                    if (!response.ok) {
+                        throw new Error('Failed to update item status')
+                    }
+
+                    const updatedItem = await response.json()
+
+                    set(state => ({
+                        currentListItems: state.currentListItems.map(i =>
+                            i.id === itemId ? updatedItem : i
+                        )
+                    }))
+                } catch (error) {
+                    console.error('[ListStore] Failed to update status:', error)
+                    throw error
+                }
             },
 
             updateListItemMetadata: async (itemId, metadata) => {
@@ -495,6 +518,31 @@ export const useListStore = create<ListStore>()(
                         lists: previousLists,
                         error: error.message
                     })
+                }
+            },
+
+            updateListSettings: async (listId, settings) => {
+                // Optimistic update
+                set(state => ({
+                    lists: state.lists.map(l =>
+                        l.id === listId ? { ...l, settings: { ...l.settings, ...settings } } : l
+                    )
+                }))
+
+                try {
+                    const response = await fetch('/api/lists', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: listId, settings })
+                    })
+                    if (!response.ok) throw new Error('Failed to update list settings')
+                    const updatedList = await response.json()
+                    set(state => ({
+                        lists: state.lists.map(l => l.id === listId ? { ...l, ...updatedList } : l)
+                    }))
+                } catch (error) {
+                    console.error('[ListStore] Failed to update list settings:', error)
+                    throw error
                 }
             },
 

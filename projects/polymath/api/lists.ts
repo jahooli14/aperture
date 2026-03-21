@@ -79,7 +79,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // POST /api/lists - Create a new list
         if (req.method === 'POST') {
-            const { title, type, description, icon } = req.body
+            const { title, type, description, icon, settings } = req.body
+            const resolvedType = type || 'generic'
+
+            // Derive default status_enabled from type unless caller overrides
+            const LIST_STATUS_DEFAULTS: Record<string, boolean> = {
+                film: true, book: true, article: true, music: true, game: true,
+                place: true, event: true, software: true, tech: true,
+                quote: false, generic: false,
+            }
+            const defaultSettings = {
+                status_enabled: LIST_STATUS_DEFAULTS[resolvedType] ?? true,
+                ...settings,
+            }
 
             // Get min sort_order to insert at the beginning
             const { data: minSortData } = await supabase
@@ -98,9 +110,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 .insert({
                     user_id: userId,
                     title,
-                    type: type || 'generic',
+                    type: resolvedType,
                     description,
                     icon,
+                    settings: defaultSettings,
                     sort_order: minSort - 1
                 })
                 .select()
@@ -132,13 +145,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.status(200).json({ success: true })
             }
 
-            // Standard Update (Title, etc)
-            const { id, title, description, icon } = req.body
+            // Standard Update (Title, settings, etc)
+            const { id, title, description, icon, settings } = req.body
             if (!id) return res.status(400).json({ error: 'List ID required' })
+
+            const updates: Record<string, unknown> = {}
+            if (title !== undefined) updates.title = title
+            if (description !== undefined) updates.description = description
+            if (icon !== undefined) updates.icon = icon
+            if (settings !== undefined) updates.settings = settings
 
             const { data, error } = await supabase
                 .from('lists')
-                .update({ title, description, icon })
+                .update(updates)
                 .eq('id', id)
                 .eq('user_id', userId)
                 .select()
