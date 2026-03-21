@@ -13,6 +13,7 @@ import {
     BottomSheetTitle,
 } from '../ui/bottom-sheet'
 import type { ListType } from '../../types'
+import { LIST_STATUS_DEFAULTS } from '../../types'
 
 const TYPES: { id: ListType, label: string, icon: any }[] = [
     { id: 'film', label: 'Movies', icon: Film },
@@ -104,17 +105,26 @@ export function CreateListDialog({ open, onOpenChange }: Props) {
                                         key={t.id}
                                         type="button"
                                         onClick={() => setType(t.id)}
-                                        className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${isSelected
+                                        className={`relative flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${isSelected
                                             ? 'bg-white text-black border-white'
                                             : 'bg-black border-[var(--glass-surface-hover)] text-[var(--brand-text-secondary)] hover:border-white/30'
                                             }`}
                                     >
+                                        {LIST_STATUS_DEFAULTS[t.id] && (
+                                            <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-emerald-400 opacity-60" />
+                                        )}
                                         <Icon className="h-5 w-5 mb-1" />
                                         <span className="text-[10px] uppercase font-bold">{t.label}</span>
                                     </button>
                                 )
                             })}
                         </div>
+                        <p className="text-[10px] text-[var(--brand-text-muted)] mt-2">
+                            {LIST_STATUS_DEFAULTS[type]
+                                ? <><span className="text-emerald-400">●</span> Tracks progress — items have a status you can advance (e.g. Want to watch → Watching → Watched). Toggle off per list anytime.</>
+                                : <>Collection only — no progress tracking. Items are just entries. You can enable status tracking per list anytime.</>
+                            }
+                        </p>
                     </div>
 
                     <BottomSheetFooter>
