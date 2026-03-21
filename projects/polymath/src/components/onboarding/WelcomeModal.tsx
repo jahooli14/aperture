@@ -4,6 +4,7 @@
  */
 
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Brain, Zap, Layers, ArrowRight, X, Lightbulb } from 'lucide-react'
 import { BrandName } from '../BrandName'
 
@@ -16,6 +17,7 @@ interface WelcomeModalProps {
 
 export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: WelcomeModalProps) {
   const [isLoading, setIsLoading] = useState(false)
+  const navigate = useNavigate()
 
   if (!open) return null
 
@@ -62,6 +64,9 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
           </h1>
           <p className="text-lg max-w-xl mx-auto" style={{ color: "var(--brand-primary)" }}>
             Turn your scattered thoughts into connected insights and creative projects
+          </p>
+          <p className="text-sm mt-2" style={{ color: 'var(--brand-text-secondary)', opacity: 0.55 }}>
+            5 questions. 30 seconds each. Or explore with demo data.
           </p>
         </div>
 
@@ -186,7 +191,7 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
               )}
             </button>
             <button
-              onClick={onStartFresh}
+              onClick={() => { onStartFresh(); navigate('/onboarding') }}
               className="flex-1 inline-flex items-center justify-center gap-2 py-3 font-bold uppercase tracking-wider text-sm transition-all hover:bg-brand-surface"
               style={{
                 border: '2px solid rgba(255,255,255,0.2)',
@@ -195,7 +200,7 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
                 color: 'var(--brand-text-secondary)',
               }}
             >
-              Start Fresh
+              Map my mind with voice
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>

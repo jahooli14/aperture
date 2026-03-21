@@ -1,109 +1,69 @@
 /**
  * Empty State Component
- * Shown when user has no data - provides guidance on next steps
+ * Shown when user has no data — voice-first path back to onboarding
  */
 
-import { Brain, Mic, Zap, ExternalLink } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Mic, Zap } from 'lucide-react'
 import { BrandName } from '../BrandName'
 
 export function EmptyState() {
+  const navigate = useNavigate()
+
   return (
     <div className="min-h-[60vh] flex items-center justify-center py-12">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        {/* Icon */}
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-100 to-amber-100 mb-6">
-          <Brain className="h-10 w-10 text-brand-primary" />
+      <div className="max-w-md mx-auto px-4 text-center">
+
+        {/* Dot grid — subtle visual */}
+        <div className="flex justify-center gap-2 mb-8">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <span
+              key={i}
+              className="block w-2 h-2 rounded-full"
+              style={{ background: 'var(--brand-text-secondary)', opacity: 0.2 }}
+            />
+          ))}
         </div>
 
-        {/* Heading */}
-        <h2 className="text-3xl font-bold text-neutral-900 mb-4">
-          Start capturing your thoughts
+        <h2 className="text-2xl font-bold mb-3" style={{ color: 'var(--brand-text-primary)' }}>
+          Your knowledge graph starts here
         </h2>
-        <p className="text-lg text-neutral-600 mb-8">
-          <BrandName size="md" /> connects your voice notes, ideas, and discoveries into something that thinks with you.
-          Here's how to get started:
+        <p className="text-sm mb-2" style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}>
+          Speak 5 thoughts to see your first patterns emerge.
+        </p>
+        <p className="text-xs mb-8" style={{ color: 'var(--brand-text-secondary)', opacity: 0.35 }}>
+          30 seconds each — <BrandName size="sm" /> does the rest.
         </p>
 
-        {/* Steps */}
-        <div className="space-y-6 text-left mb-8">
-          {/* Step 1 */}
-          <div className="flex gap-4 items-start">
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-brand-primary flex items-center justify-center font-bold text-brand-primary">
-              1
-            </div>
-            <div>
-              <h3 className="font-semibold text-neutral-900 mb-1">
-                Connect Audiopen
-              </h3>
-              <p className="text-sm text-neutral-600">
-                Set up Audiopen webhook to send your voice notes to <BrandName size="sm" />.
-                We'll automatically process them and extract themes, entities, and insights.
-              </p>
-            </div>
-          </div>
-
-          {/* Step 2 */}
-          <div className="flex gap-4 items-start">
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-brand-primary flex items-center justify-center font-bold text-brand-primary">
-              2
-            </div>
-            <div>
-              <h3 className="font-semibold text-neutral-900 mb-1">
-                Record Voice Notes
-              </h3>
-              <p className="text-sm text-neutral-600">
-                Share thoughts about anything: coding breakthroughs, project ideas, creative
-                inspirations, learning insights. The more diverse, the better.
-              </p>
-            </div>
-          </div>
-
-          {/* Step 3 */}
-          <div className="flex gap-4 items-start">
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-brand-primary flex items-center justify-center font-bold text-brand-primary">
-              3
-            </div>
-            <div>
-              <h3 className="font-semibold text-neutral-900 mb-1">
-                Get AI Suggestions
-              </h3>
-              <p className="text-sm text-neutral-600">
-                After collecting a few memories, our AI will synthesize them into creative
-                project suggestions that bridge your interests and skills.
-              </p>
-            </div>
-          </div>
+        {/* Progress hint */}
+        <div
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs mb-8"
+          style={{ background: 'rgba(99,179,237,0.08)', color: 'var(--brand-primary)', border: '1px solid rgba(99,179,237,0.15)' }}
+        >
+          0 of 5 thoughts captured
         </div>
 
-        {/* CTA */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <a
-            href="https://audiopen.ai"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-primary inline-flex items-center justify-center gap-2"
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={() => navigate('/onboarding')}
+            className="btn-primary inline-flex items-center justify-center gap-2 py-3.5 text-base font-semibold"
           >
             <Mic className="h-4 w-4" />
-            Get Audiopen
-            <ExternalLink className="h-3 w-3" />
-          </a>
+            Speak a thought
+          </button>
+
           <button
             onClick={() => {
-              // Show welcome modal again to load demo
               localStorage.removeItem('clandestined_has_visited')
               window.location.reload()
             }}
-            className="btn-secondary inline-flex items-center justify-center gap-2"
+            className="inline-flex items-center justify-center gap-2 py-2.5 text-sm transition-opacity hover:opacity-80"
+            style={{ color: 'var(--brand-text-secondary)', opacity: 0.45 }}
           >
-            <Zap className="h-4 w-4" />
-            Load Demo Instead
+            <Zap className="h-3.5 w-3.5" />
+            Load demo instead
           </button>
         </div>
-
-        {/* Footer note */}
-        <p className="mt-8 text-xs text-[var(--brand-text-muted)]">
-           Tip: Record 5-10 voice notes across different topics to see the magic happen
-        </p>
       </div>
     </div>
   )
