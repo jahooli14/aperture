@@ -965,6 +965,26 @@ export interface ReadingQueueItem {
 export type ListType = 'film' | 'music' | 'tech' | 'book' | 'place' | 'game' | 'software' | 'event' | 'quote' | 'article' | 'generic'
 export type ListItemStatus = 'pending' | 'active' | 'completed' | 'abandoned'
 
+export interface ListSettings {
+  status_enabled?: boolean // undefined = use type default
+  status_labels?: {
+    pending?: string
+    active?: string
+    completed?: string
+  }
+}
+
+// Types where status tracking is ON by default (meaningful progression exists)
+export const LIST_STATUS_DEFAULTS: Record<ListType, boolean> = {
+  film: true, book: true, article: true, music: true, game: true,
+  place: true, event: true, software: true, tech: true,
+  quote: false, generic: false,
+}
+
+export function listHasStatus(list: List): boolean {
+  return list.settings?.status_enabled ?? LIST_STATUS_DEFAULTS[list.type] ?? true
+}
+
 export interface List {
   id: string
   user_id: string
@@ -973,6 +993,7 @@ export interface List {
   description?: string | null
   icon?: string | null
   sort_order: number
+  settings?: ListSettings
   created_at: string
   updated_at: string
   // Virtual field for frontend convenience
@@ -1000,6 +1021,7 @@ export interface CreateListInput {
   type: ListType
   description?: string
   icon?: string
+  settings?: ListSettings
 }
 
 export interface CreateListItemInput {
