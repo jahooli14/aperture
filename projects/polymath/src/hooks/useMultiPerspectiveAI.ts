@@ -84,7 +84,7 @@ export function useMultiPerspectiveAI() {
         relatedMemories
       }
 
-      const response = await fetch('/api/suggestions-multi-perspective', {
+      const response = await fetch('/api/power-hour', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

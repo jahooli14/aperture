@@ -181,13 +181,14 @@ export function ProjectChatPanel({
 
     try {
       const token = (await supabase.auth.getSession()).data.session?.access_token
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/project-chat`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/brainstorm`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
+          step: 'project-chat',
           projectId: project.id,
           projectTitle: project.title,
           projectDescription: project.description,
@@ -247,13 +248,14 @@ export function ProjectChatPanel({
 
       supabase.auth.getSession().then(({ data }) => {
         const token = data.session?.access_token
-        fetch(`${import.meta.env.VITE_API_URL}/api/project-chat`, {
+        fetch(`${import.meta.env.VITE_API_URL}/api/brainstorm`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({
+            step: 'project-chat',
             projectId: project.id,
             projectTitle: project.title,
             projectDescription: project.description,
