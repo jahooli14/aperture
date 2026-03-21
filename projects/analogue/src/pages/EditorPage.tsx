@@ -21,6 +21,7 @@ import { TagDrawer } from '../components/TagDrawer'
 import { WordTagList } from '../components/WordTagList'
 import { TaggedProseView } from '../components/TaggedProseView'
 import AIAssistantDrawer from '../components/AIAssistantDrawer'
+import VoiceNoteButton from '../components/VoiceNoteButton'
 
 const AVAILABLE_TAGS = ['glasses', 'door', 'drift', 'postman', 'villager', 'identity', 'recovery', 'threshold', 'mask', 'anchor']
 
@@ -302,6 +303,32 @@ export default function EditorPage() {
     }
   }
 
+  const handleVoiceInsert = useCallback((text: string, target: 'prose' | 'footnotes') => {
+    if (!scene || !manuscript) return
+
+    if (target === 'prose') {
+      const textarea = proseRef.current
+      const insertAt = textarea ? cursorPositionRef.current : localProse.length
+      const before = localProse.slice(0, insertAt)
+      const after = localProse.slice(insertAt)
+      const separator = before.length > 0 && !before.endsWith('\n\n') ? '\n\n' : ''
+      const newProse = before + separator + text + (after.length > 0 ? '\n\n' : '') + after
+
+      setLocalProse(newProse)
+      cursorPositionRef.current = (before + separator + text).length
+
+      const rawText = getStorageText(newProse, manuscript.protagonistRealName, manuscript.maskModeEnabled)
+      updateScene(scene.id, { prose: rawText })
+      const newWordCount = rawText.trim().split(/\s+/).filter(Boolean).length
+      updateSessionWords(newWordCount)
+    } else {
+      const existing = scene.footnotes.trim()
+      const newFootnotes = existing ? existing + '\n\n' + text : text
+      updateScene(scene.id, { footnotes: newFootnotes })
+      openFootnoteDrawer()
+    }
+  }, [scene, manuscript, localProse, updateScene, updateSessionWords, openFootnoteDrawer])
+
   if (!scene || !manuscript) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -377,6 +404,8 @@ export default function EditorPage() {
               +{sessionWordsAdded}
             </motion.span>
           )}
+          {/* Voice note button */}
+          <VoiceNoteButton ctx={aiContext} onInsert={handleVoiceInsert} />
           {/* AI button */}
           <button
             onClick={() => setShowAIAssistant(!showAIAssistant)}
