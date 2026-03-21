@@ -57,28 +57,41 @@ export async function enrichListItem(userId: string, listId: string, itemId: str
             metadata = await enrichBook(content)
         }
 
-        // Fallback to Wikipedia if category API didn't work or no category API
-        if (!metadata) {
+        // Fallback to Wikipedia if category API didn't work, or returned metadata with no image
+        if (!metadata || !metadata.image) {
             console.log(`[Enrichment] Trying Wikipedia for: ${content}`)
+
+            let wikiData = null
 
             // For film/TV, try multiple search strategies in order of likelihood
             if (category === 'film' || category === 'tv' || category === 'movie' || category === 'show') {
                 // Try exact title first (works for most content)
-                metadata = await enrichFromWikipedia(content)
+                wikiData = await enrichFromWikipedia(content)
 
                 // If no result, try with "(TV series)" suffix (for shows/miniseries)
-                if (!metadata) {
+                if (!wikiData) {
                     console.log(`[Enrichment] Trying Wikipedia with TV series suffix for: ${content}`)
-                    metadata = await enrichFromWikipedia(`${content} (TV series)`)
+                    wikiData = await enrichFromWikipedia(`${content} (TV series)`)
                 }
 
                 // If still no result, try with "(film)" suffix
-                if (!metadata) {
+                if (!wikiData) {
                     console.log(`[Enrichment] Trying Wikipedia with film suffix for: ${content}`)
-                    metadata = await enrichFromWikipedia(`${content} (film)`)
+                    wikiData = await enrichFromWikipedia(`${content} (film)`)
                 }
             } else {
-                metadata = await enrichFromWikipedia(content)
+                wikiData = await enrichFromWikipedia(content)
+            }
+
+            if (wikiData) {
+                if (!metadata) {
+                    // No metadata yet — use Wikipedia's fully
+                    metadata = wikiData
+                } else if (wikiData.image) {
+                    // Keep the richer OMDb/Books metadata but fill in the missing image
+                    metadata.image = wikiData.image
+                    metadata.thumbnail = wikiData.thumbnail
+                }
             }
         }
 
