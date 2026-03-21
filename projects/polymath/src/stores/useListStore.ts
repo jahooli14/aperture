@@ -397,7 +397,29 @@ export const useListStore = create<ListStore>()(
                     return
                 }
 
-                // TODO: Implement API call for update when online
+                // Update via API when online
+                try {
+                    const response = await fetch(`/api/lists?scope=items&id=${itemId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status })
+                    })
+
+                    if (!response.ok) {
+                        throw new Error('Failed to update item status')
+                    }
+
+                    const updatedItem = await response.json()
+
+                    set(state => ({
+                        currentListItems: state.currentListItems.map(i =>
+                            i.id === itemId ? updatedItem : i
+                        )
+                    }))
+                } catch (error) {
+                    console.error('[ListStore] Failed to update status:', error)
+                    throw error
+                }
             },
 
             updateListItemMetadata: async (itemId, metadata) => {
