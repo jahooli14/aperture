@@ -1,17 +1,20 @@
 import { useRef, useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Send, Trash2, CheckCircle2, XCircle, Bot } from 'lucide-react'
+import { X, Send, Trash2, CheckCircle2, XCircle, Bot, ChevronsRight } from 'lucide-react'
 import { useStructuralAIStore } from '../stores/useStructuralAIStore'
 import { useManuscriptStore } from '../stores/useManuscriptStore'
 import type { StructuralContext, StructuralAction } from '../lib/gemini'
+import type { NarrativeSection } from '../types/manuscript'
 
 interface Props {
   onClose: () => void
 }
 
-const SECTION_ORDER = ['departure', 'escape', 'rupture', 'alignment', 'reveal']
+const SECTION_ORDER: NarrativeSection[] = ['departure', 'escape', 'rupture', 'alignment', 'reveal']
 
-function buildContext(manuscript: NonNullable<ReturnType<typeof useManuscriptStore.getState>['manuscript']>): StructuralContext {
+function buildContext(
+  manuscript: NonNullable<ReturnType<typeof useManuscriptStore.getState>['manuscript']>
+): StructuralContext {
   return {
     manuscriptTitle: manuscript.title,
     scenes: [...manuscript.scenes]
@@ -25,38 +28,52 @@ function buildContext(manuscript: NonNullable<ReturnType<typeof useManuscriptSto
         section: s.section,
         order: s.order,
         wordCount: s.wordCount,
-        sceneBeat: s.sceneBeat
+        sceneBeat: s.sceneBeat,
+        prose: s.prose
       }))
   }
 }
 
-function actionLabel(action: StructuralAction, manuscript: NonNullable<ReturnType<typeof useManuscriptStore.getState>['manuscript']>): string {
+function actionLabel(
+  action: StructuralAction,
+  manuscript: NonNullable<ReturnType<typeof useManuscriptStore.getState>['manuscript']>
+): string {
   if (action.type === 'move_scene') {
     const scene = manuscript.scenes.find(s => s.id === action.sceneId)
     const target = action.targetBeforeSceneId
       ? manuscript.scenes.find(s => s.id === action.targetBeforeSceneId)
       : null
-    const sceneName = scene?.title ?? action.sceneId
-    const targetName = target ? `before "${target.title}"` : `at end of ${action.targetSection}`
-    return `Move "${sceneName}" → ${targetName} (${action.targetSection})`
+    const where = target ? `before "${target.title}"` : `end of ${action.targetSection}`
+    return `Move "${scene?.title ?? action.sceneId}" → ${where}`
   }
   if (action.type === 'edit_prose') {
     const scene = manuscript.scenes.find(s => s.id === action.sceneId)
-    return `Apply prose edit to "${scene?.title ?? action.sceneId}"`
+    const words = action.newProse.split(/\s+/).length
+    return `Edit prose in "${scene?.title ?? action.sceneId}" (${words} words)`
+  }
+  if (action.type === 'create_scene') {
+    const before = action.targetBeforeSceneId
+      ? manuscript.scenes.find(s => s.id === action.targetBeforeSceneId)
+      : null
+    const where = before ? `before "${before.title}"` : `end of ${action.section}`
+    return `Create scene "${action.title}" [${action.section}] — ${where}`
   }
   return 'Apply change'
 }
 
 export default function StructuralChatbot({ onClose }: Props) {
-  const { messages, isLoading, streamingContent, pendingAction, error, sendMessage, clearMessages, clearPendingAction, clearError } = useStructuralAIStore()
-  const { manuscript, reorderScenes, updateScene } = useManuscriptStore()
+  const {
+    messages, isLoading, streamingContent, pendingActions,
+    error, sendMessage, clearMessages, dismissAction, clearAllPending, clearError
+  } = useStructuralAIStore()
+  const { manuscript, reorderScenes, updateScene, createScene } = useManuscriptStore()
   const [input, setInput] = useState('')
+  const [applying, setApplying] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, streamingContent])
+  }, [messages, streamingContent, pendingActions])
 
   if (!manuscript) return null
 
@@ -76,27 +93,21 @@ export default function StructuralChatbot({ onClose }: Props) {
     }
   }
 
-  const handleApplyAction = async (action: StructuralAction) => {
+  const applyAction = async (action: StructuralAction) => {
     if (action.type === 'move_scene') {
-      // Build new scene order: take scene out, insert before targetBeforeSceneId
       const sorted = [...manuscript.scenes].sort((a, b) => {
         const si = SECTION_ORDER.indexOf(a.section) - SECTION_ORDER.indexOf(b.section)
         return si !== 0 ? si : a.order - b.order
       })
-
       const moving = sorted.find(s => s.id === action.sceneId)
       if (!moving) return
-
-      // Update section if changed
       if (moving.section !== action.targetSection) {
-        await updateScene(action.sceneId, { section: action.targetSection as typeof moving.section })
+        await updateScene(action.sceneId, { section: action.targetSection as NarrativeSection })
       }
-
       const without = sorted.filter(s => s.id !== action.sceneId)
       const insertIdx = action.targetBeforeSceneId
         ? without.findIndex(s => s.id === action.targetBeforeSceneId)
         : without.length
-
       without.splice(insertIdx < 0 ? without.length : insertIdx, 0, moving)
       await reorderScenes(without.map(s => s.id))
     }
@@ -105,7 +116,42 @@ export default function StructuralChatbot({ onClose }: Props) {
       await updateScene(action.sceneId, { prose: action.newProse })
     }
 
-    clearPendingAction()
+    if (action.type === 'create_scene') {
+      const newScene = await createScene(action.section as NarrativeSection, action.title)
+      await updateScene(newScene.id, {
+        sceneBeat: action.sceneBeat,
+        prose: action.proseFramework
+      })
+      // Reorder: insert before targetBeforeSceneId if specified
+      if (action.targetBeforeSceneId) {
+        const sorted = [...manuscript.scenes, newScene].sort((a, b) => {
+          const si = SECTION_ORDER.indexOf(a.section) - SECTION_ORDER.indexOf(b.section)
+          return si !== 0 ? si : a.order - b.order
+        })
+        const without = sorted.filter(s => s.id !== newScene.id)
+        const insertIdx = without.findIndex(s => s.id === action.targetBeforeSceneId)
+        without.splice(insertIdx < 0 ? without.length : insertIdx, 0, newScene)
+        await reorderScenes(without.map(s => s.id))
+      }
+    }
+  }
+
+  const handleApplyOne = async (index: number) => {
+    const action = pendingActions[index]
+    if (!action) return
+    setApplying(true)
+    await applyAction(action)
+    dismissAction(index)
+    setApplying(false)
+  }
+
+  const handleApplyAll = async () => {
+    setApplying(true)
+    for (const action of pendingActions) {
+      await applyAction(action)
+    }
+    clearAllPending()
+    setApplying(false)
   }
 
   return (
@@ -121,10 +167,12 @@ export default function StructuralChatbot({ onClose }: Props) {
         <Bot className="w-5 h-5 text-section-alignment" />
         <div className="flex-1 min-w-0">
           <div className="text-sm font-medium text-ink-100">Structure Editor</div>
-          <div className="text-xs text-ink-500">gemini-3-flash-preview · {ctx.scenes.length} scenes</div>
+          <div className="text-xs text-ink-500">
+            gemini-3-flash-preview · {ctx.scenes.length} scenes · {manuscript.totalWordCount.toLocaleString()} words
+          </div>
         </div>
         <button
-          onClick={() => { clearMessages(); }}
+          onClick={clearMessages}
           className="p-2 text-ink-500 hover:text-ink-300"
           title="Clear conversation"
         >
@@ -141,11 +189,13 @@ export default function StructuralChatbot({ onClose }: Props) {
           <div className="text-center py-8">
             <Bot className="w-8 h-8 text-ink-700 mx-auto mb-3" />
             <p className="text-sm text-ink-500 max-w-xs mx-auto">
-              Describe what the structure needs — move scenes, cut sections, reshape the arc.
+              The full manuscript is loaded. Ask for top-down analysis, major cuts, rewrites, new scenes — anything.
             </p>
-            <p className="text-xs text-ink-700 mt-2">
-              e.g. "This scene is too obvious — move it before scene 3 and cut the cabin in the woods part"
-            </p>
+            <div className="mt-4 space-y-1.5 text-xs text-ink-700 max-w-xs mx-auto text-left">
+              <p>"This character needs more build-up — add a scene before chapter 3"</p>
+              <p>"The cabin scene is too on-the-nose. Cut the woods section and move it earlier"</p>
+              <p>"Review the whole arc and tell me where it sags"</p>
+            </div>
           </div>
         )}
 
@@ -188,32 +238,53 @@ export default function StructuralChatbot({ onClose }: Props) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Pending action confirmation */}
+      {/* Pending actions */}
       <AnimatePresence>
-        {pendingAction && pendingAction.type !== 'none' && (
+        {pendingActions.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
             className="mx-4 mb-3 p-3 bg-section-alignment/10 border border-section-alignment/30 rounded-xl"
           >
-            <p className="text-xs text-section-alignment font-medium mb-2">Proposed change</p>
-            <p className="text-sm text-ink-200 mb-3">{actionLabel(pendingAction, manuscript)}</p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleApplyAction(pendingAction)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-section-alignment rounded-lg text-xs text-white font-medium"
-              >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                Apply
-              </button>
-              <button
-                onClick={clearPendingAction}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-ink-800 rounded-lg text-xs text-ink-300"
-              >
-                <XCircle className="w-3.5 h-3.5" />
-                Dismiss
-              </button>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-section-alignment font-medium">
+                {pendingActions.length} proposed change{pendingActions.length !== 1 ? 's' : ''}
+              </p>
+              {pendingActions.length > 1 && (
+                <button
+                  onClick={handleApplyAll}
+                  disabled={applying}
+                  className="flex items-center gap-1 px-2.5 py-1 bg-section-alignment rounded-lg text-xs text-white font-medium disabled:opacity-50"
+                >
+                  <ChevronsRight className="w-3 h-3" />
+                  Apply all
+                </button>
+              )}
+            </div>
+            <div className="space-y-2">
+              {pendingActions.map((action, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <span className="text-xs text-ink-500 mt-0.5 shrink-0">{i + 1}.</span>
+                  <p className="flex-1 text-xs text-ink-200 leading-relaxed">{actionLabel(action, manuscript)}</p>
+                  <div className="flex gap-1 shrink-0">
+                    <button
+                      onClick={() => handleApplyOne(i)}
+                      disabled={applying}
+                      className="flex items-center gap-1 px-2 py-1 bg-section-alignment/80 rounded text-xs text-white disabled:opacity-50"
+                    >
+                      <CheckCircle2 className="w-3 h-3" />
+                    </button>
+                    <button
+                      onClick={() => dismissAction(i)}
+                      disabled={applying}
+                      className="flex items-center gap-1 px-2 py-1 bg-ink-800 rounded text-xs text-ink-400 disabled:opacity-50"
+                    >
+                      <XCircle className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </motion.div>
         )}
@@ -231,7 +302,6 @@ export default function StructuralChatbot({ onClose }: Props) {
       <div className="p-4 border-t border-ink-800 pb-safe">
         <div className="flex gap-2 items-end">
           <textarea
-            ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -239,11 +309,11 @@ export default function StructuralChatbot({ onClose }: Props) {
             rows={1}
             className="flex-1 px-3 py-2.5 bg-ink-900 border border-ink-700 rounded-xl text-sm text-ink-100 placeholder:text-ink-600 resize-none focus:outline-none focus:border-ink-500"
             style={{ maxHeight: '100px', overflowY: 'auto' }}
-            disabled={isLoading}
+            disabled={isLoading || applying}
           />
           <button
             onClick={handleSend}
-            disabled={!input.trim() || isLoading}
+            disabled={!input.trim() || isLoading || applying}
             className="flex-shrink-0 p-2.5 bg-section-alignment rounded-xl text-white disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Send className="w-4 h-4" />

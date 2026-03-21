@@ -116,8 +116,7 @@ export interface StructuralSceneSummary {
   order: number
   wordCount: number
   sceneBeat: string | null
-  // prose included only when an edit is needed
-  prose?: string
+  prose: string
 }
 
 export interface StructuralContext {
@@ -129,42 +128,49 @@ export interface StructuralContext {
 export type StructuralAction =
   | { type: 'move_scene'; sceneId: string; targetBeforeSceneId: string | null; targetSection: string }
   | { type: 'edit_prose'; sceneId: string; newProse: string }
-  | { type: 'none' }
+  | { type: 'create_scene'; title: string; section: string; targetBeforeSceneId: string | null; sceneBeat: string; proseFramework: string }
 
 function buildStructuralSystemPrompt(ctx: StructuralContext): string {
   const sceneList = ctx.scenes
     .map((s, i) => {
-      const beat = s.sceneBeat ? ` — ${s.sceneBeat}` : ''
-      return `  ${i + 1}. [${s.section}] "${s.title}" (id: ${s.id}, ${s.wordCount} words)${beat}`
+      const beat = s.sceneBeat ? `\nBeat: ${s.sceneBeat}` : ''
+      const prose = s.prose
+        ? `\n---\n${s.prose}\n---`
+        : '\n(no prose yet)'
+      return `### Scene ${i + 1}: "${s.title}" [${s.section}] (id: ${s.id}, ${s.wordCount} words)${beat}${prose}`
     })
-    .join('\n')
+    .join('\n\n')
 
-  return `You are a structural editor helping the author of "${ctx.manuscriptTitle}" reshape their manuscript at a high level.
+  return `You are a structural editor working on a full manuscript rewrite of "${ctx.manuscriptTitle}". You have the complete text of every scene below and full authority to propose any change.
 
-The manuscript currently has these scenes in order:
+Sections (narrative order): departure → escape → rupture → alignment → reveal
+
 ${sceneList}
 
-Sections (in narrative order): departure → escape → rupture → alignment → reveal
+---
 
-Your job:
-- Respond conversationally to the author's structural notes — analyse, agree, push back, or ask questions as a thoughtful editor.
-- When the author asks you to execute a structural change (move, cut, edit), propose the change explicitly and embed a single JSON action block at the very end of your reply using this exact format:
+Your role is that of a hands-on developmental editor, not an advisor. When the author describes a problem or asks for a change, you:
+1. Respond conversationally — confirm you understand, push back if needed, ask one clarifying question if genuinely required.
+2. Propose the concrete changes as executable actions in an <actions> block at the END of your reply.
 
-<action>
+Action types available:
+
+move_scene — reorder or move a scene to a different section:
 {"type":"move_scene","sceneId":"<id>","targetBeforeSceneId":"<id or null>","targetSection":"<section>"}
-</action>
 
-or for a prose edit (only when the author asks to cut or rewrite part of a scene and you have the full prose):
-
-<action>
+edit_prose — rewrite or cut within a scene (return the complete new prose, not a diff):
 {"type":"edit_prose","sceneId":"<id>","newProse":"<full revised prose>"}
-</action>
+
+create_scene — scaffold a new scene the author will develop:
+{"type":"create_scene","title":"<title>","section":"<section>","targetBeforeSceneId":"<id or null>","sceneBeat":"<one-sentence beat>","proseFramework":"<detailed scene framework: key beats, emotional arc, what must be established, suggested opening — structured so the author can write directly into it>"}
 
 Rules:
-- Only include ONE action block per reply. If multiple changes are needed, address them one at a time.
-- For prose edits, you'll receive the full scene prose. Return the complete revised prose, not a diff.
-- If no executable action is needed, do not include an action block.
-- Be direct and concise. This is a working session, not a lecture.`
+- Include as many actions as the request requires — batch them all in one <actions> block.
+- The <actions> block must contain a valid JSON array, even for a single action.
+- Place the <actions> block at the very end of your reply, after all conversational text.
+- For edit_prose, always return the complete new prose for the scene — never a partial excerpt or diff.
+- If no executable action is needed, omit the <actions> block entirely.
+- Be direct. This is a working editorial session.`
 }
 
 export async function* streamStructuralResponse(
@@ -176,16 +182,14 @@ export async function* streamStructuralResponse(
   const ai = new GoogleGenAI({ apiKey })
   const systemPrompt = buildStructuralSystemPrompt(ctx)
 
-  // Build multi-turn contents from history
   const contents = [
-    // Inject system prompt as the first user turn (GoogleGenAI SDK pattern)
     {
       role: 'user' as const,
       parts: [{ text: systemPrompt }]
     },
     {
       role: 'model' as const,
-      parts: [{ text: 'Understood. Ready to help with structural edits.' }]
+      parts: [{ text: 'Understood. I have the full manuscript. Ready to work.' }]
     },
     ...history.map(m => ({
       role: m.role as 'user' | 'model',
