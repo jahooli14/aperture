@@ -4,8 +4,29 @@ import type {
   Reverberation,
   GlassesMention,
   SpeechPattern,
-  ManuscriptState
+  ManuscriptState,
+  NarrativeSection
 } from '../types/manuscript'
+
+export interface ManuscriptVersionScene {
+  id: string
+  title: string
+  section: NarrativeSection
+  order: number
+  prose: string
+  footnotes: string
+  sceneBeat: string | null
+  wordCount: number
+}
+
+export interface ManuscriptVersion {
+  id: string
+  name: string
+  timestamp: number
+  wordCount: number
+  sceneCount: number
+  scenes: ManuscriptVersionScene[]
+}
 
 // Offline-first database using Dexie (IndexedDB wrapper)
 class AnalogueDatabase extends Dexie {
@@ -15,6 +36,7 @@ class AnalogueDatabase extends Dexie {
   glassesMentions!: EntityTable<GlassesMention & { manuscriptId: string }, 'id'>
   speechPatterns!: EntityTable<SpeechPattern & { manuscriptId: string }, 'id'>
   pendingSync!: EntityTable<PendingSyncOperation, 'id'>
+  manuscriptVersions!: EntityTable<ManuscriptVersion, 'id'>
 
   constructor() {
     super('analogue')
@@ -26,6 +48,10 @@ class AnalogueDatabase extends Dexie {
       glassesMentions: 'id, manuscriptId, sceneId, flagged',
       speechPatterns: 'id, manuscriptId, characterSource',
       pendingSync: 'id, type, timestamp'
+    })
+
+    this.version(2).stores({
+      manuscriptVersions: 'id, timestamp'
     })
   }
 }
