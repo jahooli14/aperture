@@ -1,7 +1,7 @@
 import { GoogleGenAI } from '@google/genai'
 
-export const GEMINI_MODEL = 'gemini-2.5-flash-lite'
-export const GEMINI_AUDIO_MODEL = 'gemini-2.5-flash'
+export const GEMINI_MODEL = 'gemini-3.1-flash-lite-preview'
+export const GEMINI_AUDIO_MODEL = 'gemini-3-flash-preview'
 
 export interface GeminiContext {
   manuscriptTitle: string
