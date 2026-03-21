@@ -6,7 +6,7 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Loader2, MoreVertical, Plus, Check, X, GripVertical, ChevronDown, Zap, Target, Star, Sprout } from 'lucide-react'
+import { ArrowLeft, Loader2, MoreVertical, Plus, Check, X, GripVertical, ChevronDown, Zap, Target, Star, Sprout, MessageSquare } from 'lucide-react'
 import { StudioTab } from '../components/projects/StudioTab'
 import { MarkdownRenderer } from '../components/ui/MarkdownRenderer'
 import { useProjectStore } from '../stores/useProjectStore'
@@ -25,6 +25,7 @@ import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import { handleInputFocus } from '../utils/keyboard'
 import { EditProjectDialog } from '../components/projects/EditProjectDialog'
 import { ProjectCompletionModal } from '../components/projects/ProjectCompletionModal'
+import { ProjectChatPanel } from '../components/projects/ProjectChatPanel'
 import { MultiPerspectiveSuggestions } from '../components/suggestions/MultiPerspectiveSuggestions'
 import type { Project, Memory } from '../types'
 import { supabase } from '../lib/supabase'
@@ -69,6 +70,11 @@ export function ProjectDetailPage() {
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [isRefining, setIsRefining] = useState(false)
   const [showCompletionModal, setShowCompletionModal] = useState(false)
+
+  // Chat panel state
+  const [showChat, setShowChat] = useState(false)
+  const [recentCompletions, setRecentCompletions] = useState<string[]>([])
+  const prevTasksRef = useRef<{ id: string; done: boolean }[]>([])
 
 
   // Listen for custom event from FloatingNav to open AddNote dialog
@@ -546,6 +552,39 @@ export function ProjectDetailPage() {
     loadProjectDetails() // Refresh to get updated last_active
   }
 
+  const handleChatAddTask = async (taskData: {
+    text: string
+    task_type?: 'ignition' | 'core' | 'shutdown'
+    estimated_minutes?: number
+    reasoning?: string
+  }) => {
+    if (!project) return
+    const now = new Date().toISOString()
+    const existingTasks: Task[] = (project.metadata?.tasks as Task[] | undefined) || []
+    const newTask: Task = {
+      id: crypto.randomUUID(),
+      text: taskData.text,
+      done: false,
+      created_at: now,
+      order: existingTasks.length,
+      is_ai_suggested: true,
+      ai_reasoning: taskData.reasoning,
+      task_type: taskData.task_type,
+      estimated_minutes: taskData.estimated_minutes,
+    }
+    const updatedTasks = [...existingTasks, newTask]
+    await updateProject(project.id, {
+      metadata: {
+        ...project.metadata,
+        tasks: updatedTasks,
+        progress: Math.round((updatedTasks.filter(t => t.done).length / updatedTasks.length) * 100) || 0,
+      },
+      last_active: now,
+      updated_at: now,
+    })
+    // debounced enrichment fires automatically via aiEnrichmentManager
+  }
+
   // Calculate these before ANY early returns to avoid hooks order violation
   const progress = project?.metadata?.progress || 0
   const tasks = project?.metadata?.tasks || []
@@ -1021,6 +1060,14 @@ export function ProjectDetailPage() {
                     {isRefining ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
                     <span className="text-[10px] font-bold uppercase tracking-wider">Refine Plan</span>
                   </button>
+
+                  <button
+                    onClick={() => setShowChat(true)}
+                    className="ml-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary border border-indigo-500/20 transition-all"
+                  >
+                    <MessageSquare className="h-3 w-3" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Brainstorm</span>
+                  </button>
                 </div>
                 <TaskList
                   tasks={project.metadata?.tasks?.filter((task, index, self) =>
@@ -1033,6 +1080,15 @@ export function ProjectDetailPage() {
                   onUpdate={async (tasks) => {
                     if (!project) return
                     console.log('[ProjectDetail] Task update triggered')
+
+                    // Track newly completed tasks so the chat panel can show them inline
+                    const newlyCompleted = tasks.filter(
+                      t => t.done && !prevTasksRef.current.find(p => p.id === t.id && p.done)
+                    )
+                    if (newlyCompleted.length > 0) {
+                      setRecentCompletions(prev => [...prev, ...newlyCompleted.map(t => t.text)])
+                    }
+                    prevTasksRef.current = tasks.map(t => ({ id: t.id, done: t.done }))
 
                     const now = new Date().toISOString()
                     const newMetadata = {
@@ -1190,6 +1246,20 @@ export function ProjectDetailPage() {
           sparkedByMemories={sparkedByMemories}
           isOpen={showCompletionModal}
           onClose={() => setShowCompletionModal(false)}
+        />
+      )}
+
+      {/* Project Chat Panel */}
+      {project && (
+        <ProjectChatPanel
+          isOpen={showChat}
+          onClose={() => {
+            setShowChat(false)
+            setRecentCompletions([])
+          }}
+          project={project}
+          recentCompletions={recentCompletions}
+          onAddTask={handleChatAddTask}
         />
       )}
     </div>
