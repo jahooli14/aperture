@@ -48,25 +48,24 @@ async function searchKnowledgeLake(text: string, userId: string, excludeProjectI
     return { memories: [], articles: [], projects: [], all: [] }
   }
 
+  // No row limits — cosine similarity is cheap, and we want old things to resurface.
+  // The whole database is scanned in memory; Gemini Flash Lite keeps this economical.
   const [memoriesRes, articlesRes, projectsRes] = await Promise.all([
     supabase
       .from('memories')
       .select('id, title, body, embedding')
       .eq('user_id', userId)
-      .not('embedding', 'is', null)
-      .limit(80),
+      .not('embedding', 'is', null),
     supabase
       .from('reading_queue')
       .select('id, title, excerpt, embedding')
       .eq('user_id', userId)
-      .not('embedding', 'is', null)
-      .limit(50),
+      .not('embedding', 'is', null),
     supabase
       .from('projects')
       .select('id, title, description, embedding')
       .eq('user_id', userId)
-      .not('embedding', 'is', null)
-      .limit(50),
+      .not('embedding', 'is', null),
   ])
 
   const memories: EchoItem[] = (memoriesRes.data || [])
@@ -76,9 +75,9 @@ async function searchKnowledgeLake(text: string, userId: string, excludeProjectI
       score: cosineSimilarity(embedding, m.embedding as number[]),
       type: 'memory' as const,
     }))
-    .filter(m => m.score > 0.42)
+    .filter(m => m.score > 0.38)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 4)
+    .slice(0, 6)
     .map(({ title, snippet, type }) => ({ title, snippet, type }))
 
   const articles: EchoItem[] = (articlesRes.data || [])
@@ -88,9 +87,9 @@ async function searchKnowledgeLake(text: string, userId: string, excludeProjectI
       score: cosineSimilarity(embedding, a.embedding as number[]),
       type: 'article' as const,
     }))
-    .filter(a => a.score > 0.42)
+    .filter(a => a.score > 0.38)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 2)
+    .slice(0, 3)
     .map(({ title, snippet, type }) => ({ title, snippet, type }))
 
   const projects: EchoItem[] = (projectsRes.data || [])
@@ -101,9 +100,9 @@ async function searchKnowledgeLake(text: string, userId: string, excludeProjectI
       score: cosineSimilarity(embedding, p.embedding as number[]),
       type: 'project' as const,
     }))
-    .filter(p => p.score > 0.52)
+    .filter(p => p.score > 0.45)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 3)
+    .slice(0, 4)
     .map(({ title, snippet, type }) => ({ title, snippet, type }))
 
   return { memories, articles, projects, all: [...memories, ...articles, ...projects] }
@@ -156,6 +155,7 @@ Rules for your reply:
 - If nothing connects, say nothing about the lake.
 - At most one question. Often none is better.
 - Write like a person, not software.
+- When they mention something specific — a name, a domain, a particular problem — reflect it back with precision, not generality. "You mentioned X" beats "that area of work". Show you heard the specific thing.
 ${contextBlock ? `\n${contextBlock}\n` : ''}
 ${priorTurns ? `\nCONVERSATION SO FAR:\n${priorTurns}\n` : ''}
 USER: ${message}
@@ -180,14 +180,14 @@ Return JSON only:
     const parsed = JSON.parse(raw)
     return {
       reply: (parsed.reply || '').trim(),
-      echoes: lakeResults.all.slice(0, 4),
+      echoes: lakeResults.all.slice(0, 6),
       readyToExtract: parsed.readyToExtract === true,
     }
   } catch {
     // Fallback: treat raw as plain reply, no ready signal
     return {
       reply: raw.trim(),
-      echoes: lakeResults.all.slice(0, 4),
+      echoes: lakeResults.all.slice(0, 6),
       readyToExtract: false,
     }
   }
