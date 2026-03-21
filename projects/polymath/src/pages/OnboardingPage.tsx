@@ -15,11 +15,11 @@ import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
 import type { OnboardingAnalysis } from '../types'
 
 const PROMPTS = [
-  "What are you quietly working on that most people don't know about yet?",
-  "What skill have you been building — something you want to get genuinely good at?",
-  "What's a problem that keeps coming back to you, one you haven't fully solved?",
-  "What's the most interesting thing you've discovered recently — something you couldn't stop thinking about?",
-  "If you had a completely free month and no obligations, what would you make?",
+  "Tell me what you actually do — not the job title, but what you're building or solving day to day.",
+  "What's the last thing you made that you were genuinely proud of — could be code, writing, a design, even a great dinner.",
+  "What topic have you fallen down a rabbit hole on recently — something you keep reading or thinking about?",
+  "What's something you're quietly good at that most people who know you from work probably wouldn't guess?",
+  "What's an idea you keep coming back to — something you'd actually build if you had the time and the right people?",
 ]
 
 type Phase = 'prompts' | 'analyzing' | 'done'

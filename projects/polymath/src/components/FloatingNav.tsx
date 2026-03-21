@@ -6,7 +6,7 @@
 import React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Compass, Feather, Sprout, Archive } from 'lucide-react'
+import { Compass, Feather, Sprout, Library } from 'lucide-react'
 import { VoiceFAB } from './VoiceFAB'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useKeyboardVisible } from '../hooks/useKeyboardVisible'
@@ -40,7 +40,7 @@ const NAV_OPTIONS: NavOption[] = [
   { id: 'home',     label: 'Home',     icon: Compass, path: '/',         action: 'navigate', color: 'home' },
   { id: 'thoughts', label: 'Thoughts', icon: Feather, path: '/memories', action: 'navigate', color: 'thoughts' },
   { id: 'projects', label: 'Projects', icon: Sprout,  path: '/projects', action: 'navigate', color: 'projects' },
-  { id: 'lists',    label: 'Lists',    icon: Archive, path: '/lists',    action: 'navigate', color: 'lists' },
+  { id: 'lists',    label: 'Lists',    icon: Library, path: '/lists',    action: 'navigate', color: 'lists' },
 ]
 
 export function FloatingNav() {
