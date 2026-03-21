@@ -68,7 +68,6 @@ export function ProjectDetailPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'studio'>('overview')
 
   const [showEditDialog, setShowEditDialog] = useState(false)
-  const [isRefining, setIsRefining] = useState(false)
   const [showCompletionModal, setShowCompletionModal] = useState(false)
 
   // Chat panel state
@@ -674,6 +673,15 @@ export function ProjectDetailPage() {
               content={pinnedContent}
             />
             <button
+              onClick={() => setShowChat(true)}
+              className="h-10 w-10 flex items-center justify-center rounded-xl bg-[var(--glass-surface)] border border-white/10 transition-all hover:border-[var(--brand-primary)]/50"
+              style={{ color: "var(--brand-primary)" }}
+              aria-label="Chat with AI about this project"
+              title="Chat"
+            >
+              <MessageSquare className="h-5 w-5" />
+            </button>
+            <button
               onClick={() => setShowMenu(!showMenu)}
               className="h-10 w-10 flex items-center justify-center rounded-xl bg-[var(--glass-surface)] border border-white/10 transition-all"
               style={{ color: "var(--brand-primary)" }}
@@ -1029,45 +1037,6 @@ export function ProjectDetailPage() {
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--brand-text-primary)]/50">Execution Plan</span>
                     <div className="h-px bg-white/20 flex-grow" />
                   </div>
-
-                  <button
-                    onClick={async () => {
-                      if (!project) return
-                      setIsRefining(true)
-                      try {
-                        const token = (await supabase.auth.getSession()).data.session?.access_token
-                        // Trigger enrichment
-                        await fetch(`${import.meta.env.VITE_API_URL}/api/power-hour?projectId=${project.id}&enrich=true`, {
-                          headers: {
-                            'Authorization': `Bearer ${token}`
-                          }
-                        })
-
-                        // Refresh project data
-                        await loadProjectDetails() // Ensure we get the latest
-
-                        addToast({ title: 'Plan refined by AI', variant: 'default' })
-                      } catch (err) {
-                        console.error(err)
-                        addToast({ title: 'Refinement failed', variant: 'destructive' })
-                      } finally {
-                        setIsRefining(false)
-                      }
-                    }}
-                    disabled={isRefining}
-                    className="ml-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary border border-indigo-500/20 transition-all disabled:opacity-50"
-                  >
-                    {isRefining ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
-                    <span className="text-[10px] font-bold uppercase tracking-wider">Refine Plan</span>
-                  </button>
-
-                  <button
-                    onClick={() => setShowChat(true)}
-                    className="ml-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary border border-indigo-500/20 transition-all"
-                  >
-                    <MessageSquare className="h-3 w-3" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">Brainstorm</span>
-                  </button>
                 </div>
                 <TaskList
                   tasks={project.metadata?.tasks?.filter((task, index, self) =>
@@ -1260,6 +1229,13 @@ export function ProjectDetailPage() {
           project={project}
           recentCompletions={recentCompletions}
           onAddTask={handleChatAddTask}
+          onRefinePlan={async () => {
+            const token = (await supabase.auth.getSession()).data.session?.access_token
+            await fetch(`${import.meta.env.VITE_API_URL}/api/power-hour?projectId=${project.id}&enrich=true`, {
+              headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+            })
+            await loadProjectDetails()
+          }}
         />
       )}
     </div>
