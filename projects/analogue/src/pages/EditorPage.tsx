@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Bot,
+  History,
 } from 'lucide-react'
 import { useManuscriptStore } from '../stores/useManuscriptStore'
 import { useEditorStore } from '../stores/useEditorStore'
@@ -22,6 +23,7 @@ import { WordTagList } from '../components/WordTagList'
 import { TaggedProseView } from '../components/TaggedProseView'
 import AIAssistantDrawer from '../components/AIAssistantDrawer'
 import VoiceNoteButton from '../components/VoiceNoteButton'
+import { useProseHistoryStore } from '../stores/useProseHistoryStore'
 
 const AVAILABLE_TAGS = ['glasses', 'door', 'drift', 'postman', 'villager', 'identity', 'recovery', 'threshold', 'mask', 'anchor']
 
@@ -56,6 +58,8 @@ export default function EditorPage() {
     updateSessionWords,
   } = useEditorStore()
 
+  const proseHistory = useProseHistoryStore()
+
   const proseRef = useRef<HTMLTextAreaElement>(null)
   const footnoteRef = useRef<HTMLTextAreaElement>(null)
   const dragControls = useDragControls()
@@ -63,6 +67,7 @@ export default function EditorPage() {
   const [showExport, setShowExport] = useState(false)
   const [isReadMode, setIsReadMode] = useState(false)
   const [touchStart, setTouchStart] = useState<number | null>(null)
+  const [showHistory, setShowHistory] = useState(false)
 
   // Local state for immediate UI updates (prevents cursor jumping)
   const [localProse, setLocalProse] = useState<string>('')
@@ -404,6 +409,16 @@ export default function EditorPage() {
               +{sessionWordsAdded}
             </motion.span>
           )}
+          {/* Version history button — only when AI prose history exists for this scene */}
+          {sceneId && proseHistory.hasSnapshots(sceneId) && (
+            <button
+              onClick={() => setShowHistory(v => !v)}
+              className={`p-2 rounded-lg transition-colors ${showHistory ? 'bg-amber-600/20 text-amber-400' : 'text-ink-400'}`}
+              title="Version history"
+            >
+              <History className="w-5 h-5" />
+            </button>
+          )}
           {/* Voice note button */}
           <VoiceNoteButton ctx={aiContext} onInsert={handleVoiceInsert} />
           {/* AI button */}
@@ -418,6 +433,49 @@ export default function EditorPage() {
           </button>
         </div>
       </header>
+
+      {/* Prose version history restore sheet */}
+      <AnimatePresence>
+        {showHistory && sceneId && scene && manuscript && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+            className="overflow-hidden border-b border-amber-800/30 bg-amber-950/20 flex-shrink-0"
+          >
+            <div className="p-3">
+              <p className="text-xs text-amber-500/80 font-medium mb-2">
+                AI edit history — tap a version to restore
+              </p>
+              <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                {proseHistory.getSnapshots(sceneId).map((snap, i) => (
+                  <button
+                    key={i}
+                    onClick={async () => {
+                      await updateScene(sceneId, { prose: snap.prose })
+                      const display = applyMask(snap.prose, manuscript.protagonistRealName, manuscript.maskModeEnabled)
+                      setLocalProse(display)
+                      proseHistory.remove(sceneId, i)
+                    }}
+                    className="w-full text-left px-3 py-2 bg-ink-900 hover:bg-ink-800 rounded-lg transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-0.5">
+                      <span className="text-xs text-amber-500/70">{snap.trigger}</span>
+                      <span className="text-xs text-ink-600">
+                        {new Date(snap.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <p className="text-xs text-ink-400 truncate">
+                      {snap.prose.slice(0, 90)}{snap.prose.length > 90 ? '…' : ''}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Prose Pane */}
       <div
