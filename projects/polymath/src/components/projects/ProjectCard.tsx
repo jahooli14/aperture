@@ -91,7 +91,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
             style={{
               backgroundColor: `rgba(${theme.rgb}, 0.7)`
             }}
-            title="AI Analysis"
+            title="Show related memories & articles"
           >
           </button>
           {project.is_priority && (
