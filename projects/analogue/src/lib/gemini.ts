@@ -1,7 +1,6 @@
 import { GoogleGenAI } from '@google/genai'
 
 export const GEMINI_MODEL = 'gemini-3.1-flash-lite-preview'
-export const GEMINI_AUDIO_MODEL = 'gemini-3-flash-preview'
 
 export interface GeminiContext {
   manuscriptTitle: string
@@ -44,7 +43,7 @@ ${ctx.sceneBeat ? `Scene summary: ${ctx.sceneBeat}.` : ''}
 ${ctx.prose ? `Existing prose for context:\n---\n${ctx.prose.slice(0, 1000)}\n---` : ''}`
 
   const response = await ai.models.generateContent({
-    model: GEMINI_AUDIO_MODEL,
+    model: GEMINI_MODEL,
     contents: [
       {
         role: 'user',
