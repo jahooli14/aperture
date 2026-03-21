@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai'
 
 export const GEMINI_MODEL = 'gemini-3.1-flash-lite-preview'
+export const GEMINI_AUDIO_MODEL = 'gemini-2.0-flash'
 
 export interface GeminiContext {
   manuscriptTitle: string
@@ -25,6 +26,37 @@ ${proseSnippet || '(no prose written yet)'}
 Help the author make progress on their rewrite. Be direct, specific, and creative.
 Keep responses concise and actionable. Match the existing tone and voice.
 If suggesting rewrites, provide the actual rewritten text, not just advice.`
+}
+
+export async function transcribeVoiceNote(
+  apiKey: string,
+  audioBase64: string,
+  mimeType: string,
+  ctx: GeminiContext
+): Promise<string> {
+  const ai = new GoogleGenAI({ apiKey })
+
+  const prompt = `You are a writing assistant for a manuscript titled "${ctx.manuscriptTitle}" (section: ${ctx.sectionLabel}, scene: "${ctx.sceneTitle}").
+
+The author has recorded a voice note. Transcribe it accurately, then clean it up into polished prose that matches the manuscript's tone and voice. Remove filler words, false starts, and repetition. Format as ready-to-use prose paragraphs. Do not add any preamble or explanation — output only the cleaned prose.
+
+${ctx.sceneBeat ? `Scene summary: ${ctx.sceneBeat}.` : ''}
+${ctx.prose ? `Existing prose for context:\n---\n${ctx.prose.slice(0, 1000)}\n---` : ''}`
+
+  const response = await ai.models.generateContent({
+    model: GEMINI_AUDIO_MODEL,
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          { inlineData: { mimeType, data: audioBase64 } },
+          { text: prompt }
+        ]
+      }
+    ]
+  })
+
+  return response.text ?? ''
 }
 
 export async function generateResponse(
