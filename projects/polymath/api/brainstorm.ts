@@ -156,6 +156,7 @@ Rules for your reply:
 - If nothing connects, say nothing about the lake.
 - At most one question. Often none is better.
 - Write like a person, not software.
+- When they mention something specific — a name, a domain, a particular problem — reflect it back with precision, not generality. "You mentioned X" beats "that area of work". Show you heard the specific thing.
 ${contextBlock ? `\n${contextBlock}\n` : ''}
 ${priorTurns ? `\nCONVERSATION SO FAR:\n${priorTurns}\n` : ''}
 USER: ${message}
