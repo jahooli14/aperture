@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Send, Trash2, CheckCircle2, XCircle, Bot, ChevronsRight } from 'lucide-react'
 import { useStructuralAIStore } from '../stores/useStructuralAIStore'
 import { useManuscriptStore } from '../stores/useManuscriptStore'
+import { useProseHistoryStore } from '../stores/useProseHistoryStore'
 import type { StructuralContext, StructuralAction } from '../lib/gemini'
 import type { NarrativeSection } from '../types/manuscript'
 
@@ -113,6 +114,10 @@ export default function StructuralChatbot({ onClose }: Props) {
     }
 
     if (action.type === 'edit_prose') {
+      const existing = manuscript.scenes.find(s => s.id === action.sceneId)
+      if (existing?.prose) {
+        useProseHistoryStore.getState().snapshot(action.sceneId, existing.prose, 'structural edit')
+      }
       await updateScene(action.sceneId, { prose: action.newProse })
     }
 
