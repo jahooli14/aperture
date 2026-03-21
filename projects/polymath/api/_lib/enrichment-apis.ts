@@ -174,9 +174,13 @@ export async function enrichFilm(title: string): Promise<EnrichmentMetadata | nu
             ? (data.Writer && data.Writer !== 'N/A' ? `Creator: ${data.Writer.split(',')[0]}` : `${data.Year}`)
             : (data.Director && data.Director !== 'N/A' ? `Director: ${data.Director}` : `${data.Year}`)
 
+        // Upgrade http:// → https:// to avoid mixed-content blocking on the HTTPS frontend
+        const toHttps = (url?: string) => url ? url.replace(/^http:\/\//, 'https://') : undefined
+        const poster = data.Poster !== 'N/A' ? toHttps(data.Poster) : undefined
+
         const metadata: EnrichmentMetadata = {
-            image: data.Poster !== 'N/A' ? data.Poster : undefined,
-            thumbnail: data.Poster !== 'N/A' ? data.Poster : undefined,
+            image: poster,
+            thumbnail: poster,
             subtitle,
             description: data.Plot && data.Plot !== 'N/A' ? extractBriefDescription(data.Plot) : undefined,
             tags: data.Genre ? data.Genre.split(', ').slice(0, 3) : [],
