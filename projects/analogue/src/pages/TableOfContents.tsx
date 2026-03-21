@@ -18,10 +18,14 @@ import {
   ChevronRight,
   MoreVertical,
   X,
-  Tag
+  Tag,
+  Bot,
+  BookMarked
 } from 'lucide-react'
 import { useManuscriptStore } from '../stores/useManuscriptStore'
 import type { NarrativeSection, ValidationStatus, SceneNode } from '../types/manuscript'
+import StructuralChatbot from '../components/StructuralChatbot'
+import VersionsPanel from '../components/VersionsPanel'
 
 const SECTIONS: { id: NarrativeSection; label: string; icon: typeof Eye }[] = [
   { id: 'departure', label: 'Departure', icon: Eye },
@@ -53,6 +57,8 @@ export default function TableOfContents() {
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set())
   const [editingChapterTheme, setEditingChapterTheme] = useState<string | null>(null)
   const [chapterThemeText, setChapterThemeText] = useState('')
+  const [showStructuralChatbot, setShowStructuralChatbot] = useState(false)
+  const [showVersionsPanel, setShowVersionsPanel] = useState(false)
 
   // Redirect if no manuscript after a brief delay (allows for store hydration)
   useEffect(() => {
@@ -212,17 +218,33 @@ export default function TableOfContents() {
           </p>
         </div>
 
-        <button
-          onClick={() => toggleMaskMode()}
-          className="p-2 -mr-2"
-          title={manuscript.maskModeEnabled ? 'Unmask YYYY' : 'Mask protagonist'}
-        >
-          {manuscript.maskModeEnabled ? (
-            <EyeOff className="w-5 h-5 text-section-departure" />
-          ) : (
-            <Eye className="w-5 h-5 text-ink-400" />
-          )}
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setShowVersionsPanel(true)}
+            className="p-2"
+            title="Versions"
+          >
+            <BookMarked className="w-5 h-5 text-ink-400" />
+          </button>
+          <button
+            onClick={() => setShowStructuralChatbot(true)}
+            className="p-2"
+            title="Structure editor"
+          >
+            <Bot className="w-5 h-5 text-ink-400" />
+          </button>
+          <button
+            onClick={() => toggleMaskMode()}
+            className="p-2 -mr-2"
+            title={manuscript.maskModeEnabled ? 'Unmask YYYY' : 'Mask protagonist'}
+          >
+            {manuscript.maskModeEnabled ? (
+              <EyeOff className="w-5 h-5 text-section-departure" />
+            ) : (
+              <Eye className="w-5 h-5 text-ink-400" />
+            )}
+          </button>
+        </div>
       </header>
 
       {/* Quick actions */}
@@ -623,6 +645,20 @@ export default function TableOfContents() {
           </div>
         ))}
       </div>
+
+      {/* Structural Chatbot */}
+      <AnimatePresence>
+        {showStructuralChatbot && (
+          <StructuralChatbot onClose={() => setShowStructuralChatbot(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* Versions Panel */}
+      <AnimatePresence>
+        {showVersionsPanel && (
+          <VersionsPanel onClose={() => setShowVersionsPanel(false)} />
+        )}
+      </AnimatePresence>
 
       {/* Delete Confirmation Modal */}
       <AnimatePresence>
