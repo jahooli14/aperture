@@ -322,10 +322,17 @@ Return JSON only:
 // ─── Mode: project-chat ───────────────────────────────────────────────────────
 
 interface ProjectTask {
+  id: string
   text: string
   done: boolean
   is_ai_suggested?: boolean
   task_type?: 'ignition' | 'core' | 'shutdown'
+}
+
+interface TaskOp {
+  action: 'complete' | 'uncomplete' | 'delete' | 'edit'
+  taskId: string
+  newText?: string
 }
 
 interface PowerHourSuggestion {
@@ -393,7 +400,7 @@ async function handleProjectChat(
     history?: ConversationMessage[]
   },
   userId: string
-): Promise<{ reply: string; suggestedTasks: SuggestedTask[]; echoes: EchoItem[] }> {
+): Promise<{ reply: string; suggestedTasks: SuggestedTask[]; taskOps: TaskOp[]; echoes: EchoItem[] }> {
   const {
     projectId,
     projectTitle,
@@ -416,11 +423,11 @@ async function handleProjectChat(
   const recentlyCompleted = tasks.filter(t => t.done).slice(-5)
 
   const taskBlock = pendingTasks.length > 0
-    ? `PENDING TASKS (${pendingTasks.length}):\n${pendingTasks.map((t, i) => `${i + 1}. ${t.text}${t.is_ai_suggested ? ' [AI suggested]' : ''}`).join('\n')}`
+    ? `PENDING TASKS (${pendingTasks.length}):\n${pendingTasks.map((t, i) => `${i + 1}. [id:${t.id}] ${t.text}${t.is_ai_suggested ? ' [AI suggested]' : ''}`).join('\n')}`
     : 'PENDING TASKS: none'
 
   const completedBlock = recentlyCompleted.length > 0
-    ? `\nRECENTLY COMPLETED:\n${recentlyCompleted.map(t => `✓ ${t.text}`).join('\n')}`
+    ? `\nRECENTLY COMPLETED:\n${recentlyCompleted.map(t => `✓ [id:${t.id}] ${t.text}`).join('\n')}`
     : ''
 
   const powerHourBlock = powerHourSuggestions.length > 0
@@ -459,6 +466,7 @@ Rules:
 - If you suggest tasks, put them in the suggestedTasks array. Don't list tasks in your reply text if you're returning them structured.
 - At most one question. Often none is better.
 - Write like a person, not software.
+- If the user asks to mark a task done, delete a task, or edit a task text, return the operation in taskOps referencing the task's id shown in the task list above.
 ${priorTurns ? `\nCONVERSATION SO FAR:\n${priorTurns}\n` : ''}
 USER: ${message}
 
@@ -472,25 +480,34 @@ Return JSON only:
       "estimated_minutes": 15,
       "reasoning": "one sentence on why this task"
     }
+  ],
+  "taskOps": [
+    {
+      "action": "complete" | "uncomplete" | "delete" | "edit",
+      "taskId": "the task id from the list",
+      "newText": "only for edit action"
+    }
   ]
 }
 
-Only include suggestedTasks if you're genuinely recommending specific tasks to add to their list. Leave it empty [] if you're just having a conversation. task_type: ignition = breaks inertia (setup, small starts), core = main work, shutdown = wraps up session.`
+Only include suggestedTasks if you're genuinely recommending new tasks to add. Only include taskOps if the user explicitly asked to modify existing tasks. Leave both as [] otherwise. task_type: ignition = breaks inertia (setup, small starts), core = main work, shutdown = wraps up session.`
 
   const raw = await generateText(prompt, { temperature: 0.72, maxTokens: 400, responseFormat: 'json' })
 
   let reply = ''
   let suggestedTasks: SuggestedTask[] = []
+  let taskOps: TaskOp[] = []
 
   try {
     const parsed = JSON.parse(raw)
     reply = (parsed.reply || '').trim()
     suggestedTasks = Array.isArray(parsed.suggestedTasks) ? parsed.suggestedTasks : []
+    taskOps = Array.isArray(parsed.taskOps) ? parsed.taskOps : []
   } catch {
     reply = raw.trim()
   }
 
-  return { reply, suggestedTasks, echoes }
+  return { reply, suggestedTasks, taskOps, echoes }
 }
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
