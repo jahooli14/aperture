@@ -15,10 +15,10 @@ import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
 import type { OnboardingAnalysis } from '../types'
 
 const PROMPTS = [
-  "Tell me what you actually do — not the job title, but what you're building or solving day to day.",
-  "What's the last thing you made that you were genuinely proud of — could be code, writing, a design, even a great dinner.",
+  "What's been keeping your brain busy lately? Tell me about something you're actually in the middle of.",
+  "What's something you made or figured out recently that felt satisfying — doesn't matter how big or small.",
   "What topic have you fallen down a rabbit hole on recently — something you keep reading or thinking about?",
-  "What's something you're quietly good at that most people who know you from work probably wouldn't guess?",
+  "What's something you can do well that tends to surprise people who mainly know you through work?",
   "What's an idea you keep coming back to — something you'd actually build if you had the time and the right people?",
 ]
 
