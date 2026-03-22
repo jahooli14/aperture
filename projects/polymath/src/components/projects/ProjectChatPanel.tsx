@@ -219,6 +219,16 @@ export function ProjectChatPanel({
 
       const data = await res.json()
 
+      if (!res.ok) {
+        const errorMsg = data?.error || `Server error ${res.status}`
+        console.error('[ProjectChat] Server error:', errorMsg)
+        setMessages(prev => [
+          ...prev,
+          { kind: 'model', content: `Error: ${errorMsg}` },
+        ])
+        return
+      }
+
       // Apply task operations returned by AI
       if (data.taskOps?.length && onUpdateTasks) {
         const currentTasks: Task[] = (project.metadata?.tasks as Task[] | undefined) || []
@@ -268,10 +278,12 @@ export function ProjectChatPanel({
           echoes: data.echoes || [],
         },
       ])
-    } catch {
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : 'Network error'
+      console.error('[ProjectChat] Fetch error:', errMsg)
       setMessages(prev => [
         ...prev,
-        { kind: 'model', content: "Couldn't reach the server — try again." },
+        { kind: 'model', content: `Couldn't reach the server — ${errMsg}` },
       ])
     } finally {
       setThinking(false)
@@ -324,8 +336,17 @@ export function ProjectChatPanel({
             history: [],
           }),
         })
-          .then(res => res.json())
-          .then(data => {
+          .then(async res => {
+            const data = await res.json()
+            if (!res.ok) {
+              const errorMsg = data?.error || `Server error ${res.status}`
+              console.error('[ProjectChat] Server error:', errorMsg)
+              setMessages(prev => [
+                ...prev,
+                { kind: 'model', content: `Error: ${errorMsg}` },
+              ])
+              return
+            }
             setMessages(prev => [
               ...prev,
               {
@@ -336,10 +357,12 @@ export function ProjectChatPanel({
               },
             ])
           })
-          .catch(() => {
+          .catch((err: unknown) => {
+            const errMsg = err instanceof Error ? err.message : 'Network error'
+            console.error('[ProjectChat] Fetch error:', errMsg)
             setMessages(prev => [
               ...prev,
-              { kind: 'model', content: "Couldn't reach the server — try again." },
+              { kind: 'model', content: `Couldn't reach the server — ${errMsg}` },
             ])
           })
           .finally(() => setThinking(false))
