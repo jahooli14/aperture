@@ -51,6 +51,12 @@ interface PowerHourSuggestion {
   task_description?: string
 }
 
+interface TaskOp {
+  action: 'complete' | 'uncomplete' | 'delete' | 'edit'
+  taskId: string
+  newText?: string
+}
+
 interface ProjectChatPanelProps {
   isOpen: boolean
   onClose: () => void
@@ -62,6 +68,7 @@ interface ProjectChatPanelProps {
     estimated_minutes?: number
     reasoning?: string
   }) => void
+  onUpdateTasks?: (tasks: Task[]) => Promise<void>
   onRefinePlan?: () => Promise<void>
 }
 
@@ -114,6 +121,7 @@ export function ProjectChatPanel({
   project,
   recentCompletions,
   onAddTask,
+  onUpdateTasks,
   onRefinePlan,
 }: ProjectChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -195,6 +203,7 @@ export function ProjectChatPanel({
           projectMotivation: project.metadata?.motivation,
           projectGoal: project.metadata?.end_goal,
           tasks: tasks.map(t => ({
+            id: t.id,
             text: t.text,
             done: t.done,
             is_ai_suggested: t.is_ai_suggested,
@@ -207,6 +216,46 @@ export function ProjectChatPanel({
       })
 
       const data = await res.json()
+
+      // Apply task operations returned by AI
+      if (data.taskOps?.length && onUpdateTasks) {
+        const currentTasks: Task[] = (project.metadata?.tasks as Task[] | undefined) || []
+        let updatedTasks = [...currentTasks]
+        const opSummaries: string[] = []
+
+        for (const op of data.taskOps as TaskOp[]) {
+          if (op.action === 'complete') {
+            updatedTasks = updatedTasks.map(t =>
+              t.id === op.taskId ? { ...t, done: true, completed_at: new Date().toISOString() } : t
+            )
+            const task = currentTasks.find(t => t.id === op.taskId)
+            if (task) opSummaries.push(`✓ Marked done: "${task.text}"`)
+          } else if (op.action === 'uncomplete') {
+            updatedTasks = updatedTasks.map(t =>
+              t.id === op.taskId ? { ...t, done: false, completed_at: undefined } : t
+            )
+            const task = currentTasks.find(t => t.id === op.taskId)
+            if (task) opSummaries.push(`↩ Reopened: "${task.text}"`)
+          } else if (op.action === 'delete') {
+            const task = currentTasks.find(t => t.id === op.taskId)
+            updatedTasks = updatedTasks.filter(t => t.id !== op.taskId)
+            if (task) opSummaries.push(`✕ Deleted: "${task.text}"`)
+          } else if (op.action === 'edit' && op.newText) {
+            const task = currentTasks.find(t => t.id === op.taskId)
+            updatedTasks = updatedTasks.map(t =>
+              t.id === op.taskId ? { ...t, text: op.newText! } : t
+            )
+            if (task) opSummaries.push(`✎ Updated: "${task.text}" → "${op.newText}"`)
+          }
+        }
+
+        await onUpdateTasks(updatedTasks)
+
+        // Inject system messages for each operation
+        for (const summary of opSummaries) {
+          setMessages(prev => [...prev, { kind: 'system', content: summary }])
+        }
+      }
 
       setMessages(prev => [
         ...prev,
@@ -262,6 +311,7 @@ export function ProjectChatPanel({
             projectMotivation: project.metadata?.motivation,
             projectGoal: project.metadata?.end_goal,
             tasks: tasks.map(t => ({
+              id: t.id,
               text: t.text,
               done: t.done,
               is_ai_suggested: t.is_ai_suggested,
