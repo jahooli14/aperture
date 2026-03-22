@@ -492,7 +492,7 @@ Return JSON only:
 
 Only include suggestedTasks if you're genuinely recommending new tasks to add. Only include taskOps if the user explicitly asked to modify existing tasks. Leave both as [] otherwise. task_type: ignition = breaks inertia (setup, small starts), core = main work, shutdown = wraps up session.`
 
-  const raw = await generateText(prompt, { temperature: 0.72, maxTokens: 400, responseFormat: 'json' })
+  const raw = await generateText(prompt, { temperature: 0.72, maxTokens: 600, responseFormat: 'json' })
 
   let reply = ''
   let suggestedTasks: SuggestedTask[] = []

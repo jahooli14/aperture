@@ -34,6 +34,11 @@
       ]
     }
   ],
+  "functions": {
+    "api/brainstorm.ts": {
+      "maxDuration": 30
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/jobs?job=daily",
