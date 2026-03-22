@@ -15,7 +15,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react'
-import { ArrowUp, Plus, Check, Zap, Flag } from 'lucide-react'
+import { ArrowUp, Plus, Check, Zap, Flag, ListTodo } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   BottomSheet,
@@ -129,6 +129,7 @@ export function ProjectChatPanel({
   const [thinking, setThinking] = useState(false)
   const [addedTasks, setAddedTasks] = useState<Set<string>>(new Set())
   const [isRefining, setIsRefining] = useState(false)
+  const [contextTab, setContextTab] = useState<'goal' | 'steps'>('goal')
   const threadRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -150,6 +151,7 @@ export function ProjectChatPanel({
     setMessages(opening)
     setAddedTasks(new Set())
     setInput('')
+    setContextTab('goal')
 
     // Focus input after animation settles
     setTimeout(() => inputRef.current?.focus(), 350)
@@ -385,45 +387,119 @@ export function ProjectChatPanel({
           className="flex-1 overflow-y-auto px-6 space-y-5 pb-4 scroll-minimal"
           style={{ minHeight: 0 }}
         >
-          {/* Finish line — zooms in on open so the goal is front of mind */}
-          <motion.div
-            initial={{ scale: 0.88, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-            className="rounded-2xl px-5 py-5 mb-1"
-            style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.07)',
-            }}
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <Flag
-                className="h-3 w-3 flex-shrink-0"
-                style={{ color: 'var(--brand-primary)', opacity: 0.5 }}
-              />
-              <span
-                className="text-[10px] font-bold uppercase tracking-[0.18em]"
-                style={{ color: 'var(--brand-primary)', opacity: 0.45 }}
+          {/* Context card — zooms in on open, toggles between goal and next steps */}
+          {(() => {
+            const incompleteTasks = ((project.metadata?.tasks as Task[] | undefined) || [])
+              .filter(t => !t.done)
+              .slice(0, 5)
+
+            return (
+              <motion.div
+                initial={{ scale: 0.88, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+                className="rounded-2xl px-4 pt-3 pb-4 mb-1"
+                style={{
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.07)',
+                }}
               >
-                finish line
-              </span>
-            </div>
-            {project.metadata?.end_goal ? (
-              <p
-                className="text-[17px] leading-snug font-medium"
-                style={{ color: 'var(--brand-text-primary)', opacity: 0.85 }}
-              >
-                {project.metadata.end_goal}
-              </p>
-            ) : (
-              <p
-                className="text-[15px] leading-snug italic"
-                style={{ color: 'var(--brand-text-secondary)', opacity: 0.35 }}
-              >
-                No finish line set — what does done look like for {project.title}?
-              </p>
-            )}
-          </motion.div>
+                {/* Toggle */}
+                <div
+                  className="flex gap-1 mb-3 p-0.5 rounded-lg self-start w-fit"
+                  style={{ background: 'rgba(255,255,255,0.05)' }}
+                >
+                  {([
+                    { id: 'goal', icon: Flag, label: 'Goal' },
+                    { id: 'steps', icon: ListTodo, label: 'Steps' },
+                  ] as const).map(({ id, icon: Icon, label }) => (
+                    <button
+                      key={id}
+                      onClick={() => setContextTab(id)}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-all"
+                      style={{
+                        background: contextTab === id ? 'rgba(255,255,255,0.09)' : 'transparent',
+                        color: contextTab === id ? 'var(--brand-text-primary)' : 'var(--brand-text-secondary)',
+                        opacity: contextTab === id ? 1 : 0.4,
+                      }}
+                    >
+                      <Icon className="h-3 w-3" />
+                      <span className="text-[11px] font-medium">{label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Goal view */}
+                {contextTab === 'goal' && (
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key="goal"
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      {project.metadata?.end_goal ? (
+                        <p
+                          className="text-[16px] leading-snug font-medium"
+                          style={{ color: 'var(--brand-text-primary)', opacity: 0.85 }}
+                        >
+                          {project.metadata.end_goal}
+                        </p>
+                      ) : (
+                        <p
+                          className="text-[14px] leading-snug italic"
+                          style={{ color: 'var(--brand-text-secondary)', opacity: 0.35 }}
+                        >
+                          No finish line set yet — what does done look like?
+                        </p>
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
+                )}
+
+                {/* Steps view */}
+                {contextTab === 'steps' && (
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key="steps"
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={{ duration: 0.15 }}
+                      className="space-y-2"
+                    >
+                      {incompleteTasks.length > 0 ? (
+                        incompleteTasks.map((task, i) => (
+                          <div key={task.id} className="flex items-start gap-2.5">
+                            <span
+                              className="text-[11px] tabular-nums mt-0.5 flex-shrink-0"
+                              style={{ color: 'var(--brand-text-secondary)', opacity: 0.3 }}
+                            >
+                              {i + 1}
+                            </span>
+                            <p
+                              className="text-[14px] leading-snug"
+                              style={{ color: 'var(--brand-text-primary)', opacity: 0.8 }}
+                            >
+                              {task.text}
+                            </p>
+                          </div>
+                        ))
+                      ) : (
+                        <p
+                          className="text-[14px] leading-snug italic"
+                          style={{ color: 'var(--brand-text-secondary)', opacity: 0.35 }}
+                        >
+                          No tasks yet — ask me to suggest some.
+                        </p>
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
+                )}
+              </motion.div>
+            )
+          })()}
 
           {messages.length === 0 && (
             <div className="pt-2 space-y-4">
