@@ -6,7 +6,7 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Loader2, MoreVertical, Plus, Check, X, GripVertical, ChevronDown, Zap, Target, Star, Sprout, MessageSquare } from 'lucide-react'
+import { Loader2, MoreVertical, Plus, Check, X, GripVertical, ChevronDown, Zap, Target, Star, Sprout, Pin, PinOff } from 'lucide-react'
 import { StudioTab } from '../components/projects/StudioTab'
 import { MarkdownRenderer } from '../components/ui/MarkdownRenderer'
 import { useProjectStore } from '../stores/useProjectStore'
@@ -15,8 +15,6 @@ import { ProjectActivityStream } from '../components/projects/ProjectActivityStr
 import { AddNoteDialog } from '../components/projects/AddNoteDialog'
 import { TaskList, type Task } from '../components/projects/TaskList'
 import { PinnedTaskList } from '../components/projects/PinnedTaskList'
-import { ConnectionsList } from '../components/connections/ConnectionsList'
-import { CreateConnectionDialog } from '../components/connections/CreateConnectionDialog'
 import { ConnectionSuggestion } from '../components/ConnectionSuggestion'
 import { PinButton } from '../components/PinButton'
 import { Button } from '../components/ui/button'
@@ -30,6 +28,7 @@ import { MultiPerspectiveSuggestions } from '../components/suggestions/MultiPers
 import type { Project, Memory } from '../types'
 import { supabase } from '../lib/supabase'
 import { useMemoryStore } from '../stores/useMemoryStore'
+import { usePin } from '../contexts/PinContext'
 
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { SubtleBackground } from '../components/SubtleBackground'
@@ -50,6 +49,7 @@ export function ProjectDetailPage() {
 
   const { projects, fetchProjects, deleteProject, updateProject, syncProject, setPriority } = useProjectStore()
   const { setContext, clearContext } = useContextEngineStore()
+  const { pinnedItem, pinItem, unpinItem } = usePin()
 
   // Reactive selection from store
   const project = useProjectStore(state => state.allProjects.find(p => p.id === id))
@@ -584,6 +584,27 @@ export function ProjectDetailPage() {
     // debounced enrichment fires automatically via aiEnrichmentManager
   }
 
+  const handleChatUpdateTasks = async (updatedTasks: Task[]) => {
+    if (!project) return
+    const now = new Date().toISOString()
+    const newlyCompleted = updatedTasks.filter(
+      t => t.done && !prevTasksRef.current.find(p => p.id === t.id && p.done)
+    )
+    if (newlyCompleted.length > 0) {
+      setRecentCompletions(prev => [...prev, ...newlyCompleted.map(t => t.text)])
+    }
+    prevTasksRef.current = updatedTasks.map(t => ({ id: t.id, done: t.done }))
+    await updateProject(project.id, {
+      metadata: {
+        ...project.metadata,
+        tasks: updatedTasks,
+        progress: Math.round((updatedTasks.filter(t => t.done).length / updatedTasks.length) * 100) || 0,
+      },
+      last_active: now,
+      updated_at: now,
+    })
+  }
+
   // Calculate these before ANY early returns to avoid hooks order violation
   const progress = project?.metadata?.progress || 0
   const tasks = project?.metadata?.tasks || []
@@ -635,35 +656,34 @@ export function ProjectDetailPage() {
     <div className="min-h-screen pb-24 relative" style={{ backgroundColor: 'var(--brand-bg)' }}>
       <SubtleBackground />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-10 pb-6 flex flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="flex items-start justify-between">
+          <div className="flex-1 min-w-0">
+            {/* Breadcrumb */}
             <button
               onClick={() => navigate('/projects')}
-              className="h-12 w-12 flex items-center justify-center rounded-xl bg-[var(--glass-surface)] border border-white/10 transition-all hover:scale-105"
-              style={{ color: "var(--brand-primary)" }}
-              aria-label="Back to projects"
+              className="text-[10px] font-black uppercase tracking-widest opacity-40 hover:opacity-70 transition-opacity mb-2 flex items-center gap-1"
+              style={{ color: 'var(--brand-primary)' }}
             >
-              <ArrowLeft className="h-6 w-6" />
+              ← Projects
             </button>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="px-2 py-0.5 rounded-md bg-brand-primary/10 border border-brand-primary/20 text-[10px] font-black uppercase tracking-widest text-brand-primary">
-                  Project Detail
+            <div className="flex items-center gap-2 mb-1">
+              <span className="px-2 py-0.5 rounded-md bg-brand-primary/10 border border-brand-primary/20 text-[10px] font-black uppercase tracking-widest text-brand-primary">
+                Project Detail
+              </span>
+              {project.is_priority && (
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-[10px] font-black uppercase tracking-widest text-amber-500">
+                  <Star className="h-2.5 w-2.5 fill-current" />
+                  Priority
                 </span>
-                {project.is_priority && (
-                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-[10px] font-black uppercase tracking-widest text-amber-500">
-                    <Star className="h-2.5 w-2.5 fill-current" />
-                    Priority
-                  </span>
-                )}
-              </div>
-              <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] leading-none">
-                {project.title}
-              </h1>
+              )}
             </div>
+            <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] leading-none">
+              {project.title}
+            </h1>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Hidden PinButton to preserve useEffect content sync */}
+          <div className="hidden">
             <PinButton
               type="project"
               id={project.id}
@@ -672,15 +692,9 @@ export function ProjectDetailPage() {
               contentVersion={tasks.length}
               content={pinnedContent}
             />
-            <button
-              onClick={() => setShowChat(true)}
-              className="h-10 w-10 flex items-center justify-center rounded-xl bg-[var(--glass-surface)] border border-white/10 transition-all hover:border-[var(--brand-primary)]/50"
-              style={{ color: "var(--brand-primary)" }}
-              aria-label="Chat with AI about this project"
-              title="Chat"
-            >
-              <MessageSquare className="h-5 w-5" />
-            </button>
+          </div>
+
+          <div className="relative flex items-center gap-2 flex-shrink-0 ml-3">
             <button
               onClick={() => setShowMenu(!showMenu)}
               className="h-10 w-10 flex items-center justify-center rounded-xl bg-[var(--glass-surface)] border border-white/10 transition-all"
@@ -696,7 +710,7 @@ export function ProjectDetailPage() {
                   className="fixed inset-0 z-50"
                   onClick={() => setShowMenu(false)}
                 />
-                <div className="absolute right-0 top-full mt-2 w-48 rounded-xl p-1 z-[60] premium-glass border border-white/10 shadow-2xl">
+                <div className="absolute right-0 top-full mt-2 w-52 rounded-xl p-1 z-[60] premium-glass border border-white/10 shadow-2xl">
                   <button
                     onClick={() => {
                       setShowMenu(false)
@@ -706,6 +720,25 @@ export function ProjectDetailPage() {
                     style={{ color: "var(--brand-primary)" }}
                   >
                     Edit Details
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowMenu(false)
+                      const isThisPinned = pinnedItem !== null && (pinnedItem.id === project.id || pinnedItem.id === id)
+                      if (isThisPinned) {
+                        unpinItem()
+                      } else {
+                        pinItem({ type: 'project', id: project.id, title: project.title, content: pinnedContent })
+                      }
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm font-bold uppercase tracking-wide transition-colors hover:bg-white/5 rounded-lg flex items-center gap-2"
+                    style={{ color: "var(--brand-primary)" }}
+                  >
+                    {pinnedItem?.id === project.id ? (
+                      <><PinOff className="h-3.5 w-3.5" /> Unpin</>
+                    ) : (
+                      <><Pin className="h-3.5 w-3.5" /> Pin to Compare</>
+                    )}
                   </button>
                   <button
                     onClick={() => {
@@ -723,28 +756,46 @@ export function ProjectDetailPage() {
         </div>
 
         {/* Status & Meta Bar */}
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--glass-surface)] border border-white/5">
-            <Target className="h-3.5 w-3.5 text-brand-primary" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-brand-primary">{project.status}</span>
+        <div className="flex flex-wrap items-center gap-3 relative">
+          {/* Status dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowStatusMenu(!showStatusMenu)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--glass-surface)] border border-white/5 transition-all hover:border-brand-primary/30"
+            >
+              <Target className="h-3.5 w-3.5 text-brand-primary" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-brand-primary">{project.status}</span>
+              <ChevronDown className="h-3 w-3 text-brand-primary opacity-60" />
+            </button>
+            {showStatusMenu && (
+              <>
+                <div className="fixed inset-0 z-50" onClick={() => setShowStatusMenu(false)} />
+                <div className="absolute left-0 top-full mt-1.5 w-44 rounded-xl p-1 z-[60] premium-glass border border-white/10 shadow-2xl">
+                  {(['active', 'next', 'dormant', 'completed', 'graveyard'] as Project['status'][]).map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => {
+                        setShowStatusMenu(false)
+                        handleStatusChange(s)
+                      }}
+                      className={`w-full px-3 py-2 text-left text-[10px] font-black uppercase tracking-widest rounded-lg transition-colors ${
+                        project.status === s
+                          ? 'bg-brand-primary/10 text-brand-primary'
+                          : 'hover:bg-white/5 text-brand-text-secondary'
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
+          {/* Type badge */}
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--glass-surface)] border border-white/5">
             <span className="text-[10px] font-black uppercase tracking-widest text-brand-text-muted">{project.type || 'Uncategorized'}</span>
           </div>
-
-          <div className="flex-1" />
-
-          <button
-            onClick={() => handleStatusChange(project.status === 'completed' ? 'active' : 'completed')}
-            className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
-              project.status === 'completed'
-                ? 'bg-brand-primary/10 border-brand-primary/30 text-brand-primary'
-                : 'bg-white/5 border-white/10 text-brand-text-secondary hover:border-brand-primary/50'
-            }`}
-          >
-            {project.status === 'completed' ? 'Mark Active' : 'Mark Done'}
-          </button>
         </div>
       </div>
 
@@ -956,20 +1007,6 @@ export function ProjectDetailPage() {
                 )}
               </div>
 
-              {/* Connected Ideas — surfaces AI-linked memories, articles, and list items */}
-              <div className="mt-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="h-px bg-[var(--glass-surface)] flex-1" />
-                  <span className="text-[9px] font-black uppercase tracking-[0.35em] text-[var(--brand-text-primary)]/30">Connected</span>
-                  <div className="h-px bg-[var(--glass-surface)] flex-1" />
-                </div>
-                <ConnectionsList
-                  itemType="project"
-                  itemId={id || ''}
-                  content={[project.title, project.description].filter(Boolean).join('. ')}
-                />
-              </div>
-
               {/* The Finish Line (Definition of Done) */}
               <div className="grid gap-3 mt-6">
                 <div
@@ -1113,14 +1150,14 @@ export function ProjectDetailPage() {
                 </details>
               )}
 
-              {/* Activity */}
-              <div className="mt-12">
+              {/* Activity — decision log + completed tasks */}
+              <div className="mt-12 pb-32">
                 <div className="flex items-center justify-between mb-6">
                   <h3
                     className="text-[11px] font-black uppercase tracking-widest"
                     style={{ color: 'rgba(255,255,255,0.3)' }}
                   >
-                    Activity
+                    Log
                   </h3>
                   <button
                     onClick={() => setShowAddNote(true)}
@@ -1132,19 +1169,24 @@ export function ProjectDetailPage() {
                     }}
                   >
                     <Plus className="h-3 w-3" />
-                    Add Update
+                    Add Note
                   </button>
                 </div>
                 <ProjectActivityStream
-                  notes={[...notes, ...projectMemories.map(m => ({
-                    id: m.id,
-                    project_id: id || '',
-                    user_id: '',
-                    bullets: m.body.split('\n').filter(l => l.trim().length > 0).map(l => l.replace(/^[-]\s*/, '')),
-                    created_at: m.created_at,
-                    note_type: (m.memory_type === 'quick-note' ? 'text' : 'voice') as 'text' | 'voice',
-                    image_urls: m.image_urls || undefined
-                  }))].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())}
+                  notes={[
+                    ...notes,
+                    // Completed tasks appear as log entries
+                    ...(project.metadata?.tasks || [])
+                      .filter((t: Task) => t.done && t.completed_at)
+                      .map((t: Task) => ({
+                        id: `task-done-${t.id}`,
+                        project_id: id || '',
+                        user_id: '',
+                        bullets: [`✓ ${t.text}`],
+                        created_at: t.completed_at!,
+                        note_type: 'task' as 'text' | 'voice',
+                      }))
+                  ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())}
                   onRefresh={loadProjectDetails}
                 />
               </div>
@@ -1163,22 +1205,42 @@ export function ProjectDetailPage() {
         </AnimatePresence>
       </div>
 
+      {/* Project Guide — Prominent floating bar */}
+      <div className="fixed bottom-20 left-4 right-4 z-30 max-w-2xl mx-auto">
+        <button
+          onClick={() => setShowChat(true)}
+          className="w-full flex items-center gap-3 px-5 py-4 rounded-2xl transition-all active:scale-[0.98] group"
+          style={{
+            background: 'linear-gradient(135deg, rgba(59,130,246,0.15) 0%, rgba(99,102,241,0.1) 100%)',
+            border: '1.5px solid rgba(59,130,246,0.35)',
+            boxShadow: '0 0 24px rgba(59,130,246,0.12), 0 4px 16px rgba(0,0,0,0.4)',
+            backdropFilter: 'blur(12px)',
+          }}
+        >
+          <div
+            className="h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform"
+            style={{ background: 'rgba(59,130,246,0.2)', border: '1px solid rgba(59,130,246,0.3)' }}
+          >
+            <Zap className="h-4.5 w-4.5" style={{ color: 'var(--brand-primary)' }} />
+          </div>
+          <div className="flex-1 text-left min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-brand-primary opacity-70">Your Project Guide</p>
+            <p className="text-sm font-medium text-[var(--brand-text-primary)] opacity-80 truncate">Chat, plan, get unstuck…</p>
+          </div>
+          <div className="flex-shrink-0 opacity-40 group-hover:opacity-70 transition-opacity">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="var(--brand-primary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+        </button>
+      </div>
+
       {/* Add Note Dialog */}
       <AddNoteDialog
         open={showAddNote}
         onClose={() => setShowAddNote(false)}
         projectId={project.id}
         onNoteAdded={handleNoteAdded}
-      />
-
-      {/* Create Connection Dialog */}
-      <CreateConnectionDialog
-        open={showCreateConnection}
-        onOpenChange={setShowCreateConnection}
-        sourceType="project"
-        sourceId={project.id}
-        sourceContent={`${project.title}\n\n${project.description || ''}`}
-        onConnectionCreated={loadProjectDetails}
       />
 
       {/* Confirmation Dialog */}
@@ -1229,6 +1291,7 @@ export function ProjectDetailPage() {
           project={project}
           recentCompletions={recentCompletions}
           onAddTask={handleChatAddTask}
+          onUpdateTasks={handleChatUpdateTasks}
           onRefinePlan={async () => {
             const token = (await supabase.auth.getSession()).data.session?.access_token
             await fetch(`${import.meta.env.VITE_API_URL}/api/power-hour?projectId=${project.id}&enrich=true`, {

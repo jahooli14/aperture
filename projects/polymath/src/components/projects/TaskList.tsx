@@ -349,30 +349,37 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                       <Check className="h-3 w-3 text-[var(--brand-text-primary)]" />
                     </button>
 
-                    {/* Task Text */}
-                    {editingTaskId === task.id ? (
-                      <input
-                        type="text"
-                        value={editingText}
-                        onChange={(e) => setEditingText(e.target.value)}
-                        onFocus={handleInputFocus}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleEditSave(task.id)
-                          if (e.key === 'Escape') handleEditCancel()
-                        }}
-                        className="flex-1 px-2 py-1 text-sm rounded-xl focus:outline-none focus:ring-2 bg-[rgba(255,255,255,0.1)]"
-                        style={{ color: "var(--brand-primary)" }}
-                        autoFocus
-                      />
-                    ) : (
-                      <span
-                        className="flex-1 text-sm line-through cursor-text hover:opacity-70 transition-opacity"
-                        onClick={() => handleEditStart(task.id, task.text)}
-                        style={{ color: "var(--brand-primary)" }}
-                      >
-                        {task.text}
-                      </span>
-                    )}
+                    {/* Task Text + Completion date */}
+                    <div className="flex-1 min-w-0">
+                      {editingTaskId === task.id ? (
+                        <input
+                          type="text"
+                          value={editingText}
+                          onChange={(e) => setEditingText(e.target.value)}
+                          onFocus={handleInputFocus}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleEditSave(task.id)
+                            if (e.key === 'Escape') handleEditCancel()
+                          }}
+                          className="w-full px-2 py-1 text-sm rounded-xl focus:outline-none focus:ring-2 bg-[rgba(255,255,255,0.1)]"
+                          style={{ color: "var(--brand-primary)" }}
+                          autoFocus
+                        />
+                      ) : (
+                        <span
+                          className="text-sm line-through cursor-text hover:opacity-70 transition-opacity block"
+                          onClick={() => handleEditStart(task.id, task.text)}
+                          style={{ color: "var(--brand-primary)" }}
+                        >
+                          {task.text}
+                        </span>
+                      )}
+                      {task.completed_at && (
+                        <span className="text-[9px] opacity-30 mt-0.5 block" style={{ color: 'var(--brand-primary)' }}>
+                          Done {new Date(task.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                      )}
+                    </div>
 
                     {/* Delete Button */}
                     <button
