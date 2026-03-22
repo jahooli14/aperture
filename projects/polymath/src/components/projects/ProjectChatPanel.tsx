@@ -15,7 +15,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react'
-import { ArrowUp, Plus, Check, Zap } from 'lucide-react'
+import { ArrowUp, Plus, Check, Zap, Flag } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   BottomSheet,
@@ -385,6 +385,46 @@ export function ProjectChatPanel({
           className="flex-1 overflow-y-auto px-6 space-y-5 pb-4 scroll-minimal"
           style={{ minHeight: 0 }}
         >
+          {/* Finish line — zooms in on open so the goal is front of mind */}
+          <motion.div
+            initial={{ scale: 0.88, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            className="rounded-2xl px-5 py-5 mb-1"
+            style={{
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid rgba(255,255,255,0.07)',
+            }}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <Flag
+                className="h-3 w-3 flex-shrink-0"
+                style={{ color: 'var(--brand-primary)', opacity: 0.5 }}
+              />
+              <span
+                className="text-[10px] font-bold uppercase tracking-[0.18em]"
+                style={{ color: 'var(--brand-primary)', opacity: 0.45 }}
+              >
+                finish line
+              </span>
+            </div>
+            {project.metadata?.end_goal ? (
+              <p
+                className="text-[17px] leading-snug font-medium"
+                style={{ color: 'var(--brand-text-primary)', opacity: 0.85 }}
+              >
+                {project.metadata.end_goal}
+              </p>
+            ) : (
+              <p
+                className="text-[15px] leading-snug italic"
+                style={{ color: 'var(--brand-text-secondary)', opacity: 0.35 }}
+              >
+                No finish line set — what does done look like for {project.title}?
+              </p>
+            )}
+          </motion.div>
+
           {messages.length === 0 && (
             <div className="pt-2 space-y-4">
               <p
