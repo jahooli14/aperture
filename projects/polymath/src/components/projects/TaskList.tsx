@@ -300,7 +300,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
               {/* Delete Button */}
               <button
                 onClick={() => handleDeleteTask(task.id)}
-                className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full opacity-30 active:opacity-100 transition-all active:bg-brand-primary/10 text-[var(--brand-text-primary)]"
+                className="flex-shrink-0 h-11 w-11 flex items-center justify-center rounded-xl opacity-40 hover:opacity-80 active:opacity-100 active:scale-90 active:bg-red-500/10 transition-all text-[var(--brand-text-primary)]"
                 aria-label="Delete task"
               >
                 <Trash2 className="h-4 w-4" />
@@ -384,11 +384,11 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                     {/* Delete Button */}
                     <button
                       onClick={() => handleDeleteTask(task.id)}
-                      className="flex-shrink-0 h-7 w-7 flex items-center justify-center rounded-full opacity-30 active:opacity-100 transition-all"
+                      className="flex-shrink-0 h-11 w-11 flex items-center justify-center rounded-xl opacity-40 hover:opacity-80 active:opacity-100 active:scale-90 active:bg-red-500/10 transition-all"
                       style={{ color: "var(--brand-primary)" }}
                       aria-label="Delete task"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 ))}
