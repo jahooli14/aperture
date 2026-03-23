@@ -1294,7 +1294,7 @@ export function ProjectDetailPage() {
           onUpdateTasks={handleChatUpdateTasks}
           onRefinePlan={async () => {
             const token = (await supabase.auth.getSession()).data.session?.access_token
-            await fetch(`${import.meta.env.VITE_API_URL}/api/power-hour?projectId=${project.id}&enrich=true`, {
+            await fetch(`${import.meta.env.VITE_API_URL || ''}/api/power-hour?projectId=${project.id}&enrich=true`, {
               headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
             })
             await loadProjectDetails()

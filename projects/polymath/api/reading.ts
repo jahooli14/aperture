@@ -2064,7 +2064,13 @@ Return ONLY the JSON, no other text.`
       }
 
       console.log(`[Image Proxy] Fetching: ${imageUrl}`)
-      const imgRes = await fetch(imageUrl)
+      const imgRes = await fetch(imageUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+          'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+          'Accept-Encoding': 'gzip, deflate, br',
+        },
+      })
 
       if (!imgRes.ok) {
         throw new Error(`Upstream returned ${imgRes.status}`)
