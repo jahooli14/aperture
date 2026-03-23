@@ -352,6 +352,18 @@ export interface OnboardingAnalysis {
     nodes: { id: string; label: string; type: string }[]
     edges: { from: string; to: string; label: string }[]
   }
+  project_suggestions: Array<{
+    title: string
+    description: string
+    reasoning: string
+  }>
+}
+
+export interface BookSearchResult {
+  title: string
+  author: string
+  thumbnail: string
+  description: string
 }
 
 export interface GapPrompt {

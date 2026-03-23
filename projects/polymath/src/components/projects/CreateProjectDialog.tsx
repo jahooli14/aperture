@@ -48,6 +48,8 @@ export interface CreateProjectDialogProps {
   initialTitle?: string
   initialDescription?: string
   onCreated?: (projectId: string) => void
+  /** Pre-loaded conversation for seeding brainstorm from onboarding suggestions */
+  seedConversation?: ConversationMessage[]
 }
 
 export function CreateProjectDialog({
@@ -58,6 +60,7 @@ export function CreateProjectDialog({
   initialTitle,
   initialDescription,
   onCreated,
+  seedConversation,
 }: CreateProjectDialogProps = {}) {
   const [internalOpen, setInternalOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -71,10 +74,9 @@ export function CreateProjectDialog({
 
   // ── Brainstorm state ──────────────────────────────────────────────
   const hasPrefill = !!(initialTitle && initialDescription)
+  const defaultHistory: ConversationMessage[] = seedConversation || [{ role: 'model', content: "What's next?" }]
   const [mode, setMode] = useState<DialogMode>(hasPrefill ? 'commit' : 'chat')
-  const [history, setHistory] = useState<ConversationMessage[]>([
-    { role: 'model', content: "What's next?" },
-  ])
+  const [history, setHistory] = useState<ConversationMessage[]>(defaultHistory)
   const [chatInput, setChatInput] = useState('')
   const [thinking, setThinking] = useState(false)
   const [isReady, setIsReady] = useState(false)
@@ -113,9 +115,17 @@ export function CreateProjectDialog({
   const isFormValid = formData.title.length > 2 && formData.description.length > 10
   const hasExchange = history.length > 1 // more than just the opening message
 
+  // Sync seed conversation when it changes (e.g. opening from onboarding)
+  useEffect(() => {
+    if (open && seedConversation && seedConversation.length > 0) {
+      setHistory(seedConversation)
+      setMode('chat')
+    }
+  }, [open, seedConversation])
+
   const resetAll = () => {
     setMode(hasPrefill ? 'commit' : 'chat')
-    setHistory([{ role: 'model', content: "What's next?" }])
+    setHistory(defaultHistory)
     setChatInput('')
     setThinking(false)
     setIsReady(false)
