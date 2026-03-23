@@ -217,10 +217,20 @@ export function ProjectChatPanel({
         }),
       })
 
-      const data = await res.json()
+      let data: Record<string, unknown>
+      try {
+        data = await res.json()
+      } catch {
+        console.error('[ProjectChat] Failed to parse response — server may have timed out')
+        setMessages(prev => [
+          ...prev,
+          { kind: 'model', content: "Something went wrong on my end — try again in a moment." },
+        ])
+        return
+      }
 
       if (!res.ok) {
-        const errorMsg = data?.error || `Server error ${res.status}`
+        const errorMsg = (data as { error?: string })?.error || `Server error ${res.status}`
         console.error('[ProjectChat] Server error:', errorMsg)
         setMessages(prev => [
           ...prev,
@@ -273,9 +283,9 @@ export function ProjectChatPanel({
         ...prev,
         {
           kind: 'model',
-          content: data.reply || "Couldn't reach the server — try again.",
-          suggestedTasks: data.suggestedTasks || [],
-          echoes: data.echoes || [],
+          content: (data.reply as string) || "Couldn't reach the server — try again.",
+          suggestedTasks: (data.suggestedTasks as SuggestedTask[]) || [],
+          echoes: (data.echoes as EchoItem[]) || [],
         },
       ])
     } catch (err) {
@@ -337,9 +347,19 @@ export function ProjectChatPanel({
           }),
         })
           .then(async res => {
-            const data = await res.json()
+            let data: Record<string, unknown>
+            try {
+              data = await res.json()
+            } catch {
+              console.error('[ProjectChat] Failed to parse response — server may have timed out')
+              setMessages(prev => [
+                ...prev,
+                { kind: 'model', content: "Something went wrong on my end — try again in a moment." },
+              ])
+              return
+            }
             if (!res.ok) {
-              const errorMsg = data?.error || `Server error ${res.status}`
+              const errorMsg = (data as { error?: string })?.error || `Server error ${res.status}`
               console.error('[ProjectChat] Server error:', errorMsg)
               setMessages(prev => [
                 ...prev,
@@ -351,9 +371,9 @@ export function ProjectChatPanel({
               ...prev,
               {
                 kind: 'model',
-                content: data.reply || "Couldn't reach the server — try again.",
-                suggestedTasks: data.suggestedTasks || [],
-                echoes: data.echoes || [],
+                content: (data.reply as string) || "Couldn't reach the server — try again.",
+                suggestedTasks: (data.suggestedTasks as SuggestedTask[]) || [],
+                echoes: (data.echoes as EchoItem[]) || [],
               },
             ])
           })
