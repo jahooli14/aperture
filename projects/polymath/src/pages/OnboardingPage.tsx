@@ -1,28 +1,63 @@
 /**
- * OnboardingPage — Voice-first mind mapping
+ * OnboardingPage — Voice-first mind mapping + bookshelf + reveal
  *
- * 5 curated prompts, 30s voice each. Responses saved as real memories
- * so the brainstorm API has context when the user creates their first project.
+ * Flow: Pillar intro → 5 voice questions → Bookshelf step → Analysis reveal
+ *
+ * Each phase teaches a pillar of the app:
+ *   1. Voice capture (thoughts)
+ *   2. List curation (books)
+ *   3. Project creation (spark from suggestions)
  */
 
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowRight, Lightbulb, RotateCcw } from 'lucide-react'
+import { ArrowRight, RotateCcw, Check, Mic } from 'lucide-react'
 import { VoiceInput } from '../components/VoiceInput'
 import { useMemoryStore } from '../stores/useMemoryStore'
-import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
-import type { OnboardingAnalysis } from '../types'
+import { BookshelfStep } from '../components/onboarding/BookshelfStep'
+import { RevealSequence } from '../components/onboarding/RevealSequence'
+import type { OnboardingAnalysis, BookSearchResult } from '../types'
 
 const PROMPTS = [
-  "What's been keeping your brain busy lately? Tell me about something you're actually in the middle of.",
-  "What's something you made or figured out recently that felt satisfying — doesn't matter how big or small.",
-  "What topic have you fallen down a rabbit hole on recently — something you keep reading or thinking about?",
-  "What's something you can do well that tends to surprise people who mainly know you through work?",
-  "What's an idea you keep coming back to — something you'd actually build if you had the time and the right people?",
+  "What's been on your mind lately — something you're in the middle of?",
+  "What's something you made or figured out recently that felt good?",
+  "Pick a topic you're genuinely curious about and just talk about it.",
+  "What's something you're good at that most people wouldn't guess?",
+  "What's an idea you keep coming back to — something you'd love to build or try?",
 ]
 
-type Phase = 'prompts' | 'analyzing' | 'done'
+type Phase = 'voice-intro' | 'prompts' | 'captured' | 'book-intro' | 'books' | 'analyzing' | 'reveal'
+
+// Extract 2-3 "interesting" words from a transcript for the keyword animation
+function extractKeywords(text: string): string[] {
+  const stopWords = new Set([
+    'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
+    'of', 'with', 'by', 'is', 'am', 'are', 'was', 'were', 'be', 'been',
+    'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would',
+    'could', 'should', 'may', 'might', 'shall', 'can', 'need', 'dare',
+    'ought', 'used', 'it', 'its', 'my', 'me', 'we', 'our', 'you', 'your',
+    'he', 'she', 'they', 'them', 'their', 'this', 'that', 'these', 'those',
+    'i', 'so', 'if', 'not', 'no', 'just', 'like', 'about', 'been', 'really',
+    'thing', 'things', 'kind', 'lot', 'much', 'very', 'also', 'get', 'got',
+    'know', 'think', 'something', 'actually', 'basically', 'going', 'there',
+    'here', 'what', 'when', 'where', 'which', 'who', 'how', 'than', 'then',
+    'some', 'more', 'into', 'from', 'up', 'out', 'all', 'one', 'two',
+  ])
+
+  const words = text.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/)
+  const freq = new Map<string, number>()
+  for (const w of words) {
+    if (w.length > 3 && !stopWords.has(w)) {
+      freq.set(w, (freq.get(w) || 0) + 1)
+    }
+  }
+
+  return [...freq.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([word]) => word)
+}
 
 export function OnboardingPage() {
   const navigate = useNavigate()
@@ -31,14 +66,50 @@ export function OnboardingPage() {
   const [stepIndex, setStepIndex] = useState(0)
   const [completedCount, setCompletedCount] = useState(0)
   const [currentTranscript, setCurrentTranscript] = useState('')
-  const [voiceKey, setVoiceKey] = useState(0) // used to reset VoiceInput
+  const [voiceKey, setVoiceKey] = useState(0)
   const [saving, setSaving] = useState(false)
-  const [phase, setPhase] = useState<Phase>('prompts')
+  const [phase, setPhase] = useState<Phase>('voice-intro')
   const [analysis, setAnalysis] = useState<OnboardingAnalysis | null>(null)
-  const [showCreateProject, setShowCreateProject] = useState(false)
   const [transcripts, setTranscripts] = useState<string[]>([])
+  const [books, setBooks] = useState<BookSearchResult[]>([])
+  const [floatingWords, setFloatingWords] = useState<string[]>([])
+  const [showCaptured, setShowCaptured] = useState(false)
 
   const isLast = stepIndex === PROMPTS.length - 1
+
+  // ── Voice intro auto-advance ────────────────────────────────────────
+  useEffect(() => {
+    if (phase !== 'voice-intro') return
+    const timer = setTimeout(() => setPhase('prompts'), 2800)
+    return () => clearTimeout(timer)
+  }, [phase])
+
+  // ── Book intro auto-advance ─────────────────────────────────────────
+  useEffect(() => {
+    if (phase !== 'book-intro') return
+    const timer = setTimeout(() => setPhase('books'), 2800)
+    return () => clearTimeout(timer)
+  }, [phase])
+
+  // ── Captured animation auto-advance ─────────────────────────────────
+  useEffect(() => {
+    if (phase !== 'captured') return
+    const timer = setTimeout(() => {
+      setFloatingWords([])
+      setShowCaptured(false)
+      if (isLast) {
+        // Voice done → go to book intro
+        setPhase('book-intro')
+      } else {
+        setStepIndex(prev => prev + 1)
+        setCurrentTranscript('')
+        setVoiceKey(k => k + 1)
+        setSaving(false)
+        setPhase('prompts')
+      }
+    }, 1400)
+    return () => clearTimeout(timer)
+  }, [phase, isLast])
 
   const handleTranscript = (text: string) => {
     setCurrentTranscript(text)
@@ -56,7 +127,12 @@ export function OnboardingPage() {
     const updatedTranscripts = [...transcripts, currentTranscript]
     setTranscripts(updatedTranscripts)
 
-    // Save as a real memory so the brainstorm API can find it
+    // Extract keywords for the floating animation
+    const keywords = extractKeywords(currentTranscript)
+    setFloatingWords(keywords)
+    setShowCaptured(true)
+
+    // Save as a real memory
     try {
       await createMemory({
         body: currentTranscript,
@@ -67,21 +143,21 @@ export function OnboardingPage() {
     }
 
     setCompletedCount(prev => prev + 1)
-
-    if (!isLast) {
-      setStepIndex(prev => prev + 1)
-      setCurrentTranscript('')
-      setVoiceKey(k => k + 1)
-      setSaving(false)
-    } else {
-      // All done — analyse
-      setPhase('analyzing')
-      setSaving(false)
-      await analyzeResponses(updatedTranscripts)
-    }
+    setPhase('captured')
   }
 
-  const analyzeResponses = async (allTranscripts: string[]) => {
+  const handleBooksComplete = (selectedBooks: BookSearchResult[]) => {
+    setBooks(selectedBooks)
+    setPhase('analyzing')
+    analyzeResponses(transcripts, selectedBooks)
+  }
+
+  const handleBooksSkip = () => {
+    setPhase('analyzing')
+    analyzeResponses(transcripts, [])
+  }
+
+  const analyzeResponses = async (allTranscripts: string[], selectedBooks: BookSearchResult[]) => {
     try {
       const res = await fetch('/api/onboarding?resource=analyze', {
         method: 'POST',
@@ -91,165 +167,167 @@ export function OnboardingPage() {
             transcript: t,
             question_number: i + 1,
           })),
+          books: selectedBooks.map(b => ({ title: b.title, author: b.author })),
         }),
       })
       if (!res.ok) throw new Error('Analysis failed')
       const data: OnboardingAnalysis = await res.json()
       setAnalysis(data)
     } catch {
-      // Show a minimal fallback so the user isn't stuck
       setAnalysis({
         capabilities: [],
         themes: [],
         patterns: [],
         entities: { people: [], places: [], topics: [], skills: [] },
-        first_insight: 'Your thoughts are saved. Add your first project to see how they connect.',
+        first_insight: 'Your thoughts are saved. Start a project to see how they connect.',
         graph_preview: { nodes: [], edges: [] },
+        project_suggestions: [],
       })
     } finally {
-      setPhase('done')
+      setPhase('reveal')
     }
   }
 
-  // ── Analysis / done screen ───────────────────────────────────────
-  if (phase === 'analyzing' || phase === 'done') {
+  // ── Voice Intro ─────────────────────────────────────────────────────
+  if (phase === 'voice-intro') {
     return (
       <div className="min-h-screen flex items-center justify-center px-4 py-12">
-        <AnimatePresence mode="wait">
-          {phase === 'analyzing' ? (
-            <motion.div
-              key="analyzing"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="text-center"
-            >
-              <div className="flex gap-1 justify-center mb-6">
-                {[0, 1, 2].map(i => (
-                  <motion.span
-                    key={i}
-                    className="block w-2 h-2 rounded-full"
-                    style={{ background: 'var(--brand-primary)' }}
-                    animate={{ opacity: [0.2, 1, 0.2] }}
-                    transition={{ duration: 1.4, repeat: Infinity, delay: i * 0.22 }}
-                  />
-                ))}
-              </div>
-              <p className="text-base" style={{ color: 'var(--brand-text-secondary)' }}>
-                Building your mind map…
-              </p>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="done"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="max-w-xl w-full"
-            >
-              <div className="text-center mb-10">
-                <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--brand-text-primary)' }}>
-                  Your mind, mapped.
-                </h1>
-                <p className="text-sm" style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}>
-                  From {PROMPTS.length} thoughts
-                </p>
-              </div>
-
-              <div className="space-y-4 mb-8">
-                {/* Themes */}
-                {analysis && analysis.themes.length > 0 && (
-                  <div
-                    className="p-5 rounded-xl"
-                    style={{ background: 'var(--brand-glass-bg)', backdropFilter: 'blur(12px)' }}
-                  >
-                    <p className="text-xs font-medium mb-3 uppercase tracking-widest" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>
-                      Themes emerging
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {analysis.themes.map((theme, i) => (
-                        <span
-                          key={i}
-                          className="px-3 py-1 rounded-full text-sm"
-                          style={{ background: 'rgba(99,179,237,0.12)', color: 'var(--brand-primary)' }}
-                        >
-                          {theme}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Capabilities */}
-                {analysis && analysis.capabilities.length > 0 && (
-                  <div
-                    className="p-5 rounded-xl"
-                    style={{ background: 'var(--brand-glass-bg)', backdropFilter: 'blur(12px)' }}
-                  >
-                    <p className="text-xs font-medium mb-3 uppercase tracking-widest" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>
-                      Skills & capabilities
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {analysis.capabilities.map((cap, i) => (
-                        <span
-                          key={i}
-                          className="px-3 py-1 rounded-full text-sm"
-                          style={{ background: 'rgba(245,158,11,0.1)', color: 'var(--brand-text-primary)', opacity: 0.85 }}
-                        >
-                          {cap}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* First insight */}
-                {analysis?.first_insight && (
-                  <div
-                    className="p-5 rounded-xl flex gap-3"
-                    style={{ background: 'var(--brand-glass-bg)', backdropFilter: 'blur(12px)' }}
-                  >
-                    <Lightbulb className="h-5 w-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--brand-primary)' }} />
-                    <p className="text-sm leading-relaxed" style={{ color: 'var(--brand-text-secondary)' }}>
-                      {analysis.first_insight}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* CTAs */}
-              <div className="flex flex-col gap-3">
-                <button
-                  onClick={() => setShowCreateProject(true)}
-                  className="btn-primary w-full py-3.5 text-base font-semibold inline-flex items-center justify-center gap-2"
-                >
-                  Add your first project
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => navigate('/')}
-                  className="w-full py-3 text-sm transition-opacity hover:opacity-80"
-                  style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
-                >
-                  Start exploring →
-                </button>
-              </div>
-
-              {/* Inline project dialog */}
-              <CreateProjectDialog
-                isOpen={showCreateProject}
-                onOpenChange={setShowCreateProject}
-                hideTrigger
-                onCreated={() => navigate('/')}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          className="text-center max-w-md"
+        >
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
+            className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-6"
+            style={{ background: 'rgba(99,179,237,0.12)' }}
+          >
+            <Mic className="h-7 w-7" style={{ color: 'var(--brand-primary)' }} />
+          </motion.div>
+          <motion.h2
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="text-xl font-semibold mb-3"
+            style={{ color: 'var(--brand-text-primary)' }}
+          >
+            Polymath captures your thoughts by voice.
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.7 }}
+            className="text-sm"
+            style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}
+          >
+            Just talk naturally — we'll do the rest.
+          </motion.p>
+        </motion.div>
       </div>
     )
   }
 
-  // ── Prompt screens (steps 1–5) ───────────────────────────────────
+  // ── Book Intro ──────────────────────────────────────────────────────
+  if (phase === 'book-intro') {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 py-12">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          className="text-center max-w-md"
+        >
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
+            className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-6"
+            style={{ background: 'rgba(245,158,11,0.12)' }}
+          >
+            <svg
+              className="h-7 w-7"
+              style={{ color: 'var(--brand-primary)' }}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
+            </svg>
+          </motion.div>
+          <motion.h2
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="text-xl font-semibold mb-3"
+            style={{ color: 'var(--brand-text-primary)' }}
+          >
+            Polymath helps you curate lists.
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.7 }}
+            className="text-sm"
+            style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}
+          >
+            Films, books, music, anything. Let's start yours.
+          </motion.p>
+        </motion.div>
+      </div>
+    )
+  }
+
+  // ── Bookshelf step ──────────────────────────────────────────────────
+  if (phase === 'books') {
+    return (
+      <BookshelfStep
+        onComplete={handleBooksComplete}
+        onSkip={handleBooksSkip}
+      />
+    )
+  }
+
+  // ── Analyzing + Reveal ──────────────────────────────────────────────
+  if (phase === 'analyzing' || phase === 'reveal') {
+    if (phase === 'reveal' && analysis) {
+      return <RevealSequence analysis={analysis} books={books} />
+    }
+
+    // Still analyzing — RevealSequence handles its own loading state,
+    // but we show a simple loader while the API call is in flight
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 py-12">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center"
+        >
+          <div className="flex gap-1 justify-center mb-6">
+            {[0, 1, 2].map(i => (
+              <motion.span
+                key={i}
+                className="block w-2 h-2 rounded-full"
+                style={{ background: 'var(--brand-primary)' }}
+                animate={{ opacity: [0.2, 1, 0.2] }}
+                transition={{ duration: 1.4, repeat: Infinity, delay: i * 0.22 }}
+              />
+            ))}
+          </div>
+          <p className="text-base" style={{ color: 'var(--brand-text-secondary)' }}>
+            Reading between the lines…
+          </p>
+        </motion.div>
+      </div>
+    )
+  }
+
+  // ── Prompt screens (steps 1–5) with captured animation ─────────────
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 relative">
       {/* Skip */}
@@ -279,73 +357,112 @@ export function OnboardingPage() {
       </div>
 
       <AnimatePresence mode="wait">
-        <motion.div
-          key={stepIndex}
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -16 }}
-          transition={{ duration: 0.3 }}
-          className="max-w-xl w-full text-center"
-        >
-          {/* Question */}
-          <p
-            className="text-xs font-medium mb-6 uppercase tracking-widest"
-            style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}
+        {/* "Captured" micro-animation between questions */}
+        {showCaptured && phase === 'captured' ? (
+          <motion.div
+            key="captured"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.25 }}
+            className="text-center"
           >
-            Thought {stepIndex + 1} of {PROMPTS.length}
-          </p>
-          <h2
-            className="text-2xl sm:text-3xl font-semibold leading-snug mb-10"
-            style={{ color: 'var(--brand-text-primary)' }}
-          >
-            {PROMPTS[stepIndex]}
-          </h2>
+            {/* Checkmark pulse */}
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: [0, 1.2, 1] }}
+              transition={{ duration: 0.4, times: [0, 0.6, 1] }}
+              className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-5"
+              style={{ background: 'rgba(34,197,94,0.15)' }}
+            >
+              <Check className="h-6 w-6" style={{ color: 'rgb(34,197,94)' }} />
+            </motion.div>
 
-          {/* Voice input */}
-          <div className="mb-6">
-            <VoiceInput
-              key={voiceKey}
-              onTranscript={handleTranscript}
-              maxDuration={30}
-              autoSubmit={false}
-            />
-          </div>
-
-          {/* Transcript preview */}
-          <AnimatePresence>
-            {currentTranscript && (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="mb-6 p-4 rounded-xl text-left"
-                style={{ background: 'var(--brand-glass-bg)', backdropFilter: 'blur(12px)' }}
-              >
-                <p className="text-sm leading-relaxed italic" style={{ color: 'var(--brand-text-secondary)' }}>
-                  "{currentTranscript}"
-                </p>
-                <button
-                  onClick={handleReRecord}
-                  className="mt-3 flex items-center gap-1.5 text-xs transition-opacity hover:opacity-80"
-                  style={{ color: 'var(--brand-text-secondary)', opacity: 0.45 }}
+            {/* Floating keywords */}
+            <div className="flex justify-center gap-3">
+              {floatingWords.map((word, i) => (
+                <motion.span
+                  key={word}
+                  initial={{ opacity: 0, y: 0 }}
+                  animate={{ opacity: [0, 0.8, 0], y: -30 }}
+                  transition={{ duration: 1.2, delay: i * 0.15 }}
+                  className="text-sm font-medium"
+                  style={{ color: 'var(--brand-primary)' }}
                 >
-                  <RotateCcw className="h-3 w-3" />
-                  Re-record
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Save & continue */}
-          <button
-            onClick={handleSave}
-            disabled={!currentTranscript.trim() || saving}
-            className="btn-primary px-8 py-3.5 text-base font-semibold inline-flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
+                  {word}
+                </motion.span>
+              ))}
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key={stepIndex}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16 }}
+            transition={{ duration: 0.3 }}
+            className="max-w-xl w-full text-center"
           >
-            {saving ? 'Saving…' : isLast ? 'Finish' : 'Save & continue'}
-            {!saving && <ArrowRight className="h-4 w-4" />}
-          </button>
-        </motion.div>
+            {/* Question */}
+            <p
+              className="text-xs font-medium mb-6 uppercase tracking-widest"
+              style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}
+            >
+              Thought {stepIndex + 1} of {PROMPTS.length}
+            </p>
+            <h2
+              className="text-2xl sm:text-3xl font-semibold leading-snug mb-10"
+              style={{ color: 'var(--brand-text-primary)' }}
+            >
+              {PROMPTS[stepIndex]}
+            </h2>
+
+            {/* Voice input */}
+            <div className="mb-6">
+              <VoiceInput
+                key={voiceKey}
+                onTranscript={handleTranscript}
+                maxDuration={30}
+                autoSubmit={false}
+              />
+            </div>
+
+            {/* Transcript preview */}
+            <AnimatePresence>
+              {currentTranscript && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="mb-6 p-4 rounded-xl text-left"
+                  style={{ background: 'var(--brand-glass-bg)', backdropFilter: 'blur(12px)' }}
+                >
+                  <p className="text-sm leading-relaxed italic" style={{ color: 'var(--brand-text-secondary)' }}>
+                    "{currentTranscript}"
+                  </p>
+                  <button
+                    onClick={handleReRecord}
+                    className="mt-3 flex items-center gap-1.5 text-xs transition-opacity hover:opacity-80"
+                    style={{ color: 'var(--brand-text-secondary)', opacity: 0.45 }}
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    Re-record
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Save & continue */}
+            <button
+              onClick={handleSave}
+              disabled={!currentTranscript.trim() || saving}
+              className="btn-primary px-8 py-3.5 text-base font-semibold inline-flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              {saving ? 'Saving…' : isLast ? 'Finish' : 'Save & continue'}
+              {!saving && <ArrowRight className="h-4 w-4" />}
+            </button>
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   )
