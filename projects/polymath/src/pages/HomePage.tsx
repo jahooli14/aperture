@@ -1252,7 +1252,7 @@ export function HomePage() {
                     <Lightbulb className="h-5 w-5 text-[var(--brand-text-secondary)]" />
                   </div>
                   <div>
-                    <h2 className="section-header !mb-1 !text-xl">Discover Projects</h2>
+                    <h3 className="font-bold mb-1 aperture-header">Discover Projects</h3>
                     <p className="text-sm aperture-body text-[var(--brand-text-secondary)]">
                       AI recommendations
                     </p>
