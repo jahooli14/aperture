@@ -134,6 +134,7 @@ Return a JSON object with these fields:
   // Be SPECIFIC — quote or reference actual things they said. No generic platitudes.
   // The reader should feel "wow, I never connected those two things before."
   // Write in second person ("You mentioned..." / "There's an interesting thread between your...")
+  // Start with the most surprising connection. Don't warm up — go straight to the insight. The reader should feel the connection before they understand it.
 
   "project_suggestions": [
     {
@@ -153,6 +154,7 @@ Return a JSON object with these fields:
   // Each should combine at least 2 different capabilities or interests from their responses.
   // Make them diverse: one practical/buildable, one creative/expressive, one ambitious/stretch.
   // They should feel personal and surprising — not obvious.
+  // Each title should be a noun phrase or verb phrase, not a sentence. "Ambient Recipe Engine" not "Build an Ambient Recipe Engine". Think album title, not task description.
 
   "graph_preview": { "nodes": [], "edges": [] }
   // Leave empty, not used.
