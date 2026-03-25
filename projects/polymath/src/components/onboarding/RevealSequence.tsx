@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Lightbulb, Zap, ArrowRight, Book } from 'lucide-react'
+import { Zap, ArrowRight, Book } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { CreateProjectDialog } from '../projects/CreateProjectDialog'
 import type { OnboardingAnalysis, BookSearchResult } from '../../types'
@@ -24,7 +24,7 @@ const LOADING_MESSAGES = [
   'Connecting the dots…',
   'Finding patterns you haven\'t noticed…',
   'Cross-referencing your bookshelf…',
-  'Almost there…',
+  'Pulling it all together…',
 ]
 
 export function RevealSequence({ analysis, books }: RevealSequenceProps) {
@@ -52,14 +52,7 @@ export function RevealSequence({ analysis, books }: RevealSequenceProps) {
     return () => clearTimeout(timer)
   }, [])
 
-  // Auto-advance from profile → ideas after profile has had time to read
-  useEffect(() => {
-    if (beat !== 'profile') return
-    const timer = setTimeout(() => {
-      setBeat('ideas')
-    }, 4000)
-    return () => clearTimeout(timer)
-  }, [beat])
+  // User manually advances from profile → ideas via button
 
   const handleSpark = (suggestion: { title: string; description: string; reasoning: string }) => {
     setSparkSuggestion(suggestion)
@@ -70,7 +63,7 @@ export function RevealSequence({ analysis, books }: RevealSequenceProps) {
   const seedConversation = sparkSuggestion ? [
     {
       role: 'model' as const,
-      content: `I love this idea — **${sparkSuggestion.title}**.\n\n${sparkSuggestion.reasoning}\n\nHere's what I'm picturing: ${sparkSuggestion.description}\n\nWhat excites you most about this? And is there a specific angle or constraint that would make it feel more *you*?`,
+      content: `**${sparkSuggestion.title}** — ${sparkSuggestion.reasoning}\n\n${sparkSuggestion.description}\n\nWhat's the version of this that only you could make?`,
     },
   ] : undefined
 
@@ -129,61 +122,35 @@ export function RevealSequence({ analysis, books }: RevealSequenceProps) {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="text-3xl font-bold mb-2"
+                className="text-3xl font-bold"
                 style={{ color: 'var(--brand-text-primary)' }}
               >
-                Your mind, mapped.
+                Here's what we noticed.
               </motion.h1>
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 }}
-                className="text-sm"
-                style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}
-              >
-                Here's what we found
-              </motion.p>
             </div>
 
             <div className="space-y-4 mb-8">
-              {/* Themes */}
-              {analysis.themes.length > 0 && (
+              {/* The Insight — centerpiece, shown first */}
+              {analysis.first_insight && (
                 <motion.div
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.5 }}
-                  className="p-5 rounded-xl"
-                  style={{ background: 'var(--brand-glass-bg)', backdropFilter: 'blur(12px)' }}
+                  className="p-6 rounded-xl"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(99,179,237,0.08), rgba(168,85,247,0.08))',
+                    backdropFilter: 'blur(12px)',
+                    border: '1px solid rgba(99,179,237,0.15)',
+                  }}
                 >
-                  <p
-                    className="text-xs font-medium mb-3 uppercase tracking-widest"
-                    style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
-                  >
-                    Themes emerging
+                  <p className="text-base leading-relaxed" style={{ color: 'var(--brand-text-primary)' }}>
+                    {analysis.first_insight}
                   </p>
-                  <div className="flex flex-wrap gap-2">
-                    {analysis.themes.map((theme, i) => (
-                      <motion.span
-                        key={i}
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.6 + i * 0.12 }}
-                        className="px-3 py-1.5 rounded-full text-sm font-medium"
-                        style={{
-                          background: `linear-gradient(135deg, rgba(99,179,237,0.15), rgba(99,179,237,0.08))`,
-                          color: 'var(--brand-primary)',
-                          border: '1px solid rgba(99,179,237,0.2)',
-                        }}
-                      >
-                        {theme}
-                      </motion.span>
-                    ))}
-                  </div>
                 </motion.div>
               )}
 
-              {/* Capabilities */}
-              {analysis.capabilities.length > 0 && (
+              {/* Themes */}
+              {analysis.themes.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -195,24 +162,23 @@ export function RevealSequence({ analysis, books }: RevealSequenceProps) {
                     className="text-xs font-medium mb-3 uppercase tracking-widest"
                     style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
                   >
-                    Skills & capabilities
+                    What keeps coming up
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    {analysis.capabilities.map((cap, i) => (
+                    {analysis.themes.map((theme, i) => (
                       <motion.span
                         key={i}
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 0.9 + i * 0.12 }}
-                        className="px-3 py-1.5 rounded-full text-sm"
+                        className="px-3 py-1.5 rounded-full text-sm font-medium"
                         style={{
-                          background: 'linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.08))',
-                          color: 'var(--brand-text-primary)',
-                          border: '1px solid rgba(245,158,11,0.2)',
-                          opacity: 0.9,
+                          background: `linear-gradient(135deg, rgba(99,179,237,0.15), rgba(99,179,237,0.08))`,
+                          color: 'var(--brand-primary)',
+                          border: '1px solid rgba(99,179,237,0.2)',
                         }}
                       >
-                        {cap}
+                        {theme}
                       </motion.span>
                     ))}
                   </div>
@@ -232,7 +198,7 @@ export function RevealSequence({ analysis, books }: RevealSequenceProps) {
                     className="text-xs font-medium mb-3 uppercase tracking-widest"
                     style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
                   >
-                    Your bookshelf
+                    Your shelf
                   </p>
                   <div className="flex gap-3">
                     {books.map((book, i) => (
@@ -268,26 +234,61 @@ export function RevealSequence({ analysis, books }: RevealSequenceProps) {
                 </motion.div>
               )}
 
-              {/* The Insight — centerpiece */}
-              {analysis.first_insight && (
+              {/* Capabilities */}
+              {analysis.capabilities.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1.5 }}
-                  className="p-5 rounded-xl flex gap-3"
-                  style={{
-                    background: 'linear-gradient(135deg, rgba(99,179,237,0.08), rgba(168,85,247,0.08))',
-                    backdropFilter: 'blur(12px)',
-                    border: '1px solid rgba(99,179,237,0.15)',
-                  }}
+                  transition={{ delay: 1.4 }}
+                  className="p-5 rounded-xl"
+                  style={{ background: 'var(--brand-glass-bg)', backdropFilter: 'blur(12px)' }}
                 >
-                  <Lightbulb className="h-5 w-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--brand-primary)' }} />
-                  <p className="text-sm leading-relaxed" style={{ color: 'var(--brand-text-primary)' }}>
-                    {analysis.first_insight}
+                  <p
+                    className="text-xs font-medium mb-3 uppercase tracking-widest"
+                    style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
+                  >
+                    What you bring
                   </p>
+                  <div className="flex flex-wrap gap-2">
+                    {analysis.capabilities.map((cap, i) => (
+                      <motion.span
+                        key={i}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 1.5 + i * 0.12 }}
+                        className="px-3 py-1.5 rounded-full text-sm"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.08))',
+                          color: 'var(--brand-text-primary)',
+                          border: '1px solid rgba(245,158,11,0.2)',
+                          opacity: 0.9,
+                        }}
+                      >
+                        {cap}
+                      </motion.span>
+                    ))}
+                  </div>
                 </motion.div>
               )}
             </div>
+
+            {/* Manual continue to ideas */}
+            {beat === 'profile' && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1.8 }}
+                className="text-center"
+              >
+                <button
+                  onClick={() => setBeat('ideas')}
+                  className="btn-primary px-8 py-3.5 text-base font-semibold inline-flex items-center gap-2"
+                >
+                  What could you build?
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              </motion.div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -301,25 +302,14 @@ export function RevealSequence({ analysis, books }: RevealSequenceProps) {
             transition={{ delay: 0.3, duration: 0.5 }}
             className="max-w-xl w-full mt-4"
           >
-            {/* Pillar intro */}
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="text-xs text-center mb-4"
-              style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
-            >
-              Polymath connects your thoughts and interests to suggest projects uniquely suited to you.
-            </motion.p>
-
             <motion.h2
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
+              transition={{ delay: 0.3 }}
               className="text-xl font-bold mb-5 text-center"
               style={{ color: 'var(--brand-text-primary)' }}
             >
-              3 ideas for you
+              What if you built...
             </motion.h2>
 
             {/* Suggestion Cards — horizontal scroll */}
@@ -329,7 +319,7 @@ export function RevealSequence({ analysis, books }: RevealSequenceProps) {
                   key={i}
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.7 + i * 0.2 }}
+                  transition={{ delay: 0.4 + i * 0.2 }}
                   className="flex-shrink-0 w-[280px] snap-center rounded-xl p-5 flex flex-col"
                   style={{
                     background: 'var(--brand-glass-bg)',
@@ -396,7 +386,7 @@ export function RevealSequence({ analysis, books }: RevealSequenceProps) {
                 className="text-sm transition-opacity hover:opacity-80 inline-flex items-center gap-1.5"
                 style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
               >
-                Explore on your own
+                I'll find my own
                 <ArrowRight className="h-3.5 w-3.5" />
               </button>
             </motion.div>
