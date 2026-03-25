@@ -112,7 +112,7 @@ export function VoiceInput({
         ) : (
           <>
             <Mic className="h-5 w-5" />
-            Record Voice ({maxDuration}s max)
+            Tap to talk
           </>
         )}
       </Button>

@@ -119,26 +119,23 @@ export function BookshelfStep({ onComplete, onSkip }: BookshelfStepProps) {
         className="max-w-xl w-full"
       >
         {/* Counter */}
-        <p
-          className="text-xs font-medium mb-6 uppercase tracking-widest text-center"
-          style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}
-        >
-          {selectedBooks.length} of 3 books
-        </p>
+        {selectedBooks.length > 0 && (
+          <p
+            className="text-xs font-medium mb-6 uppercase tracking-widest text-center"
+            style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}
+          >
+            {selectedBooks.length} picked
+          </p>
+        )}
+        {selectedBooks.length === 0 && <div className="mb-6" />}
 
         {/* Heading */}
         <h2
-          className="text-2xl sm:text-3xl font-semibold leading-snug mb-3 text-center"
+          className="text-2xl sm:text-3xl font-semibold leading-snug mb-8 text-center"
           style={{ color: 'var(--brand-text-primary)' }}
         >
-          Pick 3 books you've enjoyed.
+          Three books that stuck with you.
         </h2>
-        <p
-          className="text-sm mb-8 text-center"
-          style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
-        >
-          Doesn't need to be life-changing — just books that stuck with you.
-        </p>
 
         {/* 3 Book Slots */}
         <div className="grid grid-cols-3 gap-3 mb-8">
@@ -308,7 +305,7 @@ export function BookshelfStep({ onComplete, onSkip }: BookshelfStepProps) {
                 disabled={saving}
                 className="btn-primary px-8 py-3.5 text-base font-semibold inline-flex items-center gap-2 disabled:opacity-50"
               >
-                {saving ? 'Saving…' : 'Continue'}
+                {saving ? 'Saving…' : 'See what we found'}
                 {!saving && <ArrowRight className="h-4 w-4" />}
               </button>
             </motion.div>

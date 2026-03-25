@@ -12,7 +12,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowRight, RotateCcw, Check, Mic } from 'lucide-react'
+import { ArrowRight, RotateCcw, Mic } from 'lucide-react'
 import { VoiceInput } from '../components/VoiceInput'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { BookshelfStep } from '../components/onboarding/BookshelfStep'
@@ -107,7 +107,7 @@ export function OnboardingPage() {
         setSaving(false)
         setPhase('prompts')
       }
-    }, 1400)
+    }, 2200)
     return () => clearTimeout(timer)
   }, [phase, isLast])
 
@@ -214,7 +214,7 @@ export function OnboardingPage() {
             className="text-xl font-semibold mb-3"
             style={{ color: 'var(--brand-text-primary)' }}
           >
-            Polymath captures your thoughts by voice.
+            Think out loud.
           </motion.h2>
           <motion.p
             initial={{ opacity: 0 }}
@@ -223,7 +223,7 @@ export function OnboardingPage() {
             className="text-sm"
             style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}
           >
-            Just talk naturally — we'll do the rest.
+            Five questions. No right answers.
           </motion.p>
         </motion.div>
       </div>
@@ -245,7 +245,7 @@ export function OnboardingPage() {
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
             className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-6"
-            style={{ background: 'rgba(245,158,11,0.12)' }}
+            style={{ background: 'linear-gradient(135deg, rgba(99,179,237,0.08), rgba(245,158,11,0.12))' }}
           >
             <svg
               className="h-7 w-7"
@@ -267,7 +267,7 @@ export function OnboardingPage() {
             className="text-xl font-semibold mb-3"
             style={{ color: 'var(--brand-text-primary)' }}
           >
-            Polymath helps you curate lists.
+            Now, your bookshelf.
           </motion.h2>
           <motion.p
             initial={{ opacity: 0 }}
@@ -276,7 +276,7 @@ export function OnboardingPage() {
             className="text-sm"
             style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}
           >
-            Films, books, music, anything. Let's start yours.
+            Books, films, music — the more you add, the better Polymath understands how you think.
           </motion.p>
         </motion.div>
       </div>
@@ -367,31 +367,27 @@ export function OnboardingPage() {
             transition={{ duration: 0.25 }}
             className="text-center"
           >
-            {/* Checkmark pulse */}
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: [0, 1.2, 1] }}
-              transition={{ duration: 0.4, times: [0, 0.6, 1] }}
-              className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-5"
-              style={{ background: 'rgba(34,197,94,0.15)' }}
-            >
-              <Check className="h-6 w-6" style={{ color: 'rgb(34,197,94)' }} />
-            </motion.div>
-
-            {/* Floating keywords */}
-            <div className="flex justify-center gap-3">
-              {floatingWords.map((word, i) => (
-                <motion.span
-                  key={word}
-                  initial={{ opacity: 0, y: 0 }}
-                  animate={{ opacity: [0, 0.8, 0], y: -30 }}
-                  transition={{ duration: 1.2, delay: i * 0.15 }}
-                  className="text-sm font-medium"
-                  style={{ color: 'var(--brand-primary)' }}
-                >
-                  {word}
-                </motion.span>
-              ))}
+            {/* Floating keywords — drift upward and fade */}
+            <div className="flex justify-center gap-4">
+              {floatingWords.map((word, i) => {
+                const colors = [
+                  'var(--brand-primary)',
+                  'rgba(245,158,11,0.8)',
+                  'rgba(168,85,247,0.7)',
+                ]
+                return (
+                  <motion.span
+                    key={word}
+                    initial={{ opacity: 0, y: 0 }}
+                    animate={{ opacity: [0, 0.9, 0.3], y: -60 }}
+                    transition={{ duration: 1.8, delay: i * 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
+                    className="text-base font-medium"
+                    style={{ color: colors[i] || colors[0] }}
+                  >
+                    {word}
+                  </motion.span>
+                )
+              })}
             </div>
           </motion.div>
         ) : (
@@ -404,12 +400,6 @@ export function OnboardingPage() {
             className="max-w-xl w-full text-center"
           >
             {/* Question */}
-            <p
-              className="text-xs font-medium mb-6 uppercase tracking-widest"
-              style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}
-            >
-              Thought {stepIndex + 1} of {PROMPTS.length}
-            </p>
             <h2
               className="text-2xl sm:text-3xl font-semibold leading-snug mb-10"
               style={{ color: 'var(--brand-text-primary)' }}
@@ -437,8 +427,8 @@ export function OnboardingPage() {
                   className="mb-6 p-4 rounded-xl text-left"
                   style={{ background: 'var(--brand-glass-bg)', backdropFilter: 'blur(12px)' }}
                 >
-                  <p className="text-sm leading-relaxed italic" style={{ color: 'var(--brand-text-secondary)' }}>
-                    "{currentTranscript}"
+                  <p className="text-sm leading-relaxed" style={{ color: 'var(--brand-text-primary)' }}>
+                    {currentTranscript}
                   </p>
                   <button
                     onClick={handleReRecord}
@@ -446,7 +436,7 @@ export function OnboardingPage() {
                     style={{ color: 'var(--brand-text-secondary)', opacity: 0.45 }}
                   >
                     <RotateCcw className="h-3 w-3" />
-                    Re-record
+                    Try again
                   </button>
                 </motion.div>
               )}
@@ -458,7 +448,7 @@ export function OnboardingPage() {
               disabled={!currentTranscript.trim() || saving}
               className="btn-primary px-8 py-3.5 text-base font-semibold inline-flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
             >
-              {saving ? 'Saving…' : isLast ? 'Finish' : 'Save & continue'}
+              {saving ? 'Saving…' : isLast ? "That's all five" : 'Next'}
               {!saving && <ArrowRight className="h-4 w-4" />}
             </button>
           </motion.div>

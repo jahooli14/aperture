@@ -993,16 +993,16 @@ export function HomePage() {
                 <div className="flex items-start gap-4 pr-10">
                   <div className="flex-1">
                     <h3 className="font-bold mb-1" style={{ color: "var(--brand-primary)" }}>
-                      Complete Your Profile
+                      5 minutes. 5 questions.
                     </h3>
                     <p className="text-sm mb-3" style={{ color: "var(--brand-primary)" }}>
-                      Answer a few questions to get personalized suggestions tailored to your interests
+                      Tell us what you're thinking about — we'll show you something interesting.
                     </p>
                     <Link
                       to="/onboarding"
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition-all hover:opacity-90 brand-gradient text-brand-text-primary shadow-lg shadow-cyan-500/20"
                     >
-                      Complete Now
+                      Let's go
                     </Link>
                   </div>
                 </div>
