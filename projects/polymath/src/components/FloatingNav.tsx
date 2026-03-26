@@ -6,7 +6,7 @@
 import React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Compass, Feather, Sprout, Library, User, LogOut } from 'lucide-react'
+import { Compass, Brain, Layers, List, User, LogOut } from 'lucide-react'
 import { VoiceFAB } from './VoiceFAB'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useKeyboardVisible } from '../hooks/useKeyboardVisible'
@@ -40,9 +40,9 @@ interface NavOption {
 // 4 core nav tabs: Home, Thoughts, Projects, Lists
 const NAV_OPTIONS: NavOption[] = [
   { id: 'home',     label: 'Home',     icon: Compass, path: '/',         action: 'navigate', color: 'home' },
-  { id: 'thoughts', label: 'Thoughts', icon: Feather, path: '/memories', action: 'navigate', color: 'thoughts' },
-  { id: 'projects', label: 'Projects', icon: Sprout,  path: '/projects', action: 'navigate', color: 'projects' },
-  { id: 'lists',    label: 'Lists',    icon: Library, path: '/lists',    action: 'navigate', color: 'lists' },
+  { id: 'thoughts', label: 'Thoughts', icon: Brain,   path: '/memories', action: 'navigate', color: 'thoughts' },
+  { id: 'projects', label: 'Projects', icon: Layers,  path: '/projects', action: 'navigate', color: 'projects' },
+  { id: 'lists',    label: 'Lists',    icon: List,    path: '/lists',    action: 'navigate', color: 'lists' },
 ]
 
 export function FloatingNav() {
