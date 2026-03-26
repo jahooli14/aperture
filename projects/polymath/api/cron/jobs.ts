@@ -45,7 +45,10 @@ if (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseClient()
-  const userId = getUserId()
+  // Cron jobs run server-side — get all active users and process first one
+  // (extend to loop over all users when multi-user is needed)
+  const { data: users } = await supabase.from('memories').select('user_id').not('user_id', 'is', null).limit(1)
+  const userId = users?.[0]?.user_id || null
   // Verify authorization
   const authHeader = req.headers['authorization']
   const cronSecret = process.env.CRON_SECRET
@@ -350,7 +353,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json(results)
 
     } else if (job === 'synthesis') {
-      const userId = getUserId()
+      // userId already resolved above
       const mode = req.query.mode as string | undefined
       const suggestions = await runSynthesis(userId, mode)
 

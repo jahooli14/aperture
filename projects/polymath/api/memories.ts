@@ -109,17 +109,18 @@ interface UserPromptStatus {
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseClient()
-  const userId = getUserId(req)
 
   try {
     const { resurfacing, bridges, themes, prompts, id, capture, submit_response, q, action, seeds } = req.query
 
     // POST: Media analysis (audio transcription or image description)
+    // Allow without auth — transcription is stateless
     if (req.method === 'POST' && (action === 'transcribe' || action === 'analyze-media')) {
       return await handleMediaAnalysis(req, res)
     }
 
     // POST: Background processing (merged from process.ts)
+    // Allow without auth — triggered by server-side processing
     if (req.method === 'POST' && action === 'process') {
       if (!req.body && req.headers['content-type']?.includes('application/json')) {
         const chunks = []
@@ -127,6 +128,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         req.body = JSON.parse(Buffer.concat(chunks).toString())
       }
       return await handleProcess(req, res)
+    }
+
+    // ── Auth required for all remaining endpoints ──
+    const userId = await getUserId(req)
+    if (!userId) {
+      return res.status(401).json({ error: 'Sign in to access your data' })
     }
 
     // POST: Submit foundational thought response
@@ -233,6 +240,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .from('memories')
         .select('*')
         .eq('id', id)
+        .eq('user_id', userId)
         .single()
 
       if (error) {
@@ -247,6 +255,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { data: memories, error } = await supabase
         .from('memories')
         .select('*')
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
 
       if (error) {

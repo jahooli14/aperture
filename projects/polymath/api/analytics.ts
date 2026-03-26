@@ -1237,7 +1237,7 @@ async function getMonitoringStats() {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { resource } = req.query
 
-  // MONITORING/HEALTH (merged from /api/monitoring)
+  // MONITORING/HEALTH — public, no auth required
   if (resource === 'monitoring' || resource === 'health') {
     if (req.method !== 'GET') {
       return res.status(405).json({ error: 'Method not allowed' })
@@ -1283,6 +1283,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         details: error instanceof Error ? error.message : 'Unknown error'
       })
     }
+  }
+
+  // ── Auth required for all remaining endpoints ──
+  const userId = await getUserId(req)
+  if (!userId) {
+    return res.status(401).json({ error: 'Sign in to access your data' })
   }
 
   // GET INSPIRATION
@@ -1368,7 +1374,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(405).json({ error: 'Method not allowed' })
     }
     try {
-      const result = await generateMorningBriefing(getUserId())
+      const result = await generateMorningBriefing(userId)
       return res.status(200).json(result)
     } catch {
       return res.status(500).json({ error: 'Briefing generation failed' })
@@ -1424,7 +1430,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // DAILY SPARK — one ambient synthesis insight per day
   if (resource === 'spark') {
     if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
-    const userId = getUserId(req)
     return await handleSpark(req, res, userId)
   }
 

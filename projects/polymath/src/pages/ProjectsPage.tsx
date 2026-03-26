@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { useAuthContext } from '../contexts/AuthContext'
+import { SignInNudge } from '../components/SignInNudge'
 import { useProjectStore } from '../stores/useProjectStore'
 import { useSuggestionStore } from '../stores/useSuggestionStore'
 import { ProjectsPageCarousel } from '../components/projects/ProjectsPageCarousel'
@@ -132,6 +134,16 @@ function CompletedProjectsTimeline({ projects, onNavigate }: { projects: Project
 }
 
 export function ProjectsPage() {
+  const { isAuthenticated, loading: authLoading } = useAuthContext()
+
+  if (!authLoading && !isAuthenticated) {
+    return (
+      <div style={{ backgroundColor: 'var(--brand-bg)' }} className="min-h-screen pt-12">
+        <SignInNudge feature="your projects" description="Sign in to create, track, and manage your projects." />
+      </div>
+    )
+  }
+
   const navigate = useNavigate()
   const {
     projects: allProjects,

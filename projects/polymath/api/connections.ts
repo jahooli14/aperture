@@ -20,7 +20,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'Server configuration error: GEMINI_API_KEY is not set.' })
   }
 
-  const userId = getUserId() // Get the user ID
+  const userId = await getUserId(req)
+  if (!userId) return res.status(401).json({ error: 'Sign in to access your data' })
 
   // Handle GET requests for listing connections
   if (req.method === 'GET') {

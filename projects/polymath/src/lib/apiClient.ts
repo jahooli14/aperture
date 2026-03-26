@@ -1,8 +1,18 @@
+import { supabase } from './supabase'
+
 class ApiError extends Error {
   constructor(public status: number, message: string, public details?: any) {
     super(message)
     this.name = 'ApiError'
   }
+}
+
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (session?.access_token) {
+    return { Authorization: `Bearer ${session.access_token}` }
+  }
+  return {}
 }
 
 /**
@@ -104,9 +114,10 @@ export const api = {
     // 3. Make Request with timeout (default 30s)
     const promise = (async () => {
       try {
+        const authHeaders = await getAuthHeaders()
         const response = await fetchWithTimeout(
           `/api/${endpoint}`,
-          {},
+          { headers: authHeaders },
           options.timeout || 30000
         )
         const data = await handleResponse(response)
@@ -127,11 +138,12 @@ export const api = {
     // Invalidate Cache on Mutation
     cache.clear()
 
+    const authHeaders = await getAuthHeaders()
     const response = await fetchWithTimeout(
       `/api/${endpoint}`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify(data)
       },
       options.timeout || 30000
@@ -163,11 +175,12 @@ export const api = {
       }
     }
 
+    const authHeaders = await getAuthHeaders()
     const response = await fetchWithTimeout(
       `/api/${finalEndpoint}`,
       {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: data ? JSON.stringify(data) : undefined
       },
       options.timeout || 30000
@@ -188,10 +201,12 @@ export const api = {
       finalEndpoint = `${base}?id=${id}${rest}`
     }
 
+    const authHeaders = await getAuthHeaders()
     const response = await fetchWithTimeout(
       `/api/${finalEndpoint}`,
       {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: authHeaders
       },
       options.timeout || 30000
     )
