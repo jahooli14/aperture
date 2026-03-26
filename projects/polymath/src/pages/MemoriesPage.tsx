@@ -114,7 +114,7 @@ export function MemoriesPage() {
   if (!authLoading && !isAuthenticated) {
     return (
       <div style={{ backgroundColor: 'var(--brand-bg)' }} className="min-h-screen pt-12">
-        <SignInNudge feature="your thoughts" description="Sign in to capture, browse, and connect your thoughts." />
+        <SignInNudge variant="thoughts" />
       </div>
     )
   }
