@@ -1,13 +1,13 @@
 /**
  * SignInNudge — contextual gates for unauthenticated users.
  *
- * Each variant shows a different facet of the app's intelligence,
- * matched to the tab it gates. No more identical lock screens.
+ * Each variant shows the outcome of using that feature,
+ * not the mechanism behind it. No locks, no data-lake language.
  */
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Feather, Sprout, Library, ArrowRight, Link2 } from 'lucide-react'
+import { Feather, Sprout, Library, ArrowRight, ChevronRight } from 'lucide-react'
 
 type Variant = 'thoughts' | 'projects' | 'lists'
 
@@ -15,120 +15,116 @@ interface SignInNudgeProps {
   variant: Variant
 }
 
-// ── Thoughts variant: connection lines between thought snippets ─────────
+// ── Thoughts variant: voice notes that go somewhere ─────────────────────
 
 function ThoughtsVisual() {
-  const thoughts = [
-    { text: 'creative cities and where to live', x: 20, y: 0 },
-    { text: 'distributed systems remind me of nature', x: 0, y: 44 },
-    { text: 'building a personal research tool', x: 40, y: 88 },
+  const notes = [
+    { text: 'maybe I should write about what I learned from that failure…', time: '2h ago' },
+    { text: 'the thing connecting all my side projects is systems thinking', time: 'yesterday' },
+    { text: 'that conversation with Mel changed how I see the problem', time: '3d ago' },
   ]
 
   return (
-    <div className="relative w-full h-36 mb-2">
-      {/* Connection lines (SVG) */}
-      <svg
-        className="absolute inset-0 w-full h-full"
-        style={{ overflow: 'visible' }}
-      >
-        <motion.line
-          x1="50%" y1="16" x2="30%" y2="56"
-          stroke="var(--brand-primary)"
-          strokeWidth="1"
-          strokeDasharray="4 3"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.25 }}
-          transition={{ delay: 0.8, duration: 0.6 }}
-        />
-        <motion.line
-          x1="50%" y1="56" x2="60%" y2="100"
-          stroke="var(--brand-primary)"
-          strokeWidth="1"
-          strokeDasharray="4 3"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.25 }}
-          transition={{ delay: 1.1, duration: 0.6 }}
-        />
-      </svg>
-
-      {/* Thought chips */}
-      {thoughts.map((t, i) => (
+    <div className="flex flex-col gap-2 mb-2">
+      {notes.map((note, i) => (
         <motion.div
           key={i}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 + i * 0.2, duration: 0.4 }}
-          className="absolute px-3 py-2 rounded-xl text-xs"
+          initial={{ opacity: 0, x: -12 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3 + i * 0.18, duration: 0.4 }}
+          className="flex items-start gap-3 px-3 py-2.5 rounded-xl text-left"
           style={{
-            left: `${t.x}px`,
-            top: `${t.y}px`,
             backgroundColor: 'var(--glass-surface)',
             border: '1px solid var(--glass-surface-hover)',
-            color: 'var(--brand-text-primary)',
-            maxWidth: '220px',
           }}
         >
-          {t.text}
+          <div
+            className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0"
+            style={{
+              backgroundColor: i === 0
+                ? 'var(--brand-primary)'
+                : i === 1 ? '#8B5CF6' : '#10B981',
+            }}
+          />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs leading-relaxed" style={{ color: 'var(--brand-text-primary)', opacity: 0.85 }}>
+              {note.text}
+            </p>
+            <span className="text-[10px] mt-1 block" style={{ color: 'var(--brand-text-muted)' }}>
+              {note.time}
+            </span>
+          </div>
         </motion.div>
       ))}
     </div>
   )
 }
 
-// ── Projects variant: a mock sparked project card ───────────────────────
+// ── Projects variant: a project that emerged from thinking ──────────────
 
 function ProjectsVisual() {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.4, duration: 0.5 }}
-      className="w-full rounded-xl p-4 mb-2"
-      style={{
-        backgroundColor: 'var(--glass-surface)',
-        border: '1px solid var(--glass-surface-hover)',
-      }}
-    >
-      <div className="flex items-start gap-3">
-        <div
-          className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0"
-          style={{ backgroundColor: '#3B82F6' }}
-        />
-        <div className="flex-1 min-w-0">
-          <p
-            className="text-sm font-semibold mb-1"
+    <div className="flex flex-col gap-2.5 mb-2">
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4, duration: 0.5 }}
+        className="w-full rounded-xl p-4"
+        style={{
+          backgroundColor: 'var(--glass-surface)',
+          border: '1px solid var(--glass-surface-hover)',
+        }}
+      >
+        <div className="flex items-center gap-2.5 mb-2">
+          <div
+            className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+            style={{ backgroundColor: '#8B5CF6' }}
+          />
+          <span
+            className="text-sm font-semibold"
             style={{ color: 'var(--brand-text-primary)' }}
           >
-            Creative Cities Research
-          </p>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.8 }}
-            className="flex items-center gap-1.5 text-xs"
-            style={{ color: 'var(--brand-primary)', opacity: 0.7 }}
-          >
-            <Link2 className="w-3 h-3" />
-            sparked by 4 related thoughts
-          </motion.div>
+            Systems Thinking Essay
+          </span>
         </div>
-      </div>
-      {/* Mock progress bar */}
-      <motion.div
-        initial={{ scaleX: 0 }}
-        animate={{ scaleX: 1 }}
-        transition={{ delay: 1.0, duration: 0.8, ease: 'easeOut' }}
-        className="mt-3 h-1 rounded-full origin-left"
-        style={{
-          background: 'linear-gradient(90deg, var(--brand-primary), #818cf8)',
-          width: '35%',
-        }}
-      />
-    </motion.div>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.9 }}
+          className="flex items-center gap-1 text-xs pl-5 mb-3"
+          style={{ color: '#8B5CF6', opacity: 0.8 }}
+        >
+          <ChevronRight className="w-3 h-3" />
+          next: write the opening paragraph
+        </motion.div>
+        {/* Momentum bar */}
+        <div className="pl-5">
+          <div className="h-1 rounded-full w-full" style={{ backgroundColor: 'var(--glass-surface-hover)' }}>
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: '45%' }}
+              transition={{ delay: 1.2, duration: 0.8, ease: 'easeOut' }}
+              className="h-full rounded-full"
+              style={{ background: 'linear-gradient(90deg, #8B5CF6, var(--brand-primary))' }}
+            />
+          </div>
+        </div>
+      </motion.div>
+
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.6 }}
+        className="text-[11px] text-center"
+        style={{ color: 'var(--brand-text-muted)' }}
+      >
+        emerged from 5 voice notes over 2 weeks
+      </motion.p>
+    </div>
   )
 }
 
-// ── Lists variant: mock list covers ─────────────────────────────────────
+// ── Lists variant: curated collections ──────────────────────────────────
 
 function ListsVisual() {
   const lists = [
@@ -172,22 +168,22 @@ const VARIANTS: Record<Variant, {
 }> = {
   thoughts: {
     icon: Feather,
-    header: 'your thoughts, untangled',
-    subtext: 'speak freely. aperture finds the threads.',
+    header: 'capture anything. organise nothing.',
+    subtext: 'just talk. your thoughts sort themselves out.',
     cta: 'sign in to start',
     Visual: ThoughtsVisual,
   },
   projects: {
     icon: Sprout,
-    header: 'projects that find you',
-    subtext: 'aperture notices when your ideas want to become something.',
-    cta: 'sign in to discover yours',
+    header: 'your next project is already in your head',
+    subtext: 'keep thinking out loud. the shape reveals itself.',
+    cta: 'sign in to see yours',
     Visual: ProjectsVisual,
   },
   lists: {
     icon: Library,
     header: 'curate what shapes you',
-    subtext: 'books, films, places — all woven into your thinking.',
+    subtext: 'books, films, places — the things that made you, you.',
     cta: 'sign in to start curating',
     Visual: ListsVisual,
   },
