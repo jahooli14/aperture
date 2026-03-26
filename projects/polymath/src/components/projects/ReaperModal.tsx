@@ -7,7 +7,7 @@ import { useProjectStore } from '../../stores/useProjectStore'
 
 interface ReaperModalProps {
   isOpen: boolean
-  onClose: () => void
+  onClose: (resolved?: boolean) => void
 }
 
 interface RottingProject {
@@ -74,7 +74,7 @@ export function ReaperModal({ isOpen, onClose }: ReaperModalProps) {
         variant: 'success',
       })
       fetchProjects() // Refresh projects list
-      onClose()
+      onClose(true)
     } catch (error) {
       console.error('[ReaperModal] Failed to bury project:', error)
       addToast({
@@ -98,7 +98,7 @@ export function ReaperModal({ isOpen, onClose }: ReaperModalProps) {
         variant: 'success',
       })
       fetchProjects() // Refresh projects list
-      onClose()
+      onClose(true)
     } catch (error) {
       console.error('[ReaperModal] Failed to resurrect project:', error)
       addToast({
