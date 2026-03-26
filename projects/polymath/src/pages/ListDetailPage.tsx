@@ -523,6 +523,58 @@ const QuoteCard = memo(({
 })
 
 // ============================================================================
+// Helpers for type-aware metadata display
+// ============================================================================
+
+const INTERNAL_SPEC_KEYS = new Set(['type', 'lastModified', 'source', 'Type'])
+
+function getMetaLine(item: ListItem, listType: string): string[] {
+    const m = item.metadata
+    if (!m) return []
+    const parts: string[] = []
+
+    switch (listType) {
+        case 'film': case 'movie': case 'tv': case 'show':
+            if (m.specs?.Year || m.year) parts.push(m.specs?.Year || m.year)
+            if (m.specs?.Runtime) parts.push(m.specs.Runtime)
+            if (m.director) parts.push(`dir. ${m.director}`)
+            if (m.specs?.Rating) parts.push(`★ ${m.specs.Rating}`)
+            break
+        case 'book':
+            if (m.author) parts.push(m.author)
+            if (m.specs?.Year || m.year) parts.push(m.specs?.Year || m.year)
+            if (m.specs?.pages) parts.push(`${m.specs.pages}pp`)
+            if (m.specs?.publisher) parts.push(m.specs.publisher)
+            break
+        case 'music':
+            if (m.subtitle && !m.subtitle.startsWith('Director')) parts.push(m.subtitle)
+            if (m.specs?.Year) parts.push(m.specs.Year)
+            if (m.genre || m.specs?.Genre) parts.push(m.genre || m.specs?.Genre)
+            break
+        case 'game':
+            if (m.specs?.Year) parts.push(m.specs.Year)
+            if (m.specs?.Developer) parts.push(m.specs.Developer)
+            if (m.specs?.Platform) parts.push(m.specs.Platform)
+            break
+        case 'place':
+            if (m.specs?.Region) parts.push(m.specs.Region)
+            if (m.specs?.Country) parts.push(m.specs.Country)
+            break
+        case 'event':
+            if (m.specs?.Date) parts.push(m.specs.Date)
+            if (m.specs?.Location) parts.push(m.specs.Location)
+            break
+        default:
+            // tech, software, generic: first 3 non-internal spec values
+            Object.entries(m.specs || {})
+                .filter(([k]) => !INTERNAL_SPEC_KEYS.has(k))
+                .slice(0, 3)
+                .forEach(([, v]) => v && parts.push(String(v)))
+    }
+    return parts.filter(Boolean)
+}
+
+// ============================================================================
 // Standard item card
 // ============================================================================
 
@@ -665,58 +717,45 @@ const StandardItemCard = memo(({
 
                 {/* Key metadata on expanded */}
                 {isExpanded && (
-                    <div className="space-y-1 backdrop-blur-sm bg-black/30 p-2 rounded-lg border border-[var(--glass-surface-hover)] mt-1">
-                        {item.metadata?.subtitle && (
-                            <p className="text-zinc-300 text-[10px] italic leading-relaxed">{item.metadata.subtitle}</p>
-                        )}
+                    <div className="space-y-1.5 backdrop-blur-sm bg-black/30 p-2 rounded-lg border border-[var(--glass-surface-hover)] mt-1">
+                        {/* Type-aware meta line */}
+                        {(() => {
+                            const line = getMetaLine(item, listType)
+                            return line.length > 0 ? (
+                                <p className="text-[9px] text-brand-text-muted font-medium tracking-wide leading-relaxed">
+                                    {line.join(' · ')}
+                                </p>
+                            ) : null
+                        })()}
+                        {/* Description */}
                         {item.metadata?.description && (
-                            <p className="text-brand-text-muted text-[10px] leading-relaxed line-clamp-3">{item.metadata.description}</p>
+                            <p className="text-brand-text-muted text-[10px] leading-relaxed line-clamp-2">{item.metadata.description}</p>
                         )}
-                        {item.metadata?.specs && (
-                            <div className="flex flex-wrap gap-2">
-                                {Object.entries(item.metadata.specs).slice(0, 3).map(([key, value]) => (
-                                    <div key={key} className="flex items-baseline gap-1">
-                                        <span className="text-[8px] uppercase font-bold text-brand-text-muted">{key}:</span>
-                                        <span className="text-[9px] text-zinc-300">{value as string}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                        {/* Show year / author / director from metadata root */}
-                        {(item.metadata?.year || item.metadata?.author || item.metadata?.director || item.metadata?.genre) && (
-                            <div className="flex flex-wrap gap-2">
-                                {item.metadata.year && (
-                                    <span className="text-[9px] text-brand-text-muted">{item.metadata.year}</span>
-                                )}
-                                {item.metadata.author && (
-                                    <span className="text-[9px] text-brand-text-muted">{item.metadata.author}</span>
-                                )}
-                                {item.metadata.director && (
-                                    <span className="text-[9px] text-brand-text-muted">dir. {item.metadata.director}</span>
-                                )}
-                                {item.metadata.genre && (
-                                    <span className="text-[9px] bg-[rgba(255,255,255,0.1)] px-1.5 py-0.5 rounded-xl text-brand-text-muted">{item.metadata.genre}</span>
-                                )}
-                            </div>
-                        )}
-                        {item.metadata?.tags && item.metadata.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                                {item.metadata.tags.slice(0, 3).map((tag: string) => (
-                                    <span key={tag} className="text-[8px] bg-brand-primary/20 border border-sky-500/30 px-1.5 py-0.5 rounded-xl text-brand-primary font-medium">
-                                        {tag}
-                                    </span>
-                                ))}
-                            </div>
-                        )}
+                        {/* Tags — filtered */}
+                        {item.metadata?.tags && item.metadata.tags.length > 0 && (() => {
+                            const cleanTags = (item.metadata.tags as string[])
+                                .filter(t => t.length >= 4 && !INTERNAL_SPEC_KEYS.has(t))
+                                .slice(0, 3)
+                            return cleanTags.length > 0 ? (
+                                <div className="flex flex-wrap gap-1">
+                                    {cleanTags.map((tag: string) => (
+                                        <span key={tag} className="text-[8px] bg-brand-primary/20 border border-sky-500/30 px-1.5 py-0.5 rounded-xl text-brand-primary font-medium">
+                                            {tag}
+                                        </span>
+                                    ))}
+                                </div>
+                            ) : null
+                        })()}
+                        {/* Details link */}
                         {item.metadata?.link && (
                             <a
                                 href={item.metadata.link}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-[9px] font-bold text-brand-primary hover:text-[var(--brand-text-primary)] transition-colors uppercase tracking-widest flex items-center gap-1 mt-1"
+                                className="text-[9px] font-bold text-brand-primary hover:text-[var(--brand-text-primary)] transition-colors uppercase tracking-widest flex items-center gap-1 mt-0.5"
                                 onClick={e => e.stopPropagation()}
                             >
-                                Details 
+                                Details
                             </a>
                         )}
                     </div>
@@ -1281,7 +1320,7 @@ export default function ListDetailPage() {
 
                 {/* Status Filter Tabs */}
                 {!isReordering && hasStatus && displayItems.length > 0 && (
-                    <div className="flex items-center gap-1 mt-4 overflow-x-auto pb-1 scrollbar-hide">
+                    <div className="flex items-center gap-1 mt-3 overflow-x-auto pb-1 scrollbar-hide">
                         {(['queue', 'completed', 'all'] as StatusFilter[]).map(tab => {
                             const isActive = statusFilter === tab
                             const count = counts[tab]
@@ -1316,7 +1355,7 @@ export default function ListDetailPage() {
 
                 {/* Add Input */}
                 {!isReordering && (
-                    <div className="mt-6 mb-10 max-w-2xl">
+                    <div className="mt-4 mb-5 max-w-2xl">
                         <AnimatePresence mode="wait">
                             {isVoiceMode ? (
                                 <motion.div
