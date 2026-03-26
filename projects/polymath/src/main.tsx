@@ -1,7 +1,11 @@
 import ReactDOM from 'react-dom/client'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from './lib/queryClient'
+import { setupAuthFetch } from './lib/authFetch'
 import App from './App'
+
+// Patch global fetch to auto-attach auth tokens to /api/ requests
+setupAuthFetch()
 
 // Import Inter font
 import '@fontsource/inter/400.css' // Regular

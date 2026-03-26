@@ -6,6 +6,7 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { FloatingNav } from './components/FloatingNav'
 import { PWAInstallBanner } from './components/PWAInstallBanner'
 import { PinProvider } from './contexts/PinContext'
+import { AuthProvider } from './contexts/AuthContext'
 import { PinOverlay } from './components/PinOverlay'
 import { AutoSuggestionProvider } from './contexts/AutoSuggestionContext'
 import { ScrollToTop } from './components/ScrollToTop'
@@ -265,6 +266,7 @@ export default function App() {
   }, [])
 
   return (
+    <AuthProvider>
     <PinProvider>
       <AutoSuggestionProvider>
         <ToastProvider>
@@ -354,6 +356,7 @@ export default function App() {
         </ToastProvider>
       </AutoSuggestionProvider>
     </PinProvider>
+    </AuthProvider>
   )
 }
 // Force redeploy Wed 29 Oct 2025 13:24:27 GMT

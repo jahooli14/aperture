@@ -182,7 +182,8 @@ function selectDailyQueue(scores: ProjectScore[]): ProjectScore[] {
 
 async function internalHandler(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseClient()
-  const userId = getUserId()
+  const userId = await getUserId(req)
+  if (!userId) return res.status(401).json({ error: 'Sign in to access your data' })
   const { resource } = req.query
 
   // DEFAULT RESOURCE (Projects CRUD)
