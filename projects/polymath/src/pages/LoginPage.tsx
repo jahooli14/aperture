@@ -85,7 +85,7 @@ export function LoginPage() {
             letterSpacing: '-0.04em',
           }}
         >
-          polymath
+          aperture
         </h1>
         <div className="mt-2 h-6" />  {/* breathing room, no tagline */}
       </motion.div>
