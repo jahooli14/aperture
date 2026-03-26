@@ -11,7 +11,7 @@ import { ReaperModal } from '../components/projects/ReaperModal'
 import { GraveyardWalkthrough, shouldShowGraveyardWalkthrough } from '../components/projects/GraveyardWalkthrough'
 import { Button } from '../components/ui/button'
 import { PremiumTabs } from '../components/ui/premium-tabs'
-import { Layers, Search, Check } from 'lucide-react'
+import { Layers, Search, Check, Skull } from 'lucide-react'
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import { SubtleBackground } from '../components/SubtleBackground'
@@ -169,17 +169,16 @@ export function ProjectsPage() {
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
 
   const [reaperModalOpen, setReaperModalOpen] = useState(false)
+  const [rottingCount, setRottingCount] = useState(0)
   const [graveyardWalkthroughOpen, setGraveyardWalkthroughOpen] = useState(false)
 
-  // Check for rotting projects on page load
+  // Check for rotting projects on page load — passive count only, no auto-open
   useEffect(() => {
     const checkForRottingProjects = async () => {
       try {
         const response = await api.get('projects?resource=reaper&action=rotting')
         const rottingProjects = Array.isArray(response) ? response : response?.projects || []
-        if (rottingProjects.length > 0) {
-          setReaperModalOpen(true)
-        }
+        setRottingCount(rottingProjects.length)
       } catch (error) {
         console.error('Failed to check for rotting projects:', error)
       }
@@ -400,6 +399,17 @@ export function ProjectsPage() {
                     Live <span className="text-brand-primary">Projects</span>
                   </h2>
                 </div>
+                {rottingCount > 0 && (
+                  <button
+                    onClick={() => setReaperModalOpen(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors hover:bg-red-500/10"
+                    style={{ color: 'rgba(239,68,68,0.6)', border: '1px solid rgba(239,68,68,0.2)' }}
+                    title={`${rottingCount} project${rottingCount > 1 ? 's' : ''} gone quiet`}
+                  >
+                    <Skull className="h-3.5 w-3.5" />
+                    <span>{rottingCount}</span>
+                  </button>
+                )}
               </div>
 
               {/* Inner Content */}
@@ -483,7 +493,10 @@ export function ProjectsPage() {
       {/* Reaper Modal */}
       <ReaperModal
         isOpen={reaperModalOpen}
-        onClose={() => setReaperModalOpen(false)}
+        onClose={(resolved?: boolean) => {
+          setReaperModalOpen(false)
+          if (resolved) setRottingCount(c => Math.max(0, c - 1))
+        }}
       />
 
       {/* Monthly Graveyard Walkthrough */}
