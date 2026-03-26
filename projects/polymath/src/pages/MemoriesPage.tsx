@@ -501,7 +501,11 @@ export function MemoriesPage() {
         activeTags.every(tag => m.tags?.includes(tag))
       )
     }
-    return filtered
+    return filtered.slice().sort((a, b) => {
+      const dateA = new Date(a.audiopen_created_at || a.created_at).getTime()
+      const dateB = new Date(b.audiopen_created_at || b.created_at).getTime()
+      return dateB - dateA
+    })
   }, [baseMemories, searchQuery, activeTags])
 
   // Pinned thoughts  shown as a horizontal row above the main grid
