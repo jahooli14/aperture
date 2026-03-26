@@ -107,7 +107,7 @@ export function UnauthHome() {
           letterSpacing: '-0.04em',
         }}
       >
-        polymath
+        aperture
       </motion.h1>
 
       {/* Hero line */}

@@ -173,14 +173,14 @@ const VARIANTS: Record<Variant, {
   thoughts: {
     icon: Feather,
     header: 'your thoughts, untangled',
-    subtext: 'speak freely. polymath finds the threads.',
+    subtext: 'speak freely. aperture finds the threads.',
     cta: 'sign in to start',
     Visual: ThoughtsVisual,
   },
   projects: {
     icon: Sprout,
     header: 'projects that find you',
-    subtext: 'polymath notices when your ideas want to become something.',
+    subtext: 'aperture notices when your ideas want to become something.',
     cta: 'sign in to discover yours',
     Visual: ProjectsVisual,
   },
