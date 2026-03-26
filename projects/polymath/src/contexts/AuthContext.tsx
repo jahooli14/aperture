@@ -34,8 +34,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       const newUserId = session?.user?.id ?? null
-      // Clear cached store data when switching accounts or signing out
-      if (event === 'SIGNED_OUT' || (event === 'SIGNED_IN' && newUserId !== currentUserId.current)) {
+      // Clear cached store data only when switching between two known accounts or signing out.
+      // If currentUserId is null it means this is the initial session restore on page load — don't clear.
+      if (event === 'SIGNED_OUT' || (event === 'SIGNED_IN' && currentUserId.current !== null && newUserId !== currentUserId.current)) {
         useMemoryStore.getState().clearCache()
         useProjectStore.getState().clearCache()
       }
