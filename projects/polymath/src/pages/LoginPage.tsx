@@ -85,11 +85,9 @@ export function LoginPage() {
             letterSpacing: '-0.04em',
           }}
         >
-          polymath
+          aperture
         </h1>
-        <p className="text-sm mt-2" style={{ color: 'var(--brand-text-secondary)' }}>
-          your second brain
-        </p>
+        <div className="mt-2 h-6" />  {/* breathing room, no tagline */}
       </motion.div>
 
       <motion.div
@@ -174,7 +172,7 @@ export function LoginPage() {
                   sign in
                 </h2>
                 <p className="text-sm mb-6" style={{ color: 'var(--brand-text-secondary)' }}>
-                  continue to your knowledge graph
+                  pick up where you left off
                 </p>
 
                 {/* Google */}

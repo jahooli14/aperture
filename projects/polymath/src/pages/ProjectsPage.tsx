@@ -139,7 +139,7 @@ export function ProjectsPage() {
   if (!authLoading && !isAuthenticated) {
     return (
       <div style={{ backgroundColor: 'var(--brand-bg)' }} className="min-h-screen pt-12">
-        <SignInNudge feature="your projects" description="Sign in to create, track, and manage your projects." />
+        <SignInNudge variant="projects" />
       </div>
     )
   }
