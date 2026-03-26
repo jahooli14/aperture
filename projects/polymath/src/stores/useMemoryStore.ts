@@ -26,6 +26,7 @@ interface MemoryStore {
   loadFromOfflineDB: () => Promise<boolean>
   setMemories: (memories: Memory[]) => void
   clearError: () => void
+  clearCache: () => void
   fetchBridgesForMemory: (memoryId: string) => Promise<BridgeWithMemories[]>
   createMemory: (input: CreateMemoryInput) => Promise<Memory>
   updateMemory: (id: string, input: CreateMemoryInput) => Promise<Memory>
@@ -275,6 +276,10 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
 
   clearError: () => {
     set({ error: null })
+  },
+
+  clearCache: () => {
+    set({ memories: [], bridges: [], lastFetched: null, error: null })
   },
 
   fetchBridgesForMemory: async (memoryId: string) => {
