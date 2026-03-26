@@ -82,7 +82,7 @@ export default function ListsPage() {
     if (!authLoading && !isAuthenticated) {
       return (
         <div style={{ backgroundColor: 'var(--brand-bg)' }} className="min-h-screen pt-12">
-          <SignInNudge feature="your lists" description="Sign in to curate books, films, and more." />
+          <SignInNudge variant="lists" />
         </div>
       )
     }

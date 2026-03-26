@@ -37,7 +37,7 @@ import { MemoryDetailModal } from '../components/memories/MemoryDetailModal'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { readingDb } from '../lib/db'
 import { useAuthContext } from '../contexts/AuthContext'
-import { SignInNudge } from '../components/SignInNudge'
+import { UnauthHome } from '../components/onboarding/UnauthHome'
 
 interface InspirationData {
   type: 'article' | 'thought' | 'project' | 'empty'
@@ -711,28 +711,9 @@ export function HomePage() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  // Show sign-in nudge for unauthenticated users
+  // Show animated demo for unauthenticated users
   if (!authLoading && !isAuthenticated) {
-    return (
-      <div style={{ backgroundColor: 'var(--brand-bg)' }} className="min-h-screen">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12">
-          <h1
-            className="aperture-header text-center mb-2"
-            style={{ fontSize: '2.5rem', color: 'var(--brand-primary)', letterSpacing: '-0.04em' }}
-          >
-            polymath
-          </h1>
-          <p className="text-center text-sm mb-8" style={{ color: 'var(--brand-text-secondary)' }}>
-            your second brain
-          </p>
-        </div>
-        <SignInNudge
-          feature="your knowledge graph"
-          description="Sign in to save thoughts, track projects, and build your second brain."
-          showOnboarding
-        />
-      </div>
-    )
+    return <UnauthHome />
   }
 
   const { suggestions, fetchSuggestions } = useSuggestionStore()
