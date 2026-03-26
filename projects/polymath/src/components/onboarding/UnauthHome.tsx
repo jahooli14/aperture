@@ -1,62 +1,65 @@
 /**
  * UnauthHome — The first screen unauthenticated users see.
  *
- * Instead of a lock icon and "unlock your knowledge graph", this demonstrates
- * the app's core loop: speak → AI extracts meaning → connections appear.
- * A cycling animated demo shows what happens when you use Polymath.
+ * Shows the outcome, not the mechanism: scattered voice notes become
+ * shaped projects with momentum. The data lake is invisible —
+ * what matters is that your thinking goes somewhere.
  */
 
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Mic, User, MapPin, Hash, Link2, ArrowRight } from 'lucide-react'
+import { Mic, ArrowRight, ChevronRight } from 'lucide-react'
 
-interface DemoThought {
-  transcript: string
-  entities: { icon: typeof User; label: string; color: string }[]
-  connection: string
+interface DemoStory {
+  /** The messy voice note — relatable, raw */
+  voiceNote: string
+  /** What it became — the outcome */
+  project: { title: string; status: string; color: string }
+  /** How many scattered thoughts fed into this */
+  fromCount: number
 }
 
-const DEMO_THOUGHTS: DemoThought[] = [
+const DEMO_STORIES: DemoStory[] = [
   {
-    transcript:
-      "I keep thinking about that conversation with Sarah about moving to Portland… it connects to that article about creative cities I read last week",
-    entities: [
-      { icon: User, label: 'Sarah', color: 'rgba(96, 165, 250, 0.9)' },
-      { icon: MapPin, label: 'Portland', color: 'rgba(52, 211, 153, 0.9)' },
-      { icon: Hash, label: 'creative cities', color: 'rgba(251, 191, 36, 0.9)' },
-    ],
-    connection: 'links to 3 thoughts about relocation',
+    voiceNote:
+      "I keep coming back to this idea about moving somewhere more creative… Portland, maybe Berlin…",
+    project: {
+      title: 'Relocation Plan',
+      status: 'next step: research cost of living',
+      color: '#10B981',
+    },
+    fromCount: 6,
   },
   {
-    transcript:
-      "That podcast on distributed systems reminded me of how ant colonies work… there's something about emergent behaviour I want to dig into",
-    entities: [
-      { icon: Hash, label: 'distributed systems', color: 'rgba(167, 139, 250, 0.9)' },
-      { icon: Hash, label: 'emergent behaviour', color: 'rgba(251, 146, 60, 0.9)' },
-      { icon: Hash, label: 'ant colonies', color: 'rgba(52, 211, 153, 0.9)' },
-    ],
-    connection: 'links to 2 thoughts about complex systems',
+    voiceNote:
+      "That podcast about ant colonies got me thinking about how teams self-organise…",
+    project: {
+      title: 'Emergent Systems Essay',
+      status: 'draft outline ready',
+      color: '#8B5CF6',
+    },
+    fromCount: 4,
   },
   {
-    transcript:
-      "I want to build a tool that helps me track what I'm reading and connects it to things I've been thinking about… like a personal research engine",
-    entities: [
-      { icon: Hash, label: 'reading tracker', color: 'rgba(96, 165, 250, 0.9)' },
-      { icon: Hash, label: 'research engine', color: 'rgba(244, 114, 182, 0.9)' },
-      { icon: Hash, label: 'personal tools', color: 'rgba(251, 191, 36, 0.9)' },
-    ],
-    connection: 'sparked a new project idea',
+    voiceNote:
+      "I want to make something that helps people track what they read and why it mattered…",
+    project: {
+      title: 'Reading Companion App',
+      status: 'next step: sketch the core flow',
+      color: '#3B82F6',
+    },
+    fromCount: 8,
   },
 ]
 
-const CYCLE_DURATION = 10000
+const CYCLE_DURATION = 8000
 
 // Simple animated waveform bars
 function Waveform() {
   return (
     <div className="flex items-end gap-[3px] h-5">
-      {Array.from({ length: 16 }).map((_, i) => (
+      {Array.from({ length: 14 }).map((_, i) => (
         <motion.div
           key={i}
           className="w-[2px] rounded-full"
@@ -83,12 +86,12 @@ export function UnauthHome() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setActiveIndex(prev => (prev + 1) % DEMO_THOUGHTS.length)
+      setActiveIndex(prev => (prev + 1) % DEMO_STORIES.length)
     }, CYCLE_DURATION)
     return () => clearInterval(interval)
   }, [])
 
-  const thought = DEMO_THOUGHTS[activeIndex]
+  const story = DEMO_STORIES[activeIndex]
 
   return (
     <div
@@ -110,18 +113,18 @@ export function UnauthHome() {
         aperture
       </motion.h1>
 
-      {/* Hero line */}
+      {/* Hero line — the outcome, not the mechanism */}
       <motion.p
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.3, duration: 0.5 }}
-        className="text-base mb-10"
+        className="text-base mb-10 text-center"
         style={{ color: 'var(--brand-text-secondary)', letterSpacing: '-0.01em' }}
       >
-        speak. watch it connect.
+        think out loud. finish what matters.
       </motion.p>
 
-      {/* Animated demo card */}
+      {/* Animated story card — shows the transformation */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -145,62 +148,75 @@ export function UnauthHome() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.4 }}
             >
-              {/* Waveform + mic label */}
-              <div className="flex items-center gap-3 mb-4">
+              {/* Voice note — the messy input */}
+              <div className="flex items-center gap-3 mb-3">
                 <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                  className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
                   style={{ backgroundColor: 'rgba(56, 189, 248, 0.12)' }}
                 >
-                  <Mic className="w-4 h-4" style={{ color: 'var(--brand-primary)' }} />
+                  <Mic className="w-3.5 h-3.5" style={{ color: 'var(--brand-primary)' }} />
                 </div>
                 <Waveform />
               </div>
 
-              {/* Transcript appearing */}
               <motion.p
                 initial={{ opacity: 0 }}
-                animate={{ opacity: 0.85 }}
-                transition={{ delay: 0.3, duration: 0.8 }}
-                className="text-sm leading-relaxed mb-5"
-                style={{ color: 'var(--brand-text-primary)' }}
+                animate={{ opacity: 0.7 }}
+                transition={{ delay: 0.3, duration: 0.6 }}
+                className="text-sm leading-relaxed mb-5 italic"
+                style={{ color: 'var(--brand-text-secondary)' }}
               >
-                "{thought.transcript}"
+                "{story.voiceNote}"
               </motion.p>
 
-              {/* Extracted entities */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                {thought.entities.map((entity, i) => {
-                  const Icon = entity.icon
-                  return (
-                    <motion.div
-                      key={entity.label}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 1.0 + i * 0.2, duration: 0.35 }}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium"
-                      style={{
-                        backgroundColor: 'var(--glass-surface)',
-                        border: '1px solid var(--glass-surface-hover)',
-                        color: entity.color,
-                      }}
-                    >
-                      <Icon className="w-3 h-3" />
-                      {entity.label}
-                    </motion.div>
-                  )
-                })}
-              </div>
-
-              {/* Connection line */}
+              {/* The transformation arrow */}
               <motion.div
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 1.8, duration: 0.4 }}
-                className="flex items-center gap-2 text-xs"
-                style={{ color: 'var(--brand-primary)', opacity: 0.7 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.3 }}
+                transition={{ delay: 1.2, duration: 0.3 }}
+                className="flex items-center gap-2 mb-4 text-xs"
+                style={{ color: 'var(--brand-text-muted)' }}
               >
-                <Link2 className="w-3 h-3" />
-                {thought.connection}
+                <div className="flex-1 h-px" style={{ backgroundColor: 'var(--glass-surface-hover)' }} />
+                <span>
+                  from {story.fromCount} voice notes
+                </span>
+                <div className="flex-1 h-px" style={{ backgroundColor: 'var(--glass-surface-hover)' }} />
+              </motion.div>
+
+              {/* The outcome — a shaped project */}
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.6, duration: 0.4 }}
+                className="rounded-xl p-3.5"
+                style={{
+                  backgroundColor: 'var(--glass-surface)',
+                  border: '1px solid var(--glass-surface-hover)',
+                }}
+              >
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div
+                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: story.project.color }}
+                  />
+                  <span
+                    className="text-sm font-semibold"
+                    style={{ color: 'var(--brand-text-primary)' }}
+                  >
+                    {story.project.title}
+                  </span>
+                </div>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 2.2, duration: 0.4 }}
+                  className="flex items-center gap-1 text-xs pl-5"
+                  style={{ color: story.project.color, opacity: 0.8 }}
+                >
+                  <ChevronRight className="w-3 h-3" />
+                  {story.project.status}
+                </motion.div>
               </motion.div>
             </motion.div>
           </AnimatePresence>
@@ -208,7 +224,7 @@ export function UnauthHome() {
 
         {/* Cycle dots */}
         <div className="flex justify-center gap-1.5 mt-4">
-          {DEMO_THOUGHTS.map((_, i) => (
+          {DEMO_STORIES.map((_, i) => (
             <motion.div
               key={i}
               className="rounded-full"
