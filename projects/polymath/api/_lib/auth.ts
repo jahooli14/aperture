@@ -1,13 +1,22 @@
 /**
  * Authentication Helper
- * Returns user ID for API requests
+ * Extracts user ID from Supabase JWT in Authorization header.
+ * Returns null if not authenticated — callers must handle 401.
  */
-export function getUserId(req?: any) {
-    // Check for user ID in header (passed by frontend store)
-    if (req?.headers?.['x-user-id']) {
-        return req.headers['x-user-id'] as string;
-    }
+import { getSupabaseClient } from './supabase.js'
 
-    // Single user app - hardcoded user ID fallback
-    return 'f2404e61-2010-46c8-8edd-b8a3e702f0fb';
+export async function getUserId(req?: any): Promise<string | null> {
+    // Extract Bearer token from Authorization header
+    const authHeader = req?.headers?.['authorization'] || req?.headers?.['Authorization']
+    if (authHeader?.startsWith('Bearer ')) {
+        const token = authHeader.slice(7)
+        try {
+            const supabase = getSupabaseClient()
+            const { data: { user }, error } = await supabase.auth.getUser(token)
+            if (!error && user) return user.id
+        } catch (e) {
+            console.error('[auth] Failed to verify token:', e)
+        }
+    }
+    return null
 }

@@ -40,15 +40,8 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
     set({ loading: true, error: null })
 
     try {
-      // Try to get authenticated user, but don't require it
-      const { data: { user } } = await supabase.auth.getUser()
-
-      const headers: Record<string, string> = {}
-      if (user) {
-        headers['x-user-id'] = user.id
-      }
-
-      const response = await fetch('/api/memories?prompts=true', { headers })
+      // Auth token is now auto-attached by setupAuthFetch()
+      const response = await fetch('/api/memories?prompts=true')
 
       if (!response.ok) {
         throw new Error('Failed to fetch prompts')

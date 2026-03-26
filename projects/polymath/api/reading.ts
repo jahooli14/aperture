@@ -1040,7 +1040,8 @@ function countWords(content: string): number {
 
 async function internalHandler(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseClient()
-  const userId = getUserId(req)
+  const userId = await getUserId(req)
+  if (!userId) return res.status(401).json({ error: 'Sign in to access your data' })
   const { resource, id } = req.query
 
   // HIGHLIGHTS RESOURCE

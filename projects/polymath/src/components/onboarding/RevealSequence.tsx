@@ -9,9 +9,10 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Zap, ArrowRight, Book } from 'lucide-react'
+import { Zap, ArrowRight, Book, Lock } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { CreateProjectDialog } from '../projects/CreateProjectDialog'
+import { useAuthContext } from '../../contexts/AuthContext'
 import type { OnboardingAnalysis, BookSearchResult } from '../../types'
 
 interface RevealSequenceProps {
@@ -28,6 +29,7 @@ const LOADING_MESSAGES = [
 ]
 
 export function RevealSequence({ analysis, books }: RevealSequenceProps) {
+  const { isAuthenticated } = useAuthContext()
   const navigate = useNavigate()
   const [beat, setBeat] = useState<'loading' | 'profile' | 'ideas'>('loading')
   const [loadingMessage, setLoadingMessage] = useState(0)
@@ -374,19 +376,32 @@ export function RevealSequence({ analysis, books }: RevealSequenceProps) {
               ))}
             </div>
 
-            {/* Explore on your own */}
+            {/* Sign in to save / explore */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 1.3 }}
-              className="text-center mt-6"
+              className="text-center mt-6 flex flex-col items-center gap-3"
             >
+              {!isAuthenticated && (
+                <button
+                  onClick={() => navigate('/login')}
+                  className="flex items-center justify-center gap-2 px-8 py-3 rounded-xl font-bold text-sm transition-all hover:opacity-90"
+                  style={{
+                    background: 'linear-gradient(135deg, var(--brand-primary), #818cf8)',
+                    color: '#fff',
+                  }}
+                >
+                  <Lock className="h-3.5 w-3.5" />
+                  sign in to save your project
+                </button>
+              )}
               <button
                 onClick={() => navigate('/')}
                 className="text-sm transition-opacity hover:opacity-80 inline-flex items-center gap-1.5"
                 style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
               >
-                I'll find my own
+                {isAuthenticated ? "I'll find my own" : 'skip for now'}
                 <ArrowRight className="h-3.5 w-3.5" />
               </button>
             </motion.div>
@@ -401,13 +416,26 @@ export function RevealSequence({ analysis, books }: RevealSequenceProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
-            className="text-center mt-6"
+            className="text-center mt-6 flex flex-col items-center gap-3"
           >
+            {!isAuthenticated && (
+              <button
+                onClick={() => navigate('/login')}
+                className="flex items-center justify-center gap-2 px-8 py-3 rounded-xl font-bold text-sm transition-all hover:opacity-90"
+                style={{
+                  background: 'linear-gradient(135deg, var(--brand-primary), #818cf8)',
+                  color: '#fff',
+                }}
+              >
+                <Lock className="h-3.5 w-3.5" />
+                sign in to unlock
+              </button>
+            )}
             <button
               onClick={() => navigate('/')}
               className="btn-primary px-8 py-3.5 text-base font-semibold inline-flex items-center gap-2"
             >
-              Start exploring
+              {isAuthenticated ? 'Start exploring' : 'skip for now'}
               <ArrowRight className="h-4 w-4" />
             </button>
           </motion.div>
@@ -420,7 +448,7 @@ export function RevealSequence({ analysis, books }: RevealSequenceProps) {
         onOpenChange={setShowCreateDialog}
         hideTrigger
         seedConversation={seedConversation}
-        onCreated={() => navigate('/')}
+        onCreated={() => navigate(isAuthenticated ? '/' : '/login')}
       />
     </div>
   )

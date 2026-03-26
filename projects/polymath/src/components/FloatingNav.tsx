@@ -13,7 +13,7 @@ import { useKeyboardVisible } from '../hooks/useKeyboardVisible'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOfflineSync } from '../hooks/useOfflineSync'
 import { useToast } from './ui/toast'
-import { useAuth } from '../hooks/useAuth'
+import { useAuthContext } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 
 // Schema colors for each section - unified blue theme
@@ -52,7 +52,7 @@ export function FloatingNav() {
   const { addOfflineCapture } = useOfflineSync()
   const { addToast } = useToast()
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user } = useAuthContext()
   const [showUserMenu, setShowUserMenu] = React.useState(false)
 
   const location = useLocation()
