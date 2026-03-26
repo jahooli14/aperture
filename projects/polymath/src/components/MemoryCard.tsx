@@ -290,7 +290,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
 
   const isOfflinePending = memory.id.startsWith('offline_') || memory.tags?.includes('offline-pending')
   const typeConfig = memory.memory_type ? MEMORY_TYPE_CONFIG[memory.memory_type] : null
-  const displayDate = new Date(memory.created_at).toLocaleDateString('en-US', {
+  const displayDate = new Date(memory.audiopen_created_at || memory.created_at).toLocaleDateString('en-US', {
     month: 'short', day: 'numeric', year: 'numeric',
   })
   const firstTag = memory.tags?.find(t => t !== 'offline-pending')
