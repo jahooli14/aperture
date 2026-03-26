@@ -11,9 +11,7 @@ import { getUserId } from './_lib/auth.js'
 import { generateText } from './_lib/gemini-chat.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const userId = getUserId(req)
-  if (!userId) return res.status(401).json({ error: 'Unauthorized' })
-
+  // Onboarding is accessible without auth to allow try-before-signup
   const resource = req.query.resource as string
 
   if (req.method === 'GET' && resource === 'book-search') {

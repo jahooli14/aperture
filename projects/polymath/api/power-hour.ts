@@ -210,8 +210,8 @@ function synthesizePerspectives(perspectives: PerspectiveResult[]): string {
 }
 
 async function handleMultiPerspective(req: VercelRequest, res: VercelResponse) {
-    const userId = getUserId(req)
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+    const userId = await getUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Sign in to access your data' })
     if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'dummy-key') return res.status(500).json({ error: 'GEMINI_API_KEY is not configured' })
 
     const { projectId, projectTitle, projectDescription, recentActivity = [], openTodos = [], relatedMemories = [] } = req.body
@@ -258,7 +258,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(405).json({ error: 'Method not allowed' })
     }
 
-    const userId = getUserId()
+    const userId = await getUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Sign in to access your data' })
     const supabase = getSupabaseClient()
     console.log('[power-hour] Fetching tasks for user:', userId)
 

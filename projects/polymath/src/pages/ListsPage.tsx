@@ -2,6 +2,8 @@ import React, { useEffect, useState, useRef } from 'react'
 import { Reorder, motion, AnimatePresence } from 'framer-motion'
 import { Plus, Film, Music, Monitor, Book, MapPin, Gamepad2, Box, Calendar, Quote, FileText, Trash2, GripVertical, ListOrdered, Check } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { useAuthContext } from '../contexts/AuthContext'
+import { SignInNudge } from '../components/SignInNudge'
 import { useListStore } from '../stores/useListStore'
 import { Button } from '../components/ui/button'
 import { CreateListDialog } from '../components/lists/CreateListDialog'
@@ -75,6 +77,16 @@ const EXAMPLE_COLLECTIONS = [
 ]
 
 export default function ListsPage() {
+    const { isAuthenticated, loading: authLoading } = useAuthContext()
+
+    if (!authLoading && !isAuthenticated) {
+      return (
+        <div style={{ backgroundColor: 'var(--brand-bg)' }} className="min-h-screen pt-12">
+          <SignInNudge feature="your lists" description="Sign in to curate books, films, and more." />
+        </div>
+      )
+    }
+
     const navigate = useNavigate()
     const { lists, fetchLists, reorderLists, loading } = useListStore()
     const [createOpen, setCreateOpen] = useState(false)

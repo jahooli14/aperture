@@ -7,6 +7,8 @@ import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 // import { Virtuoso } from 'react-virtuoso' // Removed Virtuoso
+import { useAuthContext } from '../contexts/AuthContext'
+import { SignInNudge } from '../components/SignInNudge'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOnboardingStore } from '../stores/useOnboardingStore'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
@@ -107,6 +109,16 @@ function MasonryGrid({
 }
 
 export function MemoriesPage() {
+  const { isAuthenticated, loading: authLoading } = useAuthContext()
+
+  if (!authLoading && !isAuthenticated) {
+    return (
+      <div style={{ backgroundColor: 'var(--brand-bg)' }} className="min-h-screen pt-12">
+        <SignInNudge feature="your thoughts" description="Sign in to capture, browse, and connect your thoughts." />
+      </div>
+    )
+  }
+
   const navigate = useNavigate()
   const location = useLocation()
   const { memories, fetchMemories, loading, error, deleteMemory, clearError } = useMemoryStore()
