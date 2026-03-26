@@ -86,6 +86,7 @@ interface ProjectState {
   deleteProject: (id: string) => Promise<void>
   setPriority: (id: string) => Promise<void>
   setFilter: (filter: ProjectState['filter']) => void
+  clearCache: () => void
   // React Query Sync Actions
   setProjects: (projects: Project[]) => void
   setLoading: (loading: boolean) => void
@@ -506,6 +507,10 @@ export const useProjectStore = create<ProjectState>()(
           filter,
           projects: filterProjects(state.allProjects, filter)
         }))
+      },
+
+      clearCache: () => {
+        set({ allProjects: [], projects: [], initialized: false, error: null })
       },
       setProjects: async (projects) => {
         // When setting projects (e.g. from sync or background fetch), 

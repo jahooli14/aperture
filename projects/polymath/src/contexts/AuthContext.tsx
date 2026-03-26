@@ -1,6 +1,8 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import type { User, Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { useMemoryStore } from '../stores/useMemoryStore'
+import { useProjectStore } from '../stores/useProjectStore'
 
 interface AuthContextValue {
   user: User | null
@@ -22,13 +24,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session: null,
     loading: true,
   })
+  const currentUserId = useRef<string | null>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
+      currentUserId.current = session?.user?.id ?? null
       setState({ user: session?.user ?? null, session, loading: false })
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const newUserId = session?.user?.id ?? null
+      // Clear cached store data when switching accounts or signing out
+      if (event === 'SIGNED_OUT' || (event === 'SIGNED_IN' && newUserId !== currentUserId.current)) {
+        useMemoryStore.getState().clearCache()
+        useProjectStore.getState().clearCache()
+      }
+      currentUserId.current = newUserId
       setState({ user: session?.user ?? null, session, loading: false })
     })
 
