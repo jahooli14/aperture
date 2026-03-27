@@ -282,6 +282,36 @@ export async function enrichBook(title: string): Promise<EnrichmentMetadata | nu
 }
 
 /**
+ * Open Library Covers API - No key required
+ * Fetches a book cover image URL by title search
+ */
+export async function fetchOpenLibraryCover(title: string): Promise<string | null> {
+    if (!title || title.trim().length === 0) return null
+
+    const cleanTitle = title.trim().substring(0, 200)
+
+    try {
+        const searchUrl = `https://openlibrary.org/search.json?title=${encodeURIComponent(cleanTitle)}&limit=1&fields=cover_i`
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 8000)
+
+        const res = await fetch(searchUrl, { signal: controller.signal })
+        clearTimeout(timeout)
+
+        if (!res.ok) return null
+
+        const data: any = await res.json()
+        const coverId = data.docs?.[0]?.cover_i
+        if (!coverId) return null
+
+        console.log(`[Open Library] Found cover for: ${cleanTitle}`)
+        return `https://covers.openlibrary.org/b/id/${coverId}-L.jpg`
+    } catch {
+        return null
+    }
+}
+
+/**
  * Helper: Extract relevant tags from Wikipedia summary text
  */
 const WIKI_STOP_WORDS = new Set([

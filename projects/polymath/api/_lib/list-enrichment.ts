@@ -5,7 +5,7 @@
 
 import { generateText } from './gemini-chat.js'
 import { getSupabaseClient } from './supabase.js'
-import { enrichFilm, enrichBook, enrichFromWikipedia } from './enrichment-apis.js'
+import { enrichFilm, enrichBook, enrichFromWikipedia, fetchOpenLibraryCover } from './enrichment-apis.js'
 import { generateEmbedding } from './gemini-embeddings.js'
 import { updateItemConnections } from './connection-logic.js'
 
@@ -92,6 +92,16 @@ export async function enrichListItem(userId: string, listId: string, itemId: str
                     metadata.image = wikiData.image
                     metadata.thumbnail = wikiData.thumbnail
                 }
+            }
+        }
+
+        // For books still missing an image, try Open Library covers (no key required)
+        if (metadata && !metadata.image && category === 'book') {
+            console.log(`[Enrichment] Trying Open Library cover for: ${content}`)
+            const olCover = await fetchOpenLibraryCover(content)
+            if (olCover) {
+                metadata.image = olCover
+                metadata.thumbnail = olCover
             }
         }
 
