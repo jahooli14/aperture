@@ -78,10 +78,9 @@ export async function enrichFromWikipedia(title: string): Promise<EnrichmentMeta
             description: extractBriefDescription(summary.extract || ''),
             tags: extractTagsFromSummary(summary.extract || ''),
             link: summary.content_urls?.desktop?.page,
-            specs: {
-                type: summary.type || 'article',
-                lastModified: new Date(summary.timestamp).getFullYear().toString()
-            },
+            specs: summary.timestamp
+                ? { Year: new Date(summary.timestamp).getFullYear().toString() }
+                : {},
             source: 'wikipedia'
         }
 
@@ -186,10 +185,9 @@ export async function enrichFilm(title: string): Promise<EnrichmentMetadata | nu
             tags: data.Genre ? data.Genre.split(', ').slice(0, 3) : [],
             link: `https://www.imdb.com/title/${data.imdbID}/`,
             specs: {
-                year: data.Year,
-                runtime: data.Runtime !== 'N/A' ? data.Runtime : undefined,
-                rating: data.imdbRating !== 'N/A' ? data.imdbRating : undefined,
-                type: data.Type
+                ...(data.Year ? { Year: data.Year } : {}),
+                ...(data.Runtime && data.Runtime !== 'N/A' ? { Runtime: data.Runtime } : {}),
+                ...(data.imdbRating && data.imdbRating !== 'N/A' ? { Rating: data.imdbRating } : {}),
             },
             source: 'omdb'
         }
@@ -286,10 +284,20 @@ export async function enrichBook(title: string): Promise<EnrichmentMetadata | nu
 /**
  * Helper: Extract relevant tags from Wikipedia summary text
  */
+const WIKI_STOP_WORDS = new Set([
+    'The','This','That','These','Those','A','An','In','Of','On','At','To','For',
+    'With','By','From','And','Or','But','Is','Are','Was','Were','Has','Have','Had',
+    'Be','Been','Being','Do','Does','Did','Will','Would','Could','Should','May',
+    'Might','Must','Shall','Can','Not','No','Nor','So','Yet','Both','Either',
+    'Neither','It','Its','He','She','They','We','You','His','Her','Their','Our',
+    'Your','My','Who','Which','When','Where','How','What','While','After','Before',
+    'Between','During','Through','About','Over','Under','Above','Also','Then',
+    'Than','More','Most','Some','Such','Each','Any','All','New','First','Last',
+])
+
 function extractTagsFromSummary(text: string): string[] {
-    // Simple keyword extraction - can be improved with NLP
-    const keywords = text.match(/\b[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\b/g) || []
-    return keywords.slice(0, 3)
+    const keywords = text.match(/\b[A-Z][a-z]{2,}(?:\s[A-Z][a-z]+)*\b/g) || []
+    return keywords.filter(k => !WIKI_STOP_WORDS.has(k) && k.length >= 4).slice(0, 3)
 }
 
 /**
