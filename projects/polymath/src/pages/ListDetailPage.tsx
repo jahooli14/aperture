@@ -684,7 +684,7 @@ const StandardItemCard = memo(({
                     return (
                         <button
                             onClick={handleStatusCycle}
-                            className="self-start flex items-center gap-1.5 px-2.5 py-1 rounded-full active:scale-95 transition-all min-h-[28px]"
+                            className="self-start flex items-center gap-1.5 px-2.5 py-2 rounded-full active:scale-95 transition-all min-h-[44px]"
                             style={{
                                 background: pillBg,
                                 border: `1px solid ${pillBorder}`,
@@ -777,8 +777,8 @@ const StandardItemCard = memo(({
                 )}
             </div>
 
-            {/* Quick actions on hover */}
-            <div className="absolute top-2 right-2 flex gap-1 transform translate-y-[-120%] group-hover:translate-y-0 transition-transform duration-300">
+            {/* Quick actions on hover or when expanded */}
+            <div className={`absolute top-2 right-2 flex gap-1 transition-transform duration-300 ${isExpanded ? 'translate-y-0' : 'translate-y-[-120%] group-hover:translate-y-0'}`}>
                 <button
                     onClick={(e) => { e.stopPropagation(); onDelete(item.id, item.list_id) }}
                     className="p-1.5 rounded-lg bg-brand-primary/10 hover:bg-brand-primary text-brand-text-secondary/50 hover:text-[var(--brand-text-primary)] backdrop-blur-md border border-red-500/20 transition-all"
