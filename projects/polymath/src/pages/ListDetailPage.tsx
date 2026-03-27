@@ -589,7 +589,8 @@ const StandardItemCard = memo(({
     onMarkDone,
     rgb,
     hasThought,
-    hasStatus = true
+    hasStatus = true,
+    coverOverride,
 }: {
     item: ListItem
     listType: string
@@ -602,8 +603,10 @@ const StandardItemCard = memo(({
     rgb: string
     hasThought?: boolean
     hasStatus?: boolean
+    coverOverride?: string
 }) => {
-    const hasImage = item.metadata?.image
+    const hasImage = coverOverride || item.metadata?.image
+    const imageUrl = coverOverride || item.metadata?.image
     const isPosterType = listType === 'book' || listType === 'film' || listType === 'movie' || listType === 'show' || listType === 'tv'
     const isCompleted = item.status === 'completed'
 
@@ -633,7 +636,7 @@ const StandardItemCard = memo(({
             {hasImage ? (
                 <div className={`relative ${isPosterType ? 'aspect-[2/3]' : 'aspect-square'} overflow-hidden`}>
                     <OptimizedImage
-                        src={item.metadata.image}
+                        src={imageUrl!}
                         alt={item.content}
                         className="w-full h-full"
                         aspectRatio={isPosterType ? '2/3' : '1/1'}
@@ -661,13 +664,6 @@ const StandardItemCard = memo(({
                     {/* Ghost icon watermark */}
                     <div className="absolute inset-0 flex items-center justify-center opacity-[0.06]">
                         <ListIcon type={listType as ListType} className="h-24 w-24" style={{ color: `rgb(${rgb})` }} />
-                    </div>
-                    {/* Item title as the cover */}
-                    <div className="absolute inset-0 flex flex-col items-center justify-center p-4 z-10">
-                        <p className="text-center text-[var(--brand-text-primary)]/80 text-xs font-semibold leading-snug line-clamp-4"
-                            style={{ textShadow: `0 1px 8px rgba(${rgb}, 0.3)` }}>
-                            {item.content}
-                        </p>
                     </div>
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent" />
                 </div>
@@ -809,7 +805,8 @@ function MasonryListGrid({
     onMarkDone,
     rgb,
     thoughtCapturedIds,
-    hasStatus = true
+    hasStatus = true,
+    coverOverrides = {},
 }: {
     items: ListItem[]
     listType: string
@@ -822,6 +819,7 @@ function MasonryListGrid({
     rgb: string
     thoughtCapturedIds?: Set<string>
     hasStatus?: boolean
+    coverOverrides?: Record<string, string>
 }) {
     const [columns, setColumns] = useState(2)
 
@@ -877,6 +875,7 @@ function MasonryListGrid({
                             rgb={rgb}
                             hasThought={thoughtCapturedIds?.has(item.id)}
                             hasStatus={hasStatus}
+                            coverOverride={coverOverrides[item.id]}
                         />
                     ))}
                 </div>
@@ -1069,6 +1068,7 @@ export default function ListDetailPage() {
     const [showSortMenu, setShowSortMenu] = useState(false)
     const [showListSettings, setShowListSettings] = useState(false)
     const [celebrationItem, setCelebrationItem] = useState<ListItem | null>(null)
+    const [coverOverrides, setCoverOverrides] = useState<Record<string, string>>({})
     const inputRef = useRef<HTMLInputElement>(null)
     const { confirm, dialog: confirmDialog } = useConfirmDialog()
 
@@ -1110,6 +1110,37 @@ export default function ListDetailPage() {
             window.scrollTo(0, 0)
         }
     }, [id])
+
+    // Fetch Open Library covers for book items that have no image
+    useEffect(() => {
+        if (!list || list.type !== 'book') return
+        const missing = displayItems.filter(item =>
+            !item.metadata?.image && item.enrichment_status === 'completed' && !coverOverrides[item.id]
+        )
+        if (missing.length === 0) return
+
+        Promise.all(missing.map(async (item) => {
+            try {
+                const res = await fetch(
+                    `https://openlibrary.org/search.json?title=${encodeURIComponent(item.content)}&limit=1&fields=cover_i`,
+                    { signal: AbortSignal.timeout(8000) }
+                )
+                if (!res.ok) return null
+                const data = await res.json()
+                const coverId = data.docs?.[0]?.cover_i
+                if (!coverId) return null
+                return [item.id, `https://covers.openlibrary.org/b/id/${coverId}-L.jpg`] as [string, string]
+            } catch {
+                return null
+            }
+        })).then(results => {
+            const overrides: Record<string, string> = {}
+            results.forEach(r => { if (r) overrides[r[0]] = r[1] })
+            if (Object.keys(overrides).length > 0) {
+                setCoverOverrides(prev => ({ ...prev, ...overrides }))
+            }
+        })
+    }, [displayItems, list?.type])
 
     // Close sort menu on outside click
     useEffect(() => {
@@ -1472,6 +1503,7 @@ export default function ListDetailPage() {
                                     rgb={rgb}
                                     thoughtCapturedIds={thoughtCapturedIds}
                                     hasStatus={hasStatus}
+                                    coverOverrides={coverOverrides}
                                 />
                             ) : loading ? (
                                 <div className="flex flex-wrap gap-3">
