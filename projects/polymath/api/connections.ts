@@ -661,6 +661,9 @@ Don't soften it. Don't end with encouragement. Just the challenge. Use their own
           } else if (relatedType === 'list') {
             const { data } = await supabase.from('lists').select('id, title, description').eq('user_id', userId).eq('id', relatedId).single()
             relatedItem = data
+          } else if (relatedType === 'list_item') {
+            const { data } = await supabase.from('list_items').select('id, content, metadata').eq('user_id', userId).eq('id', relatedId).single()
+            if (data) relatedItem = { id: data.id, title: data.content || data.metadata?.title || 'Untitled' }
           }
 
           return {
