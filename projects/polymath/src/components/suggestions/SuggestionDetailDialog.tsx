@@ -249,7 +249,7 @@ export function SuggestionDetailDialog({
 
           {/* Suggested Date */}
           <div className="text-xs" style={{ color: "var(--brand-primary)" }}>
-            Suggested {new Date(suggestion.suggested_at).toLocaleDateString()}
+            Suggested {suggestion.suggested_at ? new Date(suggestion.suggested_at).toLocaleDateString() : 'recently'}
           </div>
         </div>
 

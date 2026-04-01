@@ -11,7 +11,7 @@ import { MODELS } from './models.js'
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 const supabase = getSupabaseClient()
 
-interface CanonicalTag {
+interface _CanonicalTag {
   id: string
   tag: string
   category: string | null

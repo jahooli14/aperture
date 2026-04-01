@@ -1,7 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getSupabaseClient } from './supabase.js'
-import type { Memory, Entities, MemoryType, ExtractedMetadata } from '../../src/types'
-import { normalizeTags } from './tag-normalizer.js'
+import type { Entities, ExtractedMetadata } from '../../src/types'
 import { updateItemConnections } from './connection-logic.js'
 import { generateText } from './gemini-chat.js'
 import { MODELS } from './models.js'
@@ -478,7 +477,7 @@ export async function storeCapabilities(memoryId: string, skills: string[], memo
  * into a concrete implication: what does this insight actually unlock?
  */
 async function generateThoughtBridge(
-  memoryId: string,
+  _memoryId: string,
   memoryTitle: string,
   memoryBody: string,
   triage: any,
