@@ -281,7 +281,6 @@ export function StudioTab({ project }: StudioTabProps) {
             <ConnectionsList
               itemType="project"
               itemId={project.id}
-              content={`${project.title}\n${project.description || ''}\n${draft}`}
               onCountChange={setConnectionCount}
               onLoadingChange={setIsLoadingConnections}
             />

@@ -7,16 +7,14 @@
 import { useEffect, useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowRight, ArrowLeft, Link as LinkIcon, Brain, Layers, BookOpen, Lightbulb, Plus, Check, Zap } from 'lucide-react'
+import { ArrowRight, Brain, Layers, BookOpen, Plus, Zap } from 'lucide-react'
 import type { ItemConnection, ConnectionSourceType } from '../../types'
 import { CreateConnectionDialog } from './CreateConnectionDialog'
 import { useConnectionStore } from '../../stores/useConnectionStore'
-import { ConnectionSuggestion } from '../ConnectionSuggestion'
 
 interface ConnectionsListProps {
   itemType: ConnectionSourceType
   itemId: string
-  content?: string // For AI suggestions
   onConnectionDeleted?: () => void
   onConnectionCreated?: () => void
   onCountChange?: (count: number) => void
@@ -25,11 +23,9 @@ interface ConnectionsListProps {
 
 interface DisplayItem {
   id: string
-  type: string // 'project' | 'thought' | 'article'
+  type: string
   title: string
   reasoning?: string
-  similarity?: number
-  isPersisted: boolean
   connectionId?: string
   connectionType?: string
   direction?: 'inbound' | 'outbound'
@@ -60,10 +56,9 @@ const SCHEMA_COLORS = {
   }
 }
 
-export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted, onConnectionCreated, onCountChange, onLoadingChange }: ConnectionsListProps) {
+export function ConnectionsList({ itemType, itemId, onConnectionDeleted, onConnectionCreated, onCountChange, onLoadingChange }: ConnectionsListProps) {
   const { getConnections, setConnections: cacheConnections, invalidateConnections } = useConnectionStore()
   const [connections, setConnections] = useState<ItemConnection[]>([])
-  const [suggestions, setSuggestions] = useState<DisplayItem[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
 
@@ -74,7 +69,7 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
 
   useEffect(() => {
     loadData()
-  }, [itemType, itemId, content])
+  }, [itemType, itemId])
 
   const loadData = async () => {
     setLoading(true)
@@ -97,35 +92,6 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
         setConnections(fetchedConnections)
       }
 
-      // 2. Fetch AI Suggestions (if needed to fill slots)
-      // Always fetch to ensure we have the best candidates
-      if (content) {
-        const response = await fetch('/api/connections', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sourceType: itemType,
-            sourceId: itemId,
-            content,
-            userId: 'default'
-          })
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          // Map to DisplayItem
-          const mappedSuggestions = (data.candidates || []).map((c: any) => ({
-            id: c.id,
-            type: c.type,
-            title: c.title,
-            similarity: c.similarity,
-            reasoning: `${Math.round(c.similarity * 100)}% Match`,
-            isPersisted: false
-          }))
-          setSuggestions(mappedSuggestions)
-        }
-      }
-
     } catch (err) {
       console.error('Error loading connections data:', err)
     } finally {
@@ -133,14 +99,12 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
     }
   }
 
-  // Persisted connections only (suggestions are handled separately by ConnectionSuggestion)
   const displayItems = useMemo(() => {
     return connections.slice(0, 5).map(conn => ({
       id: conn.related_id,
       type: conn.related_type,
       title: getItemTitle(conn),
-      reasoning: conn.ai_reasoning || (conn.created_by === 'ai' ? 'AI Connected' : undefined),
-      isPersisted: true,
+      reasoning: conn.ai_reasoning,
       connectionId: conn.connection_id,
       connectionType: conn.connection_type,
       direction: conn.direction,
@@ -149,10 +113,9 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
     }))
   }, [connections])
 
-  // Notify parent of total count (persisted + suggestions)
   useEffect(() => {
-    onCountChange?.(connections.length + suggestions.length)
-  }, [connections.length, suggestions.length, onCountChange])
+    onCountChange?.(connections.length)
+  }, [connections.length, onCountChange])
 
   const handleManualConnectionCreated = async () => {
     // Called after a new manual connection is created
@@ -210,7 +173,7 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
     onConnectionCreated?.()
   }
 
-  if (loading && displayItems.length === 0 && suggestions.length === 0) {
+  if (loading && displayItems.length === 0) {
     return (
       <div className="space-y-2">
         {[1, 2].map(i => (
@@ -227,8 +190,7 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
         {displayItems.map((item, index) => {
           const schema = SCHEMA_COLORS[item.type as keyof typeof SCHEMA_COLORS] || SCHEMA_COLORS.project
           const Icon = schema.icon
-          const isPersisted = item.isPersisted
-          const isAI = !isPersisted || item.createdBy === 'ai'
+          const isAI = item.createdBy === 'ai'
 
           return (
             <motion.div
@@ -240,12 +202,7 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
               <Link
                 to={getItemUrl(item.type, item.id)}
                 className="group relative overflow-hidden rounded-xl border border-[var(--glass-surface)] bg-[var(--glass-surface)] p-4 block transition-all hover:bg-[rgba(255,255,255,0.1)] hover:border-[var(--glass-surface-hover)] premium-glass-subtle"
-                style={{
-                  backgroundColor: isAI ? undefined : 'var(--glass-surface-hover)' // Subtle distinction for manual?
-                }}
               >
-                {/* Visual indicator for AI vs Manual if needed, but "You cannot delete" implies uniform look */}
-
                 <div className="flex items-start gap-3">
                   {/* Icon */}
                   <div className="flex-shrink-0 mt-1 p-1.5 rounded-lg" style={{ backgroundColor: schema.bg }}>
@@ -288,31 +245,6 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
         })}
 
       </div>
-
-      {/* AI Suggestions — shown after persisted connections */}
-      {suggestions.length > 0 && (
-        <div>
-          <h3 className="text-xs font-medium mb-3 flex items-center gap-2 uppercase tracking-wider opacity-60" style={{ color: "var(--brand-primary)" }}>
-            <Lightbulb className="h-3 w-3 text-brand-primary" />
-            Smart Suggestions
-          </h3>
-          <ConnectionSuggestion
-            suggestions={suggestions.map(s => ({
-              targetId: s.id,
-              targetType: s.type as any,
-              targetTitle: s.title,
-              reason: s.reasoning || '',
-              confidence: s.similarity || 0
-            }))}
-            sourceId={itemId}
-            sourceType={itemType === 'thought' ? 'memory' : itemType as any}
-            onLinkCreated={() => {
-              invalidateConnections(itemType, itemId)
-              loadData()
-            }}
-          />
-        </div>
-      )}
 
       {/* Manual Link Button */}
       <div className="pt-2">

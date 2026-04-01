@@ -1637,7 +1637,6 @@ export default function ListDetailPage() {
                         <ConnectionsList
                             itemType="list"
                             itemId={list.id}
-                            content={`${list.title} ${list.description || ''} ${displayItems.map(i => i.content).join(', ')}`}
                             onCountChange={setConnectionCount}
                             onLoadingChange={setIsLoadingConnections}
                         />

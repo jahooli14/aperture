@@ -15,7 +15,6 @@ import { ProjectActivityStream } from '../components/projects/ProjectActivityStr
 import { AddNoteDialog } from '../components/projects/AddNoteDialog'
 import { TaskList, type Task } from '../components/projects/TaskList'
 import { PinnedTaskList } from '../components/projects/PinnedTaskList'
-import { ConnectionSuggestion } from '../components/ConnectionSuggestion'
 import { PinButton } from '../components/PinButton'
 import { Button } from '../components/ui/button'
 import { useToast } from '../components/ui/toast'
@@ -64,7 +63,6 @@ export function ProjectDetailPage() {
   const [showAddNote, setShowAddNote] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [showCreateConnection, setShowCreateConnection] = useState(false)
-  const [suggestions, setSuggestions] = useState<any[]>([])
   const [activeTab, setActiveTab] = useState<'overview' | 'studio'>('overview')
 
   const [showEditDialog, setShowEditDialog] = useState(false)
@@ -131,25 +129,6 @@ export function ProjectDetailPage() {
       setContext('project', project.id, project.title, `${project.title}\n\n${project.description || ''}`)
     }
   }, [project])
-
-  // Fetch connection suggestions
-  useEffect(() => {
-    if (!id) return
-
-    const fetchSuggestions = async () => {
-      try {
-        const response = await fetch(`/api/connections?action=suggestions&id=${id}&type=project`)
-        if (response.ok) {
-          const data = await response.json()
-          setSuggestions(data.suggestions || [])
-        }
-      } catch (error) {
-        console.error('[ProjectDetail] Failed to fetch suggestions:', error)
-      }
-    }
-
-    fetchSuggestions()
-  }, [id])
 
   // Fetch memories that sparked this project (inspired_by connections)
   useEffect(() => {
@@ -1246,21 +1225,6 @@ export function ProjectDetailPage() {
       {/* Confirmation Dialog */}
       {confirmDialog}
 
-      {/* Connection Suggestions - Floating */}
-      {
-        suggestions.length > 0 && (
-          <ConnectionSuggestion
-            suggestions={suggestions}
-            sourceId={project.id}
-            sourceType="project"
-            onLinkCreated={() => {
-              loadProjectDetails()
-              setSuggestions([]) // Clear suggestions after linking
-            }}
-            onDismiss={() => setSuggestions([])}
-          />
-        )
-      }
       {/* Edit Project Dialog */}
       {project && (
         <EditProjectDialog
