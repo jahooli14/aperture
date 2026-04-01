@@ -67,7 +67,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
     }
   }
 
-  const theme = getTheme(project.type, project.title)
+  const theme = getTheme(project.type ?? '', project.title)
 
   const handleTouchStart = () => {
     didLongPress.current = false

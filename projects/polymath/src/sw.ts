@@ -211,11 +211,17 @@ self.addEventListener('fetch', (event) => {
 })
 
 // Background sync for offline voice notes
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'sync-captures') {
-    event.waitUntil(syncCaptures())
+self.addEventListener('sync', (event: Event) => {
+  const syncEvent = event as SyncEvent
+  if (syncEvent.tag === 'sync-captures') {
+    syncEvent.waitUntil(syncCaptures())
   }
 })
+
+interface SyncEvent extends Event {
+  tag: string
+  waitUntil(promise: Promise<unknown>): void
+}
 
 async function syncCaptures() {
   console.log('[ServiceWorker] Starting background sync for captures...')
