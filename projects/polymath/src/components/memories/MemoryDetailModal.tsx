@@ -361,7 +361,6 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
                 <ConnectionsList
                   itemType="thought"
                   itemId={memory.id}
-                  content={memoryContent}
                   onConnectionCreated={loadMemoryBridges}
                   onConnectionDeleted={loadMemoryBridges}
                   onCountChange={setConnectionCount}

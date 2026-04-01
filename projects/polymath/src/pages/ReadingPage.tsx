@@ -13,8 +13,6 @@ import { ArticleCard } from '../components/reading/ArticleCard'
 import { ReadingProvocation } from '../components/reading/ReadingProvocation'
 import { RSSFeedItem } from '../components/reading/RSSFeedItem'
 import { useToast } from '../components/ui/toast'
-import { useConnectionStore } from '../stores/useConnectionStore'
-import { ConnectionSuggestion } from '../components/ConnectionSuggestion'
 import { useBulkSelection } from '../hooks/useBulkSelection'
 import { BulkActionsBar } from '../components/BulkActionsBar'
 import { PremiumTabs } from '../components/ui/premium-tabs'
@@ -62,7 +60,6 @@ export function ReadingPage() {
   const { downloadForOffline } = useOfflineArticle()
   const rssStoreData = useRSSStore() as any
   const { feeds = [], syncing = false, fetchFeeds, syncFeeds, autoSyncFeeds } = rssStoreData || {}
-  const { suggestions, sourceId, sourceType, clearSuggestions } = useConnectionStore()
   const [activeTab, setActiveTab] = useState<FilterTab>('queue')
   const [showSaveDialog, setShowSaveDialog] = useState(false)
   const [inlineUrl, setInlineUrl] = useState('')
@@ -1146,24 +1143,6 @@ export function ReadingPage() {
           />
         </Suspense>
 
-        {/* Connection Suggestions */}
-        {
-          suggestions && Array.isArray(suggestions) && suggestions.length > 0 && sourceType === 'article' && (
-            <ConnectionSuggestion
-              suggestions={suggestions}
-              sourceType={sourceType}
-              sourceId={sourceId!}
-              onLinkCreated={(targetId, targetType) => {
-                addToast({
-                  title: 'Connection created!',
-                  description: `Linked to ${targetType}`,
-                  variant: 'success',
-                })
-              }}
-              onDismiss={clearSuggestions}
-            />
-          )
-        }
 
         {/* Bulk Actions Bar */}
         <BulkActionsBar

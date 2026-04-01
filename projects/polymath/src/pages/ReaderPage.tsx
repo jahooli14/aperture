@@ -18,7 +18,6 @@ import { useReadingProgress } from '../hooks/useReadingProgress'
 import { ArticleCompletionDialog } from '../components/reading/ArticleCompletionDialog'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { ConnectionsList } from '../components/connections/ConnectionsList'
-import { ConnectionSuggestion } from '../components/ConnectionSuggestion'
 import { supabase } from '../lib/supabase'
 
 export function ReaderPage() {
@@ -56,8 +55,6 @@ export function ReaderPage() {
   const [isOfflineCached, setIsOfflineCached] = useState(false)
   const [cachedImageUrls, setCachedImageUrls] = useState<Map<string, string>>(new Map())
   const [showCompletionDialog, setShowCompletionDialog] = useState(false)
-  const [showConnectionSuggestions, setShowConnectionSuggestions] = useState(true)
-  const [suggestions, setSuggestions] = useState<any[]>([])
 
   const [isHighlighterMode, setIsHighlighterMode] = useState(false)
   const [connectionCount, setConnectionCount] = useState(0)
@@ -121,19 +118,6 @@ export function ReaderPage() {
       })
     }
   }, [cachedImageUrls])
-
-  const fetchSuggestions = async () => {
-    if (!id) return
-    try {
-      const response = await fetch(`/api/connections?action=suggestions&id=${id}&type=article`)
-      if (response.ok) {
-        const data = await response.json()
-        setSuggestions(data.suggestions || [])
-      }
-    } catch (error) {
-      console.error('[Reader] Failed to fetch suggestions:', error)
-    }
-  }
 
   useEffect(() => {
     if (article) {
@@ -633,7 +617,6 @@ export function ReaderPage() {
               <ConnectionsList
                 itemType="article"
                 itemId={article.id}
-                content={article.title + ' ' + (article.excerpt || '')}
                 onCountChange={setConnectionCount}
                 onLoadingChange={setIsLoadingConnections}
               />
@@ -667,15 +650,6 @@ export function ReaderPage() {
           )}
         </AnimatePresence>
 
-        {/* Floating Suggestions */}
-        {showConnectionSuggestions && suggestions.length > 0 && (
-          <ConnectionSuggestion
-            suggestions={suggestions}
-            sourceId={article.id}
-            sourceType="article"
-            onDismiss={() => setShowConnectionSuggestions(false)}
-          />
-        )}
 
         <ArticleCompletionDialog
           open={showCompletionDialog}

@@ -137,7 +137,6 @@ export function ArticleConnectionsDialog({
                     <ConnectionsList
                       itemType="article"
                       itemId={article.id}
-                      content={`${article.title}\n\n${article.excerpt || article.content || ''}`}
                       onConnectionCreated={() => {
                         onConnectionsCreated?.()
                       }}
