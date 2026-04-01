@@ -352,12 +352,14 @@ function getItemTitle(connection: ItemConnection): string {
 }
 
 function getItemUrl(type: string, id: string): string {
+  if (!id || id === 'undefined' || id === 'null') return '#'
   switch (type) {
     case 'project': return `/projects/${id}`
     case 'thought':
-    case 'memory': return `/memories?highlight=${id}` // Handle mapping 'thought' -> 'memory'
+    case 'memory': return `/memories?highlight=${id}`
     case 'article': return `/reading?highlight=${id}`
     case 'list': return `/lists/${id}`
+    case 'list_item': return `/lists?highlight=${id}`
     default: return '#'
   }
 }

@@ -169,8 +169,14 @@ export function cosineSimilarity(a: number[] | string, b: number[] | string): nu
   const arrayA = Array.isArray(a) ? a : JSON.parse(a)
   const arrayB = Array.isArray(b) ? b : JSON.parse(b)
 
-  const dotProduct = arrayA.reduce((sum, val, i) => sum + val * arrayB[i], 0)
-  const magnitudeA = Math.sqrt(arrayA.reduce((sum, val) => sum + val * val, 0))
-  const magnitudeB = Math.sqrt(arrayB.reduce((sum, val) => sum + val * val, 0))
+  if (!arrayA?.length || !arrayB?.length) return 0
+
+  const dotProduct = arrayA.reduce((sum: number, val: number, i: number) => sum + val * arrayB[i], 0)
+  const magnitudeA = Math.sqrt(arrayA.reduce((sum: number, val: number) => sum + val * val, 0))
+  const magnitudeB = Math.sqrt(arrayB.reduce((sum: number, val: number) => sum + val * val, 0))
+
+  // Guard against zero-magnitude vectors (all-zero embeddings produce NaN)
+  if (magnitudeA === 0 || magnitudeB === 0) return 0
+
   return dotProduct / (magnitudeA * magnitudeB)
 }
