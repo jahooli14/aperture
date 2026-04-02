@@ -1,5 +1,5 @@
-import { supabase } from './supabase';
-import type { Idea, FrontierBlock } from './types';
+import { supabase } from './supabase.js';
+import type { Idea, FrontierBlock } from './types.js';
 
 /**
  * Frontier Advancement Score (FAS) Calculation

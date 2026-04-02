@@ -1,6 +1,6 @@
-import { supabase } from './supabase';
+import { supabase } from './supabase.js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import type { EvolutionaryFeedback, FeedbackSummary } from './types';
+import type { EvolutionaryFeedback, FeedbackSummary } from './types.js';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY!);

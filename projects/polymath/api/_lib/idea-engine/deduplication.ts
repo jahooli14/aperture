@@ -1,5 +1,5 @@
-import { supabase } from './supabase';
-import type { Idea } from './types';
+import { supabase } from './supabase.js';
+import type { Idea } from './types.js';
 
 /**
  * Deduplication using pgvector similarity search

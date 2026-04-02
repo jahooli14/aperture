@@ -1,6 +1,6 @@
-import { supabase } from './supabase';
-import type { DomainPair, Domain } from './types';
-import domains from './domains.json';
+import { supabase } from './supabase.js';
+import type { DomainPair, Domain } from './types.js';
+import domains from './domains.json' assert { type: 'json' };
 
 /**
  * Domain Sampler
