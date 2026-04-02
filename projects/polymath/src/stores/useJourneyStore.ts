@@ -1,20 +1,24 @@
 /**
- * Journey Store — Post-onboarding Day 1→7 engagement bridge
+ * Journey Store — Post-onboarding engagement flywheel
  *
- * Tracks the user's first week after completing onboarding.
- * Progressive disclosure: unlock features as they complete daily challenges.
- * Each day has a specific action that builds on the previous one,
- * creating a habit loop before streaks can take over (~Day 7).
+ * The north star loop:
+ *   Data in → Polymath knows you → suggests projects → chat builds it out
+ *   → encourages more data → better suggestions → repeat
  *
- * Design:
- *   - journeyDay is calculated from onboardingCompletedAt
- *   - Each day has a challenge + reward (feature unlock or celebration)
- *   - Milestones fire events that other components can listen to
- *   - After Day 7, journey is "graduated" and the full homepage takes over
+ * This store tracks:
+ *   - Onboarding analysis (themes, capabilities, first_insight) — persisted
+ *   - Day 1→7 challenges that teach the flywheel, not just features
+ *   - Graduation → ongoing "feed the loop" nudges
  */
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+
+export interface OnboardingProfile {
+  themes: string[]
+  capabilities: string[]
+  firstInsight: string
+}
 
 export interface DayChallenge {
   day: number
@@ -25,74 +29,87 @@ export interface DayChallenge {
   celebrationText: string
 }
 
+/**
+ * Challenges redesigned around the flywheel:
+ * Day 1: Add data (voice) → system learns
+ * Day 2: Add data (article) → system connects it to your project
+ * Day 3: See the connections → proof the loop works
+ * Day 4: Complete a task → project moves forward
+ * Day 5: Add more data (voice) → see how suggestions improve
+ * Day 6: Explore what Polymath learned → visible learning
+ * Day 7: Power Hour → full loop in action
+ */
 export const JOURNEY_CHALLENGES: DayChallenge[] = [
   {
     day: 1,
-    title: 'Capture your first thought',
-    description: 'Record a voice note about whatever is on your mind right now.',
+    title: 'Tell Polymath more',
+    description: 'Record a voice note — the more you share, the better your suggestions get.',
     action: 'voice_note',
-    reward: 'Unlocked: Your thought feed',
-    celebrationText: 'Your mind just got a second brain.',
+    reward: 'Polymath is learning what you care about',
+    celebrationText: 'That thought is now part of your knowledge graph.',
   },
   {
     day: 2,
-    title: 'Save something you read',
-    description: 'Add an article or link — Polymath will connect it to your thoughts.',
+    title: 'Feed it something you read',
+    description: 'Save an article — Polymath will connect it to your project and thoughts.',
     action: 'read_article',
-    reward: 'Unlocked: Reading queue',
-    celebrationText: 'Now Polymath reads with you.',
+    reward: 'New connections forming with your project',
+    celebrationText: 'Polymath just linked that to what you\'ve been thinking about.',
   },
   {
     day: 3,
-    title: 'See your first connections',
-    description: 'Check how your thoughts and reading are linking together.',
+    title: 'See the connections',
+    description: 'Your thoughts and reading are linking together. Check the Insights page.',
     action: 'check_connections',
-    reward: 'Unlocked: Collision Reports',
-    celebrationText: 'Your ideas are already talking to each other.',
+    reward: 'You can see how Polymath thinks about you',
+    celebrationText: 'This is what happens when ideas talk to each other.',
   },
   {
     day: 4,
-    title: 'Start a project',
-    description: 'Pick one of your sparked ideas — or start fresh. Chat with Polymath to shape it.',
-    action: 'start_project',
-    reward: 'Unlocked: AI Council',
-    celebrationText: 'From idea to project. That\'s the leap.',
+    title: 'Ship something small',
+    description: 'Complete one task on your project. Small wins compound.',
+    action: 'complete_task',
+    reward: 'Momentum started — streaks unlock tomorrow',
+    celebrationText: 'First task shipped. The project is moving.',
   },
   {
     day: 5,
-    title: 'Complete a task',
-    description: 'Knock out one task on your project. Small wins compound.',
-    action: 'complete_task',
-    reward: 'Unlocked: Streaks',
-    celebrationText: 'First task done. Momentum started.',
+    title: 'Teach Polymath something new',
+    description: 'Record another thought — watch how your suggestions sharpen.',
+    action: 'voice_note',
+    reward: 'Your suggestions just got more specific',
+    celebrationText: 'More data, sharper ideas. The flywheel is spinning.',
   },
   {
     day: 6,
-    title: 'Explore your patterns',
-    description: 'Visit Insights to see what Polymath has learned about how you think.',
+    title: 'See what Polymath learned',
+    description: 'Visit Insights — your patterns, themes, and the connections you can\'t see.',
     action: 'explore_insights',
-    reward: 'Unlocked: Bedtime Ideas',
-    celebrationText: 'Polymath is learning your mind.',
+    reward: 'You can see your own thinking patterns',
+    celebrationText: 'Polymath mapped your mind. Keep feeding it.',
   },
   {
     day: 7,
     title: 'Run a Power Hour',
-    description: 'A focused work session — Polymath plans the tasks, you do the work.',
+    description: 'Polymath plans your session from everything it knows. You just do the work.',
     action: 'power_hour',
-    reward: 'Full Polymath unlocked',
-    celebrationText: 'You\'ve built the habit. Polymath is yours now.',
+    reward: 'The full loop is yours',
+    celebrationText: 'Data in, projects out. You own the loop now.',
   },
 ]
 
 interface JourneyStore {
   // Core state
   onboardingCompletedAt: string | null
-  completedChallenges: number[] // day numbers
+  onboardingProfile: OnboardingProfile | null
+  completedChallenges: number[]
   firstProjectId: string | null
   firstConnectionSeen: boolean
   graduated: boolean
-  dismissedTomorrowHook: string | null // ISO date string of last dismissal
+  dismissedTomorrowHook: string | null
+  dismissedFeedNudge: string | null // ISO date of last "feed the loop" dismissal
   sessionStartedAt: string | null
+  dataPointCount: number // tracks how many things user has added post-onboarding
 
   // Computed helpers
   getCurrentDay: () => number
@@ -102,38 +119,44 @@ interface JourneyStore {
   isGraduated: () => boolean
   getTomorrowTeaser: () => string | null
   shouldShowTomorrowHook: () => boolean
+  shouldShowFeedNudge: () => boolean
 
   // Actions
-  startJourney: () => void
+  startJourney: (profile?: OnboardingProfile) => void
   completeChallenge: (day: number) => void
   setFirstProjectId: (id: string) => void
   markFirstConnectionSeen: () => void
   graduate: () => void
   dismissTomorrowHook: () => void
+  dismissFeedNudge: () => void
   startSession: () => void
+  incrementDataPoints: () => void
   reset: () => void
 }
 
 const TOMORROW_TEASERS: Record<number, string> = {
-  1: 'Tomorrow: save something you\'ve been reading. Polymath will connect it to what you just said.',
-  2: 'Tomorrow: see how your thoughts and reading are already linking together.',
-  3: 'Tomorrow: turn one of those connections into a real project.',
-  4: 'Tomorrow: complete your first task and start building momentum.',
-  5: 'Tomorrow: discover what Polymath has learned about how you think.',
-  6: 'Tomorrow: your first Power Hour — focused work, AI-planned.',
-  7: 'You\'ve graduated. Polymath is yours now.',
+  1: 'Tomorrow: save something you\'ve been reading. Polymath will connect it to your project.',
+  2: 'Tomorrow: see the connections forming between your thoughts, your reading, and your project.',
+  3: 'Tomorrow: ship a task on your project. Small wins make the suggestions sharper.',
+  4: 'Tomorrow: teach Polymath something new. One more thought makes every suggestion better.',
+  5: 'Tomorrow: see what Polymath learned about how you think.',
+  6: 'Tomorrow: your first Power Hour. Everything Polymath knows, focused into one session.',
+  7: 'The loop is yours. Keep adding, keep building.',
 }
 
 export const useJourneyStore = create<JourneyStore>()(
   persist(
     (set, get) => ({
       onboardingCompletedAt: null,
+      onboardingProfile: null,
       completedChallenges: [],
       firstProjectId: null,
       firstConnectionSeen: false,
       graduated: false,
       dismissedTomorrowHook: null,
+      dismissedFeedNudge: null,
       sessionStartedAt: null,
+      dataPointCount: 0,
 
       getCurrentDay: () => {
         const { onboardingCompletedAt, graduated } = get()
@@ -144,7 +167,6 @@ export const useJourneyStore = create<JourneyStore>()(
         const diffMs = now.getTime() - start.getTime()
         const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
 
-        // Day 1 is the day of onboarding, capped at 7
         return Math.min(Math.max(diffDays + 1, 1), 7)
       },
 
@@ -154,14 +176,12 @@ export const useJourneyStore = create<JourneyStore>()(
         const day = getCurrentDay()
         if (day === 0) return null
 
-        // Find the first incomplete challenge up to current day
         for (let d = 1; d <= day; d++) {
           if (!completedChallenges.includes(d)) {
             return JOURNEY_CHALLENGES[d - 1]
           }
         }
 
-        // All challenges up to today complete — show today's if not done
         if (!completedChallenges.includes(day)) {
           return JOURNEY_CHALLENGES[day - 1]
         }
@@ -192,7 +212,6 @@ export const useJourneyStore = create<JourneyStore>()(
         const { dismissedTomorrowHook, graduated, completedChallenges } = get()
         if (graduated || completedChallenges.length === 0) return false
 
-        // Don't show if dismissed today
         if (dismissedTomorrowHook) {
           const dismissed = new Date(dismissedTomorrowHook).toDateString()
           const today = new Date().toDateString()
@@ -202,11 +221,27 @@ export const useJourneyStore = create<JourneyStore>()(
         return true
       },
 
-      startJourney: () => {
+      shouldShowFeedNudge: () => {
+        const { graduated, dismissedFeedNudge, onboardingCompletedAt } = get()
+        if (!graduated || !onboardingCompletedAt) return false
+
+        // Show every 3 days after graduation
+        if (dismissedFeedNudge) {
+          const dismissed = new Date(dismissedFeedNudge)
+          const now = new Date()
+          const daysSince = Math.floor((now.getTime() - dismissed.getTime()) / (1000 * 60 * 60 * 24))
+          if (daysSince < 3) return false
+        }
+
+        return true
+      },
+
+      startJourney: (profile?: OnboardingProfile) => {
         set({
           onboardingCompletedAt: new Date().toISOString(),
           completedChallenges: [],
           graduated: false,
+          onboardingProfile: profile || null,
         })
       },
 
@@ -217,7 +252,6 @@ export const useJourneyStore = create<JourneyStore>()(
         const updated = [...completedChallenges, day].sort((a, b) => a - b)
         set({ completedChallenges: updated })
 
-        // Fire event for celebration components
         const challenge = JOURNEY_CHALLENGES[day - 1]
         if (challenge) {
           window.dispatchEvent(new CustomEvent('journey-milestone', {
@@ -225,7 +259,6 @@ export const useJourneyStore = create<JourneyStore>()(
           }))
         }
 
-        // Auto-graduate after all 7
         if (updated.length === 7) {
           set({ graduated: true })
           window.dispatchEvent(new CustomEvent('journey-graduated'))
@@ -248,19 +281,30 @@ export const useJourneyStore = create<JourneyStore>()(
         set({ dismissedTomorrowHook: new Date().toISOString() })
       },
 
+      dismissFeedNudge: () => {
+        set({ dismissedFeedNudge: new Date().toISOString() })
+      },
+
       startSession: () => {
         set({ sessionStartedAt: new Date().toISOString() })
+      },
+
+      incrementDataPoints: () => {
+        set({ dataPointCount: get().dataPointCount + 1 })
       },
 
       reset: () => {
         set({
           onboardingCompletedAt: null,
+          onboardingProfile: null,
           completedChallenges: [],
           firstProjectId: null,
           firstConnectionSeen: false,
           graduated: false,
           dismissedTomorrowHook: null,
+          dismissedFeedNudge: null,
           sessionStartedAt: null,
+          dataPointCount: 0,
         })
       },
     }),

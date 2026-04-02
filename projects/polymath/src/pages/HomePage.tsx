@@ -36,6 +36,7 @@ import type { Memory, Project, SynthesisInsight } from '../types'
 import { CohesionSummaryWidget } from '../components/home/CohesionSummaryWidget'
 import { JourneyMilestones } from '../components/home/JourneyMilestones'
 import { TomorrowHook } from '../components/home/TomorrowHook'
+import { PolymathProfileCard } from '../components/home/PolymathProfileCard'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { useJourneyStore } from '../stores/useJourneyStore'
 import { readingDb } from '../lib/db'
@@ -328,7 +329,7 @@ export function HomePage() {
   const { memories, fetchMemories, createMemory } = useMemoryStore()
   const { progress, requiredPrompts, fetchPrompts } = useOnboardingStore()
   const { setContext } = useContextEngineStore()
-  const { completeChallenge, onboardingCompletedAt, graduated, startSession } = useJourneyStore()
+  const { completeChallenge, onboardingCompletedAt, graduated, startSession, incrementDataPoints } = useJourneyStore()
 
   useEffect(() => {
     setContext('home', 'home', 'Home')
@@ -721,6 +722,9 @@ export function HomePage() {
 
         {/* Journey Milestones — Day 1-7 progressive challenge (new users only) */}
         <JourneyMilestones />
+
+        {/* Polymath Profile — what the system knows + nudge for more data (graduated users) */}
+        <PolymathProfileCard />
 
         <CohesionSummaryWidget />
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Brain, Users, Hash, Heart, Link2, ArrowRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { useJourneyStore } from '../../stores/useJourneyStore'
 
 interface ExtractionDetail {
   memoryId: string
@@ -17,6 +18,7 @@ export function ExtractionSummary() {
   const [extraction, setExtraction] = useState<ExtractionDetail | null>(null)
   const [visible, setVisible] = useState(false)
   const navigate = useNavigate()
+  const { incrementDataPoints, onboardingCompletedAt } = useJourneyStore()
 
   useEffect(() => {
     let dismissTimer: ReturnType<typeof setTimeout>
@@ -24,6 +26,11 @@ export function ExtractionSummary() {
     const handleExtraction = (e: CustomEvent<ExtractionDetail>) => {
       setExtraction(e.detail)
       setVisible(true)
+
+      // Track data point for the flywheel
+      if (onboardingCompletedAt) {
+        incrementDataPoints()
+      }
 
       // Show longer when there's a bridge insight worth reading
       const duration = e.detail.bridgeInsight ? 7000 : 4000
@@ -36,7 +43,7 @@ export function ExtractionSummary() {
       window.removeEventListener('memory-extracted', handleExtraction as EventListener)
       clearTimeout(dismissTimer)
     }
-  }, [])
+  }, [onboardingCompletedAt])
 
   return (
     <AnimatePresence>
@@ -54,7 +61,9 @@ export function ExtractionSummary() {
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5">
                 <Brain className="w-3.5 h-3.5 text-brand-primary" />
-                <span className="text-xs text-brand-primary font-medium">Understood</span>
+                <span className="text-xs text-brand-primary font-medium">
+                  {extraction.connections > 0 ? 'Connected' : 'Understood'}
+                </span>
               </div>
               <div className="h-3 w-px bg-[rgba(255,255,255,0.1)]" />
               <div className="flex items-center gap-2.5 text-xs text-[var(--brand-text-secondary)]">
@@ -84,6 +93,16 @@ export function ExtractionSummary() {
                 )}
               </div>
             </div>
+
+            {/* Row 1.5: flywheel feedback — shown when connections found */}
+            {extraction.connections > 0 && !extraction.bridgeInsight && onboardingCompletedAt && (
+              <>
+                <div className="h-px bg-[rgba(255,255,255,0.07)] my-2.5" />
+                <p className="text-[10px] leading-relaxed" style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}>
+                  {extraction.connections} new {extraction.connections === 1 ? 'connection' : 'connections'} to your existing thoughts. Your suggestions are getting sharper.
+                </p>
+              </>
+            )}
 
             {/* Row 2: thought bridge — shown only when present */}
             {extraction.bridgeInsight && (

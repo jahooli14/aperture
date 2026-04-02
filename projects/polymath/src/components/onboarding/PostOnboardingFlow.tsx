@@ -64,9 +64,13 @@ export function PostOnboardingFlow({ analysis, sparkedSuggestion }: PostOnboardi
   const [revealBeat, setRevealBeat] = useState(0)
   const [whyYouStatement, setWhyYouStatement] = useState<string | null>(null)
 
-  // Start the journey when this component mounts
+  // Start the journey and persist onboarding analysis
   useEffect(() => {
-    startJourney()
+    startJourney({
+      themes: analysis.themes || [],
+      capabilities: analysis.capabilities || [],
+      firstInsight: analysis.first_insight || '',
+    })
   }, [])
 
   // Pull actual project data once created
