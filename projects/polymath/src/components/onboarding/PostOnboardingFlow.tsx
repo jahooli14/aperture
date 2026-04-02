@@ -154,7 +154,14 @@ export function PostOnboardingFlow({ analysis, sparkedSuggestion }: PostOnboardi
 
   const handleGoToProject = () => {
     if (createdProjectId) {
-      navigate(`/projects/${createdProjectId}`, { state: { openChat: true } })
+      // Build a contextual auto-message that references their onboarding themes
+      const themesStr = analysis.themes.slice(0, 3).join(', ')
+      const capsStr = analysis.capabilities.slice(0, 2).join(' and ')
+      const autoMsg = `During onboarding I talked about ${themesStr || 'a few things on my mind'}${capsStr ? `, and you noticed I'm good at ${capsStr}` : ''}. Now I've started this project — what connections do you see between what I shared earlier and what I'm building here? What's the one thing I should focus on first to make real progress?`
+
+      navigate(`/projects/${createdProjectId}`, {
+        state: { openChat: true, chatAutoMessage: autoMsg },
+      })
     }
   }
 

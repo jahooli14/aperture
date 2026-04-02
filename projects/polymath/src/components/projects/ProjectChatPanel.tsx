@@ -71,6 +71,8 @@ interface ProjectChatPanelProps {
   }) => void
   onUpdateTasks?: (tasks: Task[]) => Promise<void>
   onRefinePlan?: () => Promise<void>
+  /** Auto-send this message when the panel opens (e.g. from post-onboarding) */
+  autoMessage?: string | null
 }
 
 const TASK_TYPE_LABELS: Record<string, string> = {
@@ -124,6 +126,7 @@ export function ProjectChatPanel({
   onAddTask,
   onUpdateTasks,
   onRefinePlan,
+  autoMessage,
 }: ProjectChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
@@ -134,6 +137,7 @@ export function ProjectChatPanel({
   const [showCouncil, setShowCouncil] = useState(false)
   const threadRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const autoMessageSentRef = useRef(false)
 
   // Build conversation history for the API (only user/model messages)
   const apiHistory = messages
@@ -159,6 +163,60 @@ export function ProjectChatPanel({
     // Focus input after animation settles
     setTimeout(() => inputRef.current?.focus(), 350)
   }, [isOpen]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-send a seeded message when arriving from post-onboarding
+  useEffect(() => {
+    if (!isOpen || !autoMessage || autoMessageSentRef.current) return
+    autoMessageSentRef.current = true
+
+    // Delay slightly so the panel renders first
+    const timer = setTimeout(async () => {
+      const msg = autoMessage
+      setMessages(prev => [...prev, { kind: 'user', content: msg }])
+      setThinking(true)
+
+      try {
+        const tasks: Task[] = (project.metadata?.tasks as Task[] | undefined) || []
+        const token = (await supabase.auth.getSession()).data.session?.access_token
+        const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/brainstorm`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            step: 'project-chat',
+            projectId: project.id,
+            projectTitle: project.title,
+            projectDescription: project.description,
+            projectMotivation: project.metadata?.motivation,
+            projectGoal: project.metadata?.end_goal,
+            tasks: tasks.map(t => ({ id: t.id, text: t.text, done: t.done })),
+            message: msg,
+            history: [],
+          }),
+        })
+        const data = await res.json()
+        if (res.ok && data.reply) {
+          setMessages(prev => [
+            ...prev,
+            {
+              kind: 'model',
+              content: data.reply,
+              suggestedTasks: data.suggestedTasks || [],
+              echoes: data.echoes || [],
+            },
+          ])
+        }
+      } catch {
+        // Silent — they can still type normally
+      } finally {
+        setThinking(false)
+      }
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [isOpen, autoMessage]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Append new completion events when they arrive while panel is open
   useEffect(() => {
