@@ -4,7 +4,9 @@
  * intersections, tensions, patterns, and the meaning beneath the surface activity.
  *
  * Runs fire-and-forget after every new memory entry.
+ * Debounced: skips generation if last run was <10 minutes ago.
  * Results are cached in synthesis_insights table (one row per user, upserted).
+ * Each generation is archived to synthesis_insights_history before overwriting.
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
@@ -12,6 +14,8 @@ import { getSupabaseClient } from './supabase.js'
 import { MODELS } from './models.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
+
+const DEBOUNCE_MS = 10 * 60 * 1000 // 10 minutes
 
 interface InsightData {
   evidence?: string[]
@@ -31,10 +35,31 @@ export interface GeneratedInsight {
 
 /**
  * Generate fresh insights from all user data using Gemini Flash.
- * Caches results in synthesis_insights table.
+ * - Debounced: skips if last generation was <10 minutes ago.
+ * - Incremental: passes previous insights to the model to evolve, not restart.
+ * - Archives: saves previous insights to history before overwriting.
  */
 export async function generateInsights(userId: string): Promise<GeneratedInsight[]> {
   const supabase = getSupabaseClient()
+
+  // Read current cache — used for debounce, previous insights, and history archiving
+  const { data: cached } = await supabase
+    .from('synthesis_insights')
+    .select('insights, generated_at, feedback')
+    .eq('user_id', userId)
+    .single()
+
+  // Debounce: skip if generated within the last 10 minutes
+  if (cached?.generated_at) {
+    const ageMs = Date.now() - new Date(cached.generated_at).getTime()
+    if (ageMs < DEBOUNCE_MS) {
+      console.log(`[insights-generator] Debounced — last ran ${Math.round(ageMs / 60000)}m ago`)
+      return (cached.insights as GeneratedInsight[]) || []
+    }
+  }
+
+  const previousInsights = (cached?.insights as GeneratedInsight[]) || []
+  const feedback = (cached?.feedback as Record<string, 'up' | 'down'>) || {}
 
   // Load everything in parallel — we want the full picture
   const [memoriesResult, articlesResult, projectsResult, listItemsResult] = await Promise.all([
@@ -94,6 +119,20 @@ export async function generateInsights(userId: string): Promise<GeneratedInsight
     .join(', ')
     .slice(0, 500)
 
+  // Build the evolution section if we have previous insights to evolve
+  const dislikedTitles = Object.entries(feedback)
+    .filter(([, rating]) => rating === 'down')
+    .map(([title]) => title)
+
+  const evolutionSection = previousInsights.length > 0
+    ? `
+PREVIOUS INSIGHTS (evolve these — don't just restate them):
+${previousInsights.map(i => `- [${i.type}] "${i.title}": ${i.description}`).join('\n')}
+${dislikedTitles.length > 0 ? `\nThe user found these previous insights unhelpful — avoid similar patterns:\n${dislikedTitles.map(t => `- "${t}"`).join('\n')}` : ''}
+
+Update, sharpen, or replace the previous insights based on everything you now see. If a previous insight has grown stronger with new evidence, evolve it. If something genuinely new has emerged, surface it. Drop anything that no longer rings true.`
+    : ''
+
   const prompt = `You have complete access to everything this person has written, saved, and created. Your job is to find the "so what" — the patterns, tensions, and intersections that this person probably can't see because they're too close to it.
 
 Don't be a search engine. Don't just say "you think about X a lot". Say what THAT MEANS. What's the deeper truth? What's the unresolved tension? What's the thing they keep circling but haven't named yet? What would a perceptive friend say after reading all of this?
@@ -109,6 +148,7 @@ ${projectsSummary || 'None yet'}
 
 THINGS THEY TRACK (lists, films, books, etc.):
 ${listsSummary || 'None yet'}
+${evolutionSection}
 
 ---
 
@@ -158,11 +198,25 @@ Return ONLY a JSON array (no markdown, no explanation):
     const jsonMatch = cleanedText.match(/\[[\s\S]*\]/)
     const insights: GeneratedInsight[] = JSON.parse(jsonMatch ? jsonMatch[0] : cleanedText)
 
-    // Cache results — one row per user, upserted
+    // Archive previous insights before overwriting
+    if (previousInsights.length > 0 && cached?.generated_at) {
+      supabase
+        .from('synthesis_insights_history')
+        .insert({
+          user_id: userId,
+          insights: previousInsights,
+          generated_at: cached.generated_at,
+          item_count: memories.length + articles.length + projects.length + listItems.length,
+        })
+        .then(() => {})
+        .catch(() => {}) // Non-critical
+    }
+
+    // Cache results — one row per user, upserted. Preserve existing feedback.
     await supabase
       .from('synthesis_insights')
       .upsert(
-        { user_id: userId, insights, generated_at: new Date().toISOString() },
+        { user_id: userId, insights, generated_at: new Date().toISOString(), feedback },
         { onConflict: 'user_id' }
       )
 
@@ -191,4 +245,52 @@ export async function getCachedInsights(
     insights: (data?.insights as GeneratedInsight[]) || [],
     generated_at: data?.generated_at || null,
   }
+}
+
+/**
+ * Record user feedback (up/down) on a specific insight by title.
+ * Feedback persists across regenerations and is used to steer future prompts.
+ */
+export async function recordInsightFeedback(
+  userId: string,
+  insightTitle: string,
+  rating: 'up' | 'down'
+): Promise<void> {
+  const supabase = getSupabaseClient()
+
+  const { data } = await supabase
+    .from('synthesis_insights')
+    .select('feedback')
+    .eq('user_id', userId)
+    .single()
+
+  const existing = (data?.feedback as Record<string, 'up' | 'down'>) || {}
+  const updated = { ...existing, [insightTitle]: rating }
+
+  await supabase
+    .from('synthesis_insights')
+    .update({ feedback: updated })
+    .eq('user_id', userId)
+}
+
+/**
+ * Return the archived history of past insight generations for a user.
+ */
+export async function getInsightHistory(
+  userId: string,
+  limit = 10
+): Promise<Array<{ insights: GeneratedInsight[]; generated_at: string; item_count: number | null }>> {
+  const supabase = getSupabaseClient()
+  const { data } = await supabase
+    .from('synthesis_insights_history')
+    .select('insights, generated_at, item_count')
+    .eq('user_id', userId)
+    .order('generated_at', { ascending: false })
+    .limit(limit)
+
+  return (data || []).map(row => ({
+    insights: row.insights as GeneratedInsight[],
+    generated_at: row.generated_at,
+    item_count: row.item_count,
+  }))
 }
