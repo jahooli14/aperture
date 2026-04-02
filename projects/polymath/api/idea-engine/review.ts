@@ -1,10 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { supabase } from '../../projects/idea-engine/src/lib/supabase';
-import { calculateFAS, createFrontierBlock } from '../../projects/idea-engine/src/lib/frontier-advancement';
-import { extractAbstractPattern } from '../../projects/idea-engine/src/lib/gemini-client';
-import { updateModeSuccessRate } from '../../projects/idea-engine/src/lib/mode-selector';
-import type { Idea, OpusVerdict } from '../../projects/idea-engine/src/lib/types';
+import { supabase } from '../../../idea-engine/src/lib/supabase';
+import { calculateFAS, createFrontierBlock } from '../../../idea-engine/src/lib/frontier-advancement';
+import { extractAbstractPattern } from '../../../idea-engine/src/lib/gemini-client';
+import { updateModeSuccessRate } from '../../../idea-engine/src/lib/mode-selector';
+import type { Idea, OpusVerdict } from '../../../idea-engine/src/lib/types';
 
 /**
  * Idea Engine Review Endpoint
