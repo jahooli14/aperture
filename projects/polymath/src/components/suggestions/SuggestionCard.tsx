@@ -198,10 +198,10 @@ export const SuggestionCard = memo(function SuggestionCard({
             <div className="mb-4 p-3 premium-glass-subtle rounded-lg">
               <p className="text-sm italic" style={{ color: "var(--brand-primary)" }}>
                 {suggestion.capabilities.length === 1
-                  ? `Leverages your ${suggestion.capabilities[0].name} experience`
+                  ? `Draws on your ${suggestion.capabilities[0].name} experience`
                   : suggestion.capabilities.length === 2
-                    ? `At the intersection of ${suggestion.capabilities[0].name} and ${suggestion.capabilities[1].name}`
-                    : `Uniquely combines ${suggestion.capabilities.slice(0, 2).map(c => c.name).join(', ')}, and ${suggestion.capabilities.length - 2} more ${suggestion.capabilities.length - 2 === 1 ? 'skill' : 'skills'}a rare convergence`
+                    ? `Combines your ${suggestion.capabilities[0].name} and ${suggestion.capabilities[1].name} skills`
+                    : `Draws on ${suggestion.capabilities.slice(0, 2).map(c => c.name).join(', ')}, and ${suggestion.capabilities.length - 2} other thing${suggestion.capabilities.length - 2 === 1 ? '' : 's'} you know`
                 }
               </p>
             </div>
