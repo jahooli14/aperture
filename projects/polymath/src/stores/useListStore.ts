@@ -154,7 +154,10 @@ export const useListStore = create<ListStore>()(
                         body: JSON.stringify(input)
                     })
 
-                    if (!response.ok) throw new Error('Failed to create list')
+                    if (!response.ok) {
+                        const body = await response.json().catch(() => ({}))
+                        throw new Error(body.error || 'Failed to create list')
+                    }
 
                     const realList = await response.json()
 
