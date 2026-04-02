@@ -49,11 +49,7 @@ const SCHEMA_COLORS = {
     bg: 'rgba(16, 185, 129, 0.1)',
     icon: BookOpen
   },
-  suggestion: {
-    primary: '#f59e0b',
-    bg: 'rgba(245, 158, 11, 0.1)',
-    icon: Lightbulb
-  }
+
 }
 
 export function ConnectionsList({ itemType, itemId, onConnectionDeleted, onConnectionCreated, onCountChange, onLoadingChange }: ConnectionsListProps) {
@@ -265,7 +261,7 @@ export function ConnectionsList({ itemType, itemId, onConnectionDeleted, onConne
         onOpenChange={setShowCreateDialog}
         sourceType={itemType}
         sourceId={itemId}
-        sourceContent={content}
+
         onConnectionCreated={handleManualConnectionCreated}
       />
     </div>

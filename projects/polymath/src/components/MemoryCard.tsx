@@ -1,7 +1,7 @@
 import React, { useState, memo, useCallback, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { Edit, Trash2, Copy, Share2, Link2, Pin, Sprout, Film, Book, Music, MapPin, Gamepad2, Monitor, FileText, Box, CheckSquare, Square } from 'lucide-react'
+import { Edit, Trash2, Copy, Share2, Pin, Sprout, Film, Book, Music, MapPin, Gamepad2, Monitor, FileText, Box, CheckSquare, Square } from 'lucide-react'
 import type { Memory, BridgeWithMemories, ChecklistItem } from '../types'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useToast } from './ui/toast'
@@ -112,10 +112,9 @@ interface MemoryCardProps {
   memory: Memory
   onEdit?: (memory: Memory) => void
   onDelete?: (memory: Memory) => void
-  connectionCount?: number
 }
 
-export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, connectionCount }: MemoryCardProps) {
+export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
   const navigate = useNavigate()
   const [showContextMenu, setShowContextMenu] = useState(false)
   const [showDetailModal, setShowDetailModal] = useState(false)
@@ -438,18 +437,6 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete, c
           </span>
 
           <div className="flex items-center gap-1.5 flex-shrink-0">
-            {connectionCount !== undefined && connectionCount > 0 && (
-              <span
-                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-medium"
-                style={{
-                  background: 'rgba(52,211,153,0.08)',
-                  border: '1px solid rgba(52,211,153,0.2)',
-                  color: 'rgba(52,211,153,0.7)',
-                }}
-              >
-                <Link2 className="w-2 h-2" />
-                {connectionCount}
-              </span>
             )}
 
             {memory.checklist_items && memory.checklist_items.length > 0 && (
