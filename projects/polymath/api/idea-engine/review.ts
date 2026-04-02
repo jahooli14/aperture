@@ -1,10 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { supabase } from '../../../idea-engine/src/lib/supabase';
-import { calculateFAS, createFrontierBlock } from '../../../idea-engine/src/lib/frontier-advancement';
-import { extractAbstractPattern } from '../../../idea-engine/src/lib/gemini-client';
-import { updateModeSuccessRate } from '../../../idea-engine/src/lib/mode-selector';
-import type { Idea, OpusVerdict } from '../../../idea-engine/src/lib/types';
+import { supabase } from '../../lib/idea-engine/supabase';
+import { calculateFAS, createFrontierBlock } from '../../lib/idea-engine/frontier-advancement';
+import { extractAbstractPattern } from '../../lib/idea-engine/gemini-client';
+import { updateModeSuccessRate } from '../../lib/idea-engine/mode-selector';
+import type { Idea, OpusVerdict } from '../../lib/idea-engine/types';
 
 /**
  * Idea Engine Review Endpoint
@@ -198,24 +198,39 @@ Return ONLY the JSON array, no other text.`;
 
         // Update domain pair success rate
         const [a, b] = idea.domain_pair.sort();
-        await supabase.rpc('increment_domain_pair_success', {
+        const rpcResult = await supabase.rpc('increment_domain_pair_success', {
           p_user_id: userId,
           p_domain_a: a,
           p_domain_b: b,
-        }).catch(() => {
-          // Fallback if function doesn't exist
-          supabase
+        });
+
+        if (rpcResult.error) {
+          // Fallback if function doesn't exist - fetch and update manually
+          const { data: pairData } = await supabase
             .from('ie_domain_pairs')
-            .update({
-              times_approved: supabase.raw('times_approved + 1'),
-              success_rate: supabase.raw(
-                'CASE WHEN times_generated > 0 THEN (times_approved + 1)::float / times_generated ELSE 0 END'
-              ),
-            })
+            .select('times_approved, times_generated')
             .eq('user_id', userId)
             .eq('domain_a', a)
-            .eq('domain_b', b);
-        });
+            .eq('domain_b', b)
+            .single();
+
+          if (pairData) {
+            const newApproved = pairData.times_approved + 1;
+            const newSuccessRate = pairData.times_generated > 0
+              ? newApproved / pairData.times_generated
+              : 0;
+
+            await supabase
+              .from('ie_domain_pairs')
+              .update({
+                times_approved: newApproved,
+                success_rate: newSuccessRate,
+              })
+              .eq('user_id', userId)
+              .eq('domain_a', a)
+              .eq('domain_b', b);
+          }
+        }
 
         // Calculate FAS for approved ideas
         console.log(`Calculating FAS for "${idea.title}"...`);
@@ -252,16 +267,32 @@ Return ONLY the JSON array, no other text.`;
 
         // Update rejection patterns
         const [a, b] = idea.domain_pair.sort();
+        const patternSignature = `${a}|${b}`;
+
+        // Fetch existing pattern
+        const { data: existingPattern } = await supabase
+          .from('ie_rejection_patterns')
+          .select('rejection_count, penalty_weight, typical_reasons')
+          .eq('user_id', userId)
+          .eq('pattern_type', 'domain_combo')
+          .eq('pattern_signature', patternSignature)
+          .single();
+
+        const newRejectionCount = (existingPattern?.rejection_count || 0) + 1;
+        const newPenaltyWeight = (existingPattern?.penalty_weight || 0) + 0.1;
+        const newReasons = [
+          ...(existingPattern?.typical_reasons || []),
+          verdict.reasoning,
+        ];
+
         await supabase.from('ie_rejection_patterns').upsert(
           {
             user_id: userId,
             pattern_type: 'domain_combo',
-            pattern_signature: `${a}|${b}`,
-            rejection_count: supabase.raw('COALESCE(rejection_count, 0) + 1'),
-            penalty_weight: supabase.raw('COALESCE(penalty_weight, 0) + 0.1'),
-            typical_reasons: supabase.raw(
-              `array_append(COALESCE(typical_reasons, ARRAY[]::text[]), '${verdict.reasoning.replace(/'/g, "''")}')`
-            ),
+            pattern_signature: patternSignature,
+            rejection_count: newRejectionCount,
+            penalty_weight: newPenaltyWeight,
+            typical_reasons: newReasons,
             last_rejected_at: new Date().toISOString(),
           },
           {
