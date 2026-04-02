@@ -69,7 +69,7 @@ export function InsightsPage() {
 
       // 3. Fetch cached insights from server (fast — just a DB read)
       setIsOffline(false)
-      const response = await fetch('/api/analytics?resource=evolution')
+      const response = await fetch('/api/memories?action=evolution')
       if (response.ok) {
         const data = await response.json()
         if (data.insights?.length > 0) {
@@ -101,7 +101,7 @@ export function InsightsPage() {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 60000)
 
-      const response = await fetch('/api/analytics?resource=evolution', {
+      const response = await fetch('/api/memories?action=evolution', {
         method: 'POST',
         signal: controller.signal,
       })

@@ -159,7 +159,7 @@ export function OnboardingPage() {
 
   const analyzeResponses = async (allTranscripts: string[], selectedBooks: BookSearchResult[]) => {
     try {
-      const res = await fetch('/api/onboarding?resource=analyze', {
+      const res = await fetch('/api/utilities?resource=analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
