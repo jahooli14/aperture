@@ -1,10 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabase } from '../../projects/idea-engine/src/lib/supabase';
-import { sampleDomainPair, recordDomainPairGeneration } from '../../projects/idea-engine/src/lib/domain-sampler';
-import { selectFrontierMode, recordModeUsage } from '../../projects/idea-engine/src/lib/mode-selector';
-import { generateIdea, scoreIdea } from '../../projects/idea-engine/src/lib/gemini-client';
-import { generateIdeaEmbedding, storeIdeaWithDedupe } from '../../projects/idea-engine/src/lib/deduplication';
-import { getLatestFeedbackSummary } from '../../projects/idea-engine/src/lib/feedback-summarizer';
+import { supabase } from '../../../idea-engine/src/lib/supabase';
+import { sampleDomainPair, recordDomainPairGeneration } from '../../../idea-engine/src/lib/domain-sampler';
+import { selectFrontierMode, recordModeUsage } from '../../../idea-engine/src/lib/mode-selector';
+import { generateIdea, scoreIdea } from '../../../idea-engine/src/lib/gemini-client';
+import { generateIdeaEmbedding, storeIdeaWithDedupe } from '../../../idea-engine/src/lib/deduplication';
+import { getLatestFeedbackSummary } from '../../../idea-engine/src/lib/feedback-summarizer';
 
 /**
  * Idea Engine Generation Endpoint
