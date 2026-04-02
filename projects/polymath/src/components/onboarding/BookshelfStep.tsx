@@ -43,7 +43,7 @@ export function BookshelfStep({ onComplete, onSkip }: BookshelfStepProps) {
 
     setSearching(true)
     try {
-      const res = await fetch(`/api/onboarding?resource=book-search&q=${encodeURIComponent(q)}`)
+      const res = await fetch(`/api/utilities?resource=book-search&q=${encodeURIComponent(q)}`)
       if (!res.ok) throw new Error('Search failed')
       const data = await res.json()
       setResults(data.results || [])

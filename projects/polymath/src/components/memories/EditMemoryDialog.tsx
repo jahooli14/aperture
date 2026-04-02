@@ -118,7 +118,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
 
         // 1. Get Signed URL from backend
         console.log('[EditMemoryDialog] Requesting signed URL for:', fileName)
-        const authResponse = await fetch('/api/upload-image', {
+        const authResponse = await fetch('/api/utilities?resource=upload-image', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
