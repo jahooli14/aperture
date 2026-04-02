@@ -223,7 +223,7 @@ class DataSynchronizer {
         }).catch(err => logger.warn('[DataSynchronizer] Inspiration fetch failed:', err)),
 
         // Evolution (Insights)
-        fetch('/api/analytics?resource=evolution').then(async (res) => {
+        fetch('/api/memories?action=evolution').then(async (res) => {
           if (res.ok) {
             const data = await res.json()
             await readingDb.cacheDashboard('evolution', data)

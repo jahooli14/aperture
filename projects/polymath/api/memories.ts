@@ -8,6 +8,7 @@ import fs from 'fs'
 import { generateEmbedding, cosineSimilarity } from './_lib/gemini-embeddings.js'
 import { processMemory } from './_lib/process-memory.js'
 import { generateText } from './_lib/gemini-chat.js'
+import { generateInsights, getCachedInsights } from './_lib/insights-generator.js'
 import { MODELS } from './_lib/models.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
@@ -232,6 +233,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'GET' && action === 'insight') {
       if (!userId) return res.status(401).json({ error: 'Unauthorized' })
       return await handleInsight(req, res, supabase, userId)
+    }
+
+    // GET /api/memories?action=evolution  → return cached synthesis insights + shadow_project
+    // POST /api/memories?action=evolution → force-regenerate from all user data
+    if (action === 'evolution') {
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+      try {
+        if (req.method === 'GET') {
+          const cached = await getCachedInsights(userId)
+          return res.status(200).json({
+            insights: cached.insights,
+            shadow_project: cached.shadow_project,
+            generated_at: cached.generated_at,
+          })
+        }
+        if (req.method === 'POST') {
+          const all = await generateInsights(userId)
+          const shadow_project = all.find(i => i.type === 'shadow_project') ?? null
+          const insights = all.filter(i => i.type !== 'shadow_project')
+          return res.status(200).json({
+            insights,
+            shadow_project,
+            generated_at: new Date().toISOString(),
+          })
+        }
+        return res.status(405).json({ error: 'Method not allowed' })
+      } catch (error) {
+        console.error('[memories:evolution] Error:', error)
+        return res.status(500).json({ error: 'Analysis failed', insights: [], shadow_project: null })
+      }
     }
 
     // GET: Single memory by ID

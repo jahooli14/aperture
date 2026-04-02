@@ -90,7 +90,7 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
         const fileExt = file.name.split('.').pop()
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
 
-        const authResponse = await fetch('/api/upload-image', {
+        const authResponse = await fetch('/api/utilities?resource=upload-image', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ fileName, fileType: file.type })

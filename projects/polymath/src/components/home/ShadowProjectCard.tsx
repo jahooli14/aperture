@@ -55,7 +55,7 @@ export function ShadowProjectCard() {
     } catch {}
 
     // Fetch fresh — reuse the same endpoint InsightsPage uses
-    fetch('/api/analytics?resource=evolution')
+    fetch('/api/memories?action=evolution')
       .then(r => r.ok ? r.json() : null)
       .then(d => {
         if (d?.shadow_project) {
