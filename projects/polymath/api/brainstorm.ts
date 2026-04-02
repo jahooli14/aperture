@@ -510,6 +510,69 @@ Only include suggestedTasks if you're genuinely recommending new tasks to add. O
   return { reply, suggestedTasks, taskOps, echoes }
 }
 
+// ─── Mode: project-reveal ────────────────────────────────────────────────────
+// Generates a personalized "why this project is perfect for you" statement
+// using onboarding analysis + project data + knowledge lake context.
+
+async function handleProjectReveal(
+  body: {
+    projectTitle: string
+    projectDescription: string
+    projectType: string
+    themes: string[]
+    capabilities: string[]
+    firstInsight: string
+  },
+  userId: string
+): Promise<{ statement: string }> {
+  const { projectTitle, projectDescription, projectType, themes, capabilities, firstInsight } = body
+
+  // Search knowledge lake for connections to this project
+  const lakeResults = await searchKnowledgeLake(
+    `${projectTitle} ${projectDescription}`,
+    userId
+  )
+  const contextBlock = buildContextBlock(lakeResults)
+
+  const prompt = `You are writing a single, personal statement for someone who just created their first project in Polymath — a thinking tool that turns scattered ideas into real work.
+
+This person completed voice onboarding where we learned:
+- Themes on their mind: ${themes.join(', ') || 'varied interests'}
+- Capabilities detected: ${capabilities.join(', ') || 'creative problem-solving'}
+- First insight about them: "${firstInsight || 'They think in connections.'}"
+
+They just created this project:
+- Title: "${projectTitle}"
+- Type: ${projectType || 'Creative'}
+- Description: "${projectDescription}"
+${contextBlock ? `\nFrom their knowledge lake (saved thoughts, articles, projects):\n${contextBlock}\n` : ''}
+
+Write a 2-3 sentence statement that explains why THIS person is the right person to build THIS project. Not generic encouragement. Connect specific dots:
+- Reference a specific theme or capability and show how it maps to what this project needs
+- If their knowledge lake has relevant entries, name one ("You've already been thinking about X")
+- Make it feel like a revelation — something they half-knew but hadn't articulated
+
+Rules:
+- No filler, no "Great job", no "This is exciting"
+- Write like a sharp friend who sees you clearly, not a motivational poster
+- Second person ("you")
+- Short punchy sentences. One thought per sentence.
+- Do NOT start with "You" — vary the opening
+- The tone is: knowing, warm, precise
+
+Return JSON only:
+{ "statement": "your 2-3 sentence statement" }`
+
+  const raw = await generateText(prompt, { temperature: 0.8, maxTokens: 200, responseFormat: 'json' })
+
+  try {
+    const parsed = JSON.parse(raw)
+    return { statement: (parsed.statement || '').trim() }
+  } catch {
+    return { statement: raw.trim() }
+  }
+}
+
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -535,6 +598,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.json(await handleStudioMagic(body as unknown as Parameters<typeof handleStudioMagic>[0], userId))
       case 'project-chat':
         return res.json(await handleProjectChat(body as unknown as Parameters<typeof handleProjectChat>[0], userId))
+      case 'project-reveal':
+        return res.json(await handleProjectReveal(body as unknown as Parameters<typeof handleProjectReveal>[0], userId))
       default:
         return res.status(400).json({ error: `Unknown step: ${body.step}` })
     }

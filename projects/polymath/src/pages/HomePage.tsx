@@ -34,7 +34,11 @@ import { PROJECT_COLORS } from '../components/projects/ProjectCard'
 import { PowerHourHero } from '../components/home/PowerHourHero'
 import type { Memory, Project, SynthesisInsight } from '../types'
 import { CohesionSummaryWidget } from '../components/home/CohesionSummaryWidget'
+import { JourneyMilestones } from '../components/home/JourneyMilestones'
+import { TomorrowHook } from '../components/home/TomorrowHook'
+import { PolymathProfileCard } from '../components/home/PolymathProfileCard'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
+import { useJourneyStore } from '../stores/useJourneyStore'
 import { readingDb } from '../lib/db'
 
 interface InspirationData {
@@ -325,10 +329,41 @@ export function HomePage() {
   const { memories, fetchMemories, createMemory } = useMemoryStore()
   const { progress, requiredPrompts, fetchPrompts } = useOnboardingStore()
   const { setContext } = useContextEngineStore()
+  const { completeChallenge, onboardingCompletedAt, graduated, startSession, incrementDataPoints } = useJourneyStore()
 
   useEffect(() => {
     setContext('home', 'home', 'Home')
+    // Track session start for journey
+    if (onboardingCompletedAt && !graduated) {
+      startSession()
+    }
   }, [])
+
+  // Auto-complete journey challenges based on user actions
+  useEffect(() => {
+    if (!onboardingCompletedAt || graduated) return
+
+    // Voice note captured → Day 1
+    const handleVoiceCapture = () => completeChallenge(1)
+    // Article saved → Day 2
+    const handleArticleSaved = () => completeChallenge(2)
+    // Project created → Day 4
+    const handleProjectCreated = () => completeChallenge(4)
+    // Task completed → Day 5
+    const handleTaskCompleted = () => completeChallenge(5)
+
+    window.addEventListener('memory-created', handleVoiceCapture)
+    window.addEventListener('article-saved', handleArticleSaved)
+    window.addEventListener('projectEnriched', handleProjectCreated)
+    window.addEventListener('task-completed', handleTaskCompleted)
+
+    return () => {
+      window.removeEventListener('memory-created', handleVoiceCapture)
+      window.removeEventListener('article-saved', handleArticleSaved)
+      window.removeEventListener('projectEnriched', handleProjectCreated)
+      window.removeEventListener('task-completed', handleTaskCompleted)
+    }
+  }, [onboardingCompletedAt, graduated])
 
   const { addToast } = useToast()
 
@@ -685,6 +720,12 @@ export function HomePage() {
           </div>
         </section>
 
+        {/* Journey Milestones — Day 1-7 progressive challenge (new users only) */}
+        <JourneyMilestones />
+
+        {/* Polymath Profile — what the system knows + nudge for more data (graduated users) */}
+        <PolymathProfileCard />
+
         <CohesionSummaryWidget />
 
         {/* Aperture Power Hour - The Hero Engine */}
@@ -764,6 +805,9 @@ export function HomePage() {
           sparkCandidate={sparkCandidate}
           projects={projects}
         />
+
+        {/* Tomorrow Hook — teaser for next day's challenge (journey users) */}
+        <TomorrowHook />
 
         {/* 5. EXPLORE (Bottom Links) */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 flex flex-col aperture-shelf">
