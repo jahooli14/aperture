@@ -44,6 +44,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     switch (action) {
+      case 'test':
+        return res.status(200).json({ success: true, message: 'Idea Engine API is working!', env: {
+          hasGeminiKey: !!process.env.GEMINI_API_KEY,
+          hasSupabaseUrl: !!(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL),
+          hasUserId: !!process.env.IDEA_ENGINE_USER_ID
+        }});
       case 'generate':
         return await handleGenerate(res);
       case 'review':
@@ -51,13 +57,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       case 'send-digest':
         return await handleSendDigest(res);
       default:
-        return res.status(400).json({ error: 'Invalid action. Use ?action=generate|review|send-digest' });
+        return res.status(400).json({ error: 'Invalid action. Use ?action=test|generate|review|send-digest' });
     }
   } catch (error) {
     console.error(`❌ ${action} failed:`, error);
     return res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
     });
   }
 }
