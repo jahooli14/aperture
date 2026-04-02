@@ -302,9 +302,7 @@ export function ReadingPage() {
 
   // Handle shared URLs from Web Share Target API with robust processing
   useEffect(() => {
-    console.log('='.repeat(80))
-    console.log('[ReadingPage] SHARE DETECTION START')
-    console.log('[ReadingPage] Current URL:', location.pathname + location.search)
+    console.log('[ReadingPage] SHARE DETECTION - URL:', location.pathname + location.search)
 
     const params = new URLSearchParams(location.search)
 
@@ -317,7 +315,15 @@ export function ReadingPage() {
       sharedParam = textParam
     }
 
-    console.log('[ReadingPage] Extracted share URL:', sharedParam)
+    // Fallback: check localStorage for share data (set by shareHandler or share-target.html)
+    if (!sharedParam) {
+      const stored = consumeShareData()
+      if (stored?.url) {
+        console.log('[ReadingPage] Found share URL in localStorage:', stored.url)
+        sharedParam = stored.url
+        clearShareData()
+      }
+    }
 
     const shareUrl: string | undefined = sharedParam || undefined
 

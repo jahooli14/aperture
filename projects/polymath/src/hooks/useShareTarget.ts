@@ -32,33 +32,12 @@ export function useShareTarget({
   // Track the last processed URL to prevent duplicate processing
   const lastProcessedUrlRef = useRef<string | null>(null)
 
-  // Extensive logging function
   const logShareAttempt = (source: string, shareData: {
     url?: string | null,
     title?: string | null,
     text?: string | null
   }) => {
-    const logEntry = {
-      timestamp: new Date().toISOString(),
-      source,
-      shareData,
-      searchParams: Object.fromEntries(searchParams.entries())
-    }
-
-    try {
-      const logFileName = `/Users/danielcroome-horgan/Aperture/projects/rosette/logs/share_target_log_${Date.now()}.json`
-      const fs = require('fs')
-      fs.writeFileSync(logFileName, JSON.stringify(logEntry, null, 2))
-      console.log(`[useShareTarget] Extensive log written to ${logFileName}`)
-    } catch (logError) {
-      console.error('[useShareTarget] Failed to write log file:', logError)
-    }
-
-    console.group('[useShareTarget] Share Attempt')
-    console.log('Source:', source)
-    console.log('Share Data:', shareData)
-    console.log('Search Params:', Object.fromEntries(searchParams.entries()))
-    console.groupEnd()
+    console.log('[useShareTarget] Share attempt:', source, shareData)
   }
 
   // Initialize share handler on component mount
