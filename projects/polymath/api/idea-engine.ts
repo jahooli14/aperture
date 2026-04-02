@@ -1,14 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Resend } from 'resend';
-import { supabase } from '../lib/idea-engine/supabase';
-import { sampleDomainPair, recordDomainPairGeneration } from '../lib/idea-engine/domain-sampler';
-import { selectFrontierMode, recordModeUsage, updateModeSuccessRate } from '../lib/idea-engine/mode-selector';
-import { generateIdea, scoreIdea, extractAbstractPattern } from '../lib/idea-engine/gemini-client';
-import { generateIdeaEmbedding, storeIdeaWithDedupe } from '../lib/idea-engine/deduplication';
-import { getLatestFeedbackSummary } from '../lib/idea-engine/feedback-summarizer';
-import { calculateFAS, createFrontierBlock } from '../lib/idea-engine/frontier-advancement';
-import type { Idea, FrontierBlock } from '../lib/idea-engine/types';
+import { supabase } from './_lib/idea-engine/supabase';
+import { sampleDomainPair, recordDomainPairGeneration } from './_lib/idea-engine/domain-sampler';
+import { selectFrontierMode, recordModeUsage, updateModeSuccessRate } from './_lib/idea-engine/mode-selector';
+import { generateIdea, scoreIdea, extractAbstractPattern } from './_lib/idea-engine/gemini-client';
+import { generateIdeaEmbedding, storeIdeaWithDedupe } from './_lib/idea-engine/deduplication';
+import { getLatestFeedbackSummary } from './_lib/idea-engine/feedback-summarizer';
+import { calculateFAS, createFrontierBlock } from './_lib/idea-engine/frontier-advancement';
+import type { Idea, FrontierBlock } from './_lib/idea-engine/types';
 
 /**
  * Consolidated Idea Engine Endpoint
