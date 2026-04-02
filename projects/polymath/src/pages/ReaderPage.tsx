@@ -137,7 +137,7 @@ export function ReaderPage() {
 
   useEffect(() => {
     if (article) {
-      setContext('article', article.id, article.title, { url: article.url })
+      setContext('article', article.id, article.title ?? undefined, { url: article.url })
     }
   }, [article, setContext])
 

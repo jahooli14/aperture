@@ -71,7 +71,7 @@ async function searchOffline(searchQuery: string): Promise<SearchResponse> {
     }))
 
   const filteredArticles = articles
-    .filter(a => a.title.toLowerCase().includes(lowerCaseQuery) || (a.content && a.content.toLowerCase().includes(lowerCaseQuery)) || (a.excerpt && a.excerpt.toLowerCase().includes(lowerCaseQuery)))
+    .filter(a => (a.title ?? '').toLowerCase().includes(lowerCaseQuery) || (a.content && a.content.toLowerCase().includes(lowerCaseQuery)) || (a.excerpt && a.excerpt.toLowerCase().includes(lowerCaseQuery)))
     .map(a => ({
       type: 'article' as const,
       id: a.id,
@@ -90,7 +90,7 @@ async function searchOffline(searchQuery: string): Promise<SearchResponse> {
   return {
     query: searchQuery,
     total: allResults.length,
-    results: allResults,
+    results: allResults as SearchResult[],
     breakdown: {
       memories: filteredMemories.length,
       projects: filteredProjects.length,

@@ -73,7 +73,7 @@ export async function retryWithBackoff<T>(
 
       console.log(
         `[Retry] Attempt ${attempt + 1}/${opts.maxRetries} failed. Retrying in ${Math.round(delay)}ms...`,
-        error.message || error
+        error instanceof Error ? error.message : error
       )
 
       // Wait before retrying

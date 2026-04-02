@@ -11,6 +11,7 @@ import { VoiceFAB } from './VoiceFAB'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useKeyboardVisible } from '../hooks/useKeyboardVisible'
 import { useMemoryStore } from '../stores/useMemoryStore'
+import type { Memory } from '../types'
 import { useOfflineSync } from '../hooks/useOfflineSync'
 import { useToast } from './ui/toast'
 import { useAuthContext } from '../contexts/AuthContext'
@@ -58,8 +59,8 @@ export function FloatingNav() {
   const location = useLocation()
   const [isHidden, setIsHidden] = React.useState(false)
 
-  const allMemories = useMemoryStore(s => s.memories)
-  const hasRecentMemories = allMemories.some(m => {
+  const allMemories = useMemoryStore((s: { memories: Memory[] }) => s.memories)
+  const hasRecentMemories = allMemories.some((m: Memory) => {
     const created = m.created_at || m.audiopen_created_at
     if (!created) return false
     const mTime = new Date(created).getTime()

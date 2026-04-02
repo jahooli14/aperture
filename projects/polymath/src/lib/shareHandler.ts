@@ -149,13 +149,13 @@ export function initShareHandler() {
 
     // Check in order: shared param, text param, url param
     if (isValidUrl(sharedParam)) {
-      sharedUrl = sanitizeUrl(sharedParam)
+      sharedUrl = sanitizeUrl(sharedParam!)
       console.log('[ShareHandler] URL sourced from shared parameter')
     } else if (isValidUrl(textParam)) {
-      sharedUrl = sanitizeUrl(textParam)
+      sharedUrl = sanitizeUrl(textParam!)
       console.log('[ShareHandler] URL sourced from text parameter')
     } else if (isValidUrl(urlParam)) {
-      sharedUrl = sanitizeUrl(urlParam)
+      sharedUrl = sanitizeUrl(urlParam!)
       console.log('[ShareHandler] URL sourced from URL parameter')
     }
 

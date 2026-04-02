@@ -126,8 +126,8 @@ class ArticleProcessor {
       // If article is old and still not processed, it's stuck - backend likely died
       // Threshold set to 90s to allow complex extractions time to complete before declaring zombie
       // Check for ANY processing-related message (case-insensitive) OR just not processed after 90s
-      const isProcessingMessage = /extract|process|progress/i.test(processing.lastLog)
-      const hasFailureMessage = /failed|blocked|timeout|timed out/i.test(processing.lastLog)
+      const isProcessingMessage = /extract|process|progress/i.test(processing.lastLog ?? '')
+      const hasFailureMessage = /failed|blocked|timeout|timed out/i.test(processing.lastLog ?? '')
       const isZombie = articleAgeSeconds >= 90 && !article.processed && (isProcessingMessage || hasFailureMessage)
 
       if (isZombie) {
@@ -139,27 +139,28 @@ class ArticleProcessor {
       }
 
       // Detect which stage based on backend message - check failures first
-      if (processing.lastLog.includes('failed') || processing.lastLog.includes('Failed')) {
+      const lastLog = processing.lastLog ?? ''
+      if (lastLog.includes('failed') || lastLog.includes('Failed')) {
         processing.currentStage = ' Backend: Extraction Failed'
-      } else if (processing.lastLog.includes('blocked')) {
+      } else if (lastLog.includes('blocked')) {
         processing.currentStage = ' Backend: Domain Blocked'
-      } else if (processing.lastLog.includes('timeout') || processing.lastLog.includes('timed out') || processing.lastLog.includes('take a moment')) {
+      } else if (lastLog.includes('timeout') || lastLog.includes('timed out') || lastLog.includes('take a moment')) {
         processing.currentStage = ' Backend: Timed Out'
-      } else if (processing.lastLog.includes('JavaScript')) {
+      } else if (lastLog.includes('JavaScript')) {
         processing.currentStage = ' Backend: Needs JS Rendering'
-      } else if (processing.lastLog.includes('Extracting') || processing.lastLog.includes('extraction')) {
+      } else if (lastLog.includes('Extracting') || lastLog.includes('extraction')) {
         processing.currentStage = ' Backend: Extracting (Tier 123)'
-      } else if (processing.lastLog.includes('progress')) {
+      } else if (lastLog.includes('progress')) {
         processing.currentStage = ' Backend: In Progress'
       } else {
         processing.currentStage = ' Backend: Processing'
       }
 
-      this.log(`Stage: ${processing.currentStage} | ${processing.lastLog.slice(0, 40)}`, 'info')
+      this.log(`Stage: ${processing.currentStage} | ${lastLog.slice(0, 40)}`, 'info')
 
       // Check if article has been retrying for too long with timeout/failure messages
       // If we've been seeing timeout/failure messages for >30s and still not processed, trigger retry
-      if (articleAgeSeconds >= 30 && !article.processed && (hasFailureMessage || processing.lastLog.includes('timed out'))) {
+      if (articleAgeSeconds >= 30 && !article.processed && (hasFailureMessage || lastLog.includes('timed out'))) {
         this.log(`Article ${articleId.slice(0, 8)} has timeout/failure message for ${articleAgeSeconds}s - triggering early retry`, 'error')
         await this.retryExtraction(articleId, processing.url, onProgress)
         return

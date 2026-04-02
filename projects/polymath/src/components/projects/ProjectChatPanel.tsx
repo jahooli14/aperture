@@ -240,7 +240,7 @@ export function ProjectChatPanel({
       }
 
       // Apply task operations returned by AI
-      if (data.taskOps?.length && onUpdateTasks) {
+      if ((data as Record<string, unknown>).taskOps && Array.isArray((data as Record<string, unknown>).taskOps) && onUpdateTasks) {
         const currentTasks: Task[] = (project.metadata?.tasks as Task[] | undefined) || []
         let updatedTasks = [...currentTasks]
         const opSummaries: string[] = []
@@ -409,7 +409,7 @@ export function ProjectChatPanel({
 
   return (
     <BottomSheet open={isOpen} onOpenChange={open => { if (!open) onClose() }}>
-      <BottomSheetContent className="flex flex-col" style={{ maxHeight: '85vh' }}>
+      <BottomSheetContent className="flex flex-col max-h-[85vh]">
         <BottomSheetHeader className="sr-only">
           <BottomSheetTitle>Brainstorm — {project.title}</BottomSheetTitle>
         </BottomSheetHeader>
