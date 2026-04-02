@@ -1,6 +1,9 @@
 import { supabase } from './supabase.js';
 import type { DomainPair, Domain } from './types.js';
-import domains from './domains.json' assert { type: 'json' };
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+const domains = JSON.parse(readFileSync(join(__dirname, 'domains.json'), 'utf-8'));
 
 /**
  * Domain Sampler

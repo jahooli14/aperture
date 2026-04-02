@@ -1,6 +1,9 @@
 import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 import type { FrontierMode, GeminiResponse, PreFilterScore } from './types.js';
-import frontierModes from './frontier-modes.json' assert { type: 'json' };
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+const frontierModes = JSON.parse(readFileSync(join(__dirname, 'frontier-modes.json'), 'utf-8'));
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
