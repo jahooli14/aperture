@@ -13,6 +13,16 @@ interface ConnectionCandidate {
   similarity: number
 }
 
+// Per-target-type similarity thresholds.
+// Projects are high-signal so we're more selective; articles are looser to
+// encourage cross-domain reading → doing connections.
+const SIMILARITY_THRESHOLDS: Record<'project' | 'thought' | 'article' | 'list_item', number> = {
+  project:   0.60,
+  thought:   0.55,
+  article:   0.52,
+  list_item: 0.58,
+}
+
 /**
  * Core logic to find and update connections for an item.
  * Enforces "Top 5 Dynamic" rule:
@@ -46,7 +56,7 @@ export async function updateItemConnections(
       for (const p of projects) {
         if (p.embedding) {
           const similarity = cosineSimilarity(sourceEmbedding, p.embedding)
-          if (similarity > 0.55) {
+          if (similarity > SIMILARITY_THRESHOLDS.project) {
             candidates.push({ type: 'project', id: p.id, title: p.title, similarity })
           }
         }
@@ -67,7 +77,7 @@ export async function updateItemConnections(
       for (const m of memories) {
         if (m.embedding) {
           const similarity = cosineSimilarity(sourceEmbedding, m.embedding)
-          if (similarity > 0.55) {
+          if (similarity > SIMILARITY_THRESHOLDS.thought) {
             candidates.push({
               type: 'thought',
               id: m.id,
@@ -93,7 +103,7 @@ export async function updateItemConnections(
       for (const a of articles) {
         if (a.embedding) {
           const similarity = cosineSimilarity(sourceEmbedding, a.embedding)
-          if (similarity > 0.55) {
+          if (similarity > SIMILARITY_THRESHOLDS.article) {
             candidates.push({
               type: 'article',
               id: a.id,
@@ -120,7 +130,7 @@ export async function updateItemConnections(
       for (const item of listItems) {
         if (item.embedding) {
           const similarity = cosineSimilarity(sourceEmbedding, item.embedding)
-          if (similarity > 0.55) {
+          if (similarity > SIMILARITY_THRESHOLDS.list_item) {
             candidates.push({
               type: 'list_item',
               id: item.id,

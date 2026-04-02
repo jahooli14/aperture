@@ -9,14 +9,23 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
-import { Zap, TrendingUp, AlertCircle, Lightbulb, Search, Brain, WifiOff, RefreshCw } from 'lucide-react'
+import { Zap, TrendingUp, AlertCircle, Lightbulb, Search, Brain, WifiOff, RefreshCw, Sparkles, FolderPlus } from 'lucide-react'
 import { SubtleBackground } from '../components/SubtleBackground'
 import type { SynthesisInsight } from '../types'
 import { readingDb } from '../lib/db'
 
+interface ShadowProjectInsight {
+  title: string
+  description: string
+  data: { project_name?: string; how_long?: string; evidence?: string[]; recommendation?: string }
+  action?: string
+  is_new?: boolean
+}
+
 export function InsightsPage() {
   const navigate = useNavigate()
   const [insights, setInsights] = useState<SynthesisInsight[]>([])
+  const [shadowProject, setShadowProject] = useState<ShadowProjectInsight | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [generatedAt, setGeneratedAt] = useState<string | null>(null)
@@ -60,12 +69,13 @@ export function InsightsPage() {
 
       // 3. Fetch cached insights from server (fast — just a DB read)
       setIsOffline(false)
-      const response = await fetch('/api/analytics?resource=evolution')
+      const response = await fetch('/api/memories?action=evolution')
       if (response.ok) {
         const data = await response.json()
         if (data.insights?.length > 0) {
           setInsights(data.insights)
           setGeneratedAt(data.generated_at || null)
+          if (data.shadow_project) setShadowProject(data.shadow_project)
           await readingDb.cacheDashboard('evolution', data)
         } else if (!cached) {
           // Nothing cached anywhere — trigger a fresh generation
@@ -91,7 +101,7 @@ export function InsightsPage() {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 60000)
 
-      const response = await fetch('/api/analytics?resource=evolution', {
+      const response = await fetch('/api/memories?action=evolution', {
         method: 'POST',
         signal: controller.signal,
       })
@@ -104,6 +114,7 @@ export function InsightsPage() {
       const data = await response.json()
       setInsights(data.insights || [])
       setGeneratedAt(data.generated_at || null)
+      if (data.shadow_project) setShadowProject(data.shadow_project)
       await readingDb.cacheDashboard('evolution', data)
     } catch (error) {
       console.error('Error refreshing insights:', error)
@@ -286,6 +297,64 @@ export function InsightsPage() {
             </section>
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+
+            {/* Shadow Project — always first, most important synthesis output */}
+            {shadowProject && (
+              <div
+                className="p-6 rounded-xl backdrop-blur-xl"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(139,92,246,0.15) 0%, rgba(59,130,246,0.08) 100%)',
+                  boxShadow: '0 8px 32px rgba(139,92,246,0.15)',
+                  border: '1px solid rgba(139,92,246,0.3)',
+                }}
+              >
+                <div className="flex items-center gap-2 mb-4">
+                  <Sparkles className="h-5 w-5" style={{ color: 'rgb(167,139,250)' }} />
+                  <span className="text-sm font-bold tracking-widest uppercase" style={{ color: 'rgb(167,139,250)' }}>
+                    Shadow Project
+                  </span>
+                  {shadowProject.is_new && (
+                    <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ background: 'rgba(139,92,246,0.25)', color: 'rgb(196,181,253)' }}>
+                      New
+                    </span>
+                  )}
+                </div>
+                <h3 className="text-2xl font-bold mb-3" style={{ color: 'var(--brand-text-primary)' }}>
+                  {shadowProject.data?.project_name || shadowProject.title}
+                </h3>
+                <p className="text-base leading-relaxed mb-4" style={{ color: 'var(--brand-text-secondary)' }}>
+                  {shadowProject.description}
+                </p>
+                {shadowProject.data?.evidence && shadowProject.data.evidence.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {shadowProject.data.evidence.map((e: string, i: number) => (
+                      <span key={i} className="px-2 py-0.5 rounded-lg text-xs" style={{ backgroundColor: 'rgba(139,92,246,0.15)', color: 'rgb(196,181,253)' }}>
+                        {e}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {shadowProject.data?.how_long && (
+                  <p className="text-sm mb-4 opacity-60" style={{ color: 'var(--brand-text-secondary)' }}>
+                    Building toward this {shadowProject.data.how_long}
+                  </p>
+                )}
+                {shadowProject.data?.recommendation && (
+                  <div className="p-4 rounded-lg mb-4" style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)' }}>
+                    <p className="text-sm" style={{ color: 'rgb(196,181,253)' }}>{shadowProject.data.recommendation}</p>
+                  </div>
+                )}
+                <Button
+                  onClick={() => navigate('/projects', { state: { suggestedProjectName: shadowProject.data?.project_name || shadowProject.title } })}
+                  className="flex items-center gap-2"
+                  style={{ background: 'rgba(139,92,246,0.3)', border: '1px solid rgba(139,92,246,0.5)', color: 'rgb(196,181,253)' }}
+                >
+                  <FolderPlus className="h-4 w-4" />
+                  Create this project
+                </Button>
+              </div>
+            )}
+
             {insights.map((insight, index) => (
               <div
                 key={index}
