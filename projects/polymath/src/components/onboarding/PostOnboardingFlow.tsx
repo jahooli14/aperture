@@ -62,6 +62,7 @@ export function PostOnboardingFlow({ analysis, sparkedSuggestion }: PostOnboardi
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [createdProjectId, setCreatedProjectId] = useState<string | null>(null)
   const [revealBeat, setRevealBeat] = useState(0)
+  const [whyYouStatement, setWhyYouStatement] = useState<string | null>(null)
 
   // Start the journey when this component mounts
   useEffect(() => {
@@ -84,11 +85,43 @@ export function PostOnboardingFlow({ analysis, sparkedSuggestion }: PostOnboardi
     const timers = [
       setTimeout(() => setRevealBeat(1), 400),    // Icon burst
       setTimeout(() => setRevealBeat(2), 1200),    // Title appears
-      setTimeout(() => setRevealBeat(3), 2000),    // Description + task
-      setTimeout(() => setRevealBeat(4), 3200),    // CTA
+      setTimeout(() => setRevealBeat(3), 2200),    // "Why you" statement
+      setTimeout(() => setRevealBeat(4), 3800),    // First task
+      setTimeout(() => setRevealBeat(5), 5000),    // CTA
     ]
     return () => timers.forEach(clearTimeout)
   }, [phase])
+
+  // Fetch personalized "why you" statement when reveal starts
+  useEffect(() => {
+    if (phase !== 'reveal' || !createdProject) return
+
+    const fetchWhyYou = async () => {
+      try {
+        const res = await fetch('/api/brainstorm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            step: 'project-reveal',
+            projectTitle: createdProject.title,
+            projectDescription: createdProject.description || '',
+            projectType: createdProject.type || 'Creative',
+            themes: analysis.themes,
+            capabilities: analysis.capabilities,
+            firstInsight: analysis.first_insight || '',
+          }),
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.statement) setWhyYouStatement(data.statement)
+        }
+      } catch {
+        // Silent fail — the reveal still works without it
+      }
+    }
+
+    fetchWhyYou()
+  }, [phase, createdProject])
 
   const topTheme = analysis.themes[0] || 'your ideas'
   const topCapability = analysis.capabilities[0] || 'creative thinking'
@@ -410,62 +443,112 @@ export function PostOnboardingFlow({ analysis, sparkedSuggestion }: PostOnboardi
               )}
             </AnimatePresence>
 
-            {/* === Description + first task === */}
+            {/* === "Why this is perfect for you" === */}
             <AnimatePresence>
-              {revealBeat >= 3 && createdProject && (
+              {revealBeat >= 3 && (
                 <motion.div
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5 }}
+                  transition={{ duration: 0.7, ease: 'easeOut' }}
                   className="mb-8 w-full max-w-sm"
                 >
-                  {createdProject.description && (
-                    <motion.p
-                      className="text-sm leading-relaxed mb-5"
-                      style={{ color: 'var(--brand-text-secondary)', opacity: 0.8 }}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 0.8 }}
-                      transition={{ delay: 0.2 }}
-                    >
-                      {createdProject.description.length > 120
-                        ? createdProject.description.slice(0, 120) + '...'
-                        : createdProject.description}
-                    </motion.p>
-                  )}
-
-                  {/* First task card */}
-                  {firstTask && (
+                  <motion.div
+                    className="relative p-5 rounded-2xl text-left overflow-hidden"
+                    style={{
+                      background: `linear-gradient(135deg, rgba(${projectColor}, 0.06), rgba(${projectColor}, 0.02))`,
+                      border: `1px solid rgba(${projectColor}, 0.12)`,
+                    }}
+                  >
+                    {/* Accent line */}
                     <motion.div
-                      className="p-4 rounded-xl text-left"
-                      style={{
-                        background: `rgba(${projectColor}, 0.06)`,
-                        border: `1px solid rgba(${projectColor}, 0.15)`,
-                      }}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.4, duration: 0.4 }}
+                      className="absolute top-0 left-0 w-1 rounded-full"
+                      style={{ background: `rgb(${projectColor})` }}
+                      initial={{ height: 0 }}
+                      animate={{ height: '100%' }}
+                      transition={{ duration: 0.8, delay: 0.2, ease: 'easeOut' }}
+                    />
+
+                    <motion.p
+                      className="text-[10px] font-bold uppercase tracking-[0.15em] mb-3 ml-3"
+                      style={{ color: `rgb(${projectColor})`, opacity: 0.6 }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 0.6 }}
+                      transition={{ delay: 0.3 }}
                     >
-                      <p
-                        className="text-[10px] font-bold uppercase tracking-widest mb-1.5"
-                        style={{ color: `rgb(${projectColor})`, opacity: 0.6 }}
-                      >
-                        First step
-                      </p>
-                      <p
-                        className="text-sm font-medium"
+                      Why you
+                    </motion.p>
+
+                    {whyYouStatement ? (
+                      <motion.p
+                        className="text-[15px] leading-[1.65] font-medium ml-3"
                         style={{ color: 'var(--brand-text-primary)' }}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.4, duration: 0.5 }}
                       >
-                        {firstTask.text}
-                      </p>
-                    </motion.div>
-                  )}
+                        {whyYouStatement}
+                      </motion.p>
+                    ) : (
+                      /* Loading shimmer while AI generates */
+                      <div className="ml-3 space-y-2">
+                        <motion.div
+                          className="h-4 rounded-lg"
+                          style={{ background: `rgba(${projectColor}, 0.08)`, width: '90%' }}
+                          animate={{ opacity: [0.3, 0.6, 0.3] }}
+                          transition={{ duration: 1.4, repeat: Infinity }}
+                        />
+                        <motion.div
+                          className="h-4 rounded-lg"
+                          style={{ background: `rgba(${projectColor}, 0.08)`, width: '70%' }}
+                          animate={{ opacity: [0.3, 0.6, 0.3] }}
+                          transition={{ duration: 1.4, repeat: Infinity, delay: 0.2 }}
+                        />
+                      </div>
+                    )}
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* === First task card === */}
+            <AnimatePresence>
+              {revealBeat >= 4 && firstTask && (
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                  className="mb-8 w-full max-w-sm"
+                >
+                  <motion.div
+                    className="p-4 rounded-xl text-left"
+                    style={{
+                      background: `rgba(${projectColor}, 0.06)`,
+                      border: `1px solid rgba(${projectColor}, 0.15)`,
+                    }}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.15, duration: 0.4 }}
+                  >
+                    <p
+                      className="text-[10px] font-bold uppercase tracking-widest mb-1.5"
+                      style={{ color: `rgb(${projectColor})`, opacity: 0.6 }}
+                    >
+                      First step
+                    </p>
+                    <p
+                      className="text-sm font-medium"
+                      style={{ color: 'var(--brand-text-primary)' }}
+                    >
+                      {firstTask.text}
+                    </p>
+                  </motion.div>
                 </motion.div>
               )}
             </AnimatePresence>
 
             {/* === CTA === */}
             <AnimatePresence>
-              {revealBeat >= 4 && (
+              {revealBeat >= 5 && (
                 <motion.div
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
