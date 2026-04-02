@@ -12,6 +12,7 @@ import { getUserId } from './_lib/auth.js'
 import { getUsageStats } from './_lib/gemini-embeddings.js'
 import { getTokenStats } from './_lib/gemini-chat.js'
 import { MODELS } from './_lib/models.js'
+import { generateInsights, getCachedInsights } from './_lib/insights-generator.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
@@ -1335,21 +1336,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // SYNTHESIS EVOLUTION
+  // SYNTHESIS INSIGHTS
+  // GET  → return cached insights instantly (stale-while-revalidate pattern)
+  // POST → force-regenerate from all user data, return fresh insights
   if (resource === 'evolution') {
-    if (req.method !== 'GET') {
-      return res.status(405).json({ error: 'Method not allowed' })
-    }
-
     try {
-      const result = await getSynthesisEvolution()
-      return res.status(200).json(result)
+      if (req.method === 'GET') {
+        const cached = await getCachedInsights(userId)
+        return res.status(200).json({
+          insights: cached.insights,
+          generated_at: cached.generated_at,
+        })
+      }
+
+      if (req.method === 'POST') {
+        const insights = await generateInsights(userId)
+        return res.status(200).json({
+          insights,
+          generated_at: new Date().toISOString(),
+        })
+      }
+
+      return res.status(405).json({ error: 'Method not allowed' })
     } catch (error) {
       console.error('[analytics:evolution] Error:', error)
       return res.status(500).json({
         error: 'Analysis failed',
         insights: [],
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown error',
       })
     }
   }

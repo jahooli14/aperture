@@ -22,9 +22,7 @@ import { ThemeClusterCard } from '../components/memories/ThemeClusterCard'
 import { Button } from '../components/ui/button'
 // import { Card, CardContent } from '../components/ui/card' // Will use GlassCard
 import { useToast } from '../components/ui/toast'
-import { useConnectionStore } from '../stores/useConnectionStore'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
-import { ConnectionSuggestion } from '../components/ConnectionSuggestion'
 import { PremiumTabs } from '../components/ui/premium-tabs'
 import { SkeletonCard } from '../components/ui/skeleton-card'
 import { Brain, Zap, ArrowLeft, CloudOff, Search, X, Tag, Lightbulb, Leaf, Code, Palette, Heart, BookOpen, Users, Pin } from 'lucide-react'
@@ -56,14 +54,12 @@ function MasonryGrid({
   memories,
   onEdit,
   onDelete,
-  renderExtra,
-  connectionCounts
+  renderExtra
 }: {
   memories: Memory[],
   onEdit: (m: Memory) => void,
   onDelete: (m: Memory) => void,
-  renderExtra?: (m: Memory) => React.ReactNode,
-  connectionCounts?: Record<string, number>
+  renderExtra?: (m: Memory) => React.ReactNode
 }) {
   const columns = 2
 
@@ -97,7 +93,7 @@ function MasonryGrid({
                 memory={memory}
                 onEdit={onEdit}
                 onDelete={onDelete}
-                connectionCount={connectionCounts?.[memory.id]}
+
               />
               {renderExtra && renderExtra(memory)}
             </motion.div>
@@ -131,7 +127,6 @@ export function MemoriesPage() {
   }, [])
   const { isOnline } = useOnlineStatus()
   const { addOfflineCapture } = useOfflineSync()
-  const { suggestions, sourceId, sourceType, clearSuggestions } = useConnectionStore()
   const [resurfacing, setResurfacing] = useState<Memory[]>([])
   const [view, setView] = useState<'foundational' | 'all' | 'resurfacing'>('all')
   const [loadingResurfacing, setLoadingResurfacing] = useState(false)
@@ -1077,24 +1072,6 @@ export function MemoriesPage() {
         />
       )}
 
-      {/* Connection Suggestions */}
-      {suggestions.length > 0 && sourceType === 'memory' && (
-        <ConnectionSuggestion
-          suggestions={suggestions}
-          sourceType={sourceType}
-          sourceId={sourceId!}
-          onLinkCreated={(targetId, targetType) => {
-            addToast({
-              title: 'Connection created!',
-              description: `Linked thought to ${targetType}`,
-              variant: 'success',
-            })
-            // Refresh to show updated connection counts
-            fetchMemories()
-          }}
-          onDismiss={clearSuggestions}
-        />
-      )}
     </>
   )
 }

@@ -10,7 +10,7 @@ import { useToast } from '../ui/toast'
 import { useConfirmDialog } from '../ui/confirm-dialog'
 import { haptic } from '../../utils/haptics'
 import { MemoryLinks } from '../MemoryLinks'
-import { ConnectionsList } from '../connections/ConnectionsList'
+import { ItemInsightStrip } from '../ItemInsightStrip'
 import { EditMemoryDialog } from './EditMemoryDialog'
 import { GlassCard } from '../ui/GlassCard'
 import { SmartActionDot } from '../SmartActionDot'
@@ -39,8 +39,6 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
 const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
   const [bridgesFetched, setBridgesFetched] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [connectionCount, setConnectionCount] = useState(0);
-  const [isLoadingConnections, setIsLoadingConnections] = useState(true);
   const [insight, setInsight] = useState<InsightResult | null>(null);
 
   // Fetch contextual insight when modal opens
@@ -355,18 +353,9 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
                 </div>
               )}
 
-              {/* Connections Section — always shown so AI suggestions are visible */}
               <div className="mt-8 pt-6 border-t border-[var(--glass-surface-hover)]">
                 <MemoryLinks currentMemoryId={memory.id} bridges={bridges} onMemoryClick={handleMemoryClick} />
-                <ConnectionsList
-                  itemType="thought"
-                  itemId={memory.id}
-                  content={memoryContent}
-                  onConnectionCreated={loadMemoryBridges}
-                  onConnectionDeleted={loadMemoryBridges}
-                  onCountChange={setConnectionCount}
-                  onLoadingChange={setIsLoadingConnections}
-                />
+                <ItemInsightStrip title={memory.title} themes={memory.themes ?? undefined} />
               </div>
 
               {/* Timestamp */}

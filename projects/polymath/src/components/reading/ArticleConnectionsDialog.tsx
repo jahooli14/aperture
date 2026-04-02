@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Zap, Check, ChevronRight, Brain, Rocket, BookmarkCheck } from 'lucide-react'
-import { ConnectionsList } from '../connections/ConnectionsList'
+import { ItemInsightStrip } from '../ItemInsightStrip'
 
 interface ArticleConnectionsDialogProps {
   article: {
@@ -119,31 +119,10 @@ export function ArticleConnectionsDialog({
                 </div>
               ) : (
                 <div className="p-6">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="p-2 rounded-lg" style={{ background: 'rgba(59, 130, 246, 0.2)' }}>
-                      <Brain className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold premium-text-platinum">
-                        AI-Suggested Connections
-                      </h3>
-                      <p className="text-sm" style={{ color: "var(--brand-primary)" }}>
-                        Based on "{article.title}"
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="max-h-[60vh] overflow-y-auto">
-                    <ConnectionsList
-                      itemType="article"
-                      itemId={article.id}
-                      content={`${article.title}\n\n${article.excerpt || article.content || ''}`}
-                      onConnectionCreated={() => {
-                        onConnectionsCreated?.()
-                      }}
-                      onConnectionDeleted={() => { }}
-                    />
-                  </div>
+                  <p className="text-sm mb-4" style={{ color: "var(--brand-primary)" }}>
+                    "{article.title}"
+                  </p>
+                  <ItemInsightStrip title={article.title} themes={article.themes ?? undefined} />
 
                   <div className="mt-6 pt-6 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
                     <button
