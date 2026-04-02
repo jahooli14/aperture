@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { Resend } from 'resend';
-import { supabase } from '../../../idea-engine/src/lib/supabase';
-import type { Idea, FrontierBlock } from '../../../idea-engine/src/lib/types';
+import { supabase } from '../../lib/idea-engine/supabase';
+import type { Idea, FrontierBlock } from '../../lib/idea-engine/types';
 
 /**
  * Email Digest Endpoint
