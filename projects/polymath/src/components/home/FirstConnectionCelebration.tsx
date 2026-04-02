@@ -111,7 +111,7 @@ export function FirstConnectionCelebration() {
                 >
                   {bridgeInsight
                     ? bridgeInsight
-                    : `Polymath found ${connectionCount} ${connectionCount === 1 ? 'connection' : 'connections'} to your existing thoughts. This is how ideas grow.`
+                    : `Polymath found ${connectionCount} ${connectionCount === 1 ? 'connection' : 'connections'} to your existing thoughts. The more you add, the more it finds.`
                   }
                 </motion.p>
               </div>

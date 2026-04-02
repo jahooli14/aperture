@@ -28,6 +28,7 @@ import { supabase } from '../../lib/supabase'
 import type { Project } from '../../types'
 import type { Task } from './TaskList'
 import { MultiPerspectiveSuggestions } from '../suggestions/MultiPerspectiveSuggestions'
+import { useJourneyStore } from '../../stores/useJourneyStore'
 
 interface EchoItem {
   title: string
@@ -84,7 +85,8 @@ const TASK_TYPE_LABELS: Record<string, string> = {
 function buildOpeningMessage(
   project: Project,
   recentCompletions: string[],
-  powerHourSuggestions: PowerHourSuggestion[]
+  powerHourSuggestions: PowerHourSuggestion[],
+  onboardingProfile?: { themes: string[]; capabilities: string[] } | null
 ): ChatMessage[] {
   const messages: ChatMessage[] = []
 
@@ -98,9 +100,15 @@ function buildOpeningMessage(
     const taskLines = powerHourSuggestions
       .map(s => `• ${s.task_title}${s.task_description ? ` — ${s.task_description}` : ''}`)
       .join('\n')
+
+    // Weave in onboarding context if available
+    const profileContext = onboardingProfile?.themes?.length
+      ? ` Given your interest in ${onboardingProfile.themes.slice(0, 2).join(' and ')}, I'd especially focus on the ones that play to those strengths.`
+      : ''
+
     messages.push({
       kind: 'model',
-      content: `Based on where ${project.title} is right now, here's what I'd suggest for your next session:\n\n${taskLines}\n\nWant to add any of these, talk through the approach, or go a different direction?`,
+      content: `Based on where ${project.title} is right now, here's what I'd suggest for your next session:\n\n${taskLines}\n\nWant to add any of these, talk through the approach, or go a different direction?${profileContext}`,
       suggestedTasks: powerHourSuggestions.map(s => ({
         text: s.task_title,
         task_type: 'core' as const,
@@ -146,6 +154,9 @@ export function ProjectChatPanel({
     )
     .map(m => ({ role: m.kind as 'user' | 'model', content: m.content }))
 
+  // Get onboarding profile for personalization
+  const onboardingProfile = useJourneyStore(state => state.onboardingProfile)
+
   // Reset and initialise when panel opens
   useEffect(() => {
     if (!isOpen) return
@@ -153,7 +164,7 @@ export function ProjectChatPanel({
     const powerHourSuggestions: PowerHourSuggestion[] =
       (project.metadata?.suggested_power_hour_tasks as PowerHourSuggestion[] | undefined) || []
 
-    const opening = buildOpeningMessage(project, recentCompletions, powerHourSuggestions)
+    const opening = buildOpeningMessage(project, recentCompletions, powerHourSuggestions, onboardingProfile)
     setMessages(opening)
     setAddedTasks(new Set())
     setInput('')
