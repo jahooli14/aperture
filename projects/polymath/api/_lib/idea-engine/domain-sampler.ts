@@ -1,8 +1,11 @@
 import { supabase } from './supabase.js';
 import type { DomainPair, Domain } from './types.js';
 import { readFileSync } from 'fs';
-import { join } from 'path';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 const domains = JSON.parse(readFileSync(join(__dirname, 'domains.json'), 'utf-8'));
 
 /**
