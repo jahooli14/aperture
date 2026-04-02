@@ -16,21 +16,16 @@ export function useUndoToast() {
   const { addToast } = useToast()
 
   const showUndoToast = ({ title, description, onUndo, duration = 5000 }: UndoToastOptions) => {
-    // Simple implementation: Show toast with "Tap to undo" instruction
-    // In a future enhancement, could add custom toast component with inline button
-
     addToast({
       title,
-      description: `${description}  Tap here to undo`,
+      description,
       variant: 'default',
       duration,
+      action: {
+        label: 'Undo',
+        onClick: () => { onUndo() },
+      },
     })
-
-    // TODO: Wire up undo callback to toast click event
-    // For now, undo functionality will be added in a future enhancement
-    // Current implementation provides the notification infrastructure
-
-    return () => onUndo()
   }
 
   return { showUndoToast }

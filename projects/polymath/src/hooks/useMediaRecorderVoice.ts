@@ -385,7 +385,7 @@ export function useMediaRecorderVoice({
         console.log('[Web] onstop fired')
         clearTimeout(timeoutId)
         if (originalOnStop) {
-          originalOnStop.call(mediaRecorderRef.current, event)
+          originalOnStop.call(mediaRecorderRef.current!, event)
         }
         // Give extra time for final ondataavailable event
         setTimeout(resolve, 100) // 100ms is safe for final buffers

@@ -131,7 +131,7 @@ export const useProjectStore = create<ProjectState>()(
 
         // Check online status
         if (!navigator.onLine) {
-          console.log('[ProjectStore] Offline mode detected - fetching from local DB')
+          logger.debug('[ProjectStore] Offline mode detected - fetching from local DB')
           try {
             const { readingDb } = await import('../lib/db')
             const cachedProjects = await readingDb.getCachedProjects()
@@ -151,7 +151,7 @@ export const useProjectStore = create<ProjectState>()(
             }))
             return
           } catch (e) {
-            console.error('[ProjectStore] Failed to load offline projects:', e)
+            logger.error('[ProjectStore] Failed to load offline projects:', e)
             set({ error: 'Failed to load offline projects', loading: false, offlineMode: true })
             return
           }
@@ -167,7 +167,7 @@ export const useProjectStore = create<ProjectState>()(
             const { readingDb } = await import('../lib/db')
             await readingDb.cacheProjects(fetchedProjects)
           } catch (cacheError) {
-            console.warn('[ProjectStore] Failed to cache projects:', cacheError)
+            logger.warn('[ProjectStore] Failed to cache projects:', cacheError)
           }
 
           // Merge pending local changes to avoid clobbering optimistic updates
@@ -180,7 +180,7 @@ export const useProjectStore = create<ProjectState>()(
           const currentProjects = get().allProjects
           if (currentProjects.length === fetchedProjects.length && fetchedProjects.length > 0) {
             // Quick check: compare IDs and updated_at timestamps
-            const hasChanged = fetchedProjects.some((newP, idx) => {
+            const hasChanged = fetchedProjects.some((newP: Project, idx: number) => {
               const oldP = currentProjects[idx]
               return !oldP ||
                      newP.id !== oldP.id ||
@@ -190,7 +190,7 @@ export const useProjectStore = create<ProjectState>()(
             })
 
             if (!hasChanged) {
-              console.log('[ProjectStore] Skipping state update - data unchanged')
+              logger.debug('[ProjectStore] Skipping state update - data unchanged')
               set({ loading: false, initialized: true, offlineMode: false, error: null })
               return
             }
@@ -208,7 +208,7 @@ export const useProjectStore = create<ProjectState>()(
           logger.error('Failed to fetch projects:', error)
 
           // Fallback to offline DB on error
-          console.log('[ProjectStore] Fetch failed, falling back to offline DB')
+          logger.debug('[ProjectStore] Fetch failed, falling back to offline DB')
           try {
             const { readingDb } = await import('../lib/db')
             const cachedProjects = await readingDb.getCachedProjects()
@@ -276,7 +276,7 @@ export const useProjectStore = create<ProjectState>()(
 
             // Update cache
             import('../lib/db').then(({ readingDb }) => {
-              readingDb.cacheProjects(sorted).catch(e => console.warn('Failed to cache projects after create:', e))
+              readingDb.cacheProjects(sorted).catch(e => logger.warn('Failed to cache projects after create:', e))
             })
 
             return {
@@ -285,7 +285,7 @@ export const useProjectStore = create<ProjectState>()(
             }
           })
         } catch (error) {
-          console.error('[ProjectStore] Failed to create project:', error)
+          logger.error('[ProjectStore] Failed to create project:', error)
           // Rollback
           set(state => ({
             allProjects: previousAllProjects,
@@ -315,7 +315,7 @@ export const useProjectStore = create<ProjectState>()(
 
         // Update cache optimistically
         import('../lib/db').then(({ readingDb }) => {
-          readingDb.cacheProjects(sortedAllProjects).catch(e => console.warn('Failed to cache projects after update:', e))
+          readingDb.cacheProjects(sortedAllProjects).catch(e => logger.warn('Failed to cache projects after update:', e))
         })
 
         // If offline, queue operation
@@ -366,7 +366,7 @@ export const useProjectStore = create<ProjectState>()(
           }))
           // Revert cache
           import('../lib/db').then(({ readingDb }) => {
-            readingDb.cacheProjects(previousAllProjects).catch(e => console.warn('Failed to revert project cache:', e))
+            readingDb.cacheProjects(previousAllProjects).catch(e => logger.warn('Failed to revert project cache:', e))
           })
           throw error
         }
@@ -385,7 +385,7 @@ export const useProjectStore = create<ProjectState>()(
 
         // Update cache optimistically
         import('../lib/db').then(({ readingDb }) => {
-          readingDb.projects.delete(id).catch(e => console.warn('Failed to delete project from cache:', e))
+          readingDb.projects.delete(id).catch(e => logger.warn('Failed to delete project from cache:', e))
         })
 
         const { isOnline } = useOfflineStore.getState()
@@ -408,7 +408,7 @@ export const useProjectStore = create<ProjectState>()(
           }))
           // Revert cache
           import('../lib/db').then(({ readingDb }) => {
-            readingDb.cacheProjects(previousAllProjects).catch(e => console.warn('Failed to revert project cache:', e))
+            readingDb.cacheProjects(previousAllProjects).catch(e => logger.warn('Failed to revert project cache:', e))
           })
           throw error
         }
@@ -434,7 +434,7 @@ export const useProjectStore = create<ProjectState>()(
 
           // Update cache
           import('../lib/db').then(({ readingDb }) => {
-            readingDb.cacheProjects(sorted).catch(e => console.warn('Failed to cache projects after priority toggle:', e))
+            readingDb.cacheProjects(sorted).catch(e => logger.warn('Failed to cache projects after priority toggle:', e))
           })
 
           try {
@@ -449,7 +449,7 @@ export const useProjectStore = create<ProjectState>()(
             }))
             // Revert cache
             import('../lib/db').then(({ readingDb }) => {
-              readingDb.cacheProjects(previousAllProjects).catch(e => console.warn('Failed to revert project cache:', e))
+              readingDb.cacheProjects(previousAllProjects).catch(e => logger.warn('Failed to revert project cache:', e))
             })
             throw error
           }
@@ -467,7 +467,7 @@ export const useProjectStore = create<ProjectState>()(
 
           // Update cache
           import('../lib/db').then(({ readingDb }) => {
-            readingDb.cacheProjects(sorted).catch(e => console.warn('Failed to cache projects after priority set:', e))
+            readingDb.cacheProjects(sorted).catch(e => logger.warn('Failed to cache projects after priority set:', e))
           })
 
           try {
@@ -482,7 +482,7 @@ export const useProjectStore = create<ProjectState>()(
               }))
               // Update cache with server response
               import('../lib/db').then(({ readingDb }) => {
-                readingDb.cacheProjects(sortedResponse).catch(e => console.warn('Failed to cache projects after priority set (server):', e))
+                readingDb.cacheProjects(sortedResponse).catch(e => logger.warn('Failed to cache projects after priority set (server):', e))
               })
             }
           } catch (error) {
@@ -495,7 +495,7 @@ export const useProjectStore = create<ProjectState>()(
             }))
             // Revert cache
             import('../lib/db').then(({ readingDb }) => {
-              readingDb.cacheProjects(previousAllProjects).catch(e => console.warn('Failed to revert project cache:', e))
+              readingDb.cacheProjects(previousAllProjects).catch(e => logger.warn('Failed to revert project cache:', e))
             })
             throw error
           }
@@ -556,7 +556,7 @@ export const useProjectStore = create<ProjectState>()(
 
           // Update cache silently
           import('../lib/db').then(({ readingDb }) => {
-            readingDb.cacheProjects(sorted).catch(e => console.warn('Failed to cache synced project:', e))
+            readingDb.cacheProjects(sorted).catch(e => logger.warn('Failed to cache synced project:', e))
           })
 
           return {

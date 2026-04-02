@@ -47,7 +47,7 @@ export const GlassCard = React.forwardRef<HTMLDivElement, GlassCardProps>(
       onMouseLeave: isInteractive
         ? (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
           (e.currentTarget as HTMLElement).style.background = currentBg
-            ; (e.currentTarget as HTMLElement).style.boxShadow = cardStyles.boxShadow
+            ; (e.currentTarget as HTMLElement).style.boxShadow = cardStyles.boxShadow as string ?? ''
           onMouseLeave?.(e)
         }
         : onMouseLeave,

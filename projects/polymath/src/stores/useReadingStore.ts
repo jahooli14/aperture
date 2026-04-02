@@ -4,6 +4,7 @@
  */
 
 import { create } from 'zustand'
+import { logger } from '../lib/logger'
 import type { Article, ArticleStatus, SaveArticleRequest } from '../types/reading'
 import { queueOperation } from '../lib/offlineQueue'
 import { useOfflineStore } from './useOfflineStore'
@@ -23,7 +24,7 @@ const debouncedSavePendingArticles = (articles: Article[]) => {
       localStorage.setItem('pending-articles', JSON.stringify(articles))
       pendingArticlesWriteTimer = null
     } catch (e) {
-      console.error('Failed to save pending articles to localStorage:', e)
+      logger.error('Failed to save pending articles to localStorage:', e)
     }
   }, 300) // 300ms debounce
 }
@@ -60,7 +61,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
       initialPending = JSON.parse(stored)
     }
   } catch (e) {
-    console.error('Failed to load pending articles:', e)
+    logger.error('Failed to load pending articles:', e)
   }
 
   return {
@@ -78,7 +79,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
 
       // 1. In-memory cache check (fastest)
       if (!force && state.articles.length > 0 && state.lastFetched && (now - state.lastFetched < CACHE_TTL)) {
-        console.log('[ReadingStore] Using in-memory cache')
+        logger.debug('[ReadingStore] Using in-memory cache')
         return
       }
 
@@ -117,7 +118,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
             set({ loading: true, error: null })
           }
         } catch (dbError) {
-          console.warn('[ReadingStore] Failed to load from DB:', dbError)
+          logger.warn('[ReadingStore] Failed to load from DB:', dbError)
           set({ loading: true, error: null })
         }
       }
@@ -162,10 +163,10 @@ export const useReadingStore = create<ReadingState>((set, get) => {
           )
           if (staleIds.length > 0) {
             await readingDb.articles.bulkDelete(staleIds)
-            console.log(`[ReadingStore] Cleaned ${staleIds.length} stale Dexie records`)
+            logger.debug(`[ReadingStore] Cleaned ${staleIds.length} stale Dexie records`)
           }
         } catch (cacheError) {
-          console.warn('[ReadingStore] Failed to auto-cache articles:', cacheError)
+          logger.warn('[ReadingStore] Failed to auto-cache articles:', cacheError)
         }
 
         // INTELLIGENT DEDUPLICATION & PENDING CLEANUP
@@ -185,7 +186,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
 
         // 2. Update local storage if pending list changed
         if (remainingPending.length !== currentPending.length) {
-          console.log(`[ReadingStore] cleaned up ${currentPending.length - remainingPending.length} pending articles`)
+          logger.debug(`[ReadingStore] cleaned up ${currentPending.length - remainingPending.length} pending articles`)
           debouncedSavePendingArticles(remainingPending)
           set({ pendingArticles: remainingPending })
         }
@@ -225,7 +226,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
         syncAllArticlesForOffline(articles).catch(console.error)
 
       } catch (error) {
-        console.error('[ReadingStore] Network fetch failed:', error)
+        logger.error('[ReadingStore] Network fetch failed:', error)
         // We might already have data from DB, so don't wipe it with an error screen
         // Just set the error flag lightly or toast
         const errorMessage = error instanceof Error ? error.message : 'Unknown error'
@@ -289,9 +290,9 @@ export const useReadingStore = create<ReadingState>((set, get) => {
           images_cached: false,
           last_synced: new Date().toISOString()
         })
-        console.log('[ReadingStore] Optimistic article cached:', optimisticArticle.id)
+        logger.debug('[ReadingStore] Optimistic article cached:', optimisticArticle.id)
       } catch (e) {
-        console.error('Failed to save pending/optimistic:', e)
+        logger.error('Failed to save pending/optimistic:', e)
       }
 
       try {
@@ -338,7 +339,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
             last_synced: new Date().toISOString()
           })
         } catch (cacheError) {
-          console.warn('[ReadingStore] Failed to cache real article:', cacheError)
+          logger.warn('[ReadingStore] Failed to cache real article:', cacheError)
         }
 
         // Success! Replace temp article with real one
@@ -359,7 +360,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
 
         return article
       } catch (error) {
-        console.warn('[ReadingStore] Offline save - keeping in pending queue:', error)
+        logger.warn('[ReadingStore] Offline save - keeping in pending queue:', error)
         // Keep in pending, it's already there. 
         // We return the optimistic article so the UI can continue
         return optimisticArticle
@@ -370,7 +371,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
       const state = get()
       if (state.pendingArticles.length === 0) return
 
-      console.log(`[ReadingStore] Syncing ${state.pendingArticles.length} pending articles...`)
+      logger.debug(`[ReadingStore] Syncing ${state.pendingArticles.length} pending articles...`)
 
       const remainingPending: Article[] = []
       let hasChanges = false
@@ -400,7 +401,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
                 last_synced: new Date().toISOString()
               })
             } catch (cacheError) {
-              console.warn('[ReadingStore] Failed to cache synced article:', cacheError)
+              logger.warn('[ReadingStore] Failed to cache synced article:', cacheError)
             }
 
             // Update the real article in the list
@@ -412,7 +413,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
             remainingPending.push(article)
           }
         } catch (e) {
-          console.error(`[ReadingStore] Failed to sync article ${article.url}:`, e)
+          logger.error(`[ReadingStore] Failed to sync article ${article.url}:`, e)
           remainingPending.push(article)
         }
       }
@@ -449,7 +450,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
             await readingDb.articles.put({ ...cached, ...updates })
           }
         } catch (cacheError) {
-          console.warn('[ReadingStore] Failed to update cached article:', cacheError)
+          logger.warn('[ReadingStore] Failed to update cached article:', cacheError)
         }
       }
 
@@ -474,7 +475,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
             await readingDb.articles.put({ ...cached, ...article })
           }
         } catch (cacheError) {
-          console.warn('[ReadingStore] Failed to update cached article from server:', cacheError)
+          logger.warn('[ReadingStore] Failed to update cached article from server:', cacheError)
         }
 
         // Replace with server data
@@ -513,7 +514,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
             await readingDb.articles.put({ ...cached, status })
           }
         } catch (cacheError) {
-          console.warn('[ReadingStore] Failed to update cached article status:', cacheError)
+          logger.warn('[ReadingStore] Failed to update cached article status:', cacheError)
         }
       }
 
@@ -522,7 +523,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
       if (!isOnline) {
         await queueOperation('update_article', { id, status })
         await useOfflineStore.getState().updateQueueSize()
-        console.log('[ReadingStore] Article status update queued for offline sync')
+        logger.debug('[ReadingStore] Article status update queued for offline sync')
         return
       }
 
@@ -547,7 +548,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
             await readingDb.articles.put({ ...cached, ...article })
           }
         } catch (cacheError) {
-          console.warn('[ReadingStore] Failed to update cached article status from server:', cacheError)
+          logger.warn('[ReadingStore] Failed to update cached article status from server:', cacheError)
         }
 
         // Replace with server data
@@ -578,7 +579,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
         const { readingDb } = await import('../lib/db')
         await readingDb.articles.delete(id)
       } catch (cacheError) {
-        console.warn('[ReadingStore] Failed to delete cached article:', cacheError)
+        logger.warn('[ReadingStore] Failed to delete cached article:', cacheError)
       }
 
       // If it's a temporary item (optimistic), just remove from pending
@@ -596,7 +597,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
       if (!isOnline) {
         await queueOperation('delete_article', { id })
         await useOfflineStore.getState().updateQueueSize()
-        console.log('[ReadingStore] Article deletion queued for offline sync')
+        logger.debug('[ReadingStore] Article deletion queued for offline sync')
         return
       }
 

@@ -109,7 +109,7 @@ export async function enrichListItem(userId: string, listId: string, itemId: str
         if (!metadata) {
             console.log(`[Enrichment] All APIs failed, trying Gemini for: ${content}`)
             try {
-                metadata = await enrichWithGemini(content, category)
+                metadata = await enrichWithGemini(content, category || '')
             } catch (geminiError) {
                 console.error(`[Enrichment] Gemini fallback failed:`, geminiError)
                 // Ultimate fallback: create basic metadata from content

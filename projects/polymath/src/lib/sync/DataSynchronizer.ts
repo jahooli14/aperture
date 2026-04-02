@@ -3,6 +3,7 @@ import { useMemoryStore } from '../../stores/useMemoryStore'
 import { useReadingStore } from '../../stores/useReadingStore'
 import { useListStore } from '../../stores/useListStore'
 import { useOfflineStore } from '../../stores/useOfflineStore'
+import { logger } from '../logger'
 import { offlineContentManager } from '../offline/OfflineContentManager'
 import { readingDb } from '../db'
 import { SYNC_INTERVAL } from '../cacheConfig'
@@ -21,7 +22,7 @@ class DataSynchronizer {
     // Listen for sync events from other tabs/workers
     this.broadcastChannel.onmessage = (event) => {
       if (event.data.type === 'SYNC_COMPLETE') {
-        console.log('[DataSynchronizer] Received sync complete signal from another tab')
+        logger.debug('[DataSynchronizer] Received sync complete signal from another tab')
       }
     }
   }
@@ -54,19 +55,19 @@ class DataSynchronizer {
    */
   public async sync() {
     if (this.isSyncing) {
-      console.log('[DataSynchronizer] Sync already in progress, skipping')
+      logger.debug('[DataSynchronizer] Sync already in progress, skipping')
       return
     }
 
     const { isOnline } = useOfflineStore.getState()
     if (!isOnline) {
-      console.log('[DataSynchronizer] Offline, skipping sync')
+      logger.debug('[DataSynchronizer] Offline, skipping sync')
       return
     }
 
     this.isSyncing = true
     useOfflineStore.getState().setPulling(true)
-    console.log('[DataSynchronizer] Starting comprehensive sync...')
+    logger.debug('[DataSynchronizer] Starting comprehensive sync...')
 
     try {
       // Stagger sync operations to avoid thundering herd
@@ -80,17 +81,17 @@ class DataSynchronizer {
       ]
 
       for (const op of operations) {
-        try { await op() } catch (e) { console.warn('[DataSynchronizer] Sync step failed:', e) }
+        try { await op() } catch (e) { logger.warn('[DataSynchronizer] Sync step failed:', e) }
         // Small delay between operations to spread network load
         await new Promise(r => setTimeout(r, 500))
       }
 
       this.lastFullSync = Date.now()
-      console.log('[DataSynchronizer] Sync completed successfully')
+      logger.debug('[DataSynchronizer] Sync completed successfully')
       this.broadcastChannel.postMessage({ type: 'SYNC_COMPLETE', timestamp: Date.now() })
       
     } catch (error) {
-      console.error('[DataSynchronizer] Sync failed:', error)
+      logger.error('[DataSynchronizer] Sync failed:', error)
     } finally {
       this.isSyncing = false
       useOfflineStore.getState().setPulling(false)
@@ -98,19 +99,19 @@ class DataSynchronizer {
   }
 
   private async syncProjects() {
-    console.log('[DataSynchronizer] Syncing projects...')
+    logger.debug('[DataSynchronizer] Syncing projects...')
     // Force retry=0, triggering API call if online
     await useProjectStore.getState().fetchProjects(0)
   }
 
   private async syncMemories() {
-    console.log('[DataSynchronizer] Syncing memories...')
+    logger.debug('[DataSynchronizer] Syncing memories...')
     // Force=true to bypass cache check and hit API
     await useMemoryStore.getState().fetchMemories(true)
   }
 
   private async syncReadingList() {
-    console.log('[DataSynchronizer] Syncing reading list...')
+    logger.debug('[DataSynchronizer] Syncing reading list...')
     try {
       // 1. Fetch latest metadata/content from API
       await useReadingStore.getState().fetchArticles(undefined, true)
@@ -130,7 +131,7 @@ class DataSynchronizer {
         }
       }
 
-      console.log(`[DataSynchronizer] Found ${uncachedArticles.length} articles to cache offline`)
+      logger.debug(`[DataSynchronizer] Found ${uncachedArticles.length} articles to cache offline`)
 
       // 3. Download content for uncached articles (Sequential to be nice to network/CPU)
       for (const article of uncachedArticles) {
@@ -138,12 +139,12 @@ class DataSynchronizer {
       }
 
     } catch (error) {
-      console.error('[DataSynchronizer] Reading list sync failed:', error)
+      logger.error('[DataSynchronizer] Reading list sync failed:', error)
     }
   }
   
   private async syncLists() {
-    console.log('[DataSynchronizer] Syncing lists...')
+    logger.debug('[DataSynchronizer] Syncing lists...')
     try {
       // 1. Fetch all lists (updates store.lists  safe, doesn't affect items)
       await useListStore.getState().fetchLists()
@@ -172,18 +173,18 @@ class DataSynchronizer {
         }
       }
 
-      console.log(`[DataSynchronizer] Synced ${lists.length} lists with items`)
+      logger.debug(`[DataSynchronizer] Synced ${lists.length} lists with items`)
     } catch (error) {
-      console.error('[DataSynchronizer] Lists sync failed:', error)
+      logger.error('[DataSynchronizer] Lists sync failed:', error)
     }
   }
 
   private async syncConnections() {
-    console.log('[DataSynchronizer] Syncing connections...')
+    logger.debug('[DataSynchronizer] Syncing connections...')
     try {
       // Double-check online status before making network request
       if (!navigator.onLine) {
-        console.log('[DataSynchronizer] Skipping connections sync - offline')
+        logger.debug('[DataSynchronizer] Skipping connections sync - offline')
         return
       }
 
@@ -192,21 +193,21 @@ class DataSynchronizer {
         const { connections } = await response.json()
         if (connections && Array.isArray(connections)) {
           await readingDb.cacheConnections(connections)
-          console.log(`[DataSynchronizer] Cached ${connections.length} connections`)
+          logger.debug(`[DataSynchronizer] Cached ${connections.length} connections`)
         }
       }
     } catch (error) {
-      console.error('[DataSynchronizer] Connection sync failed:', error)
+      logger.error('[DataSynchronizer] Connection sync failed:', error)
       // Silently fail - this is a background sync operation
     }
   }
   
   private async syncDashboard() {
-    console.log('[DataSynchronizer] Syncing dashboard data...')
+    logger.debug('[DataSynchronizer] Syncing dashboard data...')
     try {
       // Double-check online status before making network requests
       if (!navigator.onLine) {
-        console.log('[DataSynchronizer] Skipping dashboard sync - offline')
+        logger.debug('[DataSynchronizer] Skipping dashboard sync - offline')
         return
       }
 
@@ -219,7 +220,7 @@ class DataSynchronizer {
             const data = await res.json()
             await readingDb.cacheDashboard('inspiration', data)
           }
-        }).catch(err => console.warn('[DataSynchronizer] Inspiration fetch failed:', err)),
+        }).catch(err => logger.warn('[DataSynchronizer] Inspiration fetch failed:', err)),
 
         // Evolution (Insights)
         fetch('/api/analytics?resource=evolution').then(async (res) => {
@@ -227,7 +228,7 @@ class DataSynchronizer {
             const data = await res.json()
             await readingDb.cacheDashboard('evolution', data)
           }
-        }).catch(err => console.warn('[DataSynchronizer] Evolution fetch failed:', err)),
+        }).catch(err => logger.warn('[DataSynchronizer] Evolution fetch failed:', err)),
 
         // Patterns (Timeline)
         fetch('/api/analytics?resource=patterns').then(async (res) => {
@@ -235,7 +236,7 @@ class DataSynchronizer {
             const data = await res.json()
             await readingDb.cacheDashboard('patterns', data)
           }
-        }).catch(err => console.warn('[DataSynchronizer] Patterns fetch failed:', err)),
+        }).catch(err => logger.warn('[DataSynchronizer] Patterns fetch failed:', err)),
 
         // Bedtime prompts
         fetch('/api/projects?resource=bedtime').then(async (res) => {
@@ -243,7 +244,7 @@ class DataSynchronizer {
             const data = await res.json()
             await readingDb.cacheDashboard('bedtime', data)
           }
-        }).catch(err => console.warn('[DataSynchronizer] Bedtime fetch failed:', err)),
+        }).catch(err => logger.warn('[DataSynchronizer] Bedtime fetch failed:', err)),
 
         // COST OPTIMIZATION: Removed Power Hour from auto-sync
         // Power Hour is expensive (~18K tokens/call) and already has:
@@ -260,12 +261,12 @@ class DataSynchronizer {
               await readingDb.cacheDashboard('rss-feeds', data.feeds)
             }
           }
-        }).catch(err => console.warn('[DataSynchronizer] RSS fetch failed:', err))
+        }).catch(err => logger.warn('[DataSynchronizer] RSS fetch failed:', err))
       ])
 
-      console.log('[DataSynchronizer] Dashboard data cached (inspiration, evolution, patterns, bedtime, rss)')
+      logger.debug('[DataSynchronizer] Dashboard data cached (inspiration, evolution, patterns, bedtime, rss)')
     } catch (error) {
-      console.error('[DataSynchronizer] Dashboard sync failed:', error)
+      logger.error('[DataSynchronizer] Dashboard sync failed:', error)
       // Silently fail - this is a background sync operation
     }
   }
@@ -309,7 +310,7 @@ class DataSynchronizer {
         await Promise.allSettled([this.syncProjects(), this.syncMemories()])
       }
     } catch (error) {
-      console.error('[DataSynchronizer] Route sync failed:', error)
+      logger.error('[DataSynchronizer] Route sync failed:', error)
     } finally {
       this.isSyncing = false
     }
@@ -321,7 +322,7 @@ class DataSynchronizer {
   public startPeriodicSync(intervalMs: number = SYNC_INTERVAL) {
     if (this.syncInterval) return
 
-    console.log(`[DataSynchronizer] Starting periodic sync every ${intervalMs}ms`)
+    logger.debug(`[DataSynchronizer] Starting periodic sync every ${intervalMs}ms`)
     this.syncInterval = setInterval(() => {
       // Only auto-sync if window is visible to save resources
       if (document.visibilityState === 'visible') {
