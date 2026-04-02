@@ -1,14 +1,4 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { Resend } from 'resend';
-import { supabase } from './_lib/idea-engine/supabase';
-import { sampleDomainPair, recordDomainPairGeneration } from './_lib/idea-engine/domain-sampler';
-import { selectFrontierMode, recordModeUsage, updateModeSuccessRate } from './_lib/idea-engine/mode-selector';
-import { generateIdea, scoreIdea, extractAbstractPattern } from './_lib/idea-engine/gemini-client';
-import { generateIdeaEmbedding, storeIdeaWithDedupe } from './_lib/idea-engine/deduplication';
-import { getLatestFeedbackSummary } from './_lib/idea-engine/feedback-summarizer';
-import { calculateFAS, createFrontierBlock } from './_lib/idea-engine/frontier-advancement';
-import type { Idea, FrontierBlock } from './_lib/idea-engine/types';
 
 /**
  * Consolidated Idea Engine Endpoint
@@ -16,15 +6,6 @@ import type { Idea, FrontierBlock } from './_lib/idea-engine/types';
  * Query param "action" determines which operation to run
  */
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-if (!GEMINI_API_KEY) {
-  throw new Error('GEMINI_API_KEY not set');
-}
-
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const reviewModel = genAI.getGenerativeModel({ model: 'gemini-3.1-pro-preview' });
-
-const resend = new Resend(process.env.RESEND_API_KEY);
 const TO_EMAIL = 'dmahorgan@gmail.com';
 const FROM_EMAIL = 'onboarding@resend.dev'; // Use Resend's testing domain (or verify your own domain)
 
