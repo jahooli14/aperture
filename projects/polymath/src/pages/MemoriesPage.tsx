@@ -54,14 +54,12 @@ function MasonryGrid({
   memories,
   onEdit,
   onDelete,
-  renderExtra,
-  connectionCounts
+  renderExtra
 }: {
   memories: Memory[],
   onEdit: (m: Memory) => void,
   onDelete: (m: Memory) => void,
-  renderExtra?: (m: Memory) => React.ReactNode,
-  connectionCounts?: Record<string, number>
+  renderExtra?: (m: Memory) => React.ReactNode
 }) {
   const columns = 2
 
@@ -95,7 +93,7 @@ function MasonryGrid({
                 memory={memory}
                 onEdit={onEdit}
                 onDelete={onDelete}
-                connectionCount={connectionCounts?.[memory.id]}
+
               />
               {renderExtra && renderExtra(memory)}
             </motion.div>

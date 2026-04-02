@@ -19,7 +19,7 @@ import {
 import { Input } from '../ui/input'
 import { useToast } from '../ui/toast'
 import { useReadingStore } from '../../stores/useReadingStore'
-import { useConnectionStore } from '../../stores/useConnectionStore'
+
 import { articleProcessor } from '../../lib/articleProcessor'
 
 interface SaveArticleDialogProps {
@@ -33,7 +33,6 @@ export function SaveArticleDialog({ open, onClose, hideTrigger = false }: SaveAr
   const [loading, setLoading] = useState(false)
   const [inputFocused, setInputFocused] = useState(false)
   const { saveArticle } = useReadingStore()
-  const { fetchSuggestions } = useConnectionStore()
   const { addToast } = useToast()
 
   const resetForm = () => {
@@ -73,14 +72,6 @@ export function SaveArticleDialog({ open, onClose, hideTrigger = false }: SaveAr
 
             await fetchArticles(undefined, true)
 
-            if (updatedArticle && (updatedArticle.content || updatedArticle.excerpt)) {
-              fetchSuggestions(
-                'article',
-                updatedArticle.id,
-                updatedArticle.content || updatedArticle.excerpt || '',
-                updatedArticle.title || undefined
-              )
-            }
           } else if (status === 'failed') {
             await fetchArticles(undefined, true)
           }

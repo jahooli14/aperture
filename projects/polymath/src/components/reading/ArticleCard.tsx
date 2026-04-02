@@ -10,7 +10,7 @@ import { haptic } from '../../utils/haptics'
 import { ContextMenu, type ContextMenuItem } from '../ui/context-menu'
 import { Thumbnail } from '../ui/optimized-image'
 import { PinButton } from '../PinButton'
-import { SuggestionBadge } from '../SuggestionBadge'
+
 import { EditArticleDialog } from './EditArticleDialog'
 import { ArticleConnectionsDialog } from './ArticleConnectionsDialog'
 import { useOfflineArticle } from '../../hooks/useOfflineArticle'
@@ -216,7 +216,7 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
 
           <div className="flex-1 flex flex-col items-end justify-between h-16">
             <div className="flex items-center gap-1">
-              <SuggestionBadge itemId={article.id} itemType="article" />
+
               {isContentFullyCached ? (
                 <div className="p-1 rounded-lg text-brand-text-secondary" style={{ background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.25)' }} title="Available offline">
                   <Download className="h-3 w-3" />
