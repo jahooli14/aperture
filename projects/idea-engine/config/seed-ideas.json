@@ -1,0 +1,148 @@
+{
+  "seed_ideas": [
+    {
+      "frontier_mode": "translate",
+      "domain_pair": ["neuroscience", "machine_learning"],
+      "title": "Dendritic Computation as Multi-Head Attention",
+      "description": "Express dendritic computation (how neurons integrate inputs across dendrite branches) in transformer architecture language. Each dendrite branch becomes an attention head with learned spatial weighting. This translation reveals that biological neurons may be performing something analogous to multi-head attention, where different branches specialize in different input patterns.",
+      "reasoning": "This translation is valuable because it suggests concrete ways to improve neural networks: allow neurons to have branch-specific computations before integration, similar to how dendrites work. It also suggests testable predictions about dendritic function that could be verified with calcium imaging.",
+      "quality_rating": 5
+    },
+    {
+      "frontier_mode": "translate",
+      "domain_pair": ["information_theory", "thermodynamics"],
+      "title": "Landauer's Principle as Rate-Distortion Tradeoff",
+      "description": "Reframe Landauer's principle (erasing information costs energy) using rate-distortion theory language. Information erasure becomes 'maximum compression with zero distortion tolerance,' and the energy cost is the price of that constraint. This reveals that thermodynamic cost of computation is fundamentally about compression requirements.",
+      "reasoning": "This translation connects two usually-separate formulations of entropy and suggests that any irreversible computation is implicitly performing lossy compression. Could lead to new energy-efficient computing paradigms that explicitly manage the compression-energy tradeoff.",
+      "quality_rating": 4
+    },
+    {
+      "frontier_mode": "translate",
+      "domain_pair": ["algebraic_topology", "machine_learning"],
+      "title": "Loss Landscapes as Fibration Spaces",
+      "description": "Express neural network loss landscapes using fibration theory from algebraic topology. The loss function becomes a fibration over parameter space, and gradient descent is motion through the total space that respects the fibration structure. Critical points (local minima) correspond to topological features of the base space.",
+      "reasoning": "This translation provides a rigorous framework for understanding mode connectivity, loss barrier crossing, and why certain initializations work better. It suggests that 'good' training paths respect the topological structure of the loss fibration.",
+      "quality_rating": 3
+    },
+    {
+      "frontier_mode": "tool_transfer",
+      "domain_pair": ["evolution", "machine_learning"],
+      "title": "Bet-Hedging Strategies for Robust Neural Networks",
+      "description": "Apply bet-hedging from evolutionary biology to neural network training. In uncertain environments, organisms don't optimize for average fitness—they use mixed strategies (some offspring conservative, some risky) to avoid extinction. Transfer this: train ensembles where some networks specialize for different data regimes, maintaining diversity even when it hurts average performance. This hedges against distributional shift.",
+      "reasoning": "Current ensemble methods focus on improving average accuracy. Bet-hedging focuses on worst-case survival. This is novel because it explicitly optimizes for robustness over performance, which is critical for safety-critical AI systems. Could be tested immediately with existing datasets.",
+      "quality_rating": 5
+    },
+    {
+      "frontier_mode": "tool_transfer",
+      "domain_pair": ["immunology", "cybersecurity"],
+      "title": "Clonal Selection for Adaptive Intrusion Detection",
+      "description": "Apply clonal selection from adaptive immunity to intrusion detection systems. When the immune system detects a pathogen, it rapidly clones the specific B-cells that recognized it, creating targeted defense. Transfer this: when an IDS detects novel attack patterns, automatically spawn specialized 'clone detectors' that focus only on variants of that attack. These clones die off after the threat passes.",
+      "reasoning": "Current IDS systems either use fixed signatures (brittle) or ML models (slow to adapt). Clonal selection provides a middle path: rapid, targeted adaptation to new threats without full retraining. Addresses the cold-start problem for zero-day exploits.",
+      "quality_rating": 4
+    },
+    {
+      "frontier_mode": "tool_transfer",
+      "domain_pair": ["mathematics", "software_engineering"],
+      "title": "Proof by Contradiction for Automated Debugging",
+      "description": "Apply proof by contradiction to automated debugging. Assume the buggy behavior is correct, derive logical consequences, find the contradiction with known-good test cases. The contradiction reveals the faulty assumption. Implement this as a SAT/SMT solver that searches for the minimal set of 'assumed correct' statements that lead to contradiction.",
+      "reasoning": "Current debugging tools require developers to manually hypothesize bug locations. This inverts the process: start with the bug, assume it's correct, let the contradiction find the error. Particularly powerful for concurrency bugs and race conditions where causality is unclear.",
+      "quality_rating": 4
+    },
+    {
+      "frontier_mode": "assumption_audit",
+      "domain_pair": ["economics", "ecology"],
+      "title": "Challenging 'Rational Actors' with Niche Construction",
+      "description": "Economics assumes agents take their environment as given and optimize within it (rational actors). Ecology shows that organisms actively modify their environment (niche construction), which changes the optimization landscape. Challenge: what if economic agents don't just respond to markets, but actively reshape the market structure through their choices? This suggests markets have 'developmental' dynamics, not just equilibrium-seeking.",
+      "reasoning": "Standard economic models treat market structure as exogenous. Niche construction implies it's endogenous—agents co-create the environment they optimize in. This explains phenomena like platform lock-in, network effects, and path dependence that standard models struggle with.",
+      "quality_rating": 5
+    },
+    {
+      "frontier_mode": "assumption_audit",
+      "domain_pair": ["linguistics", "cognitive_science"],
+      "title": "Challenging 'Syntax-First' with Embodied Cognition",
+      "description": "Linguistics traditionally assumes syntax is primary and meaning is derived compositionally (syntax-first). Embodied cognition research shows that meaning is grounded in sensorimotor experience, not abstract symbols. Challenge: what if syntax is a late-stage compression trick, and meaning comes first through embodied simulation? This suggests language models need grounding, not just more scale.",
+      "reasoning": "Current LLMs are purely syntactic and show systematic failures on grounded reasoning. This assumption audit suggests why: they're missing the sensorimotor foundation that meaning actually rests on. Points toward multimodal or robotics-grounded language learning.",
+      "quality_rating": 4
+    },
+    {
+      "frontier_mode": "assumption_audit",
+      "domain_pair": ["machine_learning", "neuroscience"],
+      "title": "Challenging 'Backprop is Biologically Implausible'",
+      "description": "ML assumes backpropagation is how we train networks, but neuroscience long claimed it's biologically implausible (no backwards error signals). Recent neuroscience work on predictive coding and dendritic error computation challenges this. What if the brain does implement something backprop-like through local prediction errors? This reopens the question of whether biological and artificial learning are fundamentally different.",
+      "reasoning": "If biological systems do something like backprop, it validates end-to-end learning as a general principle and suggests we should look harder at biological implementation details for architectural insights. Also suggests predictive coding might be the bridge theory.",
+      "quality_rating": 3
+    },
+    {
+      "frontier_mode": "analogy_mine",
+      "domain_pair": ["information_theory", "molecular_biology"],
+      "title": "DNA Repair as Error-Correcting Codes",
+      "description": "Error-correcting codes (information theory) solve: transmit data reliably over noisy channels using redundancy. DNA repair mechanisms (molecular biology) solve: maintain genome integrity despite chemical damage using redundancy (multiple repair pathways, homologous chromosomes). Isomorphism: both use redundant representations and local consistency checks to recover from errors. Map the solution: DNA repair enzymes are 'syndrome decoders' that detect and correct errors using parity-check-like mechanisms.",
+      "reasoning": "This analogy is deep because both systems face the same mathematical problem: recover original message from corrupted copy. DNA repair uses multiple correction 'codes' (base excision, mismatch repair) just like Reed-Solomon and LDPC codes use different algebraic structures. Suggests we could design better molecular error correction by borrowing from coding theory.",
+      "quality_rating": 5
+    },
+    {
+      "frontier_mode": "analogy_mine",
+      "domain_pair": ["physics_complexity", "sociology"],
+      "title": "Social Movements as Self-Organized Criticality",
+      "description": "Self-organized criticality (physics) explains avalanches: sandpiles naturally evolve to a critical state where any grain can trigger cascade failures. Social movements (sociology) show similar dynamics: society builds tension until a single event (Rosa Parks, Arab Spring) triggers cascading change. Isomorphism: both have metastable states, power-law event distributions, and lack of characteristic scale. Map the solution: predict social movements by measuring 'social stress' gradients, not by trying to predict the trigger event itself.",
+      "reasoning": "This analogy reveals why social predictions fail: we focus on predicting triggers (impossible), not measuring criticality (tractable). Suggests measuring polarization, inequality, network connectivity as early warning signals. Same math as earthquake prediction.",
+      "quality_rating": 4
+    },
+    {
+      "frontier_mode": "analogy_mine",
+      "domain_pair": ["game_theory", "molecular_biology"],
+      "title": "Protein Folding as Nash Equilibrium Search",
+      "description": "Nash equilibrium (game theory): find strategy profile where no player benefits from unilateral deviation. Protein folding: find 3D structure where no local region benefits from changing conformation given neighbors' states. Isomorphism: both search for fixed points in multi-agent optimization. Map the solution: protein folding algorithms could use game-theoretic equilibrium solvers (fictitious play, regret minimization) instead of energy minimization.",
+      "reasoning": "Standard protein folding uses energy minimization, which is NP-hard. Game-theoretic equilibrium finding has better-studied tractability properties and convergence guarantees. This reframing might lead to faster folding algorithms and explain why certain protein structures are more common (they're simpler equilibria).",
+      "quality_rating": 3
+    },
+    {
+      "frontier_mode": "compression",
+      "domain_pair": ["evolution", "machine_learning"],
+      "title": "Overfitting and Extinction as Failure Modes of Specialization",
+      "description": "Overfitting in ML (model too specialized to training data, fails on new data) and extinction in evolution (species too specialized to niche, fails when environment changes) are both failures of over-optimization. Unified principle: 'Specialization under stable conditions creates fragility to distributional shift.' Both systems face the same exploration-exploitation tradeoff, and both fail when they over-exploit.",
+      "reasoning": "This compression reveals that regularization (ML) and genetic diversity (evolution) serve the same function: maintaining optionality for future uncertainty. Suggests that any learning system needs explicit mechanisms to limit specialization, and that 'good enough' solutions are often more robust than optimal ones.",
+      "quality_rating": 5
+    },
+    {
+      "frontier_mode": "compression",
+      "domain_pair": ["thermodynamics", "information_theory"],
+      "title": "Entropy as Universal Measure of Constraint",
+      "description": "Thermodynamic entropy (physics) measures how constrained a physical system is. Information entropy (CS) measures how constrained our knowledge of a system is. Unified principle: 'Entropy quantifies the degrees of freedom remaining after applying constraints.' Both are log of phase space volume after constraints. This unification predicts that any process reducing uncertainty (observation, computation) must dissipate energy.",
+      "reasoning": "This compression directly leads to Landauer's principle and explains the thermodynamic cost of computation from first principles. Also suggests that 'learning' and 'thermodynamic relaxation' are the same process viewed from different angles: both are constraint satisfaction that reduces entropy.",
+      "quality_rating": 4
+    },
+    {
+      "frontier_mode": "compression",
+      "domain_pair": ["neuroscience", "economics"],
+      "title": "Neural Plasticity and Market Adaptation as Bayesian Updates",
+      "description": "Hebbian plasticity (neurons that fire together, wire together) and market price discovery both update estimates based on local evidence. Unified principle: 'Distributed systems learn by local Bayesian updates on correlation structures.' Synaptic weights are posterior beliefs about input correlations; prices are posterior beliefs about supply/demand. Both use prediction errors to drive updates.",
+      "reasoning": "This unification predicts that both systems should exhibit similar dynamics: initial instability, convergence to stable states, occasional regime shifts. Suggests we can model neural circuit formation using market microstructure equations, and vice versa. Also explains why both systems struggle with non-stationary environments (prior becomes stale).",
+      "quality_rating": 3
+    },
+    {
+      "frontier_mode": "inversion",
+      "domain_pair": ["neuroscience", "machine_learning"],
+      "title": "Inverting 'More Data is Better': Evidence from Catastrophic Forgetting",
+      "description": "ML consensus: more training data improves models. Inversion: continuous data streams cause catastrophic forgetting—new data destroys old knowledge. Neuroscience evidence: sleep consolidation suggests the brain doesn't learn continuously; it gates when to update. Under continuous learning regimes, stability matters more than data volume. The inverted view: less frequent, higher-quality updates may outperform continuous high-volume training.",
+      "reasoning": "This inversion explains why continual learning is hard and why the brain uses sleep for consolidation. Suggests ML systems should batch updates and use explicit replay mechanisms, not train continuously. Testable: compare batch learning with sparse updates vs. continuous learning with high frequency.",
+      "quality_rating": 4
+    },
+    {
+      "frontier_mode": "inversion",
+      "domain_pair": ["economics", "ecology"],
+      "title": "Inverting 'Market Efficiency': Inefficiency as Adaptive Strategy",
+      "description": "Economics consensus: efficient markets are better because they allocate resources optimally. Inversion: some inefficiency is adaptive because it maintains diversity and resilience. Ecology evidence: ecosystems with 'inefficient' redundancy (multiple species filling similar niches) survive perturbations better than optimized monocultures. Under volatile conditions, inefficiency (slack resources, redundant pathways) is adaptive, not wasteful.",
+      "reasoning": "This inversion challenges the efficiency-maximization paradigm in economics and suggests that engineered systems (supply chains, financial markets) need deliberately maintained inefficiency for resilience. Testable via simulation: compare efficient vs. redundant network performance under perturbation.",
+      "quality_rating": 5
+    },
+    {
+      "frontier_mode": "inversion",
+      "domain_pair": ["machine_learning", "cognitive_science"],
+      "title": "Inverting 'Scale is All You Need': Evidence from Cognitive Load Theory",
+      "description": "ML consensus: scaling models (more parameters, more data) solves most problems. Inversion: cognitive load theory shows that humans perform worse when given more information due to working memory limits. Evidence from cognitive science: compression and abstraction (reducing information) often improve performance more than adding details. Under bounded rationality, less information at the right level of abstraction beats more raw data.",
+      "reasoning": "This inversion suggests that LLMs might hit fundamental limits not from lack of scale, but from lack of abstraction mechanisms. Points toward hierarchical, compressed representations as the next frontier. Testable: compare models trained on compressed/abstracted data vs. raw scale.",
+      "quality_rating": 4
+    }
+  ]
+}

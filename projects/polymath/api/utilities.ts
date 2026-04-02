@@ -1,18 +1,30 @@
 /**
- * Onboarding API
+ * Utilities API - Consolidated endpoint for small utility functions
  *
- * Two resources in one file (respecting 12-API cap):
- *   GET  ?resource=book-search&q=...  — Google Books auto-complete
- *   POST ?resource=analyze             — Analyse 5 voice transcripts + books → themes, insight, project suggestions
+ * Three resources in one file (respecting 12-API cap):
+ *   POST ?resource=upload-image             — Generate signed upload URL for images
+ *   GET  ?resource=book-search&q=...        — Google Books auto-complete
+ *   POST ?resource=analyze                  — Analyse 5 voice transcripts + books → themes, insight, project suggestions
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getUserId } from './_lib/auth.js'
+import { getSupabaseClient } from './_lib/supabase.js'
 import { generateText } from './_lib/gemini-chat.js'
 
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+  },
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Onboarding is accessible without auth to allow try-before-signup
   const resource = req.query.resource as string
+
+  if (req.method === 'POST' && resource === 'upload-image') {
+    return handleUploadImage(req, res)
+  }
 
   if (req.method === 'GET' && resource === 'book-search') {
     return handleBookSearch(req, res)
@@ -23,6 +35,85 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   return res.status(404).json({ error: 'Not found' })
+}
+
+// ── Upload Image ───────────────────────────────────────────────────────────
+async function handleUploadImage(req: VercelRequest, res: VercelResponse) {
+  try {
+    const supabase = getSupabaseClient()
+    const { fileName, fileType } = req.body
+
+    if (!fileName || !fileType) {
+      console.error('[utilities/upload-image] Missing required fields:', { fileName, fileType })
+      return res.status(400).json({
+        error: 'Missing required fields: fileName, fileType',
+        details: 'Both fileName and fileType are required'
+      })
+    }
+
+    // Validate file type
+    if (!fileType.startsWith('image/')) {
+      console.error('[utilities/upload-image] Invalid file type:', fileType)
+      return res.status(400).json({
+        error: 'Invalid file type',
+        details: 'Only image files are allowed'
+      })
+    }
+
+    console.log('[utilities/upload-image] Generating signed URL for:', { fileName, fileType })
+
+    // Create a Signed Upload URL
+    // Tries to upload to 'thought-images' bucket
+    // The token allows uploading a specific file for a limited time (e.g. 60s)
+    const { data, error } = await supabase.storage
+      .from('thought-images')
+      .createSignedUploadUrl(fileName)
+
+    if (error) {
+      console.error('[utilities/upload-image] Supabase error creating signed URL:', {
+        message: error.message,
+        name: error.name
+      })
+      return res.status(500).json({
+        error: 'Failed to create upload URL',
+        details: error.message || 'Supabase storage error'
+      })
+    }
+
+    if (!data || !data.signedUrl) {
+      console.error('[utilities/upload-image] No signed URL returned from Supabase')
+      return res.status(500).json({
+        error: 'Failed to create upload URL',
+        details: 'No signed URL returned from storage'
+      })
+    }
+
+    // Return the signed URL for the frontend to PUT the file to
+    // And the public URL for reference after upload
+    const { data: publicUrlData } = supabase.storage
+      .from('thought-images')
+      .getPublicUrl(fileName)
+
+    console.log('[utilities/upload-image] Successfully generated URLs for:', fileName)
+
+    return res.status(200).json({
+      success: true,
+      signedUrl: data.signedUrl,
+      path: data.path, // Internal storage path
+      token: data.token, // Upload token if needed manually
+      publicUrl: publicUrlData.publicUrl
+    })
+
+  } catch (error) {
+    console.error('[utilities/upload-image] Unexpected error:', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    })
+    return res.status(500).json({
+      error: 'Upload preparation failed',
+      details: error instanceof Error ? error.message : String(error)
+    })
+  }
 }
 
 // ── Book Search ────────────────────────────────────────────────────────────
@@ -62,7 +153,7 @@ async function handleBookSearch(req: VercelRequest, res: VercelResponse) {
 
     return res.status(200).json({ results })
   } catch (error: any) {
-    console.error('[Onboarding] Book search error:', error.message)
+    console.error('[utilities/book-search] Book search error:', error.message)
     return res.status(500).json({ error: 'Book search failed' })
   }
 }
@@ -181,7 +272,7 @@ Be warm but not sycophantic. Be specific, not generic. Surprise them.`
 
     return res.status(200).json(response)
   } catch (error: any) {
-    console.error('[Onboarding] Analysis error:', error.message)
+    console.error('[utilities/analyze] Analysis error:', error.message)
     // Return minimal fallback so the user isn't stuck
     return res.status(200).json({
       capabilities: [],
