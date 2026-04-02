@@ -28,6 +28,7 @@ import { supabase } from '../../lib/supabase'
 import type { Project } from '../../types'
 import type { Task } from './TaskList'
 import { MultiPerspectiveSuggestions } from '../suggestions/MultiPerspectiveSuggestions'
+import { useJourneyStore } from '../../stores/useJourneyStore'
 
 interface EchoItem {
   title: string
@@ -71,6 +72,8 @@ interface ProjectChatPanelProps {
   }) => void
   onUpdateTasks?: (tasks: Task[]) => Promise<void>
   onRefinePlan?: () => Promise<void>
+  /** Auto-send this message when the panel opens (e.g. from post-onboarding) */
+  autoMessage?: string | null
 }
 
 const TASK_TYPE_LABELS: Record<string, string> = {
@@ -82,7 +85,8 @@ const TASK_TYPE_LABELS: Record<string, string> = {
 function buildOpeningMessage(
   project: Project,
   recentCompletions: string[],
-  powerHourSuggestions: PowerHourSuggestion[]
+  powerHourSuggestions: PowerHourSuggestion[],
+  onboardingProfile?: { themes: string[]; capabilities: string[] } | null
 ): ChatMessage[] {
   const messages: ChatMessage[] = []
 
@@ -96,9 +100,15 @@ function buildOpeningMessage(
     const taskLines = powerHourSuggestions
       .map(s => `• ${s.task_title}${s.task_description ? ` — ${s.task_description}` : ''}`)
       .join('\n')
+
+    // Weave in onboarding context if available
+    const profileContext = onboardingProfile?.themes?.length
+      ? ` Given your interest in ${onboardingProfile.themes.slice(0, 2).join(' and ')}, I'd especially focus on the ones that play to those strengths.`
+      : ''
+
     messages.push({
       kind: 'model',
-      content: `Based on where ${project.title} is right now, here's what I'd suggest for your next session:\n\n${taskLines}\n\nWant to add any of these, talk through the approach, or go a different direction?`,
+      content: `Based on where ${project.title} is right now, here's what I'd suggest for your next session:\n\n${taskLines}\n\nWant to add any of these, talk through the approach, or go a different direction?${profileContext}`,
       suggestedTasks: powerHourSuggestions.map(s => ({
         text: s.task_title,
         task_type: 'core' as const,
@@ -124,6 +134,7 @@ export function ProjectChatPanel({
   onAddTask,
   onUpdateTasks,
   onRefinePlan,
+  autoMessage,
 }: ProjectChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
@@ -134,6 +145,7 @@ export function ProjectChatPanel({
   const [showCouncil, setShowCouncil] = useState(false)
   const threadRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const autoMessageSentRef = useRef(false)
 
   // Build conversation history for the API (only user/model messages)
   const apiHistory = messages
@@ -142,6 +154,9 @@ export function ProjectChatPanel({
     )
     .map(m => ({ role: m.kind as 'user' | 'model', content: m.content }))
 
+  // Get onboarding profile for personalization
+  const onboardingProfile = useJourneyStore(state => state.onboardingProfile)
+
   // Reset and initialise when panel opens
   useEffect(() => {
     if (!isOpen) return
@@ -149,7 +164,7 @@ export function ProjectChatPanel({
     const powerHourSuggestions: PowerHourSuggestion[] =
       (project.metadata?.suggested_power_hour_tasks as PowerHourSuggestion[] | undefined) || []
 
-    const opening = buildOpeningMessage(project, recentCompletions, powerHourSuggestions)
+    const opening = buildOpeningMessage(project, recentCompletions, powerHourSuggestions, onboardingProfile)
     setMessages(opening)
     setAddedTasks(new Set())
     setInput('')
@@ -159,6 +174,60 @@ export function ProjectChatPanel({
     // Focus input after animation settles
     setTimeout(() => inputRef.current?.focus(), 350)
   }, [isOpen]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-send a seeded message when arriving from post-onboarding
+  useEffect(() => {
+    if (!isOpen || !autoMessage || autoMessageSentRef.current) return
+    autoMessageSentRef.current = true
+
+    // Delay slightly so the panel renders first
+    const timer = setTimeout(async () => {
+      const msg = autoMessage
+      setMessages(prev => [...prev, { kind: 'user', content: msg }])
+      setThinking(true)
+
+      try {
+        const tasks: Task[] = (project.metadata?.tasks as Task[] | undefined) || []
+        const token = (await supabase.auth.getSession()).data.session?.access_token
+        const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/brainstorm`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            step: 'project-chat',
+            projectId: project.id,
+            projectTitle: project.title,
+            projectDescription: project.description,
+            projectMotivation: project.metadata?.motivation,
+            projectGoal: project.metadata?.end_goal,
+            tasks: tasks.map(t => ({ id: t.id, text: t.text, done: t.done })),
+            message: msg,
+            history: [],
+          }),
+        })
+        const data = await res.json()
+        if (res.ok && data.reply) {
+          setMessages(prev => [
+            ...prev,
+            {
+              kind: 'model',
+              content: data.reply,
+              suggestedTasks: data.suggestedTasks || [],
+              echoes: data.echoes || [],
+            },
+          ])
+        }
+      } catch {
+        // Silent — they can still type normally
+      } finally {
+        setThinking(false)
+      }
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [isOpen, autoMessage]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Append new completion events when they arrive while panel is open
   useEffect(() => {
