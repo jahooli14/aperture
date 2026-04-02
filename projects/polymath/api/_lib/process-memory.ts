@@ -2,7 +2,8 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getSupabaseClient } from './supabase.js'
 import type { Entities, ExtractedMetadata } from '../../src/types'
 import { updateItemConnections } from './connection-logic.js'
-import { generateInsights } from './insights-generator.js'
+import { generateInsights, mergeGenesisInsights } from './insights-generator.js'
+import { detectProjectGenesis } from './project-genesis.js'
 import { generateText } from './gemini-chat.js'
 import { MODELS } from './models.js'
 
@@ -101,6 +102,12 @@ export async function processMemory(memoryId: string): Promise<void> {
 
     // 7. Regenerate insights over all user data — fire-and-forget, never blocks processing
     generateInsights(userId).catch(() => {}) // Non-critical
+
+    // 7b. Project genesis detection — find theme clusters with no active project
+    // Runs independently so it works even when insights are debounced
+    detectProjectGenesis(userId)
+      .then(genesisInsights => mergeGenesisInsights(userId, genesisInsights))
+      .catch(() => {}) // Non-critical
 
     // 8a. Generate thought bridge — one sentence connecting this memory to the most relevant project.
     // Stored inside the triage JSONB as bridge_insight (no schema change needed).
