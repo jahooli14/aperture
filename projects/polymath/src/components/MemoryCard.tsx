@@ -437,7 +437,6 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
           </span>
 
           <div className="flex items-center gap-1.5 flex-shrink-0">
-            )}
 
             {memory.checklist_items && memory.checklist_items.length > 0 && (
               <span
