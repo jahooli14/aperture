@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
-import { Zap, TrendingUp, AlertCircle, Lightbulb, Search, Brain, WifiOff } from 'lucide-react'
+import { Zap, TrendingUp, AlertCircle, Lightbulb, Search, Brain, WifiOff, RefreshCw } from 'lucide-react'
 import { SubtleBackground } from '../components/SubtleBackground'
 import type { SynthesisInsight } from '../types'
 import { readingDb } from '../lib/db'
@@ -18,6 +18,8 @@ export function InsightsPage() {
   const navigate = useNavigate()
   const [insights, setInsights] = useState<SynthesisInsight[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [generatedAt, setGeneratedAt] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
   const [showResolutionDialog, setShowResolutionDialog] = useState(false)
@@ -41,10 +43,11 @@ export function InsightsPage() {
     setError(null)
 
     try {
-      // 1. Load from cache first (instant)
+      // 1. Load from IndexedDB first (instant)
       const cached = await readingDb.getDashboard('evolution')
       if (cached) {
         setInsights(cached.insights || [])
+        setGeneratedAt(cached.generated_at || null)
         setLoading(false)
       }
 
@@ -55,37 +58,62 @@ export function InsightsPage() {
         return
       }
 
-      // 3. Fetch fresh data from network
+      // 3. Fetch cached insights from server (fast — just a DB read)
       setIsOffline(false)
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout
-
-      const response = await fetch('/api/analytics?resource=evolution', {
-        signal: controller.signal
-      })
-      clearTimeout(timeoutId)
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || 'Failed to fetch insights')
+      const response = await fetch('/api/analytics?resource=evolution')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.insights?.length > 0) {
+          setInsights(data.insights)
+          setGeneratedAt(data.generated_at || null)
+          await readingDb.cacheDashboard('evolution', data)
+        } else if (!cached) {
+          // Nothing cached anywhere — trigger a fresh generation
+          triggerRefresh()
+        }
       }
-      const data = await response.json()
-      setInsights(data.insights || [])
-
-      // 4. Cache for offline use
-      await readingDb.cacheDashboard('evolution', data)
     } catch (error) {
       console.error('Error fetching insights:', error)
-      if (error instanceof Error && error.name === 'AbortError') {
-        setError('Request timed out. The analysis is taking too long.')
-      } else if (insights.length === 0) {
-        // Only show error if we don't have cached data
+      if (insights.length === 0) {
         setError(error instanceof Error ? error.message : 'Failed to load insights')
       }
     } finally {
       setLoading(false)
     }
   }, [])
+
+  const triggerRefresh = useCallback(async () => {
+    if (refreshing || !navigator.onLine) return
+    setRefreshing(true)
+    setError(null)
+
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 60000)
+
+      const response = await fetch('/api/analytics?resource=evolution', {
+        method: 'POST',
+        signal: controller.signal,
+      })
+      clearTimeout(timeoutId)
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        throw new Error(err.error || 'Refresh failed')
+      }
+      const data = await response.json()
+      setInsights(data.insights || [])
+      setGeneratedAt(data.generated_at || null)
+      await readingDb.cacheDashboard('evolution', data)
+    } catch (error) {
+      console.error('Error refreshing insights:', error)
+      if (error instanceof Error && error.name !== 'AbortError') {
+        setError(error.message)
+      }
+    } finally {
+      setRefreshing(false)
+    }
+  }, [refreshing])
 
   useEffect(() => {
     fetchInsights()
@@ -140,14 +168,27 @@ export function InsightsPage() {
               Insights
             </h1>
           </div>
-          <button
-            onClick={() => navigate('/search')}
-            className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-[var(--glass-surface)]"
-            style={{ color: "var(--brand-primary)" }}
-            title="Search everything"
-          >
-            <Search className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {insights.length > 0 && (
+              <button
+                onClick={triggerRefresh}
+                disabled={refreshing}
+                className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-[var(--glass-surface)] disabled:opacity-40"
+                style={{ color: "var(--brand-primary)" }}
+                title="Regenerate insights from all your data"
+              >
+                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              </button>
+            )}
+            <button
+              onClick={() => navigate('/search')}
+              className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-[var(--glass-surface)]"
+              style={{ color: "var(--brand-primary)" }}
+              title="Search everything"
+            >
+              <Search className="h-5 w-5" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -208,11 +249,14 @@ export function InsightsPage() {
                   <>
                     <TrendingUp className="h-16 w-16 mx-auto mb-4" style={{ color: "var(--brand-primary)" }} />
                     <h2 className="text-2xl font-bold mb-2 premium-text-platinum">
-                      Building Your Insights
+                      No insights yet
                     </h2>
                     <p style={{ color: "var(--brand-primary)" }} className="mb-6">
-                      Capture at least 10 thoughts to see evolution patterns and synthesis insights
+                      Add a few thoughts and articles, then generate your first insights.
                     </p>
+                    <Button onClick={triggerRefresh} disabled={refreshing} className="btn-primary">
+                      {refreshing ? 'Analysing your data...' : 'Generate insights'}
+                    </Button>
                   </>
                 )}
               </div>
@@ -230,8 +274,14 @@ export function InsightsPage() {
                   Your synthesis <span style={{ color: "var(--brand-primary)" }}>insights</span>
                 </h2>
                 <p className="mt-2 text-lg" style={{ color: "var(--brand-primary)" }}>
-                  How your thinking evolved and patterns emerged
+                  What your data actually means — patterns, tensions, and intersections
                 </p>
+                {generatedAt && (
+                  <p className="mt-1 text-xs opacity-50" style={{ color: "var(--brand-primary)" }}>
+                    Generated {new Date(generatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    {refreshing && ' · Refreshing...'}
+                  </p>
+                )}
               </div>
             </section>
 
@@ -281,11 +331,22 @@ export function InsightsPage() {
                     </div>
                   )}
 
-                  {/* Pattern Details */}
-                  {insight.type === 'pattern' && insight.data?.recommendation && (
+                  {/* Evidence chips */}
+                  {insight.data?.evidence && Array.isArray(insight.data.evidence) && insight.data.evidence.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {insight.data.evidence.map((e: string, i: number) => (
+                        <span key={i} className="px-2 py-0.5 rounded-lg text-xs" style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'var(--brand-primary)', opacity: 0.8 }}>
+                          {e}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Recommendation */}
+                  {insight.data?.recommendation && (
                     <div className="p-4 rounded-lg premium-glass-subtle">
-                      <p className="text-sm font-medium mb-2" style={{ color: "var(--brand-primary)" }}>
-                         Recommendation:
+                      <p className="text-sm font-medium mb-1" style={{ color: "var(--brand-primary)" }}>
+                        What to do with this:
                       </p>
                       <p className="text-sm" style={{ color: "var(--brand-primary)" }}>
                         {insight.data.recommendation}

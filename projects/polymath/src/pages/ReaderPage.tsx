@@ -17,8 +17,7 @@ import { useOfflineArticle } from '../hooks/useOfflineArticle'
 import { useReadingProgress } from '../hooks/useReadingProgress'
 import { ArticleCompletionDialog } from '../components/reading/ArticleCompletionDialog'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
-import { ConnectionsList } from '../components/connections/ConnectionsList'
-import { ConnectionSuggestion } from '../components/ConnectionSuggestion'
+import { ItemInsightStrip } from '../components/ItemInsightStrip'
 import { supabase } from '../lib/supabase'
 
 export function ReaderPage() {
@@ -56,12 +55,8 @@ export function ReaderPage() {
   const [isOfflineCached, setIsOfflineCached] = useState(false)
   const [cachedImageUrls, setCachedImageUrls] = useState<Map<string, string>>(new Map())
   const [showCompletionDialog, setShowCompletionDialog] = useState(false)
-  const [showConnectionSuggestions, setShowConnectionSuggestions] = useState(true)
-  const [suggestions, setSuggestions] = useState<any[]>([])
 
   const [isHighlighterMode, setIsHighlighterMode] = useState(false)
-  const [connectionCount, setConnectionCount] = useState(0)
-  const [isLoadingConnections, setIsLoadingConnections] = useState(true)
 
   // Automatic offline caching
   useEffect(() => {
@@ -121,19 +116,6 @@ export function ReaderPage() {
       })
     }
   }, [cachedImageUrls])
-
-  const fetchSuggestions = async () => {
-    if (!id) return
-    try {
-      const response = await fetch(`/api/connections?action=suggestions&id=${id}&type=article`)
-      if (response.ok) {
-        const data = await response.json()
-        setSuggestions(data.suggestions || [])
-      }
-    } catch (error) {
-      console.error('[Reader] Failed to fetch suggestions:', error)
-    }
-  }
 
   useEffect(() => {
     if (article) {
@@ -617,27 +599,9 @@ export function ReaderPage() {
             dangerouslySetInnerHTML={{ __html: processedContent || (article.content ? article.content : '<p class="text-brand-text-muted italic">No content available for this article. <a href="' + article.url + '" target="_blank" class="text-[var(--brand-primary)] underline">View Original</a></p>') }}
           />
 
-          {/* Smart Connections Section */}
-          {(connectionCount > 0 || isLoadingConnections) && (
-            <div className="mt-20 pt-12 border-t border-[var(--glass-surface)]">
-              <div className="flex items-center justify-between mb-8">
-                <div>
-                  <h3 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">Synthesized Insights</h3>
-                  <p className="text-sm text-brand-text-muted">Connections discovered by the Aperture Engine.</p>
-                </div>
-                <div className="px-3 py-1 bg-brand-primary/10 border border-blue-500/20 rounded-full text-[10px] font-black uppercase tracking-widest text-brand-primary">
-                  AI Connected
-                </div>
-              </div>
-
-              <ConnectionsList
-                itemType="article"
-                itemId={article.id}
-                content={article.title + ' ' + (article.excerpt || '')}
-                onCountChange={setConnectionCount}
-                onLoadingChange={setIsLoadingConnections}
-              />
-            </div>
+          <div className="mt-20 pt-12 border-t border-[var(--glass-surface)]">
+            <ItemInsightStrip title={article.title} themes={article.themes ?? undefined} />
+          </div>
           )}
         </main>
 
@@ -667,15 +631,6 @@ export function ReaderPage() {
           )}
         </AnimatePresence>
 
-        {/* Floating Suggestions */}
-        {showConnectionSuggestions && suggestions.length > 0 && (
-          <ConnectionSuggestion
-            suggestions={suggestions}
-            sourceId={article.id}
-            sourceType="article"
-            onDismiss={() => setShowConnectionSuggestions(false)}
-          />
-        )}
 
         <ArticleCompletionDialog
           open={showCompletionDialog}

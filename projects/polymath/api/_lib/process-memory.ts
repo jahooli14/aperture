@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getSupabaseClient } from './supabase.js'
 import type { Entities, ExtractedMetadata } from '../../src/types'
 import { updateItemConnections } from './connection-logic.js'
+import { generateInsights } from './insights-generator.js'
 import { generateText } from './gemini-chat.js'
 import { MODELS } from './models.js'
 
@@ -98,7 +99,10 @@ export async function processMemory(memoryId: string): Promise<void> {
     await updateItemConnections(memoryId, 'thought', embedding, userId)
     logger.info({ memory_id: memoryId }, '✅ Connections processed')
 
-    // 7. Generate thought bridge — one sentence connecting this memory to the most relevant project.
+    // 7. Regenerate insights over all user data — fire-and-forget, never blocks processing
+    generateInsights(userId).catch(() => {}) // Non-critical
+
+    // 8a. Generate thought bridge — one sentence connecting this memory to the most relevant project.
     // Stored inside the triage JSONB as bridge_insight (no schema change needed).
     // Fire-and-forget: errors here never block memory processing.
     generateThoughtBridge(memoryId, metadata.summary_title, metadata.insightful_body, metadata.triage, userId)
