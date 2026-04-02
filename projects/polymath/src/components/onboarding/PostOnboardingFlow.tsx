@@ -7,17 +7,19 @@
  * The flow:
  *   1. "You're in" — celebratory moment with their top theme
  *   2. Chat-based project kickoff — seeded with their onboarding data
- *   3. Redirect to project detail page with chat open
+ *   3. Cinematic first project reveal — the project becomes REAL
  *
  * This is the "so what" — the moment where captured data becomes actionable.
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowRight, MessageCircle, Sparkles, Zap } from 'lucide-react'
+import { ArrowRight, MessageCircle, Sparkles } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { CreateProjectDialog } from '../projects/CreateProjectDialog'
 import { useJourneyStore } from '../../stores/useJourneyStore'
+import { useProjectStore } from '../../stores/useProjectStore'
+import { PROJECT_COLORS } from '../projects/ProjectCard'
 import type { OnboardingAnalysis } from '../../types'
 
 interface PostOnboardingFlowProps {
@@ -30,18 +32,63 @@ interface PostOnboardingFlowProps {
   } | null
 }
 
-type FlowPhase = 'welcome' | 'chat' | 'complete'
+type FlowPhase = 'welcome' | 'chat' | 'reveal'
+
+// Particle positions for the burst effect — pre-computed for consistency
+const PARTICLES = Array.from({ length: 24 }, (_, i) => ({
+  angle: (i / 24) * Math.PI * 2,
+  distance: 80 + Math.random() * 100,
+  size: 3 + Math.random() * 4,
+  delay: Math.random() * 0.3,
+  duration: 0.8 + Math.random() * 0.6,
+}))
+
+// Orbital ring dots
+const ORBITALS = Array.from({ length: 8 }, (_, i) => ({
+  angle: (i / 8) * Math.PI * 2,
+  delay: i * 0.08,
+}))
+
+function getProjectColor(type: string): string {
+  const t = type?.toLowerCase().trim() || ''
+  return PROJECT_COLORS[t] || PROJECT_COLORS['default']
+}
 
 export function PostOnboardingFlow({ analysis, sparkedSuggestion }: PostOnboardingFlowProps) {
   const navigate = useNavigate()
   const { startJourney, completeChallenge, setFirstProjectId } = useJourneyStore()
+  const { allProjects } = useProjectStore()
   const [phase, setPhase] = useState<FlowPhase>('welcome')
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [createdProjectId, setCreatedProjectId] = useState<string | null>(null)
+  const [revealBeat, setRevealBeat] = useState(0)
 
   // Start the journey when this component mounts
   useEffect(() => {
     startJourney()
   }, [])
+
+  // Pull actual project data once created
+  const createdProject = useMemo(() => {
+    if (!createdProjectId) return null
+    return allProjects.find(p => p.id === createdProjectId) || null
+  }, [createdProjectId, allProjects])
+
+  const projectColor = createdProject ? getProjectColor(createdProject.type || '') : 'var(--project-default-rgb)'
+  const firstTask = createdProject?.metadata?.tasks?.[0]
+
+  // Reveal sequence timing
+  useEffect(() => {
+    if (phase !== 'reveal') return
+
+    const timers = [
+      setTimeout(() => setRevealBeat(1), 400),    // Icon burst
+      setTimeout(() => setRevealBeat(2), 1200),    // Title appears
+      setTimeout(() => setRevealBeat(3), 2000),    // Description + task
+      setTimeout(() => setRevealBeat(4), 3200),    // CTA
+    ]
+    return () => timers.forEach(clearTimeout)
+  }, [phase])
 
   const topTheme = analysis.themes[0] || 'your ideas'
   const topCapability = analysis.capabilities[0] || 'creative thinking'
@@ -62,24 +109,24 @@ export function PostOnboardingFlow({ analysis, sparkedSuggestion }: PostOnboardi
       ]
 
   const handleProjectCreated = (projectId: string) => {
+    setCreatedProjectId(projectId)
     setFirstProjectId(projectId)
-    // Complete Day 1 challenge (voice note was done in onboarding)
-    // and Day 4 (start a project) since they just created one
     completeChallenge(1)
-    setPhase('complete')
-
-    // Navigate to the project after a celebration beat
-    setTimeout(() => {
-      navigate(`/projects/${projectId}`)
-    }, 2500)
+    setPhase('reveal')
   }
 
   const handleSkipToHome = () => {
     navigate('/')
   }
 
+  const handleGoToProject = () => {
+    if (createdProjectId) {
+      navigate(`/projects/${createdProjectId}`)
+    }
+  }
+
   return (
-    <div className="min-h-screen flex flex-col items-center px-4 py-12">
+    <div className="min-h-screen flex flex-col items-center px-4 py-12 relative overflow-hidden">
       <AnimatePresence mode="wait">
         {/* ── Phase 1: Welcome Moment ──────────────────────────────── */}
         {phase === 'welcome' && (
@@ -91,7 +138,6 @@ export function PostOnboardingFlow({ analysis, sparkedSuggestion }: PostOnboardi
             transition={{ duration: 0.5 }}
             className="flex-1 flex flex-col items-center justify-center text-center max-w-md"
           >
-            {/* Animated sparkle */}
             <motion.div
               initial={{ scale: 0, rotate: -180 }}
               animate={{ scale: 1, rotate: 0 }}
@@ -173,7 +219,6 @@ export function PostOnboardingFlow({ analysis, sparkedSuggestion }: PostOnboardi
             exit={{ opacity: 0 }}
             className="w-full"
           >
-            {/* Subtle context banner above the dialog */}
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -187,48 +232,273 @@ export function PostOnboardingFlow({ analysis, sparkedSuggestion }: PostOnboardi
           </motion.div>
         )}
 
-        {/* ── Phase 3: Project Created Celebration ─────────────────── */}
-        {phase === 'complete' && (
+        {/* ── Phase 3: Cinematic First Project Reveal ──────────────── */}
+        {phase === 'reveal' && (
           <motion.div
-            key="complete"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 200 }}
-            className="flex-1 flex flex-col items-center justify-center text-center max-w-md"
+            key="reveal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex-1 flex flex-col items-center justify-center text-center max-w-lg w-full relative"
           >
+            {/* === Background radial glow === */}
             <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: [0, 1.2, 1] }}
-              transition={{ delay: 0.2, duration: 0.6 }}
-              className="w-20 h-20 rounded-full flex items-center justify-center mb-8"
-              style={{
-                background: 'linear-gradient(135deg, rgba(34,197,94,0.15), rgba(99,179,237,0.15))',
-                border: '2px solid rgba(34,197,94,0.3)',
-              }}
-            >
-              <Zap className="h-10 w-10" style={{ color: 'rgb(34,197,94)' }} />
-            </motion.div>
-
-            <motion.h2
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="text-2xl font-bold mb-3"
-              style={{ color: 'var(--brand-text-primary)' }}
-            >
-              Project sparked.
-            </motion.h2>
-
-            <motion.p
+              className="absolute inset-0 pointer-events-none"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.8 }}
-              className="text-sm"
-              style={{ color: 'var(--brand-text-secondary)', opacity: 0.7 }}
-            >
-              Taking you there now...
-            </motion.p>
+              transition={{ duration: 1.5 }}
+              style={{
+                background: `radial-gradient(circle at 50% 40%, rgba(${projectColor}, 0.12) 0%, transparent 70%)`,
+              }}
+            />
+
+            {/* === Particle burst === */}
+            {revealBeat >= 1 && PARTICLES.map((p, i) => (
+              <motion.div
+                key={`particle-${i}`}
+                className="absolute rounded-full pointer-events-none"
+                style={{
+                  width: p.size,
+                  height: p.size,
+                  background: `rgba(${projectColor}, ${0.4 + Math.random() * 0.4})`,
+                  top: '40%',
+                  left: '50%',
+                }}
+                initial={{ x: 0, y: 0, opacity: 0, scale: 0 }}
+                animate={{
+                  x: Math.cos(p.angle) * p.distance,
+                  y: Math.sin(p.angle) * p.distance,
+                  opacity: [0, 0.9, 0],
+                  scale: [0, 1.5, 0],
+                }}
+                transition={{
+                  duration: p.duration,
+                  delay: p.delay,
+                  ease: 'easeOut',
+                }}
+              />
+            ))}
+
+            {/* === Orbital ring === */}
+            {revealBeat >= 1 && (
+              <div className="absolute" style={{ top: '40%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                {ORBITALS.map((orb, i) => (
+                  <motion.div
+                    key={`orb-${i}`}
+                    className="absolute rounded-full"
+                    style={{
+                      width: 5,
+                      height: 5,
+                      background: `rgba(${projectColor}, 0.5)`,
+                    }}
+                    initial={{
+                      x: Math.cos(orb.angle) * 50,
+                      y: Math.sin(orb.angle) * 50,
+                      opacity: 0,
+                      scale: 0,
+                    }}
+                    animate={{
+                      x: Math.cos(orb.angle) * 60,
+                      y: Math.sin(orb.angle) * 60,
+                      opacity: [0, 0.8, 0.8, 0],
+                      scale: [0, 1, 1, 0],
+                    }}
+                    transition={{
+                      duration: 1.8,
+                      delay: 0.2 + orb.delay,
+                      ease: 'easeOut',
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* === Central icon with expansion ring === */}
+            <div className="relative mb-10">
+              {/* Expansion ring */}
+              {revealBeat >= 1 && (
+                <motion.div
+                  className="absolute rounded-full pointer-events-none"
+                  style={{
+                    border: `2px solid rgba(${projectColor}, 0.3)`,
+                    top: '50%',
+                    left: '50%',
+                  }}
+                  initial={{ width: 0, height: 0, x: 0, y: 0, opacity: 0.8 }}
+                  animate={{
+                    width: 200,
+                    height: 200,
+                    x: -100,
+                    y: -100,
+                    opacity: 0,
+                  }}
+                  transition={{ duration: 1.2, ease: 'easeOut' }}
+                />
+              )}
+
+              {/* Inner glow */}
+              <motion.div
+                className="absolute rounded-full pointer-events-none"
+                style={{
+                  background: `radial-gradient(circle, rgba(${projectColor}, 0.2), transparent 70%)`,
+                  top: '50%',
+                  left: '50%',
+                  width: 120,
+                  height: 120,
+                  transform: 'translate(-50%, -50%)',
+                }}
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: revealBeat >= 1 ? 1 : 0, scale: revealBeat >= 1 ? 1 : 0 }}
+                transition={{ duration: 0.8 }}
+              />
+
+              {/* Main icon */}
+              <motion.div
+                className="relative z-10 w-20 h-20 rounded-2xl flex items-center justify-center"
+                style={{
+                  background: `linear-gradient(135deg, rgba(${projectColor}, 0.2), rgba(${projectColor}, 0.08))`,
+                  border: `2px solid rgba(${projectColor}, 0.4)`,
+                  boxShadow: `0 0 40px rgba(${projectColor}, 0.15)`,
+                }}
+                initial={{ scale: 0, rotate: -90 }}
+                animate={{
+                  scale: revealBeat >= 1 ? [0, 1.3, 1] : 0,
+                  rotate: revealBeat >= 1 ? [- 90, 10, 0] : -90,
+                }}
+                transition={{ duration: 0.7, ease: [0.34, 1.56, 0.64, 1] }}
+              >
+                <motion.div
+                  animate={revealBeat >= 2 ? { rotate: [0, 360] } : {}}
+                  transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+                >
+                  <Sparkles
+                    className="h-9 w-9"
+                    style={{ color: `rgb(${projectColor})` }}
+                  />
+                </motion.div>
+              </motion.div>
+            </div>
+
+            {/* === Project title === */}
+            <AnimatePresence>
+              {revealBeat >= 2 && createdProject && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20, filter: 'blur(8px)' }}
+                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                  transition={{ duration: 0.6, ease: 'easeOut' }}
+                  className="mb-6"
+                >
+                  <motion.p
+                    className="text-xs font-bold uppercase tracking-[0.2em] mb-3"
+                    style={{ color: `rgb(${projectColor})`, opacity: 0.7 }}
+                    initial={{ opacity: 0, letterSpacing: '0.5em' }}
+                    animate={{ opacity: 0.7, letterSpacing: '0.2em' }}
+                    transition={{ duration: 0.8, delay: 0.2 }}
+                  >
+                    {createdProject.type || 'Project'}
+                  </motion.p>
+
+                  <motion.h1
+                    className="text-3xl sm:text-4xl font-bold leading-tight"
+                    style={{ color: 'var(--brand-text-primary)' }}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.5, delay: 0.1 }}
+                  >
+                    {createdProject.title}
+                  </motion.h1>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* === Description + first task === */}
+            <AnimatePresence>
+              {revealBeat >= 3 && createdProject && (
+                <motion.div
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="mb-8 w-full max-w-sm"
+                >
+                  {createdProject.description && (
+                    <motion.p
+                      className="text-sm leading-relaxed mb-5"
+                      style={{ color: 'var(--brand-text-secondary)', opacity: 0.8 }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 0.8 }}
+                      transition={{ delay: 0.2 }}
+                    >
+                      {createdProject.description.length > 120
+                        ? createdProject.description.slice(0, 120) + '...'
+                        : createdProject.description}
+                    </motion.p>
+                  )}
+
+                  {/* First task card */}
+                  {firstTask && (
+                    <motion.div
+                      className="p-4 rounded-xl text-left"
+                      style={{
+                        background: `rgba(${projectColor}, 0.06)`,
+                        border: `1px solid rgba(${projectColor}, 0.15)`,
+                      }}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.4, duration: 0.4 }}
+                    >
+                      <p
+                        className="text-[10px] font-bold uppercase tracking-widest mb-1.5"
+                        style={{ color: `rgb(${projectColor})`, opacity: 0.6 }}
+                      >
+                        First step
+                      </p>
+                      <p
+                        className="text-sm font-medium"
+                        style={{ color: 'var(--brand-text-primary)' }}
+                      >
+                        {firstTask.text}
+                      </p>
+                    </motion.div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* === CTA === */}
+            <AnimatePresence>
+              {revealBeat >= 4 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="flex flex-col items-center gap-3"
+                >
+                  <motion.button
+                    onClick={handleGoToProject}
+                    className="px-10 py-4 rounded-xl text-base font-bold inline-flex items-center gap-3 transition-all"
+                    style={{
+                      background: `linear-gradient(135deg, rgba(${projectColor}, 0.9), rgba(${projectColor}, 0.7))`,
+                      color: '#fff',
+                      boxShadow: `0 4px 24px rgba(${projectColor}, 0.3)`,
+                    }}
+                    whileHover={{ scale: 1.03, boxShadow: `0 8px 32px rgba(${projectColor}, 0.4)` }}
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    Let's build this
+                    <ArrowRight className="h-5 w-5" />
+                  </motion.button>
+
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                    className="text-xs"
+                    style={{ color: 'var(--brand-text-secondary)', opacity: 0.35 }}
+                  >
+                    Day 1 of your Polymath journey
+                  </motion.p>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>
@@ -239,7 +509,6 @@ export function PostOnboardingFlow({ analysis, sparkedSuggestion }: PostOnboardi
         onOpenChange={(open) => {
           setShowCreateDialog(open)
           if (!open && phase === 'chat') {
-            // User closed dialog without creating — go to home
             navigate('/')
           }
         }}
