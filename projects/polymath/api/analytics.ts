@@ -1345,14 +1345,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const cached = await getCachedInsights(userId)
         return res.status(200).json({
           insights: cached.insights,
+          shadow_project: cached.shadow_project,
           generated_at: cached.generated_at,
         })
       }
 
       if (req.method === 'POST') {
-        const insights = await generateInsights(userId)
+        const all = await generateInsights(userId)
+        const shadow_project = all.find(i => i.type === 'shadow_project') ?? null
+        const insights = all.filter(i => i.type !== 'shadow_project')
         return res.status(200).json({
           insights,
+          shadow_project,
           generated_at: new Date().toISOString(),
         })
       }
