@@ -31,7 +31,7 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
         onClick={onClose}
       />
 
@@ -40,9 +40,9 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
         className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto"
         style={{
           background: 'rgba(15, 24, 41, 0.98)',
-          border: '2px solid rgba(255,255,255,0.15)',
+          border: '2px solid rgba(255,255,255,0.35)',
           borderRadius: '4px',
-          boxShadow: '6px 6px 0 rgba(0,0,0,0.8)',
+          boxShadow: '6px 6px 0 rgba(0,0,0,0.8), 0 0 40px rgba(59,130,246,0.15)',
         }}
       >
         {/* Close button */}

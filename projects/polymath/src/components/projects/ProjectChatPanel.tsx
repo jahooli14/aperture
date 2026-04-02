@@ -747,7 +747,7 @@ export function ProjectChatPanel({
 
         {/* Input row */}
         <div
-          className="px-6 py-3 flex-shrink-0"
+          className="px-6 pt-3 pb-6 flex-shrink-0"
           style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
         >
           <div className="flex items-center gap-2">
