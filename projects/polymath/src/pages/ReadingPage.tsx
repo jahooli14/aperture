@@ -525,8 +525,8 @@ export function ReadingPage() {
     }
   }, [saveArticle, fetchArticles, addToast])
 
-  const handleTabChange = (tab: FilterTab) => {
-    setActiveTab(tab)
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab as FilterTab)
     if (tab !== 'queue' && tab !== 'updates') {
       setFilter(tab as ArticleStatus)
     }

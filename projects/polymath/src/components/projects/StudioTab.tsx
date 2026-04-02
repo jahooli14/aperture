@@ -81,7 +81,7 @@ export function StudioTab({ project }: StudioTabProps) {
   const appendGhost = () => {
     if (!magicResult?.ghost) return
     const separator = draft.trim() ? '\n\n' : ''
-    setDraft(d => d + separator + magicResult.ghost)
+    setDraft((d: string) => d + separator + magicResult.ghost)
     setShowMagicPanel(false)
   }
 
