@@ -228,7 +228,7 @@ Return JSON only:
   "description": "1-2 sentences: what this is and why it matters to the person",
   "type": "exactly one of: Writing, Tech, Art, Music, Business, Creative",
   "project_mode": "completion or recurring",
-  "end_goal": "what done looks like (be specific, not generic)",
+  "end_goal": "a plain sentence describing when this is finished — e.g. 'A working iOS app in the App Store' or 'The manuscript is edited and sent to beta readers'. Concrete, not abstract.",
   "first_step": "the smallest concrete action to begin — a verb phrase",
   "genesisDraft": "the conversation as a first-person journal entry"
 }`
