@@ -70,7 +70,8 @@ async function pollProcessing(memoryId: string) {
                 people: entities.people?.length || 0,
                 themes: processed.themes?.length || 0,
                 tone: processed.emotional_tone || null,
-                connections: 0
+                connections: 0,
+                bridgeInsight: processed.triage?.bridge_insight || null,
               }
             }))
 
