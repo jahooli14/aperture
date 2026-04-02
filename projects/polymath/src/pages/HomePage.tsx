@@ -26,6 +26,7 @@ import { DriftMode } from '../components/bedtime/DriftMode'
 import { MorningFollowUp } from '../components/bedtime/MorningFollowUp'
 import { CollisionReport } from '../components/home/CollisionReport'
 import { DailySpark } from '../components/home/DailySpark'
+import { ShadowProjectCard } from '../components/home/ShadowProjectCard'
 import { PROJECT_COLORS } from '../components/projects/ProjectCard'
 import { PowerHourHero } from '../components/home/PowerHourHero'
 import type { Memory, Project, SynthesisInsight } from '../types'
@@ -1149,6 +1150,9 @@ export function HomePage() {
               or just <span>explore</span>
             </h2>
           </div>
+
+          {/* Shadow Project — what they're really building */}
+          <ShadowProjectCard />
 
           {/* Daily Spark — ambient synthesis from the knowledge graph */}
           <div className="mb-4">
