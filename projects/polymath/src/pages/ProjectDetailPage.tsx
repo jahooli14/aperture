@@ -22,7 +22,6 @@ import { handleInputFocus } from '../utils/keyboard'
 import { EditProjectDialog } from '../components/projects/EditProjectDialog'
 import { ProjectCompletionModal } from '../components/projects/ProjectCompletionModal'
 import { ProjectChatPanel } from '../components/projects/ProjectChatPanel'
-import { MultiPerspectiveSuggestions } from '../components/suggestions/MultiPerspectiveSuggestions'
 import type { Project, Memory } from '../types'
 import { supabase } from '../lib/supabase'
 import { useMemoryStore } from '../stores/useMemoryStore'
@@ -1041,41 +1040,7 @@ export function ProjectDetailPage() {
                 />
               </div>
 
-              {/* The Council — on-demand AI perspectives */}
-              {project.status === 'active' && (
-                <details className="mt-8 group">
-                  <summary className="cursor-pointer text-[10px] font-black uppercase tracking-[0.3em] flex items-center gap-2 list-none select-none"
-                    style={{ color: 'var(--brand-text-secondary)' }}
-                  >
-                    <span className="flex-1">The Council</span>
-                    <ChevronDown className="h-3 w-3 transition-transform group-open:rotate-180" />
-                  </summary>
-                  <div className="mt-4">
-                    <MultiPerspectiveSuggestions
-                      project={project}
-                      onAddTodo={async (text) => {
-                        const existing = project.metadata?.tasks || []
-                        const newTask = {
-                          id: crypto.randomUUID(),
-                          text,
-                          done: false,
-                          created_at: new Date().toISOString(),
-                          order: existing.length
-                        }
-                        try {
-                          await updateProject(project.id, {
-                            metadata: { ...project.metadata, tasks: [...existing, newTask] }
-                          })
-                        } catch (err) {
-                          console.error('[ProjectDetail] Failed to add AI suggestion as task:', err)
-                        }
-                      }}
-                    />
-                  </div>
-                </details>
-              )}
-
-              {/* Activity — decision log + completed tasks */}
+              {/* Activity — decision log */}
               <div className="mt-12 pb-32">
                 <div className="flex items-center justify-between mb-6">
                   <h3
