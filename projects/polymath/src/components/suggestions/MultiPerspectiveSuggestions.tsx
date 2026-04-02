@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useMultiPerspectiveAI, type PerspectiveSuggestion } from '../../hooks/useMultiPerspectiveAI'
 import { MarkdownRenderer } from '../ui/MarkdownRenderer'
 import type { Project } from '../../types'
-import { Database } from 'lucide-react'
 
 interface MultiPerspectiveSuggestionsProps {
   project: Project
@@ -57,7 +56,6 @@ function PerspectiveCard({
 }) {
   const [added, setAdded] = useState(false)
   const colors = ACCENT_COLORS[perspective.accentColor] || ACCENT_COLORS.blue
-  const hasSources = perspective.sourcesCited && perspective.sourcesCited.length > 0
 
   const handleAdd = () => {
     if (onAddTodo) {
@@ -78,43 +76,30 @@ function PerspectiveCard({
         borderColor: colors.border
       }}
     >
-      {/* Persona header row */}
-      <div className="flex items-center gap-2 mb-2.5">
-        <span className="text-base leading-none">{perspective.icon}</span>
-        <span className="text-xs font-black uppercase tracking-widest" style={{ color: colors.text }}>
-          {perspective.persona}
-        </span>
-        {perspective.confidence === 'high' && (
-          <span
-            className="ml-auto px-1.5 py-0.5 rounded-xl text-[9px] font-black uppercase tracking-widest"
-            style={{ background: colors.bg, border: `1px solid ${colors.border}`, color: colors.text }}
-          >
-            High
-          </span>
-        )}
-      </div>
-
-      <MarkdownRenderer
-        content={perspective.suggestion}
-        className="text-sm aperture-body"
-        style={{ color: "var(--brand-primary)" }}
-      />
-
-      {/* Sources cited from knowledge lake */}
-      {hasSources && (
-        <div className="mt-2.5 flex flex-wrap gap-1.5">
-          {perspective.sourcesCited.map((src, i) => (
-            <span
-              key={i}
-              className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium"
-              style={{ background: 'rgba(6,182,212,0.08)', border: '1px solid rgba(6,182,212,0.2)', color: 'rgb(103,232,249)' }}
-            >
-              <Database className="h-2.5 w-2.5 flex-shrink-0" />
-              {src}
+      <div className="flex items-start gap-2.5">
+        {/* Persona header */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs font-black uppercase tracking-widest" style={{ color: colors.text }}>
+              {perspective.persona}
             </span>
-          ))}
+            {perspective.confidence === 'high' && (
+              <span
+                className="ml-auto px-1.5 py-0.5 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-1"
+                style={{ background: colors.bg, border: `1px solid ${colors.border}`, color: colors.text }}
+              >
+                High
+              </span>
+            )}
+          </div>
+
+          <MarkdownRenderer
+            content={perspective.suggestion}
+            className="text-sm aperture-body"
+            style={{ color: "var(--brand-primary)" }}
+          />
         </div>
-      )}
+      </div>
 
       {/* Add to todos button */}
       {onAddTodo && (
@@ -129,7 +114,11 @@ function PerspectiveCard({
               color: added ? colors.text : 'var(--brand-text-secondary)'
             }}
           >
-            {added ? 'Added' : 'Add to todos'}
+            {added ? (
+              "Added"
+            ) : (
+              "Add to todos"
+            )}
           </button>
         </div>
       )}
@@ -160,36 +149,26 @@ export function MultiPerspectiveSuggestions({
   const visiblePerspectives = showAll ? perspectives : perspectives.slice(0, 3)
   const hiddenCount = perspectives.length - 3
 
-  // Initial "trigger" state  user hasn't asked yet
   if (!hasRequested && !loading && !result) {
     return (
       <div
-        className="rounded-3xl border overflow-hidden premium-glass shadow-2xl transition-all duration-500 hover:border-indigo-500/30"
+        className="rounded-2xl border overflow-hidden premium-glass shadow-lg transition-all duration-300 hover:border-indigo-500/30 flex items-center justify-between p-4"
         style={{
-          background: 'radial-gradient(circle at 0% 0%, rgba(139,92,246,0.1), transparent), radial-gradient(circle at 100% 100%, rgba(59,130,246,0.1), transparent)',
+          background: 'rgba(139,92,246,0.05)',
           borderColor: 'var(--glass-border)'
         }}
       >
-        <div className="p-8">
-          <div className="mb-6">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 mb-2 block">Heuristic Engine</span>
-            <h3 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] mb-1">
-              The Council
-            </h3>
-            <p className="text-sm text-[var(--brand-text-muted)] leading-relaxed">
-              Five advisors. Each reads your full knowledge lake and gives you the advice nobody else will.
-            </p>
-          </div>
-
-          <button
-            onClick={handleGenerate}
-            className="group relative w-full py-4 rounded-2xl overflow-hidden transition-all active:scale-[0.98]"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/40 to-blue-600/40 opacity-70 group-hover:opacity-100 transition-opacity" />
-            <div className="absolute inset-0 border border-white/10 rounded-2xl" />
-            <span className="relative text-xs font-black uppercase tracking-[0.2em] text-white">Assemble the Council</span>
-          </button>
+        <div className="flex-1 pr-4">
+          <p className="text-sm text-[var(--brand-text-primary)] leading-relaxed font-medium">
+            Summon distinct perspectives to analyze your trajectory.
+          </p>
         </div>
+        <button
+          onClick={handleGenerate}
+          className="flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all active:scale-[0.98] brand-gradient text-brand-text-primary shadow-lg shadow-indigo-500/20"
+        >
+          Assemble
+        </button>
       </div>
     )
   }
@@ -209,18 +188,6 @@ export function MultiPerspectiveSuggestions({
           <h3 className="font-bold text-sm aperture-header" style={{ color: "var(--brand-primary)" }}>
             What's Next?
           </h3>
-          {result?.lakeContext && (
-            <div
-              className="flex items-center gap-1 px-1.5 py-0.5 rounded-md"
-              style={{ background: 'rgba(6,182,212,0.08)', border: '1px solid rgba(6,182,212,0.2)' }}
-              title={`Knowledge lake: ${result.lakeContext.memoriesUsed} notes, ${result.lakeContext.articlesUsed} articles, ${result.lakeContext.projectsUsed} projects`}
-            >
-              <Database className="h-3 w-3 text-cyan-400" />
-              <span className="text-[10px] text-cyan-400 font-semibold">
-                {result.lakeContext.memoriesUsed + result.lakeContext.articlesUsed + result.lakeContext.projectsUsed} lake items
-              </span>
-            </div>
-          )}
         </div>
         <button
           onClick={handleRefresh}
@@ -229,7 +196,7 @@ export function MultiPerspectiveSuggestions({
           style={{ color: 'var(--brand-text-muted)', border: '1px solid var(--glass-surface)' }}
           title="Regenerate all perspectives"
         >
-          {loading ? 'Thinking...' : 'Refresh'}
+          {loading ? 'Thinking...' : 'REGENERATE'}
         </button>
       </div>
 

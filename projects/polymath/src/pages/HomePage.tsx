@@ -14,27 +14,28 @@ import { useProjectStore } from '../stores/useProjectStore'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOnboardingStore } from '../stores/useOnboardingStore'
 import { useToast } from '../components/ui/toast'
+import { haptic } from '../utils/haptics'
+import { SmartSuggestionWidget } from '../components/SmartSuggestionWidget'
+import { SaveArticleDialog } from '../components/reading/SaveArticleDialog'
 import { CreateMemoryDialog } from '../components/memories/CreateMemoryDialog'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
 import { SkeletonCard } from '../components/ui/skeleton-card'
 import { EmptyState } from '../components/ui/empty-state'
-import { Layers, ArrowRight, Mic, FileText, Search, TrendingUp, Moon, Zap, Brain, X, AlertCircle, Lightbulb, RefreshCw, Wind, MoreHorizontal } from 'lucide-react'
+import { Layers, ArrowRight, Plus, Mic, FileText, FolderKanban, Search, TrendingUp, Moon, Calendar, Zap, Brain, X, AlertCircle, Check, Lightbulb, RefreshCw, Wind, Rss, Map as MapIcon, MoreHorizontal } from 'lucide-react'
+import { MultiPerspectiveSuggestions } from '../components/suggestions/MultiPerspectiveSuggestions'
 import { BrandName } from '../components/BrandName'
 import { MarkdownRenderer } from '../components/ui/MarkdownRenderer'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { DriftMode } from '../components/bedtime/DriftMode'
 import { MorningFollowUp } from '../components/bedtime/MorningFollowUp'
 import { CollisionReport } from '../components/home/CollisionReport'
-import { DailySpark } from '../components/home/DailySpark'
 import { ShadowProjectCard } from '../components/home/ShadowProjectCard'
 import { PROJECT_COLORS } from '../components/projects/ProjectCard'
 import { PowerHourHero } from '../components/home/PowerHourHero'
 import type { Memory, Project, SynthesisInsight } from '../types'
-import { MemoryDetailModal } from '../components/memories/MemoryDetailModal'
+import { CohesionSummaryWidget } from '../components/home/CohesionSummaryWidget'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { readingDb } from '../lib/db'
-import { useAuthContext } from '../contexts/AuthContext'
-import { UnauthHome } from '../components/onboarding/UnauthHome'
 
 interface InspirationData {
   type: 'article' | 'thought' | 'project' | 'empty'
@@ -150,7 +151,27 @@ function GetInspirationSection({
           >
             <Link
               to={inspiration.url || '/projects'}
-              className="group block p-6 attention-card transition-all duration-300 flex-1 flex flex-col relative overflow-hidden active:scale-[0.98]"
+              className="group block p-6 attention-card transition-all duration-300 flex-1 flex flex-col relative overflow-hidden"
+              onMouseEnter={(e) => {
+                const projId = inspiration.url?.split('/').pop()
+                if (inspiration.type === 'project') {
+                  const project = projects.find(p => p.id === projId)
+                  const theme = getTheme(project?.type || 'other', inspiration.title)
+                  e.currentTarget.style.background = `rgba(${theme.rgb}, 0.15)`
+                } else {
+                  e.currentTarget.style.background = 'var(--glass-surface-hover)'
+                }
+              }}
+              onMouseLeave={(e) => {
+                const projId = inspiration.url?.split('/').pop()
+                if (inspiration.type === 'project') {
+                  const project = projects.find(p => p.id === projId)
+                  const theme = getTheme(project?.type || 'other', inspiration.title)
+                  e.currentTarget.style.background = theme.backgroundColor
+                } else {
+                  e.currentTarget.style.background = 'var(--brand-glass-bg)'
+                }
+              }}
             >
               <div className="relative z-10 flex-1 flex flex-col h-full">
                 <div className="flex items-center justify-between gap-4 mb-4">
@@ -219,6 +240,14 @@ function GetInspirationSection({
                   boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
                   borderColor: theme.borderColor
                 }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = `rgba(${theme.rgb}, 0.15)`
+                  e.currentTarget.style.borderColor = `rgba(${theme.rgb}, 0.4)`
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = theme.backgroundColor
+                  e.currentTarget.style.borderColor = theme.borderColor
+                }}
               >
                 <div className="relative z-10 flex-1 flex flex-col h-full">
                   <div className="flex items-center justify-between gap-4 mb-4">
@@ -273,7 +302,7 @@ function GetInspirationSection({
         >
           <Zap className="h-4 w-4" />
           {hasPendingSuggestions
-            ? `${pendingSuggestionsCount} ${pendingSuggestionsCount === 1 ? 'Idea' : 'Ideas'} Waiting to be reviewed`
+            ? `${pendingSuggestionsCount} ${pendingSuggestionsCount === 1 ? 'idea' : 'ideas'} waiting to be reviewed`
             : "See all project suggestions"
           }
           <ArrowRight className="h-4 w-4 ml-1" />
@@ -283,435 +312,13 @@ function GetInspirationSection({
   )
 }
 
-// Simple Dialog Component for displaying full insights
-function InsightDialog({ insight, open, onClose }: { insight: SynthesisInsight | null; open: boolean; onClose: () => void }) {
-  if (!insight) return null
 
-  return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${open ? '' : 'hidden'}`}>
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="relative w-full max-w-lg rounded-xl p-6 shadow-2xl overflow-y-auto max-h-[80vh]"
-        style={{ background: 'var(--brand-glass-bg)' }}
-      >
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-full hover:bg-[rgba(255,255,255,0.1)] transition-colors"
-          style={{ color: "var(--brand-primary)" }}
-        >
-          <X className="h-5 w-5" />
-        </button>
-
-        <div className="mb-6 pr-8">
-          <h2 className="text-xl font-bold premium-text-platinum mb-2">
-            {insight.title}
-          </h2>
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded-xl text-xs font-medium uppercase tracking-wider"
-              style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: 'var(--brand-text-secondary)' }}>
-              {insight.type}
-            </span>
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <div className="mb-6">
-            <MarkdownRenderer
-              content={insight.description}
-              className="text-base"
-              style={{ color: "var(--brand-primary)" }}
-            />
-          </div>
-
-          {/* Render timeline if available */}
-          {insight.data && insight.data.timeline && Array.isArray(insight.data.timeline) && (
-            <div className="mt-6 pt-6 border-t border-[var(--glass-surface-hover)]">
-              <h3 className="text-sm font-bold mb-4" style={{ color: "var(--brand-primary)" }}>Evolution Timeline</h3>
-              <div className="space-y-4 relative pl-4 border-l-2 border-[var(--glass-surface-hover)]">
-                {insight.data.timeline.map((item: any, idx: number) => (
-                  <div key={idx} className="relative pl-4">
-                    <div className="absolute -left-[21px] top-1.5 h-3 w-3 rounded-full border-2 border-[var(--brand-glass-bg)]"
-                      style={{ backgroundColor: idx === insight.data.timeline.length - 1 ? 'var(--brand-primary)' : 'var(--brand-text-muted)' }} />
-                    <div className="text-xs mb-1" style={{ color: "var(--brand-primary)" }}>
-                      {item.date || 'Previously'}
-                    </div>
-                    <div className="text-sm font-medium mb-1" style={{ color: "var(--brand-primary)" }}>
-                      {item.stance}
-                    </div>
-                    {item.quote && (
-                      <div className="text-xs italic pl-2 border-l-2 border-[var(--glass-surface-hover)]" style={{ color: "var(--brand-primary)" }}>
-                        "{item.quote}"
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {insight.actionable && insight.action && (
-            <div className="mt-4 p-4 rounded-lg bg-brand-primary/10 border border-blue-500/20">
-              <h4 className="text-sm font-bold text-brand-primary mb-1">Recommendation</h4>
-              <p className="text-sm text-brand-primary">{insight.action}</p>
-            </div>
-          )}
-        </div>
-      </motion.div>
-    </div>
-  )
-}
-
-function InsightsSection() {
-  const [insights, setInsights] = useState<SynthesisInsight[]>([])
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
-  const [requirements, setRequirements] = useState<{ current: number; needed: number; tip: string } | null>(null)
-
-  // Dialog State
-  const [selectedInsight, setSelectedInsight] = useState<SynthesisInsight | null>(null)
-
-  const navigate = useNavigate()
-
-  const loadInsights = async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true)
-    else setLoading(true)
-
-    try {
-      // 1. Try cache first
-      if (!isRefresh) {
-        const cached = await readingDb.getDashboard('evolution')
-        if (cached) {
-          setInsights(cached.insights || [])
-          setRequirements(cached.requirements || null)
-          setLoading(false)
-        }
-      }
-
-      // 2. Fetch fresh data if online
-      if (navigator.onLine) {
-        const response = await fetch('/api/analytics?resource=evolution')
-        if (response.ok) {
-          const data = await response.json()
-          setInsights(data.insights || [])
-          setRequirements(data.requirements || null)
-          await readingDb.cacheDashboard('evolution', data)
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch insights:', error)
-    } finally {
-      setLoading(false)
-      setRefreshing(false)
-    }
-  }
-
-  useEffect(() => {
-    loadInsights()
-  }, [])
-
-  const getInsightIcon = (type: string) => {
-    switch (type) {
-      case 'evolution': return <TrendingUp className="h-5 w-5 text-[var(--brand-primary)]" />
-      case 'pattern': return <Zap className="h-5 w-5 text-[var(--brand-primary)]" />
-      case 'collision': return <AlertCircle className="h-5 w-5 text-brand-text-secondary" />
-      case 'opportunity': return <Lightbulb className="h-5 w-5 text-brand-text-secondary" />
-      default: return <Lightbulb className="h-5 w-5 text-[var(--brand-text-secondary)]" />
-    }
-  }
-
-  return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 aperture-shelf">
-      <div className="flex items-center justify-between mb-0">
-        <h2 className="section-header">
-          your <span>insights</span>
-        </h2>
-        <button
-          onClick={() => loadInsights(true)}
-          disabled={refreshing}
-          className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-[var(--glass-surface)]"
-          style={{ color: "var(--brand-primary)" }}
-          title="Refresh insights"
-        >
-          <RefreshCw className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} />
-        </button>
-      </div>
-
-      {loading ? (
-        <div className="space-y-4 py-4">
-          <div className="flex items-center gap-3">
-            <div>
-              <div className="w-2 h-2 rounded-full bg-brand-primary animate-pulse"></div>
-            </div>
-            <div>
-              <p className="text-sm font-medium" style={{ color: "var(--brand-primary)" }}>
-                Analyzing your thoughts...
-              </p>
-              <p className="text-xs" style={{ color: "var(--brand-primary)" }}>
-                Finding patterns and connections
-              </p>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <div className="h-16 rounded-lg animate-pulse" style={{ background: 'var(--glass-surface)' }} />
-            <div className="h-16 rounded-lg animate-pulse" style={{ background: 'var(--glass-surface)', animationDelay: '150ms' }} />
-          </div>
-        </div>
-      ) : insights.length > 0 ? (
-        <div className="space-y-3">
-          {/* Show first 2 insights */}
-          {insights.slice(0, 2).map((insight, index) => (
-            <button
-              key={index}
-              onClick={() => setSelectedInsight(insight)}
-              className="w-full text-left p-5 rounded-xl transition-all hover:border-white/20 active:scale-[0.99] glass-card glass-card-hover mt-2"
-              style={{
-                boxShadow: '3px 3px 0 rgba(0,0,0,0.5)'
-              }}
-            >
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 mt-0.5">
-                  {getInsightIcon(insight.type)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-sm mb-1 premium-text-platinum">
-                    {insight.title}
-                  </h3>
-                  <MarkdownRenderer
-                    content={insight.description}
-                    className="text-sm line-clamp-2"
-                    style={{ color: "var(--brand-primary)" }}
-                  />
-                </div>
-                <ArrowRight className="h-4 w-4 mt-1 opacity-50" style={{ color: "var(--brand-primary)" }} />
-              </div>
-            </button>
-          ))}
-
-          {insights.length > 2 && (
-            <button
-              onClick={() => navigate('/insights')}
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-bold transition-all hover:bg-[rgba(255,255,255,0.1)] border border-[var(--glass-surface)] text-[var(--brand-primary)] aperture-header"
-            >
-              View All Insights ({insights.length}) <ArrowRight className="h-4 w-4 ml-1" />
-            </button>
-          )}
-        </div>
-      ) : (
-        <div className="text-center py-6">
-          <TrendingUp className="h-10 w-10 mx-auto mb-3" style={{ color: 'var(--brand-text-muted)', opacity: 0.5 }} />
-          <p className="text-sm mb-1" style={{ color: "var(--brand-primary)" }}>
-            Building your insights...
-          </p>
-          {requirements ? (
-            <>
-              <p className="text-xs mb-2" style={{ color: "var(--brand-primary)" }}>
-                {requirements.current}/{requirements.needed} {requirements.needed === 5 ? 'thoughts' : 'with themes'}
-              </p>
-              <p className="text-xs" style={{ color: "var(--brand-primary)" }}>
-                {requirements.tip}
-              </p>
-            </>
-          ) : (
-            <p className="text-xs" style={{ color: "var(--brand-primary)" }}>
-              Add more thoughts with themes to see patterns emerge
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Full Insight Modal */}
-      <InsightDialog
-        insight={selectedInsight}
-        open={!!selectedInsight}
-        onClose={() => setSelectedInsight(null)}
-      />
-    </section>
-  )
-}
 
 import { FocusStream } from '../components/home/FocusStream'
-import { Film, Book, Music, MapPin, Gamepad2, Monitor, Box as BoxIcon, List as ListIcon } from 'lucide-react'
-import { useListStore } from '../stores/useListStore'
-
-// List-type icon map (shared across home components)
-const LIST_ICON_MAP: Record<string, React.FC<{ className?: string; style?: React.CSSProperties }>> = {
-  film: Film, book: Book, music: Music, place: MapPin, game: Gamepad2,
-  tech: Monitor, software: Monitor, article: FileText,
-}
-
-function RecentThoughtsSection({ memories, onOpenMemory }: { memories: Memory[], onOpenMemory: (id: string) => void }) {
-  const recent = [...memories]
-    .sort((a, b) => {
-      const aTime = new Date(a.created_at || '').getTime()
-      const bTime = new Date(b.created_at || '').getTime()
-      return bTime - aTime
-    })
-    .slice(0, 3)
-
-  if (recent.length === 0) return null
-
-  return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 aperture-shelf">
-      <h2 className="section-header mb-4">
-        on your <span>mind</span>
-      </h2>
-      <div className="space-y-3">
-        {recent.map((memory) => {
-          const src = memory.source_reference
-          const isFromList = src?.type === 'list_item' && src.title
-          const SrcIcon = isFromList ? (LIST_ICON_MAP[src!.list_type || ''] || BoxIcon) : null
-          return (
-            <button
-              key={memory.id}
-              onClick={() => onOpenMemory(memory.id)}
-              className="w-full text-left p-4 glass-card glass-card-hover rounded-xl transition-all"
-              style={{ boxShadow: '3px 3px 0 rgba(0,0,0,0.5)' }}
-            >
-              {isFromList && SrcIcon && (
-                <div className="flex items-center gap-1 mb-1.5">
-                  <span
-                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-widest"
-                    style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.2)', color: 'rgba(251,191,36,0.7)' }}
-                  >
-                    <SrcIcon className="w-2.5 h-2.5" />
-                    {src!.title}
-                  </span>
-                </div>
-              )}
-              <p className="text-sm leading-relaxed line-clamp-2 aperture-body" style={{ color: 'var(--brand-text-primary)' }}>
-                {memory.body || memory.title}
-              </p>
-              <p className="text-xs mt-2 opacity-50 aperture-body" style={{ color: 'var(--brand-primary)' }}>
-                {new Date(memory.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              </p>
-            </button>
-          )
-        })}
-      </div>
-    </section>
-  )
-}
-
-// ---- List quick-add sheet shown from home capture row ----
-function HomeListQuickAdd({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const { lists, fetchLists, addListItem } = useListStore()
-  const [selectedListId, setSelectedListId] = useState<string | null>(null)
-  const [text, setText] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const inputRef = React.useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    if (isOpen) { fetchLists(); setText(''); setSelectedListId(null) }
-  }, [isOpen])
-
-  useEffect(() => {
-    if (selectedListId) setTimeout(() => inputRef.current?.focus(), 80)
-  }, [selectedListId])
-
-  const selectedList = lists.find(l => l.id === selectedListId)
-
-  const handleAdd = async (e?: React.FormEvent) => {
-    e?.preventDefault()
-    if (!text.trim() || !selectedListId || submitting) return
-    setSubmitting(true)
-    try {
-      await addListItem({ list_id: selectedListId, content: text.trim(), status: 'pending' })
-      onClose()
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  if (!isOpen) return null
-
-  return (
-    <>
-      <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div
-        className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl px-5 pt-5 pb-10"
-        style={{ background: '#141f32', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1), 0 -20px 60px rgba(0,0,0,0.5)' }}
-      >
-        <div className="w-10 h-1 rounded-full bg-white/20 mx-auto mb-5" />
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] mb-3" style={{ color: 'var(--brand-primary)' }}>
-          Add to list
-        </p>
-
-        {!selectedListId ? (
-          <div className="space-y-2 max-h-72 overflow-y-auto">
-            {lists.length === 0 ? (
-              <div className="py-8 text-center">
-                <p className="text-sm font-bold mb-1" style={{ color: 'var(--brand-text-secondary)' }}>No lists yet</p>
-                <Link
-                  to="/lists"
-                  onClick={onClose}
-                  className="text-[11px] font-black uppercase tracking-widest"
-                  style={{ color: 'var(--brand-primary)' }}
-                >
-                  Create your first list →
-                </Link>
-              </div>
-            ) : lists.map(list => {
-              const Icon = LIST_ICON_MAP[list.type] || BoxIcon
-              return (
-                <button
-                  key={list.id}
-                  onClick={() => setSelectedListId(list.id)}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl text-left active:scale-[0.98] transition-all"
-                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
-                >
-                  <Icon className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
-                  <div>
-                    <p className="text-sm font-bold text-[var(--brand-text-primary)] uppercase tracking-tight">{list.title}</p>
-                    {list.description && <p className="text-[10px] text-[var(--brand-text-secondary)] truncate">{list.description}</p>}
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-        ) : (
-          <form onSubmit={handleAdd}>
-            <button
-              type="button"
-              onClick={() => setSelectedListId(null)}
-              className="flex items-center gap-1.5 mb-4 text-[10px] font-black uppercase tracking-widest"
-              style={{ color: 'var(--brand-primary)' }}
-            >
-              ← {selectedList?.title}
-            </button>
-            <input
-              ref={inputRef}
-              value={text}
-              onChange={e => setText(e.target.value)}
-              placeholder={`Add to ${selectedList?.title || 'list'}...`}
-              className="w-full px-4 py-3 rounded-xl text-sm text-[var(--brand-text-primary)] placeholder:text-[var(--brand-text-primary)]/20 focus:outline-none mb-3"
-              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
-            />
-            <button
-              type="submit"
-              disabled={!text.trim() || submitting}
-              className="w-full py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all disabled:opacity-40"
-              style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', color: 'var(--brand-primary)' }}
-            >
-              {submitting ? 'Adding...' : 'Add'}
-            </button>
-          </form>
-        )}
-      </div>
-    </>
-  )
-}
 
 export function HomePage() {
-  const { isAuthenticated, loading: authLoading } = useAuthContext()
   const navigate = useNavigate()
   const location = useLocation()
-
-  // Show animated demo for unauthenticated users
-  if (!authLoading && !isAuthenticated) {
-    return <UnauthHome />
-  }
 
   const { suggestions, fetchSuggestions } = useSuggestionStore()
   const { projects, fetchProjects, loading: projectsLoading, updateProject } = useProjectStore()
@@ -730,13 +337,11 @@ export function HomePage() {
   const [saveArticleOpen, setSaveArticleOpen] = useState(false)
   const [createThoughtOpen, setCreateThoughtOpen] = useState(false)
   const [createProjectOpen, setCreateProjectOpen] = useState(false)
-  const [listQuickAddOpen, setListQuickAddOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showDebugPanel, setShowDebugPanel] = useState(false)
   const [driftModeOpen, setDriftModeOpen] = useState(false)
   const [breakPrompts, setBreakPrompts] = useState<any[]>([])
   const [showMorningFollowUp, setShowMorningFollowUp] = useState(true)
-  const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null)
 
 
   // Refetch data whenever user navigates to this page
@@ -947,15 +552,19 @@ export function HomePage() {
         )}
       </AnimatePresence>
 
-      {/* Fixed Header Bar - Brand & Search */}
-      <div
-        className="fixed top-0 left-0 right-0 z-40 border-b border-[var(--glass-border)] backdrop-blur-md"
-        style={{
-          backgroundColor: 'rgba(var(--brand-bg-rgb), 0.8)'
-        }}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-          <h1 className="text-2xl sm:text-3xl aperture-header" style={{
+      {/* Floating Header Bar */}
+      <div className="fixed top-0 left-0 right-0 z-40 px-4 pt-4 sm:px-6">
+        <div
+          className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between rounded-2xl"
+          style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid var(--glass-surface-hover)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
+          }}
+        >
+          <h1 className="text-xl sm:text-2xl aperture-header" style={{
             color: 'var(--brand-text-secondary)',
             opacity: 0.9
           }}>
@@ -963,11 +572,10 @@ export function HomePage() {
           </h1>
           <button
             onClick={() => navigate('/search')}
-            className="h-10 w-10 rounded-lg flex items-center justify-center transition-all hover:bg-[var(--glass-surface)]"
-            style={{ color: "var(--brand-primary)" }}
+            className="h-10 w-10 rounded-xl flex items-center justify-center transition-all bg-[var(--glass-surface)] hover:bg-[var(--glass-surface-hover)] border border-[rgba(255,255,255,0.05)] text-[var(--brand-primary)] shadow-inner"
             title="Search everything"
           >
-            <Search className="h-5 w-5" />
+            <Search className="h-4 w-4" />
           </button>
         </div>
       </div>
@@ -998,16 +606,16 @@ export function HomePage() {
                 <div className="flex items-start gap-4 pr-10">
                   <div className="flex-1">
                     <h3 className="font-bold mb-1" style={{ color: "var(--brand-primary)" }}>
-                      5 minutes. 5 questions.
+                      Complete Your Profile
                     </h3>
                     <p className="text-sm mb-3" style={{ color: "var(--brand-primary)" }}>
-                      Tell us what you're thinking about — we'll show you something interesting.
+                      Answer a few questions to get personalized suggestions tailored to your interests
                     </p>
                     <Link
                       to="/onboarding"
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition-all hover:opacity-90 brand-gradient text-brand-text-primary shadow-lg shadow-cyan-500/20"
                     >
-                      Let's go
+                      Complete Now
                     </Link>
                   </div>
                 </div>
@@ -1033,68 +641,56 @@ export function HomePage() {
         )}
 
         {/* 1. ADD SOMETHING NEW */}
-        <motion.section
-          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6 mt-4"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: 'easeOut', delay: 0.05 }}
-        >
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--brand-text-muted)] mb-3 px-1">What's happening?</p>
-          <div className="flex items-center gap-2">
-            {/* Voice */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6 mt-4">
+
+          <div className="flex items-center gap-3">
+            {/* Voice Note */}
             <button
               onClick={(e) => {
                 e.stopPropagation()
                 window.dispatchEvent(new CustomEvent('openVoiceCapture'))
               }}
-              className="flex-1 flex flex-col items-center gap-1 py-3 glass-button active:scale-95 transition-transform"
+              className="flex-1 h-14 glass-button hover:bg-brand-surface group"
               title="Voice Note"
             >
-              <Mic className="h-5 w-5 text-brand-primary" />
-              <span className="text-[9px] font-black uppercase tracking-widest text-brand-primary opacity-60">Voice</span>
+              <Mic className="h-6 w-6 text-brand-primary group-hover:scale-110 transition-transform" />
             </button>
 
-            {/* Thought */}
+            {/* Written Thought */}
             <button
               onClick={() => setCreateThoughtOpen(true)}
-              className="flex-1 flex flex-col items-center gap-1 py-3 glass-button active:scale-95 transition-transform"
+              className="flex-1 h-14 glass-button hover:bg-brand-surface group"
               title="Thought"
             >
-              <Brain className="h-5 w-5 text-brand-primary" />
-              <span className="text-[9px] font-black uppercase tracking-widest text-brand-primary opacity-60">Thought</span>
+              <Brain className="h-6 w-6 text-brand-primary group-hover:scale-110 transition-transform" />
             </button>
 
-            {/* List — replaces Article, which now lives in Lists */}
+            {/* Article */}
             <button
-              onClick={() => setListQuickAddOpen(true)}
-              className="flex-1 flex flex-col items-center gap-1 py-3 glass-button active:scale-95 transition-transform"
-              title="Add to list"
+              onClick={() => setSaveArticleOpen(true)}
+              className="flex-1 h-14 glass-button hover:bg-brand-surface group"
+              title="Article"
             >
-              <ListIcon className="h-5 w-5 text-brand-primary" />
-              <span className="text-[9px] font-black uppercase tracking-widest text-brand-primary opacity-60">List</span>
+              <FileText className="h-6 w-6 text-brand-primary group-hover:scale-110 transition-transform" />
             </button>
 
             {/* Project */}
             <button
               onClick={() => setCreateProjectOpen(true)}
-              className="flex-1 flex flex-col items-center gap-1 py-3 glass-button active:scale-95 transition-transform"
+              className="flex-1 h-14 glass-button hover:bg-brand-surface group"
               title="Project"
             >
-              <Layers className="h-5 w-5 text-brand-primary" />
-              <span className="text-[9px] font-black uppercase tracking-widest text-brand-primary opacity-60">Project</span>
+              <Layers className="h-6 w-6 text-brand-primary group-hover:scale-110 transition-transform" />
             </button>
           </div>
-        </motion.section>
+        </section>
+
+        <CohesionSummaryWidget />
 
         {/* Aperture Power Hour - The Hero Engine */}
-        <motion.section
-          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4 aperture-shelf"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: 'easeOut', delay: 0.12 }}
-        >
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4 aperture-shelf">
           <PowerHourHero />
-        </motion.section>
+        </section>
 
         {/* Subtle Divider */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8 opacity-20">
@@ -1113,38 +709,64 @@ export function HomePage() {
         }
 
         {/* 2. KEEP THE MOMENTUM (Focus Stream) */}
-        <motion.div
-          className="aperture-shelf"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: 'easeOut', delay: 0.2 }}
-        >
+        <div className="aperture-shelf">
           <FocusStream />
-        </motion.div>
+        </div>
 
-        {/* 3. WHAT'S ON YOUR MIND - Recent Thoughts */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: 'easeOut', delay: 0.28 }}
-        >
-        <RecentThoughtsSection
-          memories={memories}
-          onOpenMemory={(id) => {
-            const m = memories.find(m => m.id === id) || null
-            setSelectedMemory(m)
-          }}
+        {/* 2b. AI COUNCIL  Multi-Perspective Next-Step Suggestions */}
+        {(priorityProject || recentProject) && (
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 aperture-shelf">
+            <div className="mb-0">
+              <h2 className="section-header">
+                council of <span>advisors</span>
+              </h2>
+            </div>
+            <MultiPerspectiveSuggestions
+              project={(priorityProject || recentProject)!}
+              onAddTodo={async (text) => {
+                const project = (priorityProject || recentProject)!
+                // Append a new task to the project metadata and save
+                const existing = project.metadata?.tasks || []
+                const newTask = {
+                  id: `task-${Date.now()}`,
+                  text,
+                  done: false,
+                  created_at: new Date().toISOString(),
+                  order: existing.length
+                }
+                try {
+                  await fetch(`/api/projects?id=${project.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      metadata: {
+                        ...project.metadata,
+                        tasks: [...existing, newTask]
+                      }
+                    })
+                  })
+                  // Refresh projects in store
+                  window.dispatchEvent(new CustomEvent('projectEnriched', { detail: { projectId: project.id } }))
+                } catch (err) {
+                  console.error('[HomePage] Failed to add AI todo:', err)
+                }
+              }}
+            />
+          </section>
+        )}
+
+        {/* 4. GET INSPIRATION (Glass Cards + Spark) */}
+        <GetInspirationSection
+          excludeProjectIds={projects.filter(p => p.status === 'active').map(p => p.id)}
+          hasPendingSuggestions={pendingSuggestions.length > 0}
+          pendingSuggestionsCount={pendingSuggestions.length}
+          projectsLoading={projectsLoading}
+          sparkCandidate={sparkCandidate}
+          projects={projects}
         />
-        </motion.div>
 
-
-        {/* 6. EXPLORE (Bottom Links) */}
-        <motion.section
-          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 aperture-shelf"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: 'easeOut', delay: 0.36 }}
-        >
+        {/* 5. EXPLORE (Bottom Links) */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 flex flex-col aperture-shelf">
           <div className="mb-0">
             <h2 className="section-header">
               or just <span>explore</span>
@@ -1154,10 +776,6 @@ export function HomePage() {
           {/* Shadow Project — what they're really building */}
           <ShadowProjectCard />
 
-          {/* Daily Spark — ambient synthesis from the knowledge graph */}
-          <div className="mb-4">
-            <DailySpark />
-          </div>
 
           {/* Weekly Collision Report */}
           <div className="mb-6">
@@ -1210,7 +828,13 @@ export function HomePage() {
             {/* Bedtime Ideas */}
             <Link
               to="/bedtime"
-              className="p-5 glass-card glass-card-hover transition-all active:scale-[0.98]"
+              className="group p-5 glass-card glass-card-hover transition-all"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--glass-surface)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'var(--brand-glass-bg)'
+              }}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
@@ -1224,14 +848,20 @@ export function HomePage() {
                     </p>
                   </div>
                 </div>
-                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-30 text-[var(--brand-primary)]" />
+                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all text-[var(--brand-primary)]" />
               </div>
             </Link>
 
             {/* Drift Mode */}
             <button
               onClick={handleOpenDrift}
-              className="p-5 glass-card glass-card-hover transition-all text-left active:scale-[0.98]"
+              className="group p-5 glass-card glass-card-hover transition-all text-left"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--glass-surface)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'var(--brand-glass-bg)'
+              }}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
@@ -1245,14 +875,20 @@ export function HomePage() {
                     </p>
                   </div>
                 </div>
-                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-30 text-[var(--brand-primary)]" />
+                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all text-[var(--brand-primary)]" />
               </div>
             </button>
 
             {/* Discover Projects */}
             <Link
               to="/suggestions"
-              className="p-5 glass-card glass-card-hover transition-all active:scale-[0.98]"
+              className="group p-5 glass-card glass-card-hover transition-all"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--glass-surface)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'var(--brand-glass-bg)'
+              }}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
@@ -1260,20 +896,26 @@ export function HomePage() {
                     <Lightbulb className="h-5 w-5 text-[var(--brand-text-secondary)]" />
                   </div>
                   <div>
-                    <h3 className="font-bold mb-1 aperture-header">Discover Projects</h3>
+                    <h3 className="font-bold mb-1 aperture-header">Discover projects</h3>
                     <p className="text-sm aperture-body text-[var(--brand-text-secondary)]">
                       AI recommendations
                     </p>
                   </div>
                 </div>
-                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-30 text-[var(--brand-primary)]" />
+                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all text-[var(--brand-primary)]" />
               </div>
             </Link>
 
             {/* Analysis */}
             <Link
               to="/insights"
-              className="p-5 glass-card glass-card-hover transition-all active:scale-[0.98]"
+              className="group p-5 glass-card glass-card-hover transition-all"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--glass-surface)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'var(--brand-glass-bg)'
+              }}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
@@ -1287,11 +929,11 @@ export function HomePage() {
                     </p>
                   </div>
                 </div>
-                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-30 text-[var(--brand-primary)]" />
+                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all text-[var(--brand-primary)]" />
               </div>
             </Link>
           </div>
-        </motion.section>
+        </section>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 flex justify-center">
           <Link
@@ -1309,14 +951,9 @@ export function HomePage() {
       </div>
 
       {/* Dialogs  controlled open/close via state */}
+      <SaveArticleDialog open={saveArticleOpen} onClose={() => setSaveArticleOpen(false)} />
       <CreateMemoryDialog isOpen={createThoughtOpen} onOpenChange={setCreateThoughtOpen} hideTrigger />
       <CreateProjectDialog isOpen={createProjectOpen} onOpenChange={setCreateProjectOpen} hideTrigger />
-      <HomeListQuickAdd isOpen={listQuickAddOpen} onClose={() => setListQuickAddOpen(false)} />
-      <MemoryDetailModal
-        memory={selectedMemory}
-        isOpen={!!selectedMemory}
-        onClose={() => setSelectedMemory(null)}
-      />
     </motion.div>
   )
 }
