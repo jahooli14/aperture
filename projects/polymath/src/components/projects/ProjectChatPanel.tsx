@@ -15,7 +15,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react'
-import { ArrowUp, Plus, Check, Zap, Flag, ListTodo } from 'lucide-react'
+import { ArrowUp, Plus, Check, Zap, Flag, ListTodo, Users, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   BottomSheet,
@@ -27,6 +27,7 @@ import { handleInputFocus } from '../../utils/keyboard'
 import { supabase } from '../../lib/supabase'
 import type { Project } from '../../types'
 import type { Task } from './TaskList'
+import { MultiPerspectiveSuggestions } from '../suggestions/MultiPerspectiveSuggestions'
 
 interface EchoItem {
   title: string
@@ -130,6 +131,7 @@ export function ProjectChatPanel({
   const [addedTasks, setAddedTasks] = useState<Set<string>>(new Set())
   const [isRefining, setIsRefining] = useState(false)
   const [contextTab, setContextTab] = useState<'goal' | 'steps'>('goal')
+  const [showCouncil, setShowCouncil] = useState(false)
   const threadRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -152,6 +154,7 @@ export function ProjectChatPanel({
     setAddedTasks(new Set())
     setInput('')
     setContextTab('goal')
+    setShowCouncil(false)
 
     // Focus input after animation settles
     setTimeout(() => inputRef.current?.focus(), 350)
@@ -744,6 +747,60 @@ export function ProjectChatPanel({
             </div>
           )}
         </div>
+
+        {/* Council panel — on-demand AI perspectives */}
+        {showCouncil && (
+          <div
+            className="flex-shrink-0 overflow-y-auto px-6 py-4 scroll-minimal"
+            style={{
+              maxHeight: '55vh',
+              borderTop: '1px solid rgba(255,255,255,0.06)',
+            }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <span
+                className="text-[10px] font-black uppercase tracking-[0.25em]"
+                style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
+              >
+                The Council
+              </span>
+              <button
+                onClick={() => setShowCouncil(false)}
+                className="p-1 rounded-md transition-opacity opacity-40 hover:opacity-80"
+                style={{ color: 'var(--brand-text-secondary)' }}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <MultiPerspectiveSuggestions
+              project={project}
+              onAddTodo={async (text) => {
+                onAddTask({ text, task_type: 'core' })
+              }}
+            />
+          </div>
+        )}
+
+        {/* Get Council trigger */}
+        {project.status === 'active' && !showCouncil && (
+          <div
+            className="px-6 py-2 flex-shrink-0"
+            style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}
+          >
+            <button
+              onClick={() => setShowCouncil(true)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all"
+              style={{
+                background: 'rgba(139,92,246,0.06)',
+                border: '1px solid rgba(139,92,246,0.15)',
+                color: 'var(--brand-text-secondary)',
+              }}
+            >
+              <Users className="h-3 w-3" style={{ color: 'rgba(139,92,246,0.7)' }} />
+              <span className="text-[11px] font-medium" style={{ opacity: 0.6 }}>Get Council</span>
+            </button>
+          </div>
+        )}
 
         {/* Input row */}
         <div
