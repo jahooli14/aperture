@@ -287,6 +287,7 @@ Return ONLY valid JSON — no markdown, no explanation:
 
     // Archive previous insights before overwriting
     if (previousInsights.length > 0 && cached?.generated_at) {
+      Promise.resolve(
       supabase
         .from('synthesis_insights_history')
         .insert({
@@ -295,8 +296,7 @@ Return ONLY valid JSON — no markdown, no explanation:
           generated_at: cached.generated_at,
           item_count: memories.length + articles.length + projects.length + listItems.length,
         })
-        .then(() => {})
-        .catch(() => {}) // Non-critical
+    ).catch(() => {}) // Non-critical
     }
 
     // Upsert — preserve feedback
