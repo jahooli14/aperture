@@ -523,13 +523,12 @@ export default function ListsPage() {
                                         </div>
 
                                         {/* Main Icon */}
-                                        <div className="relative z-10 flex flex-col items-center gap-4">
-                                            <div className="relative p-8 rounded-full bg-[var(--glass-surface)] transition-all duration-300" style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1)' }}>
-                                                <ListIcon type={list.type} className="h-12 w-12" style={{ color: `rgb(${rgb})` }} />
+                                        <div className="relative z-10 flex flex-col items-center gap-3">
+                                            <div className="relative p-6 rounded-full bg-[var(--glass-surface)] transition-all duration-300" style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1)' }}>
+                                                <ListIcon type={list.type} className="h-10 w-10" style={{ color: `rgb(${rgb})` }} />
                                             </div>
-
-                                            <div className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--brand-text-primary)]/30">
-                                                Nothing yet
+                                            <div className="text-xs font-semibold text-[var(--brand-text-primary)]/50 text-center px-2 leading-tight">
+                                                {list.title}
                                             </div>
                                         </div>
                                     </div>

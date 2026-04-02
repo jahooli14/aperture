@@ -9,8 +9,6 @@ import { useMemoryStore } from '../../stores/useMemoryStore'
 import { useToast } from '../ui/toast'
 import { useConfirmDialog } from '../ui/confirm-dialog'
 import { haptic } from '../../utils/haptics'
-import { MemoryLinks } from '../MemoryLinks'
-import { ItemInsightStrip } from '../ItemInsightStrip'
 import { EditMemoryDialog } from './EditMemoryDialog'
 import { GlassCard } from '../ui/GlassCard'
 import { SmartActionDot } from '../SmartActionDot'
@@ -352,11 +350,6 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
                   ))}
                 </div>
               )}
-
-              <div className="mt-8 pt-6 border-t border-[var(--glass-surface-hover)]">
-                <MemoryLinks currentMemoryId={memory.id} bridges={bridges} onMemoryClick={handleMemoryClick} />
-                <ItemInsightStrip title={memory.title} themes={memory.themes ?? undefined} />
-              </div>
 
               {/* Timestamp */}
               <div className="flex items-center gap-2 text-xs pt-6 mt-6 border-t border-[var(--glass-surface-hover)]" style={{ color: "var(--brand-text-muted)" }}>

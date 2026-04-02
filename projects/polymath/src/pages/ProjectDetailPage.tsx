@@ -5,7 +5,6 @@
 
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
 import { Loader2, MoreVertical, Plus, Check, X, GripVertical, ChevronDown, Zap, Target, Star, Sprout, Pin, PinOff } from 'lucide-react'
 import { StudioTab } from '../components/projects/StudioTab'
 import { MarkdownRenderer } from '../components/ui/MarkdownRenderer'
@@ -23,7 +22,6 @@ import { handleInputFocus } from '../utils/keyboard'
 import { EditProjectDialog } from '../components/projects/EditProjectDialog'
 import { ProjectCompletionModal } from '../components/projects/ProjectCompletionModal'
 import { ProjectChatPanel } from '../components/projects/ProjectChatPanel'
-import { MultiPerspectiveSuggestions } from '../components/suggestions/MultiPerspectiveSuggestions'
 import type { Project, Memory } from '../types'
 import { supabase } from '../lib/supabase'
 import { useMemoryStore } from '../stores/useMemoryStore'
@@ -63,7 +61,6 @@ export function ProjectDetailPage() {
   const [showAddNote, setShowAddNote] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [showCreateConnection, setShowCreateConnection] = useState(false)
-  const [activeTab, setActiveTab] = useState<'overview' | 'studio'>('overview')
 
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [showCompletionModal, setShowCompletionModal] = useState(false)
@@ -778,51 +775,9 @@ export function ProjectDetailPage() {
         </div>
       </div>
 
-      {/* Content - All sections on one page */}
-      {/* Tabs */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-6">
-        <div className="flex items-center gap-4 border-b border-[var(--glass-surface-hover)]">
-          <button
-            onClick={() => setActiveTab('overview')}
-            className={`pb-3 text-sm font-medium transition-colors relative ${activeTab === 'overview' ? 'text-brand-primary' : 'text-[var(--brand-text-secondary)] hover:text-[var(--brand-text-primary)]'
-              }`}
-          >
-            Overview
-            {activeTab === 'overview' && (
-              <motion.div
-                layoutId="activeTab"
-                className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-primary"
-              />
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab('studio')}
-            className={`pb-3 text-sm font-medium transition-colors relative ${activeTab === 'studio' ? 'text-brand-primary' : 'text-[var(--brand-text-secondary)] hover:text-[var(--brand-text-primary)]'
-              }`}
-          >
-            The Studio
-            {activeTab === 'studio' && (
-              <motion.div
-                layoutId="activeTab"
-                className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-primary"
-              />
-            )}
-          </button>
-        </div>
-      </div>
-
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        <AnimatePresence mode="wait">
-          {activeTab === 'overview' ? (
-            <motion.div
-              key="overview"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-6"
-            >
+        <div className="space-y-6">
               {/* Power Hour Focus Mode */}
               {powerHourTask && (
                 <div className="p-8 border-2 border-blue-500/50 relative overflow-hidden group mb-8 bg-brand-primary/20">
@@ -901,148 +856,138 @@ export function ProjectDetailPage() {
                   </div>
                 )}
 
-                {/* The Vision: Merges Description and Motivation */}
-                {(project.description || project.metadata?.motivation) && (
-                  <div className="relative group">
-                    <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
-                    <div className="relative p-8 rounded-2xl bg-white/[0.03] border border-[var(--glass-surface)] space-y-4">
-                      <div className="flex items-center gap-3 mb-4 opacity-50">
-                        <div className="h-px bg-white/20 flex-grow" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--brand-text-primary)]/50">The Vision</span>
-                        <div className="h-px bg-white/20 flex-grow" />
-                      </div>
+                {/* About this project: description, why, done when */}
+                <div className="relative group">
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
+                  <div className="relative p-6 sm:p-8 rounded-2xl bg-white/[0.03] border border-[var(--glass-surface)] space-y-5">
 
-                      <div
-                        className="cursor-pointer hover:opacity-80 transition-opacity"
-                        onClick={() => {
-                          setTempDescription(project.description || '')
-                          setEditingDescription(true)
-                          setTimeout(() => descriptionInputRef.current?.focus(), 100)
-                        }}
-                      >
-                        {editingDescription ? (
-                          <textarea
-                            ref={descriptionInputRef}
-                            value={tempDescription}
-                            onChange={(e) => setTempDescription(e.target.value)}
-                            onBlur={saveDescription}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault()
-                                saveDescription()
-                              }
-                              if (e.key === 'Escape') cancelEdit()
-                            }}
-                            className="w-full bg-black/40 border-[var(--glass-surface-hover)] rounded-xl p-4 text-xl sm:text-2xl font-medium text-[var(--brand-text-primary)] leading-relaxed italic font-serif text-center outline-none focus:border-blue-500/50"
-                            autoFocus
+                    {/* Description — big italic headline */}
+                    <div
+                      className="cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => {
+                        setTempDescription(project.description || '')
+                        setEditingDescription(true)
+                        setTimeout(() => descriptionInputRef.current?.focus(), 100)
+                      }}
+                    >
+                      {editingDescription ? (
+                        <textarea
+                          ref={descriptionInputRef}
+                          value={tempDescription}
+                          onChange={(e) => setTempDescription(e.target.value)}
+                          onBlur={saveDescription}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault()
+                              saveDescription()
+                            }
+                            if (e.key === 'Escape') cancelEdit()
+                          }}
+                          className="w-full bg-black/40 border-[var(--glass-surface-hover)] rounded-xl p-4 text-xl sm:text-2xl font-medium text-[var(--brand-text-primary)] leading-relaxed italic font-serif text-center outline-none focus:border-blue-500/50"
+                          autoFocus
+                        />
+                      ) : (
+                        <div className="text-xl sm:text-2xl font-medium text-[var(--brand-text-primary)]/90 italic font-serif text-center">
+                          <MarkdownRenderer
+                            content={project.description ? `"${project.description}"` : '"What is this project about?"'}
+                            className="text-center"
                           />
-                        ) : (
-                          <div className="text-xl sm:text-2xl font-medium text-[var(--brand-text-primary)]/90 italic font-serif text-center">
-                            <MarkdownRenderer
-                              content={project.description ? `"${project.description}"` : '"Add a vision for this project..."'}
-                              className="text-center"
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      {(project.metadata?.motivation || editingMotivation) && (
-                        <div className="pt-6 relative">
-                          <div
-                            className="cursor-pointer hover:text-[var(--brand-text-primary)] transition-colors"
-                            onClick={() => {
-                              setTempMotivation(project.metadata?.motivation || '')
-                              setEditingMotivation(true)
-                              setTimeout(() => motivationInputRef.current?.focus(), 100)
-                            }}
-                          >
-                            {editingMotivation ? (
-                              <textarea
-                                ref={motivationInputRef}
-                                value={tempMotivation}
-                                onChange={(e) => setTempMotivation(e.target.value)}
-                                onBlur={saveMotivation}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter' && !e.shiftKey) {
-                                    e.preventDefault()
-                                    saveMotivation()
-                                  }
-                                  if (e.key === 'Escape') cancelEdit()
-                                }}
-                                className="w-full bg-black/40 border-[var(--glass-surface-hover)] rounded-xl p-3 text-sm text-[var(--brand-text-primary)] leading-relaxed max-w-2xl mx-auto block outline-none focus:border-blue-500/50 text-center"
-                                autoFocus
-                              />
-                            ) : (
-                               <MarkdownRenderer
-                                 content={project.metadata?.motivation || 'What drives this project?'}
-                                 className="text-sm text-[var(--brand-text-primary)]/50 font-serif italic text-center"
-                               />
-                            )}
-                          </div>
                         </div>
                       )}
                     </div>
-                  </div>
-                )}
-              </div>
 
-              {/* The Finish Line (Definition of Done) */}
-              <div className="grid gap-3 mt-6">
-                <div
-                  className="group relative p-6 cursor-pointer hover:bg-[var(--glass-surface)] transition-all rounded-xl border border-[var(--glass-surface)] hover:border-green-500/30 overflow-hidden"
-                  onClick={!editingGoal ? startEditGoal : undefined}
-                  title="Click to edit"
-                >
-                  <div className="absolute top-0 right-0 p-4 opacity-50 group-hover:opacity-100 transition-opacity">
-                    <div className="h-2 w-2 rounded-full bg-brand-primary animate-pulse" />
-                  </div>
-
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] mb-3 text-brand-text-secondary flex items-center gap-2">
-                    The Finish Line
-                  </h3>
-
-                  {editingGoal ? (
-                    <div className="space-y-4">
-                      <textarea
-                        ref={goalInputRef}
-                        value={tempGoal}
-                        onChange={(e) => setTempGoal(e.target.value)}
-                        className="w-full bg-black/20 border border-[var(--glass-surface-hover)] rounded-lg p-3 text-base resize-none focus:outline-none focus:border-green-500/50 text-[var(--brand-text-primary)] leading-relaxed"
-                        rows={3}
-                        placeholder="What does 'done' look like?"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault()
-                            saveGoal()
-                          } else if (e.key === 'Escape') {
-                            cancelEdit()
-                          }
-                        }}
-                      />
-                      <div className="flex gap-2 justify-end">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); cancelEdit() }}
-                          className="px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-xl bg-zinc-800 hover:bg-zinc-700 text-brand-text-muted"
+                    {/* Why + Done when */}
+                    <div className="pt-4 border-t border-[var(--glass-surface)] grid sm:grid-cols-2 gap-4">
+                      {/* Why */}
+                      <div>
+                        <span className="text-[9px] font-black uppercase tracking-[0.25em] text-[var(--brand-text-primary)]/30 block mb-1.5">Why</span>
+                        <div
+                          className="cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => {
+                            setTempMotivation(project.metadata?.motivation || '')
+                            setEditingMotivation(true)
+                            setTimeout(() => motivationInputRef.current?.focus(), 100)
+                          }}
                         >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); saveGoal() }}
-                          className="px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-xl bg-brand-primary/50 text-brand-text-secondary border border-green-500/20 hover:bg-brand-primary/80"
+                          {editingMotivation ? (
+                            <textarea
+                              ref={motivationInputRef}
+                              value={tempMotivation}
+                              onChange={(e) => setTempMotivation(e.target.value)}
+                              onBlur={saveMotivation}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                  e.preventDefault()
+                                  saveMotivation()
+                                }
+                                if (e.key === 'Escape') cancelEdit()
+                              }}
+                              className="w-full bg-black/40 border-[var(--glass-surface-hover)] rounded-lg p-2 text-sm text-[var(--brand-text-primary)] leading-relaxed outline-none focus:border-blue-500/50"
+                              autoFocus
+                              rows={2}
+                            />
+                          ) : (
+                            <MarkdownRenderer
+                              content={project.metadata?.motivation || 'What drives this?'}
+                              className="text-sm text-[var(--brand-text-primary)]/60 font-serif italic"
+                            />
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Done when */}
+                      <div>
+                        <span className="text-[9px] font-black uppercase tracking-[0.25em] text-[var(--brand-text-primary)]/30 block mb-1.5">Done when</span>
+                        <div
+                          className="cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={!editingGoal ? startEditGoal : undefined}
                         >
-                          Set Target
-                        </button>
+                          {editingGoal ? (
+                            <div className="space-y-2">
+                              <textarea
+                                ref={goalInputRef}
+                                value={tempGoal}
+                                onChange={(e) => setTempGoal(e.target.value)}
+                                className="w-full bg-black/40 border border-[var(--glass-surface-hover)] rounded-lg p-2 text-sm resize-none focus:outline-none focus:border-green-500/50 text-[var(--brand-text-primary)] leading-relaxed"
+                                rows={2}
+                                placeholder="What does done look like?"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault()
+                                    saveGoal()
+                                  } else if (e.key === 'Escape') {
+                                    cancelEdit()
+                                  }
+                                }}
+                              />
+                              <div className="flex gap-2 justify-end">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); cancelEdit() }}
+                                  className="px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-lg bg-zinc-800 hover:bg-zinc-700 text-brand-text-muted"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); saveGoal() }}
+                                  className="px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-lg bg-brand-primary/50 text-brand-text-secondary border border-green-500/20 hover:bg-brand-primary/80"
+                                >
+                                  Save
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-sm text-[var(--brand-text-primary)]/60 leading-relaxed font-serif italic">
+                              {project.metadata?.end_goal ? (
+                                <MarkdownRenderer content={project.metadata.end_goal} />
+                              ) : (
+                                <span>What does done look like?</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  ) : (
-                    <div className="text-lg text-[var(--brand-text-primary)]/90 font-medium leading-relaxed">
-                      {project.metadata?.end_goal ? (
-                        <MarkdownRenderer content={project.metadata.end_goal} />
-                      ) : (
-                        <span className="text-[var(--brand-text-primary)]/30 italic">Define the clear target for completion...</span>
-                      )}
-                    </div>
-                  )}
+                  </div>
                 </div>
               </div>
 
@@ -1095,41 +1040,7 @@ export function ProjectDetailPage() {
                 />
               </div>
 
-              {/* AI Perspectives - Multi-angle next step suggestions */}
-              {project.status === 'active' && (
-                <details className="mt-8 group" open>
-                  <summary className="cursor-pointer text-[10px] font-black uppercase tracking-[0.3em] flex items-center gap-2 list-none select-none"
-                    style={{ color: 'var(--brand-text-secondary)' }}
-                  >
-                    <span className="flex-1">AI Perspectives</span>
-                    <ChevronDown className="h-3 w-3 transition-transform group-open:rotate-180" />
-                  </summary>
-                  <div className="mt-4">
-                    <MultiPerspectiveSuggestions
-                      project={project}
-                      onAddTodo={async (text) => {
-                        const existing = project.metadata?.tasks || []
-                        const newTask = {
-                          id: crypto.randomUUID(),
-                          text,
-                          done: false,
-                          created_at: new Date().toISOString(),
-                          order: existing.length
-                        }
-                        try {
-                          await updateProject(project.id, {
-                            metadata: { ...project.metadata, tasks: [...existing, newTask] }
-                          })
-                        } catch (err) {
-                          console.error('[ProjectDetail] Failed to add AI suggestion as task:', err)
-                        }
-                      }}
-                    />
-                  </div>
-                </details>
-              )}
-
-              {/* Activity — decision log + completed tasks */}
+              {/* Activity — decision log */}
               <div className="mt-12 pb-32">
                 <div className="flex items-center justify-between mb-6">
                   <h3
@@ -1152,36 +1063,23 @@ export function ProjectDetailPage() {
                   </button>
                 </div>
                 <ProjectActivityStream
-                  notes={[
-                    ...notes,
-                    // Completed tasks appear as log entries
-                    ...(project.metadata?.tasks || [])
-                      .filter((t: Task) => t.done && t.completed_at)
-                      .map((t: Task) => ({
-                        id: `task-done-${t.id}`,
-                        project_id: id || '',
-                        user_id: '',
-                        bullets: [`✓ ${t.text}`],
-                        created_at: t.completed_at!,
-                        note_type: 'task' as 'text' | 'voice',
-                      }))
-                  ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())}
+                  notes={[...notes].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())}
                   onRefresh={loadProjectDetails}
                 />
               </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="studio"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
+          {/* Brain Dump / Studio */}
+          <details className="mt-8 pb-8 group">
+            <summary className="cursor-pointer text-[10px] font-black uppercase tracking-[0.3em] flex items-center gap-2 list-none select-none"
+              style={{ color: 'var(--brand-text-secondary)' }}
             >
+              <span className="flex-1">Brain Dump</span>
+              <ChevronDown className="h-3 w-3 transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="mt-4">
               <StudioTab project={project} />
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
+          </details>
+        </div>
       </div>
 
       {/* Project Guide — Prominent floating bar */}
