@@ -46,6 +46,7 @@ export function ProjectDetailPage() {
 
   // Auto-open chat when navigating from post-onboarding reveal
   const shouldOpenChat = location.state?.openChat === true
+  const chatAutoMessage = location.state?.chatAutoMessage as string | undefined
 
   const { projects, fetchProjects, deleteProject, updateProject, syncProject, setPriority } = useProjectStore()
   const { setContext, clearContext } = useContextEngineStore()
@@ -1165,6 +1166,7 @@ export function ProjectDetailPage() {
           recentCompletions={recentCompletions}
           onAddTask={handleChatAddTask}
           onUpdateTasks={handleChatUpdateTasks}
+          autoMessage={shouldOpenChat ? (chatAutoMessage || "This is my first project. Look at what I said during onboarding and connect the dots — what's the thread between my earlier thoughts and this project? Then suggest what I should build first.") : undefined}
           onRefinePlan={async () => {
             const token = (await supabase.auth.getSession()).data.session?.access_token
             await fetch(`${import.meta.env.VITE_API_URL || ''}/api/power-hour?projectId=${project.id}&enrich=true`, {
