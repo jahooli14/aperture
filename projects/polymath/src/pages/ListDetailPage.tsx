@@ -8,7 +8,7 @@ import { useReadingStore } from '../stores/useReadingStore'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
-import { ConnectionsList } from '../components/connections/ConnectionsList'
+import { ItemInsightStrip } from '../components/ItemInsightStrip'
 import { VoiceInput } from '../components/VoiceInput'
 import { OptimizedImage } from '../components/ui/optimized-image'
 import { ArticleCard } from '../components/reading/ArticleCard'
@@ -1058,8 +1058,7 @@ export default function ListDetailPage() {
     const displayItems = isCorrectList ? currentListItems : []
 
     const [inputText, setInputText] = useState('')
-    const [connectionCount, setConnectionCount] = useState(0)
-    const [isLoadingConnections, setIsLoadingConnections] = useState(true)
+
     const [isVoiceMode, setIsVoiceMode] = useState(false)
     const [isReordering, setIsReordering] = useState(false)
     const [expandedItemId, setExpandedItemId] = useState<string | null>(null)
@@ -1621,27 +1620,10 @@ export default function ListDetailPage() {
                 )}
             </AnimatePresence>
 
-            {/* Smart Connections Section */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-48">
-                {(connectionCount > 0 || isLoadingConnections) && (
-                    <div className="mt-12 pt-12 border-t border-[var(--glass-surface)] pb-20">
-                        <div className="flex items-center justify-between mb-8">
-                            <div>
-                                <h3 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">Synthesized Insights</h3>
-                                <p className="text-sm text-brand-text-muted">Connections discovered by the Aperture Engine.</p>
-                            </div>
-                            <div className="px-3 py-1 bg-brand-primary/10 border border-blue-500/20 rounded-full text-[10px] font-black uppercase tracking-widest text-brand-primary">
-                                AI Connected
-                            </div>
-                        </div>
-                        <ConnectionsList
-                            itemType="list"
-                            itemId={list.id}
-                            onCountChange={setConnectionCount}
-                            onLoadingChange={setIsLoadingConnections}
-                        />
-                    </div>
-                )}
+                <div className="mt-12 pt-12 border-t border-[var(--glass-surface)] pb-20">
+                    <ItemInsightStrip title={list.title} />
+                </div>
             </div>
         </div>
     )
