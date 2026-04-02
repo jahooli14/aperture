@@ -280,7 +280,7 @@ async function getActiveProjects(userId: string) {
   return data || []
 }
 
-async function getCurrentInterests(userId: string) {
+async function getCurrentInterests(_userId: string) {
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
@@ -324,7 +324,7 @@ async function getOldInsights(userId: string, daysAgo: number) {
 
 async function generateCatalystPromptsWithAI(
   inputs: Array<{ title: string; type: 'project' | 'article' | 'thought'; id: string }>,
-  userId: string
+  _userId: string
 ): Promise<BedtimePrompt[]> {
       const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
 
@@ -375,15 +375,15 @@ async function generatePromptsWithAI(
   recentArticles: any[],
   recentMemories: any[],
   activeProjects: any[],
-  currentInterests: any[],
-  oldInsights: any[],
-  capabilities: any[],
-  context: {
+  _currentInterests: any[],
+  _oldInsights: any[],
+  capabilities: { name: string; description: string }[],
+  _context: {
     hasRichInput: boolean
     hasBlockedProjects: boolean
     hasNoProjects: boolean
   },
-  performance?: any,
+  _performance?: any,
   breakthroughContext?: string,
   typeDistribution?: Record<string, number>
 ): Promise<BedtimePrompt[]> {
@@ -398,7 +398,7 @@ async function generatePromptsWithAI(
     return acc
   }, {})
 
-  const consequentialThemes = Object.entries(themeCounts)
+  const _consequentialThemes = Object.entries(themeCounts)
     .filter(([_, count]) => (count as number) >= 2)
     .sort(([, a], [, b]) => (b as number) - (a as number))
     .slice(0, 5)
@@ -491,12 +491,12 @@ Return JSON array:
   }
 }
 
-async function storePrompts(userId: string, prompts: BedtimePrompt[]) {
+async function storePrompts(_userId: string, _prompts: BedtimePrompt[]) {
   // Placeholder
   return
 }
 
-async function getPromptPerformance(userId: string) {
+async function getPromptPerformance(_userId: string) {
   return {}
 }
 

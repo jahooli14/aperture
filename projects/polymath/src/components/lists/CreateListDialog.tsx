@@ -1,21 +1,18 @@
 import React, { useState } from 'react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
-import { Label } from '../ui/label'
 import { useListStore } from '../../stores/useListStore'
-import { Film, Music, Monitor, Book, MapPin, Gamepad2, Box, Calendar, Quote, FileText, ListPlus } from 'lucide-react'
+import { Film, Music, Monitor, Book, MapPin, Gamepad2, Box, Calendar, Quote, FileText } from 'lucide-react'
 import {
     BottomSheet,
     BottomSheetContent,
-    BottomSheetDescription,
     BottomSheetFooter,
     BottomSheetHeader,
     BottomSheetTitle,
 } from '../ui/bottom-sheet'
 import type { ListType } from '../../types'
-import { LIST_STATUS_DEFAULTS } from '../../types'
 
-const TYPES: { id: ListType, label: string, icon: any }[] = [
+const TYPES: { id: ListType, label: string, icon: React.ElementType }[] = [
     { id: 'film', label: 'Movies', icon: Film },
     { id: 'music', label: 'Music', icon: Music },
     { id: 'tech', label: 'Tech', icon: Monitor },
@@ -46,7 +43,7 @@ export function CreateListDialog({ open, onOpenChange }: Props) {
 
         setLoading(true)
         setError('')
-        const listId = await createList({ title, type })
+        const listId = await createList({ title: title.trim(), type })
         setLoading(false)
 
         if (!listId) {
@@ -63,84 +60,54 @@ export function CreateListDialog({ open, onOpenChange }: Props) {
         <BottomSheet open={open} onOpenChange={onOpenChange}>
             <BottomSheetContent>
                 <BottomSheetHeader>
-                    <div className="flex items-center gap-3 mb-2">
-                        <ListPlus className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
-                        <BottomSheetTitle>Create Collection</BottomSheetTitle>
-                    </div>
-                    <BottomSheetDescription>
-                        Start a new curated collection
-                    </BottomSheetDescription>
+                    <BottomSheetTitle>New collection</BottomSheetTitle>
                 </BottomSheetHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-6 mt-6">
+                <form onSubmit={handleSubmit} className="mt-5 space-y-4">
                     {error && (
-                        <div className="bg-brand-primary/10 border border-red-500/20 text-brand-text-secondary px-4 py-3 rounded-xl text-sm">
+                        <div className="rounded-lg bg-red-500/10 border border-red-500/25 px-3 py-2.5 text-sm text-red-400">
                             {error}
                         </div>
                     )}
 
-                    <div className="space-y-2">
-                        <Label className="font-bold text-xs uppercase tracking-widest" style={{ color: "var(--brand-primary)" }}>
-                            List Title <span className="text-brand-text-secondary">*</span>
-                        </Label>
-                        <Input
-                            value={title}
-                            onChange={e => setTitle(e.target.value)}
-                            placeholder="e.g. Scifi Movies 2024"
-                            className="text-lg h-14 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/10"
-                            style={{ color: "var(--brand-primary)" }}
-                            autoFocus
-                            autoComplete="off"
-                        />
-                    </div>
+                    <Input
+                        value={title}
+                        onChange={e => setTitle(e.target.value)}
+                        placeholder="Collection name…"
+                        className="h-12 text-base bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-white/30 placeholder:text-white/20"
+                        autoFocus
+                        autoComplete="off"
+                    />
 
-                    <div className="space-y-2">
-                        <Label className="font-bold text-xs uppercase tracking-widest text-[var(--brand-text-muted)]">Type</Label>
-                        <div className="grid grid-cols-3 gap-2">
-                            {TYPES.map(t => {
-                                const Icon = t.icon
-                                const isSelected = type === t.id
-                                return (
-                                    <button
-                                        key={t.id}
-                                        type="button"
-                                        onClick={() => setType(t.id)}
-                                        className={`relative flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${isSelected
+                    <div className="grid grid-cols-5 gap-1.5">
+                        {TYPES.map(t => {
+                            const Icon = t.icon
+                            const isSelected = type === t.id
+                            return (
+                                <button
+                                    key={t.id}
+                                    type="button"
+                                    onClick={() => setType(t.id)}
+                                    className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border transition-all text-[10px] font-semibold uppercase tracking-wide ${
+                                        isSelected
                                             ? 'bg-white text-black border-white'
-                                            : 'bg-black border-[var(--glass-surface-hover)] text-[var(--brand-text-secondary)] hover:border-white/30'
-                                            }`}
-                                    >
-                                        {LIST_STATUS_DEFAULTS[t.id] && (
-                                            <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-emerald-400 opacity-60" />
-                                        )}
-                                        <Icon className="h-5 w-5 mb-1" />
-                                        <span className="text-[10px] uppercase font-bold">{t.label}</span>
-                                    </button>
-                                )
-                            })}
-                        </div>
-                        <p className="text-[10px] text-[var(--brand-text-muted)] mt-2">
-                            {LIST_STATUS_DEFAULTS[type]
-                                ? <><span className="text-emerald-400">●</span> Tracks progress — items have a status you can advance (e.g. Want to watch → Watching → Watched). Toggle off per list anytime.</>
-                                : <>Collection only — no progress tracking. Items are just entries. You can enable status tracking per list anytime.</>
-                            }
-                        </p>
+                                            : 'border-white/10 text-white/35 hover:border-white/25 hover:text-white/60'
+                                    }`}
+                                >
+                                    <Icon className="h-4 w-4" />
+                                    {t.label}
+                                </button>
+                            )
+                        })}
                     </div>
 
                     <BottomSheetFooter>
                         <Button
                             type="submit"
                             disabled={!title.trim() || loading}
-                            className="w-full h-14 font-black uppercase tracking-widest touch-manipulation"
-                            style={{
-                              background: 'rgba(59,130,246,0.15)',
-                              border: '2px solid rgba(59,130,246,0.5)',
-                              borderRadius: '4px',
-                              boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
-                              color: 'var(--brand-primary)',
-                            }}
+                            className="w-full h-12 bg-white text-black font-semibold hover:bg-white/90 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl"
                         >
-                            {loading ? 'Creating...' : 'Create Collection'}
+                            {loading ? 'Creating…' : 'Create collection'}
                         </Button>
                     </BottomSheetFooter>
                 </form>

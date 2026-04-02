@@ -154,7 +154,7 @@ async function loadRichProjects(userId: string): Promise<RichProject[]> {
   }))
 }
 
-async function loadCapabilities(userId: string): Promise<Capability[]> {
+async function loadCapabilities(_userId: string): Promise<Capability[]> {
   const { data, error } = await supabase
     .from('capabilities')
     .select('id, name, description, strength, source_project')
@@ -220,7 +220,7 @@ function minePatterns(
   // Skill they have but haven't applied to a domain they keep writing/reading about
   const projectDomains = new Set<string>()
   for (const project of projects) {
-    const caps: string[] = project.metadata?.capabilities || []
+    const _caps: string[] = project.metadata?.capabilities || []
     const desc = (project.description || '').toLowerCase()
     const title = (project.title || '').toLowerCase()
     // Extract rough domains from project descriptions

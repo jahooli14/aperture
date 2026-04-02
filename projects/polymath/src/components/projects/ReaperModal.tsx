@@ -133,7 +133,7 @@ export function ReaperModal({ isOpen, onClose }: ReaperModalProps) {
             }}
           >
             <button
-              onClick={onClose}
+              onClick={() => onClose()}
               className="absolute top-4 right-4 p-2 rounded-full hover:bg-[rgba(255,255,255,0.1)] transition-colors"
               style={{ color: "var(--brand-primary)" }}
             >
@@ -209,7 +209,7 @@ export function ReaperModal({ isOpen, onClose }: ReaperModalProps) {
                 <Zap className="h-12 w-12 text-[var(--brand-text-muted)] mb-4" />
                 <p className="text-[var(--brand-text-secondary)]">All projects are alive and well.</p>
                 <button
-                  onClick={onClose}
+                  onClick={() => onClose()}
                   className="mt-6 px-4 py-2 rounded-lg bg-[rgba(255,255,255,0.1)] text-gray-200 hover:bg-white/20 transition-colors"
                 >
                   Close

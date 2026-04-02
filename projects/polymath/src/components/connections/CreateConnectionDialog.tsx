@@ -374,7 +374,7 @@ function ItemCard({
   onConnect: (type: ConnectionSourceType, id: string) => void
   showSimilarity?: boolean
 }) {
-  const schema = SCHEMA_COLORS[item.type]
+  const schema = (SCHEMA_COLORS as Record<string, (typeof SCHEMA_COLORS)[keyof typeof SCHEMA_COLORS]>)[item.type] ?? SCHEMA_COLORS.thought
   const Icon = schema.icon
 
   return (

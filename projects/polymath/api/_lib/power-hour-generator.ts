@@ -132,7 +132,7 @@ export async function generatePowerHourPlan(userId: string, projectId?: string, 
         const allTasks = p.metadata?.tasks || []
         const unfinishedTasks = allTasks.filter((t: any) => !t.done)
         const completedTasks = allTasks.filter((t: any) => t.done)
-        const totalIncomplete = unfinishedTasks.length
+        const _totalIncomplete = unfinishedTasks.length
         const totalTasks = allTasks.length
 
         // COST OPTIMIZATION: Only send top 10 incomplete + last 3 completed to AI
@@ -196,7 +196,7 @@ export async function generatePowerHourPlan(userId: string, projectId?: string, 
         const unfinishedList = unfinishedForPrompt.length > 0
             ? unfinishedForPrompt.map((t: any) => `${t.text} ${t.estimated_minutes ? `[${t.estimated_minutes}m]` : ''}`).join(', ')
             : 'None yet'
-        const completedList = completedForPrompt.length > 0
+        const _completedList = completedForPrompt.length > 0
             ? completedForPrompt.map((t: any) => t.text).join(', ')
             : 'None yet'
 

@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { logger } from '../lib/logger'
 import { supabase } from '../lib/supabase'
 import type { Memory, Bridge, BridgeWithMemories, SourceReference, ChecklistItem } from '../types'
 import { queueOperation } from '../lib/offlineQueue'
@@ -39,51 +40,76 @@ interface MemoryStore {
   unpinMemory: (id: string) => Promise<void>
 }
 
+// Track active polling controllers so they can be aborted on navigation/unmount
+const activePollingControllers = new Map<string, AbortController>()
+
 /** Poll for processing completion to show extraction summary, then steer */
 async function pollProcessing(memoryId: string) {
-  for (let i = 0; i < 6; i++) {
-    await new Promise(r => setTimeout(r, 3000)) // Check every 3s
-    try {
-      const checkRes = await fetch(`/api/memories?id=${memoryId}`)
-      if (checkRes.ok) {
-        const { memory: processed } = await checkRes.json()
-        if (processed?.processed) {
-          const entities = processed.entities || {}
-          window.dispatchEvent(new CustomEvent('memory-extracted', {
-            detail: {
-              memoryId,
-              topics: (entities.topics?.length || 0) + (entities.skills?.length || 0),
-              people: entities.people?.length || 0,
-              themes: processed.themes?.length || 0,
-              tone: processed.emotional_tone || null,
-              connections: 0
-            }
-          }))
+  // Abort any existing poll for this memory
+  activePollingControllers.get(memoryId)?.abort()
+  const controller = new AbortController()
+  activePollingControllers.set(memoryId, controller)
 
-          // Fire steering after a short delay so ExtractionSummary shows first
-          setTimeout(async () => {
-            try {
-              const steerRes = await fetch('/api/memories?action=steer', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ memory_id: memoryId }),
-              })
-              if (steerRes.ok) {
-                const steering = await steerRes.json()
-                window.dispatchEvent(new CustomEvent('memory-steered', { detail: steering }))
+  try {
+    for (let i = 0; i < 6; i++) {
+      if (controller.signal.aborted) return
+      await new Promise(r => setTimeout(r, 3000)) // Check every 3s
+      if (controller.signal.aborted) return
+      try {
+        const checkRes = await fetch(`/api/memories?id=${memoryId}`, {
+          signal: controller.signal,
+        })
+        if (checkRes.ok) {
+          const { memory: processed } = await checkRes.json()
+          if (processed?.processed) {
+            const entities = processed.entities || {}
+            window.dispatchEvent(new CustomEvent('memory-extracted', {
+              detail: {
+                memoryId,
+                topics: (entities.topics?.length || 0) + (entities.skills?.length || 0),
+                people: entities.people?.length || 0,
+                themes: processed.themes?.length || 0,
+                tone: processed.emotional_tone || null,
+                connections: 0
               }
-            } catch {
-              // Non-critical, silently fail
-            }
-          }, 4500) // After ExtractionSummary auto-dismisses (4s)
+            }))
 
-          return
+            // Fire steering after a short delay so ExtractionSummary shows first
+            setTimeout(async () => {
+              if (controller.signal.aborted) return
+              try {
+                const steerRes = await fetch('/api/memories?action=steer', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ memory_id: memoryId }),
+                  signal: controller.signal,
+                })
+                if (steerRes.ok) {
+                  const steering = await steerRes.json()
+                  window.dispatchEvent(new CustomEvent('memory-steered', { detail: steering }))
+                }
+              } catch {
+                // Non-critical, silently fail
+              }
+            }, 4500) // After ExtractionSummary auto-dismisses (4s)
+
+            return
+          }
         }
+      } catch (e) {
+        if (e instanceof DOMException && e.name === 'AbortError') return
+        // Non-critical polling, silently fail
       }
-    } catch {
-      // Non-critical polling, silently fail
     }
+  } finally {
+    activePollingControllers.delete(memoryId)
   }
+}
+
+/** Abort all active polling (call on unmount/navigation) */
+export function abortAllPolling() {
+  activePollingControllers.forEach(c => c.abort())
+  activePollingControllers.clear()
 }
 
 export const useMemoryStore = create<MemoryStore>((set, get) => ({
@@ -99,7 +125,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
 
     // Skip if we have recent data and not forcing refresh
     if (!force && state.memories.length > 0 && state.lastFetched && (now - state.lastFetched < CACHE_TTL)) {
-      console.log('[MemoryStore] Using cached memories (Zustand)')
+      logger.debug('[MemoryStore] Using cached memories (Zustand)')
       return
     }
 
@@ -140,9 +166,9 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
             created_at: m.audiopen_created_at || new Date().toISOString()
           }))
           await readingDb.bulkCacheMemories(memoriesToCache)
-          console.log(`[MemoryStore] Cached ${memoriesToCache.length} memories for offline use`)
+          logger.debug(`[MemoryStore] Cached ${memoriesToCache.length} memories for offline use`)
         } catch (cacheError) {
-          console.warn('[MemoryStore] Failed to cache memories:', cacheError)
+          logger.warn('[MemoryStore] Failed to cache memories:', cacheError)
         }
       }
 
@@ -211,7 +237,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
           })
 
           if (!hasProcessedChange) {
-            console.log('[MemoryStore] Skipping fetchMemories state update - data unchanged')
+            logger.debug('[MemoryStore] Skipping fetchMemories state update - data unchanged')
             set({ loading: false, lastFetched: now })
             return
           }
@@ -220,7 +246,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
 
       set({ memories: mergedMemories, loading: false, lastFetched: now })
     } catch (error) {
-      console.error('[MemoryStore] Fetch failed, attempting offline fallback:', error)
+      logger.error('[MemoryStore] Fetch failed, attempting offline fallback:', error)
 
       const loadedOffline = await get().loadFromOfflineDB()
       if (!loadedOffline) {
@@ -265,7 +291,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
         })
 
         if (!hasProcessedChange) {
-          console.log('[MemoryStore] Skipping state update - data unchanged')
+          logger.debug('[MemoryStore] Skipping state update - data unchanged')
           return
         }
       }
@@ -303,7 +329,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
 
       return data || []
     } catch (error) {
-      console.error('[store] Failed to fetch bridges:', error)
+      logger.error('[store] Failed to fetch bridges:', error)
       return []
     }
   },
@@ -355,13 +381,13 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       await queueOperation('create_memory', newMemory)
       await useOfflineStore.getState().updateQueueSize()
 
-      console.log('[MemoryStore] Memory queued for offline sync')
+      logger.debug('[MemoryStore] Memory queued for offline sync')
       return optimisticMemory
     }
 
     // Online flow - use API endpoint which handles auth and user_id properly
     try {
-      console.log('[MemoryStore] Creating memory via API...')
+      logger.debug('[MemoryStore] Creating memory via API...')
       const response = await fetch('/api/memories?capture=true', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -378,7 +404,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        console.error('[MemoryStore] API error:', errorData)
+        logger.error('[MemoryStore] API error:', errorData)
         throw new Error(errorData.details || errorData.error || `Failed to create memory (${response.status})`)
       }
 
@@ -390,7 +416,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
         lastFetched: Date.now(),
       }))
 
-      console.log('[MemoryStore] Memory created successfully:', data.id)
+      logger.debug('[MemoryStore] Memory created successfully:', data.id)
 
       // Non-blocking: poll for extraction summary
       pollProcessing(data.id).catch(() => {})
@@ -415,25 +441,25 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
 
       return data
     } catch (error) {
-      console.error('[MemoryStore] Create memory failed:', error)
+      logger.error('[MemoryStore] Create memory failed:', error)
       throw error instanceof Error ? error : new Error('Failed to create memory')
     }
   },
 
-  updateMemory: async (id: string, input: CreateMemoryInput) => {
+  updateMemory: async (id: string, input: CreateMemoryInput): Promise<Memory> => {
     // Optimistic update - update UI immediately
-    const previousMemories = useMemoryStore.getState().memories
-    const memoryToUpdate = previousMemories.find((m) => m.id === id)
+    const previousMemories: Memory[] = get().memories
+    const memoryToUpdate: Memory | undefined = previousMemories.find((m: Memory) => m.id === id)
 
     if (memoryToUpdate) {
       set((state) => ({
         memories: Array.isArray(state.memories)
-          ? state.memories.map((m) =>
+          ? state.memories.map((m): Memory =>
             m.id === id
               ? {
                 ...m,
-                title: input.title,
-                body: input.body,
+                title: input.title ?? m.title,
+                body: input.body ?? m.body,
                 tags: input.tags || [],
                 memory_type: input.memory_type || null,
                 image_urls: input.image_urls || m.image_urls,
@@ -462,7 +488,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       await queueOperation('update_memory', updateData)
       await useOfflineStore.getState().updateQueueSize()
 
-      console.log('[MemoryStore] Memory update queued for offline sync')
+      logger.debug('[MemoryStore] Memory update queued for offline sync')
       return memoryToUpdate!
     }
 
@@ -521,14 +547,14 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
         throw new Error(errorData.error || `Failed to update checklist (${response.status})`)
       }
     } catch (error) {
-      console.error('[MemoryStore] updateChecklistItems failed:', error)
+      logger.error('[MemoryStore] updateChecklistItems failed:', error)
       // Silently fail — optimistic state is good enough for checklists
     }
   },
 
   // Helper to load from offline DB
   loadFromOfflineDB: async () => {
-    console.log('[MemoryStore] Loading memories from offline DB...')
+    logger.debug('[MemoryStore] Loading memories from offline DB...')
     try {
       const { db } = await import('../lib/db')
       const { getPendingOperations } = await import('../lib/offlineQueue')
@@ -613,7 +639,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       })
       return true
     } catch (err) {
-      console.error('[MemoryStore] Failed to load offline memories:', err)
+      logger.error('[MemoryStore] Failed to load offline memories:', err)
       return false
     }
   },
@@ -638,7 +664,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
         const match = pending.find(p => p.timestamp === timestamp)
         if (match?.id) {
           await db.deletePendingCapture(match.id)
-          console.log('[MemoryStore] Removed voice capture from local DB')
+          logger.debug('[MemoryStore] Removed voice capture from local DB')
         }
       } else if (id.startsWith('offline_op_')) {
         const { removeOperation, getPendingOperations } = await import('../lib/offlineQueue')
@@ -647,11 +673,11 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
         const match = pending.find(p => p.timestamp === timestamp)
         if (match?.id) {
           await removeOperation(match.id)
-          console.log('[MemoryStore] Removed operation from local queue')
+          logger.debug('[MemoryStore] Removed operation from local queue')
         }
       }
     } catch (localError) {
-      console.warn('[MemoryStore] Failed to cleanup local queue during delete:', localError)
+      logger.warn('[MemoryStore] Failed to cleanup local queue during delete:', localError)
     }
 
     const { isOnline } = useOfflineStore.getState()
@@ -661,14 +687,14 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       if (!isOnline && !id.startsWith('temp_')) {
         await queueOperation('delete_memory', { id })
         await useOfflineStore.getState().updateQueueSize()
-        console.log('[MemoryStore] Memory deletion queued for offline sync')
+        logger.debug('[MemoryStore] Memory deletion queued for offline sync')
       }
       return
     }
 
     // Online flow
     try {
-      console.log('[MemoryStore] Deleting memory via API:', id)
+      logger.debug('[MemoryStore] Deleting memory via API:', id)
 
       const response = await fetch(`/api/memories?id=${id}`, {
         method: 'DELETE',
@@ -679,10 +705,10 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
         throw new Error(errorData.error || `Failed to delete memory (${response.status})`)
       }
 
-      console.log('[MemoryStore] Memory deleted successfully via API')
+      logger.debug('[MemoryStore] Memory deleted successfully via API')
 
     } catch (error) {
-      console.error('[MemoryStore] Delete failed:', error)
+      logger.error('[MemoryStore] Delete failed:', error)
       // Rollback on error
       set({ memories: previousMemories })
       throw error instanceof Error ? error : new Error('Failed to delete memory')
@@ -764,7 +790,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
           m.id === id ? { ...m, is_pinned: false } : m
         ),
       }))
-      console.error('[MemoryStore] Pin failed:', error)
+      logger.error('[MemoryStore] Pin failed:', error)
     }
   },
 
@@ -789,7 +815,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
           m.id === id ? { ...m, is_pinned: true } : m
         ),
       }))
-      console.error('[MemoryStore] Unpin failed:', error)
+      logger.error('[MemoryStore] Unpin failed:', error)
     }
   },
 }))
