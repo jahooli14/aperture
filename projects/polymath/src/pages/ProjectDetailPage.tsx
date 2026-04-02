@@ -44,6 +44,9 @@ export function ProjectDetailPage() {
   const location = useLocation()
   const powerHourTask = location.state?.powerHourTask
 
+  // Auto-open chat when navigating from post-onboarding reveal
+  const shouldOpenChat = location.state?.openChat === true
+
   const { projects, fetchProjects, deleteProject, updateProject, syncProject, setPriority } = useProjectStore()
   const { setContext, clearContext } = useContextEngineStore()
   const { pinnedItem, pinItem, unpinItem } = usePin()
@@ -70,6 +73,14 @@ export function ProjectDetailPage() {
   const [recentCompletions, setRecentCompletions] = useState<string[]>([])
   const prevTasksRef = useRef<{ id: string; done: boolean }[]>([])
 
+  // Auto-open chat when arriving from post-onboarding reveal
+  useEffect(() => {
+    if (shouldOpenChat && project && !loading) {
+      // Small delay so the page renders first
+      const timer = setTimeout(() => setShowChat(true), 600)
+      return () => clearTimeout(timer)
+    }
+  }, [shouldOpenChat, project, loading])
 
   // Listen for custom event from FloatingNav to open AddNote dialog
   useEffect(() => {

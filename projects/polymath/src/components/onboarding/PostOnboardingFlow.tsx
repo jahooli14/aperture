@@ -154,7 +154,7 @@ export function PostOnboardingFlow({ analysis, sparkedSuggestion }: PostOnboardi
 
   const handleGoToProject = () => {
     if (createdProjectId) {
-      navigate(`/projects/${createdProjectId}`)
+      navigate(`/projects/${createdProjectId}`, { state: { openChat: true } })
     }
   }
 
