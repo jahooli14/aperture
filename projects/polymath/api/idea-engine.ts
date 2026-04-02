@@ -584,12 +584,12 @@ function buildEmailHTML(data: {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Idea Engine Daily Digest</title>
 </head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background: #f5f5f5;">
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; line-height: 1.6; color: #1f2937; max-width: 650px; margin: 0 auto; padding: 20px; background: #f9fafb;">
 
   <!-- Header -->
-  <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 12px; margin-bottom: 30px;">
-    <h1 style="margin: 0 0 10px 0; font-size: 28px;">🧠 Idea Engine</h1>
-    <p style="margin: 0; opacity: 0.9; font-size: 14px;">Daily Digest - ${new Date().toLocaleDateString('en-US', {
+  <div style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; padding: 40px 32px; border-radius: 8px; margin-bottom: 32px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+    <h1 style="margin: 0 0 8px 0; font-size: 32px; font-weight: 700; letter-spacing: -0.5px;">Idea Engine</h1>
+    <p style="margin: 0; opacity: 0.95; font-size: 15px; font-weight: 500;">Daily Digest · ${new Date().toLocaleDateString('en-US', {
       weekday: 'long',
       month: 'long',
       day: 'numeric',
@@ -598,25 +598,25 @@ function buildEmailHTML(data: {
   </div>
 
   <!-- Last 24h Summary -->
-  <div style="background: white; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-    <h2 style="margin: 0 0 20px 0; font-size: 20px; color: #667eea;">📊 Last 24 Hours</h2>
+  <div style="background: white; border-radius: 8px; padding: 28px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb;">
+    <h2 style="margin: 0 0 24px 0; font-size: 18px; font-weight: 700; color: #111827;">Last 24 Hours</h2>
 
-    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
-      <div style="background: #f8f9ff; padding: 15px; border-radius: 8px; text-align: center;">
-        <div style="font-size: 32px; font-weight: bold; color: #667eea;">${last24h.generated}</div>
-        <div style="font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 0.5px;">Generated</div>
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+      <div style="background: #f8faff; padding: 20px; border-radius: 6px; text-align: center; border: 1px solid #e0e7ff;">
+        <div style="font-size: 36px; font-weight: 700; color: #4f46e5; line-height: 1;">${last24h.generated}</div>
+        <div style="font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; margin-top: 8px; font-weight: 600;">Generated</div>
       </div>
-      <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; text-align: center;">
-        <div style="font-size: 32px; font-weight: bold; color: #16a34a;">${last24h.approved}</div>
-        <div style="font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 0.5px;">Approved</div>
+      <div style="background: #f0fdf4; padding: 20px; border-radius: 6px; text-align: center; border: 1px solid #d1fae5;">
+        <div style="font-size: 36px; font-weight: 700; color: #059669; line-height: 1;">${last24h.approved}</div>
+        <div style="font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; margin-top: 8px; font-weight: 600;">Approved</div>
       </div>
-      <div style="background: #fffbeb; padding: 15px; border-radius: 8px; text-align: center;">
-        <div style="font-size: 32px; font-weight: bold; color: #d97706;">${last24h.spark}</div>
-        <div style="font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 0.5px;">Sparks</div>
+      <div style="background: #fffbeb; padding: 20px; border-radius: 6px; text-align: center; border: 1px solid #fde68a;">
+        <div style="font-size: 36px; font-weight: 700; color: #d97706; line-height: 1;">${last24h.spark}</div>
+        <div style="font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; margin-top: 8px; font-weight: 600;">Sparks</div>
       </div>
-      <div style="background: #fef2f2; padding: 15px; border-radius: 8px; text-align: center;">
-        <div style="font-size: 32px; font-weight: bold; color: #dc2626;">${last24h.rejected}</div>
-        <div style="font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 0.5px;">Rejected</div>
+      <div style="background: #fef2f2; padding: 20px; border-radius: 6px; text-align: center; border: 1px solid #fecaca;">
+        <div style="font-size: 36px; font-weight: 700; color: #dc2626; line-height: 1;">${last24h.rejected}</div>
+        <div style="font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; margin-top: 8px; font-weight: 600;">Rejected</div>
       </div>
     </div>
   </div>
@@ -625,23 +625,23 @@ function buildEmailHTML(data: {
   ${
     approvedIdeas.length > 0
       ? `
-  <div style="background: white; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-    <h2 style="margin: 0 0 20px 0; font-size: 20px; color: #16a34a;">✅ Approved Ideas (${approvedIdeas.length})</h2>
+  <div style="background: white; border-radius: 8px; padding: 28px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb;">
+    <h2 style="margin: 0 0 24px 0; font-size: 18px; font-weight: 700; color: #111827;">Approved Ideas <span style="font-weight: 400; color: #6b7280;">(${approvedIdeas.length})</span></h2>
     ${approvedIdeas
       .map(
         (idea) => `
-      <div style="border-left: 4px solid #16a34a; padding: 15px; margin-bottom: 15px; background: #f0fdf4; border-radius: 4px;">
-        <h3 style="margin: 0 0 8px 0; font-size: 16px; color: #15803d;">${idea.title}</h3>
-        <p style="margin: 0 0 10px 0; font-size: 14px; color: #4b5563;">${idea.description}</p>
-        <div style="display: flex; gap: 12px; font-size: 12px; color: #6b7280;">
-          <span><strong>Domains:</strong> ${idea.domain_pair.join(' × ')}</span>
-          <span><strong>Mode:</strong> ${idea.frontier_mode}</span>
+      <div style="border-left: 3px solid #059669; padding: 18px; margin-bottom: 16px; background: #f9fafb; border-radius: 6px;">
+        <h3 style="margin: 0 0 10px 0; font-size: 16px; font-weight: 600; color: #111827; line-height: 1.4;">${idea.title}</h3>
+        <p style="margin: 0 0 12px 0; font-size: 14px; color: #4b5563; line-height: 1.6;">${idea.description}</p>
+        <div style="display: flex; gap: 16px; font-size: 12px; color: #6b7280; margin-bottom: ${idea.opus_verdict ? '12px' : '0'};">
+          <span><strong style="font-weight: 600;">Domains:</strong> ${idea.domain_pair.join(' × ')}</span>
+          <span><strong style="font-weight: 600;">Mode:</strong> ${idea.frontier_mode.replace(/_/g, ' ')}</span>
         </div>
         ${
           idea.opus_verdict
             ? `
-          <div style="margin-top: 10px; padding: 10px; background: #dcfce7; border-radius: 4px; font-size: 13px; color: #166534;">
-            <strong>Review:</strong> ${idea.opus_verdict}
+          <div style="margin-top: 12px; padding: 12px; background: white; border-radius: 4px; font-size: 13px; color: #374151; border: 1px solid #d1fae5;">
+            <strong style="font-weight: 600; color: #059669;">Review:</strong> ${idea.opus_verdict}
           </div>
         `
             : ''
@@ -659,17 +659,17 @@ function buildEmailHTML(data: {
   ${
     sparkIdeas.length > 0
       ? `
-  <div style="background: white; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-    <h2 style="margin: 0 0 20px 0; font-size: 20px; color: #d97706;">⚡ Spark Ideas (${sparkIdeas.length})</h2>
+  <div style="background: white; border-radius: 8px; padding: 28px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb;">
+    <h2 style="margin: 0 0 24px 0; font-size: 18px; font-weight: 700; color: #111827;">Spark Ideas <span style="font-weight: 400; color: #6b7280;">(${sparkIdeas.length})</span></h2>
     ${sparkIdeas
       .slice(0, 3)
       .map(
         (idea) => `
-      <div style="border-left: 4px solid #d97706; padding: 15px; margin-bottom: 15px; background: #fffbeb; border-radius: 4px;">
-        <h3 style="margin: 0 0 8px 0; font-size: 16px; color: #b45309;">${idea.title}</h3>
-        <p style="margin: 0 0 10px 0; font-size: 14px; color: #4b5563;">${idea.description}</p>
+      <div style="border-left: 3px solid #d97706; padding: 18px; margin-bottom: 16px; background: #f9fafb; border-radius: 6px;">
+        <h3 style="margin: 0 0 10px 0; font-size: 16px; font-weight: 600; color: #111827; line-height: 1.4;">${idea.title}</h3>
+        <p style="margin: 0 0 12px 0; font-size: 14px; color: #4b5563; line-height: 1.6;">${idea.description}</p>
         <div style="font-size: 12px; color: #6b7280;">
-          <strong>Domains:</strong> ${idea.domain_pair.join(' × ')}
+          <strong style="font-weight: 600;">Domains:</strong> ${idea.domain_pair.join(' × ')}
         </div>
       </div>
     `
@@ -681,31 +681,31 @@ function buildEmailHTML(data: {
   }
 
   <!-- All-Time Progress -->
-  <div style="background: white; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-    <h2 style="margin: 0 0 20px 0; font-size: 20px; color: #667eea;">📈 All-Time Progress</h2>
+  <div style="background: white; border-radius: 8px; padding: 28px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb;">
+    <h2 style="margin: 0 0 24px 0; font-size: 18px; font-weight: 700; color: #111827;">All-Time Progress</h2>
 
-    <div style="margin-bottom: 20px;">
-      <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-        <span style="font-size: 14px; color: #6b7280;">Approval Rate</span>
-        <span style="font-size: 14px; font-weight: bold; color: #667eea;">${stats.approvalRate}%</span>
+    <div style="margin-bottom: 24px;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+        <span style="font-size: 14px; color: #6b7280; font-weight: 500;">Approval Rate</span>
+        <span style="font-size: 14px; font-weight: 700; color: #4f46e5;">${stats.approvalRate}%</span>
       </div>
-      <div style="background: #e5e7eb; height: 8px; border-radius: 4px; overflow: hidden;">
-        <div style="background: linear-gradient(90deg, #667eea, #764ba2); height: 100%; width: ${stats.approvalRate}%; transition: width 0.3s;"></div>
+      <div style="background: #e5e7eb; height: 10px; border-radius: 5px; overflow: hidden;">
+        <div style="background: linear-gradient(90deg, #4f46e5, #7c3aed); height: 100%; width: ${stats.approvalRate}%;"></div>
       </div>
     </div>
 
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 13px;">
-      <div style="text-align: center; padding: 10px; background: #f9fafb; border-radius: 6px;">
-        <div style="font-weight: bold; color: #111827;">${stats.total}</div>
-        <div style="color: #6b7280;">Total Ideas</div>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+      <div style="text-align: center; padding: 16px 12px; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;">
+        <div style="font-weight: 700; color: #111827; font-size: 24px; line-height: 1;">${stats.total}</div>
+        <div style="color: #6b7280; font-size: 12px; margin-top: 6px; font-weight: 500;">Total Ideas</div>
       </div>
-      <div style="text-align: center; padding: 10px; background: #f9fafb; border-radius: 6px;">
-        <div style="font-weight: bold; color: #16a34a;">${stats.approved + stats.spark}</div>
-        <div style="color: #6b7280;">Accepted</div>
+      <div style="text-align: center; padding: 16px 12px; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;">
+        <div style="font-weight: 700; color: #059669; font-size: 24px; line-height: 1;">${stats.approved + stats.spark}</div>
+        <div style="color: #6b7280; font-size: 12px; margin-top: 6px; font-weight: 500;">Accepted</div>
       </div>
-      <div style="text-align: center; padding: 10px; background: #f9fafb; border-radius: 6px;">
-        <div style="font-weight: bold; color: #667eea;">${stats.frontierBlockCount}</div>
-        <div style="color: #6b7280;">Frontier Blocks</div>
+      <div style="text-align: center; padding: 16px 12px; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;">
+        <div style="font-weight: 700; color: #4f46e5; font-size: 24px; line-height: 1;">${stats.frontierBlockCount}</div>
+        <div style="color: #6b7280; font-size: 12px; margin-top: 6px; font-weight: 500;">Frontier Blocks</div>
       </div>
     </div>
   </div>
@@ -714,19 +714,19 @@ function buildEmailHTML(data: {
   ${
     frontierBlocks.length > 0
       ? `
-  <div style="background: white; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-    <h2 style="margin: 0 0 20px 0; font-size: 20px; color: #764ba2;">🎯 Latest Frontier Blocks</h2>
+  <div style="background: white; border-radius: 8px; padding: 28px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb;">
+    <h2 style="margin: 0 0 24px 0; font-size: 18px; font-weight: 700; color: #111827;">Latest Frontier Blocks <span style="font-weight: 400; color: #6b7280;">(${frontierBlocks.length})</span></h2>
     ${frontierBlocks
       .slice(0, 3)
       .map(
         (block) => `
-      <div style="border-left: 4px solid #764ba2; padding: 15px; margin-bottom: 15px; background: #faf5ff; border-radius: 4px;">
-        <h3 style="margin: 0 0 8px 0; font-size: 16px; color: #6b21a8;">${block.concept_name}</h3>
-        <p style="margin: 0 0 10px 0; font-size: 14px; color: #4b5563;">${block.concept_description}</p>
+      <div style="border-left: 3px solid #7c3aed; padding: 18px; margin-bottom: 16px; background: #f9fafb; border-radius: 6px;">
+        <h3 style="margin: 0 0 10px 0; font-size: 16px; font-weight: 600; color: #111827; line-height: 1.4;">${block.concept_name}</h3>
+        <p style="margin: 0 0 12px 0; font-size: 14px; color: #4b5563; line-height: 1.6;">${block.concept_description}</p>
         <div style="font-size: 12px; color: #6b7280;">
-          <strong>FAS:</strong> ${block.frontier_advancement_score?.toFixed(2)} |
-          <strong>Spawns:</strong> ${block.spawn_count} |
-          <strong>Mode:</strong> ${block.frontier_mode}
+          <strong style="font-weight: 600;">FAS:</strong> ${block.frontier_advancement_score?.toFixed(2)} •
+          <strong style="font-weight: 600;">Spawns:</strong> ${block.spawn_count} •
+          <strong style="font-weight: 600;">Mode:</strong> ${block.frontier_mode.replace(/_/g, ' ')}
         </div>
       </div>
     `
@@ -738,9 +738,8 @@ function buildEmailHTML(data: {
   }
 
   <!-- Footer -->
-  <div style="text-align: center; padding: 20px; color: #6b7280; font-size: 12px;">
-    <p style="margin: 0 0 5px 0;">View all ideas at <a href="https://your-domain.vercel.app/ideas" style="color: #667eea; text-decoration: none;">your dashboard</a></p>
-    <p style="margin: 0;">Idea Engine • Evolutionary Frontier Exploration</p>
+  <div style="text-align: center; padding: 24px 20px; color: #9ca3af; font-size: 12px; border-top: 1px solid #e5e7eb; margin-top: 8px;">
+    <p style="margin: 0; font-weight: 500; color: #6b7280;">Idea Engine · Evolutionary Frontier Exploration</p>
   </div>
 
 </body>
