@@ -602,7 +602,6 @@ export function ReaderPage() {
           <div className="mt-20 pt-12 border-t border-[var(--glass-surface)]">
             <ItemInsightStrip title={article.title} themes={article.themes ?? undefined} />
           </div>
-          )}
         </main>
 
         {/* Highlight Menu */}
