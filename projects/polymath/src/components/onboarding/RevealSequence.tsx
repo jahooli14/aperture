@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Zap, ArrowRight, Book, Lock } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { CreateProjectDialog } from '../projects/CreateProjectDialog'
+import { PostOnboardingFlow } from './PostOnboardingFlow'
 import { useAuthContext } from '../../contexts/AuthContext'
 import type { OnboardingAnalysis, BookSearchResult } from '../../types'
 
@@ -31,7 +32,7 @@ const LOADING_MESSAGES = [
 export function RevealSequence({ analysis, books }: RevealSequenceProps) {
   const { isAuthenticated } = useAuthContext()
   const navigate = useNavigate()
-  const [beat, setBeat] = useState<'loading' | 'profile' | 'ideas'>('loading')
+  const [beat, setBeat] = useState<'loading' | 'profile' | 'ideas' | 'post-onboarding'>('loading')
   const [loadingMessage, setLoadingMessage] = useState(0)
   const [sparkSuggestion, setSparkSuggestion] = useState<{ title: string; description: string; reasoning: string } | null>(null)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
@@ -58,7 +59,11 @@ export function RevealSequence({ analysis, books }: RevealSequenceProps) {
 
   const handleSpark = (suggestion: { title: string; description: string; reasoning: string }) => {
     setSparkSuggestion(suggestion)
-    setShowCreateDialog(true)
+    if (isAuthenticated) {
+      setBeat('post-onboarding')
+    } else {
+      setShowCreateDialog(true)
+    }
   }
 
   // Build the seed conversation for CreateProjectDialog
@@ -397,7 +402,13 @@ export function RevealSequence({ analysis, books }: RevealSequenceProps) {
                 </button>
               )}
               <button
-                onClick={() => navigate('/')}
+                onClick={() => {
+                  if (isAuthenticated) {
+                    setBeat('post-onboarding')
+                  } else {
+                    navigate('/')
+                  }
+                }}
                 className="text-sm transition-opacity hover:opacity-80 inline-flex items-center gap-1.5"
                 style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
               >
@@ -432,7 +443,13 @@ export function RevealSequence({ analysis, books }: RevealSequenceProps) {
               </button>
             )}
             <button
-              onClick={() => navigate('/')}
+              onClick={() => {
+                if (isAuthenticated) {
+                  setBeat('post-onboarding')
+                } else {
+                  navigate('/')
+                }
+              }}
               className="btn-primary px-8 py-3.5 text-base font-semibold inline-flex items-center gap-2"
             >
               {isAuthenticated ? 'Start exploring' : 'skip for now'}
@@ -442,7 +459,15 @@ export function RevealSequence({ analysis, books }: RevealSequenceProps) {
         )}
       </AnimatePresence>
 
-      {/* CreateProjectDialog with seed conversation */}
+      {/* Post-Onboarding Flow — guided first project via chat */}
+      {beat === 'post-onboarding' && (
+        <PostOnboardingFlow
+          analysis={analysis}
+          sparkedSuggestion={sparkSuggestion}
+        />
+      )}
+
+      {/* CreateProjectDialog with seed conversation (for unauthenticated users) */}
       <CreateProjectDialog
         isOpen={showCreateDialog}
         onOpenChange={setShowCreateDialog}
