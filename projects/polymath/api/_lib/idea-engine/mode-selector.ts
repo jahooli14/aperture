@@ -1,5 +1,5 @@
-import { supabase } from './supabase';
-import type { FrontierMode, ModeStats, EvolutionaryPressure } from './types';
+import { supabase } from './supabase.js';
+import type { FrontierMode, ModeStats, EvolutionaryPressure } from './types.js';
 
 const ALL_MODES: FrontierMode[] = [
   'translate',
