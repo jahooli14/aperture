@@ -4,21 +4,24 @@ import frontierModes from './frontier-modes.json' assert { type: 'json' };
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-if (!GEMINI_API_KEY) {
-  throw new Error('GEMINI_API_KEY environment variable is required');
+function getGenAI() {
+  if (!GEMINI_API_KEY) {
+    throw new Error('GEMINI_API_KEY environment variable is required');
+  }
+  return new GoogleGenerativeAI(GEMINI_API_KEY);
 }
 
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+function getAgentModel(): GenerativeModel {
+  return getGenAI().getGenerativeModel({
+    model: 'gemini-3.1-flash-lite',
+  });
+}
 
-// Use Gemini 3.1 Flash-Lite for generation
-const agentModel: GenerativeModel = genAI.getGenerativeModel({
-  model: 'gemini-3.1-flash-lite',
-});
-
-// Use Gemini 3 Flash for pre-filter scoring (better quality)
-const filterModel: GenerativeModel = genAI.getGenerativeModel({
-  model: 'gemini-3-flash-preview',
-});
+function getFilterModel(): GenerativeModel {
+  return getGenAI().getGenerativeModel({
+    model: 'gemini-3-flash-preview',
+  });
+}
 
 /**
  * Retry utility with exponential backoff
@@ -75,7 +78,7 @@ export async function generateIdea(
 
   // Call Gemini with retry logic
   const response = await retryWithBackoff(async () => {
-    const result = await agentModel.generateContent({
+    const result = await getAgentModel().generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: mode.temperature,
@@ -150,7 +153,7 @@ ${existingIdeas.slice(0, 10).map((e) => `- ${e.title}`).join('\n')}
 \`\`\``;
 
   const response = await retryWithBackoff(async () => {
-    const result = await filterModel.generateContent({
+    const result = await getFilterModel().generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.3, // Low temperature for consistent scoring
@@ -216,7 +219,7 @@ Output: "Map biological multi-pathway computation to neural network architecture
 Your turn (no JSON, just the pattern text):`;
 
   const response = await retryWithBackoff(async () => {
-    const result = await filterModel.generateContent({
+    const result = await getFilterModel().generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.5,
