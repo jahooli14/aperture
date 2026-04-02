@@ -13,6 +13,7 @@ import { ScrollToTop } from './components/ScrollToTop'
 import { DebugPanel } from './components/DebugPanel'
 import { ExtractionSummary } from './components/memories/ExtractionSummary'
 import { SteeringCard } from './components/memories/SteeringCard'
+import { FirstConnectionCelebration } from './components/home/FirstConnectionCelebration'
 import { ContextSidebar } from './components/context/ContextSidebar'
 import { FocusSession } from './components/power-hour/FocusSession'
 import { Loader2 } from 'lucide-react'
@@ -289,6 +290,11 @@ export default function App() {
             {/* Steering Card - Shows live mind steering after extraction completes */}
             <ErrorBoundary fallback={null}>
               <SteeringCard />
+            </ErrorBoundary>
+
+            {/* First Connection Celebration — early win for new users */}
+            <ErrorBoundary fallback={null}>
+              <FirstConnectionCelebration />
             </ErrorBoundary>
 
             <div className="min-h-screen flex flex-col overflow-x-hidden">
