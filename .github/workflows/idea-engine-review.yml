@@ -15,7 +15,7 @@ jobs:
     steps:
       - name: Trigger Opus review
         run: |
-          curl -X POST "https://${{ secrets.VERCEL_DOMAIN }}/api/idea-engine?action=review" \
+          curl -f -X POST "${{ secrets.VERCEL_DOMAIN }}/api/idea-engine?action=review" \
             -H "Authorization: Bearer ${{ secrets.IDEA_ENGINE_SECRET }}" \
             -H "Content-Type: application/json" \
             -w "\nHTTP Status: %{http_code}\n" \
