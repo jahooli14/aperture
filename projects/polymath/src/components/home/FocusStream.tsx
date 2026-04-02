@@ -131,6 +131,14 @@ export function FocusStream() {
                                 boxShadow: `0 8px 32px rgba(${theme.rgb}, 0.15)`
                             }}
                             onClick={() => navigate(`/projects/${priorityProject.id}`)}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = `rgba(${theme.rgb}, 0.15)`
+                                e.currentTarget.style.borderColor = theme.textColor
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = `rgba(${theme.rgb}, 0.08)`
+                                e.currentTarget.style.borderColor = theme.borderColor
+                            }}
                         >
                             <div className="relative z-10 flex-1">
                                 <div className="flex items-center justify-between gap-4 mb-4">
@@ -173,6 +181,14 @@ export function FocusStream() {
                                 boxShadow: 'none'
                             }}
                             onClick={() => navigate(`/projects/${recentProject.id}`)}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = `rgba(${theme.rgb}, 0.15)`
+                                e.currentTarget.style.borderColor = theme.textColor
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = `rgba(${theme.rgb}, 0.08)`
+                                e.currentTarget.style.borderColor = theme.borderColor
+                            }}
                         >
                             <div className="relative z-10 flex-1">
                                 <div className="flex items-center justify-between gap-4 mb-4">
@@ -200,40 +216,19 @@ export function FocusStream() {
                 })()}
 
                 {/* Card 1: Review Dormant Projects */}
-                {dormantProjects.length > 0 && (() => {
-                    return (
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="p-6 relative overflow-hidden group cursor-pointer glass-card glass-card-hover transition-all duration-300 md:col-span-2 flex flex-col"
-                            onClick={() => setShowReviewDeck(true)}
-                        >
-                            <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-                                <Layers className="h-24 w-24" />
-                            </div>
-
-                            <div className="relative z-10">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <span className="px-2 py-0.5 rounded-xl text-[10px] font-bold uppercase tracking-widest border border-[var(--glass-surface-hover)] aperture-header text-[var(--brand-text-muted)] bg-[var(--glass-surface)]">
-                                        Review Mode
-                                    </span>
-                                    <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--brand-text-muted)] aperture-header">
-                                        {dormantProjects.length} projects waiting
-                                    </span>
-                                </div>
-
-                                <h3 className="text-xl font-bold text-[var(--brand-text-primary)] mb-2 aperture-header">
-                                    Dust off your archives
-                                </h3>
-                                <p className="text-sm text-[var(--brand-text-secondary)] line-clamp-2 leading-relaxed aperture-body">
-                                    You have {dormantProjects.length} projects that haven't been touched in over 2 weeks.
-                                    Take a moment to decide their future.
-                                </p>
-                            </div>
-                        </motion.div>
-                    )
-                })()}
             </div>
+
+            {dormantProjects.length > 0 && (
+                <div className="mt-6">
+                    <button
+                        onClick={() => setShowReviewDeck(true)}
+                        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all hover:bg-[rgba(255,255,255,0.1)] border border-[var(--glass-surface)] text-[var(--brand-primary)] aperture-header"
+                    >
+                        <Layers className="h-4 w-4" />
+                        Review mode: {dormantProjects.length} dormant projects
+                    </button>
+                </div>
+            )}
 
             {/* Review Deck Modal */}
             <AnimatePresence>
