@@ -89,7 +89,7 @@ import { detectMilestones } from '../../baby-milestone-tracker/lib/milestone-det
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 SUPABASE_ANON_KEY=
-GEMINI_API_KEY=***REMOVED-GEMINI-KEY***
+GEMINI_API_KEY=your-gemini-api-key-here
 ```
 
 ### Database Migration

@@ -318,7 +318,7 @@ async retryWithExponentialBackoff<T>(
 
 ```bash
 # Required
-VITE_GEMINI_API_KEY=***REMOVED-GEMINI-KEY***
+VITE_GEMINI_API_KEY=your-gemini-api-key-here
 VITE_SUPABASE_URL=https://xxx.supabase.co
 VITE_SUPABASE_ANON_KEY=your_anon_key
 

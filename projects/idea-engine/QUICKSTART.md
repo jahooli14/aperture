@@ -3,7 +3,7 @@
 **Your Configuration:**
 - Email: dmahorgan@gmail.com
 - User ID: 55f8dc70-8317-4b79-b8c4-0de2f8b30534
-- Gemini API Key: ***REMOVED-GEMINI-KEY***
+- Gemini API Key: your-gemini-api-key-here
 - Budget: $10/month (optimized for max throughput)
 
 ---
@@ -56,7 +56,7 @@ Add these:
 
 ```bash
 # Gemini API (already have)
-GEMINI_API_KEY=***REMOVED-GEMINI-KEY***
+GEMINI_API_KEY=your-gemini-api-key-here
 
 # User ID
 IDEA_ENGINE_USER_ID=55f8dc70-8317-4b79-b8c4-0de2f8b30534

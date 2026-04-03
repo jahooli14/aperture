@@ -209,7 +209,7 @@ pip install google-genai playwright termcolor pixelmatch
 playwright install chromium
 
 # Set API key
-export GEMINI_API_KEY="***REMOVED-GEMINI-KEY***"
+export GEMINI_API_KEY="your-gemini-api-key-here"
 ```
 
 ### Core Integration
