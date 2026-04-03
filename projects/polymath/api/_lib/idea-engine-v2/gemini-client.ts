@@ -188,16 +188,20 @@ ${existingIdeas.slice(0, 10).map((e) => `- ${e.title}`).join('\n')}
     const endIdx = text.lastIndexOf('}');
 
     if (startIdx === -1 || endIdx === -1 || endIdx <= startIdx) {
-      throw new Error(`Scorer response does not contain valid JSON object. Response: ${text}`);
+      console.error('[Scorer] No valid braces. startIdx:', startIdx, 'endIdx:', endIdx, 'text length:', text.length);
+      console.error('[Scorer] First 500 chars:', text.substring(0, 500));
+      throw new Error(`Scorer: No valid JSON braces (start: ${startIdx}, end: ${endIdx}, len: ${text.length})`);
     }
 
     const jsonText = text.substring(startIdx, endIdx + 1);
+    console.log('[Scorer] Extracted JSON length:', jsonText.length, 'first 200:', jsonText.substring(0, 200));
 
     let parsed;
     try {
       parsed = JSON.parse(jsonText);
     } catch (parseError) {
-      throw new Error(`Failed to parse JSON from scorer. Raw: ${text.substring(0, 500)}. Extract: ${jsonText.substring(0, 500)}`);
+      console.error('[Scorer] Parse failed. JSON:', jsonText);
+      throw new Error(`Scorer JSON parse failed: ${parseError instanceof Error ? parseError.message : 'unknown'}`);
     }
 
     // Validate scores
