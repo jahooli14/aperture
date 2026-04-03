@@ -261,7 +261,8 @@ async function handleReview(res: VercelResponse) {
 async function handleSendDigest(res: VercelResponse) {
   const startTime = Date.now();
 
-  // Fetch approved ideas from today
+  // Fetch approved ideas that haven't been sent in a digest yet
+  // We look for ideas approved today that don't have digest_sent_at set
   const today = new Date().toISOString().split('T')[0];
   const { data: approvedIdeas, error } = await supabase
     .from('ie_ideas')
@@ -269,6 +270,7 @@ async function handleSendDigest(res: VercelResponse) {
     .eq('user_id', USER_ID)
     .eq('status', 'approved')
     .gte('reviewed_at', today)
+    .is('digest_sent_at', null)
     .order('prefilter_score', { ascending: false });
 
   if (error) {
@@ -278,6 +280,16 @@ async function handleSendDigest(res: VercelResponse) {
 
   try {
     const result = await sendDailyDigest(USER_ID!, approvedIdeas as Idea[]);
+
+    // Mark ideas as sent in digest
+    if (approvedIdeas && approvedIdeas.length > 0) {
+      const ideaIds = approvedIdeas.map(i => i.id);
+      await supabase
+        .from('ie_ideas')
+        .update({ digest_sent_at: new Date().toISOString() })
+        .in('id', ideaIds);
+    }
+
     const elapsed = Date.now() - startTime;
 
     return res.status(200).json({

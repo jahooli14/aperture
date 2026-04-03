@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS ie_ideas (
   generation_number INTEGER NOT NULL DEFAULT 1,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   reviewed_at TIMESTAMPTZ,
+  digest_sent_at TIMESTAMPTZ,
   metadata JSONB
 );
 
