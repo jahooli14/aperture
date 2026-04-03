@@ -252,11 +252,26 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
         )}
 
         {progress > 0 && (
-          <div className="w-full h-[5px] mt-2 overflow-hidden" style={{ background: 'var(--glass-surface)', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <div
-              className="h-full bg-brand-primary transition-all duration-500"
-              style={{ width: `${progress}%` }}
-            />
+          <div className="mt-2">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted">
+                {progress >= 95 ? 'Finished' : 'Reading'}
+              </span>
+              <span className="text-[10px] font-mono text-brand-text-muted">
+                {Math.round(progress)}%
+              </span>
+            </div>
+            <div className="w-full h-1 rounded-full overflow-hidden" style={{ background: 'var(--glass-surface)' }}>
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${progress}%`,
+                  background: progress >= 95
+                    ? 'rgb(52, 211, 153)'
+                    : 'var(--brand-primary)',
+                }}
+              />
+            </div>
           </div>
         )}
 
