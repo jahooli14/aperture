@@ -12,7 +12,7 @@ function getGenAI() {
 }
 
 function getSummarizerModel() {
-  return getGenAI().getGenerativeModel({ model: 'gemini-1.5-flash-8b' });
+  return getGenAI().getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
 }
 
 /**
