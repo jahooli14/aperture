@@ -65,18 +65,23 @@ Tractability Score: ${idea.tractability_score?.toFixed(2) || 'N/A'}
     generationConfig: {
       temperature: 0.3,
       maxOutputTokens: 300,
+      responseMimeType: 'application/json',
     },
   });
 
   const text = result.response.text();
 
-  // Parse JSON from response
-  const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/);
-  if (!jsonMatch) {
-    throw new Error('Reviewer response does not contain valid JSON block');
+  // Try to parse JSON directly first, then try extracting from markdown
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error(`Reviewer response does not contain valid JSON: ${text.substring(0, 200)}`);
+    }
+    parsed = JSON.parse(jsonMatch[1] || jsonMatch[0]);
   }
-
-  const parsed = JSON.parse(jsonMatch[1]);
 
   // Validate verdict
   if (!['BUILD', 'SPARK', 'REJECT'].includes(parsed.verdict)) {

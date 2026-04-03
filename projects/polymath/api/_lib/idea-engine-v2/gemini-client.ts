@@ -175,18 +175,23 @@ ${existingIdeas.slice(0, 10).map((e) => `- ${e.title}`).join('\n')}
       generationConfig: {
         temperature: 0.3, // Low temperature for consistent scoring
         maxOutputTokens: 200,
+        responseMimeType: 'application/json',
       },
     });
 
     const text = result.response.text();
 
-    // Parse JSON from response
-    const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/);
-    if (!jsonMatch) {
-      throw new Error('Scorer response does not contain valid JSON block');
+    // Try to parse JSON directly first, then try extracting from markdown
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error(`Scorer response does not contain valid JSON: ${text.substring(0, 200)}`);
+      }
+      parsed = JSON.parse(jsonMatch[1] || jsonMatch[0]);
     }
-
-    const parsed = JSON.parse(jsonMatch[1]);
 
     // Validate scores
     if (
