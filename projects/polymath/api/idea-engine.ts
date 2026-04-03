@@ -1,10 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { generateIdea, scoreIdea } from './_lib/idea-engine/gemini-client.js';
-import { sampleDomainPair, recordDomainPairGeneration } from './_lib/idea-engine/domain-sampler.js';
-import { selectFrontierMode, recordModeUsage } from './_lib/idea-engine/mode-selector.js';
-import { generateIdeaEmbedding, storeIdeaWithDedupe } from './_lib/idea-engine/deduplication.js';
-import { getLatestFeedbackSummary } from './_lib/idea-engine/feedback-summarizer.js';
-import { supabase, isSupabaseConfigured } from './_lib/idea-engine/supabase.js';
+import { generateIdea, scoreIdea } from './_lib/idea-engine-v2/gemini-client.js';
+import { sampleDomainPair, recordDomainPairGeneration } from './_lib/idea-engine-v2/domain-sampler.js';
+import { selectFrontierMode, recordModeUsage } from './_lib/idea-engine-v2/mode-selector.js';
+import { generateIdeaEmbedding, storeIdeaWithDedupe } from './_lib/idea-engine-v2/deduplication.js';
+import { getLatestFeedbackSummary } from './_lib/idea-engine-v2/feedback-summarizer.js';
+import { supabase, isSupabaseConfigured } from './_lib/idea-engine-v2/supabase.js';
 
 const USER_ID = process.env.IDEA_ENGINE_USER_ID;
 
