@@ -49,7 +49,7 @@ jobs:
       - name: Run Idea Engine
         if: steps.determine.outputs.action != 'none'
         run: |
-          curl -X POST "https://polymath-dan.vercel.app/api/idea-engine?action=${{ steps.determine.outputs.action }}" \
+          curl -X POST "https://aper-ture.vercel.app/api/idea-engine?action=${{ steps.determine.outputs.action }}" \
             -H "Authorization: Bearer ${{ secrets.IDEA_ENGINE_SECRET }}" \
             -H "Content-Type: application/json" \
             --max-time 120 \
