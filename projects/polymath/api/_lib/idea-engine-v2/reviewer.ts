@@ -62,12 +62,18 @@ Tractability Score: ${idea.tractability_score?.toFixed(2) || 'N/A'}
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     generationConfig: {
       temperature: 0.3,
-      maxOutputTokens: 500,
+      maxOutputTokens: 2000, // Increased significantly to ensure full response
+      responseMimeType: 'application/json',
     },
-    systemInstruction: 'You are a JSON API. Return only valid JSON with no additional text, explanations, or formatting.',
   });
 
+  // Debug: Check finish reason
+  const candidate = result.response.candidates?.[0];
+  console.log('[Reviewer] Finish reason:', candidate?.finishReason);
+  console.log('[Reviewer] Safety ratings:', JSON.stringify(candidate?.safetyRatings));
+
   const text = result.response.text();
+  console.log('[Reviewer] Full response text:', text);
 
   // Strip any text before first { and after last }
   const startIdx = text.indexOf('{');
