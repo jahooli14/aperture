@@ -22,6 +22,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const action = req.query.action as string;
 
+  // Force cache bust
+
   // Validate environment
   if (!USER_ID) {
     return res.status(500).json({ error: 'IDEA_ENGINE_USER_ID not configured' });
