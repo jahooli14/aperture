@@ -187,12 +187,18 @@ ${existingIdeas.slice(0, 10).map((e) => `- ${e.title}`).join('\n')}
     const startIdx = text.indexOf('{');
     const endIdx = text.lastIndexOf('}');
 
-    if (startIdx === -1 || endIdx === -1) {
-      throw new Error(`Scorer response does not contain JSON object: ${text.substring(0, 200)}`);
+    if (startIdx === -1 || endIdx === -1 || endIdx <= startIdx) {
+      throw new Error(`Scorer response does not contain valid JSON object. Response: ${text}`);
     }
 
     const jsonText = text.substring(startIdx, endIdx + 1);
-    const parsed = JSON.parse(jsonText);
+
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonText);
+    } catch (parseError) {
+      throw new Error(`Failed to parse JSON from scorer. Raw: ${text.substring(0, 500)}. Extract: ${jsonText.substring(0, 500)}`);
+    }
 
     // Validate scores
     if (
