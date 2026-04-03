@@ -6,10 +6,12 @@ Personal projects monorepo. React, TypeScript, Vite, Vercel, Supabase.
 
 | Project | Location | Status | Description |
 |---------|----------|--------|-------------|
-| **Pupils** | `projects/wizard-of-oz/` | Production | Baby photo alignment app |
+| **Pupils** | `projects/wizard-of-oz/` | Production | Baby photo alignment & milestone tracking app |
 | **Polymath** | `projects/polymath/` | Production | Voice-to-memory knowledge graph |
-| **Analogue** | `projects/analogue/` | Active | Mobile manuscript editing IDE |
-| **Agentic Swarm** | `agentic-swarm/` | Active | Multi-agent task orchestration |
+| **Analogue** | `projects/analogue/` | Active | Book publishing / manuscript editing IDE |
+| **Idea Engine** | `projects/idea-engine/` | Active | Autonomous evolutionary ideation system |
+
+> **Sonically Sound** also exists as a deployed app but lives outside this repo.
 
 ## Commands
 
@@ -17,7 +19,7 @@ Personal projects monorepo. React, TypeScript, Vite, Vercel, Supabase.
 cd projects/wizard-of-oz && npm run dev   # Pupils
 cd projects/polymath && npm run dev       # Polymath
 cd projects/analogue && npm run dev       # Analogue
-cd agentic-swarm && npm run dev           # Agentic Swarm
+cd projects/idea-engine && npm run dev    # Idea Engine
 ```
 
 ## Skills
