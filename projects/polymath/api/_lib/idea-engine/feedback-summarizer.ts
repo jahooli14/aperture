@@ -3,8 +3,17 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import type { EvolutionaryFeedback, FeedbackSummary } from './types.js';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY!);
-const summarizerModel = genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite' });
+
+function getGenAI() {
+  if (!GEMINI_API_KEY) {
+    throw new Error('GEMINI_API_KEY not configured');
+  }
+  return new GoogleGenerativeAI(GEMINI_API_KEY);
+}
+
+function getSummarizerModel() {
+  return getGenAI().getGenerativeModel({ model: 'gemini-1.5-flash-002' });
+}
 
 /**
  * Feedback Summarizer
@@ -114,7 +123,7 @@ Output format:
 
 Be concise and actionable.`;
 
-  const result = await summarizerModel.generateContent({
+  const result = await getSummarizerModel().generateContent({
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     generationConfig: {
       temperature: 0.3,
@@ -180,7 +189,7 @@ Output format:
 
 Be concise and actionable.`;
 
-  const result = await summarizerModel.generateContent({
+  const result = await getSummarizerModel().generateContent({
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     generationConfig: {
       temperature: 0.3,
