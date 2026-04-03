@@ -176,7 +176,7 @@ ${existingIdeas.slice(0, 10).map((e) => `- ${e.title}`).join('\n')}
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.3,
-        maxOutputTokens: 200,
+        maxOutputTokens: 500,
       },
       systemInstruction: 'You are a JSON API. Return only valid JSON with no additional text, explanations, or formatting.',
     });
