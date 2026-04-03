@@ -62,7 +62,7 @@ Tractability Score: ${idea.tractability_score?.toFixed(2) || 'N/A'}
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     generationConfig: {
       temperature: 0.3,
-      maxOutputTokens: 300,
+      maxOutputTokens: 500,
     },
     systemInstruction: 'You are a JSON API. Return only valid JSON with no additional text, explanations, or formatting.',
   });
@@ -73,12 +73,22 @@ Tractability Score: ${idea.tractability_score?.toFixed(2) || 'N/A'}
   const startIdx = text.indexOf('{');
   const endIdx = text.lastIndexOf('}');
 
-  if (startIdx === -1 || endIdx === -1) {
-    throw new Error(`Reviewer response does not contain JSON object: ${text.substring(0, 200)}`);
+  if (startIdx === -1 || endIdx === -1 || endIdx <= startIdx) {
+    console.error('[Reviewer] No valid braces. startIdx:', startIdx, 'endIdx:', endIdx, 'text length:', text.length);
+    console.error('[Reviewer] First 500 chars:', text.substring(0, 500));
+    throw new Error(`Reviewer: No valid JSON braces (start: ${startIdx}, end: ${endIdx}, len: ${text.length})`);
   }
 
   const jsonText = text.substring(startIdx, endIdx + 1);
-  const parsed = JSON.parse(jsonText);
+  console.log('[Reviewer] Extracted JSON length:', jsonText.length);
+
+  let parsed;
+  try {
+    parsed = JSON.parse(jsonText);
+  } catch (parseError) {
+    console.error('[Reviewer] Parse failed. JSON:', jsonText);
+    throw new Error(`Reviewer JSON parse failed: ${parseError instanceof Error ? parseError.message : 'unknown'}`);
+  }
 
   // Validate verdict
   if (!['BUILD', 'SPARK', 'REJECT'].includes(parsed.verdict)) {
