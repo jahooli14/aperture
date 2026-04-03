@@ -261,26 +261,28 @@ async function handleReview(res: VercelResponse) {
 async function handleSendDigest(res: VercelResponse) {
   const startTime = Date.now();
 
-  const { data: pendingIdeas, error } = await supabase
+  // Fetch approved ideas from today
+  const today = new Date().toISOString().split('T')[0];
+  const { data: approvedIdeas, error } = await supabase
     .from('ie_ideas')
     .select('*')
     .eq('user_id', USER_ID)
-    .eq('status', 'pending')
-    .order('prefilter_score', { ascending: false })
-    .limit(50);
+    .eq('status', 'approved')
+    .gte('reviewed_at', today)
+    .order('prefilter_score', { ascending: false });
 
   if (error) {
-    console.error('Failed to fetch pending ideas:', error);
-    return res.status(500).json({ error: 'Failed to fetch pending ideas', details: error.message });
+    console.error('Failed to fetch approved ideas:', error);
+    return res.status(500).json({ error: 'Failed to fetch approved ideas', details: error.message });
   }
 
   try {
-    const result = await sendDailyDigest(USER_ID!, pendingIdeas as Idea[]);
+    const result = await sendDailyDigest(USER_ID!, approvedIdeas as Idea[]);
     const elapsed = Date.now() - startTime;
 
     return res.status(200).json({
       success: true,
-      ideas_count: pendingIdeas?.length || 0,
+      ideas_count: approvedIdeas?.length || 0,
       message: result.message || 'Digest sent successfully',
       elapsed_ms: elapsed,
     });

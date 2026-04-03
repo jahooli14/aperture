@@ -4,9 +4,9 @@ on:
   schedule:
     # Generate: Every 11 minutes (~131 ideas/day)
     - cron: '*/11 * * * *'
-    # Review: 3x daily (8am, 2pm, 8pm UTC)
-    - cron: '0 8,14,20 * * *'
-    # Digest: Daily at 8:30am UTC
+    # Review: Once daily at 8am UTC (before digest)
+    - cron: '0 8 * * *'
+    # Digest: Daily at 8:30am UTC (after review completes)
     - cron: '30 8 * * *'
   workflow_dispatch:
     inputs:
@@ -35,12 +35,10 @@ jobs:
             # Generate runs every 11 minutes
             if [ $((MINUTE % 11)) -eq 0 ]; then
               echo "action=generate" >> $GITHUB_OUTPUT
-            # Review runs at 8am, 2pm, 8pm UTC (hours 8, 14, 20)
-            elif [ "$HOUR" = "08" ] || [ "$HOUR" = "14" ] || [ "$HOUR" = "20" ]; then
-              if [ "$MINUTE" = "00" ]; then
-                echo "action=review" >> $GITHUB_OUTPUT
-              fi
-            # Digest runs at 8:30am UTC
+            # Review runs once daily at 8am UTC
+            elif [ "$HOUR" = "08" ] && [ "$MINUTE" = "00" ]; then
+              echo "action=review" >> $GITHUB_OUTPUT
+            # Digest runs at 8:30am UTC (after review)
             elif [ "$HOUR" = "08" ] && [ "$MINUTE" = "30" ]; then
               echo "action=send-digest" >> $GITHUB_OUTPUT
             else

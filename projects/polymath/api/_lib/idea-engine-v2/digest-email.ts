@@ -67,23 +67,26 @@ async function getProgressStats(userId: string): Promise<ProgressStats> {
 }
 
 /**
- * Send daily digest email with pending ideas for review
+ * Send daily digest email with approved ideas (building blocks)
  */
 export async function sendDailyDigest(userId: string, ideas: Idea[]) {
   const resend = getResend();
 
-  if (ideas.length === 0) {
-    console.log('No pending ideas to send in digest');
-    return { success: true, message: 'No pending ideas' };
+  // Only send approved ideas (building blocks)
+  const approvedIdeas = ideas.filter(i => i.status === 'approved');
+
+  if (approvedIdeas.length === 0) {
+    console.log('No approved ideas to send in digest');
+    return { success: true, message: 'No approved ideas today' };
   }
 
   const progress = await getProgressStats(userId);
-  const html = generateDigestHTML(ideas, progress);
+  const html = generateDigestHTML(approvedIdeas, progress);
 
   const { data, error } = await resend.emails.send({
     from: 'Idea Engine <onboarding@resend.dev>',
     to: DIGEST_EMAIL,
-    subject: `🔬 Daily Idea Digest — ${ideas.length} ideas awaiting review`,
+    subject: `🔬 Daily Idea Digest — ${approvedIdeas.length} new building blocks`,
     html,
   });
 
@@ -92,7 +95,7 @@ export async function sendDailyDigest(userId: string, ideas: Idea[]) {
     throw error;
   }
 
-  console.log(`Digest email sent to ${DIGEST_EMAIL} with ${ideas.length} ideas`);
+  console.log(`Digest email sent to ${DIGEST_EMAIL} with ${approvedIdeas.length} approved ideas`);
   return { success: true, data };
 }
 
@@ -100,14 +103,14 @@ function generateDigestHTML(ideas: Idea[], progress: ProgressStats): string {
   const ideaRows = ideas
     .map(
       (idea, index) => `
-    <div style="margin-bottom: 32px; padding: 24px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #4f46e5;">
+    <div style="margin-bottom: 24px; padding: 24px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #10b981;">
       <h3 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 600; color: #1e293b;">
         ${index + 1}. ${idea.title}
       </h3>
       <p style="margin: 0 0 12px 0; font-size: 14px; line-height: 1.6; color: #475569;">
         ${idea.description}
       </p>
-      <div style="display: flex; gap: 16px; font-size: 12px; color: #64748b; margin-bottom: 12px;">
+      <div style="display: flex; gap: 16px; font-size: 12px; color: #64748b; margin-bottom: 8px;">
         <span><strong>Domains:</strong> ${idea.domain_pair.join(' × ')}</span>
         <span><strong>Mode:</strong> ${idea.frontier_mode}</span>
       </div>
@@ -116,20 +119,6 @@ function generateDigestHTML(ideas: Idea[], progress: ProgressStats): string {
         <span><strong>Tractability:</strong> ${idea.tractability_score?.toFixed(2) || 'N/A'}</span>
         <span><strong>Distance:</strong> ${idea.cross_domain_distance?.toFixed(2) || 'N/A'}</span>
         <span><strong>Overall:</strong> ${idea.prefilter_score?.toFixed(2) || 'N/A'}</span>
-      </div>
-      <div style="margin-top: 16px;">
-        <a href="https://polymath-dan.vercel.app/ideas/${idea.id}?action=approve"
-           style="display: inline-block; padding: 8px 16px; background: #10b981; color: white; text-decoration: none; border-radius: 4px; font-size: 14px; margin-right: 8px;">
-          ✓ BUILD
-        </a>
-        <a href="https://polymath-dan.vercel.app/ideas/${idea.id}?action=spark"
-           style="display: inline-block; padding: 8px 16px; background: #f59e0b; color: white; text-decoration: none; border-radius: 4px; font-size: 14px; margin-right: 8px;">
-          ⚡ SPARK
-        </a>
-        <a href="https://polymath-dan.vercel.app/ideas/${idea.id}?action=reject"
-           style="display: inline-block; padding: 8px 16px; background: #ef4444; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">
-          ✕ REJECT
-        </a>
       </div>
     </div>
   `
@@ -150,8 +139,11 @@ function generateDigestHTML(ideas: Idea[], progress: ProgressStats): string {
       <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; color: #0f172a;">
         🔬 Daily Idea Digest
       </h1>
-      <p style="margin: 0; font-size: 16px; color: #64748b;">
-        ${ideas.length} ideas generated and awaiting your review
+      <p style="margin: 0 0 8px 0; font-size: 16px; color: #64748b;">
+        ${ideas.length} new building block${ideas.length === 1 ? '' : 's'} added to your frontier
+      </p>
+      <p style="margin: 0; font-size: 14px; color: #94a3b8;">
+        Your AI runs 24/7, generating and reviewing ideas across domain boundaries. These are today's approved concepts—building blocks for your knowledge map.
       </p>
     </div>
 
