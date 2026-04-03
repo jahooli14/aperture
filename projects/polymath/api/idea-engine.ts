@@ -188,6 +188,5 @@ async function handleGenerate(res: VercelResponse) {
     throw error;
   }
 }
-// Build timestamp: Fri  3 Apr 2026 08:17:04 BST
-// Updated: $(date +%s)
-// Build: $(date +%s)
+// Build timestamp: Fri  3 Apr 2026 09:52:18 BST
+// Updated with gemini-3.1-flash-lite-preview model
