@@ -83,15 +83,27 @@ export async function generateIdea(
     prompt += `\n\n**Learned Context (from past reviews):**\n${feedbackContext}\n\nUse this context to avoid patterns that have been rejected before.`;
   }
 
-  // Add clarity instructions
-  prompt += `\n\n**IMPORTANT - Writing Style:**
-- Write for an intelligent generalist, not domain experts
-- Avoid unnecessary jargon - use plain language where possible
-- If technical terms are needed, briefly explain them in context
-- Focus on the practical insight, not showing off vocabulary
-- Make the title punchy and accessible
-- Example of good: "Using evolution's trial-and-error approach to improve AI training"
-- Example of bad: "Leveraging phylogenetic stochasticity for neural architecture optimization paradigms"`;
+  // Add clarity instructions - PLAIN ENGLISH IS THE NORTH STAR
+  prompt += `\n\n**CRITICAL - PLAIN ENGLISH ONLY (YOU WILL BE REJECTED FOR JARGON):**
+
+BANNED WORDS (do not use ANY of these): modular, paradigm, leverage, utilize, synergy, framework, cascading, systemic, polymorphic, entropy, robust, optimization, schema, methodology, holistic, utilize, facilitate, implement, infrastructure, architecture, ecosystem, metric, dynamic, strategic, innovative, scalable, iterative, synthesis, multifaceted
+
+WRITE LIKE THIS:
+- "How bee colonies decide where to build their hive - and what it means for how our brains pick restaurants"
+- "Plants can't run away from danger, so they built a chemical alarm system. Can we copy it for cybersecurity?"
+- "Why your immune system is terrible at specialization - and why that's actually genius"
+
+NOT LIKE THIS:
+- "Inverting [Complexity Requires Specialization] in evolutionary biology"
+- "Leveraging phylogenetic stochasticity for neural architecture optimization"
+- "Applying robust control theory to modular biological systems"
+
+RULES:
+1. Title must use words a 10-year-old knows
+2. No square brackets or colons in titles
+3. Use active voice and concrete examples
+4. Sound excited, not academic
+5. If you can't explain it simply, you don't understand it well enough`;
 
   // Call Gemini with retry logic
   const response = await retryWithBackoff(async () => {
