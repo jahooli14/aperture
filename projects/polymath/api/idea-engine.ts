@@ -5,6 +5,9 @@ import { selectFrontierMode, recordModeUsage } from './_lib/idea-engine-v2/mode-
 import { generateIdeaEmbedding, storeIdeaWithDedupe } from './_lib/idea-engine-v2/deduplication.js';
 import { getLatestFeedbackSummary } from './_lib/idea-engine-v2/feedback-summarizer.js';
 import { supabase, isSupabaseConfigured } from './_lib/idea-engine-v2/supabase.js';
+import { reviewIdea } from './_lib/idea-engine-v2/reviewer.js';
+import { sendDailyDigest } from './_lib/idea-engine-v2/digest-email.js';
+import type { Idea } from './_lib/idea-engine-v2/types.js';
 
 const USER_ID = process.env.IDEA_ENGINE_USER_ID;
 
@@ -42,9 +45,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       case 'generate':
         return await handleGenerate(res);
       case 'send-digest':
-        return res.status(200).json({ success: true, message: 'Digest not yet implemented' });
+        return await handleSendDigest(res);
       case 'review':
-        return res.status(200).json({ success: true, message: 'Review not yet implemented' });
+        return await handleReview(res);
       default:
         return res.status(400).json({ error: `Unknown action: ${action}` });
     }
@@ -188,5 +191,106 @@ async function handleGenerate(res: VercelResponse) {
     throw error;
   }
 }
-// Build timestamp: Fri  3 Apr 2026 09:52:18 BST
-// Updated with gemini-3.1-flash-lite-preview model
+
+async function handleReview(res: VercelResponse) {
+  const startTime = Date.now();
+
+  const { data: pendingIdeas, error } = await supabase
+    .from('ie_ideas')
+    .select('*')
+    .eq('user_id', USER_ID)
+    .eq('status', 'pending')
+    .order('prefilter_score', { ascending: false })
+    .limit(10);
+
+  if (error) {
+    console.error('Failed to fetch pending ideas:', error);
+    return res.status(500).json({ error: 'Failed to fetch pending ideas', details: error.message });
+  }
+
+  if (!pendingIdeas || pendingIdeas.length === 0) {
+    return res.status(200).json({ success: true, message: 'No pending ideas to review', reviewed: 0 });
+  }
+
+  const results = [];
+
+  for (const idea of pendingIdeas) {
+    try {
+      const verdict = await reviewIdea(idea as Idea);
+
+      const updateData: any = {
+        status: verdict.verdict === 'BUILD' ? 'approved' : verdict.verdict === 'SPARK' ? 'spark' : 'rejected',
+        opus_verdict: verdict.reasoning,
+        reviewed_at: new Date().toISOString(),
+      };
+
+      if (verdict.rejection_category) {
+        updateData.rejection_reason = verdict.reasoning;
+        updateData.rejection_category = verdict.rejection_category;
+      }
+
+      const { error: updateError } = await supabase
+        .from('ie_ideas')
+        .update(updateData)
+        .eq('id', idea.id);
+
+      if (updateError) {
+        console.error(`Failed to update idea ${idea.id}:`, updateError);
+        results.push({ id: idea.id, success: false, error: updateError.message });
+      } else {
+        results.push({ id: idea.id, success: true, verdict: verdict.verdict, title: idea.title });
+      }
+    } catch (error) {
+      console.error(`Failed to review idea ${idea.id}:`, error);
+      results.push({ id: idea.id, success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  }
+
+  const elapsed = Date.now() - startTime;
+  const successCount = results.filter((r) => r.success).length;
+
+  return res.status(200).json({
+    success: true,
+    reviewed: successCount,
+    total: results.length,
+    results,
+    elapsed_ms: elapsed,
+  });
+}
+
+async function handleSendDigest(res: VercelResponse) {
+  const startTime = Date.now();
+
+  const { data: pendingIdeas, error } = await supabase
+    .from('ie_ideas')
+    .select('*')
+    .eq('user_id', USER_ID)
+    .eq('status', 'pending')
+    .order('prefilter_score', { ascending: false })
+    .limit(50);
+
+  if (error) {
+    console.error('Failed to fetch pending ideas:', error);
+    return res.status(500).json({ error: 'Failed to fetch pending ideas', details: error.message });
+  }
+
+  try {
+    const result = await sendDailyDigest(USER_ID!, pendingIdeas as Idea[]);
+    const elapsed = Date.now() - startTime;
+
+    return res.status(200).json({
+      success: true,
+      ideas_count: pendingIdeas?.length || 0,
+      message: result.message || 'Digest sent successfully',
+      elapsed_ms: elapsed,
+    });
+  } catch (error) {
+    console.error('Failed to send digest:', error);
+    return res.status(500).json({
+      error: 'Failed to send digest',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+}
+// Build timestamp: Fri  3 Apr 2026 10:28:15 BST
+// Complete implementation with review and digest endpoints

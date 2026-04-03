@@ -10,3 +10,4 @@ dist
 api/**/*.js
 lib/**/*.js
 scripts/**/*.js
+.env*.local
