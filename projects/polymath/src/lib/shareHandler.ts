@@ -127,22 +127,7 @@ export function initShareHandler() {
       fullUrl: window.location.href
     }
 
-    // Write extensive log file for debugging
-    const logFileName = `/Users/danielcroome-horgan/Aperture/projects/rosette/logs/share_log_${Date.now()}.json`
-    try {
-      if (typeof window !== 'undefined') {
-        const fs = require('fs')
-        fs.writeFileSync(logFileName, JSON.stringify(fullShareLog, null, 2))
-        console.log(`[ShareHandler] Extensive log written to ${logFileName}`)
-      }
-    } catch (logError) {
-      console.error('[ShareHandler] Failed to write log file:', logError)
-    }
-
-    // Detailed console logging
-    console.group('[ShareHandler] Comprehensive Share Detection')
-    console.log('Full Share Log:', fullShareLog)
-    console.groupEnd()
+    console.log('[ShareHandler] Share params:', fullShareLog)
 
     // Prioritize URL detection
     let sharedUrl: string | null = null

@@ -900,6 +900,7 @@ function ArticleListMode({ list, navigate }: ArticleListModeProps) {
     const [urlInput, setUrlInput] = useState('')
     const [saving, setSaving] = useState(false)
     const inputRef = useRef<HTMLInputElement>(null)
+    const processedSharesRef = useRef<Set<string>>(new Set())
 
     // Show unread + in-progress articles (not archived)
     const readingArticles = useMemo(
@@ -912,6 +913,27 @@ function ArticleListMode({ list, navigate }: ArticleListModeProps) {
     useEffect(() => {
         fetchArticles(undefined, true)
     }, [])
+
+    // Listen for pwa-share events when user is already on this page
+    useEffect(() => {
+        const handlePWAShare = async (event: CustomEvent) => {
+            const sharedUrl = event.detail?.shared
+            if (!sharedUrl || processedSharesRef.current.has(sharedUrl)) return
+            processedSharesRef.current.add(sharedUrl)
+
+            try {
+                addToast({ title: 'Saving shared article...', description: 'Extracting content from ' + new URL(sharedUrl).hostname, variant: 'default' })
+                await saveArticle({ url: sharedUrl })
+                await fetchArticles(undefined, true)
+                addToast({ title: 'Article saved!', description: 'Extracting content in background...', variant: 'success' })
+            } catch {
+                addToast({ title: 'Failed to save', description: 'Could not save the article. Try again.', variant: 'destructive' })
+            }
+        }
+
+        window.addEventListener('pwa-share', handlePWAShare as EventListener)
+        return () => window.removeEventListener('pwa-share', handlePWAShare as EventListener)
+    }, [saveArticle, fetchArticles, addToast])
 
     const handleAddUrl = async (e: React.FormEvent) => {
         e.preventDefault()

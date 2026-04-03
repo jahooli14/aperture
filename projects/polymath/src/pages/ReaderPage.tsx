@@ -3,10 +3,10 @@
  * Inspired by Readwise Reader and Omnivore
  */
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, ExternalLink, Archive, Loader2, Highlighter, Clock, Type, Wifi, WifiOff } from 'lucide-react'
+import { ArrowLeft, ExternalLink, Archive, Loader2, Highlighter, Clock, Type, Wifi, WifiOff, Mic, X } from 'lucide-react'
 import { format } from 'date-fns'
 import DOMPurify from 'dompurify'
 import { useReadingStore } from '../stores/useReadingStore'
@@ -16,6 +16,7 @@ import { useToast } from '../components/ui/toast'
 import { useOfflineArticle } from '../hooks/useOfflineArticle'
 import { useReadingProgress } from '../hooks/useReadingProgress'
 import { ArticleCompletionDialog } from '../components/reading/ArticleCompletionDialog'
+import { VoiceInput } from '../components/VoiceInput'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { ItemInsightStrip } from '../components/ItemInsightStrip'
 import { supabase } from '../lib/supabase'
@@ -57,6 +58,8 @@ export function ReaderPage() {
   const [showCompletionDialog, setShowCompletionDialog] = useState(false)
 
   const [isHighlighterMode, setIsHighlighterMode] = useState(false)
+  const [showVoiceNote, setShowVoiceNote] = useState(false)
+  const [savingNote, setSavingNote] = useState(false)
 
   // Automatic offline caching
   useEffect(() => {
@@ -205,6 +208,22 @@ export function ReaderPage() {
     }
   }, [article?.id, processedContent, restoreProgress])
 
+  // Auto-trigger completion dialog when user reaches end of article
+  const hasTriggeredCompletion = useRef(false)
+  useEffect(() => {
+    if (
+      progress >= 95 &&
+      !hasTriggeredCompletion.current &&
+      !showCompletionDialog &&
+      article?.status !== 'archived'
+    ) {
+      hasTriggeredCompletion.current = true
+      // Small delay so the user sees they've reached the bottom
+      const timer = setTimeout(() => setShowCompletionDialog(true), 800)
+      return () => clearTimeout(timer)
+    }
+  }, [progress, showCompletionDialog, article?.status])
+
   const handleTextSelection = (event: React.MouseEvent | React.TouchEvent) => {
     if (!isHighlighterMode) return
     event.preventDefault()
@@ -277,13 +296,44 @@ export function ReaderPage() {
         description: 'Article moved to archive',
         variant: 'success',
       })
-      navigate('/reading')
+      navigate(-1)
     } catch (error) {
       addToast({
         title: 'Error',
         description: 'Failed to archive',
         variant: 'destructive',
       })
+    }
+  }
+
+  const handleVoiceNote = async (text: string) => {
+    if (!article || !text.trim()) return
+    setSavingNote(true)
+    try {
+      await fetch('/api/memories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: `Thought on: ${article.title}`,
+          body: text,
+          tags: ['reading-thought'],
+          source_reference: { type: 'article', id: article.id }
+        })
+      })
+      addToast({
+        title: 'Thought captured',
+        description: 'Saved to your knowledge graph',
+        variant: 'success',
+      })
+      setShowVoiceNote(false)
+    } catch {
+      addToast({
+        title: 'Failed to save',
+        description: 'Could not save your thought. Try again.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSavingNote(false)
     }
   }
 
@@ -310,7 +360,7 @@ export function ReaderPage() {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault()
-        navigate('/reading')
+        navigate(-1)
       }
     }
     window.addEventListener('keydown', handleKeyPress)
@@ -338,7 +388,7 @@ export function ReaderPage() {
 
       // Swipe right from left edge (within 50px of left edge, fast swipe, mostly horizontal)
       if (touchStartX < 50 && deltaX > 100 && deltaY < 100 && deltaTime < 300) {
-        navigate('/reading')
+        navigate(-1)
       }
     }
 
@@ -488,7 +538,7 @@ export function ReaderPage() {
           <div className="max-w-3xl mx-auto flex items-center justify-between px-4 py-2 bg-[#1c1c1e]/80 backdrop-blur-xl border border-[var(--glass-surface)] rounded-2xl shadow-2xl">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => navigate('/reading')}
+                onClick={() => navigate(-1)}
                 className="p-2 hover:bg-[var(--glass-surface)] rounded-xl transition-colors"
               >
                 <ArrowLeft className="h-5 w-5" />
@@ -652,6 +702,84 @@ export function ReaderPage() {
           }}
           onSkip={handleArchiveComplete}
         />
+
+        {/* Voice Note FAB — consistent with global VoiceFAB design */}
+        <AnimatePresence>
+          {!hideUI && !showCompletionDialog && (
+            <motion.button
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+              onClick={() => setShowVoiceNote(true)}
+              className="fixed z-[25001] bottom-28 md:bottom-12 right-6 md:right-12 h-14 w-14 md:h-16 md:w-16 rounded-full flex items-center justify-center touch-none"
+              style={{
+                backgroundColor: 'var(--brand-primary)',
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 0 10px var(--glass-surface)',
+              }}
+              aria-label="Record a thought about this article"
+            >
+              <Mic className="h-6 w-6 text-white" />
+            </motion.button>
+          )}
+        </AnimatePresence>
+
+        {/* Voice Note Modal */}
+        <AnimatePresence>
+          {showVoiceNote && (
+            <div className="fixed inset-0 z-[21000] flex items-end md:items-center md:justify-center">
+              <motion.div
+                key="voice-note-backdrop"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                onClick={() => setShowVoiceNote(false)}
+              />
+              <motion.div
+                key="voice-note-modal"
+                initial={{ y: '100%', opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: '100%', opacity: 0 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                className="relative w-full md:w-[500px] bg-[#0A0A0B] border border-[var(--glass-surface-hover)] rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl z-10 overflow-hidden mb-0 md:mb-12"
+              >
+                <div style={{ paddingBottom: 'env(safe-area-inset-bottom, 20px)' }}>
+                  <div className="flex justify-center pt-4 pb-2 md:hidden">
+                    <div className="w-12 h-1.5 rounded-full bg-[rgba(255,255,255,0.1)]" />
+                  </div>
+                  <div className="flex items-center justify-between px-8 py-8">
+                    <div>
+                      <h3 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] flex items-center gap-2">
+                        <Mic className="h-6 w-6 text-brand-primary" />
+                        Capture Thought
+                      </h3>
+                      <p className="text-sm text-brand-text-muted mt-1 font-medium line-clamp-1">
+                        {article.title}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setShowVoiceNote(false)}
+                      className="h-12 w-12 rounded-full bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] flex items-center justify-center transition-all border border-[var(--glass-surface)]"
+                    >
+                      <X className="h-6 w-6 text-brand-text-muted" />
+                    </button>
+                  </div>
+                  <div className="px-8 pb-10">
+                    <VoiceInput
+                      onTranscript={handleVoiceNote}
+                      maxDuration={60}
+                      autoSubmit={true}
+                      autoStart={true}
+                    />
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   )

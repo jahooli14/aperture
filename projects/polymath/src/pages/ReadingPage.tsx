@@ -24,6 +24,7 @@ import {
   consumeShareData,
   clearShareData
 } from '../lib/shareHandler'
+import { useListStore } from '../stores/useListStore'
 import { FocusableList, FocusableItem } from '../components/FocusableList'
 import { PullToRefresh } from '../components/PullToRefresh'
 import { SubtleBackground } from '../components/SubtleBackground'
@@ -37,10 +38,26 @@ const ProcessingDebugPanel = lazy(() => import('../components/reading/Processing
 
 type FilterTab = 'queue' | 'updates' | 'unread' | 'reading' | 'archived'
 
+/**
+ * Helper to find the article-type list and return its path.
+ * Articles now live under the article-type list in /lists/:id.
+ */
+function useArticleListPath() {
+  const { lists, fetchLists } = useListStore()
+
+  useEffect(() => {
+    if (lists.length === 0) fetchLists()
+  }, [lists.length, fetchLists])
+
+  const articleList = lists.find(l => l.type === 'article')
+  return articleList ? `/lists/${articleList.id}` : null
+}
+
 export function ReadingPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { articles, loading, fetchArticles, currentFilter, setFilter, saveArticle, updateArticle, updateArticleStatus, deleteArticle } = useReadingStore()
+  const articleListPath = useArticleListPath()
 
   // Sync processing articles with store deletions
   useEffect(() => {
@@ -300,12 +317,22 @@ export function ReadingPage() {
     window.open(item.link, '_blank')
   }
 
+  // Redirect to article list when no share params are present
+  // Articles now live under the article-type list at /lists/:id
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const hasShareParams = params.get('shared') || params.get('url') || params.get('text')
+
+    // Also check localStorage for pending share data
+    const storedShare = consumeShareData(false) // peek without consuming
+
+    if (!hasShareParams && !storedShare && articleListPath) {
+      navigate(articleListPath, { replace: true })
+    }
+  }, [location.search, articleListPath, navigate])
+
   // Handle shared URLs from Web Share Target API with robust processing
   useEffect(() => {
-    console.log('='.repeat(80))
-    console.log('[ReadingPage] SHARE DETECTION START')
-    console.log('[ReadingPage] Current URL:', location.pathname + location.search)
-
     const params = new URLSearchParams(location.search)
 
     // Check for 'shared', 'url', or 'text' parameters (robust fallback)
@@ -317,12 +344,20 @@ export function ReadingPage() {
       sharedParam = textParam
     }
 
-    console.log('[ReadingPage] Extracted share URL:', sharedParam)
+    // Fallback: check localStorage for share data (set by shareHandler or share-target.html)
+    if (!sharedParam) {
+      const stored = consumeShareData()
+      if (stored?.url) {
+        console.log('[ReadingPage] Found share URL in localStorage:', stored.url)
+        sharedParam = stored.url
+        clearShareData()
+      }
+    }
 
     const shareUrl: string | undefined = sharedParam || undefined
 
     if (shareUrl && !processingRef.current.has(shareUrl)) {
-      console.log('[ReadingPage]  Processing shared URL:', shareUrl)
+      console.log('[ReadingPage] Processing shared URL:', shareUrl)
 
       // Mark as processing to prevent duplicates
       processingRef.current.add(shareUrl)
@@ -331,22 +366,19 @@ export function ReadingPage() {
       if (window.location.search) {
         const cleanUrl = window.location.pathname
         window.history.replaceState({}, '', cleanUrl)
-        console.log('[ReadingPage] Cleaned URL params from address bar')
       }
 
       const handleShare = async () => {
         try {
-          // Show loading toast
           addToast({
-            title: ' Saving shared article...',
+            title: 'Saving shared article...',
             description: 'Extracting content from ' + new URL(shareUrl).hostname,
             variant: 'default',
           })
 
           const article = await saveArticle({ url: shareUrl })
-          console.log('[ReadingPage] Article saved successfully:', article.id)
 
-          // Start robust background processing with retry
+          // Start background processing with retry
           setProcessingArticles(prev => new Map(prev).set(article.id, { status: 'extracting', url: shareUrl }))
 
           articleProcessor.startProcessing(article.id, shareUrl, (status, updatedArticle) => {
@@ -355,30 +387,18 @@ export function ReadingPage() {
               if (status === 'complete') {
                 next.delete(article.id)
                 addToast({
-                  title: ' Article ready!',
+                  title: 'Article ready!',
                   description: updatedArticle?.title || 'Content extracted successfully',
                   variant: 'success',
                 })
 
-                // Auto-download for offline reading
                 if (updatedArticle) {
-                  downloadForOffline(updatedArticle).then(() => {
-                    addToast({
-                      title: 'Saved Offline',
-                      description: 'Article and images available offline',
-                      variant: 'success',
-                    })
-                  }).catch(err => console.warn('Failed to auto-download:', err))
+                  downloadForOffline(updatedArticle).catch(err => console.warn('Failed to auto-download:', err))
                 }
 
-                fetchArticles(undefined, true) // Force refresh to show completed article (bypass cache)
+                fetchArticles(undefined, true)
               } else if (status === 'retrying') {
                 next.set(article.id, { status: 'retrying', url: shareUrl })
-                addToast({
-                  title: ' Retrying extraction...',
-                  description: 'First attempt timed out, trying again',
-                  variant: 'default',
-                })
               } else if (status === 'failed') {
                 next.delete(article.id)
                 addToast({
@@ -386,7 +406,7 @@ export function ReadingPage() {
                   description: 'Could not extract content. You can still view the original URL.',
                   variant: 'destructive',
                 })
-                fetchArticles(undefined, true) // Force refresh to show failed article status
+                fetchArticles(undefined, true)
               } else {
                 next.set(article.id, { status, url: shareUrl })
               }
@@ -395,14 +415,17 @@ export function ReadingPage() {
           })
 
           addToast({
-            title: ' Article saved!',
+            title: 'Article saved!',
             description: 'Extracting content in background...',
             variant: 'success',
           })
 
-          // Refresh list to show the new article
           await fetchArticles()
-          console.log('[ReadingPage] Articles refreshed')
+
+          // Redirect to article list after saving
+          if (articleListPath) {
+            navigate(articleListPath, { replace: true })
+          }
         } catch (error) {
           console.error('[ReadingPage] Failed to save shared article:', error)
           processingRef.current.delete(shareUrl)
@@ -411,42 +434,34 @@ export function ReadingPage() {
             description: error instanceof Error ? error.message : 'Unknown error',
             variant: 'destructive',
           })
+          // Still redirect to article list on error
+          if (articleListPath) {
+            navigate(articleListPath, { replace: true })
+          }
         }
       }
 
       handleShare()
-    } else if (shareUrl) {
-      console.log('[ReadingPage] URL already being processed, skipping duplicate')
-    } else {
-      console.log('[ReadingPage] No shared URL parameter found')
     }
-    console.log('[ReadingPage] SHARE DETECTION END')
-    console.log('='.repeat(80))
-  }, [location.search, saveArticle, fetchArticles, addToast])
+  }, [location.search, saveArticle, fetchArticles, addToast, articleListPath, navigate])
 
   // Listen for custom event from main.tsx when SW sends postMessage
-  // This handles the case where the app is already on the reading page
   useEffect(() => {
     const handlePWAShare = (event: CustomEvent) => {
       const sharedUrl = event.detail?.shared
       if (sharedUrl && !processingRef.current.has(sharedUrl)) {
-        console.log('[ReadingPage] Custom event received, processing shared URL:', sharedUrl)
-
-        // Mark as processing to prevent duplicates
         processingRef.current.add(sharedUrl)
 
         const processShare = async () => {
           try {
             addToast({
-              title: ' Saving shared article...',
+              title: 'Saving shared article...',
               description: 'Extracting content from ' + new URL(sharedUrl).hostname,
               variant: 'default',
             })
 
             const article = await saveArticle({ url: sharedUrl })
-            console.log('[ReadingPage] Article saved successfully:', article.id)
 
-            // Start robust background processing with retry
             setProcessingArticles(prev => new Map(prev).set(article.id, { status: 'extracting', url: sharedUrl }))
 
             articleProcessor.startProcessing(article.id, sharedUrl, (status, updatedArticle) => {
@@ -455,30 +470,16 @@ export function ReadingPage() {
                 if (status === 'complete') {
                   next.delete(article.id)
                   addToast({
-                    title: ' Article ready!',
+                    title: 'Article ready!',
                     description: updatedArticle?.title || 'Content extracted successfully',
                     variant: 'success',
                   })
-
-                  // Auto-download for offline reading
                   if (updatedArticle) {
-                    downloadForOffline(updatedArticle).then(() => {
-                      addToast({
-                        title: 'Saved Offline',
-                        description: 'Article and images available offline',
-                        variant: 'success',
-                      })
-                    }).catch(err => console.warn('Failed to auto-download:', err))
+                    downloadForOffline(updatedArticle).catch(err => console.warn('Failed to auto-download:', err))
                   }
-
-                  fetchArticles(undefined, true) // Force refresh for postMessage share
+                  fetchArticles(undefined, true)
                 } else if (status === 'retrying') {
                   next.set(article.id, { status: 'retrying', url: sharedUrl })
-                  addToast({
-                    title: ' Retrying extraction...',
-                    description: 'First attempt timed out, trying again',
-                    variant: 'default',
-                  })
                 } else if (status === 'failed') {
                   next.delete(article.id)
                   addToast({
@@ -486,7 +487,7 @@ export function ReadingPage() {
                     description: 'Could not extract content. You can still view the original URL.',
                     variant: 'destructive',
                   })
-                  fetchArticles(undefined, true) // Force refresh for failed postMessage share
+                  fetchArticles(undefined, true)
                 } else {
                   next.set(article.id, { status, url: sharedUrl })
                 }
@@ -495,13 +496,17 @@ export function ReadingPage() {
             })
 
             addToast({
-              title: ' Article saved!',
+              title: 'Article saved!',
               description: 'Extracting content in background...',
               variant: 'success',
             })
 
             await fetchArticles()
-            console.log('[ReadingPage] Articles refreshed')
+
+            // Redirect to article list after saving
+            if (articleListPath) {
+              navigate(articleListPath, { replace: true })
+            }
           } catch (error) {
             console.error('[ReadingPage] Failed to save shared article:', error)
             processingRef.current.delete(sharedUrl)
@@ -510,12 +515,13 @@ export function ReadingPage() {
               description: error instanceof Error ? error.message : 'Unknown error',
               variant: 'destructive',
             })
+            if (articleListPath) {
+              navigate(articleListPath, { replace: true })
+            }
           }
         }
 
         processShare()
-      } else if (sharedUrl) {
-        console.log('[ReadingPage] Custom event URL already being processed, skipping duplicate')
       }
     }
 

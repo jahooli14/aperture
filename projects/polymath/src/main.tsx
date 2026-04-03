@@ -64,18 +64,14 @@ try {
 function handleSharedUrl(sharedUrl: string) {
   if (!sharedUrl) return
 
-  console.log('[Main] handleSharedUrl called with:', sharedUrl)
-
-  // Navigate to reading page with the shared URL as a query param
-  // This will trigger the existing ReadingPage useEffect that handles ?shared=
   const currentPath = window.location.pathname
-  if (currentPath !== '/reading') {
-    console.log('[Main] Navigating to /reading with shared URL')
-    window.location.href = `/reading?shared=${encodeURIComponent(sharedUrl)}`
-  } else {
-    console.log('[Main] Already on /reading, triggering custom event')
-    // Already on reading page, trigger a custom event to process the share
+
+  // If already on reading page or article list, dispatch event for in-page handling
+  if (currentPath === '/reading' || currentPath.startsWith('/lists/')) {
     window.dispatchEvent(new CustomEvent('pwa-share', { detail: { shared: sharedUrl } }))
+  } else {
+    // Navigate to reading page which will process the share and redirect to article list
+    window.location.href = `/reading?shared=${encodeURIComponent(sharedUrl)}`
   }
 }
 
