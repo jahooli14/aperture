@@ -105,13 +105,18 @@ export async function generateIdea(
 
     const text = result.response.text();
 
-    // Parse JSON from response
-    const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/);
-    if (!jsonMatch) {
-      throw new Error('Response does not contain valid JSON block');
+    // Try parsing JSON directly, then extract from text
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      // Try to extract JSON from markdown or mixed text
+      const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error(`Response does not contain valid JSON: ${text.substring(0, 200)}`);
+      }
+      parsed = JSON.parse(jsonMatch[1] || jsonMatch[0]);
     }
-
-    const parsed = JSON.parse(jsonMatch[1]);
 
     // Validate required fields
     if (!parsed.title || !parsed.description || !parsed.reasoning) {
@@ -159,15 +164,13 @@ ${existingIdeas.slice(0, 10).map((e) => `- ${e.title}`).join('\n')}
 2. **Cross-Domain Distance** (0-1): How far apart are the domains being connected? Higher = more unexpected connection.
 3. **Tractability** (0-1): Can this be built/tested within 1 year without requiring new fundamental discoveries?
 
-**Output format (JSON only, no explanation):**
-\`\`\`json
+**IMPORTANT: Respond with ONLY the JSON object below, no additional text:**
 {
   "novelty": 0.85,
   "cross_domain_distance": 0.90,
   "tractability": 0.70,
   "reasoning": "Brief 1-sentence justification for scores"
-}
-\`\`\``;
+}`;
 
   const response = await retryWithBackoff(async () => {
     const result = await getFilterModel().generateContent({

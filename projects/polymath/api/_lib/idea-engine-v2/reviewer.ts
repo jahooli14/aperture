@@ -50,15 +50,13 @@ Tractability Score: ${idea.tractability_score?.toFixed(2) || 'N/A'}
 - too_vague: Not specific enough to act on - what would you actually *do*?
 - not_tractable: Requires years of work or unsolved problems
 
-**Output format (JSON only):**
-\`\`\`json
+**IMPORTANT: Respond with ONLY the JSON object below, no additional text:**
 {
   "verdict": "BUILD" | "SPARK" | "REJECT",
   "reasoning": "2-3 sentences explaining your decision in plain language",
   "rejection_category": "poor_fit" | "not_novel" | "wrong_approach" | "too_vague" | "not_tractable" (only if REJECT),
   "frontier_advancement_score": 0.0-1.0 (how much new ground does this break?)
-}
-\`\`\``;
+}`;
 
   const result = await getReviewerModel().generateContent({
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
