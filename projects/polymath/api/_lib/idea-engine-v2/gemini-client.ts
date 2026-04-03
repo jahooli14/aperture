@@ -19,13 +19,13 @@ function getGenAI() {
 
 function getAgentModel(): GenerativeModel {
   return getGenAI().getGenerativeModel({
-    model: 'gemini-3.1-flash-lite-preview',
+    model: 'gemini-3.1-flash-lite-preview', // Cheap generation
   });
 }
 
 function getFilterModel(): GenerativeModel {
   return getGenAI().getGenerativeModel({
-    model: 'gemini-3.1-flash-lite-preview',
+    model: 'gemini-3-flash-preview', // Better quality for scoring
   });
 }
 
@@ -81,6 +81,16 @@ export async function generateIdea(
   if (feedbackContext) {
     prompt += `\n\n**Learned Context (from past reviews):**\n${feedbackContext}\n\nUse this context to avoid patterns that have been rejected before.`;
   }
+
+  // Add clarity instructions
+  prompt += `\n\n**IMPORTANT - Writing Style:**
+- Write for an intelligent generalist, not domain experts
+- Avoid unnecessary jargon - use plain language where possible
+- If technical terms are needed, briefly explain them in context
+- Focus on the practical insight, not showing off vocabulary
+- Make the title punchy and accessible
+- Example of good: "Using evolution's trial-and-error approach to improve AI training"
+- Example of bad: "Leveraging phylogenetic stochasticity for neural architecture optimization paradigms"`;
 
   // Call Gemini with retry logic
   const response = await retryWithBackoff(async () => {

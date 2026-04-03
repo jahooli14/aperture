@@ -11,7 +11,7 @@ function getGenAI() {
 }
 
 function getReviewerModel() {
-  return getGenAI().getGenerativeModel({ model: 'gemini-3.1-flash-lite-preview' });
+  return getGenAI().getGenerativeModel({ model: 'gemini-3.1-pro-preview' }); // High quality reviews
 }
 
 /**
@@ -19,7 +19,7 @@ function getReviewerModel() {
  * Returns BUILD, SPARK, or REJECT verdict
  */
 export async function reviewIdea(idea: Idea): Promise<OpusVerdict> {
-  const prompt = `You are reviewing a research idea for personal exploration. Your role is to assess whether this idea is worth pursuing.
+  const prompt = `You are reviewing a research idea for an ambitious personal explorer. Be rigorous but not pedantic.
 
 **Idea:**
 Title: ${idea.title}
@@ -31,25 +31,31 @@ Novelty Score: ${idea.novelty_score?.toFixed(2) || 'N/A'}
 Cross-Domain Distance: ${idea.cross_domain_distance?.toFixed(2) || 'N/A'}
 Tractability Score: ${idea.tractability_score?.toFixed(2) || 'N/A'}
 
+**Review Criteria:**
+1. **Clarity** - Can I understand what's being proposed without a PhD?
+2. **Insight** - Does this reveal something genuinely new or useful?
+3. **Actionable** - Could someone actually build/test this within 3-12 months?
+4. **Interesting** - Would this be exciting to work on or talk about?
+
 **Verdicts:**
-- **BUILD**: This idea is compelling, novel, and tractable. Worth investing significant time to explore/prototype.
-- **SPARK**: Interesting angle or insight, but not fully formed. Save as inspiration for future work.
-- **REJECT**: Not compelling, too vague, not novel, or not tractable within reasonable timeframe.
+- **BUILD**: Clear, insightful, tractable, and exciting. Worth dedicating serious time.
+- **SPARK**: Has a kernel of something interesting but needs refinement. Save for later.
+- **REJECT**: Too vague, obvious, jargon-heavy without substance, or not feasible.
 
 **Rejection Categories** (if REJECT):
-- poor_fit: Idea doesn't align with interests or capabilities
-- not_novel: Too similar to existing work or obvious
-- wrong_approach: The proposed method won't work or is flawed
-- too_vague: Not specific enough to act on
-- not_tractable: Would require too much time/resources or fundamental breakthroughs
+- poor_fit: Doesn't match personal interests or skills
+- not_novel: Obvious or well-trodden ground
+- wrong_approach: Approach is fundamentally flawed
+- too_vague: Not specific enough to act on - what would you actually *do*?
+- not_tractable: Requires years of work or unsolved problems
 
 **Output format (JSON only):**
 \`\`\`json
 {
   "verdict": "BUILD" | "SPARK" | "REJECT",
-  "reasoning": "2-3 sentence explanation of your decision",
+  "reasoning": "2-3 sentences explaining your decision in plain language",
   "rejection_category": "poor_fit" | "not_novel" | "wrong_approach" | "too_vague" | "not_tractable" (only if REJECT),
-  "frontier_advancement_score": 0.0-1.0 (how much does this push into new territory?)
+  "frontier_advancement_score": 0.0-1.0 (how much new ground does this break?)
 }
 \`\`\``;
 
