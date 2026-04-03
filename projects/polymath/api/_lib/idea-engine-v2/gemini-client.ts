@@ -101,6 +101,7 @@ export async function generateIdea(
         temperature: mode.temperature,
         maxOutputTokens: 500,
       },
+      systemInstruction: 'You are a JSON API. Return only valid JSON with no additional text, explanations, or formatting.',
     });
 
     const text = result.response.text();
@@ -174,10 +175,10 @@ ${existingIdeas.slice(0, 10).map((e) => `- ${e.title}`).join('\n')}
     const result = await getFilterModel().generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
-        temperature: 0.3, // Low temperature for consistent scoring
+        temperature: 0.3,
         maxOutputTokens: 200,
-        responseMimeType: 'application/json',
       },
+      systemInstruction: 'You are a JSON API. Return only valid JSON with no additional text, explanations, or formatting.',
     });
 
     const text = result.response.text();

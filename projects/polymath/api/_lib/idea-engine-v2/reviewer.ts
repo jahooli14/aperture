@@ -63,8 +63,8 @@ Tractability Score: ${idea.tractability_score?.toFixed(2) || 'N/A'}
     generationConfig: {
       temperature: 0.3,
       maxOutputTokens: 300,
-      responseMimeType: 'application/json',
     },
+    systemInstruction: 'You are a JSON API. Return only valid JSON with no additional text, explanations, or formatting.',
   });
 
   const text = result.response.text();
