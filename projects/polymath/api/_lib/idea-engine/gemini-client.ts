@@ -19,13 +19,13 @@ function getGenAI() {
 
 function getAgentModel(): GenerativeModel {
   return getGenAI().getGenerativeModel({
-    model: 'gemini-pro',
+    model: 'models/gemini-1.5-flash-001',
   });
 }
 
 function getFilterModel(): GenerativeModel {
   return getGenAI().getGenerativeModel({
-    model: 'gemini-pro',
+    model: 'models/gemini-1.5-flash-001',
   });
 }
 
