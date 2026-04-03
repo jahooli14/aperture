@@ -105,18 +105,16 @@ export async function generateIdea(
 
     const text = result.response.text();
 
-    // Try parsing JSON directly, then extract from text
-    let parsed;
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      // Try to extract JSON from markdown or mixed text
-      const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error(`Response does not contain valid JSON: ${text.substring(0, 200)}`);
-      }
-      parsed = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+    // Strip any text before first { and after last }
+    const startIdx = text.indexOf('{');
+    const endIdx = text.lastIndexOf('}');
+
+    if (startIdx === -1 || endIdx === -1) {
+      throw new Error(`Response does not contain JSON object: ${text.substring(0, 200)}`);
     }
+
+    const jsonText = text.substring(startIdx, endIdx + 1);
+    const parsed = JSON.parse(jsonText);
 
     // Validate required fields
     if (!parsed.title || !parsed.description || !parsed.reasoning) {
@@ -184,17 +182,16 @@ ${existingIdeas.slice(0, 10).map((e) => `- ${e.title}`).join('\n')}
 
     const text = result.response.text();
 
-    // Try to parse JSON directly first, then try extracting from markdown
-    let parsed;
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error(`Scorer response does not contain valid JSON: ${text.substring(0, 200)}`);
-      }
-      parsed = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+    // Strip any text before first { and after last }
+    const startIdx = text.indexOf('{');
+    const endIdx = text.lastIndexOf('}');
+
+    if (startIdx === -1 || endIdx === -1) {
+      throw new Error(`Scorer response does not contain JSON object: ${text.substring(0, 200)}`);
     }
+
+    const jsonText = text.substring(startIdx, endIdx + 1);
+    const parsed = JSON.parse(jsonText);
 
     // Validate scores
     if (

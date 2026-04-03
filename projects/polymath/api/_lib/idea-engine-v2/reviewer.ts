@@ -69,17 +69,16 @@ Tractability Score: ${idea.tractability_score?.toFixed(2) || 'N/A'}
 
   const text = result.response.text();
 
-  // Try to parse JSON directly first, then try extracting from markdown
-  let parsed;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error(`Reviewer response does not contain valid JSON: ${text.substring(0, 200)}`);
-    }
-    parsed = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+  // Strip any text before first { and after last }
+  const startIdx = text.indexOf('{');
+  const endIdx = text.lastIndexOf('}');
+
+  if (startIdx === -1 || endIdx === -1) {
+    throw new Error(`Reviewer response does not contain JSON object: ${text.substring(0, 200)}`);
   }
+
+  const jsonText = text.substring(startIdx, endIdx + 1);
+  const parsed = JSON.parse(jsonText);
 
   // Validate verdict
   if (!['BUILD', 'SPARK', 'REJECT'].includes(parsed.verdict)) {
