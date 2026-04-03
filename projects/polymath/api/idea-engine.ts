@@ -190,3 +190,4 @@ async function handleGenerate(res: VercelResponse) {
 }
 // Build timestamp: Fri  3 Apr 2026 08:17:04 BST
 // Updated: $(date +%s)
+// Build: $(date +%s)
