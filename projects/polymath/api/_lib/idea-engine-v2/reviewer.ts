@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import type { Idea, OpusVerdict, RejectionCategory } from './types.js';
+import { MODELS } from './models.js';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
@@ -11,7 +12,7 @@ function getGenAI() {
 }
 
 function getReviewerModel() {
-  return getGenAI().getGenerativeModel({ model: 'gemini-3.1-pro-preview' }); // High quality reviews
+  return getGenAI().getGenerativeModel({ model: MODELS.REVIEW });
 }
 
 /**

@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 import type { FrontierMode, GeminiResponse, PreFilterScore } from './types.js';
+import { MODELS } from './models.js';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -19,13 +20,13 @@ function getGenAI() {
 
 function getAgentModel(): GenerativeModel {
   return getGenAI().getGenerativeModel({
-    model: 'gemini-3.1-flash-lite-preview', // Cheap generation
+    model: MODELS.GENERATE,
   });
 }
 
 function getFilterModel(): GenerativeModel {
   return getGenAI().getGenerativeModel({
-    model: 'gemini-3-flash-preview', // Better quality for scoring
+    model: MODELS.FILTER,
   });
 }
 

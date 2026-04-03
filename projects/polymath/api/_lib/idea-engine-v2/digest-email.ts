@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import type { Idea } from './types.js';
+import { supabase } from './supabase.js';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const DIGEST_EMAIL = process.env.DIGEST_EMAIL || 'dmahorgan@gmail.com';
@@ -9,6 +10,60 @@ function getResend() {
     throw new Error('RESEND_API_KEY not configured');
   }
   return new Resend(RESEND_API_KEY);
+}
+
+interface ProgressStats {
+  today: {
+    generated: number;
+    reviewed: number;
+    approved: number;
+  };
+  allTime: {
+    generated: number;
+    reviewed: number;
+    approved: number;
+    sparks: number;
+  };
+}
+
+async function getProgressStats(userId: string): Promise<ProgressStats> {
+  const today = new Date().toISOString().split('T')[0];
+
+  // Today's stats
+  const { data: todayIdeas } = await supabase
+    .from('ie_ideas')
+    .select('status')
+    .eq('user_id', userId)
+    .gte('created_at', today);
+
+  const todayGenerated = todayIdeas?.length || 0;
+  const todayReviewed = todayIdeas?.filter(i => i.status !== 'pending').length || 0;
+  const todayApproved = todayIdeas?.filter(i => i.status === 'approved').length || 0;
+
+  // All-time stats
+  const { data: allIdeas } = await supabase
+    .from('ie_ideas')
+    .select('status')
+    .eq('user_id', userId);
+
+  const allGenerated = allIdeas?.length || 0;
+  const allReviewed = allIdeas?.filter(i => i.status !== 'pending').length || 0;
+  const allApproved = allIdeas?.filter(i => i.status === 'approved').length || 0;
+  const allSparks = allIdeas?.filter(i => i.status === 'spark').length || 0;
+
+  return {
+    today: {
+      generated: todayGenerated,
+      reviewed: todayReviewed,
+      approved: todayApproved,
+    },
+    allTime: {
+      generated: allGenerated,
+      reviewed: allReviewed,
+      approved: allApproved,
+      sparks: allSparks,
+    },
+  };
 }
 
 /**
@@ -22,7 +77,8 @@ export async function sendDailyDigest(userId: string, ideas: Idea[]) {
     return { success: true, message: 'No pending ideas' };
   }
 
-  const html = generateDigestHTML(ideas);
+  const progress = await getProgressStats(userId);
+  const html = generateDigestHTML(ideas, progress);
 
   const { data, error } = await resend.emails.send({
     from: 'Idea Engine <onboarding@resend.dev>',
@@ -40,7 +96,7 @@ export async function sendDailyDigest(userId: string, ideas: Idea[]) {
   return { success: true, data };
 }
 
-function generateDigestHTML(ideas: Idea[]): string {
+function generateDigestHTML(ideas: Idea[], progress: ProgressStats): string {
   const ideaRows = ideas
     .map(
       (idea, index) => `
@@ -97,6 +153,31 @@ function generateDigestHTML(ideas: Idea[]): string {
       <p style="margin: 0; font-size: 16px; color: #64748b;">
         ${ideas.length} ideas generated and awaiting your review
       </p>
+    </div>
+
+    <!-- Progress Stats -->
+    <div style="margin-bottom: 32px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; color: white;">
+      <h2 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600;">Building Block Progress</h2>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+        <div>
+          <div style="font-size: 24px; font-weight: 700; margin-bottom: 4px;">${progress.today.generated}</div>
+          <div style="font-size: 13px; opacity: 0.9;">Generated Today</div>
+        </div>
+        <div>
+          <div style="font-size: 24px; font-weight: 700; margin-bottom: 4px;">${progress.today.approved}</div>
+          <div style="font-size: 13px; opacity: 0.9;">Approved Today</div>
+        </div>
+      </div>
+
+      <div style="border-top: 1px solid rgba(255,255,255,0.3); padding-top: 16px; margin-top: 16px;">
+        <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">All-Time Progress</div>
+        <div style="font-size: 13px; opacity: 0.9; line-height: 1.6;">
+          ${progress.allTime.generated} ideas generated •
+          ${progress.allTime.approved} approved (BUILD) •
+          ${progress.allTime.sparks} sparks saved
+        </div>
+      </div>
     </div>
 
     ${ideaRows}

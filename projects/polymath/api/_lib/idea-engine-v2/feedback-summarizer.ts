@@ -1,6 +1,7 @@
 import { supabase } from './supabase.js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import type { EvolutionaryFeedback, FeedbackSummary } from './types.js';
+import { MODELS } from './models.js';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
@@ -12,7 +13,7 @@ function getGenAI() {
 }
 
 function getSummarizerModel() {
-  return getGenAI().getGenerativeModel({ model: 'gemini-3-flash-preview' }); // Good enough for summaries
+  return getGenAI().getGenerativeModel({ model: MODELS.SUMMARIZE });
 }
 
 /**
