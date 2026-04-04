@@ -138,6 +138,97 @@ export async function sendDailyDigest(userId: string, ideas: Idea[]) {
   return { success: true, data, message: approvedIdeas.length > 0 ? 'Digest sent' : 'Empty digest sent (no approved ideas today)' };
 }
 
+/**
+ * Send a test digest email with mock data to preview the format
+ */
+export async function sendTestDigest(userId: string, variant: 'with-ideas' | 'empty' = 'with-ideas') {
+  const resend = getResend();
+
+  const mockIdeas: Idea[] = [
+    {
+      id: 'test-1',
+      user_id: userId,
+      title: 'Spaced Repetition for Physical Skill Acquisition',
+      description: 'Apply the forgetting curve and spaced repetition algorithms (like SM-2) to motor learning. A system that schedules practice sessions for physical skills — rock climbing routes, piano pieces, skateboard tricks — at optimal intervals based on measured decay rates of muscle memory, rather than the flat "practice daily" approach.',
+      reasoning: 'Spaced repetition is proven for declarative memory but rarely applied to procedural memory. Motor skill retention follows similar decay curves, yet no app exploits this systematically.',
+      domain_pair: ['Cognitive Science', 'Sports Training'],
+      frontier_mode: 'tool_transfer',
+      novelty_score: 0.82,
+      tractability_score: 0.75,
+      cross_domain_distance: 0.68,
+      prefilter_score: 0.78,
+      status: 'approved',
+      generation_number: 1,
+      created_at: new Date().toISOString(),
+      reviewed_at: new Date().toISOString(),
+    },
+    {
+      id: 'test-2',
+      user_id: userId,
+      title: 'Fermentation-Inspired Version Control',
+      description: 'A creative tool that treats drafts like fermentation batches — you "seal" a version and let it age, then compare aged vs. fresh interpretations. The system resurfaces old sealed drafts at random intervals, prompting you to evaluate whether the idea improved with distance or went stale.',
+      reasoning: 'Fermentation is controlled decay that produces value. Most creative workflows lack a structured "aging" phase — everything is either actively edited or abandoned.',
+      domain_pair: ['Food Science', 'Creative Writing'],
+      frontier_mode: 'analogy_mine',
+      novelty_score: 0.91,
+      tractability_score: 0.65,
+      cross_domain_distance: 0.88,
+      prefilter_score: 0.83,
+      status: 'approved',
+      generation_number: 1,
+      created_at: new Date().toISOString(),
+      reviewed_at: new Date().toISOString(),
+    },
+    {
+      id: 'test-3',
+      user_id: userId,
+      title: 'Ecological Succession Model for Team Formation',
+      description: 'Map the stages of ecological succession (pioneer species, intermediate community, climax community) onto startup team building. Early hires are "pioneer species" — generalists who thrive in chaos. Later hires are specialists that only survive once infrastructure exists. Use this to predict when roles should be filled and when hiring a specialist too early will fail.',
+      reasoning: 'Ecological succession is a well-studied model of how complex systems self-organise over time. Startup advice on hiring is mostly anecdotal — this provides a principled framework.',
+      domain_pair: ['Ecology', 'Organisational Design'],
+      frontier_mode: 'translate',
+      novelty_score: 0.87,
+      tractability_score: 0.72,
+      cross_domain_distance: 0.79,
+      prefilter_score: 0.81,
+      status: 'approved',
+      generation_number: 1,
+      created_at: new Date().toISOString(),
+      reviewed_at: new Date().toISOString(),
+    },
+  ];
+
+  const mockProgress: ProgressStats = {
+    today: { generated: 127, reviewed: 42, approved: variant === 'with-ideas' ? 3 : 0 },
+    allTime: { generated: 1847, reviewed: 612, approved: 89, sparks: 34 },
+  };
+
+  const ideas = variant === 'with-ideas' ? mockIdeas : [];
+  const vaultIdea = variant === 'empty' ? mockIdeas[0] : null;
+
+  const html = ideas.length > 0
+    ? generateDigestHTML(ideas, mockProgress)
+    : generateEmptyDigestHTML(mockProgress, vaultIdea);
+
+  const subject = variant === 'with-ideas'
+    ? 'TEST — 3 fresh ideas just cleared review'
+    : 'TEST — Quiet day on the frontier — here\'s one from the vault';
+
+  const { data, error } = await resend.emails.send({
+    from: 'Idea Engine <onboarding@resend.dev>',
+    to: process.env.DIGEST_EMAIL || 'dmahorgan@gmail.com',
+    subject: `Idea Engine — ${subject}`,
+    html,
+  });
+
+  if (error) {
+    console.error('Failed to send test digest email:', error);
+    throw error;
+  }
+
+  return { success: true, data, message: `Test digest (${variant}) sent` };
+}
+
 function ideaCardHTML(idea: Idea, index?: number): string {
   const prefix = index !== undefined ? `${index + 1}. ` : '';
   return `

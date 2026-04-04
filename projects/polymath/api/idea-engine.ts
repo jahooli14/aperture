@@ -6,7 +6,7 @@ import { generateIdeaEmbedding, storeIdeaWithDedupe } from './_lib/idea-engine-v
 import { getLatestFeedbackSummary } from './_lib/idea-engine-v2/feedback-summarizer.js';
 import { supabase, isSupabaseConfigured } from './_lib/idea-engine-v2/supabase.js';
 import { reviewIdea } from './_lib/idea-engine-v2/reviewer.js';
-import { sendDailyDigest } from './_lib/idea-engine-v2/digest-email.js';
+import { sendDailyDigest, sendTestDigest } from './_lib/idea-engine-v2/digest-email.js';
 import type { Idea } from './_lib/idea-engine-v2/types.js';
 
 const USER_ID = process.env.IDEA_ENGINE_USER_ID;
@@ -48,6 +48,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return await handleSendDigest(res);
       case 'review':
         return await handleReview(res);
+      case 'test-digest':
+        return await handleTestDigest(req, res);
       default:
         return res.status(400).json({ error: `Unknown action: ${action}` });
     }
@@ -306,5 +308,21 @@ async function handleSendDigest(res: VercelResponse) {
     });
   }
 }
-// Build timestamp: Fri  3 Apr 2026 10:28:15 BST
-// Complete implementation with review and digest endpoints
+async function handleTestDigest(req: VercelRequest, res: VercelResponse) {
+  const variant = (req.query.variant as string) || 'with-ideas';
+
+  try {
+    const result = await sendTestDigest(USER_ID!, variant as 'with-ideas' | 'empty');
+    return res.status(200).json({
+      success: true,
+      variant,
+      message: result.message,
+    });
+  } catch (error) {
+    console.error('Failed to send test digest:', error);
+    return res.status(500).json({
+      error: 'Failed to send test digest',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+}
