@@ -6,6 +6,7 @@ import { generateInsights, mergeGenesisInsights } from './insights-generator.js'
 import { detectProjectGenesis } from './project-genesis.js'
 import { generateText } from './gemini-chat.js'
 import { MODELS } from './models.js'
+import { draftFix } from './fix-queue/drafter.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 const supabase = getSupabaseClient()
@@ -276,7 +277,7 @@ export async function processMemory(memoryId: string): Promise<void> {
           const automatable = metadata.triage.automatable || false
           const fixHint = metadata.triage.fix_hint || null
 
-          await supabase
+          const { data: insertedItem } = await supabase
             .from('list_items')
             .insert({
               user_id: userId,
@@ -292,7 +293,40 @@ export async function processMemory(memoryId: string): Promise<void> {
                 fix_status: automatable ? 'draft_pending' : 'manual'
               }
             })
+            .select('id')
+            .single()
           logger.info({ severity, automatable, fix_hint: fixHint }, '✅ Added to Fix Queue')
+
+          // Eagerly draft a fix inline (fire-and-forget, cron is the fallback)
+          if (automatable && fixHint && insertedItem) {
+            draftFix({
+              content: metadata.summary_title,
+              original_thought: metadata.insightful_body,
+              fix_hint: fixHint,
+              severity,
+              user_email: '' // Cron will fill this from auth; inline draft uses hint only
+            }).then(async (draft) => {
+              if (draft) {
+                await supabase
+                  .from('list_items')
+                  .update({
+                    metadata: {
+                      original_thought: metadata.insightful_body,
+                      memory_id: memoryId,
+                      severity,
+                      automatable,
+                      fix_hint: fixHint,
+                      fix_status: 'drafted',
+                      fix_draft: draft
+                    }
+                  })
+                  .eq('id', insertedItem.id)
+                logger.info({ fix_name: draft.name }, '✅ Fix drafted eagerly')
+              }
+            }).catch((err) => {
+              logger.warn({ error: err }, 'Eager fix drafting failed — cron will retry')
+            })
+          }
         }
       }
     }
