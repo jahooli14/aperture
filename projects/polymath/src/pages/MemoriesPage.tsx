@@ -34,20 +34,8 @@ import { MemoryDetailModal } from '../components/memories/MemoryDetailModal' // 
 import { GlassCard } from '../components/ui/GlassCard' // For consistency with other cards
 import { debounce } from '../lib/utils'
 import { CACHE_TTL } from '../lib/cacheConfig'
+import { getIconComponent } from '../lib/themeIcons'
 
-const getIconComponent = (name: string) => {
-  const lowerName = name.toLowerCase()
-  if (lowerName.includes('learn')) return Brain
-  if (lowerName.includes('creat')) return Lightbulb
-  if (lowerName.includes('nature')) return Leaf
-  if (lowerName.includes('code') || lowerName.includes('tech')) return Code
-  if (lowerName.includes('art') || lowerName.includes('design')) return Palette
-  if (lowerName.includes('love') || lowerName.includes('relationship')) return Heart
-  if (lowerName.includes('read') || lowerName.includes('book')) return BookOpen
-  if (lowerName.includes('energy') || lowerName.includes('power')) return Zap
-  if (lowerName.includes('social') || lowerName.includes('people')) return Users
-  return Lightbulb // default icon
-}
 
 // Helper for Google Keep style masonry (Across then Down)
 function MasonryGrid({
@@ -128,7 +116,7 @@ export function MemoriesPage() {
   const { isOnline } = useOnlineStatus()
   const { addOfflineCapture } = useOfflineSync()
   const [resurfacing, setResurfacing] = useState<Memory[]>([])
-  const [view, setView] = useState<'foundational' | 'all' | 'resurfacing'>('all')
+  const [view, setView] = useState<'recent' | 'themes' | 'resurfacing'>('recent')
   const [loadingResurfacing, setLoadingResurfacing] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedMemoryForModal, setSelectedMemoryForModal] = useState<Memory | null>(null) // State for the detail modal
@@ -201,7 +189,6 @@ export function MemoriesPage() {
   const [clusters, setClusters] = useState<ThemeCluster[]>([])
   const [selectedCluster, setSelectedCluster] = useState<ThemeCluster | null>(null)
   const [loadingClusters, setLoadingClusters] = useState(false)
-  const [memoryView, setMemoryView] = useState<'themes' | 'recent'>('recent')
   const [clustersLastFetched, setClustersLastFetched] = useState<number>(0)
 
   // Use store's fetchMemories directly - it has built-in caching!
@@ -262,11 +249,11 @@ export function MemoriesPage() {
 
       if (view === 'resurfacing') {
         await fetchResurfacing()
+      } else if (view === 'themes') {
+        await loadMemories()
+        await fetchThemeClusters()
       } else {
         await loadMemories()
-        if (view === 'all') {
-          await fetchThemeClusters()
-        }
       }
     }
     loadData()
@@ -476,7 +463,7 @@ export function MemoriesPage() {
 
   // Memoize displayMemories to prevent recalculation on every render
   const baseMemories = useMemo(() => {
-    return view === 'all' ? memories : resurfacing
+    return view === 'resurfacing' ? resurfacing : memories
   }, [view, memories, resurfacing])
 
   // Apply search and tag filters
@@ -510,7 +497,7 @@ export function MemoriesPage() {
 
   const isFiltered = searchQuery.trim().length > 0 || activeTags.length > 0
 
-  const isLoading = view === 'all' ? loading : loadingResurfacing
+  const isLoading = view === 'resurfacing' ? loadingResurfacing : loading
 
   return (
     <>
@@ -525,7 +512,7 @@ export function MemoriesPage() {
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mt-1">Capture everything, loose nothing.</p>
             </div>
             <div className="flex items-center gap-2">
-              {view === 'all' && <CreateMemoryDialog />}
+              {view !== 'resurfacing' && <CreateMemoryDialog />}
               <button
                 onClick={() => navigate('/search')}
                 className="h-10 w-10 rounded-xl flex items-center justify-center transition-all bg-[var(--glass-surface)] border border-white/10"
@@ -541,11 +528,8 @@ export function MemoriesPage() {
             {/* View Toggle */}
             <PremiumTabs
               tabs={[
-                {
-                  id: 'foundational',
-                  label: `Core${progress ? ` (${progress.completed_required}/${progress.total_required})` : ''}`,
-                },
-                { id: 'all', label: `All (${memories.length})` },
+                { id: 'recent', label: `Recent (${memories.length})` },
+                { id: 'themes', label: 'Themes' },
                 { id: 'resurfacing', label: `Resurface (${resurfacing.length})` },
               ]}
               activeTab={view}
@@ -566,13 +550,13 @@ export function MemoriesPage() {
             <div className="mb-6 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <h2 className="text-xl font-black uppercase tracking-tight text-[var(--brand-text-primary)]">
-                  {view === 'all' ? 'Your Graph' : view === 'resurfacing' ? 'Review Queue' : 'Core Beliefs'}
+                  {view === 'recent' ? 'Your Graph' : view === 'themes' ? 'By Theme' : 'Review Queue'}
                 </h2>
               </div>
             </div>
 
-            {/* Search Bar  only shown on 'all' view */}
-            {view === 'all' && (
+            {/* Search Bar  shown on recent and themes views */}
+            {(view === 'recent' || view === 'themes') && (
               <div className="mb-4 space-y-3">
                 {/* Search input */}
                 <div className="relative">

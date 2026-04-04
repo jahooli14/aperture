@@ -113,19 +113,19 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
                     {/* Classification */}
                     <div className="space-y-2">
                         <Label className="font-bold text-xs uppercase tracking-widest text-[var(--brand-text-muted)]">Classification</Label>
-                        <div className="grid grid-cols-2 gap-3">
-                            {['Creative', 'Tech', 'Learning', 'Business'].map((cat) => (
+                        <div className="flex flex-wrap gap-2">
+                            {['Writing', 'Tech', 'Art', 'Music', 'Business', 'Creative', 'Learning'].map((cat) => (
                                 <button
                                     key={cat}
                                     type="button"
                                     onClick={() => setFormData({ ...formData, type: cat })}
-                                    className={`p-4 rounded-xl text-sm font-bold border transition-all text-left flex items-center justify-between group ${formData.type === cat
+                                    className={`px-4 py-2.5 rounded-xl text-sm font-bold border transition-all flex items-center gap-2 ${formData.type === cat
                                         ? 'bg-white text-black border-white'
                                         : 'bg-black border-[var(--glass-surface-hover)] text-[var(--brand-text-secondary)] hover:border-white/30'
                                         }`}
                                 >
                                     <span>{cat}</span>
-                                    {formData.type === cat && <Layers className="h-4 w-4" />}
+                                    {formData.type === cat && <Layers className="h-3.5 w-3.5" />}
                                 </button>
                             ))}
                         </div>

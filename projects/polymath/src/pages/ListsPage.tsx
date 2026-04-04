@@ -183,13 +183,13 @@ export default function ListsPage() {
         reorderLists(newOrder.map(l => l.id))
     }
 
-    // Long press handlers for quick add
+    // Long press handlers - show action sheet
     const handlePointerDown = (list: List) => (e: React.PointerEvent) => {
         if (isReordering) return
         longPressActivated.current = false
         longPressTimer.current = setTimeout(() => {
             longPressActivated.current = true
-            setQuickAddList(list)
+            setActionSheetList(list)
         }, 500)
     }
 
@@ -513,27 +513,6 @@ export default function ListsPage() {
                                         >
                                             <Plus className="h-3 w-3" />
                                         </button>
-                                        <button
-                                            onClick={async (e) => {
-                                                e.stopPropagation()
-                                                const confirmed = await confirm({
-                                                    title: `Delete "${list.title}"?`,
-                                                    description: 'This collection and all its items will be removed.',
-                                                    confirmText: 'Delete',
-                                                    variant: 'destructive',
-                                                })
-                                                if (confirmed) {
-                                                    useListStore.getState().deleteList(list.id)
-                                                }
-                                            }}
-                                            className="h-6 w-6 flex items-center justify-center rounded-lg bg-brand-primary/10 active:bg-brand-primary/20 text-brand-text-secondary/40 active:text-brand-text-secondary transition-all opacity-50"
-                                            style={{ boxShadow: 'inset 0 0 0 1px rgba(239,68,68,0.15)' }}
-                                        >
-                                            <Trash2 className="h-3 w-3" />
-                                        </button>
-                                        <div className="opacity-30">
-                                            <GripVertical className="h-3 w-3 text-[var(--brand-text-primary)]" />
-                                        </div>
                                     </div>
                                 </div>
 
@@ -571,7 +550,7 @@ export default function ListsPage() {
             {/* Long press hint - only show when there are lists and not reordering */}
             {lists.length > 0 && !isReordering && (
                 <p className="text-center text-[9px] font-bold uppercase tracking-widest text-zinc-700 pb-4">
-                    Hold card to quick-add
+                    Hold card for options
                 </p>
             )}
 
@@ -586,6 +565,79 @@ export default function ListsPage() {
                     listRgb={ListColor(quickAddList.type)}
                 />
             )}
+
+            {/* Long-press Action Sheet */}
+            <AnimatePresence>
+                {actionSheetList && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+                            onClick={() => setActionSheetList(null)}
+                        />
+                        <motion.div
+                            initial={{ y: '100%', opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: '100%', opacity: 0 }}
+                            transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+                            className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl pb-safe"
+                            style={{
+                                backgroundColor: '#141f32',
+                                boxShadow: '0 -20px 60px rgba(0,0,0,0.6), inset 0 1px 0 var(--glass-surface-hover)'
+                            }}
+                        >
+                            <div className="flex justify-center pt-3 pb-1">
+                                <div className="w-10 h-1 rounded-full bg-white/15" />
+                            </div>
+                            <div className="px-5 pt-3 pb-8">
+                                <p className="text-[9px] font-black uppercase tracking-[0.2em] mb-1"
+                                    style={{ color: `rgb(${ListColor(actionSheetList.type)})` }}>
+                                    {actionSheetList.type}
+                                </p>
+                                <h3 className="text-base font-black text-[var(--brand-text-primary)] uppercase tracking-tight mb-5">
+                                    {actionSheetList.title}
+                                </h3>
+                                <div className="space-y-2">
+                                    <button
+                                        onClick={() => {
+                                            const list = actionSheetList
+                                            setActionSheetList(null)
+                                            setQuickAddList(list)
+                                        }}
+                                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:bg-[var(--glass-surface)]"
+                                        style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface-hover)' }}
+                                    >
+                                        <Plus className="h-4 w-4 text-brand-primary" />
+                                        <span className="text-sm font-bold text-[var(--brand-text-primary)] uppercase tracking-widest">Quick Add</span>
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            const listToDelete = actionSheetList
+                                            setActionSheetList(null)
+                                            const confirmed = await confirm({
+                                                title: `Delete "${listToDelete.title}"?`,
+                                                description: 'This collection and all its items will be removed.',
+                                                confirmText: 'Delete',
+                                                variant: 'destructive',
+                                            })
+                                            if (confirmed) {
+                                                useListStore.getState().deleteList(listToDelete.id)
+                                            }
+                                        }}
+                                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:bg-red-500/10"
+                                        style={{ boxShadow: 'inset 0 0 0 1px rgba(239,68,68,0.15)' }}
+                                    >
+                                        <Trash2 className="h-4 w-4 text-red-400" />
+                                        <span className="text-sm font-bold text-red-400 uppercase tracking-widest">Delete Collection</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
 
             {confirmDialog}
         </div>
