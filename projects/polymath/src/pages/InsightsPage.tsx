@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
-import { Zap, TrendingUp, AlertCircle, Lightbulb, Search, Brain, WifiOff, RefreshCw, Sparkles, FolderPlus } from 'lucide-react'
+import { Zap, TrendingUp, AlertCircle, Lightbulb, Search, Brain, WifiOff, RefreshCw, Sparkles, FolderPlus, BookOpen } from 'lucide-react'
 import { SubtleBackground } from '../components/SubtleBackground'
 import type { SynthesisInsight } from '../types'
 import { readingDb } from '../lib/db'
@@ -180,6 +180,14 @@ export function InsightsPage() {
             </h1>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/replay')}
+              className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-[var(--glass-surface)]"
+              style={{ color: "var(--brand-primary)" }}
+              title="Cognitive Replay — reconstruct what you were thinking"
+            >
+              <BookOpen className="h-5 w-5" />
+            </button>
             {insights.length > 0 && (
               <button
                 onClick={triggerRefresh}
