@@ -21,10 +21,13 @@ export interface Entities {
 }
 
 export interface TriageInfo {
-  category: 'task_update' | 'new_thought' | 'reading_lead' | 'new_project_idea' | 'action_item' | 'todo_new' | 'list_item'
+  category: 'task_update' | 'new_thought' | 'reading_lead' | 'new_project_idea' | 'action_item' | 'todo_new' | 'list_item' | 'annoyance'
   project_id?: string
   confidence: number
   suggested_todo_text?: string
+  severity?: 'critical' | 'annoying' | 'minor'
+  automatable?: boolean
+  fix_hint?: string
 }
 
 export interface SourceReference {
@@ -974,7 +977,7 @@ export interface ReadingQueueItem {
 // LISTS PILLAR
 // ============================================================================
 
-export type ListType = 'film' | 'music' | 'tech' | 'book' | 'place' | 'game' | 'software' | 'event' | 'quote' | 'article' | 'generic'
+export type ListType = 'film' | 'music' | 'tech' | 'book' | 'place' | 'game' | 'software' | 'event' | 'quote' | 'article' | 'generic' | 'fix'
 export type ListItemStatus = 'pending' | 'active' | 'completed' | 'abandoned'
 
 export interface ListSettings {
@@ -990,7 +993,7 @@ export interface ListSettings {
 export const LIST_STATUS_DEFAULTS: Record<ListType, boolean> = {
   film: true, book: true, article: true, music: true, game: true,
   place: true, event: true, software: true, tech: true,
-  quote: false, generic: false,
+  quote: false, generic: false, fix: true,
 }
 
 export function listHasStatus(list: List): boolean {

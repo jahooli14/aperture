@@ -1,0 +1,26 @@
+name: Fix Queue - Run Fixes
+
+on:
+  schedule:
+    # Run every 30 minutes - executes approved fixes when their schedule matches
+    # 30-min granularity keeps costs near zero while catching most cron patterns
+    - cron: '*/30 * * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Execute scheduled fixes
+        run: |
+          curl -f -X POST "${{ secrets.VERCEL_DOMAIN }}/api/fix-queue?action=run-fixes" \
+            -H "Authorization: Bearer ${{ secrets.IDEA_ENGINE_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -w "\nHTTP Status: %{http_code}\n" \
+            -s -S
+
+      - name: Check for failures
+        if: failure()
+        run: echo "Fix runner failed - check Vercel logs"

@@ -209,6 +209,11 @@ export default function ListsPage() {
 
     const handleCardClick = (list: List) => {
         if (longPressActivated.current) return
+        // Fix Queue has its own dedicated page
+        if (list.type === 'fix') {
+            navigate('/fixes')
+            return
+        }
         navigate(`/lists/${list.id}`)
     }
 

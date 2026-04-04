@@ -10,8 +10,41 @@ Personal projects monorepo. React, TypeScript, Vite, Vercel, Supabase.
 | **Polymath** | `projects/polymath/` | Production | Voice-to-memory knowledge graph |
 | **Analogue** | `projects/analogue/` | Active | Book publishing / manuscript editing IDE |
 | **Idea Engine** | `projects/idea-engine/` | Active | Autonomous evolutionary ideation system |
+| **Fix Queue** | `projects/polymath/` (feature) | Active | Voice-capture annoyances → AI-drafted automated fixes |
 
 > **Sonically Sound** also exists as a deployed app but lives outside this repo.
+
+## Fix Queue (Polymath Feature)
+
+Voice-capture life annoyances → AI drafts automated fixes → approve → runs on cron.
+
+### Architecture
+- **Triage**: Voice notes classified as `annoyance` by Gemini, with severity + automatable flag
+- **Drafting**: AI generates data-driven fix specs (email, weather, smart home, HTTP)
+- **Approval**: `/fixes` page in Polymath UI — review draft, approve or reject
+- **Execution**: GitHub Actions cron (every 30min) runs approved fixes via `/api/fix-queue`
+
+### Fix Action Types
+- `send_email` — Reminder/notification via Resend
+- `weather_email` — Email with live Open-Meteo weather data
+- `smart_home` — Frame TV / Sonos / bird cam (via Home Assistant or direct)
+- `http_request` — Generic API calls
+
+### Key Files
+- `api/fix-queue.ts` — Main API (draft-pending, run-fixes, approve, reject, list)
+- `api/_lib/fix-queue/drafter.ts` — AI fix generation
+- `api/_lib/fix-queue/runner.ts` — Fix execution (email, weather, smart home)
+- `api/_lib/fix-queue/types.ts` — FixDraft, FixAction types
+- `src/pages/FixQueuePage.tsx` — Approval UI
+- `.github/workflows/fix-queue-draft.yml` — Cron every 6h
+- `.github/workflows/fix-queue-runner.yml` — Cron every 30min
+
+### Env Vars Needed
+- `RESEND_API_KEY` — For email fixes (already configured)
+- `HOME_ASSISTANT_URL` + `HOME_ASSISTANT_TOKEN` — Smart home hub (optional)
+- `SONOS_HTTP_API_URL` — node-sonos-http-api bridge (optional)
+- `FRAME_TV_IP` — Samsung Frame TV local IP (optional)
+- `BIRD_CAM_URL` — Bird cam HTTP endpoint (optional)
 
 ## Commands
 
