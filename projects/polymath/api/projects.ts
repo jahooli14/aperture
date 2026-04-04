@@ -706,6 +706,113 @@ Return JSON only:
     }
   }
 
+  // ============================================================
+  // COMPLETION RITUAL — retrospective → new sparks
+  // ============================================================
+  //
+  // Body: { project_id, answers: { what_worked, what_surprised, what_next } }
+  // Stores a row in project_retrospectives, generates 1-3 sparks seeded
+  // into project_suggestions, and marks the project completed if not already.
+  if (resource === 'complete-with-retro' && req.method === 'POST') {
+    try {
+      const { project_id, answers } = req.body as {
+        project_id: string
+        answers: { what_worked?: string; what_surprised?: string; what_next?: string }
+      }
+      if (!project_id || !answers) {
+        return res.status(400).json({ error: 'project_id and answers required' })
+      }
+
+      const { data: project } = await supabase
+        .from('projects')
+        .select('id, title, description, type, lineage_root_id, status')
+        .eq('id', project_id)
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      if (!project) {
+        return res.status(404).json({ error: 'Project not found' })
+      }
+
+      // Persist the retro.
+      await supabase
+        .from('project_retrospectives')
+        .insert([{ project_id, user_id: userId, answers }])
+
+      // Flip to completed if still open.
+      if (project.status !== 'completed') {
+        await supabase
+          .from('projects')
+          .update({ status: 'completed' })
+          .eq('id', project_id)
+          .eq('user_id', userId)
+      }
+
+      // Ask Gemini for 1-3 sparks. Silence over slop: if the answers are
+      // empty or vacuous, we return [].
+      let sparks: Array<{ title: string; description: string }> = []
+      try {
+        const { generateText } = await import('./_lib/gemini-chat.js')
+        const prompt = `A user just finished a project. Read their retrospective and suggest 1-3 NEW sparks (tiny project ideas) that naturally extend from what they just made. Concrete, specific, each written as a noun or verb phrase.
+
+JUST FINISHED
+title: ${project.title}
+description: ${project.description || '(none)'}
+
+RETRO
+What worked: ${answers.what_worked || '(blank)'}
+What surprised: ${answers.what_surprised || '(blank)'}
+What's next: ${answers.what_next || '(blank)'}
+
+RULES
+- Cite the retro. Each spark should feel like a direct continuation.
+- Empty array is allowed if the answers don't justify anything concrete.
+- No platitudes. No generic self-improvement ideas.
+
+Return JSON only:
+{ "sparks": [ { "title": "...", "description": "one-sentence concrete brief" }, ... ] }`
+        const raw = await generateText(prompt, { temperature: 0.6, maxTokens: 500, responseFormat: 'json' })
+        const parsed = JSON.parse(raw)
+        const list = Array.isArray(parsed.sparks) ? parsed.sparks : []
+        sparks = list
+          .filter((s: any) => s && typeof s.title === 'string' && s.title.trim().length >= 3)
+          .slice(0, 3)
+          .map((s: any) => ({ title: String(s.title).trim(), description: String(s.description || '').trim() }))
+      } catch (e) {
+        console.warn('[complete-with-retro] spark generation failed:', e)
+      }
+
+      // Seed sparks into project_suggestions (skip silently if table schema mismatches).
+      const createdSparks: any[] = []
+      for (const s of sparks) {
+        const { data, error } = await supabase
+          .from('project_suggestions')
+          .insert([{
+            user_id: userId,
+            title: s.title,
+            description: s.description,
+            status: 'pending',
+            total_points: 5,
+            metadata: {
+              from_retrospective: project_id,
+              parent_project_title: project.title,
+            },
+          }])
+          .select()
+          .maybeSingle()
+        if (!error && data) createdSparks.push(data)
+      }
+
+      return res.status(200).json({ success: true, sparks: createdSparks })
+    } catch (error) {
+      console.error('[complete-with-retro] error:', error)
+      return res.status(500).json({
+        error: 'Failed to record retrospective',
+        details: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
   // CAPABILITY PAIRS RESOURCE - Fetch learned pair weights
   if (resource === 'capability-pairs') {
     if (req.method === 'GET') {

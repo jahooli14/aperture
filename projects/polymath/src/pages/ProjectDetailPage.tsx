@@ -23,6 +23,7 @@ import { EditProjectDialog } from '../components/projects/EditProjectDialog'
 import { ProjectCompletionModal } from '../components/projects/ProjectCompletionModal'
 import { ProjectChatPanel } from '../components/projects/ProjectChatPanel'
 import { CatalystsPanel } from '../components/projects/CatalystsPanel'
+import { CompletionRitual } from '../components/projects/CompletionRitual'
 import type { Project, Memory } from '../types'
 import { supabase } from '../lib/supabase'
 import { useMemoryStore } from '../stores/useMemoryStore'
@@ -69,6 +70,7 @@ export function ProjectDetailPage() {
 
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [showCompletionModal, setShowCompletionModal] = useState(false)
+  const [showRetroRitual, setShowRetroRitual] = useState(false)
 
   // Chat panel state
   const [showChat, setShowChat] = useState(false)
@@ -506,6 +508,7 @@ export function ProjectDetailPage() {
       await updateProject(project.id, { status: newStatus })
       if (newStatus === 'completed') {
         setShowCompletionModal(true)
+        setShowRetroRitual(true)
       } else {
         addToast({
           title: 'Status updated',
@@ -1203,6 +1206,15 @@ export function ProjectDetailPage() {
           sparkedByMemories={sparkedByMemories}
           isOpen={showCompletionModal}
           onClose={() => setShowCompletionModal(false)}
+        />
+      )}
+
+      {/* Retrospective Ritual — three questions, feeds new sparks */}
+      {project && (
+        <CompletionRitual
+          project={project}
+          isOpen={showRetroRitual}
+          onClose={() => setShowRetroRitual(false)}
         />
       )}
 
