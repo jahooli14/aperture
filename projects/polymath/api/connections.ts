@@ -1238,5 +1238,10 @@ async function fetchItemWithContent(
     if (!data) return null
     return { id: data.id, title: data.content || (data.metadata as any)?.title || 'Untitled', snippet: data.content || '', embedding: data.embedding }
   }
+  if (type === 'list') {
+    const { data } = await supabase.from('lists').select('id, title, description').eq('user_id', userId).eq('id', id).single()
+    if (!data) return null
+    return { id: data.id, title: data.title, snippet: (data.description || '').slice(0, 200), embedding: null }
+  }
   return null
 }

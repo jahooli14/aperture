@@ -338,7 +338,7 @@ export function ConnectionRevealOverlay({
               className="px-6 py-4 border-t border-white/5 flex items-center justify-between"
             >
               <p className="text-xs text-[var(--brand-text-muted)]">
-                {path.length - 2} stepping stone{path.length - 2 !== 1 ? 's' : ''} between these ideas
+                {Math.max(0, path.length - 2)} stepping stone{path.length - 2 !== 1 ? 's' : ''} between these ideas
               </p>
               <button
                 onClick={onClose}

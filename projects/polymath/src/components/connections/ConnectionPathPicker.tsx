@@ -108,16 +108,25 @@ export function ConnectionPathPicker({ sourceId, sourceType, open, onClose, onSe
     }
   }, [open])
 
-  // Filter items by query
+  // Filter items by query — search across suggestions + all items, deduped
   const filteredItems = query.trim()
-    ? allItems.filter(item =>
-        item.title.toLowerCase().includes(query.toLowerCase()) ||
-        (item.subtitle || '').toLowerCase().includes(query.toLowerCase())
-      ).slice(0, 8)
+    ? (() => {
+        const seen = new Set<string>()
+        return [...suggestions, ...allItems]
+          .filter(item => {
+            if (seen.has(item.id)) return false
+            seen.add(item.id)
+            return item.title.toLowerCase().includes(query.toLowerCase()) ||
+              (item.subtitle || '').toLowerCase().includes(query.toLowerCase())
+          })
+          .slice(0, 8)
+      })()
     : []
 
   // Show suggestions when no query, filtered results when typing
-  const displayItems = query.trim() ? filteredItems : suggestions
+  // Fall back to first 5 items if no AI suggestions available
+  const defaultItems = suggestions.length > 0 ? suggestions : allItems.slice(0, 5)
+  const displayItems = query.trim() ? filteredItems : defaultItems
 
   if (!open) return null
 
@@ -179,10 +188,12 @@ export function ConnectionPathPicker({ sourceId, sourceType, open, onClose, onSe
             ) : (
               <div className="py-2">
                 {/* Section header */}
-                {!query.trim() && suggestions.length > 0 && (
+                {!query.trim() && (
                   <div className="px-5 py-2 flex items-center gap-2">
                     <Sparkles className="w-3 h-3 text-brand-primary" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-brand-primary">Suggested connections</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-brand-primary">
+                      {suggestions.length > 0 ? 'Suggested connections' : 'Your items'}
+                    </span>
                   </div>
                 )}
 

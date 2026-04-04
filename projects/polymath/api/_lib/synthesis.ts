@@ -211,7 +211,7 @@ function minePatterns(
 
     observations.push({
       type: 'cross_source_echo',
-      description: `You've come back to "${displayTopic}" in ${memTitles.length} separate notes (e.g. "${uniqueMemTitles.join('", "')}") and also saved ${artTitles.length} article${artTitles.length > 1 ? 's' : ''} about it (e.g. "${uniqueArtTitles.join('", "')}"$). You're thinking about this both from the inside (your own notes) and the outside (what others have written).`,
+      description: `You've come back to "${displayTopic}" in ${memTitles.length} separate notes (e.g. "${uniqueMemTitles.join('", "')}") and also saved ${artTitles.length} article${artTitles.length > 1 ? 's' : ''} about it (e.g. "${uniqueArtTitles.join('", "')}"). You're thinking about this both from the inside (your own notes) and the outside (what others have written).`,
       sourceRefs: [...uniqueMemTitles, ...uniqueArtTitles],
     })
   }
