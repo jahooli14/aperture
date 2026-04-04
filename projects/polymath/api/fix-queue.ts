@@ -3,8 +3,18 @@ import { supabase, isSupabaseConfigured } from './_lib/idea-engine-v2/supabase.j
 import { draftFix } from './_lib/fix-queue/drafter.js'
 import { executeFix } from './_lib/fix-queue/runner.js'
 import type { FixDraft, FixStatus } from './_lib/fix-queue/types.js'
+import { getMissingRequirements } from './_lib/fix-queue/types.js'
 
 const USER_ID = process.env.IDEA_ENGINE_USER_ID
+
+/** Verify Supabase JWT from the frontend (approve/reject/list actions) */
+async function getUserFromRequest(req: VercelRequest): Promise<string | null> {
+  const authHeader = req.headers.authorization
+  if (!authHeader?.startsWith('Bearer ')) return null
+  const token = authHeader.slice(7)
+  const { data } = await supabase.auth.getUser(token)
+  return data?.user?.id || null
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const action = req.query.action as string
@@ -16,6 +26,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const expectedToken = process.env.IDEA_ENGINE_SECRET
     if (!expectedToken || authHeader !== `Bearer ${expectedToken}`) {
       return res.status(401).json({ error: 'Unauthorized' })
+    }
+  }
+
+  // User-facing actions require Supabase JWT auth
+  const userActions = ['approve', 'reject', 'list']
+  if (userActions.includes(action)) {
+    const userId = await getUserFromRequest(req)
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' })
     }
   }
 
@@ -64,14 +83,13 @@ async function handleDraftPending(res: VercelResponse) {
     return res.json({ drafted: 0, message: 'No fix queue exists yet' })
   }
 
-  // Get items needing drafts
+  // Get items needing drafts (only draft_pending items — manual items never get this status)
   const { data: pendingItems } = await supabase
     .from('list_items')
     .select('*')
     .eq('list_id', fixQueue.id)
     .eq('user_id', USER_ID)
-    .not('metadata->automatable', 'eq', 'false')
-    .filter('metadata->fix_status', 'eq', 'draft_pending')
+    .filter('metadata->>fix_status', 'eq', 'draft_pending')
     .order('created_at', { ascending: true })
     .limit(5) // Draft up to 5 per run
 
@@ -153,7 +171,7 @@ async function handleRunFixes(res: VercelResponse) {
     .select('*')
     .eq('list_id', fixQueue.id)
     .eq('user_id', USER_ID)
-    .filter('metadata->fix_status', 'eq', 'deployed')
+    .filter('metadata->>fix_status', 'eq', 'deployed')
 
   if (!deployedItems?.length) {
     return res.json({ run: 0, message: 'No deployed fixes to run' })
@@ -167,8 +185,17 @@ async function handleRunFixes(res: VercelResponse) {
     const draft = item.metadata?.fix_draft as FixDraft | undefined
     if (!draft?.schedule?.cron) continue
 
-    // Check if this fix should run now (within the cron window)
-    if (shouldRunNow(draft.schedule.cron, now)) {
+    const tz = draft.schedule.timezone || 'Europe/London'
+
+    // Dedup: skip if already run within the last 25 minutes
+    const lastRun = item.metadata?.last_run_at
+    if (lastRun) {
+      const msSinceLastRun = now.getTime() - new Date(lastRun).getTime()
+      if (msSinceLastRun < 25 * 60 * 1000) continue
+    }
+
+    // Check if this fix should run now (using the fix's timezone)
+    if (shouldRunNow(draft.schedule.cron, now, tz)) {
       const result = await executeFix(draft)
       runCount++
       results.push(result)
@@ -180,7 +207,8 @@ async function handleRunFixes(res: VercelResponse) {
           metadata: {
             ...item.metadata,
             last_run_at: now.toISOString(),
-            last_run_success: result.success
+            last_run_success: result.success,
+            run_count: (item.metadata?.run_count || 0) + 1
           }
         })
         .eq('id', item.id)
@@ -210,6 +238,18 @@ async function handleApprove(req: VercelRequest, res: VercelResponse) {
   const meta = item.metadata || {}
   if (meta.fix_status !== 'drafted') {
     return res.status(400).json({ error: `Cannot approve item with status: ${meta.fix_status}` })
+  }
+
+  // Server-side requirement check (env vars may have been added since draft)
+  const draft = meta.fix_draft as FixDraft | undefined
+  if (draft) {
+    const missing = getMissingRequirements(draft)
+    if (missing.length > 0) {
+      return res.status(400).json({
+        error: `Missing setup: ${missing.map(r => r.label).join(', ')}`,
+        missing_requirements: missing
+      })
+    }
   }
 
   await supabase
@@ -285,7 +325,7 @@ async function handleList(req: VercelRequest, res: VercelResponse) {
     .order('created_at', { ascending: false })
 
   if (status) {
-    query = query.filter('metadata->fix_status', 'eq', status)
+    query = query.filter('metadata->>fix_status', 'eq', status)
   }
 
   const { data: items } = await query
@@ -293,28 +333,50 @@ async function handleList(req: VercelRequest, res: VercelResponse) {
 }
 
 /**
- * Simple cron matching — checks if a cron expression matches the current time.
- * Supports: minute, hour, day-of-month, month, day-of-week
- * Runner fires every 30 min, so we match within a 30-min window.
+ * Timezone-aware cron matching.
+ * Converts `now` to the fix's timezone before comparing against the cron expression.
+ * Runner fires every 30min, so we use a 29-min window on the minute field only.
  */
-function shouldRunNow(cron: string, now: Date): boolean {
+function shouldRunNow(cron: string, now: Date, timezone: string): boolean {
   const parts = cron.split(' ')
   if (parts.length !== 5) return false
 
+  // Convert to the fix's local timezone using Intl
+  const localParts = getLocalTimeParts(now, timezone)
+
   const [minExpr, hourExpr, domExpr, monExpr, dowExpr] = parts
-  const minute = now.getUTCMinutes()
-  const hour = now.getUTCHours()
-  const dayOfMonth = now.getUTCDate()
-  const month = now.getUTCMonth() + 1
-  const dayOfWeek = now.getUTCDay()
 
   return (
-    matchField(minExpr, minute, 30) && // 30-min window for runner frequency
-    matchField(hourExpr, hour) &&
-    matchField(domExpr, dayOfMonth) &&
-    matchField(monExpr, month) &&
-    matchField(dowExpr, dayOfWeek)
+    matchField(minExpr, localParts.minute, 29) && // 29-min window for 30-min runner
+    matchField(hourExpr, localParts.hour) &&
+    matchField(domExpr, localParts.day) &&
+    matchField(monExpr, localParts.month) &&
+    matchField(dowExpr, localParts.dow)
   )
+}
+
+function getLocalTimeParts(now: Date, timezone: string) {
+  // Use Intl.DateTimeFormat to get timezone-local values
+  const formatter = new Intl.DateTimeFormat('en-GB', {
+    timeZone: timezone,
+    hour: 'numeric', minute: 'numeric',
+    day: 'numeric', month: 'numeric', weekday: 'short',
+    hour12: false
+  })
+  const parts = formatter.formatToParts(now)
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parseInt(parts.find(p => p.type === type)?.value || '0')
+
+  const dowMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }
+  const dowStr = parts.find(p => p.type === 'weekday')?.value || 'Mon'
+
+  return {
+    minute: get('minute'),
+    hour: get('hour'),
+    day: get('day'),
+    month: get('month'),
+    dow: dowMap[dowStr] ?? 1
+  }
 }
 
 function matchField(expr: string, value: number, window = 0): boolean {
@@ -323,13 +385,26 @@ function matchField(expr: string, value: number, window = 0): boolean {
   // Handle */n (every n)
   if (expr.startsWith('*/')) {
     const step = parseInt(expr.slice(2))
-    return value % step < (window || 1)
+    if (window > 0) {
+      // Check if any step-aligned value falls within the window
+      for (let v = 0; v < 60; v += step) {
+        if (Math.abs(value - v) <= window) return true
+      }
+      return false
+    }
+    return value % step === 0
+  }
+
+  // Handle ranges (e.g. 1-5)
+  if (expr.includes('-')) {
+    const [min, max] = expr.split('-').map(Number)
+    return value >= min && value <= max
   }
 
   // Handle comma-separated values
   const values = expr.split(',').map(Number)
   if (window > 0) {
-    return values.some(v => Math.abs(value - v) < window)
+    return values.some(v => Math.abs(value - v) <= window)
   }
   return values.includes(value)
 }

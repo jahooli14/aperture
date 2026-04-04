@@ -6,6 +6,7 @@
 
 import { Resend } from 'resend'
 import type { FixAction, FixDraft, WeatherEmailAction } from './types.js'
+import { getMissingRequirements } from './types.js'
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY
 const FROM_EMAIL = 'Fix Queue <onboarding@resend.dev>'
@@ -28,6 +29,14 @@ export async function executeFix(draft: FixDraft): Promise<RunResult> {
     success: true,
     actions_run: 0,
     errors: []
+  }
+
+  // Pre-flight: check all requirements are met
+  const missing = getMissingRequirements(draft)
+  if (missing.length > 0) {
+    result.success = false
+    result.errors.push(`Missing config: ${missing.map(r => r.env_var).join(', ')}`)
+    return result
   }
 
   for (const action of draft.actions) {
@@ -238,14 +247,9 @@ async function executeViaHomeAssistant(
 // or a local proxy/bridge running on the home network
 
 async function executeFrameTvAction(action: FixAction & { type: 'smart_home' }): Promise<SmartHomeResult> {
-  const tvIp = process.env.FRAME_TV_IP
-  if (!tvIp) return { success: false, message: 'FRAME_TV_IP not configured' }
-
-  // Samsung Frame TV WebSocket API (port 8002)
-  // Note: Full integration requires samsungtvws Python library or a local bridge
-  // For now, log the intent — a local Raspberry Pi bridge would handle execution
-  console.log(`[fix-runner] Frame TV (${tvIp}): ${action.command}`, action.params)
-  return { success: true, message: `Frame TV command queued: ${action.command}` }
+  // Frame TV requires local WebSocket (port 8002) — not reachable from Vercel.
+  // Must go through Home Assistant (which is checked first in executeSmartHomeAction).
+  return { success: false, message: 'Frame TV requires Home Assistant — direct control not possible from cloud' }
 }
 
 async function executeSonosAction(action: FixAction & { type: 'smart_home' }): Promise<SmartHomeResult> {

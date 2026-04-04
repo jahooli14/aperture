@@ -299,12 +299,17 @@ export async function processMemory(memoryId: string): Promise<void> {
 
           // Eagerly draft a fix inline (fire-and-forget, cron is the fallback)
           if (automatable && fixHint && insertedItem) {
+            // Fetch user email for fix actions (e.g. email reminders)
+            const userEmail = await supabase.auth.admin.getUserById(userId)
+              .then(({ data }) => data?.user?.email || '')
+              .catch(() => '')
+
             draftFix({
               content: metadata.summary_title,
               original_thought: metadata.insightful_body,
               fix_hint: fixHint,
               severity,
-              user_email: '' // Cron will fill this from auth; inline draft uses hint only
+              user_email: userEmail
             }).then(async (draft) => {
               if (draft) {
                 await supabase
@@ -326,6 +331,21 @@ export async function processMemory(memoryId: string): Promise<void> {
             }).catch((err) => {
               logger.warn({ error: err }, 'Eager fix drafting failed — cron will retry')
             })
+          }
+
+          // For manual (non-automatable) annoyances, also create a todo
+          // so it shows up in the daily task flow, not just buried in the fix queue
+          if (!automatable) {
+            await supabase
+              .from('todos')
+              .insert({
+                user_id: userId,
+                text: `Fix: ${metadata.summary_title}`,
+                notes: metadata.insightful_body,
+                status: 'pending',
+                source_memory_id: memoryId
+              })
+            logger.info('✅ Created todo for manual fix')
           }
         }
       }

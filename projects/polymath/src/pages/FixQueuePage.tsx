@@ -7,12 +7,20 @@ import { useAuthContext } from '../contexts/AuthContext'
 import { useToast } from '../components/ui/toast'
 import { SubtleBackground } from '../components/SubtleBackground'
 
+interface FixRequirement {
+  env_var: string
+  label: string
+  description: string
+}
+
 interface FixDraft {
   name: string
   description: string
   schedule: { cron: string; timezone: string; description: string }
   actions: Array<{ type: string; [key: string]: unknown }>
   estimated_cost: string
+  requirements?: FixRequirement[]
+  ready?: boolean
 }
 
 interface FixItem {
@@ -31,6 +39,7 @@ interface FixItem {
     last_run_success?: boolean
     deployed_at?: string
     rejection_reason?: string
+    run_count?: number
   }
 }
 
@@ -101,37 +110,44 @@ export function FixQueuePage() {
 
   useEffect(() => { fetchItems() }, [fetchItems])
 
+  const getAuthHeaders = async () => {
+    const { data } = await supabase.auth.getSession()
+    const token = data?.session?.access_token
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    }
+  }
+
   const handleApprove = async (item: FixItem) => {
     setApproving(item.id)
-    const { error } = await supabase
-      .from('list_items')
-      .update({
-        status: 'active',
-        metadata: {
-          ...item.metadata,
-          fix_status: 'deployed',
-          deployed_at: new Date().toISOString()
-        }
-      })
-      .eq('id', item.id)
+    const headers = await getAuthHeaders()
+    const draft = item.metadata.fix_draft
 
-    if (!error) {
-      addToast({ message: `Approved: ${item.metadata.fix_draft?.name}`, variant: 'success' })
+    // Let the server check requirements (it has live env vars, client doesn't)
+    const resp = await fetch('/api/fix-queue?action=approve', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ item_id: item.id })
+    })
+
+    if (resp.ok) {
+      addToast({ message: `Approved: ${draft?.name}`, variant: 'success' })
       fetchItems()
+    } else {
+      const err = await resp.json().catch(() => ({ error: 'Failed' }))
+      addToast({ message: err.error || 'Approval failed', variant: 'default' })
     }
     setApproving(null)
   }
 
   const handleReject = async (item: FixItem) => {
-    await supabase
-      .from('list_items')
-      .update({
-        metadata: {
-          ...item.metadata,
-          fix_status: 'rejected'
-        }
-      })
-      .eq('id', item.id)
+    const headers = await getAuthHeaders()
+    await fetch('/api/fix-queue?action=reject', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ item_id: item.id })
+    })
 
     addToast({ message: 'Fix rejected', variant: 'default' })
     fetchItems()
@@ -412,7 +428,8 @@ function FixCard({ item, expanded, onToggle, actions }: {
             )}
             {meta.last_run_at && (
               <span className="text-[10px]" style={{ color: meta.last_run_success ? '#10b981' : '#ef4444' }}>
-                Last run: {new Date(meta.last_run_at).toLocaleDateString()}
+                {meta.last_run_success ? 'Last run' : 'Failed'}: {new Date(meta.last_run_at).toLocaleDateString()}
+                {meta.run_count ? ` (${meta.run_count}x)` : ''}
               </span>
             )}
           </div>
@@ -481,6 +498,24 @@ function FixCard({ item, expanded, onToggle, actions }: {
                       Schedule: {draft.schedule.cron}
                     </span>
                   </div>
+                </div>
+              )}
+
+              {/* Requirements / not-ready warning */}
+              {draft?.ready === false && draft?.requirements && draft.requirements.length > 0 && (
+                <div className="p-2.5 rounded-xl" style={{ backgroundColor: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: '#f59e0b' }}>
+                    Setup needed before this can run
+                  </p>
+                  {draft.requirements.map((req, i) => (
+                    <div key={i} className="flex items-start gap-2 mt-1">
+                      <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" style={{ color: '#f59e0b' }} />
+                      <div>
+                        <p className="text-xs font-medium" style={{ color: 'var(--brand-text)' }}>{req.label}</p>
+                        <p className="text-[10px]" style={{ color: 'var(--brand-text-tertiary)' }}>{req.description}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
 

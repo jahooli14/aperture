@@ -7,6 +7,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { MODELS } from '../idea-engine-v2/models.js'
 import type { FixDraft } from './types.js'
+import { getRequirementsForDraft, getMissingRequirements } from './types.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
@@ -88,5 +89,11 @@ Return only valid JSON.`
   const parsed = JSON.parse(jsonMatch[0])
   if (!parsed.name) return null
 
-  return parsed as FixDraft
+  const draft = parsed as FixDraft
+
+  // Attach requirements so the UI can show what's needed
+  draft.requirements = getRequirementsForDraft(draft)
+  draft.ready = getMissingRequirements(draft).length === 0
+
+  return draft
 }
