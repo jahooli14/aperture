@@ -54,3 +54,9 @@ CREATE INDEX IF NOT EXISTS idx_retros_project
 
 CREATE INDEX IF NOT EXISTS idx_retros_user
   ON project_retrospectives (user_id, created_at DESC);
+
+-- Handoff opt-in: a boolean on user_settings. Defaults to false so the
+-- handoff evolution mode is never proposed unless the user explicitly
+-- enables it in the settings page.
+ALTER TABLE user_settings
+  ADD COLUMN IF NOT EXISTS allow_handoff_mutations BOOLEAN DEFAULT false;

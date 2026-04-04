@@ -813,6 +813,50 @@ Return JSON only:
     }
   }
 
+  // ============================================================
+  // METABOLISM SETTINGS — handoff opt-in
+  // ============================================================
+  if (resource === 'metabolism-settings') {
+    if (req.method === 'GET') {
+      try {
+        const { data } = await supabase
+          .from('user_settings')
+          .select('allow_handoff_mutations')
+          .eq('user_id', userId)
+          .maybeSingle()
+        return res.status(200).json({
+          allow_handoff_mutations: !!data?.allow_handoff_mutations,
+        })
+      } catch (error) {
+        return res.status(500).json({
+          error: 'Failed to read metabolism settings',
+          details: error instanceof Error ? error.message : String(error),
+        })
+      }
+    }
+    if (req.method === 'PUT' || req.method === 'POST') {
+      try {
+        const { allow_handoff_mutations } = req.body as { allow_handoff_mutations: boolean }
+        const { error } = await supabase
+          .from('user_settings')
+          .upsert(
+            { user_id: userId, allow_handoff_mutations: !!allow_handoff_mutations },
+            { onConflict: 'user_id' }
+          )
+        if (error) {
+          return res.status(500).json({ error: 'Failed to save', details: error.message })
+        }
+        return res.status(200).json({ success: true, allow_handoff_mutations: !!allow_handoff_mutations })
+      } catch (error) {
+        return res.status(500).json({
+          error: 'Failed to save metabolism settings',
+          details: error instanceof Error ? error.message : String(error),
+        })
+      }
+    }
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
   // CAPABILITY PAIRS RESOURCE - Fetch learned pair weights
   if (resource === 'capability-pairs') {
     if (req.method === 'GET') {
