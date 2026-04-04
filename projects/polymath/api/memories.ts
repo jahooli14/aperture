@@ -9,6 +9,7 @@ import { generateEmbedding, cosineSimilarity } from './_lib/gemini-embeddings.js
 import { processMemory } from './_lib/process-memory.js'
 import { generateText } from './_lib/gemini-chat.js'
 import { generateInsights, getCachedInsights } from './_lib/insights-generator.js'
+import { generateCognitiveReplay } from './_lib/cognitive-replay.js'
 import { MODELS } from './_lib/models.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
@@ -233,6 +234,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'GET' && action === 'insight') {
       if (!userId) return res.status(401).json({ error: 'Unauthorized' })
       return await handleInsight(req, res, supabase, userId)
+    }
+
+    // POST /api/memories?action=replay → generate cognitive replay for a time window
+    if (req.method === 'POST' && action === 'replay') {
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+      try {
+        const { start_date, end_date } = req.body || {}
+        if (!start_date || !end_date) {
+          return res.status(400).json({ error: 'start_date and end_date required' })
+        }
+        const replay = await generateCognitiveReplay(userId, start_date, end_date)
+        return res.status(200).json(replay)
+      } catch (error) {
+        console.error('[memories:replay] Error:', error)
+        return res.status(500).json({ error: 'Replay generation failed' })
+      }
     }
 
     // GET /api/memories?action=evolution  → return cached synthesis insights + shadow_project

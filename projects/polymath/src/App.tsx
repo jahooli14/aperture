@@ -48,6 +48,7 @@ const ListDetailPage = lazy(() => import('./pages/ListDetailPage'))
 const TodosPage = lazy(() => import('./pages/TodosPage').then(m => ({ default: m.TodosPage })))
 const FixQueuePage = lazy(() => import('./pages/FixQueuePage'))
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })))
+const CognitiveReplayPage = lazy(() => import('./pages/CognitiveReplayPage').then(m => ({ default: m.CognitiveReplayPage })))
 
 // Loading fallback component with skeleton
 import { useBedtimeNotifications } from './hooks/useBedtimeNotifications'
@@ -318,6 +319,7 @@ export default function App() {
                       <Route path="/projects" element={<ProjectsPage />} />
                       <Route path="/projects/:id" element={<ProjectDetailPage />} />
                       <Route path="/timeline" element={<TimelinePage />} />
+                      <Route path="/replay" element={<CognitiveReplayPage />} />
                       <Route path="/insights" element={<InsightsPage />} />
                       <Route path="/settings" element={<SettingsPage />} />
                       <Route path="/rss" element={<RSSFeedsPage />} />

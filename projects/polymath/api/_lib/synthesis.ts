@@ -211,7 +211,7 @@ function minePatterns(
 
     observations.push({
       type: 'cross_source_echo',
-      description: `You've come back to "${displayTopic}" in ${memTitles.length} separate notes (e.g. "${uniqueMemTitles.join('", "')}") and also saved ${artTitles.length} article${artTitles.length > 1 ? 's' : ''} about it (e.g. "${uniqueArtTitles.join('", "')}"$). You're thinking about this both from the inside (your own notes) and the outside (what others have written).`,
+      description: `You've come back to "${displayTopic}" in ${memTitles.length} separate notes (e.g. "${uniqueMemTitles.join('", "')}") and also saved ${artTitles.length} article${artTitles.length > 1 ? 's' : ''} about it (e.g. "${uniqueArtTitles.join('", "')}"). You're thinking about this both from the inside (your own notes) and the outside (what others have written).`,
       sourceRefs: [...uniqueMemTitles, ...uniqueArtTitles],
     })
   }
@@ -414,7 +414,8 @@ async function filterAndScoreSuggestions(
   ideas: any[],
   userId: string,
   memories: RichMemory[],
-  capabilities: Capability[]
+  capabilities: Capability[],
+  dismissalPatterns?: DismissalPattern
 ): Promise<ProjectIdea[]> {
   const { data: history } = await supabase
     .from('project_suggestions')
@@ -460,7 +461,17 @@ async function filterAndScoreSuggestions(
     const feasibilityScore = (idea.capabilityIds || []).length > 0 ? 0.75 : 0.6
     const interestScore = memoryIds.length > 0 ? Math.min(memoryIds.length / 3, 1.0) : 0.5
 
-    const totalPoints = Math.round((noveltyScore * 0.3 + feasibilityScore * 0.4 + interestScore * 0.3) * 100)
+    // Penalty for ideas relying heavily on capabilities the user keeps dismissing
+    let dismissalPenalty = 0
+    if (dismissalPatterns?.dislikedCapabilities.length) {
+      const dislikedSet = new Set(dismissalPatterns.dislikedCapabilities)
+      const dislikedCount = (idea.capabilityIds || []).filter((id: string) => dislikedSet.has(id)).length
+      dismissalPenalty = dislikedCount * 0.08 // Each disliked capability reduces score
+    }
+
+    const totalPoints = Math.max(0, Math.round(
+      ((noveltyScore * 0.3 + feasibilityScore * 0.4 + interestScore * 0.3) * 100) - (dismissalPenalty * 100)
+    ))
 
     finalSuggestions.push({
       title: idea.title,
@@ -493,17 +504,138 @@ const modeConstraints: Record<string, string> = {
   'opposite': 'Generate ideas that CONTRADICT the user\'s recent patterns. Surprise them.',
 }
 
+// ─── Dismissal pattern analysis ─────────────────────────────────────────────
+
+interface DismissalPattern {
+  topReasons: string[]
+  avoidObservationTypes: string[]
+  dislikedCapabilities: string[]
+}
+
+async function analyzeDismissalPatterns(userId: string): Promise<DismissalPattern> {
+  const result: DismissalPattern = {
+    topReasons: [],
+    avoidObservationTypes: [],
+    dislikedCapabilities: [],
+  }
+
+  try {
+    // Get recently dismissed suggestions with their feedback
+    const { data: dismissed } = await supabase
+      .from('suggestion_ratings')
+      .select('feedback, suggestion_id')
+      .eq('user_id', userId)
+      .eq('rating', -1)
+      .order('rated_at', { ascending: false })
+      .limit(30)
+
+    if (!dismissed || dismissed.length === 0) return result
+
+    // Extract feedback reasons (ignoring empty/null)
+    const reasons = dismissed
+      .map(d => d.feedback)
+      .filter((f): f is string => !!f && f.trim().length > 0)
+
+    // Count reason frequency
+    const reasonCounts = new Map<string, number>()
+    for (const reason of reasons) {
+      const key = reason.toLowerCase().trim()
+      reasonCounts.set(key, (reasonCounts.get(key) || 0) + 1)
+    }
+    result.topReasons = [...reasonCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([reason]) => reason)
+
+    // Get the dismissed suggestion details to find observation type patterns
+    const dismissedIds = dismissed.map(d => d.suggestion_id)
+    const { data: dismissedSuggestions } = await supabase
+      .from('project_suggestions')
+      .select('capability_ids, metadata')
+      .in('id', dismissedIds)
+
+    // Track which capabilities keep getting dismissed
+    const capDismissals = new Map<string, number>()
+    for (const s of dismissedSuggestions || []) {
+      for (const capId of s.capability_ids || []) {
+        capDismissals.set(capId, (capDismissals.get(capId) || 0) + 1)
+      }
+    }
+
+    // Capabilities dismissed 3+ times are flagged
+    result.dislikedCapabilities = [...capDismissals.entries()]
+      .filter(([, count]) => count >= 3)
+      .sort((a, b) => b[1] - a[1])
+      .map(([capId]) => capId)
+
+  } catch (err) {
+    logger.warn({ error: err }, 'Dismissal analysis failed (non-fatal)')
+  }
+
+  return result
+}
+
+// ─── Observation type preference tracking ────────────────────────────────────
+
+interface ObservationPreferences {
+  preferred: string[]
+  avoided: string[]
+}
+
+async function getObservationPreferences(userId: string): Promise<ObservationPreferences> {
+  const result: ObservationPreferences = { preferred: [], avoided: [] }
+
+  try {
+    // Get suggestions with ratings, grouped by observation basis
+    const { data: rated } = await supabase
+      .from('project_suggestions')
+      .select('metadata, status')
+      .eq('user_id', userId)
+      .in('status', ['rated', 'built', 'dismissed'])
+      .order('created_at', { ascending: false })
+      .limit(50)
+
+    if (!rated || rated.length === 0) return result
+
+    const typeCounts: Record<string, { positive: number; negative: number }> = {}
+
+    for (const s of rated) {
+      const obsType = s.metadata?.observation_basis || 'unknown'
+      if (!typeCounts[obsType]) typeCounts[obsType] = { positive: 0, negative: 0 }
+      if (s.status === 'rated' || s.status === 'built') {
+        typeCounts[obsType].positive++
+      } else if (s.status === 'dismissed') {
+        typeCounts[obsType].negative++
+      }
+    }
+
+    for (const [type, counts] of Object.entries(typeCounts)) {
+      const total = counts.positive + counts.negative
+      if (total < 3) continue // Not enough data
+      const ratio = counts.positive / total
+      if (ratio >= 0.7) result.preferred.push(type)
+      if (ratio <= 0.3) result.avoided.push(type)
+    }
+  } catch (err) {
+    logger.warn({ error: err }, 'Observation preference analysis failed (non-fatal)')
+  }
+
+  return result
+}
+
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export async function runSynthesis(userId: string, mode?: string) {
   logger.info({ userId, mode }, 'Starting Deep Synthesis')
 
-  // Load full data lake in parallel
-  const [memories, articles, projects, capabilities] = await Promise.all([
+  // Load full data lake + feedback signals in parallel
+  const [memories, articles, projects, capabilities, dismissalPatterns, obsPreferences] = await Promise.all([
     loadRichMemories(userId),
     loadRichArticles(userId),
     loadRichProjects(userId),
     loadCapabilities(userId),
+    analyzeDismissalPatterns(userId),
+    getObservationPreferences(userId),
   ])
 
   logger.info({
@@ -511,7 +643,9 @@ export async function runSynthesis(userId: string, mode?: string) {
     articles: articles.length,
     projects: projects.length,
     capabilities: capabilities.length,
-  }, 'Data lake loaded')
+    dismissalReasons: dismissalPatterns.topReasons.length,
+    preferredObsTypes: obsPreferences.preferred,
+  }, 'Data lake + feedback signals loaded')
 
   if (capabilities.length === 0 && memories.length === 0) {
     logger.warn('No data for synthesis')
@@ -519,7 +653,18 @@ export async function runSynthesis(userId: string, mode?: string) {
   }
 
   // Mine patterns from the full data lake
-  const observations = minePatterns(memories, articles, projects, capabilities)
+  let observations = minePatterns(memories, articles, projects, capabilities)
+
+  // Boost observations from preferred types and deprioritize avoided types
+  if (obsPreferences.preferred.length > 0 || obsPreferences.avoided.length > 0) {
+    const preferred = new Set(obsPreferences.preferred)
+    const avoided = new Set(obsPreferences.avoided)
+    observations.sort((a, b) => {
+      const scoreA = preferred.has(a.type) ? 2 : avoided.has(a.type) ? -1 : 0
+      const scoreB = preferred.has(b.type) ? 2 : avoided.has(b.type) ? -1 : 0
+      return scoreB - scoreA
+    })
+  }
 
   // Capability pair weights for personalization
   let pairWeightsSection = ''
@@ -539,6 +684,21 @@ export async function runSynthesis(userId: string, mode?: string) {
     logger.warn({ error: pairError }, 'Failed to fetch pair weights (non-fatal)')
   }
 
+  // Build dismissal feedback section for the prompt
+  let dismissalSection = ''
+  if (dismissalPatterns.topReasons.length > 0) {
+    dismissalSection += `\nPATTERNS FROM PAST FEEDBACK — the user has repeatedly dismissed suggestions for these reasons:\n${dismissalPatterns.topReasons.map(r => `- "${r}"`).join('\n')}\nAvoid generating ideas that would trigger these same objections.\n`
+  }
+
+  // Build observation preference section
+  let obsPreferenceSection = ''
+  if (obsPreferences.preferred.length > 0) {
+    obsPreferenceSection += `\nThe user tends to PREFER ideas grounded in: ${obsPreferences.preferred.join(', ')} observations.\n`
+  }
+  if (obsPreferences.avoided.length > 0) {
+    obsPreferenceSection += `The user tends to DISMISS ideas grounded in: ${obsPreferences.avoided.join(', ')} observations. De-emphasize these.\n`
+  }
+
   const modeSection = mode && modeConstraints[mode]
     ? `\nCONSTRAINT MODE: ${modeConstraints[mode]}\n`
     : ''
@@ -553,18 +713,20 @@ export async function runSynthesis(userId: string, mode?: string) {
 
   const previousTitles = (recentSuggestions || []).map(s => s.title)
 
-  // Generate ideas from observations
+  // Generate ideas from observations — now with feedback context
   const rawIdeas = await generateFromObservations(
     observations,
     capabilities,
     projects,
     CONFIG.SUGGESTIONS_PER_RUN,
     previousTitles,
-    pairWeightsSection,
+    pairWeightsSection + dismissalSection + obsPreferenceSection,
     modeSection
   )
 
-  const suggestions = await filterAndScoreSuggestions(rawIdeas, userId, memories, capabilities)
+  const suggestions = await filterAndScoreSuggestions(
+    rawIdeas, userId, memories, capabilities, dismissalPatterns
+  )
 
   if (suggestions.length > 0) {
     const { error } = await supabase
@@ -582,6 +744,7 @@ export async function runSynthesis(userId: string, mode?: string) {
         memory_ids: s.memoryIds,
         is_wildcard: s.isWildcard,
         status: 'pending',
+        metadata: { observation_basis: s.observationBasis },
       })))
 
     if (error) logger.error({ error }, 'Failed to store suggestions')

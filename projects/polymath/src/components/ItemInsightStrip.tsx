@@ -5,13 +5,19 @@
  * Replaces ConnectionsList everywhere — same slot, better signal.
  */
 
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { TrendingUp, Zap, AlertCircle, Lightbulb, ArrowRight } from 'lucide-react'
+import { TrendingUp, Zap, AlertCircle, Lightbulb, ArrowRight, Route } from 'lucide-react'
 import { useItemInsights } from '../hooks/useItemInsights'
+import { ConnectionPathPicker } from './connections/ConnectionPathPicker'
+import { ConnectionRevealOverlay } from './connections/ConnectionRevealOverlay'
+import type { ConnectionSourceType } from '../types'
 
 interface ItemInsightStripProps {
   title: string
   themes?: string[]
+  itemId?: string
+  itemType?: ConnectionSourceType
 }
 
 const TYPE_ICON = {
@@ -28,9 +34,11 @@ const TYPE_COLOR = {
   opportunity: 'rgba(16,185,129,0.15)',
 }
 
-export function ItemInsightStrip({ title, themes }: ItemInsightStripProps) {
+export function ItemInsightStrip({ title, themes, itemId, itemType }: ItemInsightStripProps) {
   const navigate = useNavigate()
   const { insights, loaded } = useItemInsights(title, themes)
+  const [showPathPicker, setShowPathPicker] = useState(false)
+  const [pathTarget, setPathTarget] = useState<{ id: string; type: string; title: string } | null>(null)
 
   if (!loaded || insights.length === 0) return null
 
@@ -60,6 +68,45 @@ export function ItemInsightStrip({ title, themes }: ItemInsightStripProps) {
           </button>
         )
       })}
+
+      {/* Connection path trigger */}
+      {itemId && itemType && (
+        <>
+          <button
+            onClick={() => setShowPathPicker(true)}
+            className="w-full p-3 rounded-xl transition-all hover:bg-brand-primary/5 flex items-center justify-center gap-2 border border-dashed border-blue-500/15 group"
+          >
+            <Route className="h-3.5 w-3.5 text-brand-primary opacity-50 group-hover:opacity-100 transition-opacity" />
+            <span className="text-xs font-medium text-brand-primary opacity-50 group-hover:opacity-100 transition-opacity">
+              See how this connects to...
+            </span>
+          </button>
+
+          <ConnectionPathPicker
+            sourceId={itemId}
+            sourceType={itemType}
+            open={showPathPicker}
+            onClose={() => setShowPathPicker(false)}
+            onSelect={(item) => {
+              setShowPathPicker(false)
+              setPathTarget({ id: item.id, type: item.type, title: item.title })
+            }}
+          />
+
+          {pathTarget && (
+            <ConnectionRevealOverlay
+              open={!!pathTarget}
+              onClose={() => setPathTarget(null)}
+              sourceId={itemId}
+              sourceType={itemType}
+              targetId={pathTarget.id}
+              targetType={pathTarget.type}
+              sourceTitle={title}
+              targetTitle={pathTarget.title}
+            />
+          )}
+        </>
+      )}
     </div>
   )
 }
