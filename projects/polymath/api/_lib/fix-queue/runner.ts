@@ -125,7 +125,7 @@ async function fetchWeather(action: WeatherEmailAction): Promise<string> {
   const resp = await fetch(url)
   if (!resp.ok) return 'Weather data unavailable'
 
-  const data = await resp.json()
+  const data = await resp.json() as Record<string, any>
   const current = data.current
   const daily = data.daily
 
