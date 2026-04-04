@@ -25,6 +25,7 @@ import { useToast } from '../ui/toast'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useAutoSuggestion } from '../../contexts/AutoSuggestionContext'
 import { SuggestionToast } from '../SuggestionToast'
+import { PROJECT_TYPES } from '../../lib/projectTheme'
 
 interface ConversationMessage {
   role: 'user' | 'model'
@@ -201,7 +202,7 @@ export function CreateProjectDialog({
         end_goal: data.end_goal || '',
         project_mode: data.project_mode === 'recurring' ? 'recurring' : 'completion',
         first_step: data.first_step || '',
-        type: (['Writing', 'Tech', 'Art', 'Music', 'Business', 'Creative', 'Learning'].includes(data.type)
+        type: ((PROJECT_TYPES as readonly string[]).includes(data.type)
           ? data.type
           : 'Creative'),
       })
