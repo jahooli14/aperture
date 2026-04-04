@@ -7,6 +7,7 @@ import { useProjectStore } from '../stores/useProjectStore'
 import { useSuggestionStore } from '../stores/useSuggestionStore'
 import { ProjectsPageCarousel } from '../components/projects/ProjectsPageCarousel'
 import { ForYouToday } from '../components/projects/ForYouToday'
+import { DrawerDigestSheet } from '../components/projects/DrawerDigestSheet'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
 import { ReaperModal } from '../components/projects/ReaperModal'
 import { GraveyardWalkthrough, shouldShowGraveyardWalkthrough } from '../components/projects/GraveyardWalkthrough'
@@ -477,6 +478,9 @@ export function ProjectsPage() {
                     )}
                   </div>
                 )}
+
+                {/* Weekly drawer digest banner — invisible when none unread */}
+                {filter === 'all' && <DrawerDigestSheet />}
 
                 {/* "For you today" — warmed drawer items, invisible when empty */}
                 {filter === 'all' && <ForYouToday />}

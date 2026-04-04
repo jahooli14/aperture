@@ -454,6 +454,258 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
+  // ============================================================
+  // DRAWER DIGEST — weekly mutations + warmed summary
+  // ============================================================
+
+  // Generate a drawer digest for this user (cron target, runs weekly).
+  // Takes warmed drawer projects, asks the evolve-project step for 0-2
+  // mutation proposals, and writes one drawer_digests row (status='unread').
+  if (resource === 'generate-digest') {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' })
+    }
+    try {
+      // Pull the top few warmed drawer projects.
+      const { data: warmedProjects } = await supabase
+        .from('projects')
+        .select('id, title, description, heat_score, heat_reason, catalysts, status, metadata')
+        .eq('user_id', userId)
+        .in('status', ['upcoming', 'dormant', 'on-hold', 'maintaining'])
+        .eq('is_priority', false)
+        .gt('heat_score', 0)
+        .not('heat_reason', 'is', null)
+        .order('heat_score', { ascending: false })
+        .limit(5)
+
+      const warmed = warmedProjects || []
+
+      // If nothing warm, write an empty digest row (status unread=false).
+      // Silence over slop: the UI will not show an empty digest.
+      if (warmed.length === 0) {
+        return res.status(200).json({ success: true, warmed: 0, evolutions: 0, skipped: 'no-warmed' })
+      }
+
+      // For each warmed project, ask the evolve-project step for a proposal.
+      // Modes are picked by the AI based on the project + evidence; we exclude
+      // handoff unless the user opted in.
+      const { data: userSettings } = await supabase
+        .from('user_settings')
+        .select('allow_handoff_mutations')
+        .eq('user_id', userId)
+        .maybeSingle()
+      const allowHandoff = !!userSettings?.allow_handoff_mutations
+
+      const { generateText } = await import('./_lib/gemini-chat.js')
+      const evolutions: any[] = []
+      for (const p of warmed.slice(0, 3)) {
+        const modes = ['shrink', 'merge', 'split', 'reframe', 'snapshot']
+        if (allowHandoff) modes.push('handoff')
+        const evidence = p.heat_reason || ''
+        const prompt = `You are helping evolve a dormant project. Pick ONE mutation mode and return a proposal.
+
+PROJECT
+title: ${p.title}
+description: ${p.description || '(none)'}
+recent evidence that it's warming: ${evidence}
+
+MODES (pick ONE that fits best)
+- shrink: propose a much smaller 1-3 day version
+- merge: propose combining with another related project (requires mentioning which)
+- split: propose splitting into 2 focused children
+- reframe: propose a new angle / positioning
+- snapshot: propose capturing current state as a standalone artifact (essay, note, sketch) and retiring the full project${allowHandoff ? '\n- handoff: propose handing off to someone else' : ''}
+
+RULES
+- The proposal must cite the provided evidence. If you can't, return mode='none'.
+- Return concrete, specific text. No platitudes.
+
+Return JSON only:
+{ "mode": "shrink|merge|split|reframe|snapshot${allowHandoff ? '|handoff' : ''}|none", "title": "new title if applicable", "proposal": "2-3 sentence concrete proposal", "evidence": "the evidence you cited" }`
+        try {
+          const raw = await generateText(prompt, { temperature: 0.5, maxTokens: 400, responseFormat: 'json' })
+          const parsed = JSON.parse(raw)
+          if (parsed && parsed.mode && parsed.mode !== 'none' && parsed.proposal) {
+            evolutions.push({
+              project_id: p.id,
+              project_title: p.title,
+              mode: parsed.mode,
+              title: parsed.title || p.title,
+              proposal: parsed.proposal,
+              evidence: parsed.evidence || evidence,
+            })
+          }
+        } catch (e) {
+          console.warn('[generate-digest] evolve-project failed for', p.id, e)
+        }
+        if (evolutions.length >= 2) break // cap at 2 evolutions per digest
+      }
+
+      // Write the digest row.
+      const { data: digestRow, error: insertErr } = await supabase
+        .from('drawer_digests')
+        .insert([{
+          user_id: userId,
+          warmed: warmed.map((p: any) => ({
+            id: p.id,
+            title: p.title,
+            heat_score: p.heat_score,
+            heat_reason: p.heat_reason,
+          })),
+          evolutions,
+          status: 'unread',
+        }])
+        .select()
+        .single()
+
+      if (insertErr) {
+        return res.status(500).json({ error: 'Failed to write digest', details: insertErr.message })
+      }
+
+      return res.status(200).json({ success: true, digest: digestRow, warmed: warmed.length, evolutions: evolutions.length })
+    } catch (error) {
+      console.error('[generate-digest] error:', error)
+      return res.status(500).json({
+        error: 'Failed to generate digest',
+        details: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
+  // Read the latest unread digest for this user, or null.
+  if (resource === 'digest' && req.method === 'GET') {
+    try {
+      const { data, error } = await supabase
+        .from('drawer_digests')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('status', 'unread')
+        .order('generated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (error) {
+        return res.status(500).json({ error: 'Failed to read digest', details: error.message })
+      }
+      return res.status(200).json({ digest: data || null })
+    } catch (error) {
+      return res.status(500).json({
+        error: 'Failed to read digest',
+        details: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
+  // Act on a digest: mark read, or accept a specific evolution.
+  // Body: { digest_id, action: 'read' | 'accept', evolution_index?: number }
+  if (resource === 'digest-act' && req.method === 'POST') {
+    try {
+      const { digest_id, action, evolution_index } = req.body as {
+        digest_id: string
+        action: 'read' | 'accept'
+        evolution_index?: number
+      }
+      if (!digest_id || !action) {
+        return res.status(400).json({ error: 'digest_id and action required' })
+      }
+
+      const { data: digest } = await supabase
+        .from('drawer_digests')
+        .select('*')
+        .eq('id', digest_id)
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      if (!digest) {
+        return res.status(404).json({ error: 'Digest not found' })
+      }
+
+      if (action === 'read') {
+        await supabase
+          .from('drawer_digests')
+          .update({ status: 'read' })
+          .eq('id', digest_id)
+          .eq('user_id', userId)
+        return res.status(200).json({ success: true })
+      }
+
+      if (action === 'accept') {
+        const evolutions = (digest.evolutions || []) as any[]
+        const idx = typeof evolution_index === 'number' ? evolution_index : 0
+        const evo = evolutions[idx]
+        if (!evo) {
+          return res.status(400).json({ error: 'evolution_index out of range' })
+        }
+
+        // Load the parent project so we can derive lineage_root_id.
+        const { data: parent } = await supabase
+          .from('projects')
+          .select('id, title, description, type, lineage_root_id')
+          .eq('id', evo.project_id)
+          .eq('user_id', userId)
+          .maybeSingle()
+
+        if (!parent) {
+          return res.status(404).json({ error: 'Parent project not found' })
+        }
+
+        const lineageRoot = parent.lineage_root_id || parent.id
+
+        // Create a new project as the mutation. It inherits the lineage root.
+        const { data: child, error: childErr } = await supabase
+          .from('projects')
+          .insert([{
+            user_id: userId,
+            title: evo.title || `${parent.title} (${evo.mode})`,
+            description: evo.proposal,
+            type: parent.type || 'hobby',
+            status: 'upcoming',
+            parent_id: parent.id,
+            lineage_root_id: lineageRoot,
+            metadata: {
+              mutation: {
+                mode: evo.mode,
+                evidence: evo.evidence,
+                parent_id: parent.id,
+                accepted_from_digest: digest_id,
+              },
+            },
+          }])
+          .select()
+          .single()
+
+        if (childErr) {
+          return res.status(500).json({ error: 'Failed to create mutation', details: childErr.message })
+        }
+
+        // Some modes retire the parent.
+        if (evo.mode === 'snapshot' || evo.mode === 'shrink' || evo.mode === 'reframe') {
+          await supabase
+            .from('projects')
+            .update({ status: 'completed' })
+            .eq('id', parent.id)
+            .eq('user_id', userId)
+        }
+
+        await supabase
+          .from('drawer_digests')
+          .update({ status: 'acted' })
+          .eq('id', digest_id)
+          .eq('user_id', userId)
+
+        return res.status(200).json({ success: true, child })
+      }
+
+      return res.status(400).json({ error: `Unknown action: ${action}` })
+    } catch (error) {
+      console.error('[digest-act] error:', error)
+      return res.status(500).json({
+        error: 'Failed to act on digest',
+        details: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
   // CAPABILITY PAIRS RESOURCE - Fetch learned pair weights
   if (resource === 'capability-pairs') {
     if (req.method === 'GET') {
