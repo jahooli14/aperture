@@ -25,7 +25,7 @@ import { useToast } from '../components/ui/toast'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { PremiumTabs } from '../components/ui/premium-tabs'
 import { SkeletonCard } from '../components/ui/skeleton-card'
-import { Brain, Zap, ArrowLeft, CloudOff, Search, X, Tag, Lightbulb, Leaf, Code, Palette, Heart, BookOpen, Users, Pin } from 'lucide-react'
+import { Brain, Zap, ArrowLeft, CloudOff, Search, X, Tag, Pin } from 'lucide-react'
 import { BrandName } from '../components/BrandName'
 import { SubtleBackground } from '../components/SubtleBackground'
 // import { FocusableList, FocusableItem } from '../components/FocusableList' // Removed for masonry
@@ -891,126 +891,127 @@ export function MemoriesPage() {
                     </>
                   )}
 
-                  {/* Recent memories view - Google Keep Style Masonry (Across then Down) */}
-                  {memoryView === 'recent' && (
-                    <>
-                      {/* Resurface a thought  one random memory 30+ days old */}
-                      <AnimatePresence>
-                        {!dismissedResurface && resurfacedMemory && !isFiltered && (
-                          <motion.div
-                            key="resurface"
-                            initial={{ opacity: 0, y: -12 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.97 }}
-                            transition={{ duration: 0.25 }}
-                            className="mb-6 rounded-lg p-4"
+                </>
+              )}
+
+              {/* Recent memories view - Google Keep Style Masonry (Across then Down) */}
+              {view === 'recent' && !isLoading && memories.length > 0 && (
+                <>
+                  {/* Resurface a thought  one random memory 30+ days old */}
+                  <AnimatePresence>
+                    {!dismissedResurface && resurfacedMemory && !isFiltered && (
+                      <motion.div
+                        key="resurface"
+                        initial={{ opacity: 0, y: -12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.97 }}
+                        transition={{ duration: 0.25 }}
+                        className="mb-6 rounded-lg p-4"
+                        style={{
+                          background: '#111113',
+                          border: '2px solid rgba(251,191,36,0.3)',
+                          borderLeft: '4px solid rgba(251,191,36,0.6)',
+                          boxShadow: '3px 3px 0 rgba(251,191,36,0.08)',
+                        }}
+                      >
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--brand-primary)" }}>
+                            A thought from {Math.floor((Date.now() - new Date(resurfacedMemory.created_at).getTime()) / 86400000)} days ago...
+                          </p>
+                          <button
+                            onClick={() => setDismissedResurface(true)}
+                            className="flex-shrink-0 h-5 w-5 flex items-center justify-center rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.1)]"
+                            style={{ color: "var(--brand-primary)" }}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                        <h4 className="font-semibold text-sm mb-1" style={{ color: "var(--brand-primary)" }}>
+                          {resurfacedMemory.title}
+                        </h4>
+                        <p className="text-sm line-clamp-3 mb-4" style={{ color: "var(--brand-primary)" }}>
+                          {resurfacedMemory.body}
+                        </p>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => setDismissedResurface(true)}
+                            className="text-[10px] px-3 py-1.5 rounded-lg font-black uppercase tracking-wide transition-colors"
                             style={{
-                              background: '#111113',
-                              border: '2px solid rgba(251,191,36,0.3)',
-                              borderLeft: '4px solid rgba(251,191,36,0.6)',
-                              boxShadow: '3px 3px 0 rgba(251,191,36,0.08)',
+                              background: 'var(--glass-surface)',
+                              border: '1.5px solid rgba(255,255,255,0.1)',
+                              color: "var(--brand-text-secondary)",
+                              boxShadow: '2px 2px 0 rgba(0,0,0,0.4)',
                             }}
                           >
-                            <div className="flex items-start justify-between gap-3 mb-3">
-                              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--brand-primary)" }}>
-                                A thought from {Math.floor((Date.now() - new Date(resurfacedMemory.created_at).getTime()) / 86400000)} days ago...
-                              </p>
-                              <button
-                                onClick={() => setDismissedResurface(true)}
-                                className="flex-shrink-0 h-5 w-5 flex items-center justify-center rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.1)]"
-                                style={{ color: "var(--brand-primary)" }}
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            </div>
-                            <h4 className="font-semibold text-sm mb-1" style={{ color: "var(--brand-primary)" }}>
-                              {resurfacedMemory.title}
-                            </h4>
-                            <p className="text-sm line-clamp-3 mb-4" style={{ color: "var(--brand-primary)" }}>
-                              {resurfacedMemory.body}
-                            </p>
-                            <div className="flex items-center gap-3">
-                              <button
-                                onClick={() => setDismissedResurface(true)}
-                                className="text-[10px] px-3 py-1.5 rounded-lg font-black uppercase tracking-wide transition-colors"
-                                style={{
-                                  background: 'var(--glass-surface)',
-                                  border: '1.5px solid rgba(255,255,255,0.1)',
-                                  color: "var(--brand-text-secondary)",
-                                  boxShadow: '2px 2px 0 rgba(0,0,0,0.4)',
-                                }}
-                              >
-                                Dismiss
-                              </button>
-                              <button
-                                onClick={() => handleOpenDetail(resurfacedMemory)}
-                                className="text-[10px] px-3 py-1.5 rounded-lg font-black uppercase tracking-wide transition-colors"
-                                style={{
-                                  background: 'rgba(251,191,36,0.12)',
-                                  border: '1.5px solid rgba(251,191,36,0.4)',
-                                  color: "var(--brand-text-secondary)",
-                                  boxShadow: '2px 2px 0 rgba(251,191,36,0.1)',
-                                }}
-                              >
-                                Connect to today
-                              </button>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-
-                      {/* Pinned Thoughts Section */}
-                      {pinnedMemories.length > 0 && !searchQuery && activeTags.length === 0 && (
-                        <div className="mb-6">
-                          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--brand-primary)" }}>
-                            <Pin className="w-3.5 h-3.5 text-brand-text-secondary" style={{ fill: 'currentColor' }} />
-                            Pinned
-                          </h3>
-                          <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
-                            {pinnedMemories.map((memory) => (
-                              <motion.div
-                                key={memory.id}
-                                onClick={() => handleOpenDetail(memory)}
-                                whileHover={{ y: -2 }}
-                                className="flex-shrink-0 w-56 rounded-xl p-3 cursor-pointer transition-all"
-                                style={{
-                                  background: 'linear-gradient(135deg, var(--glass-surface-hover) 0%, var(--glass-surface) 100%)',
-                                  boxShadow: 'inset 0 0 0 1px rgba(251,191,36,0.2), 0 4px 12px rgba(0,0,0,0.2)',
-                                  borderTop: '2px solid rgba(251,191,36,0.4)',
-                                }}
-                              >
-                                <h4 className="text-sm font-semibold truncate mb-1" style={{ color: "var(--brand-primary)" }}>
-                                  {memory.title}
-                                </h4>
-                                {memory.checklist_items && memory.checklist_items.length > 0 ? (
-                                  <div className="flex flex-col gap-0.5">
-                                    {memory.checklist_items.slice(0, 3).map((item) => (
-                                      <div key={item.id} className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--brand-primary)', opacity: item.checked ? 0.4 : 0.8 }}>
-                                        <span style={{ fontSize: '9px' }}>{item.checked ? '☑' : '☐'}</span>
-                                        <span style={{ textDecoration: item.checked ? 'line-through' : 'none' }} className="truncate">{item.text}</span>
-                                      </div>
-                                    ))}
-                                    {memory.checklist_items.length > 3 && (
-                                      <span className="text-[10px]" style={{ color: 'var(--brand-primary)', opacity: 0.4 }}>+{memory.checklist_items.length - 3} more</span>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <p className="text-xs line-clamp-2 leading-relaxed" style={{ color: "var(--brand-primary)" }}>
-                                    {memory.body}
-                                  </p>
-                                )}
-                                <span className="text-[10px] mt-2 block" style={{ color: "var(--brand-primary)" }}>
-                                  {new Date(memory.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                </span>
-                              </motion.div>
-                            ))}
-                          </div>
+                            Dismiss
+                          </button>
+                          <button
+                            onClick={() => handleOpenDetail(resurfacedMemory)}
+                            className="text-[10px] px-3 py-1.5 rounded-lg font-black uppercase tracking-wide transition-colors"
+                            style={{
+                              background: 'rgba(251,191,36,0.12)',
+                              border: '1.5px solid rgba(251,191,36,0.4)',
+                              color: "var(--brand-text-secondary)",
+                              boxShadow: '2px 2px 0 rgba(251,191,36,0.1)',
+                            }}
+                          >
+                            Connect to today
+                          </button>
                         </div>
-                      )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
-                      <MasonryGrid memories={displayMemories} onEdit={handleOpenDetail} onDelete={handleDelete} />
-                    </>
+                  {/* Pinned Thoughts Section */}
+                  {pinnedMemories.length > 0 && !searchQuery && activeTags.length === 0 && (
+                    <div className="mb-6">
+                      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--brand-primary)" }}>
+                        <Pin className="w-3.5 h-3.5 text-brand-text-secondary" style={{ fill: 'currentColor' }} />
+                        Pinned
+                      </h3>
+                      <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+                        {pinnedMemories.map((memory) => (
+                          <motion.div
+                            key={memory.id}
+                            onClick={() => handleOpenDetail(memory)}
+                            whileHover={{ y: -2 }}
+                            className="flex-shrink-0 w-56 rounded-xl p-3 cursor-pointer transition-all"
+                            style={{
+                              background: 'linear-gradient(135deg, var(--glass-surface-hover) 0%, var(--glass-surface) 100%)',
+                              boxShadow: 'inset 0 0 0 1px rgba(251,191,36,0.2), 0 4px 12px rgba(0,0,0,0.2)',
+                              borderTop: '2px solid rgba(251,191,36,0.4)',
+                            }}
+                          >
+                            <h4 className="text-sm font-semibold truncate mb-1" style={{ color: "var(--brand-primary)" }}>
+                              {memory.title}
+                            </h4>
+                            {memory.checklist_items && memory.checklist_items.length > 0 ? (
+                              <div className="flex flex-col gap-0.5">
+                                {memory.checklist_items.slice(0, 3).map((item) => (
+                                  <div key={item.id} className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--brand-primary)', opacity: item.checked ? 0.4 : 0.8 }}>
+                                    <span style={{ fontSize: '9px' }}>{item.checked ? '☑' : '☐'}</span>
+                                    <span style={{ textDecoration: item.checked ? 'line-through' : 'none' }} className="truncate">{item.text}</span>
+                                  </div>
+                                ))}
+                                {memory.checklist_items.length > 3 && (
+                                  <span className="text-[10px]" style={{ color: 'var(--brand-primary)', opacity: 0.4 }}>+{memory.checklist_items.length - 3} more</span>
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-xs line-clamp-2 leading-relaxed" style={{ color: "var(--brand-primary)" }}>
+                                {memory.body}
+                              </p>
+                            )}
+                            <span className="text-[10px] mt-2 block" style={{ color: "var(--brand-primary)" }}>
+                              {new Date(memory.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </span>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
                   )}
+
+                  <MasonryGrid memories={displayMemories} onEdit={handleOpenDetail} onDelete={handleDelete} />
                 </>
               )}
 
