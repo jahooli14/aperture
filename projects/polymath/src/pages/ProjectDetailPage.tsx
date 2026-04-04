@@ -1037,7 +1037,7 @@ export function ProjectDetailPage() {
                       All tasks complete!
                     </p>
                     <p className="text-xs text-[var(--brand-text-secondary)] mb-4 opacity-70">
-                      Every action item is done. Time to ship?
+                      Every action item is done. Time to finish?
                     </p>
                     <button
                       onClick={() => {
@@ -1051,7 +1051,7 @@ export function ProjectDetailPage() {
                         boxShadow: '0 4px 16px rgba(34,197,94,0.15)',
                       }}
                     >
-                      Ship It
+                      Finish It
                     </button>
                   </div>
                 )}

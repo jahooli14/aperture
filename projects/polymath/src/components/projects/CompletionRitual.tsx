@@ -3,7 +3,7 @@
  * is marked finished. Answers are persisted and piped back into the sparks
  * engine so every completion feeds future ideation. Nothing is wasted.
  *
- * Language: we say "finished", never "shipped".
+ * Language: we say "finished", never the s-word.
  */
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'

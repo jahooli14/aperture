@@ -48,7 +48,7 @@ function CompletedProjectsTimeline({ projects, onNavigate }: { projects: Project
       <div className="text-center py-24">
         <div className="text-5xl mb-4">🏆</div>
         <p className="text-[var(--brand-text-primary)] font-black uppercase tracking-tight text-lg mb-2">No completed projects yet</p>
-        <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>When you ship something, it'll live here.</p>
+        <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>When you finish something, it'll live here.</p>
       </div>
     )
   }
@@ -57,7 +57,7 @@ function CompletedProjectsTimeline({ projects, onNavigate }: { projects: Project
     <div className="max-w-2xl mx-auto px-4 py-6 pb-32">
       <div className="mb-8">
         <p className="text-[10px] font-black uppercase tracking-[0.3em]" style={{ color: 'var(--brand-text-secondary)' }}>
-          {sorted.length} project{sorted.length !== 1 ? 's' : ''} shipped
+          {sorted.length} project{sorted.length !== 1 ? 's' : ''} finished
         </p>
         <h2 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
           What you've <span className="text-[#34d399]">built</span>
