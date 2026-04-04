@@ -1,9 +1,8 @@
 /**
- * Home Page - 4-Pillar Architecture
+ * Home Page
  * 1. Add something new - voice, thought, article, project
- * 2. Keep the momentum - next steps on priority/recent projects
- * 3. Get inspiration - AI suggestions
- * 4. Explore - timeline, constellation, card of the day
+ * 2. Keep the momentum - Power Hour, Focus Stream, Council of Advisors
+ * 3. Explore - shadow project, collisions, card of the day, nav grid
  */
 
 import React, { useEffect, useState } from 'react'
@@ -19,8 +18,6 @@ import { SmartSuggestionWidget } from '../components/SmartSuggestionWidget'
 import { SaveArticleDialog } from '../components/reading/SaveArticleDialog'
 import { CreateMemoryDialog } from '../components/memories/CreateMemoryDialog'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
-import { SkeletonCard } from '../components/ui/skeleton-card'
-import { EmptyState } from '../components/ui/empty-state'
 import { Layers, ArrowRight, Plus, Mic, FileText, FolderKanban, Search, TrendingUp, Moon, Calendar, Zap, Brain, X, AlertCircle, Check, Lightbulb, RefreshCw, Wind, Rss, Map as MapIcon, MoreHorizontal, Film, Music, Monitor, Book, MapPin, Gamepad2, Quote, Box } from 'lucide-react'
 import { MultiPerspectiveSuggestions } from '../components/suggestions/MultiPerspectiveSuggestions'
 import { BrandName } from '../components/BrandName'
@@ -30,271 +27,15 @@ import { DriftMode } from '../components/bedtime/DriftMode'
 import { MorningFollowUp } from '../components/bedtime/MorningFollowUp'
 import { CollisionReport } from '../components/home/CollisionReport'
 import { ShadowProjectCard } from '../components/home/ShadowProjectCard'
-import { getTheme } from '../lib/projectTheme'
 import { PowerHourHero } from '../components/home/PowerHourHero'
 import type { Memory, Project, SynthesisInsight } from '../types'
 import { CohesionSummaryWidget } from '../components/home/CohesionSummaryWidget'
 import { JourneyMilestones } from '../components/home/JourneyMilestones'
 import { TomorrowHook } from '../components/home/TomorrowHook'
 import { PolymathProfileCard } from '../components/home/PolymathProfileCard'
-import { DailySpark } from '../components/home/DailySpark'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { useJourneyStore } from '../stores/useJourneyStore'
 import { useListStore } from '../stores/useListStore'
-import { readingDb } from '../lib/db'
-
-interface InspirationData {
-  type: 'article' | 'thought' | 'project' | 'empty'
-  title: string
-  description: string
-  url?: string
-  reasoning: string
-}
-
-function GetInspirationSection({
-  excludeProjectIds,
-  hasPendingSuggestions,
-  pendingSuggestionsCount,
-  projectsLoading,
-  sparkCandidate,
-  projects
-}: {
-  excludeProjectIds: string[]
-  hasPendingSuggestions: boolean
-  pendingSuggestionsCount: number
-  projectsLoading: boolean
-  sparkCandidate: Project | null
-  projects: Project[]
-}) {
-  const [inspiration, setInspiration] = useState<InspirationData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [hasFetched, setHasFetched] = useState(false)
-  const navigate = useNavigate()
-
-  useEffect(() => {
-    if (projectsLoading || hasFetched) return
-
-    const loadInspiration = async () => {
-      setLoading(true)
-      try {
-        const cached = await readingDb.getDashboard('inspiration')
-        if (cached) {
-          setInspiration(cached)
-          setLoading(false)
-        }
-
-        if (navigator.onLine) {
-          const excludeParam = excludeProjectIds.length > 0 ? `&exclude=${excludeProjectIds.join(',')}` : ''
-          const response = await fetch(`/api/analytics?resource=inspiration${excludeParam}`)
-          if (response.ok) {
-            const data = await response.json()
-            setInspiration(data)
-            await readingDb.cacheDashboard('inspiration', data)
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load inspiration:', error)
-      } finally {
-        setLoading(false)
-        setHasFetched(true)
-      }
-    }
-
-    loadInspiration()
-  }, [projectsLoading, hasFetched, excludeProjectIds.join(',')])
-
-  const timeContextEnergy = (() => {
-    const hour = new Date().getHours()
-    if (hour >= 9 && hour < 12) return 'high'
-    if (hour >= 14 && hour < 16) return 'low'
-    if (hour >= 20) return 'low'
-    return 'moderate'
-  })()
-
-
-  return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 aperture-shelf">
-      <div className="mb-0">
-        <h2 className="section-header">
-          get <span>inspiration</span>
-        </h2>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-        {/* 1. AI Inspiration Card */}
-        {loading ? (
-          <SkeletonCard variant="list" count={1} />
-        ) : inspiration && inspiration.type !== 'empty' ? (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col"
-          >
-            <Link
-              to={inspiration.url || '/projects'}
-              className="group block p-6 attention-card transition-all duration-300 flex-1 flex flex-col relative overflow-hidden"
-              onMouseEnter={(e) => {
-                const projId = inspiration.url?.split('/').pop()
-                if (inspiration.type === 'project') {
-                  const project = projects.find(p => p.id === projId)
-                  const theme = getTheme(project?.type || 'other', inspiration.title)
-                  e.currentTarget.style.background = `rgba(${theme.rgb}, 0.15)`
-                } else {
-                  e.currentTarget.style.background = 'var(--glass-surface-hover)'
-                }
-              }}
-              onMouseLeave={(e) => {
-                const projId = inspiration.url?.split('/').pop()
-                if (inspiration.type === 'project') {
-                  const project = projects.find(p => p.id === projId)
-                  const theme = getTheme(project?.type || 'other', inspiration.title)
-                  e.currentTarget.style.background = theme.backgroundColor
-                } else {
-                  e.currentTarget.style.background = 'var(--brand-glass-bg)'
-                }
-              }}
-            >
-              <div className="relative z-10 flex-1 flex flex-col h-full">
-                <div className="flex items-center justify-between gap-4 mb-4">
-                  <h3 className="premium-text-platinum font-bold text-lg truncate">
-                    {inspiration.title}
-                  </h3>
-                  <span className="flex-shrink-0 px-2 py-0.5 rounded-xl text-[10px] font-black uppercase tracking-widest border aperture-header"
-                    style={(() => {
-                      const projId = inspiration.url?.split('/').pop()
-                      const project = projects.find(p => p.id === projId)
-                      const theme = getTheme(project?.type || 'other', inspiration.title)
-                      return {
-                        borderColor: inspiration.type === 'project' ? `rgba(${theme.rgb}, 0.3)` : 'rgba(var(--brand-primary-rgb), 0.3)',
-                        color: inspiration.type === 'project' ? theme.textColor : 'var(--brand-primary)',
-                        backgroundColor: inspiration.type === 'project' ? `rgba(${theme.rgb}, 0.1)` : 'rgba(var(--brand-primary-rgb), 0.1)'
-                      }
-                    })()}
-                  >
-                    Recommended
-                  </span>
-                </div>
-                <div className="p-4 rounded-xl mt-6 bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] group-hover:bg-[rgba(255,255,255,0.1)] transition-colors">
-                  <p className="text-[10px] font-bold mb-2 text-[var(--brand-primary)] uppercase tracking-wider opacity-50">NEXT STEP</p>
-                  {inspiration.type === 'project' && (() => {
-                    const proj = projects.find(p => p.id === inspiration.url?.split('/').pop())
-                    const nextT = proj?.metadata?.tasks?.find((t: any) => !t.done)
-                    return (
-                      <p className="text-sm text-gray-200 line-clamp-2 aperture-body">
-                        {nextT?.text || inspiration.description}
-                      </p>
-                    )
-                  })()}
-                  {inspiration.type !== 'project' && (
-                    <p className="text-sm text-gray-200 line-clamp-2 aperture-body">{inspiration.description}</p>
-                  )}
-                </div>
-              </div>
-            </Link>
-          </motion.div>
-        ) : (
-          <EmptyState
-            icon={Zap}
-            title="No inspiration yet"
-            description="Add content to get suggestions!"
-          />
-        )}
-
-        {/* 2. Spark Card (Moved from FocusStream) */}
-        {sparkCandidate ? (
-          (() => {
-            if (!sparkCandidate.id) {
-              console.warn('Spark candidate missing ID', sparkCandidate)
-              return null
-            }
-            const theme = getTheme(sparkCandidate.type || 'other', sparkCandidate.title)
-            const nextTask = (sparkCandidate.metadata?.tasks || []).sort((a: any, b: any) => a.order - b.order).find((t: any) => !t.done)
-            return (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="p-5 relative overflow-hidden group cursor-pointer rounded-xl transition-all duration-300 border flex flex-col"
-                onClick={() => navigate(`/projects/${sparkCandidate.id}`)}
-                style={{
-                  background: theme.backgroundColor,
-                  boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
-                  borderColor: theme.borderColor
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = `rgba(${theme.rgb}, 0.15)`
-                  e.currentTarget.style.borderColor = `rgba(${theme.rgb}, 0.4)`
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = theme.backgroundColor
-                  e.currentTarget.style.borderColor = theme.borderColor
-                }}
-              >
-                <div className="relative z-10 flex-1 flex flex-col h-full">
-                  <div className="flex items-center justify-between gap-4 mb-4">
-                    <h3 className="text-lg font-bold text-[var(--brand-text-primary)] truncate">
-                      {sparkCandidate.title}
-                    </h3>
-                    <span className="flex-shrink-0 px-2 py-0.5 rounded-xl text-xs font-medium border flex items-center gap-1" style={{
-                      backgroundColor: `rgba(${theme.rgb}, 0.1)`,
-                      color: theme.textColor,
-                      borderColor: `rgba(${theme.rgb}, 0.3)`
-                    }}>
-                      <span className="inline-block w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: theme.textColor }} /> Spark
-                    </span>
-                  </div>
-                  <div className="p-4 rounded-xl mt-6 group-hover:bg-[var(--glass-surface)] transition-colors" style={{
-                    backgroundColor: `rgba(${theme.rgb}, 0.1)`,
-                    border: `1px solid rgba(${theme.rgb}, 0.2)`
-                  }}>
-                    <p className="text-[10px] font-bold mb-2 uppercase tracking-wider opacity-50" style={{ color: theme.textColor }}>NEXT STEP</p>
-                    <p className="text-sm text-gray-200 line-clamp-2 aperture-body">
-                      {nextTask?.text || sparkCandidate.description || `Perfect for your current ${timeContextEnergy} energy.`}
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-            )
-          })()
-        ) : (
-          // Placeholder if no Spark (e.g. "Suggest Projects" button could live here or be full width below)
-          <Link
-            to="/suggestions"
-            className="group p-5 rounded-xl transition-all duration-300 border flex flex-col items-center justify-center text-center gap-3 h-full min-h-[200px]"
-            style={{
-              background: 'var(--glass-surface)',
-              borderColor: 'var(--glass-surface)'
-            }}
-          >
-            <div className="h-12 w-12 rounded-full bg-brand-primary/10 flex items-center justify-center text-[var(--brand-primary)] mb-2">
-              <Lightbulb className="h-6 w-6" />
-            </div>
-            <h3 className="font-bold text-[var(--brand-text-primary)]">Need more ideas?</h3>
-            <p className="text-sm text-[var(--brand-text-muted)]">Generate new project suggestions based on your interests.</p>
-          </Link>
-        )}
-
-      </div>
-
-      <div className="mt-6">
-        <Link
-          to="/suggestions"
-          className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all hover:bg-[rgba(255,255,255,0.1)] border border-[var(--glass-surface)] text-[var(--brand-primary)] aperture-header"
-        >
-          <Zap className="h-4 w-4" />
-          {hasPendingSuggestions
-            ? `${pendingSuggestionsCount} ${pendingSuggestionsCount === 1 ? 'idea' : 'ideas'} waiting to be reviewed`
-            : "See all project suggestions"
-          }
-          <ArrowRight className="h-4 w-4 ml-1" />
-        </Link>
-      </div>
-    </section>
-  )
-}
-
-
 
 import { FocusStream } from '../components/home/FocusStream'
 
@@ -525,43 +266,6 @@ export function HomePage() {
       const bTime = getTime(b.updated_at || b.last_active)
       return bTime - aTime
     })[0] || null
-
-  // Projects to show in "Keep Momentum" section
-  const projectsToShow = [priorityProject, recentProject].filter(Boolean) as Project[]
-
-
-  // Spark Candidate Logic (Moved from FocusStream)
-  const sparkCandidate = React.useMemo(() => {
-    const activeProjects = projects.filter(p => p.status === 'active')
-    if (activeProjects.length === 0) return null
-
-    // Mock time context (could be a hook)
-    const hour = new Date().getHours()
-    let energy = 'moderate'
-    if (hour >= 9 && hour < 12) energy = 'high'
-    if (hour >= 14 && hour < 16) energy = 'low'
-    if (hour >= 20) energy = 'low'
-
-    // Filter by energy and prioritize those with tasks
-    const matching = activeProjects.filter(p => {
-      const nextTask = p.metadata?.tasks?.find((t: any) => !t.done)
-      if (nextTask?.energy_level) return nextTask.energy_level === energy
-      return (p.energy_level || 'moderate') === energy
-    })
-
-    const pool = matching.length > 0 ? matching : activeProjects
-
-    // Sort pool so those with tasks are first
-    const sortedPool = [...pool].sort((a, b) => {
-      const aHasTasks = (a.metadata?.tasks?.some((t: any) => !t.done)) ? 1 : 0
-      const bHasTasks = (b.metadata?.tasks?.some((t: any) => !t.done)) ? 1 : 0
-      return bHasTasks - aHasTasks
-    })
-
-    // Deterministic "random" based on date to avoid flickering on re-renders
-    const seed = new Date().getDate()
-    return sortedPool[seed % sortedPool.length]
-  }, [projects])
 
   // Get stored errors from localStorage
   const getStoredErrors = () => {
@@ -857,15 +561,19 @@ export function HomePage() {
           </section>
         )}
 
-        {/* 4. GET INSPIRATION (Glass Cards + Spark) */}
-        <GetInspirationSection
-          excludeProjectIds={projects.filter(p => p.status === 'active').map(p => p.id)}
-          hasPendingSuggestions={pendingSuggestions.length > 0}
-          pendingSuggestionsCount={pendingSuggestions.length}
-          projectsLoading={projectsLoading}
-          sparkCandidate={sparkCandidate}
-          projects={projects}
-        />
+        {/* Pending suggestions banner — moved from GetInspirationSection */}
+        {pendingSuggestions.length > 0 && (
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+            <Link
+              to="/suggestions"
+              className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all hover:bg-[rgba(255,255,255,0.1)] border border-[var(--glass-surface)] text-[var(--brand-primary)] aperture-header"
+            >
+              <Zap className="h-4 w-4" />
+              {`${pendingSuggestions.length} ${pendingSuggestions.length === 1 ? 'idea' : 'ideas'} waiting to be reviewed`}
+              <ArrowRight className="h-4 w-4 ml-1" />
+            </Link>
+          </section>
+        )}
 
         {/* Tomorrow Hook — teaser for next day's challenge (journey users) */}
         <TomorrowHook />
@@ -885,11 +593,6 @@ export function HomePage() {
           {/* Weekly Collision Report */}
           <div className="mb-6">
             <CollisionReport />
-          </div>
-
-          {/* Daily Spark — ambient synthesis */}
-          <div className="mb-6">
-            <DailySpark />
           </div>
 
           {/* Card of the Day - Resurfacing - Enhanced Design */}
