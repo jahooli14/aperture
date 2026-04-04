@@ -24,6 +24,7 @@ import { ProjectCompletionModal } from '../components/projects/ProjectCompletion
 import { ProjectChatPanel } from '../components/projects/ProjectChatPanel'
 import { CatalystsPanel } from '../components/projects/CatalystsPanel'
 import { CompletionRitual } from '../components/projects/CompletionRitual'
+import { LineageBreadcrumb } from '../components/projects/LineageBreadcrumb'
 import type { Project, Memory } from '../types'
 import { supabase } from '../lib/supabase'
 import { useMemoryStore } from '../stores/useMemoryStore'
@@ -669,6 +670,7 @@ export function ProjectDetailPage() {
                 </span>
               )}
             </div>
+            <LineageBreadcrumb project={project} />
             <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] leading-none">
               {project.title}
             </h1>
