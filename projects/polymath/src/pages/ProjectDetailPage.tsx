@@ -22,6 +22,7 @@ import { handleInputFocus } from '../utils/keyboard'
 import { EditProjectDialog } from '../components/projects/EditProjectDialog'
 import { ProjectCompletionModal } from '../components/projects/ProjectCompletionModal'
 import { ProjectChatPanel } from '../components/projects/ProjectChatPanel'
+import { CatalystsPanel } from '../components/projects/CatalystsPanel'
 import type { Project, Memory } from '../types'
 import { supabase } from '../lib/supabase'
 import { useMemoryStore } from '../stores/useMemoryStore'
@@ -1001,6 +1002,11 @@ export function ProjectDetailPage() {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Catalysts — conditions that would unlock this project */}
+              <div className="mt-4">
+                <CatalystsPanel project={project} />
               </div>
 
               {/* Task Checklist */}

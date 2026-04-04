@@ -1037,6 +1037,38 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
           // Generate scaffolding (Tasks) using the unified repair utility
           const { ensureProjectHasTasks } = await import('./_lib/project-repair.js')
           await ensureProjectHasTasks(project.id, userId)
+
+          // Infer catalysts — external conditions that would unlock this project.
+          // Fire-and-forget, no-op on failure. Silence over slop: returns [] if nothing concrete.
+          try {
+            const { generateText } = await import('./_lib/gemini-chat.js')
+            const prompt = `Analyze this project and return 2-5 concrete catalysts (external conditions that would unlock or accelerate it). Each must be specific enough to later spot in voice notes or articles. Return empty array if nothing concrete comes to mind.
+
+title: ${project.title}
+description: ${project.description || '(none)'}
+
+Return JSON: { "catalysts": [ { "text": "...", "kind": "skill|collaborator|tool|time|life_event|other" } ] }`
+            const raw = await generateText(prompt, { temperature: 0.4, maxTokens: 400, responseFormat: 'json' })
+            const parsed = JSON.parse(raw)
+            const list = Array.isArray(parsed.catalysts) ? parsed.catalysts : []
+            const cleaned = list
+              .filter((c: any) => c && typeof c.text === 'string' && c.text.trim().length >= 4)
+              .slice(0, 5)
+              .map((c: any) => ({
+                text: String(c.text).trim(),
+                kind: ['skill', 'collaborator', 'tool', 'time', 'life_event', 'other'].includes(c.kind) ? c.kind : 'other',
+                matched: false,
+              }))
+            if (cleaned.length > 0) {
+              await supabase
+                .from('projects')
+                .update({ catalysts: cleaned })
+                .eq('id', project.id)
+                .eq('user_id', userId)
+            }
+          } catch (catErr) {
+            console.warn('[projects] Catalyst inference failed (non-fatal):', catErr)
+          }
         } catch (err) {
           console.error('[projects] Background scaffolding error:', err)
         }

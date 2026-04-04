@@ -573,6 +573,72 @@ Return JSON only:
   }
 }
 
+// ─── Infer catalysts ────────────────────────────────────────────────────────
+//
+// Given a project title + description, return 2-5 catalysts: external
+// conditions that would meaningfully unlock or accelerate the project. A
+// catalyst can be a skill you might acquire, a collaborator you might meet,
+// a tool that might become available, a moment in life, or a window of time.
+//
+// Silence over slop: if nothing good can be inferred, return an empty array.
+// Never invent generic-sounding catalysts.
+
+interface InferCatalystsBody {
+  project_id?: string
+  title: string
+  description?: string
+}
+
+async function handleInferCatalysts(body: InferCatalystsBody, userId: string) {
+  const title = (body.title || '').trim()
+  const description = (body.description || '').trim()
+  if (!title && !description) {
+    return { catalysts: [] }
+  }
+
+  const prompt = `You are analyzing a project to infer its catalysts — the external conditions that, if they showed up, would meaningfully unlock or accelerate this project. Think: a new skill, a specific kind of collaborator, a tool becoming cheap/available, a life event, a window of free time, a piece of information.
+
+PROJECT
+title: ${title}
+description: ${description || '(none)'}
+
+RULES
+- Return 2 to 5 catalysts, or an empty array if nothing concrete comes to mind.
+- Each catalyst must be specific enough that we could later spot it appearing in the user's voice notes or saved articles. "more time" is too vague. "a free Saturday morning" is concrete.
+- Do not invent generic platitudes. If unsure, return fewer or empty.
+- Pick a kind for each: 'skill' | 'collaborator' | 'tool' | 'time' | 'life_event' | 'other'.
+
+Return JSON only:
+{ "catalysts": [ { "text": "...", "kind": "..." }, ... ] }`
+
+  const raw = await generateText(prompt, { temperature: 0.4, maxTokens: 400, responseFormat: 'json' })
+  try {
+    const parsed = JSON.parse(raw)
+    const list = Array.isArray(parsed.catalysts) ? parsed.catalysts : []
+    const cleaned = list
+      .filter((c: any) => c && typeof c.text === 'string' && c.text.trim().length >= 4)
+      .slice(0, 5)
+      .map((c: any) => ({
+        text: String(c.text).trim(),
+        kind: ['skill', 'collaborator', 'tool', 'time', 'life_event', 'other'].includes(c.kind) ? c.kind : 'other',
+        matched: false,
+      }))
+
+    // Optionally persist if project_id provided
+    if (body.project_id && cleaned.length > 0) {
+      await supabase
+        .from('projects')
+        .update({ catalysts: cleaned })
+        .eq('id', body.project_id)
+        .eq('user_id', userId)
+    }
+
+    return { catalysts: cleaned }
+  } catch {
+    return { catalysts: [] }
+  }
+}
+
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -600,6 +666,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.json(await handleProjectChat(body as unknown as Parameters<typeof handleProjectChat>[0], userId))
       case 'project-reveal':
         return res.json(await handleProjectReveal(body as unknown as Parameters<typeof handleProjectReveal>[0], userId))
+      case 'infer-catalysts':
+        return res.json(await handleInferCatalysts(body as unknown as InferCatalystsBody, userId))
       default:
         return res.status(400).json({ error: `Unknown step: ${body.step}` })
     }

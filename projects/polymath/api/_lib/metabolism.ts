@@ -43,6 +43,8 @@ export interface HeatResult {
   score: number
   reason: string | null
   evidence_ref: string | null
+  /** If catalysts were matched during scoring, the updated array (with matched flags). */
+  catalysts?: Catalyst[] | null
 }
 
 export interface Catalyst {
@@ -106,14 +108,20 @@ export function scoreProjectHeat(
   }
 
   // Catalyst matches — if a project's stated catalyst text appears literally in
-  // recent user material, that's a very high-signal match.
+  // recent user material, that's a very high-signal match. We also flip the
+  // `matched` flag on the catalyst so the UI can glow it green.
+  let updatedCatalysts: Catalyst[] | null = null
   if (project.catalysts && project.catalysts.length > 0) {
-    for (const cat of project.catalysts) {
+    updatedCatalysts = project.catalysts.map(c => ({ ...c }))
+    for (const cat of updatedCatalysts) {
       const needle = cat.text.toLowerCase().trim()
       if (needle.length < 4) continue
       for (const mem of inputs.recentMemories.slice(0, 50)) {
         if ((mem.content || '').toLowerCase().includes(needle)) {
           score += 15
+          cat.matched = true
+          cat.matched_at = new Date().toISOString()
+          cat.matched_evidence = `memory:${mem.id}`
           if (bestStrength < 0.9) {
             bestStrength = 0.9
             bestReason = `a condition this project was waiting for just showed up — "${cat.text}"`
@@ -140,6 +148,7 @@ export function scoreProjectHeat(
     score: Math.round(score * 10) / 10,
     reason: bestReason,
     evidence_ref: bestEvidenceRef,
+    catalysts: updatedCatalysts,
   }
 }
 
@@ -213,13 +222,17 @@ export async function recomputeHeatForUser(
 
     // Decay by 20% if nothing new — prevents stale heat from lingering forever.
     // We don't decay to zero in a single pass; we let the next recompute continue.
+    const update: Record<string, any> = {
+      heat_score: result.score,
+      heat_reason: result.reason,
+      heat_updated_at: now,
+    }
+    if (result.catalysts) {
+      update.catalysts = result.catalysts
+    }
     const { error: updErr } = await supabase
       .from('projects')
-      .update({
-        heat_score: result.score,
-        heat_reason: result.reason,
-        heat_updated_at: now,
-      })
+      .update(update)
       .eq('id', p.id)
       .eq('user_id', userId)
 
