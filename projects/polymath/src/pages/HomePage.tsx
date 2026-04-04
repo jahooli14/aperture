@@ -21,7 +21,7 @@ import { CreateMemoryDialog } from '../components/memories/CreateMemoryDialog'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
 import { SkeletonCard } from '../components/ui/skeleton-card'
 import { EmptyState } from '../components/ui/empty-state'
-import { Layers, ArrowRight, Plus, Mic, FileText, FolderKanban, Search, TrendingUp, Moon, Calendar, Zap, Brain, X, AlertCircle, Check, Lightbulb, RefreshCw, Wind, Rss, Map as MapIcon, MoreHorizontal } from 'lucide-react'
+import { Layers, ArrowRight, Plus, Mic, FileText, FolderKanban, Search, TrendingUp, Moon, Calendar, Zap, Brain, X, AlertCircle, Check, Lightbulb, RefreshCw, Wind, Rss, Map as MapIcon, MoreHorizontal, Film, Music, Monitor, Book, MapPin, Gamepad2, Quote, Box } from 'lucide-react'
 import { MultiPerspectiveSuggestions } from '../components/suggestions/MultiPerspectiveSuggestions'
 import { BrandName } from '../components/BrandName'
 import { MarkdownRenderer } from '../components/ui/MarkdownRenderer'
@@ -30,15 +30,17 @@ import { DriftMode } from '../components/bedtime/DriftMode'
 import { MorningFollowUp } from '../components/bedtime/MorningFollowUp'
 import { CollisionReport } from '../components/home/CollisionReport'
 import { ShadowProjectCard } from '../components/home/ShadowProjectCard'
-import { PROJECT_COLORS } from '../components/projects/ProjectCard'
+import { getTheme } from '../lib/projectTheme'
 import { PowerHourHero } from '../components/home/PowerHourHero'
 import type { Memory, Project, SynthesisInsight } from '../types'
 import { CohesionSummaryWidget } from '../components/home/CohesionSummaryWidget'
 import { JourneyMilestones } from '../components/home/JourneyMilestones'
 import { TomorrowHook } from '../components/home/TomorrowHook'
 import { PolymathProfileCard } from '../components/home/PolymathProfileCard'
+import { DailySpark } from '../components/home/DailySpark'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { useJourneyStore } from '../stores/useJourneyStore'
+import { useListStore } from '../stores/useListStore'
 import { readingDb } from '../lib/db'
 
 interface InspirationData {
@@ -109,30 +111,6 @@ function GetInspirationSection({
     return 'moderate'
   })()
 
-
-  // Theme helper for Cards (Standardized)
-  const getTheme = (type: string, title: string) => {
-    const t = type?.toLowerCase().trim() || ''
-
-    let rgb = PROJECT_COLORS[t]
-
-    // Deterministic fallback if type is unknown or missing
-    if (!rgb) {
-      const keys = Object.keys(PROJECT_COLORS).filter(k => k !== 'default')
-      let hash = 0
-      for (let i = 0; i < title.length; i++) {
-        hash = title.charCodeAt(i) + ((hash << 5) - hash)
-      }
-      rgb = PROJECT_COLORS[keys[Math.abs(hash) % keys.length]]
-    }
-
-    return {
-      borderColor: `rgba(${rgb}, 0.25)`,
-      backgroundColor: `rgba(${rgb}, 0.08)`,
-      textColor: `rgb(${rgb})`,
-      rgb: rgb
-    }
-  }
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 aperture-shelf">
@@ -320,6 +298,85 @@ function GetInspirationSection({
 
 import { FocusStream } from '../components/home/FocusStream'
 
+const LIST_TYPE_ICONS: Record<string, React.ElementType> = {
+  film: Film, music: Music, tech: Monitor, book: Book, place: MapPin,
+  game: Gamepad2, event: Calendar, quote: Quote, article: FileText,
+  software: Monitor, generic: Box,
+}
+
+function NowConsumingWidget() {
+  const { lists, fetchLists } = useListStore()
+  const [activeItems, setActiveItems] = useState<{ listId: string; listTitle: string; listType: string; itemId: string; itemContent: string }[]>([])
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    if (lists.length === 0) fetchLists()
+  }, [])
+
+  useEffect(() => {
+    if (lists.length === 0) return
+
+    const fetchActiveItems = async () => {
+      const results: typeof activeItems = []
+      // Fetch items for each list and filter for active
+      for (const list of lists.slice(0, 10)) {
+        try {
+          const res = await fetch(`/api/lists?scope=items&listId=${list.id}&limit=10`)
+          if (!res.ok) continue
+          const items = await res.json()
+          for (const item of items) {
+            if (item.status === 'active') {
+              results.push({
+                listId: list.id,
+                listTitle: list.title,
+                listType: list.type,
+                itemId: item.id,
+                itemContent: item.content,
+              })
+            }
+          }
+        } catch {}
+      }
+      setActiveItems(results)
+      setLoaded(true)
+    }
+    fetchActiveItems()
+  }, [lists])
+
+  if (!loaded || activeItems.length === 0) return null
+
+  const shown = activeItems.slice(0, 4)
+
+  return (
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
+      <h2 className="section-header">
+        now <span>consuming</span>
+      </h2>
+      <div className="flex flex-col gap-2">
+        {shown.map((item) => {
+          const Icon = LIST_TYPE_ICONS[item.listType] || Box
+          return (
+            <Link
+              key={item.itemId}
+              to={`/lists/${item.listId}`}
+              className="flex items-center gap-3 p-3 rounded-xl transition-all hover:bg-[var(--glass-surface)] border border-[var(--glass-surface)]"
+            >
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] flex-shrink-0">
+                <Icon className="h-4 w-4 text-[var(--brand-text-secondary)]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-[var(--brand-text-primary)] truncate">{item.itemContent}</p>
+                <p className="text-[10px] text-[var(--brand-text-secondary)] opacity-50">{item.listTitle}</p>
+              </div>
+              <ArrowRight className="h-3.5 w-3.5 text-[var(--brand-text-secondary)] opacity-30 flex-shrink-0" />
+            </Link>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
 export function HomePage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -435,11 +492,8 @@ export function HomePage() {
       if (response.ok) {
         const data = await response.json()
         if (data.memories && data.memories.length > 0) {
-          // Use today's date as seed to pick a consistent memory for the day
-          const today = new Date().toDateString()
-          const seed = today.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
-          const index = seed % data.memories.length
-          setCardOfTheDay(data.memories[index])
+          // Trust server ranking — first result is the best pick
+          setCardOfTheDay(data.memories[0])
         }
       } else {
         // Silently fail - this is a nice-to-have feature
@@ -685,37 +739,41 @@ export function HomePage() {
                 e.stopPropagation()
                 window.dispatchEvent(new CustomEvent('openVoiceCapture'))
               }}
-              className="flex-1 h-14 glass-button hover:bg-brand-surface group"
+              className="flex-1 h-14 glass-button hover:bg-brand-surface group flex flex-col items-center justify-center gap-1"
               title="Voice Note"
             >
-              <Mic className="h-6 w-6 text-brand-primary group-hover:scale-110 transition-transform" />
+              <Mic className="h-5 w-5 text-brand-primary group-hover:scale-110 transition-transform" />
+              <span className="text-[10px] text-white/50">Voice</span>
             </button>
 
             {/* Written Thought */}
             <button
               onClick={() => setCreateThoughtOpen(true)}
-              className="flex-1 h-14 glass-button hover:bg-brand-surface group"
+              className="flex-1 h-14 glass-button hover:bg-brand-surface group flex flex-col items-center justify-center gap-1"
               title="Thought"
             >
-              <Brain className="h-6 w-6 text-brand-primary group-hover:scale-110 transition-transform" />
+              <Brain className="h-5 w-5 text-brand-primary group-hover:scale-110 transition-transform" />
+              <span className="text-[10px] text-white/50">Thought</span>
             </button>
 
             {/* Article */}
             <button
               onClick={() => setSaveArticleOpen(true)}
-              className="flex-1 h-14 glass-button hover:bg-brand-surface group"
+              className="flex-1 h-14 glass-button hover:bg-brand-surface group flex flex-col items-center justify-center gap-1"
               title="Article"
             >
-              <FileText className="h-6 w-6 text-brand-primary group-hover:scale-110 transition-transform" />
+              <FileText className="h-5 w-5 text-brand-primary group-hover:scale-110 transition-transform" />
+              <span className="text-[10px] text-white/50">Article</span>
             </button>
 
             {/* Project */}
             <button
               onClick={() => setCreateProjectOpen(true)}
-              className="flex-1 h-14 glass-button hover:bg-brand-surface group"
+              className="flex-1 h-14 glass-button hover:bg-brand-surface group flex flex-col items-center justify-center gap-1"
               title="Project"
             >
-              <Layers className="h-6 w-6 text-brand-primary group-hover:scale-110 transition-transform" />
+              <Layers className="h-5 w-5 text-brand-primary group-hover:scale-110 transition-transform" />
+              <span className="text-[10px] text-white/50">Project</span>
             </button>
           </div>
         </section>
@@ -726,12 +784,12 @@ export function HomePage() {
         {/* Polymath Profile — what the system knows + nudge for more data (graduated users) */}
         <PolymathProfileCard />
 
-        <CohesionSummaryWidget />
-
         {/* Aperture Power Hour - The Hero Engine */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4 aperture-shelf">
           <PowerHourHero />
         </section>
+
+        <CohesionSummaryWidget />
 
         {/* Subtle Divider */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8 opacity-20">
@@ -753,6 +811,9 @@ export function HomePage() {
         <div className="aperture-shelf">
           <FocusStream />
         </div>
+
+        {/* Now Consuming — active list items */}
+        <NowConsumingWidget />
 
         {/* 2b. AI COUNCIL  Multi-Perspective Next-Step Suggestions */}
         {(priorityProject || recentProject) && (
@@ -824,6 +885,11 @@ export function HomePage() {
           {/* Weekly Collision Report */}
           <div className="mb-6">
             <CollisionReport />
+          </div>
+
+          {/* Daily Spark — ambient synthesis */}
+          <div className="mb-6">
+            <DailySpark />
           </div>
 
           {/* Card of the Day - Resurfacing - Enhanced Design */}

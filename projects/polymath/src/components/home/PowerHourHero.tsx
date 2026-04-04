@@ -8,7 +8,7 @@ import { useProjectStore } from '../../stores/useProjectStore'
 import { useFocusStore } from '../../stores/useFocusStore'
 import { PowerHourReview } from './PowerHourReview'
 
-import { PROJECT_COLORS } from '../projects/ProjectCard'
+import { getTheme } from '../../lib/projectTheme'
 
 interface PowerTask {
     project_id: string
@@ -44,31 +44,24 @@ export function PowerHourHero() {
     const [selectedIndex, setSelectedIndex] = useState(0)
     const [isRefreshing, setIsRefreshing] = useState(false)
     const [showProjectPicker, setShowProjectPicker] = useState(false)
-    const [duration, setDuration] = useState(60)
+    const [duration, setDuration] = useState(() => {
+        try {
+            const stored = localStorage.getItem('polymath-power-hour-duration')
+            return stored ? parseInt(stored, 10) || 60 : 60
+        } catch { return 60 }
+    })
     const [showReview, setShowReview] = useState(false)
+
+    // Persist duration preference
+    useEffect(() => {
+        localStorage.setItem('polymath-power-hour-duration', String(duration))
+    }, [duration])
 
     const navigate = useNavigate()
 
     // Get all projects for the manual picker
     const { allProjects, updateProject } = useProjectStore()
     const activeProjects = allProjects.filter(p => ['active', 'upcoming', 'maintaining'].includes(p.status))
-
-    const getTheme = (type: string, title: string) => {
-        const t = type?.toLowerCase().trim() || ''
-        let rgb = PROJECT_COLORS[t]
-        if (!rgb) {
-            const keys = Object.keys(PROJECT_COLORS).filter(k => k !== 'default')
-            let hash = 0
-            for (let i = 0; i < title.length; i++) {
-                hash = title.charCodeAt(i) + ((hash << 5) - hash)
-            }
-            rgb = PROJECT_COLORS[keys[Math.abs(hash) % keys.length]]
-        }
-        return {
-            text: `rgb(${rgb})`,
-            rgb: rgb
-        }
-    }
 
     const mainTask = tasks[selectedIndex] || tasks[0]
     const currentProject = allProjects.find(p => p.id === mainTask?.project_id)

@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
-import { X, Check, Zap, Clock, ArrowRight, Plus, Brain, Link2 } from 'lucide-react'
+import { X, Check, Zap, Clock, ArrowRight, Plus, Brain, Link2, Archive } from 'lucide-react'
 import { Project } from '../../types'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useToast } from '../ui/toast'
@@ -121,6 +121,13 @@ export function ReviewDeck({ projects, onClose }: ReviewDeckProps) {
             setDirection(null)
             setCurrentIndex(prev => prev + 1)
         }, 200)
+    }
+
+    const handleGraveyard = async () => {
+        haptic.medium()
+        await updateProject(currentProject.id, { status: 'graveyard' })
+        addToast({ title: 'Sent to Graveyard', description: `${currentProject.title} has been archived.` })
+        setCurrentIndex(prev => prev + 1)
     }
 
     const handleTaskSubmit = async (e?: React.FormEvent) => {
@@ -283,6 +290,13 @@ export function ReviewDeck({ projects, onClose }: ReviewDeckProps) {
                     </div>
                     <span className="text-xs font-medium">Active</span>
                 </button>
+
+                <button onClick={handleGraveyard} className="flex flex-col items-center gap-2 text-[var(--brand-text-secondary)] hover:text-zinc-400 transition-colors">
+                    <div className="w-12 h-12 rounded-full bg-zinc-800/80 flex items-center justify-center border border-zinc-600/50">
+                        <Archive className="h-6 w-6" />
+                    </div>
+                    <span className="text-xs font-medium">Graveyard</span>
+                </button>
             </div>
         </div>
     )
@@ -351,7 +365,7 @@ function Card({ project, onSwipe }: { project: Project, onSwipe: (dir: 'left' | 
                 </div>
 
                 <div className="pt-6 border-t border-[var(--glass-surface-hover)] text-center text-sm text-[var(--brand-text-muted)]">
-                    Swipe Right to Activate  Left to Snooze  Up to Add Task
+                    Swipe Right to Activate · Left to Snooze · Up to Add Task
                 </div>
             </div>
         </motion.div>

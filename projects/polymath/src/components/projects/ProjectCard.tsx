@@ -3,10 +3,14 @@ import { Link, useNavigate } from 'react-router-dom'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MarkdownRenderer } from '../ui/MarkdownRenderer'
-import { ArrowRight, Clock, Star, Zap, X } from 'lucide-react'
+import { ArrowRight, Clock, Star, Zap, X, CheckCircle, Archive, Plus } from 'lucide-react'
 import type { Project } from '../../types'
 import { useContextEngineStore } from '../../stores/useContextEngineStore'
 import { useProjectStore } from '../../stores/useProjectStore'
+import { useToast } from '../ui/toast'
+import { handleInputFocus } from '../../utils/keyboard'
+import { getTheme, PROJECT_COLORS } from '../../lib/projectTheme'
+import { getNextTask } from '../../lib/taskUtils'
 
 interface Task {
   text: string
@@ -19,53 +23,28 @@ const CARD_HOVER_STYLES = {
   leave: { background: 'var(--brand-glass-bg)', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)', transform: 'translateY(0)' }
 }
 
-// Export colors for reuse
-export const PROJECT_COLORS: Record<string, string> = {
-  tech: 'var(--project-tech-rgb)',
-  art: 'var(--project-art-rgb)',
-  writing: 'var(--project-writing-rgb)',
-  music: 'var(--project-music-rgb)',
-  business: 'var(--project-business-rgb)',
-  life: 'var(--project-life-rgb)',
-  default: 'var(--project-default-rgb)'
-}
+// Re-export for backwards compatibility
+export { PROJECT_COLORS } from '../../lib/projectTheme'
 
 const LONG_PRESS_DURATION = 450
 
 export function ProjectCard({ project, prominent = false }: { project: Project, prominent?: boolean }) {
   const { setContext, toggleSidebar } = useContextEngineStore()
-  const { setPriority } = useProjectStore()
+  const { setPriority, updateProject } = useProjectStore()
+  const { addToast } = useToast()
   const navigate = useNavigate()
 
   const tasks = (project.metadata?.tasks || []) as Task[]
-  const nextTask = tasks.sort((a, b) => a.order - b.order).find(task => !task.done)
+  const nextTask = getNextTask(project)
   const totalTasks = tasks.length
   const completedTasks = tasks.filter(t => t.done).length
   const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0
 
   const [showContextMenu, setShowContextMenu] = useState(false)
+  const [showQuickAddTask, setShowQuickAddTask] = useState(false)
+  const [quickTaskText, setQuickTaskText] = useState('')
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const didLongPress = useRef(false)
-
-  // Color Coding
-  const getTheme = (type: string, title: string) => {
-    const t = type?.toLowerCase().trim() || ''
-    let rgb = PROJECT_COLORS[t]
-    if (!rgb) {
-      const keys = Object.keys(PROJECT_COLORS).filter(k => k !== 'default')
-      let hash = 0
-      for (let i = 0; i < title.length; i++) {
-        hash = title.charCodeAt(i) + ((hash << 5) - hash)
-      }
-      rgb = PROJECT_COLORS[keys[Math.abs(hash) % keys.length]]
-    }
-    return {
-      border: `rgba(${rgb}, 0.25)`,
-      bg: `rgba(${rgb}, 0.1)`,
-      text: `rgb(${rgb})`,
-      rgb: rgb
-    }
-  }
 
   const theme = getTheme(project.type ?? '', project.title)
 
@@ -103,6 +82,41 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
     e.preventDefault()
     e.stopPropagation()
     await setPriority(project.id)
+    setShowContextMenu(false)
+  }
+
+  const handleMarkComplete = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    await updateProject(project.id, { status: 'completed' })
+    addToast({ title: 'Project completed!', description: `"${project.title}" marked as complete.`, variant: 'success' })
+    setShowContextMenu(false)
+  }
+
+  const handleSendToGraveyard = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    await updateProject(project.id, { status: 'graveyard' })
+    addToast({ title: 'Sent to Graveyard', description: `"${project.title}" archived.` })
+    setShowContextMenu(false)
+  }
+
+  const handleQuickAddTask = async () => {
+    if (!quickTaskText.trim()) return
+    const existingTasks = (project.metadata?.tasks || []) as Task[]
+    const newTask = {
+      id: crypto.randomUUID(),
+      text: quickTaskText.trim(),
+      done: false,
+      created_at: new Date().toISOString(),
+      order: existingTasks.length
+    }
+    await updateProject(project.id, {
+      metadata: { ...project.metadata, tasks: [...existingTasks, newTask] }
+    })
+    addToast({ title: 'Task added', description: `Added to "${project.title}"`, variant: 'success' })
+    setQuickTaskText('')
+    setShowQuickAddTask(false)
     setShowContextMenu(false)
   }
 
@@ -289,6 +303,88 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
                       <p className="text-[11px] opacity-60 mt-0.5">See related memories and context</p>
                     </div>
                   </button>
+
+                  <button
+                    onClick={handleMarkComplete}
+                    className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all text-left"
+                    style={{
+                      background: 'var(--glass-surface)',
+                      border: '1.5px solid rgba(255,255,255,0.06)',
+                      color: 'var(--brand-text-primary)'
+                    }}
+                  >
+                    <CheckCircle className="h-5 w-5 flex-shrink-0" style={{ color: 'rgb(34,197,94)' }} />
+                    <div>
+                      <p className="text-sm font-bold">Mark Complete</p>
+                      <p className="text-[11px] opacity-60 mt-0.5">Ship it and celebrate</p>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={handleSendToGraveyard}
+                    className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all text-left"
+                    style={{
+                      background: 'var(--glass-surface)',
+                      border: '1.5px solid rgba(255,255,255,0.06)',
+                      color: 'var(--brand-text-primary)'
+                    }}
+                  >
+                    <Archive className="h-5 w-5 flex-shrink-0" style={{ color: 'rgb(161,161,170)' }} />
+                    <div>
+                      <p className="text-sm font-bold">Send to Graveyard</p>
+                      <p className="text-[11px] opacity-60 mt-0.5">Archive this project for now</p>
+                    </div>
+                  </button>
+
+                  {showQuickAddTask ? (
+                    <div
+                      className="w-full px-4 py-3.5 rounded-xl"
+                      style={{
+                        background: 'var(--glass-surface)',
+                        border: '1.5px solid rgba(255,255,255,0.06)',
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={quickTaskText}
+                          onChange={(e) => setQuickTaskText(e.target.value)}
+                          onFocus={handleInputFocus}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleQuickAddTask()
+                            if (e.key === 'Escape') { setShowQuickAddTask(false); setQuickTaskText('') }
+                          }}
+                          placeholder="Task description..."
+                          autoFocus
+                          className="flex-1 bg-transparent border-0 outline-none text-sm text-[var(--brand-text-primary)] placeholder-[var(--brand-text-muted)]"
+                        />
+                        <button
+                          onClick={handleQuickAddTask}
+                          disabled={!quickTaskText.trim()}
+                          className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-30"
+                          style={{ background: `rgba(${theme.rgb}, 0.2)`, color: theme.text }}
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowQuickAddTask(true) }}
+                      className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all text-left"
+                      style={{
+                        background: 'var(--glass-surface)',
+                        border: '1.5px solid rgba(255,255,255,0.06)',
+                        color: 'var(--brand-text-primary)'
+                      }}
+                    >
+                      <Plus className="h-5 w-5 flex-shrink-0" style={{ color: theme.text }} />
+                      <div>
+                        <p className="text-sm font-bold">Quick Add Task</p>
+                        <p className="text-[11px] opacity-60 mt-0.5">Add an action item right now</p>
+                      </div>
+                    </button>
+                  )}
 
                   <button
                     onClick={handleOpenProject}
