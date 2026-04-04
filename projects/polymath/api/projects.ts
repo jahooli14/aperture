@@ -270,6 +270,12 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
 
   // SET-PRIORITY RESOURCE - Atomically set one project as priority
   if (resource === 'set-priority') {
+    // Toggle semantic with a focus-tier cap.
+    // Up to FOCUS_CAP projects can be priority at once. Toggling on when the
+    // cap is full returns 409 with the list of current priorities so the
+    // client can prompt the user to demote one.
+    const FOCUS_CAP = 3
+
     if (req.method !== 'POST') {
       return res.status(405).json({ error: 'Method not allowed' })
     }
@@ -281,7 +287,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'project_id is required' })
       }
 
-      // Verify project exists and belongs to user
+      // Look up the target project
       const { data: project, error: projectError } = await supabase
         .from('projects')
         .select('id, title, is_priority')
@@ -289,10 +295,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         .eq('user_id', userId)
         .single()
 
-      console.log('[set-priority] Project lookup result:', { project, projectError })
-
       if (projectError) {
-        console.error('[set-priority] Project lookup error:', JSON.stringify(projectError, null, 2))
         return res.status(500).json({
           error: 'Database error during project lookup',
           details: projectError.message,
@@ -301,53 +304,57 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
       }
 
       if (!project) {
-        console.error('[set-priority] Project not found:', project_id)
         return res.status(404).json({ error: 'Project not found' })
       }
 
-      console.log('[set-priority] Step 3: Clearing all priorities for user:', userId)
-      // Atomic operation: clear all priorities, then set the one
-      const { data: clearedData, error: clearError } = await supabase
+      // Count current priorities (excluding this project)
+      const { data: currentPriorities, error: countError } = await supabase
         .from('projects')
-        .update({ is_priority: false })
+        .select('id, title')
         .eq('user_id', userId)
-        .select('id, title, is_priority')
+        .eq('is_priority', true)
+        .neq('id', project_id)
 
-      console.log('[set-priority] Clear result:', { clearedData, clearError })
-
-      if (clearError) {
-        console.error('[set-priority] Clear error FULL:', JSON.stringify(clearError, null, 2))
+      if (countError) {
         return res.status(500).json({
-          error: 'Failed to clear priorities',
-          details: clearError.message,
-          code: clearError.code,
-          hint: clearError.hint
+          error: 'Failed to count current priorities',
+          details: countError.message
         })
       }
 
-      console.log('[set-priority] Step 4: Setting priority on project:', project_id)
-      // Step 2: Set priority on the specified project
+      const currentCount = currentPriorities?.length || 0
+      const nextValue = !project.is_priority
+
+      // Enforce cap when promoting
+      if (nextValue && currentCount >= FOCUS_CAP) {
+        return res.status(409).json({
+          error: 'focus_cap_reached',
+          message: `You can focus on up to ${FOCUS_CAP} projects at a time. Drop one to promote another.`,
+          cap: FOCUS_CAP,
+          current_priorities: currentPriorities || []
+        })
+      }
+
+      // Toggle priority on the target project
       const { data: updatedProject, error: setError } = await supabase
         .from('projects')
-        .update({ is_priority: true })
+        .update({
+          is_priority: nextValue,
+          ...(nextValue ? { last_active: new Date().toISOString() } : {})
+        })
         .eq('id', project_id)
         .eq('user_id', userId)
         .select()
         .single()
 
-      console.log('[set-priority] Set result:', { updatedProject, setError })
-
       if (setError) {
-        console.error('[set-priority] Set error FULL:', JSON.stringify(setError, null, 2))
         return res.status(500).json({
-          error: 'Failed to set priority',
+          error: 'Failed to update priority',
           details: setError.message,
-          code: setError.code,
-          hint: setError.hint
+          code: setError.code
         })
       }
 
-      console.log('[set-priority] Step 5: Fetching all projects')
       // Return all projects so the client can refresh
       const { data: allProjects, error: fetchError } = await supabase
         .from('projects')
@@ -356,22 +363,20 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         .order('created_at', { ascending: false })
 
       if (fetchError) {
-        console.error('[set-priority] Fetch error:', JSON.stringify(fetchError, null, 2))
         return res.status(500).json({
           error: 'Failed to fetch projects after update',
           details: fetchError.message
         })
       }
 
-      console.log('[set-priority] SUCCESS! Returning', allProjects?.length, 'projects')
       return res.status(200).json({
         success: true,
         updated_project: updatedProject,
-        projects: allProjects || []
+        projects: allProjects || [],
+        focus_cap: FOCUS_CAP
       })
     } catch (error) {
       console.error('[set-priority] UNEXPECTED ERROR:', error)
-      console.error('[set-priority] Error stack:', error instanceof Error ? error.stack : 'No stack')
       return res.status(500).json({
         error: 'Failed to set priority',
         details: error instanceof Error ? error.message : JSON.stringify(error)

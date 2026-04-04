@@ -286,10 +286,15 @@ export function ProjectsPage() {
   //   fetchProjects()
   // }, [filter])
 
-  // Categorize projects for the dashboard
+  // Categorize projects for the dashboard.
+  // Focus tier: up to FOCUS_CAP priority projects (multi-priority as of Phase 1).
+  // Active tier: fills remaining slots with recently-active projects if priorities < cap.
+  const FOCUS_CAP = 3
   const { activeList, drawerList } = React.useMemo(() => {
-    // 1. Get all priority projects
-    const priorityProjects = projects.filter(p => p.is_priority)
+    // 1. Get all priority projects (capped — defensive; backend enforces too)
+    const priorityProjects = projects
+      .filter(p => p.is_priority)
+      .slice(0, FOCUS_CAP)
     const priorityIds = new Set(priorityProjects.map(p => p.id))
 
     // 2. Get recent active projects, excluding those already prioritized
@@ -297,11 +302,10 @@ export function ProjectsPage() {
       new Date(b.last_active || b.created_at).getTime() - new Date(a.last_active || a.created_at).getTime()
     )
 
-    // Fill remaining slots up to 3 (Pinned + Top Recent) for active focus
-    const maxActiveCount = 3
+    // Fill remaining slots up to FOCUS_CAP total
     const recentActiveNonPriority = sortedByRecency
       .filter(p => p.status === 'active' && !priorityIds.has(p.id))
-      .slice(0, maxActiveCount - priorityProjects.length)
+      .slice(0, Math.max(0, FOCUS_CAP - priorityProjects.length))
 
     const activeList = [...priorityProjects, ...recentActiveNonPriority].filter(Boolean) as Project[]
     const activeIds = new Set(activeList.map(p => p.id))
