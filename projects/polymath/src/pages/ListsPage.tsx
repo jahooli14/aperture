@@ -253,12 +253,12 @@ export default function ListsPage() {
 
             {/* Loading State - Show skeleton cards while loading */}
             {initialLoad && loading && lists.length === 0 && (
-                <div className="flex flex-wrap gap-3 pb-20">
+                <div className="grid gap-3 pb-20" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(160px, 100%), 1fr))' }}>
                     {[1, 2, 3, 4].map((i) => (
                         <div
                             key={`skeleton-${i}`}
                             className="overflow-hidden rounded-2xl bg-zinc-900/40"
-                            style={{ width: 'calc(50% - 6px)', boxShadow: 'inset 0 0 0 1px var(--glass-surface)' }}
+                            style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface)' }}
                         >
                             <div className="aspect-[3/4] shimmer" />
                         </div>
@@ -293,16 +293,15 @@ export default function ListsPage() {
                         <p className="text-[9px] font-black uppercase tracking-[0.25em] text-zinc-600 mb-4 text-center">
                             Some ideas to get you started
                         </p>
-                        <div className="flex flex-wrap gap-3">
+                        <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(160px, 100%), 1fr))' }}>
                             {EXAMPLE_COLLECTIONS.map((example) => {
                                 const rgb = ListColor(example.type)
                                 return (
                                     <button
                                         key={example.type}
                                         onClick={() => setCreateOpen(true)}
-                                        className="group relative overflow-hidden rounded-2xl cursor-pointer flex-shrink-0 text-left"
+                                        className="group relative overflow-hidden rounded-2xl cursor-pointer text-left"
                                         style={{
-                                            width: 'calc(50% - 6px)',
                                             boxShadow: `inset 0 0 0 1px rgba(${rgb}, 0.12), 0 4px 12px rgba(0,0,0,0.25)`
                                         }}
                                     >
@@ -403,9 +402,9 @@ export default function ListsPage() {
                 </Reorder.Group>
             )}
 
-            {/* Normal Mode - Static 2-column Grid */}
+            {/* Normal Mode - Responsive Grid */}
             {lists.length > 0 && !isReordering && (
-                <div className="flex flex-wrap gap-3 pb-20">
+                <div className="grid gap-3 pb-20" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(160px, 100%), 1fr))' }}>
                 {lists.map((list) => {
                     const rgb = ListColor(list.type)
                     const coverImage = listCovers[list.id]
@@ -421,8 +420,8 @@ export default function ListsPage() {
                             onPointerDown={handlePointerDown(list)}
                             onPointerUp={handlePointerUp}
                             onPointerCancel={handlePointerCancel}
-                            className="group relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 bg-zinc-900/40 flex-shrink-0 select-none"
-                            style={{ width: 'calc(50% - 6px)', boxShadow: 'inset 0 0 0 1px var(--glass-surface), 0 4px 12px rgba(0,0,0,0.3)' }}
+                            className="group relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 bg-zinc-900/40 select-none"
+                            style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface), 0 4px 12px rgba(0,0,0,0.3)' }}
                             whileHover={{ y: -2 }}
                         >
                             {/* Poster / Cover Image / Quote Cover */}

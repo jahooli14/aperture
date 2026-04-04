@@ -6,6 +6,7 @@
 import { Target } from 'lucide-react'
 import { Card, CardContent } from '../ui/card'
 import type { Project } from '../../types'
+import { getNextTask } from '../../lib/taskUtils'
 
 interface Task {
   id: string
@@ -23,8 +24,7 @@ export function NextActionCard({ project }: NextActionCardProps) {
   const tasks = (project.metadata?.tasks || []) as Task[]
 
   // Find first uncompleted task (sorted by order)
-  const sortedTasks = [...tasks].sort((a, b) => a.order - b.order)
-  const nextTask = sortedTasks.find(task => !task.done)
+  const nextTask = getNextTask(project)
 
   // Empty state - no tasks at all
   if (tasks.length === 0) {

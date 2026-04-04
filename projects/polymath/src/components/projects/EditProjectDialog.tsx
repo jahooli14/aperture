@@ -20,6 +20,7 @@ import { Label } from '../ui/label'
 import { useToast } from '../ui/toast'
 import { useProjectStore } from '../../stores/useProjectStore'
 import type { Project } from '../../types'
+import { PROJECT_TYPES } from '../../lib/projectTheme'
 
 export interface EditProjectDialogProps {
     project: Project
@@ -114,7 +115,7 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
                     <div className="space-y-2">
                         <Label className="font-bold text-xs uppercase tracking-widest text-[var(--brand-text-muted)]">Classification</Label>
                         <div className="flex flex-wrap gap-2">
-                            {['Writing', 'Tech', 'Art', 'Music', 'Business', 'Creative', 'Learning'].map((cat) => (
+                            {PROJECT_TYPES.map((cat) => (
                                 <button
                                     key={cat}
                                     type="button"

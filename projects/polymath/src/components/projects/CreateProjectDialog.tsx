@@ -509,7 +509,7 @@ export function CreateProjectDialog({
                 <div className="flex items-center gap-1 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                   {/* Type pills */}
                   <div className="flex items-center gap-1 overflow-x-auto scrollbar-none flex-1 min-w-0">
-                    {(['Writing', 'Tech', 'Art', 'Music', 'Business', 'Creative', 'Learning'] as const).map(cat => (
+                    {PROJECT_TYPES.map(cat => (
                       <button
                         key={cat}
                         type="button"

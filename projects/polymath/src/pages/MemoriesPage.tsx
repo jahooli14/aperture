@@ -644,8 +644,8 @@ export function MemoriesPage() {
 
             {/* Inner Content */}
             <div>
-              {/* Demo Data Context Banner - Only show on "My Thoughts" view with demo data */}
-              {view === 'all' && memories.length > 0 && memories.some(m => m.audiopen_id?.startsWith('demo-')) && (
+              {/* Demo Data Context Banner - Only show on "Recent" view with demo data */}
+              {view === 'recent' && memories.length > 0 && memories.some(m => m.audiopen_id?.startsWith('demo-')) && (
                 <div className="mb-6 p-4 rounded-lg" style={{ background: '#111113', border: '2px solid rgba(59,130,246,0.25)', borderLeft: '4px solid rgba(59,130,246,0.6)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
                   <h3 className="font-black text-xs uppercase tracking-widest mb-2 flex items-center gap-2" style={{ color: "var(--brand-primary)" }}>
                     <Brain className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
@@ -681,11 +681,15 @@ export function MemoriesPage() {
                 </div>
               )}
 
-              {/* Foundational Tab */}
-              {view === 'foundational' && <FoundationalPrompts />}
+              {/* Core Beliefs banner — show for new users who haven't completed onboarding */}
+              {view === 'recent' && progress && progress.completed_required < progress.total_required && (
+                <div className="mb-6">
+                  <FoundationalPrompts />
+                </div>
+              )}
 
-              {/* My Memories Tab */}
-              {view === 'all' && (
+              {/* Recent Memories Tab */}
+              {view === 'recent' && (
                 <>
                   <SuggestedPrompts />
 
@@ -734,7 +738,7 @@ export function MemoriesPage() {
               {/* Empty State */}
               {!isLoading && displayMemories.length === 0 && (
                 <div className="mb-8 py-16 px-6 text-center">
-                  {view === 'all' && isFiltered ? (
+                  {(view === 'recent' || view === 'themes') && isFiltered ? (
                     /* Search returned no results */
                     <div className="max-w-xs mx-auto space-y-4">
                       <div className="inline-flex items-center justify-center w-14 h-14 rounded-full"
@@ -756,7 +760,7 @@ export function MemoriesPage() {
                         Clear filters
                       </button>
                     </div>
-                  ) : view === 'all' ? (
+                  ) : (view === 'recent' || view === 'themes') ? (
                     /* No memories at all — rich inspirational state */
                     <div className="max-w-sm mx-auto">
                       {/* Decorative orb */}
@@ -809,23 +813,11 @@ export function MemoriesPage() {
                 </div>
               )}
 
-              {/* My Memories: Theme Clusters or Recent View */}
-              {view === 'all' && !isLoading && memories.length > 0 && (
+              {/* Theme Clusters View */}
+              {view === 'themes' && !isLoading && memories.length > 0 && (
                 <>
-                  {/* Sub-navigation for Themes vs Recent - Minimal pill tabs */}
-                  <div className="mb-6">
-                    <PremiumTabs
-                      tabs={[
-                        { id: 'recent', label: 'Recent' },
-                        { id: 'themes', label: 'By Theme' }
-                      ]}
-                      activeTab={memoryView}
-                      onChange={(tabId) => setMemoryView(tabId as typeof memoryView)}
-                    />
-                  </div>
-
                   {/* Theme cluster detail view */}
-                  {selectedCluster && memoryView === 'themes' && (
+                  {selectedCluster && (
                     <div className="mb-8">
                       <button
                         onClick={() => setSelectedCluster(null)}
@@ -874,7 +866,7 @@ export function MemoriesPage() {
                   )}
 
                   {/* Theme clusters grid */}
-                  {!selectedCluster && memoryView === 'themes' && (
+                  {!selectedCluster && (
                     <>
                       {loadingClusters && clusters.length === 0 ? (
                         <div className="text-center py-12">
