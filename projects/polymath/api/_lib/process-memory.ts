@@ -235,6 +235,65 @@ export async function processMemory(memoryId: string): Promise<void> {
             url: metadata.entities?.topics?.[0] || 'thought://' + memoryId // Pseudo-URL
           })
         logger.info('✅ Added to reading queue')
+      } else if (category === 'annoyance') {
+        logger.info('🔧 Routing annoyance to Fix Queue...')
+        // Find or create the "Fix Queue" list
+        let fixQueueId: string | null = null
+        const { data: existingQueue } = await supabase
+          .from('lists')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('type', 'fix')
+          .maybeSingle()
+
+        if (existingQueue) {
+          fixQueueId = existingQueue.id
+        } else {
+          const { data: newQueue } = await supabase
+            .from('lists')
+            .insert({
+              user_id: userId,
+              title: 'Fix Queue',
+              type: 'fix',
+              icon: 'Wrench',
+              settings: {
+                status_enabled: true,
+                status_labels: {
+                  pending: 'Queued',
+                  active: 'Fixing',
+                  completed: 'Fixed'
+                }
+              }
+            })
+            .select('id')
+            .single()
+          if (newQueue) fixQueueId = newQueue.id
+          logger.info('✅ Created Fix Queue list')
+        }
+
+        if (fixQueueId) {
+          const severity = metadata.triage.severity || 'annoying'
+          const automatable = metadata.triage.automatable || false
+          const fixHint = metadata.triage.fix_hint || null
+
+          await supabase
+            .from('list_items')
+            .insert({
+              user_id: userId,
+              list_id: fixQueueId,
+              content: metadata.summary_title,
+              status: 'pending',
+              metadata: {
+                original_thought: metadata.insightful_body,
+                memory_id: memoryId,
+                severity,
+                automatable,
+                fix_hint: fixHint,
+                fix_status: automatable ? 'draft_pending' : 'manual'
+              }
+            })
+          logger.info({ severity, automatable, fix_hint: fixHint }, '✅ Added to Fix Queue')
+        }
       }
     }
 
@@ -315,9 +374,12 @@ Return JSON:
   "tags": ["3-5 specific tags like 'philosophy', 'biology', 'curiosity', 'nature'. Avoid generic words like 'thought', 'note', 'voice'"],
   "emotional_tone": "brief phrase describing the mood",
   "triage": {
-    "category": "task_update|todo_new|list_item|new_thought|reading_lead|new_project_idea",
+    "category": "task_update|todo_new|list_item|new_thought|reading_lead|new_project_idea|annoyance",
     "project_id": "uuid of matching project or null",
-    "confidence": 0.0-1.0
+    "confidence": 0.0-1.0,
+    "severity": "critical|annoying|minor (only for annoyance category)",
+    "automatable": true/false (only for annoyance category - could code/cron/automation fix this?),
+    "fix_hint": "brief description of how code could fix this (only if automatable is true)"
   }
 }
 
@@ -328,6 +390,7 @@ TRIAGE CATEGORY GUIDE:
 - reading_lead: An article, newsletter, or specific resource to be read later.
 - new_project_idea: A large, multi-step goal that could become a new project.
 - new_thought: Default for insights, musings, or memories without immediate action.
+- annoyance: A frustration, recurring problem, or friction point in daily life. Things that bug the user — broken stuff, inefficiencies, things that should work better. If a cron job, notification, API call, or smart home automation could fix it, mark automatable=true and provide a fix_hint.
 
 Return only valid JSON.`
 
