@@ -1,7 +1,7 @@
 /**
  * Bedtime Idea Suggester
  * Bridges collected material (reading, thoughts) → creative projects
- * Leverages hypnagogic state to synthesize inputs into actionable outputs
+ * Gives people interesting things to think about before bed
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
@@ -336,7 +336,7 @@ async function generateCatalystPromptsWithAI(
     .map(input => `${input.type.toUpperCase()}: "${input.title}"`) // Corrected escape for quote
     .join('\n') // Corrected escape for newline
 
-  const prompt = `You are an insight engineer. Generate 2-4 prompts that trigger genuine realizations from these specific inputs.
+  const prompt = `Generate 2-4 prompts that help someone see a connection they haven't noticed yet between these things.
 
 **INPUTS:**
 ${inputsList}

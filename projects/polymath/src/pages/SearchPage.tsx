@@ -311,7 +311,7 @@ export function SearchPage() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-6">
           <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
-            your <span className="text-brand-primary">knowledge</span>
+            your <span className="text-brand-primary">stuff</span>
           </h1>
           <p className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mt-1">Search memories, projects, and articles.</p>
         </div>
@@ -336,7 +336,7 @@ export function SearchPage() {
                   onChange={handleQueryChange}
                   onFocus={(e) => { setSearchFocused(true); handleInputFocus(e) }}
                   onBlur={() => setSearchFocused(false)}
-                  placeholder="Search your knowledge..."
+                  placeholder="Search everything..."
                   className="w-full h-12 pl-12 pr-4 rounded-lg border-2 text-base focus:outline-none transition-all duration-200"
                   style={{
                     background: 'var(--glass-surface)',
@@ -396,7 +396,7 @@ export function SearchPage() {
                   searchMode === 'semantic' ? 'bg-brand-primary/20 text-brand-primary' : 'text-[var(--brand-text-muted)]'
                 }`}
               >
-                Semantic
+                Smart
               </button>
             </div>
           </div>

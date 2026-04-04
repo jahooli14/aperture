@@ -341,7 +341,7 @@ export function getMilestoneMessage(type: 'thought' | 'connection' | 'project', 
       case 10:
         return '10 thoughts captured! Building momentum'
       case 50:
-        return '50 thoughts! Your knowledge graph is growing'
+        return '50 thoughts! The connections are getting interesting'
       case 100:
         return '100 thoughts! Incredible milestone'
       default:

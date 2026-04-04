@@ -10,13 +10,15 @@ import { isNative, base64ToBlob } from '../lib/platform'
 
 interface UseMediaRecorderVoiceOptions {
   onTranscript: (text: string) => void
+  onError?: (message: string) => void
   maxDuration?: number // seconds
   autoSubmit?: boolean
 }
 
 export function useMediaRecorderVoice({
   onTranscript,
-  maxDuration = 30,
+  onError,
+  maxDuration = 120,
   autoSubmit = false
 }: UseMediaRecorderVoiceOptions) {
   const [isRecording, setIsRecording] = useState(false)
@@ -142,7 +144,7 @@ export function useMediaRecorderVoice({
       if (!result.value) {
         const permResult = await VoiceRecorder.requestAudioRecordingPermission()
         if (!permResult.value) {
-          alert('Microphone permission is required for voice recording')
+          onError?.('Microphone permission is required for voice recording')
           return
         }
       }
@@ -155,7 +157,7 @@ export function useMediaRecorderVoice({
       console.log('[Native] Recording started')
     } catch (error) {
       console.error('[Native] Failed to start recording:', error)
-      alert('Failed to start recording. Please try again.')
+      onError?.('Failed to start recording. Please try again.')
     }
   }
 
@@ -237,7 +239,7 @@ export function useMediaRecorderVoice({
       // Handle recording errors
       mediaRecorder.onerror = (error) => {
         console.error('[Web] MediaRecorder error:', error)
-        alert('Recording error occurred. Please try again.')
+        onError?.('Recording error occurred. Please try again.')
         stopWebRecording()
       }
 
@@ -254,11 +256,11 @@ export function useMediaRecorderVoice({
       console.error('[Web] Failed to start recording:', error)
 
       if (error.name === 'NotAllowedError') {
-        alert('Microphone access denied. Please allow microphone access and try again.')
+        onError?.('Microphone access denied. Please allow microphone access and try again.')
       } else if (error.name === 'NotFoundError') {
-        alert('No microphone found. Please connect a microphone and try again.')
+        onError?.('No microphone found. Please connect a microphone and try again.')
       } else {
-        alert(`Failed to start recording: ${error.message}`)
+        onError?.(`Failed to start recording: ${error.message}`)
       }
     }
   }
@@ -338,7 +340,7 @@ export function useMediaRecorderVoice({
       }
     } catch (error) {
       console.error('[Native] Failed to process recording:', error)
-      alert('Failed to process recording. Please try again.')
+      onError?.('Failed to process recording. Please try again.')
     } finally {
       setIsProcessing(false)
     }
@@ -406,7 +408,7 @@ export function useMediaRecorderVoice({
 
       if (chunksRef.current.length === 0) {
         console.error('[Web] No audio chunks recorded - this indicates the dataavailable event never fired')
-        alert('No audio was recorded. Please try again and make sure to speak.')
+        onError?.('No audio was recorded. Please try again and make sure to speak.')
         return
       }
 
@@ -472,7 +474,7 @@ export function useMediaRecorderVoice({
     } catch (error) {
       console.error('[Web] Failed to process recording:', error)
       const message = error instanceof Error ? error.message : 'Unknown error'
-      alert(`Failed to process recording: ${message}`)
+      onError?.(`Failed to process recording: ${message}`)
     } finally {
       setIsProcessing(false)
       chunksRef.current = []

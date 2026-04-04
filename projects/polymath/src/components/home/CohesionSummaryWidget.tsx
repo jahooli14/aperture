@@ -64,7 +64,7 @@ export function CohesionSummaryWidget() {
             <div className="h-8 w-8 rounded-lg bg-brand-primary/20 flex items-center justify-center">
               <Brain className="h-5 w-5 text-brand-primary" />
             </div>
-            <h2 className="text-sm font-bold uppercase racking-wides ext-indigo-300">Cognitive State</h2>
+            <h2 className="text-sm font-bold uppercase racking-wides ext-indigo-300">Where you're at</h2>
           </div>
 
           <div className="mb-8 max-w-4xl text-xl md:text-2xl font-medium text-[var(--brand-text-primary)]/90 leading-relaxed">

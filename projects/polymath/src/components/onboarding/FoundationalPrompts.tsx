@@ -78,7 +78,7 @@ export function FoundationalPrompts() {
     <div className="max-w-2xl mx-auto">
       {/* Progress Header */}
       <div className="mb-6 p-4 rounded-lg" style={{ background: 'var(--glass-surface)', backdropFilter: 'blur(12px)' }}>
-        <h2 className="text-lg font-bold mb-2" style={{ color: "var(--brand-primary)" }}>Complete Your Foundation</h2>
+        <h2 className="text-lg font-bold mb-2" style={{ color: "var(--brand-primary)" }}>Tell us about yourself</h2>
         <div className="flex items-center gap-3">
           <div className="flex-1 rounded-full h-2" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
             <div
@@ -98,7 +98,7 @@ export function FoundationalPrompts() {
           )}
         </p>
         <p className="text-xs mt-1" style={{ color: "var(--brand-primary)" }}>
-           Better memories = Better project suggestions
+           The more you share, the better your suggestions get.
         </p>
       </div>
 

@@ -351,6 +351,61 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
                 </div>
               )}
 
+              {/* Connected Thoughts (Bridges) */}
+              {bridges.length > 0 && (
+                <div className="mb-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Link2 className="h-3.5 w-3.5" style={{ color: 'var(--brand-primary)' }} />
+                    <span className="text-xs font-medium" style={{ color: 'var(--brand-text-secondary)' }}>
+                      Connected Thoughts
+                    </span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(99,102,241,0.1)', color: 'var(--brand-text-muted)' }}>
+                      {bridges.length}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {bridges.map((bridge) => {
+                      const connectedMemory = bridge.memory_a.id === memory.id ? bridge.memory_b : bridge.memory_a
+                      const bridgeTypeLabels: Record<string, string> = {
+                        entity_match: 'Entity',
+                        semantic_similarity: 'Semantic',
+                        temporal_proximity: 'Temporal',
+                      }
+                      return (
+                        <button
+                          key={bridge.id}
+                          onClick={() => handleMemoryClick(connectedMemory.id)}
+                          className="flex items-start gap-3 w-full text-left px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(255,255,255,0.04)] active:scale-[0.98]"
+                          style={{
+                            background: 'rgba(255,255,255,0.02)',
+                            border: '1px solid rgba(255,255,255,0.06)',
+                          }}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate" style={{ color: 'var(--brand-text-primary)' }}>
+                              {connectedMemory.title}
+                            </p>
+                            <p className="text-xs line-clamp-1 mt-0.5" style={{ color: 'var(--brand-text-muted)' }}>
+                              {connectedMemory.body}
+                            </p>
+                          </div>
+                          <span
+                            className="flex-shrink-0 px-1.5 py-0.5 rounded-md text-[10px] font-medium mt-0.5"
+                            style={{
+                              background: 'rgba(148,163,184,0.08)',
+                              border: '1px solid rgba(148,163,184,0.15)',
+                              color: 'rgba(148,163,184,0.6)',
+                            }}
+                          >
+                            {bridgeTypeLabels[bridge.bridge_type] || bridge.bridge_type}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Timestamp */}
               <div className="flex items-center gap-2 text-xs pt-6 mt-6 border-t border-[var(--glass-surface-hover)]" style={{ color: "var(--brand-text-muted)" }}>
                 <Calendar className="h-3 w-3" />

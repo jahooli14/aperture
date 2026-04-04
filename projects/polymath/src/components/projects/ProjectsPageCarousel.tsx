@@ -6,7 +6,8 @@ import type { Project } from '../../types'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useSuggestionStore } from '../../stores/useSuggestionStore'
 import { useContextEngineStore } from '../../stores/useContextEngineStore'
-import { PROJECT_COLORS } from './ProjectCard'
+import { PROJECT_COLORS, getTheme } from '../../lib/projectTheme'
+import { getNextTask } from '../../lib/taskUtils'
 import { api } from '../../lib/apiClient'
 import { useToast } from '../ui/toast'
 
@@ -33,34 +34,11 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
   const { setContext, toggleSidebar } = useContextEngineStore()
   const { setPriority } = useProjectStore()
   const tasks = (project.metadata?.tasks || []) as Task[]
-  const nextTask = tasks.sort((a, b) => a.order - b.order).find(task => !task.done)
+  const nextTask = getNextTask(project)
   const totalTasks = tasks.length
   const completedTasks = tasks.filter(t => t.done).length
   const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0
 
-
-  const getTheme = (type: string, title: string) => {
-    const t = type?.toLowerCase().trim() || ''
-
-    let rgb = PROJECT_COLORS[t]
-
-    // Deterministic fallback if type is unknown or missing
-    if (!rgb) {
-      const keys = Object.keys(PROJECT_COLORS).filter(k => k !== 'default')
-      let hash = 0
-      for (let i = 0; i < title.length; i++) {
-        hash = title.charCodeAt(i) + ((hash << 5) - hash)
-      }
-      rgb = PROJECT_COLORS[keys[Math.abs(hash) % keys.length]]
-    }
-
-    return {
-      borderColor: `rgba(${rgb}, 0.25)`,
-      bg: `rgba(${rgb}, 0.1)`,
-      textColor: `rgb(${rgb})`,
-      rgb: rgb
-    }
-  }
 
   const theme = getTheme(project.type || 'other', project.title)
 

@@ -642,9 +642,7 @@ async function generateThoughtBridge(
     projectDescription = projects[0].description || ''
   }
 
-  const prompt = `You are generating a "thought bridge" for a personal knowledge app.
-
-A thought bridge is a single sentence that translates a new captured thought into a concrete implication for an active project — what does this insight actually unlock or change?
+  const prompt = `Write one sentence connecting a new thought to an active project — what does this thought actually change or make possible for the project?
 
 NEW THOUGHT: "${memoryTitle}"
 ${memoryBody ? `Detail: "${memoryBody.slice(0, 200)}"` : ''}

@@ -25,7 +25,7 @@ import { useToast } from '../components/ui/toast'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { PremiumTabs } from '../components/ui/premium-tabs'
 import { SkeletonCard } from '../components/ui/skeleton-card'
-import { Brain, Zap, ArrowLeft, CloudOff, Search, X, Tag, Lightbulb, Leaf, Code, Palette, Heart, BookOpen, Users, Pin } from 'lucide-react'
+import { Brain, Zap, ArrowLeft, CloudOff, Search, X, Tag, Pin } from 'lucide-react'
 import { BrandName } from '../components/BrandName'
 import { SubtleBackground } from '../components/SubtleBackground'
 // import { FocusableList, FocusableItem } from '../components/FocusableList' // Removed for masonry
@@ -34,20 +34,8 @@ import { MemoryDetailModal } from '../components/memories/MemoryDetailModal' // 
 import { GlassCard } from '../components/ui/GlassCard' // For consistency with other cards
 import { debounce } from '../lib/utils'
 import { CACHE_TTL } from '../lib/cacheConfig'
+import { getIconComponent } from '../lib/themeIcons'
 
-const getIconComponent = (name: string) => {
-  const lowerName = name.toLowerCase()
-  if (lowerName.includes('learn')) return Brain
-  if (lowerName.includes('creat')) return Lightbulb
-  if (lowerName.includes('nature')) return Leaf
-  if (lowerName.includes('code') || lowerName.includes('tech')) return Code
-  if (lowerName.includes('art') || lowerName.includes('design')) return Palette
-  if (lowerName.includes('love') || lowerName.includes('relationship')) return Heart
-  if (lowerName.includes('read') || lowerName.includes('book')) return BookOpen
-  if (lowerName.includes('energy') || lowerName.includes('power')) return Zap
-  if (lowerName.includes('social') || lowerName.includes('people')) return Users
-  return Lightbulb // default icon
-}
 
 // Helper for Google Keep style masonry (Across then Down)
 function MasonryGrid({
@@ -128,7 +116,7 @@ export function MemoriesPage() {
   const { isOnline } = useOnlineStatus()
   const { addOfflineCapture } = useOfflineSync()
   const [resurfacing, setResurfacing] = useState<Memory[]>([])
-  const [view, setView] = useState<'foundational' | 'all' | 'resurfacing'>('all')
+  const [view, setView] = useState<'recent' | 'themes' | 'resurfacing'>('recent')
   const [loadingResurfacing, setLoadingResurfacing] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedMemoryForModal, setSelectedMemoryForModal] = useState<Memory | null>(null) // State for the detail modal
@@ -201,7 +189,6 @@ export function MemoriesPage() {
   const [clusters, setClusters] = useState<ThemeCluster[]>([])
   const [selectedCluster, setSelectedCluster] = useState<ThemeCluster | null>(null)
   const [loadingClusters, setLoadingClusters] = useState(false)
-  const [memoryView, setMemoryView] = useState<'themes' | 'recent'>('recent')
   const [clustersLastFetched, setClustersLastFetched] = useState<number>(0)
 
   // Use store's fetchMemories directly - it has built-in caching!
@@ -262,11 +249,11 @@ export function MemoriesPage() {
 
       if (view === 'resurfacing') {
         await fetchResurfacing()
+      } else if (view === 'themes') {
+        await loadMemories()
+        await fetchThemeClusters()
       } else {
         await loadMemories()
-        if (view === 'all') {
-          await fetchThemeClusters()
-        }
       }
     }
     loadData()
@@ -476,7 +463,7 @@ export function MemoriesPage() {
 
   // Memoize displayMemories to prevent recalculation on every render
   const baseMemories = useMemo(() => {
-    return view === 'all' ? memories : resurfacing
+    return view === 'resurfacing' ? resurfacing : memories
   }, [view, memories, resurfacing])
 
   // Apply search and tag filters
@@ -510,7 +497,7 @@ export function MemoriesPage() {
 
   const isFiltered = searchQuery.trim().length > 0 || activeTags.length > 0
 
-  const isLoading = view === 'all' ? loading : loadingResurfacing
+  const isLoading = view === 'resurfacing' ? loadingResurfacing : loading
 
   return (
     <>
@@ -522,10 +509,10 @@ export function MemoriesPage() {
               <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
                 your <span className="text-brand-primary">thoughts</span>
               </h1>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mt-1">Capture everything, loose nothing.</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mt-1">Your thoughts, all in one place.</p>
             </div>
             <div className="flex items-center gap-2">
-              {view === 'all' && <CreateMemoryDialog />}
+              {view !== 'resurfacing' && <CreateMemoryDialog />}
               <button
                 onClick={() => navigate('/search')}
                 className="h-10 w-10 rounded-xl flex items-center justify-center transition-all bg-[var(--glass-surface)] border border-white/10"
@@ -541,11 +528,8 @@ export function MemoriesPage() {
             {/* View Toggle */}
             <PremiumTabs
               tabs={[
-                {
-                  id: 'foundational',
-                  label: `Core${progress ? ` (${progress.completed_required}/${progress.total_required})` : ''}`,
-                },
-                { id: 'all', label: `All (${memories.length})` },
+                { id: 'recent', label: `Recent (${memories.length})` },
+                { id: 'themes', label: 'Themes' },
                 { id: 'resurfacing', label: `Resurface (${resurfacing.length})` },
               ]}
               activeTab={view}
@@ -566,13 +550,13 @@ export function MemoriesPage() {
             <div className="mb-6 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <h2 className="text-xl font-black uppercase tracking-tight text-[var(--brand-text-primary)]">
-                  {view === 'all' ? 'Your Graph' : view === 'resurfacing' ? 'Review Queue' : 'Core Beliefs'}
+                  {view === 'recent' ? 'Recent' : view === 'themes' ? 'By Theme' : 'Worth revisiting'}
                 </h2>
               </div>
             </div>
 
-            {/* Search Bar  only shown on 'all' view */}
-            {view === 'all' && (
+            {/* Search Bar  shown on recent and themes views */}
+            {(view === 'recent' || view === 'themes') && (
               <div className="mb-4 space-y-3">
                 {/* Search input */}
                 <div className="relative">
@@ -660,8 +644,8 @@ export function MemoriesPage() {
 
             {/* Inner Content */}
             <div>
-              {/* Demo Data Context Banner - Only show on "My Thoughts" view with demo data */}
-              {view === 'all' && memories.length > 0 && memories.some(m => m.audiopen_id?.startsWith('demo-')) && (
+              {/* Demo Data Context Banner - Only show on "Recent" view with demo data */}
+              {view === 'recent' && memories.length > 0 && memories.some(m => m.audiopen_id?.startsWith('demo-')) && (
                 <div className="mb-6 p-4 rounded-lg" style={{ background: '#111113', border: '2px solid rgba(59,130,246,0.25)', borderLeft: '4px solid rgba(59,130,246,0.6)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
                   <h3 className="font-black text-xs uppercase tracking-widest mb-2 flex items-center gap-2" style={{ color: "var(--brand-primary)" }}>
                     <Brain className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
@@ -669,7 +653,7 @@ export function MemoriesPage() {
                   </h3>
                   <p className="text-xs leading-relaxed mb-2" style={{ color: "var(--brand-primary)" }}>
                     These 8 thoughts demonstrate <strong>diverse interests</strong>: React development, woodworking, parenting, photography, ML, meditation, cooking, and design.
-                    Notice how they span <strong>technical skills AND hobbies</strong>  this is the key to powerful synthesis.
+                    Notice how they span <strong>technical skills AND hobbies</strong>  this helps us spot interesting connections.
                   </p>
                   <p className="text-xs" style={{ color: "var(--brand-primary)" }}>
                      <strong>Tip:</strong> Real-world usage works best with 510 thoughts covering both your professional expertise and personal interests.
@@ -697,11 +681,15 @@ export function MemoriesPage() {
                 </div>
               )}
 
-              {/* Foundational Tab */}
-              {view === 'foundational' && <FoundationalPrompts />}
+              {/* Core Beliefs banner — show for new users who haven't completed onboarding */}
+              {view === 'recent' && progress && progress.completed_required < progress.total_required && (
+                <div className="mb-6">
+                  <FoundationalPrompts />
+                </div>
+              )}
 
-              {/* My Memories Tab */}
-              {view === 'all' && (
+              {/* Recent Memories Tab */}
+              {view === 'recent' && (
                 <>
                   <SuggestedPrompts />
 
@@ -750,7 +738,7 @@ export function MemoriesPage() {
               {/* Empty State */}
               {!isLoading && displayMemories.length === 0 && (
                 <div className="mb-8 py-16 px-6 text-center">
-                  {view === 'all' && isFiltered ? (
+                  {(view === 'recent' || view === 'themes') && isFiltered ? (
                     /* Search returned no results */
                     <div className="max-w-xs mx-auto space-y-4">
                       <div className="inline-flex items-center justify-center w-14 h-14 rounded-full"
@@ -772,7 +760,7 @@ export function MemoriesPage() {
                         Clear filters
                       </button>
                     </div>
-                  ) : view === 'all' ? (
+                  ) : (view === 'recent' || view === 'themes') ? (
                     /* No memories at all — rich inspirational state */
                     <div className="max-w-sm mx-auto">
                       {/* Decorative orb */}
@@ -825,23 +813,11 @@ export function MemoriesPage() {
                 </div>
               )}
 
-              {/* My Memories: Theme Clusters or Recent View */}
-              {view === 'all' && !isLoading && memories.length > 0 && (
+              {/* Theme Clusters View */}
+              {view === 'themes' && !isLoading && memories.length > 0 && (
                 <>
-                  {/* Sub-navigation for Themes vs Recent - Minimal pill tabs */}
-                  <div className="mb-6">
-                    <PremiumTabs
-                      tabs={[
-                        { id: 'recent', label: 'Recent' },
-                        { id: 'themes', label: 'By Theme' }
-                      ]}
-                      activeTab={memoryView}
-                      onChange={(tabId) => setMemoryView(tabId as typeof memoryView)}
-                    />
-                  </div>
-
                   {/* Theme cluster detail view */}
-                  {selectedCluster && memoryView === 'themes' && (
+                  {selectedCluster && (
                     <div className="mb-8">
                       <button
                         onClick={() => setSelectedCluster(null)}
@@ -890,7 +866,7 @@ export function MemoriesPage() {
                   )}
 
                   {/* Theme clusters grid */}
-                  {!selectedCluster && memoryView === 'themes' && (
+                  {!selectedCluster && (
                     <>
                       {loadingClusters && clusters.length === 0 ? (
                         <div className="text-center py-12">
@@ -915,126 +891,127 @@ export function MemoriesPage() {
                     </>
                   )}
 
-                  {/* Recent memories view - Google Keep Style Masonry (Across then Down) */}
-                  {memoryView === 'recent' && (
-                    <>
-                      {/* Resurface a thought  one random memory 30+ days old */}
-                      <AnimatePresence>
-                        {!dismissedResurface && resurfacedMemory && !isFiltered && (
-                          <motion.div
-                            key="resurface"
-                            initial={{ opacity: 0, y: -12 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.97 }}
-                            transition={{ duration: 0.25 }}
-                            className="mb-6 rounded-lg p-4"
+                </>
+              )}
+
+              {/* Recent memories view - Google Keep Style Masonry (Across then Down) */}
+              {view === 'recent' && !isLoading && memories.length > 0 && (
+                <>
+                  {/* Resurface a thought  one random memory 30+ days old */}
+                  <AnimatePresence>
+                    {!dismissedResurface && resurfacedMemory && !isFiltered && (
+                      <motion.div
+                        key="resurface"
+                        initial={{ opacity: 0, y: -12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.97 }}
+                        transition={{ duration: 0.25 }}
+                        className="mb-6 rounded-lg p-4"
+                        style={{
+                          background: '#111113',
+                          border: '2px solid rgba(251,191,36,0.3)',
+                          borderLeft: '4px solid rgba(251,191,36,0.6)',
+                          boxShadow: '3px 3px 0 rgba(251,191,36,0.08)',
+                        }}
+                      >
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--brand-primary)" }}>
+                            A thought from {Math.floor((Date.now() - new Date(resurfacedMemory.created_at).getTime()) / 86400000)} days ago...
+                          </p>
+                          <button
+                            onClick={() => setDismissedResurface(true)}
+                            className="flex-shrink-0 h-5 w-5 flex items-center justify-center rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.1)]"
+                            style={{ color: "var(--brand-primary)" }}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                        <h4 className="font-semibold text-sm mb-1" style={{ color: "var(--brand-primary)" }}>
+                          {resurfacedMemory.title}
+                        </h4>
+                        <p className="text-sm line-clamp-3 mb-4" style={{ color: "var(--brand-primary)" }}>
+                          {resurfacedMemory.body}
+                        </p>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => setDismissedResurface(true)}
+                            className="text-[10px] px-3 py-1.5 rounded-lg font-black uppercase tracking-wide transition-colors"
                             style={{
-                              background: '#111113',
-                              border: '2px solid rgba(251,191,36,0.3)',
-                              borderLeft: '4px solid rgba(251,191,36,0.6)',
-                              boxShadow: '3px 3px 0 rgba(251,191,36,0.08)',
+                              background: 'var(--glass-surface)',
+                              border: '1.5px solid rgba(255,255,255,0.1)',
+                              color: "var(--brand-text-secondary)",
+                              boxShadow: '2px 2px 0 rgba(0,0,0,0.4)',
                             }}
                           >
-                            <div className="flex items-start justify-between gap-3 mb-3">
-                              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--brand-primary)" }}>
-                                A thought from {Math.floor((Date.now() - new Date(resurfacedMemory.created_at).getTime()) / 86400000)} days ago...
-                              </p>
-                              <button
-                                onClick={() => setDismissedResurface(true)}
-                                className="flex-shrink-0 h-5 w-5 flex items-center justify-center rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.1)]"
-                                style={{ color: "var(--brand-primary)" }}
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            </div>
-                            <h4 className="font-semibold text-sm mb-1" style={{ color: "var(--brand-primary)" }}>
-                              {resurfacedMemory.title}
-                            </h4>
-                            <p className="text-sm line-clamp-3 mb-4" style={{ color: "var(--brand-primary)" }}>
-                              {resurfacedMemory.body}
-                            </p>
-                            <div className="flex items-center gap-3">
-                              <button
-                                onClick={() => setDismissedResurface(true)}
-                                className="text-[10px] px-3 py-1.5 rounded-lg font-black uppercase tracking-wide transition-colors"
-                                style={{
-                                  background: 'var(--glass-surface)',
-                                  border: '1.5px solid rgba(255,255,255,0.1)',
-                                  color: "var(--brand-text-secondary)",
-                                  boxShadow: '2px 2px 0 rgba(0,0,0,0.4)',
-                                }}
-                              >
-                                Dismiss
-                              </button>
-                              <button
-                                onClick={() => handleOpenDetail(resurfacedMemory)}
-                                className="text-[10px] px-3 py-1.5 rounded-lg font-black uppercase tracking-wide transition-colors"
-                                style={{
-                                  background: 'rgba(251,191,36,0.12)',
-                                  border: '1.5px solid rgba(251,191,36,0.4)',
-                                  color: "var(--brand-text-secondary)",
-                                  boxShadow: '2px 2px 0 rgba(251,191,36,0.1)',
-                                }}
-                              >
-                                Connect to today
-                              </button>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-
-                      {/* Pinned Thoughts Section */}
-                      {pinnedMemories.length > 0 && !searchQuery && activeTags.length === 0 && (
-                        <div className="mb-6">
-                          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--brand-primary)" }}>
-                            <Pin className="w-3.5 h-3.5 text-brand-text-secondary" style={{ fill: 'currentColor' }} />
-                            Pinned
-                          </h3>
-                          <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
-                            {pinnedMemories.map((memory) => (
-                              <motion.div
-                                key={memory.id}
-                                onClick={() => handleOpenDetail(memory)}
-                                whileHover={{ y: -2 }}
-                                className="flex-shrink-0 w-56 rounded-xl p-3 cursor-pointer transition-all"
-                                style={{
-                                  background: 'linear-gradient(135deg, var(--glass-surface-hover) 0%, var(--glass-surface) 100%)',
-                                  boxShadow: 'inset 0 0 0 1px rgba(251,191,36,0.2), 0 4px 12px rgba(0,0,0,0.2)',
-                                  borderTop: '2px solid rgba(251,191,36,0.4)',
-                                }}
-                              >
-                                <h4 className="text-sm font-semibold truncate mb-1" style={{ color: "var(--brand-primary)" }}>
-                                  {memory.title}
-                                </h4>
-                                {memory.checklist_items && memory.checklist_items.length > 0 ? (
-                                  <div className="flex flex-col gap-0.5">
-                                    {memory.checklist_items.slice(0, 3).map((item) => (
-                                      <div key={item.id} className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--brand-primary)', opacity: item.checked ? 0.4 : 0.8 }}>
-                                        <span style={{ fontSize: '9px' }}>{item.checked ? '☑' : '☐'}</span>
-                                        <span style={{ textDecoration: item.checked ? 'line-through' : 'none' }} className="truncate">{item.text}</span>
-                                      </div>
-                                    ))}
-                                    {memory.checklist_items.length > 3 && (
-                                      <span className="text-[10px]" style={{ color: 'var(--brand-primary)', opacity: 0.4 }}>+{memory.checklist_items.length - 3} more</span>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <p className="text-xs line-clamp-2 leading-relaxed" style={{ color: "var(--brand-primary)" }}>
-                                    {memory.body}
-                                  </p>
-                                )}
-                                <span className="text-[10px] mt-2 block" style={{ color: "var(--brand-primary)" }}>
-                                  {new Date(memory.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                </span>
-                              </motion.div>
-                            ))}
-                          </div>
+                            Dismiss
+                          </button>
+                          <button
+                            onClick={() => handleOpenDetail(resurfacedMemory)}
+                            className="text-[10px] px-3 py-1.5 rounded-lg font-black uppercase tracking-wide transition-colors"
+                            style={{
+                              background: 'rgba(251,191,36,0.12)',
+                              border: '1.5px solid rgba(251,191,36,0.4)',
+                              color: "var(--brand-text-secondary)",
+                              boxShadow: '2px 2px 0 rgba(251,191,36,0.1)',
+                            }}
+                          >
+                            Connect to today
+                          </button>
                         </div>
-                      )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
-                      <MasonryGrid memories={displayMemories} onEdit={handleOpenDetail} onDelete={handleDelete} />
-                    </>
+                  {/* Pinned Thoughts Section */}
+                  {pinnedMemories.length > 0 && !searchQuery && activeTags.length === 0 && (
+                    <div className="mb-6">
+                      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--brand-primary)" }}>
+                        <Pin className="w-3.5 h-3.5 text-brand-text-secondary" style={{ fill: 'currentColor' }} />
+                        Pinned
+                      </h3>
+                      <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+                        {pinnedMemories.map((memory) => (
+                          <motion.div
+                            key={memory.id}
+                            onClick={() => handleOpenDetail(memory)}
+                            whileHover={{ y: -2 }}
+                            className="flex-shrink-0 w-56 rounded-xl p-3 cursor-pointer transition-all"
+                            style={{
+                              background: 'linear-gradient(135deg, var(--glass-surface-hover) 0%, var(--glass-surface) 100%)',
+                              boxShadow: 'inset 0 0 0 1px rgba(251,191,36,0.2), 0 4px 12px rgba(0,0,0,0.2)',
+                              borderTop: '2px solid rgba(251,191,36,0.4)',
+                            }}
+                          >
+                            <h4 className="text-sm font-semibold truncate mb-1" style={{ color: "var(--brand-primary)" }}>
+                              {memory.title}
+                            </h4>
+                            {memory.checklist_items && memory.checklist_items.length > 0 ? (
+                              <div className="flex flex-col gap-0.5">
+                                {memory.checklist_items.slice(0, 3).map((item) => (
+                                  <div key={item.id} className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--brand-primary)', opacity: item.checked ? 0.4 : 0.8 }}>
+                                    <span style={{ fontSize: '9px' }}>{item.checked ? '☑' : '☐'}</span>
+                                    <span style={{ textDecoration: item.checked ? 'line-through' : 'none' }} className="truncate">{item.text}</span>
+                                  </div>
+                                ))}
+                                {memory.checklist_items.length > 3 && (
+                                  <span className="text-[10px]" style={{ color: 'var(--brand-primary)', opacity: 0.4 }}>+{memory.checklist_items.length - 3} more</span>
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-xs line-clamp-2 leading-relaxed" style={{ color: "var(--brand-primary)" }}>
+                                {memory.body}
+                              </p>
+                            )}
+                            <span className="text-[10px] mt-2 block" style={{ color: "var(--brand-primary)" }}>
+                              {new Date(memory.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </span>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
                   )}
+
+                  <MasonryGrid memories={displayMemories} onEdit={handleOpenDetail} onDelete={handleDelete} />
                 </>
               )}
 

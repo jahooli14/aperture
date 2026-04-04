@@ -134,7 +134,7 @@ export const SuggestionCard = memo(function SuggestionCard({
             {/* Novelty */}
             <div className="flex-1">
               <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--brand-primary)" }}>
-                Novelty
+                How fresh
               </div>
               <div className="h-1.5 rounded-full bg-[var(--glass-surface)] overflow-hidden">
                 <div
@@ -149,7 +149,7 @@ export const SuggestionCard = memo(function SuggestionCard({
             {/* Feasibility */}
             <div className="flex-1">
               <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--brand-primary)" }}>
-                Feasibility
+                How doable
               </div>
               <div className="h-1.5 rounded-full bg-[var(--glass-surface)] overflow-hidden">
                 <div
@@ -164,7 +164,7 @@ export const SuggestionCard = memo(function SuggestionCard({
             {/* Interest */}
             <div className="flex-1">
               <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--brand-primary)" }}>
-                Interest
+                How relevant
               </div>
               <div className="h-1.5 rounded-full bg-[var(--glass-surface)] overflow-hidden">
                 <div
@@ -197,12 +197,7 @@ export const SuggestionCard = memo(function SuggestionCard({
           {suggestion.capabilities && suggestion.capabilities.length > 0 && (
             <div className="mb-4 p-3 premium-glass-subtle rounded-lg">
               <p className="text-sm italic" style={{ color: "var(--brand-primary)" }}>
-                {suggestion.capabilities.length === 1
-                  ? `Draws on your ${suggestion.capabilities[0].name} experience`
-                  : suggestion.capabilities.length === 2
-                    ? `Combines your ${suggestion.capabilities[0].name} and ${suggestion.capabilities[1].name} skills`
-                    : `Draws on ${suggestion.capabilities.slice(0, 2).map(c => c.name).join(', ')}, and ${suggestion.capabilities.length - 2} other thing${suggestion.capabilities.length - 2 === 1 ? '' : 's'} you know`
-                }
+                Touches on: {suggestion.capabilities.map(c => c.name).join(', ')}
               </p>
             </div>
           )}

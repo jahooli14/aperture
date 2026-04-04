@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Brain, Users, Hash, Heart, Link2, ArrowRight } from 'lucide-react'
+import { Brain, Users, Hash, Heart, Link2, ArrowRight, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useJourneyStore } from '../../stores/useJourneyStore'
 
@@ -21,8 +21,6 @@ export function ExtractionSummary() {
   const { incrementDataPoints, onboardingCompletedAt } = useJourneyStore()
 
   useEffect(() => {
-    let dismissTimer: ReturnType<typeof setTimeout>
-
     const handleExtraction = (e: CustomEvent<ExtractionDetail>) => {
       setExtraction(e.detail)
       setVisible(true)
@@ -31,17 +29,11 @@ export function ExtractionSummary() {
       if (onboardingCompletedAt) {
         incrementDataPoints()
       }
-
-      // Show longer when there's a bridge insight worth reading
-      const duration = e.detail.bridgeInsight ? 7000 : 4000
-      clearTimeout(dismissTimer)
-      dismissTimer = setTimeout(() => setVisible(false), duration)
     }
 
     window.addEventListener('memory-extracted', handleExtraction as EventListener)
     return () => {
       window.removeEventListener('memory-extracted', handleExtraction as EventListener)
-      clearTimeout(dismissTimer)
     }
   }, [onboardingCompletedAt])
 
@@ -54,7 +46,6 @@ export function ExtractionSummary() {
           exit={{ opacity: 0, y: 20, scale: 0.95 }}
           transition={{ type: 'spring', damping: 20, stiffness: 300 }}
           className="fixed bottom-24 left-4 right-4 z-50 md:left-1/2 md:-translate-x-1/2 md:w-auto md:max-w-sm"
-          onClick={() => setVisible(false)}
         >
           <div className="px-4 py-3 rounded-2xl bg-[#1a1f35]/95 backdrop-blur-xl border border-[var(--glass-surface-hover)] shadow-2xl">
             {/* Row 1: extraction stats */}
@@ -92,6 +83,15 @@ export function ExtractionSummary() {
                   </span>
                 )}
               </div>
+              {/* Dismiss button */}
+              <button
+                onClick={() => setVisible(false)}
+                className="ml-auto flex-shrink-0 p-1 rounded-md transition-colors hover:bg-[rgba(255,255,255,0.08)]"
+                style={{ color: 'var(--brand-text-muted)' }}
+                title="Dismiss"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
             </div>
 
             {/* Row 1.5: flywheel feedback — shown when connections found */}

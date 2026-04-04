@@ -83,7 +83,7 @@ export function ProgressiveLoading({ messages, duration, className = '' }: Progr
 export const LoadingPresets = {
   synthesis: [
     { time: 0, message: 'Looking for patterns in your ideas...', icon: '...' },
-    { time: 5000, message: 'Finding cross-domain patterns...', icon: '...' },
+    { time: 5000, message: 'Connecting the dots...', icon: '...' },
     { time: 12000, message: 'Generating project ideas...', icon: '...' },
     { time: 20000, message: 'Evaluating feasibility...', icon: '...' },
     { time: 28000, message: 'Almost ready...', icon: '...' },
@@ -92,8 +92,8 @@ export const LoadingPresets = {
   voiceProcessing: [
     { time: 0, message: 'Voice note saved', icon: '...' },
     { time: 3000, message: 'Transcribing audio...', icon: '...' },
-    { time: 10000, message: 'Analyzing content...', icon: '...' },
-    { time: 18000, message: 'Extracting insights...', icon: '...' },
+    { time: 10000, message: 'Reading your note...', icon: '...' },
+    { time: 18000, message: 'Finding what\'s interesting...', icon: '...' },
     { time: 25000, message: 'Finding connections...', icon: '...' },
   ],
 

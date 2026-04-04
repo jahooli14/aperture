@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useMemo, memo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, Send, Trash2, Mic, MicOff, ListOrdered, Check, ChevronRight, GripVertical, Film, Music, Book, MapPin, Box, Quote, Pencil, Monitor, Gamepad2, Calendar, Star, SortAsc, ChevronDown, Copy, FileText, Brain, Link as LinkIcon, BookOpen, Loader2, RefreshCw, Settings2, ToggleLeft, ToggleRight, Wrench } from 'lucide-react'
+import { ArrowLeft, Send, Trash2, Mic, MicOff, ListOrdered, Check, ChevronRight, GripVertical, Pencil, Star, SortAsc, ChevronDown, Copy, Brain, Link as LinkIcon, BookOpen, Loader2, RefreshCw, Settings2, ToggleLeft, ToggleRight, Search, X } from 'lucide-react'
 import { useListStore } from '../stores/useListStore'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useReadingStore } from '../stores/useReadingStore'
@@ -17,44 +17,7 @@ import type { ListItem, ListType, ListSettings } from '../types'
 import { listHasStatus } from '../types'
 import { useToast } from '../components/ui/toast'
 import { BottomSheet, BottomSheetContent, BottomSheetHeader, BottomSheetTitle } from '../components/ui/bottom-sheet'
-
-// ============================================================================
-// Color / Icon helpers (duplicated from ListsPage to keep files self-contained)
-// ============================================================================
-
-const ListColor = (type: ListType) => {
-    switch (type) {
-        case 'film': return '239, 68, 68'
-        case 'music': return '236, 72, 153'
-        case 'tech': return '59, 130, 246'
-        case 'book': return '245, 158, 11'
-        case 'place': return '16, 185, 129'
-        case 'game': return '139, 92, 246'
-        case 'quote': return '167, 139, 250'
-        case 'event': return '251, 146, 60'
-        case 'software': return '34, 211, 238'
-        case 'article': return '251, 191, 36'
-        case 'fix': return '245, 158, 11'
-        default: return '148, 163, 184'
-    }
-}
-
-const ListIcon = ({ type, className, style }: { type: ListType, className?: string, style?: React.CSSProperties }) => {
-    switch (type) {
-        case 'film': return <Film className={className} style={style} />
-        case 'music': return <Music className={className} style={style} />
-        case 'tech': return <Monitor className={className} style={style} />
-        case 'book': return <Book className={className} style={style} />
-        case 'place': return <MapPin className={className} style={style} />
-        case 'game': return <Gamepad2 className={className} style={style} />
-        case 'software': return <Box className={className} style={style} />
-        case 'event': return <Calendar className={className} style={style} />
-        case 'quote': return <Quote className={className} style={style} />
-        case 'article': return <FileText className={className} style={style} />
-        case 'fix': return <Wrench className={className} style={style} />
-        default: return <Box className={className} style={style} />
-    }
-}
+import { ListIcon, ListColor } from '../lib/listTheme'
 
 // ============================================================================
 // Star Rating component
@@ -826,7 +789,12 @@ function MasonryListGrid({
     const [columns, setColumns] = useState(2)
 
     useEffect(() => {
-        const update = () => { if (window.innerWidth >= 1024) setColumns(3); else setColumns(2) }
+        const update = () => {
+            const w = window.innerWidth
+            if (w < 400) setColumns(1)
+            else if (w < 768) setColumns(2)
+            else setColumns(3)
+        }
         update()
         window.addEventListener('resize', update)
         return () => window.removeEventListener('resize', update)
@@ -1061,7 +1029,7 @@ function ArticleListMode({ list, navigate }: ArticleListModeProps) {
 export default function ListDetailPage() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
-    const { lists, currentListItems, currentListId, loading, fetchListItems, addListItem, fetchLists, deleteListItem, reorderItems, updateListItemStatus, updateListItemMetadata, updateListSettings } = useListStore()
+    const { lists, currentListItems, currentListId, loading, fetchListItems, addListItem, fetchLists, deleteListItem, reorderItems, updateListItemStatus, updateListItemMetadata, updateListSettings, updateList } = useListStore()
     const { memories } = useMemoryStore()
     const { addToast } = useToast()
 
@@ -1082,6 +1050,8 @@ export default function ListDetailPage() {
     const displayItems = isCorrectList ? currentListItems : []
 
     const [inputText, setInputText] = useState('')
+    const [searchQuery, setSearchQuery] = useState('')
+    const [showSearch, setShowSearch] = useState(false)
 
     const [isVoiceMode, setIsVoiceMode] = useState(false)
     const [isReordering, setIsReordering] = useState(false)
@@ -1176,6 +1146,17 @@ export default function ListDetailPage() {
     // Filter + sort items
     const filteredItems = useMemo(() => {
         let items = displayItems
+
+        // Apply search filter
+        if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase()
+            items = items.filter(i =>
+                i.content.toLowerCase().includes(q) ||
+                i.metadata?.description?.toLowerCase().includes(q) ||
+                i.metadata?.subtitle?.toLowerCase().includes(q)
+            )
+        }
+
         // When status is disabled, show all items regardless of filter
         if (!hasStatus) return sortItems(items, sortOption)
         if (statusFilter === 'queue') {
@@ -1188,7 +1169,9 @@ export default function ListDetailPage() {
             return sortItems(items, sortOption)
         }
         return sortItems(items, sortOption)
-    }, [displayItems, statusFilter, sortOption, hasStatus])
+    }, [displayItems, statusFilter, sortOption, hasStatus, searchQuery])
+
+    const inferredStatus = statusFilter === 'completed' ? 'completed' as const : 'pending' as const
 
     const handleAddItem = async (e?: React.FormEvent) => {
         e?.preventDefault()
@@ -1201,14 +1184,14 @@ export default function ListDetailPage() {
         await addListItem({
             list_id: id,
             content,
-            status: 'pending'
+            status: inferredStatus
         })
     }
 
     const handleVoiceTranscript = async (text: string) => {
         if (!text.trim() || !id) return
         setIsVoiceMode(false)
-        await addListItem({ list_id: id, content: text.trim(), status: 'pending' })
+        await addListItem({ list_id: id, content: text.trim(), status: inferredStatus })
     }
 
     const handleReorder = async (newItems: ListItem[]) => {
@@ -1472,6 +1455,44 @@ export default function ListDetailPage() {
                 )}
             </div>
 
+            {/* Search bar - show toggle when 10+ items, or when user has activated it */}
+            {!isReordering && displayItems.length > 0 && (
+                <div className="px-4 sm:px-6 lg:px-8 max-w-5xl">
+                    {(showSearch || displayItems.length >= 10) && (
+                        <div className="relative mb-4">
+                            <div className="flex items-center gap-2 bg-zinc-900/60 backdrop-blur-xl rounded-xl px-3 py-2"
+                                style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface-hover)' }}>
+                                <Search className="h-4 w-4 text-zinc-500 flex-shrink-0" />
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                    placeholder="Search items..."
+                                    className="flex-1 bg-transparent text-sm text-[var(--brand-text-primary)] placeholder:text-zinc-600 focus:outline-none uppercase tracking-tight font-medium"
+                                />
+                                {searchQuery && (
+                                    <button
+                                        onClick={() => setSearchQuery('')}
+                                        className="h-5 w-5 flex items-center justify-center rounded-full bg-zinc-800 text-zinc-400 hover:text-[var(--brand-text-primary)] transition-colors"
+                                    >
+                                        <X className="h-3 w-3" />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                    {displayItems.length < 10 && !showSearch && (
+                        <button
+                            onClick={() => setShowSearch(true)}
+                            className="mb-4 flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[var(--glass-surface-hover)] text-brand-text-muted hover:text-[var(--brand-text-primary)] hover:border-white/20 transition-all"
+                        >
+                            <Search className="h-3 w-3" />
+                            <span className="text-[10px] font-black uppercase tracking-widest">Search</span>
+                        </button>
+                    )}
+                </div>
+            )}
+
             {/* Items Grid */}
             <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-48 max-w-5xl">
                 <AnimatePresence mode="wait">
@@ -1570,6 +1591,45 @@ export default function ListDetailPage() {
                         </div>
                     </BottomSheetHeader>
                     <div className="mt-6 space-y-6">
+                        {/* Editable title and description */}
+                        <div>
+                            <p className="text-xs font-bold text-brand-text-muted uppercase tracking-widest mb-3">Collection Info</p>
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mb-1 block">Title</label>
+                                    <input
+                                        type="text"
+                                        defaultValue={list?.title || ''}
+                                        key={`title-${list?.id}`}
+                                        onBlur={(e) => {
+                                            const val = e.target.value.trim()
+                                            if (val && val !== list?.title && list) {
+                                                updateList(list.id, { title: val })
+                                            }
+                                        }}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
+                                        className="w-full bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] rounded-lg px-3 py-2 text-sm text-[var(--brand-text-primary)] focus:outline-none focus:border-white/30 transition-colors uppercase tracking-tight font-bold"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mb-1 block">Description</label>
+                                    <textarea
+                                        defaultValue={list?.description || ''}
+                                        key={`desc-${list?.id}`}
+                                        onBlur={(e) => {
+                                            const val = e.target.value.trim()
+                                            if (list && val !== (list.description || '')) {
+                                                updateList(list.id, { description: val || undefined })
+                                            }
+                                        }}
+                                        rows={2}
+                                        className="w-full bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] rounded-lg px-3 py-2 text-sm text-[var(--brand-text-primary)] focus:outline-none focus:border-white/30 transition-colors resize-none"
+                                        placeholder="Add a description..."
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Status tracking toggle */}
                         <div>
                             <div className="flex items-center justify-between">

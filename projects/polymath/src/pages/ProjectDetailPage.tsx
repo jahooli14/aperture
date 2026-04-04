@@ -1011,6 +1011,40 @@ export function ProjectDetailPage() {
                     <div className="h-px bg-white/20 flex-grow" />
                   </div>
                 </div>
+
+                {/* All Tasks Complete Banner */}
+                {tasks.length > 0 && tasks.every((t: any) => t.done) && (
+                  <div
+                    className="mb-4 p-5 rounded-2xl text-center"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(34,197,94,0.15) 0%, rgba(59,130,246,0.12) 50%, rgba(168,85,247,0.1) 100%)',
+                      border: '1.5px solid rgba(34,197,94,0.3)',
+                      boxShadow: '0 0 24px rgba(34,197,94,0.08)',
+                    }}
+                  >
+                    <p className="text-lg font-black uppercase tracking-wider text-emerald-400 mb-1">
+                      All tasks complete!
+                    </p>
+                    <p className="text-xs text-[var(--brand-text-secondary)] mb-4 opacity-70">
+                      Every action item is done. Time to ship?
+                    </p>
+                    <button
+                      onClick={() => {
+                        handleStatusChange('completed')
+                      }}
+                      className="px-6 py-3 rounded-xl font-black uppercase text-sm tracking-widest transition-all active:scale-95"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(34,197,94,0.25) 0%, rgba(59,130,246,0.2) 100%)',
+                        border: '2px solid rgba(34,197,94,0.5)',
+                        color: 'rgb(34,197,94)',
+                        boxShadow: '0 4px 16px rgba(34,197,94,0.15)',
+                      }}
+                    >
+                      Ship It
+                    </button>
+                  </div>
+                )}
+
                 <TaskList
                   tasks={project.metadata?.tasks?.filter((task, index, self) =>
                     index === self.findIndex((t) => (
@@ -1080,11 +1114,23 @@ export function ProjectDetailPage() {
                 />
               </div>
           {/* Brain Dump / Studio */}
-          <details className="mt-8 pb-8 group">
+          <details className="mt-8 pb-8 group" open={!!project.metadata?.studio_draft}>
             <summary className="cursor-pointer text-[10px] font-black uppercase tracking-[0.3em] flex items-center gap-2 list-none select-none"
               style={{ color: 'var(--brand-text-secondary)' }}
             >
               <span className="flex-1">Brain Dump</span>
+              {project.metadata?.studio_draft && (
+                <span
+                  className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full mr-1"
+                  style={{
+                    background: 'rgba(99,102,241,0.12)',
+                    color: 'rgba(129,140,248,0.9)',
+                    border: '1px solid rgba(99,102,241,0.2)',
+                  }}
+                >
+                  Draft in progress
+                </span>
+              )}
               <ChevronDown className="h-3 w-3 transition-transform group-open:rotate-180" />
             </summary>
             <div className="mt-4">

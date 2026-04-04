@@ -160,14 +160,14 @@ export function MultiPerspectiveSuggestions({
       >
         <div className="flex-1 pr-4">
           <p className="text-sm text-[var(--brand-text-primary)] leading-relaxed font-medium">
-            Summon distinct perspectives to analyze your trajectory.
+            Get different takes on where to go next.
           </p>
         </div>
         <button
           onClick={handleGenerate}
           className="flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all active:scale-[0.98] brand-gradient text-brand-text-primary shadow-lg shadow-indigo-500/20"
         >
-          Assemble
+          Get suggestions
         </button>
       </div>
     )
@@ -209,7 +209,7 @@ export function MultiPerspectiveSuggestions({
               <SkeletonPerspective key={i} delay={i * 0.08} />
             ))}
             <p className="text-center text-xs py-1" style={{ color: "var(--brand-primary)" }}>
-              Your advisors are thinking...
+              Generating suggestions...
             </p>
           </>
         )}
@@ -267,7 +267,7 @@ export function MultiPerspectiveSuggestions({
             }}
           >
             <MarkdownRenderer
-              content={`**Council synthesis:** ${result.synthesized}`}
+              content={`**Bottom line:** ${result.synthesized}`}
               className="text-xs italic"
               style={{ color: 'var(--brand-text-secondary)' }}
             />

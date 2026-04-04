@@ -1,7 +1,7 @@
 import React, { useState, memo, useCallback, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { Edit, Trash2, Copy, Share2, Pin, Sprout, Film, Book, Music, MapPin, Gamepad2, Monitor, FileText, Box, CheckSquare, Square } from 'lucide-react'
+import { Edit, Trash2, Copy, Share2, Pin, Sprout, Film, Book, Music, MapPin, Gamepad2, Monitor, FileText, Box, CheckSquare, Square, Link2 } from 'lucide-react'
 import type { Memory, BridgeWithMemories, ChecklistItem } from '../types'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useToast } from './ui/toast'
@@ -429,12 +429,29 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
           className="flex items-center justify-between gap-2 px-3 pt-1.5 pb-2.5 mt-1.5"
           style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
         >
-          <span
-            className="text-[10px] tabular-nums"
-            style={{ color: 'var(--brand-text-muted)', opacity: 0.5 }}
-          >
-            {displayDate}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span
+              className="text-[10px] tabular-nums"
+              style={{ color: 'var(--brand-text-muted)', opacity: 0.5 }}
+            >
+              {displayDate}
+            </span>
+
+            {/* Connection hint — shown when entities suggest bridges exist */}
+            {memory.entities && (
+              (memory.entities.people?.length || 0) +
+              (memory.entities.topics?.length || 0) +
+              (memory.entities.places?.length || 0)
+            ) > 0 && (
+              <span
+                className="inline-flex items-center gap-0.5"
+                style={{ color: 'var(--brand-text-muted)', opacity: 0.35 }}
+                title="Has connections"
+              >
+                <Link2 className="w-2.5 h-2.5" />
+              </span>
+            )}
+          </div>
 
           <div className="flex items-center gap-1.5 flex-shrink-0">
 

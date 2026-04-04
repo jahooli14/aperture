@@ -42,9 +42,7 @@ export async function getCohesiveSummary(userId: string): Promise<CohesiveSummar
     LISTS: ${recentLists?.map(l => l.title).join(', ') || 'None'}
   `
 
-  const prompt = `You are the Polymath Cohesion Engine. 
-  Your goal is to look at all these disparate items and provide a unified, magical "State of the Union" and 2 "Flow" suggestions.
-  A "Flow" is a connection between pillars (e.g., Turning a thought into a project task, or adding a reading link to a list).
+  const prompt = `Look at what this person has been doing across their projects, notes, todos, and reading. Write a quick 1-2 sentence summary of where things stand, then suggest 2 things that could connect.
 
   USER CONTEXT:
   ${context}

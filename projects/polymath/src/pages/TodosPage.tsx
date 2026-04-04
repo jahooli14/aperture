@@ -81,7 +81,7 @@ const COMPLETION_TOASTS = [
   { title: 'One less thing.' },
   { title: 'Knocked out.' },
   { title: 'Keep going.' },
-  { title: 'Building momentum.' },
+  { title: 'Keep going.' },
   { title: 'That\'s the one.' },
   { title: 'Clean.' },
   { title: 'On a roll.' },
@@ -266,7 +266,7 @@ export function TodosPage() {
               your <span className="text-brand-primary">todos</span>
             </h1>
             <p className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mt-1">
-              {dayName}, {dateStr} • {streakMessage || 'Building momentum.'}
+              {dayName}, {dateStr} • {streakMessage || 'Keep going.'}
             </p>
           </div>
 

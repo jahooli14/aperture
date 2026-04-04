@@ -186,13 +186,13 @@ async function handleAnalyze(req: VercelRequest, res: VercelResponse) {
       ? `\n\nThey also shared 3 books they've enjoyed:\n${books.map((b, i) => `${i + 1}. "${b.title}" by ${b.author}`).join('\n')}`
       : ''
 
-    const prompt = `You are an insightful analyst helping someone discover hidden patterns in how they think.
+    const prompt = `You've just listened to someone talk about their life, interests, and skills. Read between the lines — notice what connects across what they said. Be specific, not generic.
 
 Below are their responses to 5 onboarding questions, spoken out loud as voice notes — so the language is natural and conversational. ${books && books.length > 0 ? 'They also shared 3 books they\'ve enjoyed.' : ''}
 
 ${transcriptBlock}${bookBlock}
 
-Your job is to read deeply between the lines — not just summarise what they said, but surface the **non-obvious connections** between their interests, skills, and the things they care about. Treat each response as a window into how their mind works.
+Your job is to read deeply between the lines — not just summarise what they said, but notice what links up across the different things they talked about — stuff they probably haven't connected themselves yet.
 
 Return a JSON object with these fields:
 

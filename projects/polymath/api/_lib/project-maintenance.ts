@@ -28,13 +28,7 @@ export async function identifyRottingProjects(userId: string): Promise<any[]> {
 }
 
 export async function generateZebraReport(project: any): Promise<string> {
-  const prompt = `You are the APERTURE NARRATOR. This project is being archived. 
-  Generate a high-contrast "Zebra Report" (max 150 words).
-  
-  Focus on:
-  1. Lessons Learned: Why did we stall? What did we prove?
-  2. Scavenge: Which parts of this project (code, ideas, research) should be saved for the next hunt?
-  3. The 80/20 Exit: Why is 80% completion good enough for now?
+  const prompt = `This project is being shelved. Write a quick honest summary (under 150 words): what worked, what stalled, and what parts are worth saving for later.
   
   Project Title: "${project.title}"
   Project Description: "${project.description || 'No description provided.'}"
