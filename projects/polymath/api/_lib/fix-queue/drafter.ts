@@ -31,42 +31,50 @@ SEVERITY: ${annoyance.severity}
 USER EMAIL: ${annoyance.user_email}
 
 Design a fix using ONLY these action types:
-1. send_email: Send a reminder/notification email
-2. send_email_digest: Aggregate and send a summary email
-3. http_request: Call an external API (weather, etc.)
-4. smart_home: Control Samsung Frame TV, Sonos speakers, or bird cam
+
+1. send_email: Simple email reminder/notification
+   { "type": "send_email", "to": "email", "subject": "...", "body": "HTML body" }
+
+2. weather_email: Email with live weather data injected (Open-Meteo, free)
+   { "type": "weather_email", "to": "email", "subject": "...", "lat": 51.5074, "lon": -0.1278, "template": "Good morning! Here's the weather:<br><br>{{weather}}<br><br>Have a great day." }
+
+3. send_email_digest: Aggregate and send a summary email
+   { "type": "send_email_digest", "to": "email", "subject": "...", "items_query": "what to summarise" }
+
+4. http_request: Call an external API
+   { "type": "http_request", "url": "...", "method": "GET|POST|PUT" }
+
+5. smart_home: Control devices (Samsung Frame TV, Sonos speakers, bird cam)
+   { "type": "smart_home", "device": "frame_tv|sonos|bird_cam", "command": "...", "params": {} }
+
+   Frame TV commands: art_mode_on, art_mode_off, next_art
+   Sonos commands: play, pause, set_volume (params: {volume: "30"}), play_favourite (params: {name: "Playlist Name"}), say (params: {text: "Hello"})
+   Bird cam commands: snapshot
 
 RULES:
-- The fix must be fully data-driven (no custom code needed)
+- The fix must be fully data-driven (no custom code)
 - Use cron expressions for scheduling (standard 5-field format)
-- Timezone should be Europe/London
+- Timezone: Europe/London
 - Keep it simple — one fix, one purpose
-- Estimate the monthly cost (emails via Resend are ~$0.001 each, API calls are free/cheap)
-- For weather: use Open-Meteo API (free, no key needed). London coords: lat=51.5074&lon=-0.1278
-- For email reminders: the "to" field should be the user's email
-- For smart home: just specify device + command, the runner handles the rest
+- Prefer weather_email over http_request+send_email when weather data is needed
+- For email "to" field: use the user's email address
+- Estimate monthly cost (emails ~$0.001 each, APIs free)
+- You can chain multiple actions in the actions array
 
 Return JSON:
 {
   "name": "short-kebab-case-name",
   "description": "One sentence explaining what this fix does and when",
   "schedule": {
-    "cron": "0 20 * * 2",
+    "cron": "0 7 * * *",
     "timezone": "Europe/London",
-    "description": "Every Tuesday at 8pm"
+    "description": "Every day at 7am"
   },
-  "actions": [
-    {
-      "type": "send_email",
-      "to": "user@example.com",
-      "subject": "Reminder subject",
-      "body": "The reminder message with any dynamic context"
-    }
-  ],
+  "actions": [ ... ],
   "estimated_cost": "$0.03/month"
 }
 
-If the annoyance cannot be reasonably automated (e.g. "fix the leaky tap"), return:
+If the annoyance CANNOT be automated at all (e.g. "fix the leaky tap"), return:
 { "name": null }
 
 Return only valid JSON.`

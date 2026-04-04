@@ -3,7 +3,7 @@
  * Data-driven fix specifications that the runner can execute
  */
 
-export type FixActionType = 'send_email' | 'send_email_digest' | 'http_request' | 'smart_home'
+export type FixActionType = 'send_email' | 'send_email_digest' | 'http_request' | 'smart_home' | 'weather_email'
 
 export type FixStatus = 'draft_pending' | 'drafted' | 'approved' | 'deployed' | 'manual' | 'rejected'
 
@@ -27,6 +27,15 @@ export interface SendEmailDigestAction {
   items_query: string   // description of what to aggregate
 }
 
+export interface WeatherEmailAction {
+  type: 'weather_email'
+  to: string
+  subject: string
+  lat: number           // e.g. 51.5074
+  lon: number           // e.g. -0.1278
+  template: string      // template with {{weather}} placeholder
+}
+
 export interface HttpRequestAction {
   type: 'http_request'
   url: string
@@ -42,7 +51,7 @@ export interface SmartHomeAction {
   params?: Record<string, string>
 }
 
-export type FixAction = SendEmailAction | SendEmailDigestAction | HttpRequestAction | SmartHomeAction
+export type FixAction = SendEmailAction | SendEmailDigestAction | WeatherEmailAction | HttpRequestAction | SmartHomeAction
 
 export interface FixDraft {
   name: string

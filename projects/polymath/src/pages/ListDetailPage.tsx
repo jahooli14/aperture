@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useMemo, memo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, Send, Trash2, Mic, MicOff, ListOrdered, Check, ChevronRight, GripVertical, Film, Music, Book, MapPin, Box, Quote, Pencil, Monitor, Gamepad2, Calendar, Star, SortAsc, ChevronDown, Copy, FileText, Brain, Link as LinkIcon, BookOpen, Loader2, RefreshCw, Settings2, ToggleLeft, ToggleRight } from 'lucide-react'
+import { ArrowLeft, Send, Trash2, Mic, MicOff, ListOrdered, Check, ChevronRight, GripVertical, Film, Music, Book, MapPin, Box, Quote, Pencil, Monitor, Gamepad2, Calendar, Star, SortAsc, ChevronDown, Copy, FileText, Brain, Link as LinkIcon, BookOpen, Loader2, RefreshCw, Settings2, ToggleLeft, ToggleRight, Wrench } from 'lucide-react'
 import { useListStore } from '../stores/useListStore'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useReadingStore } from '../stores/useReadingStore'
@@ -34,6 +34,7 @@ const ListColor = (type: ListType) => {
         case 'event': return '251, 146, 60'
         case 'software': return '34, 211, 238'
         case 'article': return '251, 191, 36'
+        case 'fix': return '245, 158, 11'
         default: return '148, 163, 184'
     }
 }
@@ -50,6 +51,7 @@ const ListIcon = ({ type, className, style }: { type: ListType, className?: stri
         case 'event': return <Calendar className={className} style={style} />
         case 'quote': return <Quote className={className} style={style} />
         case 'article': return <FileText className={className} style={style} />
+        case 'fix': return <Wrench className={className} style={style} />
         default: return <Box className={className} style={style} />
     }
 }
