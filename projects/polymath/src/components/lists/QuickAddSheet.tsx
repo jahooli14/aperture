@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Send } from 'lucide-react'
 import { useListStore } from '../../stores/useListStore'
+import { useToast } from '../ui/toast'
 import type { List } from '../../types'
 
 interface QuickAddSheetProps {
@@ -16,6 +17,7 @@ export function QuickAddSheet({ list, isOpen, onClose, listRgb }: QuickAddSheetP
     const [isSubmitting, setIsSubmitting] = useState(false)
     const inputRef = useRef<HTMLInputElement>(null)
     const { addListItem } = useListStore()
+    const { addToast } = useToast()
 
     useEffect(() => {
         if (isOpen) {
@@ -34,6 +36,10 @@ export function QuickAddSheet({ list, isOpen, onClose, listRgb }: QuickAddSheetP
                 list_id: list.id,
                 content: value.trim(),
                 status: 'pending'
+            })
+            addToast({
+                title: `Added to ${list.title}`,
+                variant: 'success'
             })
             onClose()
         } finally {

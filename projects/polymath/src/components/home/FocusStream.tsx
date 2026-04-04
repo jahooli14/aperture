@@ -4,7 +4,7 @@ import { Layers, Clock } from 'lucide-react'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useNavigate } from 'react-router-dom'
 import { ReviewDeck } from '../projects/ReviewDeck'
-import { PROJECT_COLORS } from '../projects/ProjectCard'
+import { getTheme } from '../../lib/projectTheme'
 import { Code, PenTool, Terminal, Lightbulb, Globe, Music, Video, BookOpen, Dribbble, Atom, Cpu } from 'lucide-react'
 
 const getProjectIcon = (type: string) => {
@@ -78,31 +78,6 @@ export function FocusStream() {
             //     .catch(err => console.error(`Failed to pre-fetch suggestions for ${project.id}`, err))
         })
     }, [dormantProjects])
-
-
-    const getTheme = (type: string, title: string) => {
-        const t = type?.toLowerCase().trim() || ''
-
-        let rgb = PROJECT_COLORS[t]
-
-        // Deterministic fallback if type is unknown or missing
-        if (!rgb) {
-            const keys = Object.keys(PROJECT_COLORS).filter(k => k !== 'default')
-            let hash = 0
-            for (let i = 0; i < title.length; i++) {
-                hash = title.charCodeAt(i) + ((hash << 5) - hash)
-            }
-            rgb = PROJECT_COLORS[keys[Math.abs(hash) % keys.length]]
-        }
-
-        return {
-            borderColor: `rgba(${rgb}, 0.25)`,
-            backgroundColor: `rgba(${rgb}, 0.08)`,
-            textColor: `rgb(${rgb})`,
-            rgb: rgb
-        }
-    }
-
 
 
     if (allProjects.length === 0) return null

@@ -48,7 +48,7 @@ When knowledge lake context is provided, scan for the most immediately actionabl
         persona: 'The Strategist',
         icon: '🧭',
         accentColor: 'blue',
-        systemPrompt: `You are The Strategist — a contrarian advisor who thinks in 10x leverage. Your job is to name what's being optimized for the wrong metric.
+        systemPrompt: `You are The Strategist — you zoom out and ask whether the work actually leads where they think. Name what they should stop doing, not just what to start.
 
 Zoom out. What's the end state? Does the current work path lead there? Scan the knowledge lake for recurring themes across notes, articles, and adjacent projects. If you see a pattern — the same idea appearing in 3 different places — that's signal. Name it. Tell them what the real bet is, not the current bet.
 
@@ -200,13 +200,13 @@ function synthesizePerspectives(perspectives: PerspectiveResult[]): string {
     const allCited = perspectives.flatMap(p => p.sourcesCited)
     const citeCounts = allCited.reduce((acc, s) => { acc[s] = (acc[s] || 0) + 1; return acc }, {} as Record<string, number>)
     const convergentSource = Object.entries(citeCounts).sort((a, b) => b[1] - a[1])[0]
-    if (convergentSource && convergentSource[1] >= 2) return `Multiple advisors independently surfaced "${convergentSource[0]}" — that's a signal. Whatever you do next, it runs through that.`
-    if (highConf.length >= 3) { const names = highConf.slice(0, 3).map(p => p.persona.replace('The ', '')); return `${names[0]}, ${names[1]}, and ${names[2]} all converge — rare council alignment. This is the move.` }
+    if (convergentSource && convergentSource[1] >= 2) return `Multiple advisors pointed to "${convergentSource[0]}" independently — worth paying attention to.`
+    if (highConf.length >= 3) { const names = highConf.slice(0, 3).map(p => p.persona.replace('The ', '')); return `${names[0]}, ${names[1]}, and ${names[2]} all converge — that's unusual. Probably the right move.` }
     if (highConf.length === 2) { const tension = perspectives.find(p => p.confidence === 'medium' && p.persona !== highConf[0].persona && p.persona !== highConf[1].persona); return `${highConf[0].persona} and ${highConf[1].persona} agree — strong signal.${tension ? ` Watch ${tension.persona}'s caution.` : ''}` }
     if (highConf.length === 1) return `${highConf[0].persona} has the sharpest read here. The others hedge — trust the one who doesn't.`
     const totalSources = new Set(allCited).size
-    if (totalSources > 0) return `The council pulled from ${totalSources} items in your knowledge lake. No clear consensus — but the sources they surfaced are worth reviewing.`
-    return 'The council sees multiple valid paths. This is a judgment call — pick the perspective that matches where your energy actually is today.'
+    if (totalSources > 0) return `The council pulled from ${totalSources} items in your notes and articles. No clear consensus — but the sources they surfaced are worth reviewing.`
+    return 'No clear consensus — pick the suggestion that matches your energy today.'
 }
 
 async function handleMultiPerspective(req: VercelRequest, res: VercelResponse) {

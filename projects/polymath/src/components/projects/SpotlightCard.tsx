@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Pin, ChevronRight } from 'lucide-react'
 import type { Project } from '../../types'
+import { getNextTask } from '../../lib/taskUtils'
 
 interface SpotlightCardProps {
   project: Project
@@ -46,9 +47,7 @@ export function SpotlightCard({
 }: SpotlightCardProps) {
   const config = typeConfig[type]
   const tasks = (project.metadata?.tasks || []) as any[]
-  const nextTask = tasks
-    .sort((a, b) => a.order - b.order)
-    .find(task => !task.done)
+  const nextTask = getNextTask(project)
   const totalTasks = tasks.length
   const completedTasks = tasks.filter(t => t.done).length
 

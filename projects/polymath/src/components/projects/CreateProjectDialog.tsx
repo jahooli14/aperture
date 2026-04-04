@@ -25,6 +25,7 @@ import { useToast } from '../ui/toast'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useAutoSuggestion } from '../../contexts/AutoSuggestionContext'
 import { SuggestionToast } from '../SuggestionToast'
+import { PROJECT_TYPES } from '../../lib/projectTheme'
 
 interface ConversationMessage {
   role: 'user' | 'model'
@@ -201,7 +202,7 @@ export function CreateProjectDialog({
         end_goal: data.end_goal || '',
         project_mode: data.project_mode === 'recurring' ? 'recurring' : 'completion',
         first_step: data.first_step || '',
-        type: (['Writing', 'Tech', 'Art', 'Music', 'Business', 'Creative'].includes(data.type)
+        type: ((PROJECT_TYPES as readonly string[]).includes(data.type)
           ? data.type
           : 'Creative'),
       })
@@ -509,7 +510,7 @@ export function CreateProjectDialog({
                 <div className="flex items-center gap-1 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                   {/* Type pills */}
                   <div className="flex items-center gap-1 overflow-x-auto scrollbar-none flex-1 min-w-0">
-                    {(['Writing', 'Tech', 'Art', 'Music', 'Business', 'Creative'] as const).map(cat => (
+                    {PROJECT_TYPES.map(cat => (
                       <button
                         key={cat}
                         type="button"

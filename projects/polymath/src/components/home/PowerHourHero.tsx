@@ -8,7 +8,7 @@ import { useProjectStore } from '../../stores/useProjectStore'
 import { useFocusStore } from '../../stores/useFocusStore'
 import { PowerHourReview } from './PowerHourReview'
 
-import { PROJECT_COLORS } from '../projects/ProjectCard'
+import { getTheme } from '../../lib/projectTheme'
 
 interface PowerTask {
     project_id: string
@@ -32,9 +32,9 @@ interface PowerTask {
 }
 
 const DURATION_OPTIONS = [
-    { value: 25, label: 'Spark', icon: Zap },
-    { value: 60, label: 'Ritual', icon: Flame },
-    { value: 150, label: 'Deep Dive', icon: Layers },
+    { value: 25, label: 'Quick', icon: Zap },
+    { value: 60, label: 'Standard', icon: Flame },
+    { value: 150, label: 'Long', icon: Layers },
 ]
 
 export function PowerHourHero() {
@@ -44,31 +44,24 @@ export function PowerHourHero() {
     const [selectedIndex, setSelectedIndex] = useState(0)
     const [isRefreshing, setIsRefreshing] = useState(false)
     const [showProjectPicker, setShowProjectPicker] = useState(false)
-    const [duration, setDuration] = useState(60)
+    const [duration, setDuration] = useState(() => {
+        try {
+            const stored = localStorage.getItem('polymath-power-hour-duration')
+            return stored ? parseInt(stored, 10) || 60 : 60
+        } catch { return 60 }
+    })
     const [showReview, setShowReview] = useState(false)
+
+    // Persist duration preference
+    useEffect(() => {
+        localStorage.setItem('polymath-power-hour-duration', String(duration))
+    }, [duration])
 
     const navigate = useNavigate()
 
     // Get all projects for the manual picker
     const { allProjects, updateProject } = useProjectStore()
     const activeProjects = allProjects.filter(p => ['active', 'upcoming', 'maintaining'].includes(p.status))
-
-    const getTheme = (type: string, title: string) => {
-        const t = type?.toLowerCase().trim() || ''
-        let rgb = PROJECT_COLORS[t]
-        if (!rgb) {
-            const keys = Object.keys(PROJECT_COLORS).filter(k => k !== 'default')
-            let hash = 0
-            for (let i = 0; i < title.length; i++) {
-                hash = title.charCodeAt(i) + ((hash << 5) - hash)
-            }
-            rgb = PROJECT_COLORS[keys[Math.abs(hash) % keys.length]]
-        }
-        return {
-            text: `rgb(${rgb})`,
-            rgb: rgb
-        }
-    }
 
     const mainTask = tasks[selectedIndex] || tasks[0]
     const currentProject = allProjects.find(p => p.id === mainTask?.project_id)
@@ -193,10 +186,10 @@ export function PowerHourHero() {
         <div className="relative overflow-hidden mb-12">
             <div className="zebra-card p-12 text-center border-2 border-dashed border-red-500/20 bg-brand-primary/5">
                 <Zap className="h-12 w-12 text-brand-text-secondary/20 mx-auto mb-4" />
-                <h2 className="text-xl font-black uppercase italic mb-2 tracking-tighter text-brand-text-secondary">Engine Offline</h2>
+                <h2 className="text-xl font-black uppercase italic mb-2 tracking-tighter text-brand-text-secondary">Couldn't load suggestions</h2>
                 <p className="text-[var(--brand-text-secondary)] text-sm max-w-sm mx-auto mb-6">{error}</p>
                 <button onClick={() => fetchPowerHour()} className="px-6 py-3 bg-brand-primary text-[var(--brand-text-primary)] font-black uppercase text-xs tracking-widest hover:bg-black transition-colors">
-                    Retry Feed
+                    Try again
                 </button>
             </div>
         </div>
@@ -206,10 +199,10 @@ export function PowerHourHero() {
         <div className="relative overflow-hidden mb-12">
             <div className="zebra-card p-12 text-center border-2 border-dashed border-white/20">
                 <Zap className="h-12 w-12 text-[var(--brand-text-primary)]/20 mx-auto mb-4" />
-                <h2 className="text-xl font-black uppercase italic mb-2 tracking-tighter">Engine Dormant</h2>
-                <p className="text-[var(--brand-text-muted)] text-sm max-w-sm mx-auto mb-6">Create or activate a project to initialize the hour.</p>
+                <h2 className="text-xl font-black uppercase italic mb-2 tracking-tighter">No active projects</h2>
+                <p className="text-[var(--brand-text-muted)] text-sm max-w-sm mx-auto mb-6">Start a project to get session suggestions.</p>
                 <button onClick={() => navigate('/projects')} className="px-6 py-3 bg-white text-black font-black uppercase text-xs tracking-widest hover:bg-zebra-accent transition-colors">
-                    Initialize Project
+                    Go to projects
                 </button>
             </div>
         </div>
@@ -351,7 +344,7 @@ export function PowerHourHero() {
                         style={{ backgroundColor: theme.text }}
                     >
                         {duration === 25 ? <Zap className="h-3 w-3" /> : duration === 150 ? <Layers className="h-3 w-3" /> : <Flame className="h-3 w-3" />}
-                        {duration === 25 ? 'Spark Session' : duration === 150 ? 'Deep Dive' : 'Power Hour'}
+                        {duration === 25 ? '25 min focus' : duration === 150 ? 'Deep focus' : 'Focus time'}
                     </div>
                 </div>
 
@@ -401,7 +394,7 @@ export function PowerHourHero() {
                             className="absolute top-16 right-4 z-30 w-72 glass-card glass-card-hover shadow-2xl max-h-80 overflow-y-auto"
                         >
                             <div className="p-3 bg-[var(--glass-surface)] border-b border-[var(--glass-surface-hover)] text-[10px] font-bold uppercase tracking-widest text-[var(--brand-text-muted)] aperture-header">
-                                Select Project Target
+                                Switch project
                             </div>
                             {activeProjects.map(p => {
                                 const pTheme = getTheme(p.type || 'other', p.title)
@@ -439,7 +432,7 @@ export function PowerHourHero() {
                                 <div className="flex items-center justify-between mb-2 mt-8 md:mt-0">
                                     <div className="flex items-center gap-2 font-bold text-[10px] uppercase tracking-widest aperture-header" style={{ color: theme.text }}>
                                         <Target className="h-3 w-3 fill-current" />
-                                        <span>Current Objective</span>
+                                        <span>What to work on</span>
                                         {mainTask.overhead_type && <span className="opacity-50"> {mainTask.overhead_type} Flow</span>}
                                     </div>
                                 </div>
@@ -468,20 +461,20 @@ export function PowerHourHero() {
                                     {(mainTask.ignition_tasks?.length || 0) > 0 && (
                                         <div className="flex items-center gap-1 text-brand-text-secondary">
                                             <Coffee className="h-3 w-3" />
-                                            <span>Ignition</span>
+                                            <span>Warm up</span>
                                         </div>
                                     )}
                                     <div className="w-px h-3 bg-white/20" />
                                     <div className="flex items-center gap-1 text-[var(--brand-text-primary)]">
                                         <Play className="h-3 w-3" />
-                                        <span>Flow</span>
+                                        <span>Main tasks</span>
                                     </div>
                                     {(mainTask.shutdown_tasks?.length || 0) > 0 && (
                                         <>
                                             <div className="w-px h-3 bg-white/20" />
                                             <div className="flex items-center gap-1 text-brand-primary">
                                                 <Moon className="h-3 w-3" />
-                                                <span>Parking</span>
+                                                <span>Wind down</span>
                                             </div>
                                         </>
                                     )}
@@ -515,7 +508,7 @@ export function PowerHourHero() {
                                             className="flex items-center gap-2 px-4 py-3 border border-[var(--glass-surface-hover)] rounded-xl hover:bg-[var(--glass-surface)] transition-all uppercase text-[10px] font-bold tracking-widest backdrop-blur-sm text-[var(--brand-text-primary)] aperture-header"
                                         >
                                             <BookOpen className="h-3.5 w-3.5" />
-                                            <span>Read Fuel</span>
+                                            <span>Related reading</span>
                                         </button>
                                     )}
                                 </div>

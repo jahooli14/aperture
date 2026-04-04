@@ -9,13 +9,15 @@ import { isNative, base64ToBlob } from '../lib/platform';
 
 interface UseCapacitorVoiceOptions {
   onTranscript: (text: string) => void;
+  onError?: (message: string) => void;
   maxDuration?: number; // seconds
   autoSubmit?: boolean;
 }
 
 export function useCapacitorVoice({
   onTranscript,
-  maxDuration = 30,
+  onError,
+  maxDuration = 120,
   autoSubmit = false
 }: UseCapacitorVoiceOptions) {
   const [isRecording, setIsRecording] = useState(false);
@@ -43,7 +45,7 @@ export function useCapacitorVoice({
 
     if (!SpeechRecognition) {
       console.warn('[Voice Init] Web Speech API NOT SUPPORTED in this browser');
-      alert('Web Speech API is not supported in this browser. Please use Chrome, Edge, or Safari.');
+      onError?.('Web Speech API is not supported in this browser. Please use Chrome, Edge, or Safari.');
       return;
     }
 
@@ -84,7 +86,7 @@ export function useCapacitorVoice({
       console.error('[Voice ERROR]', event.error, '- Will handle in onend');
       // Don't stop on 'no-speech' or 'aborted' - let onend handle restart
       if (event.error === 'not-allowed') {
-        alert('Microphone access denied. Please allow microphone access and try again.');
+        onError?.('Microphone access denied. Please allow microphone access and try again.');
         isRecordingRef.current = false;
         setIsRecording(false);
       } else if (event.error === 'network') {
@@ -109,7 +111,7 @@ export function useCapacitorVoice({
           if (!err.message || !err.message.includes('already started')) {
             isRecordingRef.current = false;
             setIsRecording(false);
-            alert('Recording stopped unexpectedly. Please try again.');
+            onError?.('Recording stopped unexpectedly. Please try again.');
           }
         }
       } else {
@@ -149,7 +151,7 @@ export function useCapacitorVoice({
       // Native platform: use Capacitor Voice Recorder
       const permitted = await checkNativePermission();
       if (!permitted) {
-        alert('Microphone permission is required for voice recording');
+        onError?.('Microphone permission is required for voice recording');
         return;
       }
 
@@ -160,7 +162,7 @@ export function useCapacitorVoice({
         startTimer();
       } catch (error) {
         console.error('Failed to start native recording:', error);
-        alert('Failed to start recording. Please try again.');
+        onError?.('Failed to start recording. Please try again.');
       }
     } else {
       // Web platform: use Web Speech API
@@ -168,7 +170,7 @@ export function useCapacitorVoice({
 
       if (!recognitionRef.current) {
         console.error('[Voice] Recognition not initialized! This should not happen.');
-        alert('Speech recognition is not supported in your browser. Please use Chrome, Edge, or Safari.');
+        onError?.('Speech recognition is not supported in your browser. Please use Chrome, Edge, or Safari.');
         return;
       }
 
@@ -190,7 +192,7 @@ export function useCapacitorVoice({
           isRecordingRef.current = true;
           startTimer();
         } else {
-          alert(`Failed to start recording: ${error.message}`);
+          onError?.(`Failed to start recording: ${error.message}`);
           setIsRecording(false);
           isRecordingRef.current = false;
         }
@@ -253,7 +255,7 @@ export function useCapacitorVoice({
         }
       } catch (error) {
         console.error('Failed to process recording:', error);
-        alert('Failed to process recording. Please try again.');
+        onError?.('Failed to process recording. Please try again.');
       } finally {
         setIsProcessing(false);
       }

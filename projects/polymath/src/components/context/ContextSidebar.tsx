@@ -237,7 +237,7 @@ export function ContextSidebar() {
                                                 AI Analysis
                                             </span>
                                             {analysisData?.lakeItemCount != null && analysisData.lakeItemCount > 0 && (
-                                                <div className="flex items-center gap-1" title={`${analysisData.lakeItemCount} corpus items used (${analysisData.semanticCount ?? 0} semantic)`}>
+                                                <div className="flex items-center gap-1" title={`Looked at ${analysisData.lakeItemCount} of your notes and articles`}>
                                                     <Database className="h-3 w-3 text-cyan-400" />
                                                     <span className="text-[10px] text-cyan-400 font-medium">{analysisData.lakeItemCount}</span>
                                                 </div>

@@ -695,6 +695,48 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
               </button>
             </div>
 
+            {/* ── Recent tags — tappable chips below toolbar ── */}
+            {recentTags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-2">
+                {recentTags.map((tag) => {
+                  const currentTags = formData.tags
+                    .split(',')
+                    .map((t) => t.trim())
+                    .filter((t) => t.length > 0)
+                  const isSelected = currentTags.includes(tag)
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => {
+                        if (isSelected) {
+                          const updated = currentTags.filter((t) => t !== tag).join(', ')
+                          setFormData({ ...formData, tags: updated })
+                        } else {
+                          const updated = [...currentTags, tag].join(', ')
+                          setFormData({ ...formData, tags: updated })
+                        }
+                      }}
+                      className="px-2.5 py-1 rounded-full text-[11px] font-medium transition-all active:scale-95"
+                      style={{
+                        background: isSelected
+                          ? 'rgba(99,102,241,0.15)'
+                          : 'rgba(255,255,255,0.04)',
+                        border: isSelected
+                          ? '1px solid rgba(99,102,241,0.35)'
+                          : '1px solid rgba(255,255,255,0.08)',
+                        color: isSelected
+                          ? 'rgba(165,148,249,0.9)'
+                          : 'var(--brand-text-muted)',
+                      }}
+                    >
+                      {tag}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
             {/* ── Voice seeds — below toolbar, passive, hidden once writing starts (text mode only) ── */}
             {!isChecklistMode && (
               <VoiceSeeds

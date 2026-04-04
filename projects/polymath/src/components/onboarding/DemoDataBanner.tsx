@@ -7,6 +7,7 @@
 import { useState } from 'react'
 import { X, Lightbulb, Trash2, Eye } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { useToast } from '../ui/toast'
 
 interface DemoDataBannerProps {
   onDismiss: () => void
@@ -16,6 +17,7 @@ interface DemoDataBannerProps {
 export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps) {
   const [isClearing, setIsClearing] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+  const { addToast } = useToast()
 
   const handleClearDemoData = async () => {
     setIsClearing(true)
@@ -24,7 +26,7 @@ export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         console.error('No user found')
-        alert('Not logged in')
+        addToast({ title: 'Not logged in', variant: 'destructive' })
         return
       }
 
@@ -54,12 +56,12 @@ export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps
       localStorage.setItem('clandestined_demo_dismissed', 'true')
 
       console.log('All data cleared successfully')
-      alert('Demo data cleared! Refreshing page...')
+      addToast({ title: 'Demo data cleared!', description: 'Refreshing page...', variant: 'success' })
 
       onDataCleared()
     } catch (error) {
       console.error('Error clearing demo data:', error)
-      alert('Error clearing data: ' + (error as Error).message)
+      addToast({ title: 'Error clearing data', description: (error as Error).message, variant: 'destructive' })
     } finally {
       setIsClearing(false)
     }

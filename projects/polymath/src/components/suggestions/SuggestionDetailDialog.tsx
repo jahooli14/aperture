@@ -231,7 +231,7 @@ export function SuggestionDetailDialog({
               >
                 <h3 className="text-sm font-semibold premium-text-platinum flex items-center gap-2">
                   <Brain className="h-4 w-4" />
-                  Inspired By Your Memories ({suggestion.memory_ids.length})
+                  Based on your thoughts ({suggestion.memory_ids.length})
                 </h3>
                 {expandedSections.has('memories') ? (
                   <ChevronUp className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
@@ -241,7 +241,7 @@ export function SuggestionDetailDialog({
               </button>
               {expandedSections.has('memories') && (
                 <p className="text-xs px-3 pb-3" style={{ color: "var(--brand-primary)" }}>
-                  This idea connects to {suggestion.memory_ids.length} of your past thoughts and experiences
+                  This came from things you've talked about before.
                 </p>
               )}
             </div>

@@ -28,29 +28,41 @@ export function CollisionReport() {
 
   if (loading || collisions.length === 0) return null
 
-  const top = collisions[0]
+  const shown = collisions.slice(0, 3)
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="attention-card p-4 cursor-pointer transition-all"
-      style={{ borderColor: 'var(--brand-primary)' }}
-      onClick={() => navigate('/insights')}
+      className="flex flex-col gap-2"
     >
-      <div className="flex items-center gap-2 mb-2">
+      <div className="flex items-center gap-2 mb-1">
         <Zap className="w-4 h-4 text-brand-primary" />
-        <span className="text-xs font-medium text-brand-primary uppercase tracking-wider">Unexpected collision</span>
+        <span className="text-xs font-medium text-brand-primary uppercase tracking-wider">
+          {shown.length === 1 ? 'Surprising connection' : `${shown.length} connections`}
+        </span>
       </div>
-      <p className="text-sm text-brand-text-primary leading-relaxed">
-        Your {top.source_type} <span className="text-brand-primary font-medium">"{top.source_title}"</span>
-        {' '}collided with {top.target_type} <span className="text-brand-primary font-medium">"{top.target_title}"</span>
-      </p>
-      {top.ai_reasoning && (
-        <p className="text-xs text-[var(--brand-text-secondary)] mt-1.5">{top.ai_reasoning}</p>
-      )}
-      <div className="flex items-center gap-1 mt-2 text-brand-primary text-xs">
-        <span>Explore</span>
+      {shown.map((c) => (
+        <div
+          key={c.id}
+          className="attention-card p-3 cursor-pointer transition-all"
+          style={{ borderColor: 'var(--brand-primary)' }}
+          onClick={() => navigate('/insights')}
+        >
+          <p className="text-sm text-brand-text-primary leading-relaxed">
+            Your {c.source_type} <span className="text-brand-primary font-medium">"{c.source_title}"</span>
+            {' '}connects to {c.target_type} <span className="text-brand-primary font-medium">"{c.target_title}"</span>
+          </p>
+          {c.ai_reasoning && (
+            <p className="text-xs text-[var(--brand-text-secondary)] mt-1 line-clamp-1">{c.ai_reasoning}</p>
+          )}
+        </div>
+      ))}
+      <div
+        className="flex items-center gap-1 text-brand-primary text-xs cursor-pointer hover:opacity-80 pl-1"
+        onClick={() => navigate('/insights')}
+      >
+        <span>Explore all</span>
         <ChevronRight className="w-3 h-3" />
       </div>
     </motion.div>

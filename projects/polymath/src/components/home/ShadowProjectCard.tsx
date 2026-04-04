@@ -118,7 +118,7 @@ export function ShadowProjectCard() {
                 className="text-[10px] font-black uppercase tracking-[0.25em]"
                 style={{ color: 'rgb(167,139,250)' }}
               >
-                Shadow Project
+                You might be building this
               </span>
               {shadow.is_new && (
                 <span

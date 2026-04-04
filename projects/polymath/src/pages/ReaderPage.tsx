@@ -322,7 +322,7 @@ export function ReaderPage() {
       })
       addToast({
         title: 'Thought captured',
-        description: 'Saved to your knowledge graph',
+        description: 'Saved to your thoughts',
         variant: 'success',
       })
       setShowVoiceNote(false)

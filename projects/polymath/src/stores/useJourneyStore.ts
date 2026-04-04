@@ -46,7 +46,7 @@ export const JOURNEY_CHALLENGES: DayChallenge[] = [
     description: 'Record a voice note — the more you share, the better your suggestions get.',
     action: 'voice_note',
     reward: 'Polymath is learning what you care about',
-    celebrationText: 'That thought is now part of your knowledge graph.',
+    celebrationText: 'Got it. That thought\'s saved.',
   },
   {
     day: 2,

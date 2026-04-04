@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, Check, GripVertical, ChevronDown, ChevronRight, Zap, ListTodo } from 'lucide-react'
+import { Plus, Trash2, Check, GripVertical, ChevronDown, ChevronRight, Zap, ListTodo, Clock } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { handleInputFocus } from '../../utils/keyboard'
 import { useTodoStore, selectByProject } from '../../stores/useTodoStore'
@@ -18,6 +18,7 @@ export interface Task {
   completed_at?: string
   // New Fields
   estimated_minutes?: number
+  estimate_set?: boolean
   is_ai_suggested?: boolean
   ai_reasoning?: string
   task_type?: 'ignition' | 'core' | 'shutdown'
@@ -160,7 +161,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
     const nextEstimate = nextIndex === -1 ? options[0] : options[nextIndex]
 
     const updatedTasks = tasks.map(task =>
-      task.id === taskId ? { ...task, estimated_minutes: nextEstimate } : task
+      task.id === taskId ? { ...task, estimated_minutes: nextEstimate, estimate_set: true } : task
     )
     onUpdate(updatedTasks)
   }
@@ -273,12 +274,16 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                         }}
                         className={cn(
                           "text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-xl transition-colors",
-                          task.estimated_minutes
+                          task.estimate_set
                             ? "bg-[rgba(255,255,255,0.1)] text-[var(--brand-text-primary)]/70 hover:bg-white/20"
-                            : "bg-[var(--glass-surface)] text-[var(--brand-text-primary)]/30 hover:bg-[rgba(255,255,255,0.1)]"
+                            : "bg-transparent text-[var(--brand-text-primary)]/20 hover:bg-[rgba(255,255,255,0.06)]"
                         )}
+                        title={task.estimate_set ? `Estimated: ${task.estimated_minutes}m` : 'Click to set estimate'}
                       >
-                        {task.estimated_minutes ? `${task.estimated_minutes}m` : '15m'}
+                        {task.estimate_set
+                          ? `${task.estimated_minutes}m`
+                          : <Clock className="h-3 w-3 opacity-40" />
+                        }
                       </button>
 
                       {task.is_ai_suggested && (
