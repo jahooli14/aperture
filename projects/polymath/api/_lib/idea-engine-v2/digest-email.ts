@@ -125,7 +125,7 @@ export async function sendDailyDigest(userId: string, ideas: Idea[]) {
   const { data, error } = await resend.emails.send({
     from: 'Idea Engine <onboarding@resend.dev>',
     to: DIGEST_EMAIL,
-    subject: `🔬 ${subject}`,
+    subject: `Idea Engine — ${subject}`,
     html,
   });
 
@@ -234,7 +234,7 @@ function generateDigestHTML(ideas: Idea[], progress: ProgressStats): string {
   <div style="max-width: 680px; margin: 0 auto; padding: 40px 20px;">
     <div style="margin-bottom: 32px;">
       <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; color: #0f172a;">
-        ${pick(['🔬', '🧪', '💡', '⚡', '🌱'])} Daily Idea Digest
+        Daily Idea Digest
       </h1>
       <p style="margin: 0 0 8px 0; font-size: 16px; color: #64748b;">
         ${intro}
@@ -286,7 +286,7 @@ function generateEmptyDigestHTML(progress: ProgressStats, vaultIdea: Idea | null
   const vaultHTML = vaultIdea
     ? `<div style="margin-bottom: 24px;">
         <h2 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: #0f172a;">
-          ${pick(['📦 From the Vault', '🔁 Revisit', '💎 Past Gem', '🗄️ One to Reconsider', '🏛️ From the Archive'])}
+          ${pick(['From the Vault', 'Revisit', 'Past Gem', 'One to Reconsider', 'From the Archive'])}
         </h2>
         <p style="margin: 0 0 12px 0; font-size: 14px; color: #94a3b8;">
           ${pick([
@@ -311,7 +311,7 @@ function generateEmptyDigestHTML(progress: ProgressStats, vaultIdea: Idea | null
   <div style="max-width: 680px; margin: 0 auto; padding: 40px 20px;">
     <div style="margin-bottom: 32px;">
       <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; color: #0f172a;">
-        ${pick(['🔬', '🧪', '💡', '⚡', '🌱'])} Daily Idea Digest
+        Daily Idea Digest
       </h1>
       <p style="margin: 0 0 8px 0; font-size: 16px; color: #64748b;">
         ${headline}
