@@ -241,6 +241,20 @@ export async function generatePowerHourPlan(userId: string, projectId?: string, 
             context += `\n    🚫 DO NOT SUGGEST: ${rejectedSuggestions.slice(-10).join(', ')}`
         }
 
+        // Add persisted project chat tail for continuity between coaching and doing.
+        // This is the Phase 2 change: the generator now knows what the user was
+        // chewing on in their chat session, not just which tasks are incomplete.
+        const conversation = (p.metadata?.conversation || []) as Array<{ role: string; content: string; at?: string }>
+        if (conversation.length > 0) {
+            const tail = conversation.slice(-6) // Last 6 turns = ~3 exchanges
+            const lines = tail.map(t => {
+                const who = t.role === 'assistant' ? 'coach' : 'you'
+                const text = (t.content || '').replace(/\s+/g, ' ').slice(0, 200)
+                return `       ${who}: ${text}`
+            }).join('\n')
+            context += `\n    💬 RECENT CHAT (use as live context — what the user was actually thinking):\n${lines}`
+        }
+
         // Add last session context for continuity
         if (lastSession) {
             const sessionAge = Math.floor((now - new Date(lastSession.started_at).getTime()) / (1000 * 60 * 60 * 24))
