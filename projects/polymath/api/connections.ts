@@ -734,6 +734,128 @@ Don't soften it. Don't end with encouragement. Just the challenge. Use their own
       }
     }
 
+    // CONNECTION PATH FINDER - Traces the semantic path between two items
+    // POST /api/connections?action=find-path
+    // Body: { sourceId, sourceType, targetId, targetType }
+    if (action === 'find-path') {
+      const { sourceId, sourceType, targetId, targetType } = req.body
+
+      if (!sourceId || !sourceType || !targetId || !targetType) {
+        return res.status(400).json({ error: 'sourceId, sourceType, targetId, targetType required' })
+      }
+
+      try {
+        // 1. Fetch both items with embeddings + content
+        const [sourceItem, targetItem] = await Promise.all([
+          fetchItemWithContent(sourceId, sourceType, userId),
+          fetchItemWithContent(targetId, targetType, userId),
+        ])
+
+        if (!sourceItem || !targetItem) {
+          return res.status(404).json({ error: 'One or both items not found' })
+        }
+
+        if (!sourceItem.embedding || !targetItem.embedding) {
+          return res.status(400).json({ error: 'Both items need embeddings for path finding' })
+        }
+
+        // 2. Find intermediate stepping stones via vector similarity
+        // Load all items with embeddings (excluding source and target)
+        const [projects, memories, articles] = await Promise.all([
+          supabase.from('projects').select('id, title, description, embedding').eq('user_id', userId).not('embedding', 'is', null).limit(100),
+          supabase.from('memories').select('id, title, body, themes, embedding, created_at').eq('user_id', userId).eq('processed', true).not('embedding', 'is', null).limit(200),
+          supabase.from('reading_queue').select('id, title, excerpt, embedding').eq('user_id', userId).not('embedding', 'is', null).limit(100),
+        ])
+
+        const allItems: Array<{ id: string; type: string; title: string; snippet: string; embedding: number[] }> = []
+
+        for (const p of projects.data || []) {
+          if (p.id === sourceId || p.id === targetId) continue
+          allItems.push({ id: p.id, type: 'project', title: p.title, snippet: (p.description || '').slice(0, 150), embedding: p.embedding })
+        }
+        for (const m of memories.data || []) {
+          if (m.id === sourceId || m.id === targetId) continue
+          const date = m.created_at ? new Date(m.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : ''
+          allItems.push({ id: m.id, type: 'thought', title: m.title || (m.body || '').slice(0, 50), snippet: `[${date}] ${(m.body || '').slice(0, 150)}`, embedding: m.embedding })
+        }
+        for (const a of articles.data || []) {
+          if (a.id === sourceId || a.id === targetId) continue
+          allItems.push({ id: a.id, type: 'article', title: a.title, snippet: (a.excerpt || '').slice(0, 150), embedding: a.embedding })
+        }
+
+        // 3. Score each candidate by how well it bridges source→target
+        // A good stepping stone is similar to BOTH source and target
+        const directSimilarity = cosineSimilarity(sourceItem.embedding, targetItem.embedding)
+
+        const scored = allItems.map(item => {
+          const simToSource = cosineSimilarity(item.embedding, sourceItem.embedding)
+          const simToTarget = cosineSimilarity(item.embedding, targetItem.embedding)
+          // Bridge score: geometric mean of both similarities, penalized if too close to just one side
+          const bridgeScore = Math.sqrt(simToSource * simToTarget)
+          // Bonus for items that are between source and target conceptually (not just close to one)
+          const balance = 1 - Math.abs(simToSource - simToTarget)
+          const finalScore = bridgeScore * 0.7 + balance * 0.3
+          return { ...item, simToSource, simToTarget, bridgeScore: finalScore }
+        })
+
+        scored.sort((a, b) => b.bridgeScore - a.bridgeScore)
+
+        // Pick 2-4 stepping stones depending on direct similarity
+        // High direct similarity = fewer hops needed
+        const maxSteps = directSimilarity > 0.7 ? 1 : directSimilarity > 0.5 ? 2 : 3
+        const steppingStones = scored
+          .filter(s => s.bridgeScore > 0.35)
+          .slice(0, maxSteps)
+
+        // 4. Build the path: source → [stepping stones] → target
+        const pathNodes = [
+          { id: sourceItem.id, type: sourceType, title: sourceItem.title, snippet: sourceItem.snippet },
+          ...steppingStones.map(s => ({ id: s.id, type: s.type, title: s.title, snippet: s.snippet })),
+          { id: targetItem.id, type: targetType, title: targetItem.title, snippet: targetItem.snippet },
+        ]
+
+        // 5. Generate the narrative with Gemini
+        const pathDescription = pathNodes
+          .map((node, i) => `[NODE ${i + 1} — ${node.type}] "${node.title}"\n${node.snippet}`)
+          .join('\n\n')
+
+        const prompt = `You're tracing the invisible thread between two ideas in someone's personal knowledge base. They want to understand how "${sourceItem.title}" connects to "${targetItem.title}".
+
+Here's the path through their notes and saved content:
+
+${pathDescription}
+
+Direct similarity between the two endpoints: ${Math.round(directSimilarity * 100)}%
+
+Write a concise narrative (3-4 paragraphs, ~150-200 words total) that walks through this path like a story. Each paragraph should transition from one node to the next, making the connection feel inevitable rather than forced.
+
+RULES:
+- Write in second person ("You wrote about... which led to...")
+- Reference specific titles and content from the nodes
+- Each stepping stone should feel like a revelation, not just a list item
+- The final paragraph should tie source and target together with a synthesis — the "so what"
+- No jargon, no bullet points, no consultant speak
+- Keep it concise. Every sentence should earn its place.
+- Use the marker {{STEP:node_index}} at the start of each new paragraph to indicate which node is being discussed (0-indexed, matching the path order). This is for animation timing.
+
+Return ONLY the narrative text with {{STEP:N}} markers. No JSON, no explanation.`
+
+        const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
+        const result = await model.generateContent(prompt)
+        const narrative = result.response.text().trim()
+
+        return res.status(200).json({
+          path: pathNodes,
+          narrative,
+          directSimilarity,
+          steppingStoneCount: steppingStones.length,
+        })
+      } catch (error) {
+        console.error('[connections] find-path error:', error)
+        return res.status(500).json({ error: 'Path finding failed' })
+      }
+    }
+
     // Universal AI Linker - finds connections across ALL entity types with Gemini reasoning
     // POST /api/connections?action=link
     // Body: { itemId, itemType, content?, embedding? }
@@ -1087,4 +1209,34 @@ Be specific: mention actual shared concepts. Do not say "both are about X".`
       })
     }
   }
+}
+
+// ─── Helper: Fetch item with content and embedding ─────────────────────────
+
+async function fetchItemWithContent(
+  id: string,
+  type: string,
+  userId: string
+): Promise<{ id: string; title: string; snippet: string; embedding: number[] | null } | null> {
+  if (type === 'project') {
+    const { data } = await supabase.from('projects').select('id, title, description, embedding').eq('user_id', userId).eq('id', id).single()
+    if (!data) return null
+    return { id: data.id, title: data.title, snippet: (data.description || '').slice(0, 200), embedding: data.embedding }
+  }
+  if (type === 'thought') {
+    const { data } = await supabase.from('memories').select('id, title, body, embedding').eq('user_id', userId).eq('id', id).single()
+    if (!data) return null
+    return { id: data.id, title: data.title || (data.body || '').slice(0, 50), snippet: (data.body || '').slice(0, 200), embedding: data.embedding }
+  }
+  if (type === 'article') {
+    const { data } = await supabase.from('reading_queue').select('id, title, excerpt, embedding').eq('user_id', userId).eq('id', id).single()
+    if (!data) return null
+    return { id: data.id, title: data.title, snippet: (data.excerpt || '').slice(0, 200), embedding: data.embedding }
+  }
+  if (type === 'list_item') {
+    const { data } = await supabase.from('list_items').select('id, content, metadata, embedding').eq('user_id', userId).eq('id', id).single()
+    if (!data) return null
+    return { id: data.id, title: data.content || (data.metadata as any)?.title || 'Untitled', snippet: data.content || '', embedding: data.embedding }
+  }
+  return null
 }

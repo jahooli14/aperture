@@ -7,14 +7,17 @@
 import { useEffect, useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowRight, Brain, Layers, BookOpen, Plus, Zap } from 'lucide-react'
+import { ArrowRight, Brain, Layers, BookOpen, Plus, Zap, Route } from 'lucide-react'
 import type { ItemConnection, ConnectionSourceType } from '../../types'
 import { CreateConnectionDialog } from './CreateConnectionDialog'
+import { ConnectionPathPicker } from './ConnectionPathPicker'
+import { ConnectionRevealOverlay } from './ConnectionRevealOverlay'
 import { useConnectionStore } from '../../stores/useConnectionStore'
 
 interface ConnectionsListProps {
   itemType: ConnectionSourceType
   itemId: string
+  itemTitle?: string
   onConnectionDeleted?: () => void
   onConnectionCreated?: () => void
   onCountChange?: (count: number) => void
@@ -52,11 +55,13 @@ const SCHEMA_COLORS = {
 
 }
 
-export function ConnectionsList({ itemType, itemId, onConnectionDeleted, onConnectionCreated, onCountChange, onLoadingChange }: ConnectionsListProps) {
+export function ConnectionsList({ itemType, itemId, itemTitle, onConnectionDeleted, onConnectionCreated, onCountChange, onLoadingChange }: ConnectionsListProps) {
   const { getConnections, setConnections: cacheConnections, invalidateConnections } = useConnectionStore()
   const [connections, setConnections] = useState<ItemConnection[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [showPathPicker, setShowPathPicker] = useState(false)
+  const [pathTarget, setPathTarget] = useState<{ id: string; type: string; title: string } | null>(null)
 
   // Notify parent of loading state
   useEffect(() => {
@@ -256,6 +261,20 @@ export function ConnectionsList({ itemType, itemId, onConnectionDeleted, onConne
         </button>
       </div>
 
+      {/* "See how this connects to..." button */}
+      <div>
+        <button
+          onClick={() => setShowPathPicker(true)}
+          className="w-full py-3 rounded-xl border border-dashed border-blue-500/20 flex items-center justify-center gap-2 text-xs font-medium transition-all hover:bg-brand-primary/5 hover:border-blue-500/30 group"
+          style={{ color: "var(--brand-primary)" }}
+        >
+          <Route className="h-4 w-4 group-hover:text-brand-primary transition-colors" />
+          <span className="group-hover:text-brand-primary transition-colors">
+            See how this connects to...
+          </span>
+        </button>
+      </div>
+
       <CreateConnectionDialog
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
@@ -264,6 +283,30 @@ export function ConnectionsList({ itemType, itemId, onConnectionDeleted, onConne
 
         onConnectionCreated={handleManualConnectionCreated}
       />
+
+      <ConnectionPathPicker
+        sourceId={itemId}
+        sourceType={itemType}
+        open={showPathPicker}
+        onClose={() => setShowPathPicker(false)}
+        onSelect={(item) => {
+          setShowPathPicker(false)
+          setPathTarget({ id: item.id, type: item.type, title: item.title })
+        }}
+      />
+
+      {pathTarget && (
+        <ConnectionRevealOverlay
+          open={!!pathTarget}
+          onClose={() => setPathTarget(null)}
+          sourceId={itemId}
+          sourceType={itemType}
+          targetId={pathTarget.id}
+          targetType={pathTarget.type}
+          sourceTitle={itemTitle || 'This item'}
+          targetTitle={pathTarget.title}
+        />
+      )}
     </div>
   )
 }

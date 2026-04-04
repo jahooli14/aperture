@@ -1706,7 +1706,7 @@ export default function ListDetailPage() {
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-48">
                 <div className="mt-12 pt-12 border-t border-[var(--glass-surface)] pb-20">
-                    <ItemInsightStrip title={list.title} />
+                    <ItemInsightStrip title={list.title} itemId={list.id} itemType="list" />
                 </div>
             </div>
         </div>
