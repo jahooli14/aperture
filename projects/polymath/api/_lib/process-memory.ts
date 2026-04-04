@@ -101,6 +101,23 @@ export async function processMemory(memoryId: string): Promise<void> {
     await updateItemConnections(memoryId, 'thought', embedding, userId)
     logger.info({ memory_id: memoryId }, '✅ Connections processed')
 
+    // 6b. Metabolism: bump heat on any drawer project that collides with this
+    // new thought. Fire-and-forget — heat failures never block memory processing.
+    try {
+      const { bumpHeatFromNewMemory } = await import('./metabolism.js')
+      bumpHeatFromNewMemory(supabase, userId, {
+        id: memoryId,
+        content: `${metadata.summary_title} ${metadata.insightful_body}`,
+        embedding,
+      })
+        .then(bumped => {
+          if (bumped > 0) logger.info({ memory_id: memoryId, bumped }, '🔥 Heat bumped on drawer projects')
+        })
+        .catch(() => {}) // Non-critical
+    } catch {
+      // Module not available — ignore
+    }
+
     // 7. Regenerate insights over all user data — fire-and-forget, never blocks processing
     generateInsights(userId).catch(() => {}) // Non-critical
 

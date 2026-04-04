@@ -6,6 +6,7 @@ import { SignInNudge } from '../components/SignInNudge'
 import { useProjectStore } from '../stores/useProjectStore'
 import { useSuggestionStore } from '../stores/useSuggestionStore'
 import { ProjectsPageCarousel } from '../components/projects/ProjectsPageCarousel'
+import { ForYouToday } from '../components/projects/ForYouToday'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
 import { ReaperModal } from '../components/projects/ReaperModal'
 import { GraveyardWalkthrough, shouldShowGraveyardWalkthrough } from '../components/projects/GraveyardWalkthrough'
@@ -476,6 +477,9 @@ export function ProjectsPage() {
                     )}
                   </div>
                 )}
+
+                {/* "For you today" — warmed drawer items, invisible when empty */}
+                {filter === 'all' && <ForYouToday />}
 
                 {/* Masonry Dashboard */}
                 <ProjectsPageCarousel

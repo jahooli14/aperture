@@ -16,6 +16,7 @@ import { generatePowerHourPlan } from './_lib/power-hour-generator.js'
 import { identifyRottingProjects, generateZebraReport, buryProject, resurrectProject, pickSynthesisResurfaceCandidate } from './_lib/project-maintenance.js'
 import { updateItemConnections } from './_lib/connection-logic.js'
 import { invalidateProjectCache } from './_lib/power-hour-cache.js'
+import { recomputeHeatForUser } from './_lib/metabolism.js'
 
 // Daily Queue Scoring Logic
 interface UserContext {
@@ -380,6 +381,75 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({
         error: 'Failed to set priority',
         details: error instanceof Error ? error.message : JSON.stringify(error)
+      })
+    }
+  }
+
+  // ============================================================
+  // METABOLISM RESOURCES (Phase 3+): heat, drawer, digest
+  // ============================================================
+
+  // Recompute heat scores for all drawer-tier projects belonging to the user.
+  // Called by the cron runner every 6h. Safe to trigger manually.
+  if (resource === 'recompute-heat') {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' })
+    }
+    try {
+      const result = await recomputeHeatForUser(supabase, userId)
+      return res.status(200).json({ success: true, ...result })
+    } catch (error) {
+      console.error('[recompute-heat] error:', error)
+      return res.status(500).json({
+        error: 'Failed to recompute heat',
+        details: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
+  // Read the drawer: heat-sorted top + shuffle tail for browse view.
+  // This is what /drawer and the "For you today" strip consume.
+  if (resource === 'drawer') {
+    if (req.method !== 'GET') {
+      return res.status(405).json({ error: 'Method not allowed' })
+    }
+    try {
+      const { data: projects, error } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('user_id', userId)
+        .in('status', ['upcoming', 'dormant', 'on-hold', 'maintaining'])
+        .eq('is_priority', false)
+        .order('heat_score', { ascending: false, nullsFirst: false })
+
+      if (error) {
+        return res.status(500).json({ error: 'Failed to fetch drawer', details: error.message })
+      }
+
+      const all = projects || []
+      // Warmed = heat_score > 0 AND has a cited reason. Silence over slop.
+      const warmed = all.filter((p: any) => (p.heat_score || 0) > 0 && p.heat_reason)
+      // Rest are shuffled deterministically by date seed (same mechanism the
+      // client used to use for the drawer — now done server-side for consistency).
+      const rest = all.filter((p: any) => !warmed.includes(p))
+      const seed = new Date().toDateString()
+      const seededRandom = (str: string) => {
+        let h = 0xdeadbeef
+        for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 2654435761)
+        return ((h ^ (h >>> 16)) >>> 0) / 4294967296
+      }
+      rest.sort((a: any, b: any) => seededRandom(seed + b.id) - seededRandom(seed + a.id))
+
+      return res.status(200).json({
+        warmed,     // heat-sorted, with reasons — what "For you today" shows
+        shuffle: rest, // everything else, for the full drawer browse page
+        total: all.length,
+      })
+    } catch (error) {
+      console.error('[drawer] error:', error)
+      return res.status(500).json({
+        error: 'Failed to load drawer',
+        details: error instanceof Error ? error.message : String(error),
       })
     }
   }

@@ -264,27 +264,19 @@ export function ProjectsPageCarousel({
         </section>
       )}
 
-      {/* SECTION 2: THE DRAWER (Masonry) */}
+      {/* The drawer has moved behind a nav icon (/projects/drawer). The main
+          page now only shows active focus + a conditional "For you today"
+          strip with warmed items. Silence over slop. */}
       {drawerList.length > 0 && (
-        <section>
-          <div className="mb-4 px-1 mt-8 border-t border-[var(--glass-surface)] pt-8">
-            <h3 className="text-xs font-bold text-[var(--brand-text-muted)] uppercase tracking-widest aperture-header">The Drawer</h3>
-          </div>
-
-          <div className="columns-2 md:columns-2 lg:columns-3 gap-4 space-y-4">
-            {drawerList.map((project, i) => (
-              <motion.div
-                key={project.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: i * 0.05 }}
-                className="break-inside-avoid mb-4"
-              >
-                <ProjectCard project={project} />
-              </motion.div>
-            ))}
-          </div>
-        </section>
+        <div className="mt-8 pt-8 border-t border-[var(--glass-surface)] text-center">
+          <Link
+            to="/projects/drawer"
+            className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[var(--brand-text-muted)] hover:text-[var(--brand-primary)] transition-colors"
+          >
+            <Archive className="h-3.5 w-3.5" />
+            {drawerList.length} resting in the drawer
+          </Link>
+        </div>
       )}
 
       {/* SECTION 3: FROM THE ARCHIVES (weekly graveyard spotlight) */}

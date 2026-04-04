@@ -1,0 +1,159 @@
+/**
+ * DrawerPage — the full compost heap.
+ *
+ * This page lives behind a nav icon so the main Projects page never shows the
+ * fullcognitive load of every dormant project. Come here when you want to
+ * browse. Otherwise, stay silent.
+ *
+ * Rule: projects surfaced here are drawer-tier (not active, not priority, not
+ * dead). They're sorted by heat_score so warmed items rise to the top, but
+ * every drawer project is listed — this is the place to rummage.
+ */
+import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { Archive, Flame, Search } from 'lucide-react'
+import { useProjectStore } from '../stores/useProjectStore'
+import { SubtleBackground } from '../components/SubtleBackground'
+import type { Project } from '../types'
+
+interface WarmedProject extends Project {
+  heat_score?: number
+  heat_reason?: string
+}
+
+const DRAWER_STATUSES = new Set(['upcoming', 'dormant', 'on-hold', 'maintaining'])
+
+export default function DrawerPage() {
+  const { projects, fetchProjects, loading } = useProjectStore()
+  const [query, setQuery] = useState('')
+
+  useEffect(() => {
+    fetchProjects()
+  }, [])
+
+  const drawerProjects = useMemo(() => {
+    const list = (Array.isArray(projects) ? projects : []) as WarmedProject[]
+    const filtered = list.filter(p =>
+      DRAWER_STATUSES.has(p.status as any) && !p.is_priority
+    )
+    const q = query.trim().toLowerCase()
+    const searched = q
+      ? filtered.filter(p =>
+          p.title.toLowerCase().includes(q) ||
+          (p.description || '').toLowerCase().includes(q)
+        )
+      : filtered
+    // Sort by heat_score desc, then by last_active desc
+    return [...searched].sort((a, b) => {
+      const ha = a.heat_score || 0
+      const hb = b.heat_score || 0
+      if (hb !== ha) return hb - ha
+      const da = new Date(a.last_active || a.created_at).getTime()
+      const db = new Date(b.last_active || b.created_at).getTime()
+      return db - da
+    })
+  }, [projects, query])
+
+  const warmedCount = drawerProjects.filter(p => (p.heat_score || 0) > 0 && !!p.heat_reason).length
+
+  return (
+    <>
+      <SubtleBackground />
+      <div className="min-h-screen">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-10 pb-24">
+          <div className="mb-6 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl flex items-center justify-center"
+              style={{ background: 'var(--glass-surface)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <Archive className="h-5 w-5" style={{ color: 'var(--brand-primary)' }} />
+            </div>
+            <div>
+              <h1 className="text-3xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
+                the <span className="text-brand-primary">drawer</span>
+              </h1>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mt-1">
+                {drawerProjects.length} resting · {warmedCount} warming
+              </p>
+            </div>
+          </div>
+
+          <div className="relative mb-6">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'var(--brand-primary)' }} />
+            <input
+              type="text"
+              placeholder="Rummage..."
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 rounded-lg border-2 transition-all focus:outline-none"
+              style={{
+                backgroundColor: 'var(--glass-surface)',
+                borderColor: query ? 'var(--brand-primary)' : 'rgba(255,255,255,0.1)',
+                color: 'var(--brand-text-primary)',
+              }}
+            />
+          </div>
+
+          {loading && drawerProjects.length === 0 && (
+            <div className="text-center py-12 text-xs uppercase tracking-widest text-[var(--brand-text-muted)]">
+              Opening the drawer…
+            </div>
+          )}
+
+          {!loading && drawerProjects.length === 0 && (
+            <div className="text-center py-24">
+              <Archive className="h-10 w-10 mx-auto mb-4 opacity-30" style={{ color: 'var(--brand-text-muted)' }} />
+              <p className="text-sm text-[var(--brand-text-muted)]">
+                The drawer is empty. Everything is either in motion or already done.
+              </p>
+            </div>
+          )}
+
+          <div className="columns-1 md:columns-2 lg:columns-3 gap-4 space-y-4">
+            {drawerProjects.map((p, i) => {
+              const isWarm = (p.heat_score || 0) > 0 && !!p.heat_reason
+              return (
+                <motion.div
+                  key={p.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: Math.min(i * 0.02, 0.3) }}
+                  className="break-inside-avoid mb-4"
+                >
+                  <Link
+                    to={`/projects/${p.id}`}
+                    className="block p-4 rounded-xl border transition-all hover:scale-[1.01]"
+                    style={{
+                      background: isWarm
+                        ? 'linear-gradient(135deg, rgba(59,130,246,0.08), rgba(59,130,246,0.02))'
+                        : 'var(--brand-glass-bg)',
+                      borderColor: isWarm ? 'rgba(59,130,246,0.25)' : 'var(--glass-surface-hover)',
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <h4 className="font-bold text-[var(--brand-text-primary)] text-sm leading-tight">
+                        {p.title}
+                      </h4>
+                      {isWarm && (
+                        <Flame className="h-3.5 w-3.5 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
+                      )}
+                    </div>
+                    {p.description && (
+                      <p className="text-xs text-[var(--brand-text-secondary)] line-clamp-2 mt-1">
+                        {p.description}
+                      </p>
+                    )}
+                    {isWarm && p.heat_reason && (
+                      <p className="text-[11px] text-[var(--brand-text-muted)] leading-relaxed mt-2 italic">
+                        {p.heat_reason}
+                      </p>
+                    )}
+                  </Link>
+                </motion.div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
