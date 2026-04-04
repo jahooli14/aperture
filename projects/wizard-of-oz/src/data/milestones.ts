@@ -70,6 +70,15 @@ export const milestones: Milestone[] = [
 
   // 3-6 Months
   {
+    id: 'grasping',
+    category: 'physical',
+    title: 'Grasping Objects',
+    description: 'Your baby may start holding onto toys and rattles when placed in their hand. Grip strength is developing!',
+    ageRangeWeeks: { start: 12, end: 16 },
+    icon: '✊',
+    advanceNoticeWeeks: 2,
+  },
+  {
     id: 'reaching',
     category: 'physical',
     title: 'Reaching for Objects',
@@ -106,7 +115,26 @@ export const milestones: Milestone[] = [
     advanceNoticeWeeks: 3,
   },
 
+  {
+    id: 'sleeping-through',
+    category: 'physical',
+    title: 'Sleeping Through the Night',
+    description: 'Your baby may start sleeping for longer stretches at night. Every baby finds their own sleep rhythm!',
+    ageRangeWeeks: { start: 16, end: 28 },
+    icon: '😴',
+    advanceNoticeWeeks: 3,
+  },
+
   // 6-9 Months
+  {
+    id: 'first-foods',
+    category: 'physical',
+    title: 'Starting Solid Foods',
+    description: 'Around 6 months, your baby may be ready to try their first foods alongside milk. Look for signs they can sit and hold their head steady.',
+    ageRangeWeeks: { start: 24, end: 28 },
+    icon: '🥄',
+    advanceNoticeWeeks: 4,
+  },
   {
     id: 'sitting',
     category: 'physical',
@@ -115,6 +143,42 @@ export const milestones: Milestone[] = [
     ageRangeWeeks: { start: 22, end: 36 },
     icon: '🪑',
     advanceNoticeWeeks: 4,
+  },
+  {
+    id: 'responding-to-name',
+    category: 'communication',
+    title: 'Responding to Their Name',
+    description: 'Your baby may start turning to look when they hear their name. They\'re learning that this special word means them!',
+    ageRangeWeeks: { start: 24, end: 36 },
+    icon: '👂',
+    advanceNoticeWeeks: 3,
+  },
+  {
+    id: 'transferring-objects',
+    category: 'cognitive',
+    title: 'Passing Objects Between Hands',
+    description: 'Your baby may start moving toys from one hand to the other. This shows growing coordination and brain development!',
+    ageRangeWeeks: { start: 24, end: 32 },
+    icon: '🤲',
+    advanceNoticeWeeks: 3,
+  },
+  {
+    id: 'first-tooth',
+    category: 'physical',
+    title: 'First Tooth',
+    description: 'You might spot a little tooth poking through! Teething can start from around 6 months, though it varies a lot.',
+    ageRangeWeeks: { start: 24, end: 40 },
+    icon: '🦷',
+    advanceNoticeWeeks: 4,
+  },
+  {
+    id: 'peek-a-boo',
+    category: 'cognitive',
+    title: 'Playing Peek-a-Boo',
+    description: 'Your baby is learning that things still exist when they can\'t see them! Peek-a-boo becomes a favourite game.',
+    ageRangeWeeks: { start: 26, end: 36 },
+    icon: '🙈',
+    advanceNoticeWeeks: 3,
   },
   {
     id: 'stranger-awareness',
@@ -155,6 +219,15 @@ export const milestones: Milestone[] = [
     advanceNoticeWeeks: 4,
   },
   {
+    id: 'pointing',
+    category: 'communication',
+    title: 'Pointing at Things',
+    description: 'Your baby may start pointing to show you things they want or find interesting. This is a really important communication milestone!',
+    ageRangeWeeks: { start: 36, end: 56 },
+    icon: '👆',
+    advanceNoticeWeeks: 4,
+  },
+  {
     id: 'first-words',
     category: 'communication',
     title: 'First Words',
@@ -173,6 +246,16 @@ export const milestones: Milestone[] = [
     advanceNoticeWeeks: 4,
   },
 
+  {
+    id: 'cruising',
+    category: 'physical',
+    title: 'Cruising Along Furniture',
+    description: 'Your baby may start walking while holding onto furniture. They\'re building confidence for those first independent steps!',
+    ageRangeWeeks: { start: 40, end: 52 },
+    icon: '🛋️',
+    advanceNoticeWeeks: 4,
+  },
+
   // 12-18 Months
   {
     id: 'walking',
@@ -181,6 +264,42 @@ export const milestones: Milestone[] = [
     description: 'Your baby may start taking their first independent steps! Expect lots of tumbles - that\'s all part of learning.',
     ageRangeWeeks: { start: 48, end: 72 },
     icon: '👣',
+    advanceNoticeWeeks: 6,
+  },
+  {
+    id: 'drinking-from-cup',
+    category: 'physical',
+    title: 'Drinking from a Cup',
+    description: 'Your child may start drinking from an open cup or sippy cup. It can be messy at first - that\'s all part of learning!',
+    ageRangeWeeks: { start: 48, end: 64 },
+    icon: '🥤',
+    advanceNoticeWeeks: 6,
+  },
+  {
+    id: 'following-instructions',
+    category: 'cognitive',
+    title: 'Following Simple Instructions',
+    description: 'Your child may start understanding and following simple requests like "give it to me" or "put it down." They understand more than they can say!',
+    ageRangeWeeks: { start: 48, end: 72 },
+    icon: '✅',
+    advanceNoticeWeeks: 6,
+  },
+  {
+    id: 'stacking',
+    category: 'cognitive',
+    title: 'Stacking Blocks',
+    description: 'Your child may start stacking blocks or cups on top of each other. Problem-solving and coordination are coming together!',
+    ageRangeWeeks: { start: 52, end: 72 },
+    icon: '🧱',
+    advanceNoticeWeeks: 6,
+  },
+  {
+    id: 'scribbling',
+    category: 'physical',
+    title: 'First Scribbles',
+    description: 'Give your child a chunky crayon and watch them scribble! Fine motor skills and creativity are developing.',
+    ageRangeWeeks: { start: 60, end: 78 },
+    icon: '🖍️',
     advanceNoticeWeeks: 6,
   },
   {
@@ -203,6 +322,15 @@ export const milestones: Milestone[] = [
   },
 
   // 18-24 Months
+  {
+    id: 'climbing',
+    category: 'physical',
+    title: 'Climbing Stairs',
+    description: 'Your child may start climbing up stairs with help. Always supervise near stairs - stair gates are essential!',
+    ageRangeWeeks: { start: 72, end: 96 },
+    icon: '🪜',
+    advanceNoticeWeeks: 8,
+  },
   {
     id: 'two-word-phrases',
     category: 'communication',
