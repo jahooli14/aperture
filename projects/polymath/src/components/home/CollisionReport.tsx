@@ -39,7 +39,7 @@ export function CollisionReport() {
       <div className="flex items-center gap-2 mb-1">
         <Zap className="w-4 h-4 text-brand-primary" />
         <span className="text-xs font-medium text-brand-primary uppercase tracking-wider">
-          {shown.length === 1 ? 'Unexpected collision' : `${shown.length} collisions`}
+          {shown.length === 1 ? 'Surprising connection' : `${shown.length} connections`}
         </span>
       </div>
       {shown.map((c) => (
@@ -51,7 +51,7 @@ export function CollisionReport() {
         >
           <p className="text-sm text-brand-text-primary leading-relaxed">
             Your {c.source_type} <span className="text-brand-primary font-medium">"{c.source_title}"</span>
-            {' '}collided with {c.target_type} <span className="text-brand-primary font-medium">"{c.target_title}"</span>
+            {' '}connects to {c.target_type} <span className="text-brand-primary font-medium">"{c.target_title}"</span>
           </p>
           {c.ai_reasoning && (
             <p className="text-xs text-[var(--brand-text-secondary)] mt-1 line-clamp-1">{c.ai_reasoning}</p>

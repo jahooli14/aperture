@@ -189,7 +189,7 @@ export function PowerHourHero() {
                 <h2 className="text-xl font-black uppercase italic mb-2 tracking-tighter text-brand-text-secondary">Couldn't load suggestions</h2>
                 <p className="text-[var(--brand-text-secondary)] text-sm max-w-sm mx-auto mb-6">{error}</p>
                 <button onClick={() => fetchPowerHour()} className="px-6 py-3 bg-brand-primary text-[var(--brand-text-primary)] font-black uppercase text-xs tracking-widest hover:bg-black transition-colors">
-                    Retry Feed
+                    Try again
                 </button>
             </div>
         </div>
@@ -508,7 +508,7 @@ export function PowerHourHero() {
                                             className="flex items-center gap-2 px-4 py-3 border border-[var(--glass-surface-hover)] rounded-xl hover:bg-[var(--glass-surface)] transition-all uppercase text-[10px] font-bold tracking-widest backdrop-blur-sm text-[var(--brand-text-primary)] aperture-header"
                                         >
                                             <BookOpen className="h-3.5 w-3.5" />
-                                            <span>Read Fuel</span>
+                                            <span>Related reading</span>
                                         </button>
                                     )}
                                 </div>

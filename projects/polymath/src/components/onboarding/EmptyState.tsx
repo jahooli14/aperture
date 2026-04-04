@@ -26,7 +26,7 @@ export function EmptyState() {
         </div>
 
         <h2 className="text-2xl font-bold mb-3" style={{ color: 'var(--brand-text-primary)' }}>
-          Your knowledge graph starts here
+          Start by sharing a few thoughts
         </h2>
         <p className="text-sm mb-2" style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}>
           Speak 5 thoughts to see your first patterns emerge.

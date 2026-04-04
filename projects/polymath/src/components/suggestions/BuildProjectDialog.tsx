@@ -81,7 +81,7 @@ export function BuildProjectDialog({
               <DialogTitle>Build this project</DialogTitle>
             </div>
             <DialogDescription>
-              Review and customize your project details before building. This will create a new active project and strengthen related capabilities.
+              Review and tweak before creating your project.
             </DialogDescription>
           </DialogHeader>
 
@@ -133,8 +133,7 @@ export function BuildProjectDialog({
             {/* Capabilities Info */}
             {suggestion.capability_ids.length > 0 && (
               <div className="text-xs text-neutral-600 bg-blue-50 p-3 rounded-lg border border-blue-200">
-                <span className="font-semibold"> This builds on your existing interests</span>
-                <p className="mt-1">Building this project will boost the skills and tools used in the suggestion.</p>
+                <span className="font-semibold"> This connects to things you already know about.</span>
               </div>
             )}
           </div>

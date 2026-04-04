@@ -63,7 +63,7 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
             Welcome to <BrandName size="xl" />
           </h1>
           <p className="text-lg max-w-xl mx-auto" style={{ color: "var(--brand-primary)" }}>
-            Turn your scattered thoughts into connected insights and creative projects
+            Talk through ideas. See where they lead.
           </p>
           <p className="text-sm mt-2" style={{ color: 'var(--brand-text-secondary)', opacity: 0.55 }}>
             5 questions. 30 seconds each. Or explore with demo data.
@@ -114,7 +114,7 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
                   2. AI Generates Suggestions
                 </h3>
                 <p className="text-sm" style={{ color: "var(--brand-primary)" }}>
-                  Google Gemini synthesizes your memories into creative project ideas. Cross-pollinates your interests and skills.
+                  AI spots connections between your thoughts and suggests projects that fit your interests. Connects your different interests in unexpected ways.
                 </p>
               </div>
             </div>
@@ -200,7 +200,7 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
                 color: 'var(--brand-text-secondary)',
               }}
             >
-              Map my mind with voice
+              Start with voice
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
