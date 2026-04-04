@@ -9,17 +9,17 @@ import type { ListType } from '../types'
 
 export const ListIcon = ({ type, className, style }: { type: ListType, className?: string, style?: React.CSSProperties }) => {
     switch (type) {
-        case 'film': return React.createElement(Film, { className, style })
-        case 'music': return React.createElement(Music, { className, style })
-        case 'tech': return React.createElement(Monitor, { className, style })
-        case 'book': return React.createElement(Book, { className, style })
-        case 'place': return React.createElement(MapPin, { className, style })
-        case 'game': return React.createElement(Gamepad2, { className, style })
-        case 'software': return React.createElement(Box, { className, style })
-        case 'event': return React.createElement(Calendar, { className, style })
-        case 'quote': return React.createElement(Quote, { className, style })
-        case 'article': return React.createElement(FileText, { className, style })
-        default: return React.createElement(Box, { className, style })
+        case 'film': return <Film className={className} style={style} />
+        case 'music': return <Music className={className} style={style} />
+        case 'tech': return <Monitor className={className} style={style} />
+        case 'book': return <Book className={className} style={style} />
+        case 'place': return <MapPin className={className} style={style} />
+        case 'game': return <Gamepad2 className={className} style={style} />
+        case 'software': return <Box className={className} style={style} />
+        case 'event': return <Calendar className={className} style={style} />
+        case 'quote': return <Quote className={className} style={style} />
+        case 'article': return <FileText className={className} style={style} />
+        default: return <Box className={className} style={style} />
     }
 }
 

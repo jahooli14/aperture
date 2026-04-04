@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useMemo, memo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, Send, Trash2, Mic, MicOff, ListOrdered, Check, ChevronRight, GripVertical, Film, Music, Book, MapPin, Box, Quote, Pencil, Monitor, Gamepad2, Calendar, Star, SortAsc, ChevronDown, Copy, FileText, Brain, Link as LinkIcon, BookOpen, Loader2, RefreshCw, Settings2, ToggleLeft, ToggleRight, Search, X } from 'lucide-react'
+import { ArrowLeft, Send, Trash2, Mic, MicOff, ListOrdered, Check, ChevronRight, GripVertical, Pencil, Star, SortAsc, ChevronDown, Copy, Brain, Link as LinkIcon, BookOpen, Loader2, RefreshCw, Settings2, ToggleLeft, ToggleRight, Search, X } from 'lucide-react'
 import { useListStore } from '../stores/useListStore'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useReadingStore } from '../stores/useReadingStore'
