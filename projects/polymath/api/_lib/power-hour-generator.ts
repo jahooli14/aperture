@@ -316,7 +316,7 @@ export async function generatePowerHourPlan(userId: string, projectId?: string, 
 
    OUTPUT: 2-4 checklist items representing focused progress, not a scattered to-do list.`
 
-    const prompt = `You are the APERTURE SHERPA. Your goal is to design a joyfully productive work session.
+    const prompt = `You are planning a focused work session. Make it clear, doable, and satisfying.
     The user wants to "Commit" to a specific plan. Your job is to draft that plan.
 
 === SESSION PARAMETERS ===

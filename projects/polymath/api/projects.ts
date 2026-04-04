@@ -1851,7 +1851,7 @@ async function generateNextSteps(projectId: string, userId: string, supabase: an
   const lastTasks = tasks.slice(-3).map(t => `- ${t.text} (${t.done ? 'Done' : 'Pending'})`).join('\n')
 
   // 2. Prompt Gemini
-  const prompt = `You are a pragmatic project manager. Suggest 3 concrete, actionable next steps for this project.
+  const prompt = `Suggest 3 specific things this person could do next on their project. Start each with a verb. Keep them simple and doable today.
     
 Project: ${project.title}
 Description: ${project.description || 'No description'}

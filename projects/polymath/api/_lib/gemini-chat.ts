@@ -166,7 +166,7 @@ export async function generateBatchReasoning(
   sourceType: string,
   matches: Array<{ title: string; type: string; similarity: number }>
 ): Promise<Array<{ index: number; reasoning: string }>> {
-  const prompt = `You are analyzing content connections for a personal knowledge management system.
+  const prompt = `Someone saved a note and here are related things from their collection. Explain briefly why each one connects.
 
 Source ${sourceType}: "${sourceContent.slice(0, 500)}"
 

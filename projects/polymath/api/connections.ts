@@ -307,7 +307,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ? allContextItems.map(i => `- ${i.slice(0, 200)}`).join('\n')
           : '(no related items found in knowledge lake)'
 
-        const analysisPrompt = `You are a world-class knowledge analyst with access to someone's entire personal knowledge graph. Your job is to be a brilliant thinking partner — not a summarizer. You see patterns they can't. You connect dots across their whole life of learning, projects, and ideas.
+        const analysisPrompt = `You've read all of someone's notes, saved articles, and projects. Your job is to connect things they haven't connected yet — not summarize. Be specific, not impressive.
 
 FOCUS ITEM:
 ${truncatedSource}
@@ -498,7 +498,7 @@ Rules: Name actual titles. No generic observations. No hedging. Write like someo
         let prompt = ''
         switch (actionType) {
           case 'summarize':
-            prompt = `You are a brilliant synthesizer reading someone's entire personal knowledge graph.
+            prompt = `You've read all of someone's notes and saved stuff. Connect the dots they haven't connected yet.
 
 FOCUS ITEM:
 ${truncatedSource}
@@ -516,7 +516,7 @@ Be specific. Be bold. Name actual titles. 3-5 tight sentences. No hedging, no ge
             break
 
           case 'find-gaps':
-            prompt = `You are a ruthless knowledge architect auditing someone's corpus for critical blind spots.
+            prompt = `You've read everything this person has saved. Find what's missing — the gaps they can't see from inside.
 
 FOCUS ITEM:
 ${truncatedSource}
@@ -534,7 +534,7 @@ Be a doctor reading a chart, not a cheerleader. Name what's missing precisely.`
             break
 
           case 'suggest-next':
-            prompt = `You are a world-class knowledge-to-action translator. You've read this person's entire corpus and you see exactly what they should do next.
+            prompt = `You've read everything this person has written and saved. Tell them the one thing they should actually do next.
 
 FOCUS ITEM:
 ${truncatedSource}
@@ -551,7 +551,7 @@ Tell them exactly: WHAT to do, WHY this specific moment calls for it (based on t
             break
 
           case 'connect-dots':
-            prompt = `You are a pattern recognition engine reading someone's intellectual fingerprint across their entire corpus.
+            prompt = `You've read everything this person has saved. Find the one thread they keep coming back to without realizing it.
 
 FOCUS ITEM:
 ${truncatedSource}
@@ -569,7 +569,7 @@ Make it feel like a revelation. They should read this and think: "I didn't know 
             break
 
           case 'chase-thread':
-            prompt = `You are a literary detective reading someone's intellectual diary, following a single obsession like a bloodhound.
+            prompt = `You are reading someone's notes and saved articles over time, following a single idea like a thread through everything.
 
 FOCUS ITEM:
 ${truncatedSource}
@@ -587,7 +587,7 @@ Write like a biographer who has found the hidden theme of someone's intellectual
             break
 
           case 'provoke':
-            prompt = `You are an intellectual sparring partner who has memorized this person's entire corpus. Your job is to make them think harder by using their own material against them.
+            prompt = `You've read all of this person's notes. Use what they've actually written to challenge what they just said. Be direct, not mean.
 
 FOCUS ITEM:
 ${truncatedSource}
@@ -797,7 +797,7 @@ Don't soften it. Don't end with encouragement. Just the challenge. Use their own
         const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
         const sourceLabel = content?.slice(0, 200) || `${itemType} ${itemId}`
         const candidateList = top.map((c, i) => `${i + 1}. [${c.type}] "${c.title}": ${c.content}`).join('\n')
-        const prompt = `You are a knowledge graph AI. Given a source item and ${top.length} candidates, explain WHY each connects to the source in one specific sentence. Also pick the best connection type.
+        const prompt = `Someone saved a note and here are related things from their collection. For each one, explain in one sentence why it connects — be specific about the shared idea, not vague. Also pick the best connection type.
 
 SOURCE (${itemType}): "${sourceLabel}"
 

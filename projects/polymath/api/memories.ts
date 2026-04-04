@@ -475,7 +475,7 @@ async function handleSteer(req: VercelRequest, res: VercelResponse, supabase: Re
       .map((c: any) => `• ${c.name} (strength: ${c.strength?.toFixed(2) || '?'})`)
       .join('\n')
 
-    const prompt = `You are a thinking partner for a personal knowledge system.
+    const prompt = `You are a thinking partner. Someone just captured a new thought.
 
 A new thought just arrived. Analyse it against the user's complete knowledge base and return ONE steering move that will push their thinking forward RIGHT NOW.
 
@@ -2081,7 +2081,7 @@ async function handleSeeds(
       .filter(Boolean)
       .join('\n\n')
 
-    const prompt = `You are a thinking partner generating capture prompts for a knowledge worker.
+    const prompt = `You are a thinking partner generating short, sharp prompts to make someone think. They use this app to capture thoughts and work on projects.
 
 THEIR RECENT ACTIVITY:
 ${context}
