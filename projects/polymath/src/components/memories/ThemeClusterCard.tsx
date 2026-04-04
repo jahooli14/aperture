@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { ThemeCluster } from '../../types'
-import { ChevronRight, Sprout } from 'lucide-react'
+import { Sprout } from 'lucide-react'
 import { CreateProjectDialog } from '../projects/CreateProjectDialog'
 import { getIconComponent } from '../../lib/themeIcons'
 
