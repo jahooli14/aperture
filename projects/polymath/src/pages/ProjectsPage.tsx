@@ -340,7 +340,7 @@ export function ProjectsPage() {
               <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
                 your <span className="text-brand-primary">projects</span>
               </h1>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mt-1">Building the future, one node at a time.</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mt-1">Your projects</p>
             </div>
             <div className="flex items-center gap-2">
               <CreateProjectDialog />

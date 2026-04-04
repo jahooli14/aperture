@@ -219,7 +219,7 @@ export default function ListsPage() {
                     <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] leading-none">
                         your <span className="text-brand-primary">collections</span>
                     </h1>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mt-1">Curate your existence.</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mt-1">The stuff you love.</p>
                 </div>
                 <div className="flex items-center gap-2">
                     {lists.length > 0 && (
@@ -275,7 +275,7 @@ export default function ListsPage() {
                             style={{ boxShadow: 'inset 0 0 0 1px rgba(56,189,248,0.15)' }}>
                             <Box className="h-8 w-8 text-brand-primary" />
                         </div>
-                        <h3 className="text-xl font-black uppercase tracking-tight text-[var(--brand-text-primary)] mb-2">Your trophy cabinet awaits</h3>
+                        <h3 className="text-xl font-black uppercase tracking-tight text-[var(--brand-text-primary)] mb-2">Start a collection</h3>
                         <p className="text-sm text-brand-text-muted mb-8 max-w-xs mx-auto leading-relaxed">
                             Every great collection starts with one item. What are you keeping track of?
                         </p>

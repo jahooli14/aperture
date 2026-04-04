@@ -202,8 +202,8 @@ export function SuggestionsPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold premium-text-platinum tracking-tight">Discovery</h1>
-            <p className="text-[var(--brand-text-secondary)] text-sm">Focused suggestions for your next move</p>
+            <h1 className="text-3xl font-bold premium-text-platinum tracking-tight">Ideas for you</h1>
+            <p className="text-[var(--brand-text-secondary)] text-sm">Ideas based on what you've been thinking about</p>
           </div>
           <button
             onClick={handleSynthesize}
@@ -211,7 +211,7 @@ export function SuggestionsPage() {
             className="px-5 py-2.5 rounded-full bg-brand-primary/20 text-brand-primary border border-blue-500/30 text-sm font-semibold hover:bg-brand-primary/30 transition-all flex items-center gap-2 disabled:opacity-50"
           >
             {synthesizing ? <Zap className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-            {synthesizing ? 'Synthesizing...' : 'Generate New'}
+            {synthesizing ? 'Thinking...' : 'Generate New'}
           </button>
         </div>
 
@@ -220,7 +220,7 @@ export function SuggestionsPage() {
           <div className="mb-4 p-3 rounded-xl border border-emerald-500/20 bg-brand-primary/5">
             <div className="flex items-center gap-2 text-brand-text-secondary text-sm font-medium mb-1">
               <Brain className="w-4 h-4" />
-              <span>Your engine is learning</span>
+              <span>Learning what you like</span>
             </div>
             <p className="text-xs text-[var(--brand-text-secondary)]">
               Based on {learnedPairs.length} preference{learnedPairs.length > 1 ? 's' : ''} detected 
@@ -276,13 +276,13 @@ export function SuggestionsPage() {
         {loading ? (
           <div className="premium-card p-12 flex flex-col items-center justify-center space-y-4">
             <div className="h-12 w-12 rounded-full border-2 border-blue-500/30 border-t-blue-500 animate-spin" />
-            <p className="text-[var(--brand-text-secondary)] animate-pulse">Scanning knowledge graph...</p>
+            <p className="text-[var(--brand-text-secondary)] animate-pulse">Looking through your notes...</p>
           </div>
         ) : pendingSuggestions.length === 0 ? (
           <EmptyState
             icon={Database}
             title="All caught up"
-            description="No new suggestions at the moment. Add more thoughts or trigger a new synthesis."
+            description="No new suggestions at the moment. Add more thoughts and check back, or tap Generate Now."
             action={
               <Button onClick={handleSynthesize} className="btn-primary rounded-full px-8">
                 Generate Now
@@ -327,7 +327,7 @@ export function SuggestionsPage() {
                       <div className="p-6 rounded-2xl bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] mb-8">
                         <div className="flex items-center gap-2 mb-3">
                           <Brain className="h-4 w-4 text-brand-primary" />
-                          <span className="text-sm font-bold text-brand-primary uppercase tracking-wide">AI Rationale</span>
+                          <span className="text-sm font-bold text-brand-primary uppercase tracking-wide">Why this?</span>
                         </div>
                         <p className="text-[var(--brand-text-secondary)] leading-relaxed italic">
                           "{currentSuggestion.synthesis_reasoning}"

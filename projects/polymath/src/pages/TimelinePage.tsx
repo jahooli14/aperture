@@ -63,7 +63,7 @@ export function TimelinePage() {
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center">
             <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-r-transparent mb-4" style={{ borderColor: 'var(--brand-primary)' }}></div>
-            <p className="text-lg" style={{ color: "var(--brand-primary)" }}>Analyzing your patterns...</p>
+            <p className="text-lg" style={{ color: "var(--brand-primary)" }}>Loading your activity...</p>
           </div>
         </div>
       </div>
@@ -93,7 +93,7 @@ export function TimelinePage() {
                     Not Enough Data Yet
                   </h2>
                   <p style={{ color: "var(--brand-primary)" }}>
-                    Capture at least 5 memories to see your cognitive patterns
+                    Add a few more thoughts to see when you're most active.
                   </p>
                 </>
               )}
@@ -111,10 +111,10 @@ export function TimelinePage() {
       <div className="max-w-6xl mx-auto px-4 mb-12">
         <div className="text-center">
           <h1 className="text-4xl font-bold mb-3" style={{ color: "var(--brand-primary)" }}>
-            Your Cognitive Timeline
+            Your Thinking Times
           </h1>
           <p className="text-xl" style={{ color: "var(--brand-primary)" }}>
-            Understanding when and how you think best
+            When you do your best thinking
           </p>
         </div>
       </div>
@@ -207,7 +207,7 @@ export function TimelinePage() {
                   {pattern.type === 'side_hustle_hours' && pattern.data && (
                     <div className="mt-4">
                       <p className="text-sm font-medium mb-3" style={{ color: "var(--brand-primary)" }}>
-                        Side-project hours per month:
+                        Personal project time per month:
                       </p>
                       <div className="space-y-2">
                         {pattern.data.map((month: any, i: number) => (
@@ -247,9 +247,9 @@ export function TimelinePage() {
               What This Means
             </h3>
             <p style={{ color: "var(--brand-primary)" }}>
-              Your cognitive patterns reveal when you're most creative and productive.
-              Use this data to schedule important work during your peak times and
-              protect your side-hustle hours.
+              Here's when you tend to do your best work.
+              Use this to plan around your peak times and
+              make the most of your free time.
             </p>
           </CardContent>
         </Card>

@@ -40,7 +40,7 @@ export function InsightsPage() {
     const stances = insight.data?.timeline || []
     if (stances.length < 2) return
 
-    const prompt = `You said: "${stances[0]?.quote || stances[0]?.stance}"\nThen you said: "${stances[stances.length - 1]?.quote || stances[stances.length - 1]?.stance}"\n\nWhat's the deeper truth that contains both?`
+    const prompt = `You said: "${stances[0]?.quote || stances[0]?.stance}"\nThen you said: "${stances[stances.length - 1]?.quote || stances[stances.length - 1]?.stance}"\n\nSo what do you actually think?`
 
     setResolutionPrompt(prompt)
     setResolutionInsight(insight)
@@ -214,8 +214,8 @@ export function InsightsPage() {
                 <div className="relative inline-block mb-4">
                   <Brain className="h-12 w-12 animate-pulse" style={{ color: "var(--brand-primary)" }} />
                 </div>
-                <p className="text-lg font-medium mb-1" style={{ color: "var(--brand-primary)" }}>Analyzing your thoughts...</p>
-                <p className="text-sm" style={{ color: "var(--brand-primary)" }}>Finding patterns and connections</p>
+                <p className="text-lg font-medium mb-1" style={{ color: "var(--brand-primary)" }}>Looking through your notes...</p>
+                <p className="text-sm" style={{ color: "var(--brand-primary)" }}>Finding things that connect</p>
               </div>
             </div>
           </section>
@@ -282,10 +282,10 @@ export function InsightsPage() {
                 boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
               }}>
                 <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
-                  Your synthesis <span style={{ color: "var(--brand-primary)" }}>insights</span>
+                  What we <span style={{ color: "var(--brand-primary)" }}>noticed</span>
                 </h2>
                 <p className="mt-2 text-lg" style={{ color: "var(--brand-primary)" }}>
-                  What your data actually means — patterns, tensions, and intersections
+                  Connections and patterns across your thoughts
                 </p>
                 {generatedAt && (
                   <p className="mt-1 text-xs opacity-50" style={{ color: "var(--brand-primary)" }}>
@@ -458,7 +458,7 @@ export function InsightsPage() {
                       className="mt-3 flex items-center gap-2 px-3 py-2 rounded-xl bg-brand-primary/10 border border-purple-500/20 text-brand-primary text-sm hover:bg-brand-primary/20 transition-all"
                     >
                       <Zap className="w-4 h-4" />
-                      Resolve this tension
+                      What do you actually think?
                     </button>
                   )}
 
@@ -481,11 +481,10 @@ export function InsightsPage() {
               boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
             }}>
               <h3 className="text-lg font-bold mb-3 premium-text-platinum">
-                Understanding Your Journey
+                What this means
               </h3>
               <p style={{ color: "var(--brand-primary)" }}>
-                These insights show how your thinking evolves over time. Contradictions aren't failuresthey're
-                signs of growth. Patterns help you understand your creative process and break unproductive cycles.
+                Your thinking changes over time, and that's normal. These patterns help you notice what you keep coming back to.
               </p>
             </div>
           </div>
@@ -504,7 +503,7 @@ export function InsightsPage() {
             <textarea
               value={resolutionText}
               onChange={e => setResolutionText(e.target.value)}
-              placeholder="The deeper truth is..."
+              placeholder="Here's how I see it now..."
               className="w-full bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] rounded-xl px-4 py-3 text-sm text-[var(--brand-text-primary)] placeholder-gray-500 focus:outline-none focus:border-purple-500/30 min-h-[100px] resize-none"
               autoFocus
             />

@@ -509,7 +509,7 @@ export function MemoriesPage() {
               <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
                 your <span className="text-brand-primary">thoughts</span>
               </h1>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mt-1">Capture everything, loose nothing.</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mt-1">Your thoughts, all in one place.</p>
             </div>
             <div className="flex items-center gap-2">
               {view !== 'resurfacing' && <CreateMemoryDialog />}
@@ -550,7 +550,7 @@ export function MemoriesPage() {
             <div className="mb-6 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <h2 className="text-xl font-black uppercase tracking-tight text-[var(--brand-text-primary)]">
-                  {view === 'recent' ? 'Your Graph' : view === 'themes' ? 'By Theme' : 'Review Queue'}
+                  {view === 'recent' ? 'Recent' : view === 'themes' ? 'By Theme' : 'Worth revisiting'}
                 </h2>
               </div>
             </div>
@@ -653,7 +653,7 @@ export function MemoriesPage() {
                   </h3>
                   <p className="text-xs leading-relaxed mb-2" style={{ color: "var(--brand-primary)" }}>
                     These 8 thoughts demonstrate <strong>diverse interests</strong>: React development, woodworking, parenting, photography, ML, meditation, cooking, and design.
-                    Notice how they span <strong>technical skills AND hobbies</strong>  this is the key to powerful synthesis.
+                    Notice how they span <strong>technical skills AND hobbies</strong>  this helps us spot interesting connections.
                   </p>
                   <p className="text-xs" style={{ color: "var(--brand-primary)" }}>
                      <strong>Tip:</strong> Real-world usage works best with 510 thoughts covering both your professional expertise and personal interests.
