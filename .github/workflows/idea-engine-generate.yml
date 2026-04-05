@@ -1,0 +1,26 @@
+name: Idea Engine - Generate
+
+on:
+  schedule:
+    # Run every 30 minutes: */30 * * * *
+    # This generates ~48 ideas/day (~16 pass filter/day)
+    - cron: '*/30 * * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Trigger idea generation
+        run: |
+          curl -f -X POST "${{ secrets.VERCEL_DOMAIN }}/api/idea-engine?action=generate" \
+            -H "Authorization: Bearer ${{ secrets.IDEA_ENGINE_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -w "\nHTTP Status: %{http_code}\n" \
+            -s -S
+
+      - name: Check for failures
+        if: failure()
+        run: echo "Idea generation failed - check Vercel logs"

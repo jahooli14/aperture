@@ -37,6 +37,9 @@
   "functions": {
     "api/brainstorm.ts": {
       "maxDuration": 30
+    },
+    "api/idea-engine.ts": {
+      "maxDuration": 60
     }
   },
   "crons": [
