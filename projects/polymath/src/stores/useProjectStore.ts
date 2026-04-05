@@ -415,90 +415,55 @@ export const useProjectStore = create<ProjectState>()(
       },
 
       setPriority: async (id) => {
+        // Multi-priority (focus tier, cap 3). The server enforces the cap and
+        // returns 409 'focus_cap_reached' when exceeded — we surface that error
+        // unchanged so the UI can prompt the user to demote something.
         const previousAllProjects = get().allProjects
         const targetProject = previousAllProjects.find(p => p.id === id)
 
         if (!targetProject) return
 
-        // 1. If already priority -> Toggle OFF
-        if (targetProject.is_priority) {
-          const updatedAllProjects = previousAllProjects.map(p =>
-            p.id === id ? { ...p, is_priority: false } : p
-          )
-          const sorted = smartSortProjects(updatedAllProjects)
+        const nextValue = !targetProject.is_priority
 
-          set(state => ({
-            allProjects: sorted,
-            projects: filterProjects(sorted, state.filter)
-          }))
+        // Optimistic update — only this project changes, others stay untouched
+        const updatedAllProjects = previousAllProjects.map(p =>
+          p.id === id ? { ...p, is_priority: nextValue } : p
+        )
+        const sorted = smartSortProjects(updatedAllProjects)
 
-          // Update cache
-          import('../lib/db').then(({ readingDb }) => {
-            readingDb.cacheProjects(sorted).catch(e => logger.warn('Failed to cache projects after priority toggle:', e))
-          })
+        set(state => ({
+          allProjects: sorted,
+          projects: filterProjects(sorted, state.filter)
+        }))
 
-          try {
-            await api.patch(`projects/${id}`, { is_priority: false })
-          } catch (error) {
-            logger.error('Failed to unset priority:', error)
-            // Rollback
+        import('../lib/db').then(({ readingDb }) => {
+          readingDb.cacheProjects(sorted).catch(e => logger.warn('Failed to cache projects after priority toggle:', e))
+        })
+
+        try {
+          const response = await api.post('projects?resource=set-priority', { project_id: id })
+          if (response && response.projects) {
+            const sortedResponse = smartSortProjects(response.projects)
             set(state => ({
-              allProjects: previousAllProjects,
-              projects: filterProjects(previousAllProjects, state.filter),
-              error: error instanceof Error ? error.message : 'Failed to unset priority'
+              allProjects: sortedResponse,
+              projects: filterProjects(sortedResponse, state.filter)
             }))
-            // Revert cache
             import('../lib/db').then(({ readingDb }) => {
-              readingDb.cacheProjects(previousAllProjects).catch(e => logger.warn('Failed to revert project cache:', e))
+              readingDb.cacheProjects(sortedResponse).catch(e => logger.warn('Failed to cache projects after priority set (server):', e))
             })
-            throw error
           }
-        } else {
-          // 2. If NOT priority -> Set as ONLY priority
-          const updatedAllProjects = previousAllProjects.map(p =>
-            p.id === id ? { ...p, is_priority: true } : { ...p, is_priority: false }
-          )
-          const sorted = smartSortProjects(updatedAllProjects)
-
+        } catch (error: any) {
+          logger.error('Failed to toggle priority:', error)
+          // Rollback optimistic update
           set(state => ({
-            allProjects: sorted,
-            projects: filterProjects(sorted, state.filter)
+            allProjects: previousAllProjects,
+            projects: filterProjects(previousAllProjects, state.filter),
+            error: error?.message || 'Failed to toggle priority'
           }))
-
-          // Update cache
           import('../lib/db').then(({ readingDb }) => {
-            readingDb.cacheProjects(sorted).catch(e => logger.warn('Failed to cache projects after priority set:', e))
+            readingDb.cacheProjects(previousAllProjects).catch(e => logger.warn('Failed to revert project cache:', e))
           })
-
-          try {
-            // Use atomic set-priority endpoint and use returned projects for source of truth
-            const response = await api.post('projects?resource=set-priority', { project_id: id })
-
-            if (response && response.projects) {
-              const sortedResponse = smartSortProjects(response.projects)
-              set(state => ({
-                allProjects: sortedResponse,
-                projects: filterProjects(sortedResponse, state.filter)
-              }))
-              // Update cache with server response
-              import('../lib/db').then(({ readingDb }) => {
-                readingDb.cacheProjects(sortedResponse).catch(e => logger.warn('Failed to cache projects after priority set (server):', e))
-              })
-            }
-          } catch (error) {
-            logger.error('Failed to set priority:', error)
-            // Rollback
-            set(state => ({
-              allProjects: previousAllProjects,
-              projects: filterProjects(previousAllProjects, state.filter),
-              error: error instanceof Error ? error.message : 'Failed to set priority'
-            }))
-            // Revert cache
-            import('../lib/db').then(({ readingDb }) => {
-              readingDb.cacheProjects(previousAllProjects).catch(e => logger.warn('Failed to revert project cache:', e))
-            })
-            throw error
-          }
+          throw error
         }
       },
 

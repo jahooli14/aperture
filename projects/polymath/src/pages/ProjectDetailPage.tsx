@@ -22,6 +22,9 @@ import { handleInputFocus } from '../utils/keyboard'
 import { EditProjectDialog } from '../components/projects/EditProjectDialog'
 import { ProjectCompletionModal } from '../components/projects/ProjectCompletionModal'
 import { ProjectChatPanel } from '../components/projects/ProjectChatPanel'
+import { CatalystsPanel } from '../components/projects/CatalystsPanel'
+import { CompletionRitual } from '../components/projects/CompletionRitual'
+import { LineageBreadcrumb } from '../components/projects/LineageBreadcrumb'
 import type { Project, Memory } from '../types'
 import { supabase } from '../lib/supabase'
 import { useMemoryStore } from '../stores/useMemoryStore'
@@ -68,6 +71,7 @@ export function ProjectDetailPage() {
 
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [showCompletionModal, setShowCompletionModal] = useState(false)
+  const [showRetroRitual, setShowRetroRitual] = useState(false)
 
   // Chat panel state
   const [showChat, setShowChat] = useState(false)
@@ -505,6 +509,7 @@ export function ProjectDetailPage() {
       await updateProject(project.id, { status: newStatus })
       if (newStatus === 'completed') {
         setShowCompletionModal(true)
+        setShowRetroRitual(true)
       } else {
         addToast({
           title: 'Status updated',
@@ -665,6 +670,7 @@ export function ProjectDetailPage() {
                 </span>
               )}
             </div>
+            <LineageBreadcrumb project={project} />
             <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] leading-none">
               {project.title}
             </h1>
@@ -1003,6 +1009,11 @@ export function ProjectDetailPage() {
                 </div>
               </div>
 
+              {/* Catalysts — conditions that would unlock this project */}
+              <div className="mt-4">
+                <CatalystsPanel project={project} />
+              </div>
+
               {/* Task Checklist */}
               <div data-task-list className="mt-8">
                 <div className="flex items-center justify-between mb-4">
@@ -1026,7 +1037,7 @@ export function ProjectDetailPage() {
                       All tasks complete!
                     </p>
                     <p className="text-xs text-[var(--brand-text-secondary)] mb-4 opacity-70">
-                      Every action item is done. Time to ship?
+                      Every action item is done. Time to finish?
                     </p>
                     <button
                       onClick={() => {
@@ -1040,7 +1051,7 @@ export function ProjectDetailPage() {
                         boxShadow: '0 4px 16px rgba(34,197,94,0.15)',
                       }}
                     >
-                      Ship It
+                      Finish It
                     </button>
                   </div>
                 )}
@@ -1197,6 +1208,15 @@ export function ProjectDetailPage() {
           sparkedByMemories={sparkedByMemories}
           isOpen={showCompletionModal}
           onClose={() => setShowCompletionModal(false)}
+        />
+      )}
+
+      {/* Retrospective Ritual — three questions, feeds new sparks */}
+      {project && (
+        <CompletionRitual
+          project={project}
+          isOpen={showRetroRitual}
+          onClose={() => setShowRetroRitual(false)}
         />
       )}
 

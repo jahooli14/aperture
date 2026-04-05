@@ -453,9 +453,19 @@ export interface Project {
   last_active: string // ISO 8601
   created_at: string
   updated_at?: string
-  is_priority?: boolean // Only one project can be priority at a time
+  is_priority?: boolean // Focus tier — up to 3 projects can be priority at once
   metadata?: ProjectMetadata
   embedding?: number[] // Vector embedding (1536 dims)
+
+  // Metabolism fields (Phase 3+)
+  heat_score?: number // 0+ — drawer surfacing rank
+  heat_reason?: string // Cited reason for current heat, e.g. "you mentioned X yesterday"
+  heat_updated_at?: string
+  catalysts?: Catalyst[] // Conditions that would make this project viable
+
+  // Lineage (Phase 7) — mutations link back to their ancestor
+  parent_id?: string | null
+  lineage_root_id?: string | null
 
   // Daily Queue fields
   energy_level?: 'low' | 'moderate' | 'high'
@@ -472,6 +482,23 @@ export interface Project {
 }
 
 export type ProjectStatus = 'upcoming' | 'active' | 'dormant' | 'completed' | 'on-hold' | 'maintaining' | 'archived' | 'abandoned' | 'graveyard'
+
+// A catalyst is a condition that would make a dormant project viable.
+// Heat score bumps when a catalyst is matched against recent user material.
+export interface Catalyst {
+  text: string
+  kind?: 'skill' | 'collaborator' | 'tool' | 'time' | 'life_event' | 'other'
+  matched?: boolean
+  matched_at?: string
+  matched_evidence?: string
+}
+
+// A persisted chat turn on a project.
+export interface ChatTurn {
+  role: 'user' | 'assistant'
+  content: string
+  at: string // ISO timestamp
+}
 
 export interface Task {
   id: string
@@ -498,6 +525,7 @@ export interface ProjectMetadata {
   end_goal?: string // Definition of Done - what does completion look like?
   project_mode?: 'completion' | 'recurring' // completion = has end goal, recurring = ongoing habit
   rejected_suggestions?: string[] // AI suggestions user removed - avoid suggesting again
+  conversation?: ChatTurn[] // Persisted project chat history (Phase 2)
   [key: string]: any // Allow arbitrary metadata
   // DEPRECATED: next_step field removed - use tasks?.find(t => !t.done)?.text instead
 }

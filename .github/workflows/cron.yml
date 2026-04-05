@@ -1,0 +1,80 @@
+name: Cron
+
+# Single consolidated scheduler.
+# Fires every 30 min; dispatches to Vercel endpoints based on current time.
+# All curls run in parallel so each invocation bills ~1 minute on GitHub Actions.
+#
+# Budget: 48 runs/day * 1 min ≈ 1,440 min/month (well within 2,000 free tier).
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force-run all jobs regardless of schedule'
+        required: false
+        default: 'false'
+
+concurrency:
+  group: cron
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Dispatch
+        env:
+          BASE:  ${{ secrets.VERCEL_DOMAIN }}
+          TOKEN: ${{ secrets.IDEA_ENGINE_SECRET }}
+          FORCE: ${{ github.event.inputs.force }}
+        run: |
+          set -u
+          HOUR=$(date -u +%H)
+          MIN=$(date -u +%M)
+          DOW=$(date -u +%u)   # 1=Mon .. 7=Sun
+
+          hit() {
+            echo "→ $1"
+            curl -fsS -m 60 -X POST "$BASE$1" \
+              -H "Authorization: Bearer $TOKEN" \
+              -H "Content-Type: application/json" \
+              || echo "!! failed: $1"
+          }
+
+          # ── Every 30 min ──────────────────────────────────────────────
+          # Idea Engine generator fires twice an hour.
+          # Fix Queue runner catches approved fixes on 30-min granularity.
+          hit "/api/idea-engine?action=generate" &
+          hit "/api/fix-queue?action=run-fixes" &
+
+          # ── Top of the hour only ──────────────────────────────────────
+          if [ "$MIN" = "00" ] || [ "$FORCE" = "true" ]; then
+
+            # Every 6h: Fix Queue drafter + Polymath heat recompute
+            if [ $((10#$HOUR % 6)) -eq 0 ] || [ "$FORCE" = "true" ]; then
+              hit "/api/fix-queue?action=draft-pending" &
+              hit "/api/projects?resource=recompute-heat" &
+            fi
+
+            # 08:00 UTC daily: Idea Engine Opus review
+            if [ "$HOUR" = "08" ] || [ "$FORCE" = "true" ]; then
+              hit "/api/idea-engine?action=review" &
+            fi
+
+            # 09:00 UTC daily: Idea Engine email digest
+            if [ "$HOUR" = "09" ] || [ "$FORCE" = "true" ]; then
+              hit "/api/idea-engine?action=send-digest" &
+            fi
+
+            # Sunday 08:00 UTC: Polymath drawer digest
+            if { [ "$DOW" = "7" ] && [ "$HOUR" = "08" ]; } || [ "$FORCE" = "true" ]; then
+              hit "/api/projects?resource=generate-digest" &
+            fi
+
+          fi
+
+          wait
+          echo "✓ cron dispatch complete"

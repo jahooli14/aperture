@@ -573,6 +573,29 @@ Return JSON only:
   }
 }
 
+// ─── Infer catalysts ────────────────────────────────────────────────────────
+
+interface InferCatalystsBody {
+  project_id?: string
+  title: string
+  description?: string
+}
+
+async function handleInferCatalysts(body: InferCatalystsBody, userId: string) {
+  const { inferCatalysts } = await import('./_lib/metabolism.js')
+  const catalysts = await inferCatalysts(body.title || '', body.description || '')
+
+  if (body.project_id && catalysts.length > 0) {
+    await supabase
+      .from('projects')
+      .update({ catalysts })
+      .eq('id', body.project_id)
+      .eq('user_id', userId)
+  }
+
+  return { catalysts }
+}
+
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -600,6 +623,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.json(await handleProjectChat(body as unknown as Parameters<typeof handleProjectChat>[0], userId))
       case 'project-reveal':
         return res.json(await handleProjectReveal(body as unknown as Parameters<typeof handleProjectReveal>[0], userId))
+      case 'infer-catalysts':
+        return res.json(await handleInferCatalysts(body as unknown as InferCatalystsBody, userId))
       default:
         return res.status(400).json({ error: `Unknown step: ${body.step}` })
     }
