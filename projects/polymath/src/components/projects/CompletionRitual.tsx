@@ -1,10 +1,3 @@
-/**
- * CompletionRitual — a three-question retrospective shown when a project
- * is marked finished. Answers are persisted and piped back into the sparks
- * engine so every completion feeds future ideation. Nothing is wasted.
- *
- * Language: we say "finished", never the s-word.
- */
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Sparkles, Loader2, Check } from 'lucide-react'

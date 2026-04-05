@@ -283,57 +283,25 @@ export function ProjectsPage() {
     )
   }
 
-  // React Query handles fetching now
-  // useEffect(() => {
-  //   fetchProjects()
-  // }, [filter])
-
-  // Categorize projects for the dashboard.
-  // Focus tier: up to FOCUS_CAP priority projects (multi-priority as of Phase 1).
-  // Active tier: fills remaining slots with recently-active projects if priorities < cap.
   const FOCUS_CAP = 3
   const { activeList, drawerList } = React.useMemo(() => {
-    // 1. Get all priority projects (capped — defensive; backend enforces too)
     const priorityProjects = projects
       .filter(p => p.is_priority)
       .slice(0, FOCUS_CAP)
     const priorityIds = new Set(priorityProjects.map(p => p.id))
 
-    // 2. Get recent active projects, excluding those already prioritized
-    const sortedByRecency = [...projects].sort((a, b) =>
-      new Date(b.last_active || b.created_at).getTime() - new Date(a.last_active || a.created_at).getTime()
-    )
-
-    // Fill remaining slots up to FOCUS_CAP total
-    const recentActiveNonPriority = sortedByRecency
+    const recentActiveNonPriority = [...projects]
+      .sort((a, b) =>
+        new Date(b.last_active || b.created_at).getTime() - new Date(a.last_active || a.created_at).getTime()
+      )
       .filter(p => p.status === 'active' && !priorityIds.has(p.id))
       .slice(0, Math.max(0, FOCUS_CAP - priorityProjects.length))
 
-    const activeList = [...priorityProjects, ...recentActiveNonPriority].filter(Boolean) as Project[]
+    const activeList = [...priorityProjects, ...recentActiveNonPriority] as Project[]
     const activeIds = new Set(activeList.map(p => p.id))
+    const drawerList = projects.filter(p => !activeIds.has(p.id))
 
-    // Everything else goes in the drawer
-    let drawerList = projects.filter(p => !activeIds.has(p.id))
-
-    // Shuffle drawer daily (deterministic for the day)
-    const seed = new Date().toDateString()
-    const seededRandom = (str: string) => {
-      let h = 0xdeadbeef;
-      for (let i = 0; i < str.length; i++)
-        h = Math.imul(h ^ str.charCodeAt(i), 2654435761);
-      return ((h ^ h >>> 16) >>> 0) / 4294967296;
-    }
-
-    drawerList.sort((a, b) => {
-      const scoreA = seededRandom(seed + a.id)
-      const scoreB = seededRandom(seed + b.id)
-      return scoreB - scoreA
-    })
-
-    return {
-      activeList,
-      drawerList
-    }
+    return { activeList, drawerList }
   }, [projects])
 
   return (

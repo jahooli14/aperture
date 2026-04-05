@@ -1,16 +1,3 @@
-/**
- * DrawerDigestSheet — weekly mutation proposals for the drawer.
- *
- * The cron runs once a week, inspects warmed drawer projects, and writes a
- * drawer_digests row with 0–2 concrete evolution proposals (shrink, merge,
- * split, reframe, snapshot; handoff only if opted in).
- *
- * When an unread digest exists, a quiet banner appears on the projects page.
- * Tapping opens this sheet. Each proposal can be accepted (creates a new
- * project with lineage pointing at the parent) or dismissed.
- *
- * Invisible when there is no unread digest or the digest has no evolutions.
- */
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Sparkles, ArrowRight, Check } from 'lucide-react'

@@ -1,12 +1,3 @@
-/**
- * ForYouToday — the Attention strip on the Projects page.
- *
- * This is the only component allowed to surface drawer content on the main
- * page. It shows warmed projects (those the metabolism has found newly
- * relevant) along with their cited reason. If there is nothing warmed and no
- * unread digest, **it renders nothing** — not an empty state, not a
- * placeholder. Silence is a feature.
- */
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'

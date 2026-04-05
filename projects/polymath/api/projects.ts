@@ -16,7 +16,7 @@ import { generatePowerHourPlan } from './_lib/power-hour-generator.js'
 import { identifyRottingProjects, generateZebraReport, buryProject, resurrectProject, pickSynthesisResurfaceCandidate } from './_lib/project-maintenance.js'
 import { updateItemConnections } from './_lib/connection-logic.js'
 import { invalidateProjectCache } from './_lib/power-hour-cache.js'
-import { recomputeHeatForUser } from './_lib/metabolism.js'
+import { recomputeHeatForUser, DRAWER_STATUSES, MUTATION_MODES, MODES_THAT_RETIRE_PARENT, type MutationMode } from './_lib/metabolism.js'
 
 // Daily Queue Scoring Logic
 interface UserContext {
@@ -385,12 +385,6 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // ============================================================
-  // METABOLISM RESOURCES (Phase 3+): heat, drawer, digest
-  // ============================================================
-
-  // Recompute heat scores for all drawer-tier projects belonging to the user.
-  // Called by the cron runner every 6h. Safe to trigger manually.
   if (resource === 'recompute-heat') {
     if (req.method !== 'POST') {
       return res.status(405).json({ error: 'Method not allowed' })
@@ -407,8 +401,6 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // Read the drawer: heat-sorted top + shuffle tail for browse view.
-  // This is what /drawer and the "For you today" strip consume.
   if (resource === 'drawer') {
     if (req.method !== 'GET') {
       return res.status(405).json({ error: 'Method not allowed' })
@@ -418,7 +410,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         .from('projects')
         .select('*')
         .eq('user_id', userId)
-        .in('status', ['upcoming', 'dormant', 'on-hold', 'maintaining'])
+        .in('status', DRAWER_STATUSES)
         .eq('is_priority', false)
         .order('heat_score', { ascending: false, nullsFirst: false })
 
@@ -427,22 +419,13 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
       }
 
       const all = projects || []
-      // Warmed = heat_score > 0 AND has a cited reason. Silence over slop.
       const warmed = all.filter((p: any) => (p.heat_score || 0) > 0 && p.heat_reason)
-      // Rest are shuffled deterministically by date seed (same mechanism the
-      // client used to use for the drawer — now done server-side for consistency).
-      const rest = all.filter((p: any) => !warmed.includes(p))
-      const seed = new Date().toDateString()
-      const seededRandom = (str: string) => {
-        let h = 0xdeadbeef
-        for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 2654435761)
-        return ((h ^ (h >>> 16)) >>> 0) / 4294967296
-      }
-      rest.sort((a: any, b: any) => seededRandom(seed + b.id) - seededRandom(seed + a.id))
+      const warmedIds = new Set(warmed.map((p: any) => p.id))
+      const rest = all.filter((p: any) => !warmedIds.has(p.id))
 
       return res.status(200).json({
-        warmed,     // heat-sorted, with reasons — what "For you today" shows
-        shuffle: rest, // everything else, for the full drawer browse page
+        warmed,
+        shuffle: rest,
         total: all.length,
       })
     } catch (error) {
@@ -454,24 +437,16 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // ============================================================
-  // DRAWER DIGEST — weekly mutations + warmed summary
-  // ============================================================
-
-  // Generate a drawer digest for this user (cron target, runs weekly).
-  // Takes warmed drawer projects, asks the evolve-project step for 0-2
-  // mutation proposals, and writes one drawer_digests row (status='unread').
   if (resource === 'generate-digest') {
     if (req.method !== 'POST') {
       return res.status(405).json({ error: 'Method not allowed' })
     }
     try {
-      // Pull the top few warmed drawer projects.
       const { data: warmedProjects } = await supabase
         .from('projects')
         .select('id, title, description, heat_score, heat_reason, catalysts, status, metadata')
         .eq('user_id', userId)
-        .in('status', ['upcoming', 'dormant', 'on-hold', 'maintaining'])
+        .in('status', DRAWER_STATUSES)
         .eq('is_priority', false)
         .gt('heat_score', 0)
         .not('heat_reason', 'is', null)
@@ -480,15 +455,10 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
 
       const warmed = warmedProjects || []
 
-      // If nothing warm, write an empty digest row (status unread=false).
-      // Silence over slop: the UI will not show an empty digest.
       if (warmed.length === 0) {
         return res.status(200).json({ success: true, warmed: 0, evolutions: 0, skipped: 'no-warmed' })
       }
 
-      // For each warmed project, ask the evolve-project step for a proposal.
-      // Modes are picked by the AI based on the project + evidence; we exclude
-      // handoff unless the user opted in.
       const { data: userSettings } = await supabase
         .from('user_settings')
         .select('allow_handoff_mutations')
@@ -496,11 +466,16 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         .maybeSingle()
       const allowHandoff = !!userSettings?.allow_handoff_mutations
 
-      const { generateText } = await import('./_lib/gemini-chat.js')
-      const evolutions: any[] = []
-      for (const p of warmed.slice(0, 3)) {
-        const modes = ['shrink', 'merge', 'split', 'reframe', 'snapshot']
-        if (allowHandoff) modes.push('handoff')
+      interface Evolution {
+        project_id: string
+        project_title: string
+        mode: MutationMode
+        title: string
+        proposal: string
+        evidence: string
+      }
+
+      const proposals = await Promise.all(warmed.slice(0, 3).map(async (p: any): Promise<Evolution | null> => {
         const evidence = p.heat_reason || ''
         const prompt = `You are helping evolve a dormant project. Pick ONE mutation mode and return a proposal.
 
@@ -525,23 +500,25 @@ Return JSON only:
         try {
           const raw = await generateText(prompt, { temperature: 0.5, maxTokens: 400, responseFormat: 'json' })
           const parsed = JSON.parse(raw)
-          if (parsed && parsed.mode && parsed.mode !== 'none' && parsed.proposal) {
-            evolutions.push({
-              project_id: p.id,
-              project_title: p.title,
-              mode: parsed.mode,
-              title: parsed.title || p.title,
-              proposal: parsed.proposal,
-              evidence: parsed.evidence || evidence,
-            })
+          if (!parsed?.mode || parsed.mode === 'none' || !parsed.proposal) return null
+          if (!MUTATION_MODES.includes(parsed.mode)) return null
+          if (parsed.mode === 'handoff' && !allowHandoff) return null
+          return {
+            project_id: p.id,
+            project_title: p.title,
+            mode: parsed.mode,
+            title: parsed.title || p.title,
+            proposal: parsed.proposal,
+            evidence: parsed.evidence || evidence,
           }
         } catch (e) {
           console.warn('[generate-digest] evolve-project failed for', p.id, e)
+          return null
         }
-        if (evolutions.length >= 2) break // cap at 2 evolutions per digest
-      }
+      }))
 
-      // Write the digest row.
+      const evolutions = proposals.filter((e): e is Evolution => e !== null).slice(0, 2)
+
       const { data: digestRow, error: insertErr } = await supabase
         .from('drawer_digests')
         .insert([{
@@ -596,8 +573,6 @@ Return JSON only:
     }
   }
 
-  // Act on a digest: mark read, or accept a specific evolution.
-  // Body: { digest_id, action: 'read' | 'accept', evolution_index?: number }
   if (resource === 'digest-act' && req.method === 'POST') {
     try {
       const { digest_id, action, evolution_index } = req.body as {
@@ -630,14 +605,19 @@ Return JSON only:
       }
 
       if (action === 'accept') {
-        const evolutions = (digest.evolutions || []) as any[]
+        const evolutions = (digest.evolutions || []) as Array<{
+          project_id: string
+          mode: MutationMode
+          title?: string
+          proposal: string
+          evidence: string
+        }>
         const idx = typeof evolution_index === 'number' ? evolution_index : 0
         const evo = evolutions[idx]
         if (!evo) {
           return res.status(400).json({ error: 'evolution_index out of range' })
         }
 
-        // Load the parent project so we can derive lineage_root_id.
         const { data: parent } = await supabase
           .from('projects')
           .select('id, title, description, type, lineage_root_id')
@@ -651,7 +631,6 @@ Return JSON only:
 
         const lineageRoot = parent.lineage_root_id || parent.id
 
-        // Create a new project as the mutation. It inherits the lineage root.
         const { data: child, error: childErr } = await supabase
           .from('projects')
           .insert([{
@@ -678,20 +657,23 @@ Return JSON only:
           return res.status(500).json({ error: 'Failed to create mutation', details: childErr.message })
         }
 
-        // Some modes retire the parent.
-        if (evo.mode === 'snapshot' || evo.mode === 'shrink' || evo.mode === 'reframe') {
-          await supabase
-            .from('projects')
-            .update({ status: 'completed' })
-            .eq('id', parent.id)
-            .eq('user_id', userId)
+        const followUps: Promise<unknown>[] = [
+          supabase
+            .from('drawer_digests')
+            .update({ status: 'acted' })
+            .eq('id', digest_id)
+            .eq('user_id', userId),
+        ]
+        if (MODES_THAT_RETIRE_PARENT.has(evo.mode)) {
+          followUps.push(
+            supabase
+              .from('projects')
+              .update({ status: 'completed' })
+              .eq('id', parent.id)
+              .eq('user_id', userId)
+          )
         }
-
-        await supabase
-          .from('drawer_digests')
-          .update({ status: 'acted' })
-          .eq('id', digest_id)
-          .eq('user_id', userId)
+        await Promise.all(followUps)
 
         return res.status(200).json({ success: true, child })
       }
@@ -706,13 +688,6 @@ Return JSON only:
     }
   }
 
-  // ============================================================
-  // COMPLETION RITUAL — retrospective → new sparks
-  // ============================================================
-  //
-  // Body: { project_id, answers: { what_worked, what_surprised, what_next } }
-  // Stores a row in project_retrospectives, generates 1-3 sparks seeded
-  // into project_suggestions, and marks the project completed if not already.
   if (resource === 'complete-with-retro' && req.method === 'POST') {
     try {
       const { project_id, answers } = req.body as {
@@ -734,25 +709,22 @@ Return JSON only:
         return res.status(404).json({ error: 'Project not found' })
       }
 
-      // Persist the retro.
-      await supabase
-        .from('project_retrospectives')
-        .insert([{ project_id, user_id: userId, answers }])
-
-      // Flip to completed if still open.
+      const persistOps: Promise<unknown>[] = [
+        supabase.from('project_retrospectives').insert([{ project_id, user_id: userId, answers }]),
+      ]
       if (project.status !== 'completed') {
-        await supabase
-          .from('projects')
-          .update({ status: 'completed' })
-          .eq('id', project_id)
-          .eq('user_id', userId)
+        persistOps.push(
+          supabase
+            .from('projects')
+            .update({ status: 'completed' })
+            .eq('id', project_id)
+            .eq('user_id', userId)
+        )
       }
+      await Promise.all(persistOps)
 
-      // Ask Gemini for 1-3 sparks. Silence over slop: if the answers are
-      // empty or vacuous, we return [].
       let sparks: Array<{ title: string; description: string }> = []
       try {
-        const { generateText } = await import('./_lib/gemini-chat.js')
         const prompt = `A user just finished a project. Read their retrospective and suggest 1-3 NEW sparks (tiny project ideas) that naturally extend from what they just made. Concrete, specific, each written as a noun or verb phrase.
 
 JUST FINISHED
@@ -782,12 +754,11 @@ Return JSON only:
         console.warn('[complete-with-retro] spark generation failed:', e)
       }
 
-      // Seed sparks into project_suggestions (skip silently if table schema mismatches).
-      const createdSparks: any[] = []
-      for (const s of sparks) {
-        const { data, error } = await supabase
+      let createdSparks: unknown[] = []
+      if (sparks.length > 0) {
+        const { data } = await supabase
           .from('project_suggestions')
-          .insert([{
+          .insert(sparks.map(s => ({
             user_id: userId,
             title: s.title,
             description: s.description,
@@ -797,10 +768,9 @@ Return JSON only:
               from_retrospective: project_id,
               parent_project_title: project.title,
             },
-          }])
+          })))
           .select()
-          .maybeSingle()
-        if (!error && data) createdSparks.push(data)
+        createdSparks = data || []
       }
 
       return res.status(200).json({ success: true, sparks: createdSparks })
@@ -813,9 +783,6 @@ Return JSON only:
     }
   }
 
-  // ============================================================
-  // METABOLISM SETTINGS — handoff opt-in
-  // ============================================================
   if (resource === 'metabolism-settings') {
     if (req.method === 'GET') {
       try {
@@ -1432,40 +1399,20 @@ Return JSON only:
 
       // Generate embedding and auto-suggest connections asynchronously (don't block response)
       // Return project immediately, then process connections in background
-      // Generate embedding, connections, AND initial tasks asynchronously
       const backgroundPromise = (async () => {
         try {
           await generateProjectEmbeddingAndConnect(project.id, project.title, project.description, userId)
 
-          // Generate scaffolding (Tasks) using the unified repair utility
           const { ensureProjectHasTasks } = await import('./_lib/project-repair.js')
           await ensureProjectHasTasks(project.id, userId)
 
-          // Infer catalysts — external conditions that would unlock this project.
-          // Fire-and-forget, no-op on failure. Silence over slop: returns [] if nothing concrete.
           try {
-            const { generateText } = await import('./_lib/gemini-chat.js')
-            const prompt = `Analyze this project and return 2-5 concrete catalysts (external conditions that would unlock or accelerate it). Each must be specific enough to later spot in voice notes or articles. Return empty array if nothing concrete comes to mind.
-
-title: ${project.title}
-description: ${project.description || '(none)'}
-
-Return JSON: { "catalysts": [ { "text": "...", "kind": "skill|collaborator|tool|time|life_event|other" } ] }`
-            const raw = await generateText(prompt, { temperature: 0.4, maxTokens: 400, responseFormat: 'json' })
-            const parsed = JSON.parse(raw)
-            const list = Array.isArray(parsed.catalysts) ? parsed.catalysts : []
-            const cleaned = list
-              .filter((c: any) => c && typeof c.text === 'string' && c.text.trim().length >= 4)
-              .slice(0, 5)
-              .map((c: any) => ({
-                text: String(c.text).trim(),
-                kind: ['skill', 'collaborator', 'tool', 'time', 'life_event', 'other'].includes(c.kind) ? c.kind : 'other',
-                matched: false,
-              }))
-            if (cleaned.length > 0) {
+            const { inferCatalysts } = await import('./_lib/metabolism.js')
+            const catalysts = await inferCatalysts(project.title, project.description || '')
+            if (catalysts.length > 0) {
               await supabase
                 .from('projects')
-                .update({ catalysts: cleaned })
+                .update({ catalysts })
                 .eq('id', project.id)
                 .eq('user_id', userId)
             }

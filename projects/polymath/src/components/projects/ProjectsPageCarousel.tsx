@@ -264,9 +264,6 @@ export function ProjectsPageCarousel({
         </section>
       )}
 
-      {/* The drawer has moved behind a nav icon (/projects/drawer). The main
-          page now only shows active focus + a conditional "For you today"
-          strip with warmed items. Silence over slop. */}
       {drawerList.length > 0 && (
         <div className="mt-8 pt-8 border-t border-[var(--glass-surface)] text-center">
           <Link

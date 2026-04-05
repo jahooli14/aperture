@@ -1,14 +1,3 @@
-/**
- * DrawerPage — the full compost heap.
- *
- * This page lives behind a nav icon so the main Projects page never shows the
- * fullcognitive load of every dormant project. Come here when you want to
- * browse. Otherwise, stay silent.
- *
- * Rule: projects surfaced here are drawer-tier (not active, not priority, not
- * dead). They're sorted by heat_score so warmed items rise to the top, but
- * every drawer project is listed — this is the place to rummage.
- */
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
@@ -22,7 +11,7 @@ interface WarmedProject extends Project {
   heat_reason?: string
 }
 
-const DRAWER_STATUSES = new Set(['upcoming', 'dormant', 'on-hold', 'maintaining'])
+const DRAWER_STATUS_SET: ReadonlySet<string> = new Set(['upcoming', 'dormant', 'on-hold', 'maintaining'])
 
 export default function DrawerPage() {
   const { projects, fetchProjects, loading } = useProjectStore()
@@ -35,7 +24,7 @@ export default function DrawerPage() {
   const drawerProjects = useMemo(() => {
     const list = (Array.isArray(projects) ? projects : []) as WarmedProject[]
     const filtered = list.filter(p =>
-      DRAWER_STATUSES.has(p.status as any) && !p.is_priority
+      DRAWER_STATUS_SET.has(p.status) && !p.is_priority
     )
     const q = query.trim().toLowerCase()
     const searched = q

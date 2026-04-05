@@ -1,12 +1,3 @@
-/**
- * CatalystsPanel — shows the conditions that would unlock this project.
- *
- * Each catalyst is a specific external condition (a skill, a collaborator, a
- * tool, a life event, a window of time) that would accelerate the project.
- * When one matches against the user's recent material, it glows green. The
- * panel is collapsed by default and invisible when the project has no
- * catalysts — silence over slop.
- */
 import { useState } from 'react'
 import { ChevronDown, ChevronRight, Sparkles, Loader2 } from 'lucide-react'
 import { api } from '../../lib/apiClient'

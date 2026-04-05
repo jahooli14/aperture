@@ -1,11 +1,3 @@
-/**
- * LineageBreadcrumb — shows a project's ancestry when it was born from a
- * mutation in the drawer digest. Tapping the breadcrumb navigates to the
- * parent. Expanding shows sibling projects (other evolutions of the same
- * lineage root).
- *
- * Invisible when the project has no parent_id — most projects do not.
- */
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { GitBranch, ChevronDown, ChevronRight } from 'lucide-react'
