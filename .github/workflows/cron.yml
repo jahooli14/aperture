@@ -27,7 +27,11 @@ jobs:
     steps:
       - name: Dispatch
         env:
-          BASE:  ${{ secrets.VERCEL_DOMAIN }}
+          # Hardcoded to the known-working polymath production domain.
+          # Previously used ${{ secrets.VERCEL_DOMAIN }} but that secret was
+          # the cause of repeated "curl DNS failure" incidents (see commit
+          # a00c314). Hardcoding removes an invisible failure mode.
+          BASE:  https://aper-ture.vercel.app
           TOKEN: ${{ secrets.IDEA_ENGINE_SECRET }}
           FORCE: ${{ github.event.inputs.force }}
         run: |
@@ -36,12 +40,15 @@ jobs:
           MIN=$(date -u +%M)
           DOW=$(date -u +%u)   # 1=Mon .. 7=Sun
 
+          FAILED_FILE=$(mktemp)
+
           hit() {
             echo "→ $1"
-            curl -fsS -m 60 -X POST "$BASE$1" \
-              -H "Authorization: Bearer $TOKEN" \
-              -H "Content-Type: application/json" \
-              || echo "!! failed: $1"
+            if ! curl -fsS -m 60 -X POST "$BASE$1" \
+                 -H "Authorization: Bearer $TOKEN" \
+                 -H "Content-Type: application/json"; then
+              echo "!! failed: $1" | tee -a "$FAILED_FILE"
+            fi
           }
 
           # ── Every 30 min ──────────────────────────────────────────────
@@ -77,4 +84,12 @@ jobs:
           fi
 
           wait
+
+          if [ -s "$FAILED_FILE" ]; then
+            echo ""
+            echo "::error::One or more cron endpoints failed:"
+            cat "$FAILED_FILE"
+            exit 1
+          fi
+
           echo "✓ cron dispatch complete"

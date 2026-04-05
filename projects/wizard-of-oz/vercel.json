@@ -13,5 +13,5 @@
       "schedule": "0 15 * * *"
     }
   ],
-  "ignoreCommand": "if [[ \"$VERCEL_GIT_COMMIT_REF\" == *\"dependabot\"* ]]; then exit 0; else git diff --quiet HEAD^ HEAD -- .; fi"
+  "ignoreCommand": "if [[ \"$VERCEL_GIT_COMMIT_REF\" != \"main\" ]]; then exit 0; fi; ROOT=$(git rev-parse --show-toplevel); BASE=\"${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}\"; git rev-parse \"$BASE\" >/dev/null 2>&1 || exit 1; git diff --quiet \"$BASE\" HEAD -- \"$ROOT/projects/wizard-of-oz\""
 }

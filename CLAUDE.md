@@ -2,6 +2,17 @@
 
 Personal projects monorepo. React, TypeScript, Vite, Vercel, Supabase.
 
+## CRITICAL: Never push without explicit confirmation
+
+**Vercel auto-builds on every push to remote and consumes paid build minutes.** To avoid burning through the Pro plan quota:
+
+- NEVER run `git push` (to any branch, any remote) without explicit user confirmation **in the current turn**.
+- Before pushing, you MUST ask: **"Ready to push?"** and wait for an explicit yes.
+- Authorization from a previous turn does NOT carry over. Every push requires fresh confirmation.
+- Only push when the work is genuinely complete (code done, tests passing, no WIP). Batch changes into a single push rather than pushing after every commit.
+- Committing locally is fine and does not require confirmation — only the push to remote needs a gate.
+- A PreToolUse hook in `.claude/settings.json` enforces this by blocking `git push` commands. If it blocks you, that is working as intended — stop and ask the user.
+
 ## Projects
 
 | Project | Location | Status | Description |

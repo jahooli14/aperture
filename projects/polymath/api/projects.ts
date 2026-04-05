@@ -657,7 +657,7 @@ Return JSON only:
           return res.status(500).json({ error: 'Failed to create mutation', details: childErr.message })
         }
 
-        const followUps: Promise<unknown>[] = [
+        const followUps: PromiseLike<unknown>[] = [
           supabase
             .from('drawer_digests')
             .update({ status: 'acted' })
@@ -709,7 +709,7 @@ Return JSON only:
         return res.status(404).json({ error: 'Project not found' })
       }
 
-      const persistOps: Promise<unknown>[] = [
+      const persistOps: PromiseLike<unknown>[] = [
         supabase.from('project_retrospectives').insert([{ project_id, user_id: userId, answers }]),
       ]
       if (project.status !== 'completed') {
