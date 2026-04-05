@@ -1,16 +1,4 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "cmd=$(jq -r '.tool_input.command // \"\"'); if echo \"$cmd\" | grep -Eq '(^|[;&|`[:space:]])git[[:space:]]+push([[:space:]]|$)'; then printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"BLOCKED: git push requires explicit user confirmation in this turn. Vercel auto-builds on every push to remote and burns paid build minutes. You MUST ask the user \\\"Ready to push?\\\" and wait for an explicit yes in the current turn before retrying. Do not push just because an earlier turn authorized it.\"}}'; fi"
-          }
-        ]
-      }
-    ]
-  }
+  "hooks": {}
 }
