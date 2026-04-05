@@ -6,6 +6,8 @@ import { SignInNudge } from '../components/SignInNudge'
 import { useProjectStore } from '../stores/useProjectStore'
 import { useSuggestionStore } from '../stores/useSuggestionStore'
 import { ProjectsPageCarousel } from '../components/projects/ProjectsPageCarousel'
+import { ForYouToday } from '../components/projects/ForYouToday'
+import { DrawerDigestSheet } from '../components/projects/DrawerDigestSheet'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
 import { ReaperModal } from '../components/projects/ReaperModal'
 import { GraveyardWalkthrough, shouldShowGraveyardWalkthrough } from '../components/projects/GraveyardWalkthrough'
@@ -46,7 +48,7 @@ function CompletedProjectsTimeline({ projects, onNavigate }: { projects: Project
       <div className="text-center py-24">
         <div className="text-5xl mb-4">🏆</div>
         <p className="text-[var(--brand-text-primary)] font-black uppercase tracking-tight text-lg mb-2">No completed projects yet</p>
-        <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>When you ship something, it'll live here.</p>
+        <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>When you finish something, it'll live here.</p>
       </div>
     )
   }
@@ -55,7 +57,7 @@ function CompletedProjectsTimeline({ projects, onNavigate }: { projects: Project
     <div className="max-w-2xl mx-auto px-4 py-6 pb-32">
       <div className="mb-8">
         <p className="text-[10px] font-black uppercase tracking-[0.3em]" style={{ color: 'var(--brand-text-secondary)' }}>
-          {sorted.length} project{sorted.length !== 1 ? 's' : ''} shipped
+          {sorted.length} project{sorted.length !== 1 ? 's' : ''} finished
         </p>
         <h2 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
           What you've <span className="text-[#34d399]">built</span>
@@ -281,53 +283,25 @@ export function ProjectsPage() {
     )
   }
 
-  // React Query handles fetching now
-  // useEffect(() => {
-  //   fetchProjects()
-  // }, [filter])
-
-  // Categorize projects for the dashboard
+  const FOCUS_CAP = 3
   const { activeList, drawerList } = React.useMemo(() => {
-    // 1. Get all priority projects
-    const priorityProjects = projects.filter(p => p.is_priority)
+    const priorityProjects = projects
+      .filter(p => p.is_priority)
+      .slice(0, FOCUS_CAP)
     const priorityIds = new Set(priorityProjects.map(p => p.id))
 
-    // 2. Get recent active projects, excluding those already prioritized
-    const sortedByRecency = [...projects].sort((a, b) =>
-      new Date(b.last_active || b.created_at).getTime() - new Date(a.last_active || a.created_at).getTime()
-    )
-
-    // Fill remaining slots up to 3 (Pinned + Top Recent) for active focus
-    const maxActiveCount = 3
-    const recentActiveNonPriority = sortedByRecency
+    const recentActiveNonPriority = [...projects]
+      .sort((a, b) =>
+        new Date(b.last_active || b.created_at).getTime() - new Date(a.last_active || a.created_at).getTime()
+      )
       .filter(p => p.status === 'active' && !priorityIds.has(p.id))
-      .slice(0, maxActiveCount - priorityProjects.length)
+      .slice(0, Math.max(0, FOCUS_CAP - priorityProjects.length))
 
-    const activeList = [...priorityProjects, ...recentActiveNonPriority].filter(Boolean) as Project[]
+    const activeList = [...priorityProjects, ...recentActiveNonPriority] as Project[]
     const activeIds = new Set(activeList.map(p => p.id))
+    const drawerList = projects.filter(p => !activeIds.has(p.id))
 
-    // Everything else goes in the drawer
-    let drawerList = projects.filter(p => !activeIds.has(p.id))
-
-    // Shuffle drawer daily (deterministic for the day)
-    const seed = new Date().toDateString()
-    const seededRandom = (str: string) => {
-      let h = 0xdeadbeef;
-      for (let i = 0; i < str.length; i++)
-        h = Math.imul(h ^ str.charCodeAt(i), 2654435761);
-      return ((h ^ h >>> 16) >>> 0) / 4294967296;
-    }
-
-    drawerList.sort((a, b) => {
-      const scoreA = seededRandom(seed + a.id)
-      const scoreB = seededRandom(seed + b.id)
-      return scoreB - scoreA
-    })
-
-    return {
-      activeList,
-      drawerList
-    }
+    return { activeList, drawerList }
   }, [projects])
 
   return (
@@ -472,6 +446,12 @@ export function ProjectsPage() {
                     )}
                   </div>
                 )}
+
+                {/* Weekly drawer digest banner — invisible when none unread */}
+                {filter === 'all' && <DrawerDigestSheet />}
+
+                {/* "For you today" — warmed drawer items, invisible when empty */}
+                {filter === 'all' && <ForYouToday />}
 
                 {/* Masonry Dashboard */}
                 <ProjectsPageCarousel

@@ -1,7 +1,8 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { Settings, Palette, Check, Bug, ToggleRight, ToggleLeft, Zap, RefreshCw, Search, Type, Bell } from 'lucide-react'
+import { Settings, Palette, Check, Bug, ToggleRight, ToggleLeft, Zap, RefreshCw, Search, Type, Bell, GitBranch } from 'lucide-react'
+import { api } from '../lib/apiClient'
 import { useThemeStore } from '../stores/useThemeStore'
 import { getAvailableColors, getColorPreview } from '../lib/theme'
 import { SubtleBackground } from '../components/SubtleBackground'
@@ -25,6 +26,31 @@ export function SettingsPage() {
   const { accentColor, intensity, fontSize, showBugTracker, setAccentColor, setIntensity, setFontSize, setShowBugTracker } = useThemeStore()
   const { addToast } = useToast()
   const [regenerating, setRegenerating] = useState(false)
+  const [allowHandoff, setAllowHandoff] = useState(false)
+
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const res = (await api.get('projects?resource=metabolism-settings')) as { allow_handoff_mutations?: boolean } | null
+        if (res && typeof res.allow_handoff_mutations === 'boolean') {
+          setAllowHandoff(res.allow_handoff_mutations)
+        }
+      } catch {
+        // Silent — settings are optional.
+      }
+    })()
+  }, [])
+
+  const toggleHandoff = async () => {
+    const next = !allowHandoff
+    setAllowHandoff(next)
+    try {
+      await api.post('projects?resource=metabolism-settings', { allow_handoff_mutations: next })
+    } catch {
+      setAllowHandoff(!next)
+      addToast({ title: 'Failed to save', variant: 'destructive' })
+    }
+  }
   const {
     bedtimeEnabled, bedtimeHour, bedtimeMinute,
     morningEnabled, morningHour, morningMinute,
@@ -431,6 +457,36 @@ export function SettingsPage() {
                     <ToggleRight className="w-6 h-6" style={{ color: "var(--brand-primary)" }} />
                   ) : (
                     <ToggleLeft className="w-6 h-6" style={{ color: "var(--brand-primary)" }} />
+                  )}
+                </div>
+              </button>
+
+              {/* Handoff mutations toggle — opt-in evolution mode */}
+              <button
+                onClick={toggleHandoff}
+                className="w-full flex items-center gap-4 p-4 rounded-xl backdrop-blur-xl transition-all text-left border hover:bg-[var(--glass-surface)]"
+                style={{
+                  background: 'var(--glass-surface)',
+                  borderColor: 'var(--glass-surface)',
+                }}
+              >
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'rgba(168, 85, 247, 0.15)' }}>
+                  <GitBranch className="w-5 h-5" style={{ color: '#a855f7' }} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold premium-text-platinum text-sm">
+                    Allow handoff mutations
+                  </h3>
+                  <p style={{ color: 'var(--brand-text-secondary)', fontSize: '0.8rem' }}>
+                    Let the weekly digest propose handing a dormant project to someone else.
+                  </p>
+                </div>
+                <div>
+                  {allowHandoff ? (
+                    <ToggleRight className="w-6 h-6" style={{ color: '#a855f7' }} />
+                  ) : (
+                    <ToggleLeft className="w-6 h-6" style={{ color: 'var(--brand-text-muted)' }} />
                   )}
                 </div>
               </button>

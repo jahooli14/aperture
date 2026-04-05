@@ -29,6 +29,11 @@ import type { Project } from '../../types'
 import type { Task } from './TaskList'
 import { MultiPerspectiveSuggestions } from '../suggestions/MultiPerspectiveSuggestions'
 import { useJourneyStore } from '../../stores/useJourneyStore'
+import { useProjectStore } from '../../stores/useProjectStore'
+import type { ChatTurn } from '../../types'
+
+// Cap persisted chat history to avoid unbounded metadata growth.
+const MAX_PERSISTED_TURNS = 40
 
 interface EchoItem {
   title: string
@@ -157,6 +162,38 @@ export function ProjectChatPanel({
   // Get onboarding profile for personalization
   const onboardingProfile = useJourneyStore(state => state.onboardingProfile)
 
+  // Project store for persisting conversation back to project metadata.
+  const updateProjectMeta = useProjectStore(state => state.updateProject)
+
+  // Persist current chat turns to project.metadata.conversation.
+  // Debounced per message write by the updateProject API itself; we keep this
+  // best-effort — failures are logged but never surface to the user.
+  const persistConversation = (nextMessages: ChatMessage[]) => {
+    try {
+      const turns: ChatTurn[] = nextMessages
+        .filter((m): m is Extract<ChatMessage, { kind: 'user' | 'model' }> =>
+          m.kind === 'user' || m.kind === 'model'
+        )
+        .slice(-MAX_PERSISTED_TURNS)
+        .map(m => ({
+          role: m.kind === 'model' ? 'assistant' : 'user',
+          content: m.content,
+          at: new Date().toISOString(),
+        }))
+
+      if (turns.length === 0) return
+
+      void updateProjectMeta(project.id, {
+        metadata: {
+          ...(project.metadata || {}),
+          conversation: turns,
+        },
+      }).catch(e => console.warn('[ProjectChat] persist conversation failed:', e))
+    } catch (e) {
+      console.warn('[ProjectChat] persist conversation error:', e)
+    }
+  }
+
   // Reset and initialise when panel opens
   useEffect(() => {
     if (!isOpen) return
@@ -165,7 +202,17 @@ export function ProjectChatPanel({
       (project.metadata?.suggested_power_hour_tasks as PowerHourSuggestion[] | undefined) || []
 
     const opening = buildOpeningMessage(project, recentCompletions, powerHourSuggestions, onboardingProfile)
-    setMessages(opening)
+
+    // Hydrate persisted chat turns from project metadata so the panel has memory
+    // across sessions. The opening (system context) is always fresh; persisted
+    // user/assistant turns come after it.
+    const persisted = (project.metadata?.conversation as ChatTurn[] | undefined) || []
+    const persistedMessages: ChatMessage[] = persisted.map(t => ({
+      kind: t.role === 'assistant' ? 'model' : 'user',
+      content: t.content,
+    }))
+
+    setMessages([...opening, ...persistedMessages])
     setAddedTasks(new Set())
     setInput('')
     setContextTab('goal')
@@ -209,15 +256,19 @@ export function ProjectChatPanel({
         })
         const data = await res.json()
         if (res.ok && data.reply) {
-          setMessages(prev => [
-            ...prev,
-            {
-              kind: 'model',
-              content: data.reply,
-              suggestedTasks: data.suggestedTasks || [],
-              echoes: data.echoes || [],
-            },
-          ])
+          setMessages(prev => {
+            const next: ChatMessage[] = [
+              ...prev,
+              {
+                kind: 'model',
+                content: data.reply,
+                suggestedTasks: data.suggestedTasks || [],
+                echoes: data.echoes || [],
+              },
+            ]
+            persistConversation(next)
+            return next
+          })
         }
       } catch {
         // Silent — they can still type normally
@@ -351,15 +402,19 @@ export function ProjectChatPanel({
         }
       }
 
-      setMessages(prev => [
-        ...prev,
-        {
-          kind: 'model',
-          content: (data.reply as string) || "Couldn't reach the server — try again.",
-          suggestedTasks: (data.suggestedTasks as SuggestedTask[]) || [],
-          echoes: (data.echoes as EchoItem[]) || [],
-        },
-      ])
+      setMessages(prev => {
+        const next: ChatMessage[] = [
+          ...prev,
+          {
+            kind: 'model',
+            content: (data.reply as string) || "Couldn't reach the server — try again.",
+            suggestedTasks: (data.suggestedTasks as SuggestedTask[]) || [],
+            echoes: (data.echoes as EchoItem[]) || [],
+          },
+        ]
+        persistConversation(next)
+        return next
+      })
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : 'Network error'
       console.error('[ProjectChat] Fetch error:', errMsg)
@@ -439,15 +494,19 @@ export function ProjectChatPanel({
               ])
               return
             }
-            setMessages(prev => [
-              ...prev,
-              {
-                kind: 'model',
-                content: (data.reply as string) || "Couldn't reach the server — try again.",
-                suggestedTasks: (data.suggestedTasks as SuggestedTask[]) || [],
-                echoes: (data.echoes as EchoItem[]) || [],
-              },
-            ])
+            setMessages(prev => {
+              const next: ChatMessage[] = [
+                ...prev,
+                {
+                  kind: 'model',
+                  content: (data.reply as string) || "Couldn't reach the server — try again.",
+                  suggestedTasks: (data.suggestedTasks as SuggestedTask[]) || [],
+                  echoes: (data.echoes as EchoItem[]) || [],
+                },
+              ]
+              persistConversation(next)
+              return next
+            })
           })
           .catch((err: unknown) => {
             const errMsg = err instanceof Error ? err.message : 'Network error'

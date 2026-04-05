@@ -178,7 +178,7 @@ export function SuggestionsPage() {
         <Card className="max-w-md w-full premium-card border-red-500/20 bg-brand-primary/5">
           <CardContent className="pt-6 text-center">
             <Database className="h-12 w-12 text-brand-text-secondary mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-[var(--brand-text-primary)] mb-2">Error Loading Suggestions</h3>
+            <h3 className="text-xl font-bold text-[var(--brand-text-primary)] mb-2">Error Loading Sparks</h3>
             <p className="text-brand-text-secondary mb-6">{error}</p>
             <Button onClick={() => fetchSuggestions()} variant="outline" className="w-full">
               Retry
@@ -202,8 +202,8 @@ export function SuggestionsPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold premium-text-platinum tracking-tight">Ideas for you</h1>
-            <p className="text-[var(--brand-text-secondary)] text-sm">Ideas based on what you've been thinking about</p>
+            <h1 className="text-3xl font-bold premium-text-platinum tracking-tight">Sparks</h1>
+            <p className="text-[var(--brand-text-secondary)] text-sm">Tiny project seeds drawn from what you've been thinking about</p>
           </div>
           <button
             onClick={handleSynthesize}
@@ -282,7 +282,7 @@ export function SuggestionsPage() {
           <EmptyState
             icon={Database}
             title="All caught up"
-            description="No new suggestions at the moment. Add more thoughts and check back, or tap Generate Now."
+            description="No new sparks at the moment. Capture more thoughts and check back, or tap Generate Now."
             action={
               <Button onClick={handleSynthesize} className="btn-primary rounded-full px-8">
                 Generate Now

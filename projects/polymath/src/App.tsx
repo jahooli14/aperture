@@ -35,6 +35,7 @@ const ReadingPage = lazy(() => import('./pages/ReadingPage').then(m => ({ defaul
 const ReaderPage = lazy(() => import('./pages/ReaderPage').then(m => ({ default: m.ReaderPage })))
 const SuggestionsPage = lazy(() => import('./pages/SuggestionsPage').then(m => ({ default: m.SuggestionsPage })))
 const ProjectsPage = lazy(() => import('./pages/ProjectsPage').then(m => ({ default: m.ProjectsPage })))
+const DrawerPage = lazy(() => import('./pages/DrawerPage'))
 const ProjectDetailPage = lazy(() => import('./pages/ProjectDetailPage'))
 const OnboardingPage = lazy(() => import('./pages/OnboardingPage').then(m => ({ default: m.OnboardingPage })))
 const TimelinePage = lazy(() => import('./pages/TimelinePage').then(m => ({ default: m.TimelinePage })))
@@ -317,6 +318,7 @@ export default function App() {
                       <Route path="/reading/:id" element={<ReaderPage />} />
                       <Route path="/suggestions" element={<SuggestionsPage />} />
                       <Route path="/projects" element={<ProjectsPage />} />
+                      <Route path="/projects/drawer" element={<DrawerPage />} />
                       <Route path="/projects/:id" element={<ProjectDetailPage />} />
                       <Route path="/timeline" element={<TimelinePage />} />
                       <Route path="/replay" element={<CognitiveReplayPage />} />

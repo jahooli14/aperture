@@ -16,6 +16,7 @@ import { generatePowerHourPlan } from './_lib/power-hour-generator.js'
 import { identifyRottingProjects, generateZebraReport, buryProject, resurrectProject, pickSynthesisResurfaceCandidate } from './_lib/project-maintenance.js'
 import { updateItemConnections } from './_lib/connection-logic.js'
 import { invalidateProjectCache } from './_lib/power-hour-cache.js'
+import { recomputeHeatForUser, DRAWER_STATUSES, MUTATION_MODES, MODES_THAT_RETIRE_PARENT, type MutationMode } from './_lib/metabolism.js'
 
 // Daily Queue Scoring Logic
 interface UserContext {
@@ -270,6 +271,12 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
 
   // SET-PRIORITY RESOURCE - Atomically set one project as priority
   if (resource === 'set-priority') {
+    // Toggle semantic with a focus-tier cap.
+    // Up to FOCUS_CAP projects can be priority at once. Toggling on when the
+    // cap is full returns 409 with the list of current priorities so the
+    // client can prompt the user to demote one.
+    const FOCUS_CAP = 3
+
     if (req.method !== 'POST') {
       return res.status(405).json({ error: 'Method not allowed' })
     }
@@ -281,7 +288,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'project_id is required' })
       }
 
-      // Verify project exists and belongs to user
+      // Look up the target project
       const { data: project, error: projectError } = await supabase
         .from('projects')
         .select('id, title, is_priority')
@@ -289,10 +296,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         .eq('user_id', userId)
         .single()
 
-      console.log('[set-priority] Project lookup result:', { project, projectError })
-
       if (projectError) {
-        console.error('[set-priority] Project lookup error:', JSON.stringify(projectError, null, 2))
         return res.status(500).json({
           error: 'Database error during project lookup',
           details: projectError.message,
@@ -301,53 +305,57 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
       }
 
       if (!project) {
-        console.error('[set-priority] Project not found:', project_id)
         return res.status(404).json({ error: 'Project not found' })
       }
 
-      console.log('[set-priority] Step 3: Clearing all priorities for user:', userId)
-      // Atomic operation: clear all priorities, then set the one
-      const { data: clearedData, error: clearError } = await supabase
+      // Count current priorities (excluding this project)
+      const { data: currentPriorities, error: countError } = await supabase
         .from('projects')
-        .update({ is_priority: false })
+        .select('id, title')
         .eq('user_id', userId)
-        .select('id, title, is_priority')
+        .eq('is_priority', true)
+        .neq('id', project_id)
 
-      console.log('[set-priority] Clear result:', { clearedData, clearError })
-
-      if (clearError) {
-        console.error('[set-priority] Clear error FULL:', JSON.stringify(clearError, null, 2))
+      if (countError) {
         return res.status(500).json({
-          error: 'Failed to clear priorities',
-          details: clearError.message,
-          code: clearError.code,
-          hint: clearError.hint
+          error: 'Failed to count current priorities',
+          details: countError.message
         })
       }
 
-      console.log('[set-priority] Step 4: Setting priority on project:', project_id)
-      // Step 2: Set priority on the specified project
+      const currentCount = currentPriorities?.length || 0
+      const nextValue = !project.is_priority
+
+      // Enforce cap when promoting
+      if (nextValue && currentCount >= FOCUS_CAP) {
+        return res.status(409).json({
+          error: 'focus_cap_reached',
+          message: `You can focus on up to ${FOCUS_CAP} projects at a time. Drop one to promote another.`,
+          cap: FOCUS_CAP,
+          current_priorities: currentPriorities || []
+        })
+      }
+
+      // Toggle priority on the target project
       const { data: updatedProject, error: setError } = await supabase
         .from('projects')
-        .update({ is_priority: true })
+        .update({
+          is_priority: nextValue,
+          ...(nextValue ? { last_active: new Date().toISOString() } : {})
+        })
         .eq('id', project_id)
         .eq('user_id', userId)
         .select()
         .single()
 
-      console.log('[set-priority] Set result:', { updatedProject, setError })
-
       if (setError) {
-        console.error('[set-priority] Set error FULL:', JSON.stringify(setError, null, 2))
         return res.status(500).json({
-          error: 'Failed to set priority',
+          error: 'Failed to update priority',
           details: setError.message,
-          code: setError.code,
-          hint: setError.hint
+          code: setError.code
         })
       }
 
-      console.log('[set-priority] Step 5: Fetching all projects')
       // Return all projects so the client can refresh
       const { data: allProjects, error: fetchError } = await supabase
         .from('projects')
@@ -356,27 +364,464 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         .order('created_at', { ascending: false })
 
       if (fetchError) {
-        console.error('[set-priority] Fetch error:', JSON.stringify(fetchError, null, 2))
         return res.status(500).json({
           error: 'Failed to fetch projects after update',
           details: fetchError.message
         })
       }
 
-      console.log('[set-priority] SUCCESS! Returning', allProjects?.length, 'projects')
       return res.status(200).json({
         success: true,
         updated_project: updatedProject,
-        projects: allProjects || []
+        projects: allProjects || [],
+        focus_cap: FOCUS_CAP
       })
     } catch (error) {
       console.error('[set-priority] UNEXPECTED ERROR:', error)
-      console.error('[set-priority] Error stack:', error instanceof Error ? error.stack : 'No stack')
       return res.status(500).json({
         error: 'Failed to set priority',
         details: error instanceof Error ? error.message : JSON.stringify(error)
       })
     }
+  }
+
+  if (resource === 'recompute-heat') {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' })
+    }
+    try {
+      const result = await recomputeHeatForUser(supabase, userId)
+      return res.status(200).json({ success: true, ...result })
+    } catch (error) {
+      console.error('[recompute-heat] error:', error)
+      return res.status(500).json({
+        error: 'Failed to recompute heat',
+        details: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
+  if (resource === 'drawer') {
+    if (req.method !== 'GET') {
+      return res.status(405).json({ error: 'Method not allowed' })
+    }
+    try {
+      const { data: projects, error } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('user_id', userId)
+        .in('status', DRAWER_STATUSES)
+        .eq('is_priority', false)
+        .order('heat_score', { ascending: false, nullsFirst: false })
+
+      if (error) {
+        return res.status(500).json({ error: 'Failed to fetch drawer', details: error.message })
+      }
+
+      const all = projects || []
+      const warmed = all.filter((p: any) => (p.heat_score || 0) > 0 && p.heat_reason)
+      const warmedIds = new Set(warmed.map((p: any) => p.id))
+      const rest = all.filter((p: any) => !warmedIds.has(p.id))
+
+      return res.status(200).json({
+        warmed,
+        shuffle: rest,
+        total: all.length,
+      })
+    } catch (error) {
+      console.error('[drawer] error:', error)
+      return res.status(500).json({
+        error: 'Failed to load drawer',
+        details: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
+  if (resource === 'generate-digest') {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' })
+    }
+    try {
+      const { data: warmedProjects } = await supabase
+        .from('projects')
+        .select('id, title, description, heat_score, heat_reason, catalysts, status, metadata')
+        .eq('user_id', userId)
+        .in('status', DRAWER_STATUSES)
+        .eq('is_priority', false)
+        .gt('heat_score', 0)
+        .not('heat_reason', 'is', null)
+        .order('heat_score', { ascending: false })
+        .limit(5)
+
+      const warmed = warmedProjects || []
+
+      if (warmed.length === 0) {
+        return res.status(200).json({ success: true, warmed: 0, evolutions: 0, skipped: 'no-warmed' })
+      }
+
+      const { data: userSettings } = await supabase
+        .from('user_settings')
+        .select('allow_handoff_mutations')
+        .eq('user_id', userId)
+        .maybeSingle()
+      const allowHandoff = !!userSettings?.allow_handoff_mutations
+
+      interface Evolution {
+        project_id: string
+        project_title: string
+        mode: MutationMode
+        title: string
+        proposal: string
+        evidence: string
+      }
+
+      const proposals = await Promise.all(warmed.slice(0, 3).map(async (p: any): Promise<Evolution | null> => {
+        const evidence = p.heat_reason || ''
+        const prompt = `You are helping evolve a dormant project. Pick ONE mutation mode and return a proposal.
+
+PROJECT
+title: ${p.title}
+description: ${p.description || '(none)'}
+recent evidence that it's warming: ${evidence}
+
+MODES (pick ONE that fits best)
+- shrink: propose a much smaller 1-3 day version
+- merge: propose combining with another related project (requires mentioning which)
+- split: propose splitting into 2 focused children
+- reframe: propose a new angle / positioning
+- snapshot: propose capturing current state as a standalone artifact (essay, note, sketch) and retiring the full project${allowHandoff ? '\n- handoff: propose handing off to someone else' : ''}
+
+RULES
+- The proposal must cite the provided evidence. If you can't, return mode='none'.
+- Return concrete, specific text. No platitudes.
+
+Return JSON only:
+{ "mode": "shrink|merge|split|reframe|snapshot${allowHandoff ? '|handoff' : ''}|none", "title": "new title if applicable", "proposal": "2-3 sentence concrete proposal", "evidence": "the evidence you cited" }`
+        try {
+          const raw = await generateText(prompt, { temperature: 0.5, maxTokens: 400, responseFormat: 'json' })
+          const parsed = JSON.parse(raw)
+          if (!parsed?.mode || parsed.mode === 'none' || !parsed.proposal) return null
+          if (!MUTATION_MODES.includes(parsed.mode)) return null
+          if (parsed.mode === 'handoff' && !allowHandoff) return null
+          return {
+            project_id: p.id,
+            project_title: p.title,
+            mode: parsed.mode,
+            title: parsed.title || p.title,
+            proposal: parsed.proposal,
+            evidence: parsed.evidence || evidence,
+          }
+        } catch (e) {
+          console.warn('[generate-digest] evolve-project failed for', p.id, e)
+          return null
+        }
+      }))
+
+      const evolutions = proposals.filter((e): e is Evolution => e !== null).slice(0, 2)
+
+      const { data: digestRow, error: insertErr } = await supabase
+        .from('drawer_digests')
+        .insert([{
+          user_id: userId,
+          warmed: warmed.map((p: any) => ({
+            id: p.id,
+            title: p.title,
+            heat_score: p.heat_score,
+            heat_reason: p.heat_reason,
+          })),
+          evolutions,
+          status: 'unread',
+        }])
+        .select()
+        .single()
+
+      if (insertErr) {
+        return res.status(500).json({ error: 'Failed to write digest', details: insertErr.message })
+      }
+
+      return res.status(200).json({ success: true, digest: digestRow, warmed: warmed.length, evolutions: evolutions.length })
+    } catch (error) {
+      console.error('[generate-digest] error:', error)
+      return res.status(500).json({
+        error: 'Failed to generate digest',
+        details: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
+  // Read the latest unread digest for this user, or null.
+  if (resource === 'digest' && req.method === 'GET') {
+    try {
+      const { data, error } = await supabase
+        .from('drawer_digests')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('status', 'unread')
+        .order('generated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (error) {
+        return res.status(500).json({ error: 'Failed to read digest', details: error.message })
+      }
+      return res.status(200).json({ digest: data || null })
+    } catch (error) {
+      return res.status(500).json({
+        error: 'Failed to read digest',
+        details: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
+  if (resource === 'digest-act' && req.method === 'POST') {
+    try {
+      const { digest_id, action, evolution_index } = req.body as {
+        digest_id: string
+        action: 'read' | 'accept'
+        evolution_index?: number
+      }
+      if (!digest_id || !action) {
+        return res.status(400).json({ error: 'digest_id and action required' })
+      }
+
+      const { data: digest } = await supabase
+        .from('drawer_digests')
+        .select('*')
+        .eq('id', digest_id)
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      if (!digest) {
+        return res.status(404).json({ error: 'Digest not found' })
+      }
+
+      if (action === 'read') {
+        await supabase
+          .from('drawer_digests')
+          .update({ status: 'read' })
+          .eq('id', digest_id)
+          .eq('user_id', userId)
+        return res.status(200).json({ success: true })
+      }
+
+      if (action === 'accept') {
+        const evolutions = (digest.evolutions || []) as Array<{
+          project_id: string
+          mode: MutationMode
+          title?: string
+          proposal: string
+          evidence: string
+        }>
+        const idx = typeof evolution_index === 'number' ? evolution_index : 0
+        const evo = evolutions[idx]
+        if (!evo) {
+          return res.status(400).json({ error: 'evolution_index out of range' })
+        }
+
+        const { data: parent } = await supabase
+          .from('projects')
+          .select('id, title, description, type, lineage_root_id')
+          .eq('id', evo.project_id)
+          .eq('user_id', userId)
+          .maybeSingle()
+
+        if (!parent) {
+          return res.status(404).json({ error: 'Parent project not found' })
+        }
+
+        const lineageRoot = parent.lineage_root_id || parent.id
+
+        const { data: child, error: childErr } = await supabase
+          .from('projects')
+          .insert([{
+            user_id: userId,
+            title: evo.title || `${parent.title} (${evo.mode})`,
+            description: evo.proposal,
+            type: parent.type || 'hobby',
+            status: 'upcoming',
+            parent_id: parent.id,
+            lineage_root_id: lineageRoot,
+            metadata: {
+              mutation: {
+                mode: evo.mode,
+                evidence: evo.evidence,
+                parent_id: parent.id,
+                accepted_from_digest: digest_id,
+              },
+            },
+          }])
+          .select()
+          .single()
+
+        if (childErr) {
+          return res.status(500).json({ error: 'Failed to create mutation', details: childErr.message })
+        }
+
+        const followUps: Promise<unknown>[] = [
+          supabase
+            .from('drawer_digests')
+            .update({ status: 'acted' })
+            .eq('id', digest_id)
+            .eq('user_id', userId),
+        ]
+        if (MODES_THAT_RETIRE_PARENT.has(evo.mode)) {
+          followUps.push(
+            supabase
+              .from('projects')
+              .update({ status: 'completed' })
+              .eq('id', parent.id)
+              .eq('user_id', userId)
+          )
+        }
+        await Promise.all(followUps)
+
+        return res.status(200).json({ success: true, child })
+      }
+
+      return res.status(400).json({ error: `Unknown action: ${action}` })
+    } catch (error) {
+      console.error('[digest-act] error:', error)
+      return res.status(500).json({
+        error: 'Failed to act on digest',
+        details: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
+  if (resource === 'complete-with-retro' && req.method === 'POST') {
+    try {
+      const { project_id, answers } = req.body as {
+        project_id: string
+        answers: { what_worked?: string; what_surprised?: string; what_next?: string }
+      }
+      if (!project_id || !answers) {
+        return res.status(400).json({ error: 'project_id and answers required' })
+      }
+
+      const { data: project } = await supabase
+        .from('projects')
+        .select('id, title, description, type, lineage_root_id, status')
+        .eq('id', project_id)
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      if (!project) {
+        return res.status(404).json({ error: 'Project not found' })
+      }
+
+      const persistOps: Promise<unknown>[] = [
+        supabase.from('project_retrospectives').insert([{ project_id, user_id: userId, answers }]),
+      ]
+      if (project.status !== 'completed') {
+        persistOps.push(
+          supabase
+            .from('projects')
+            .update({ status: 'completed' })
+            .eq('id', project_id)
+            .eq('user_id', userId)
+        )
+      }
+      await Promise.all(persistOps)
+
+      let sparks: Array<{ title: string; description: string }> = []
+      try {
+        const prompt = `A user just finished a project. Read their retrospective and suggest 1-3 NEW sparks (tiny project ideas) that naturally extend from what they just made. Concrete, specific, each written as a noun or verb phrase.
+
+JUST FINISHED
+title: ${project.title}
+description: ${project.description || '(none)'}
+
+RETRO
+What worked: ${answers.what_worked || '(blank)'}
+What surprised: ${answers.what_surprised || '(blank)'}
+What's next: ${answers.what_next || '(blank)'}
+
+RULES
+- Cite the retro. Each spark should feel like a direct continuation.
+- Empty array is allowed if the answers don't justify anything concrete.
+- No platitudes. No generic self-improvement ideas.
+
+Return JSON only:
+{ "sparks": [ { "title": "...", "description": "one-sentence concrete brief" }, ... ] }`
+        const raw = await generateText(prompt, { temperature: 0.6, maxTokens: 500, responseFormat: 'json' })
+        const parsed = JSON.parse(raw)
+        const list = Array.isArray(parsed.sparks) ? parsed.sparks : []
+        sparks = list
+          .filter((s: any) => s && typeof s.title === 'string' && s.title.trim().length >= 3)
+          .slice(0, 3)
+          .map((s: any) => ({ title: String(s.title).trim(), description: String(s.description || '').trim() }))
+      } catch (e) {
+        console.warn('[complete-with-retro] spark generation failed:', e)
+      }
+
+      let createdSparks: unknown[] = []
+      if (sparks.length > 0) {
+        const { data } = await supabase
+          .from('project_suggestions')
+          .insert(sparks.map(s => ({
+            user_id: userId,
+            title: s.title,
+            description: s.description,
+            status: 'pending',
+            total_points: 5,
+            metadata: {
+              from_retrospective: project_id,
+              parent_project_title: project.title,
+            },
+          })))
+          .select()
+        createdSparks = data || []
+      }
+
+      return res.status(200).json({ success: true, sparks: createdSparks })
+    } catch (error) {
+      console.error('[complete-with-retro] error:', error)
+      return res.status(500).json({
+        error: 'Failed to record retrospective',
+        details: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
+  if (resource === 'metabolism-settings') {
+    if (req.method === 'GET') {
+      try {
+        const { data } = await supabase
+          .from('user_settings')
+          .select('allow_handoff_mutations')
+          .eq('user_id', userId)
+          .maybeSingle()
+        return res.status(200).json({
+          allow_handoff_mutations: !!data?.allow_handoff_mutations,
+        })
+      } catch (error) {
+        return res.status(500).json({
+          error: 'Failed to read metabolism settings',
+          details: error instanceof Error ? error.message : String(error),
+        })
+      }
+    }
+    if (req.method === 'PUT' || req.method === 'POST') {
+      try {
+        const { allow_handoff_mutations } = req.body as { allow_handoff_mutations: boolean }
+        const { error } = await supabase
+          .from('user_settings')
+          .upsert(
+            { user_id: userId, allow_handoff_mutations: !!allow_handoff_mutations },
+            { onConflict: 'user_id' }
+          )
+        if (error) {
+          return res.status(500).json({ error: 'Failed to save', details: error.message })
+        }
+        return res.status(200).json({ success: true, allow_handoff_mutations: !!allow_handoff_mutations })
+      } catch (error) {
+        return res.status(500).json({
+          error: 'Failed to save metabolism settings',
+          details: error instanceof Error ? error.message : String(error),
+        })
+      }
+    }
+    return res.status(405).json({ error: 'Method not allowed' })
   }
 
   // CAPABILITY PAIRS RESOURCE - Fetch learned pair weights
@@ -954,14 +1399,26 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
 
       // Generate embedding and auto-suggest connections asynchronously (don't block response)
       // Return project immediately, then process connections in background
-      // Generate embedding, connections, AND initial tasks asynchronously
       const backgroundPromise = (async () => {
         try {
           await generateProjectEmbeddingAndConnect(project.id, project.title, project.description, userId)
 
-          // Generate scaffolding (Tasks) using the unified repair utility
           const { ensureProjectHasTasks } = await import('./_lib/project-repair.js')
           await ensureProjectHasTasks(project.id, userId)
+
+          try {
+            const { inferCatalysts } = await import('./_lib/metabolism.js')
+            const catalysts = await inferCatalysts(project.title, project.description || '')
+            if (catalysts.length > 0) {
+              await supabase
+                .from('projects')
+                .update({ catalysts })
+                .eq('id', project.id)
+                .eq('user_id', userId)
+            }
+          } catch (catErr) {
+            console.warn('[projects] Catalyst inference failed (non-fatal):', catErr)
+          }
         } catch (err) {
           console.error('[projects] Background scaffolding error:', err)
         }
