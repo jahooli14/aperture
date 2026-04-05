@@ -33,7 +33,7 @@ jobs:
             HOUR=$(date +%H)
 
             # Generate runs every 11 minutes
-            if [ $((MINUTE % 11)) -eq 0 ]; then
+            if [ $(( 10#$MINUTE % 11 )) -eq 0 ]; then
               echo "action=generate" >> $GITHUB_OUTPUT
             # Review runs once daily at 8am UTC
             elif [ "$HOUR" = "08" ] && [ "$MINUTE" = "00" ]; then
