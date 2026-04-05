@@ -423,7 +423,7 @@ Lists stay but feed AI in background:
 
 ## Notes
 
-- Model: Keep using `gemini-2.0-flash-lite` for all AI (cost effective)
+- Model: Keep using `gemini-3.1-flash-lite-preview` for all AI (cost effective)
 - No changes to authentication. Supabase schema changes are limited to: (a) project metadata additions, (b) new `evolution_events` table, (c) dropping `reading_queue` table.
 - Maintain offline-first with IndexedDB caching
 - Keep existing mobile-responsive design patterns

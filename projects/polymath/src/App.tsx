@@ -39,9 +39,7 @@ const DrawerPage = lazy(() => import('./pages/DrawerPage'))
 const ProjectDetailPage = lazy(() => import('./pages/ProjectDetailPage'))
 const OnboardingPage = lazy(() => import('./pages/OnboardingPage').then(m => ({ default: m.OnboardingPage })))
 const TimelinePage = lazy(() => import('./pages/TimelinePage').then(m => ({ default: m.TimelinePage })))
-const InsightsPage = lazy(() => import('./pages/InsightsPage').then(m => ({ default: m.InsightsPage })))
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })))
-const RSSFeedsPage = lazy(() => import('./pages/RSSFeedsPage').then(m => ({ default: m.RSSFeedsPage })))
 const SearchPage = lazy(() => import('./pages/SearchPage').then(m => ({ default: m.SearchPage })))
 const BedtimePage = lazy(() => import('./pages/BedtimePage').then(m => ({ default: m.BedtimePage })))
 const ListsPage = lazy(() => import('./pages/ListsPage'))
@@ -322,9 +320,7 @@ export default function App() {
                       <Route path="/projects/:id" element={<ProjectDetailPage />} />
                       <Route path="/timeline" element={<TimelinePage />} />
                       <Route path="/replay" element={<CognitiveReplayPage />} />
-                      <Route path="/insights" element={<InsightsPage />} />
                       <Route path="/settings" element={<SettingsPage />} />
-                      <Route path="/rss" element={<RSSFeedsPage />} />
                       <Route path="/search" element={<SearchPage />} />
                       <Route path="/bedtime" element={<BedtimePage />} />
                       <Route path="/lists" element={<ListsPage />} />

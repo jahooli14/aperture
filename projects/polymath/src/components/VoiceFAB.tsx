@@ -12,14 +12,13 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Plus, X, Brain, Layers, BookmarkPlus, Mic, CheckSquare } from 'lucide-react'
+import { Plus, X, Brain, Layers, Mic, CheckSquare } from 'lucide-react'
 import { VoiceInput } from './VoiceInput'
 import { cn } from '../lib/utils'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { haptic } from '../utils/haptics'
 import { CreateMemoryDialog } from './memories/CreateMemoryDialog'
 import { CreateProjectDialog } from './projects/CreateProjectDialog'
-import { SaveArticleDialog } from './reading/SaveArticleDialog'
 import { AddItemToListDialog } from './lists/AddItemToListDialog'
 import { CreateMenuModal } from './CreateMenuModal'
 import { TodoInput } from './todos/TodoInput'
@@ -77,16 +76,6 @@ const STRIP_OPTIONS = [
     glow: 'rgba(59, 130, 246, 0.5)',
     centerOffsetUp: FAB_SIZE / 2 + PILL_GAP + (PILL_H + PILL_GAP) * 2 + PILL_H / 2,
   },
-  {
-    id: 'article' as const,
-    label: 'Article',
-    icon: BookmarkPlus,
-    color: "var(--brand-text-secondary)",
-    activeColor: 'rgba(16, 185, 129, 0.55)',
-    border: 'rgba(16, 185, 129, 0.5)',
-    glow: 'rgba(16, 185, 129, 0.5)',
-    centerOffsetUp: FAB_SIZE / 2 + PILL_GAP + (PILL_H + PILL_GAP) * 3 + PILL_H / 2,
-  },
 ] as const
 
 type StripOptionId = typeof STRIP_OPTIONS[number]['id']
@@ -118,7 +107,6 @@ export function VoiceFAB({
   const [showTodoQuickAdd, setShowTodoQuickAdd] = useState(false)
   const [showProjectDialog, setShowProjectDialog] = useState(false)
   const [showThoughtDialog, setShowThoughtDialog] = useState(false)
-  const [showArticleDialog, setShowArticleDialog] = useState(false)
   const [showListDialog, setShowListDialog] = useState(false)
   const { addTodo, areas } = useTodoStore()
 
@@ -277,7 +265,6 @@ export function VoiceFAB({
         onAction={(action) => {
           if (action === 'thought') setShowThoughtDialog(true)
           if (action === 'project') setShowProjectDialog(true)
-          if (action === 'article') setShowArticleDialog(true)
           if (action === 'list') setShowListDialog(true)
         }}
       />
@@ -343,7 +330,6 @@ export function VoiceFAB({
 
       <CreateProjectDialog isOpen={showProjectDialog} onOpenChange={setShowProjectDialog} hideTrigger />
       <CreateMemoryDialog isOpen={showThoughtDialog} onOpenChange={setShowThoughtDialog} hideTrigger />
-      <SaveArticleDialog open={showArticleDialog} onClose={() => setShowArticleDialog(false)} hideTrigger />
       <AddItemToListDialog isOpen={showListDialog} onOpenChange={setShowListDialog} />
 
       {/* Todo quick-add modal */}

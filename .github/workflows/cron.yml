@@ -66,9 +66,10 @@ jobs:
               hit "/api/projects?resource=recompute-heat" &
             fi
 
-            # 08:00 UTC daily: Idea Engine Opus review
+            # 08:00 UTC daily: Idea Engine Opus review + Polymath project evolution
             if [ "$HOUR" = "08" ] || [ "$FORCE" = "true" ]; then
               hit "/api/idea-engine?action=review" &
+              hit "/api/projects?resource=evolve" &
             fi
 
             # 09:00 UTC daily: Idea Engine email digest

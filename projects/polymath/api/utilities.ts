@@ -34,6 +34,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return handleAnalyze(req, res)
   }
 
+  if (req.method === 'POST' && resource === 'refine-idea') {
+    return handleRefineIdea(req, res)
+  }
+
   return res.status(404).json({ error: 'Not found' })
 }
 
@@ -283,5 +287,45 @@ Be warm but not sycophantic. Be specific, not generic. Surprise them.`
       graph_preview: { nodes: [], edges: [] },
       project_suggestions: [],
     })
+  }
+}
+
+// ── Refine Idea ────────────────────────────────────────────────────────────
+async function handleRefineIdea(req: VercelRequest, res: VercelResponse) {
+  try {
+    const { original, feedback, attempt, context } = req.body
+
+    if (!original || !feedback) {
+      return res.status(400).json({ error: 'original and feedback are required' })
+    }
+
+    const prompt = `You are a creative catalyst AI helping someone find a project idea that resonates with them.
+
+Original idea:
+Title: ${original.title}
+Description: ${original.description}
+Why them: ${original.reasoning}
+
+User feedback (attempt ${attempt || 1}): "${feedback}"
+
+User's themes: ${(context?.themes || []).join(', ')}
+User's capabilities: ${(context?.capabilities || []).join(', ')}
+
+Reshape the idea based on their feedback. Keep what they liked, change what didn't resonate. Make it more specific to their context.
+
+Respond with JSON only:
+{
+  "title": "concise project title",
+  "description": "1-2 sentences describing the project",
+  "reasoning": "why this is uniquely suited to this person (1 sentence)"
+}`
+
+    const response = await generateText(prompt, { responseFormat: 'json', temperature: 0.7 })
+    const suggestion = JSON.parse(response)
+
+    return res.status(200).json({ suggestion })
+  } catch (error) {
+    console.error('[utilities/refine-idea] Error:', error)
+    return res.status(500).json({ error: 'Failed to refine idea' })
   }
 }
