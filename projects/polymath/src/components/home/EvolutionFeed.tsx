@@ -64,12 +64,7 @@ export function EvolutionFeed() {
           boxShadow: '3px 3px 0 rgba(0,0,0,0.3)',
         }}
       >
-        <div className="flex items-center gap-2 mb-2">
-          <div className="h-1.5 w-1.5 rounded-full opacity-30" style={{ background: 'var(--brand-primary)' }} />
-          <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[var(--brand-text-secondary)] opacity-50">
-            ideas evolving
-          </span>
-        </div>
+        <h2 className="section-header" style={{ marginBottom: '0.75rem' }}>ideas <span>evolving</span></h2>
         <p className="text-sm text-[var(--brand-text-secondary)] opacity-50 leading-relaxed">
           The AI runs overnight and will surface connections between your projects and thoughts here. Add more voice notes to speed things up.
         </p>
@@ -91,16 +86,14 @@ export function EvolutionFeed() {
       }}
     >
       {/* Header */}
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-3 mb-4">
+        <h2 className="section-header" style={{ marginBottom: 0 }}>ideas <span>evolving</span></h2>
         <motion.div
           animate={{ opacity: [0.3, 0.8, 0.3] }}
           transition={{ duration: 2.5, repeat: Infinity }}
-          className="h-1.5 w-1.5 rounded-full"
+          className="h-2 w-2 rounded-full flex-shrink-0"
           style={{ background: 'var(--brand-primary)' }}
         />
-        <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[var(--brand-text-secondary)] opacity-50">
-          ideas evolving
-        </span>
       </div>
 
       {/* Highlight event */}
