@@ -5,8 +5,8 @@ import { PromptModal } from './PromptModal'
 import { MemoryPromptWithStatus } from '../../types'
 
 /**
- * AI-generated follow-up prompts based on gap detection
- * Appears in "My Memories" tab
+ * AI-generated follow-up prompts based on onboarding analysis.
+ * Shown on the Thoughts page as lightweight suggestions — not a gate.
  */
 export function SuggestedPrompts() {
   const { suggestedPrompts, submitResponse, dismissPrompt, submitting } = useOnboardingStore()
@@ -38,26 +38,27 @@ export function SuggestedPrompts() {
 
   return (
     <div className="mb-6">
-      <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
-        <Lightbulb className="h-5 w-5 text-brand-primary" />
-        Suggested Prompts ({suggestedPrompts.length})
+      <h3 className="text-sm font-bold uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: 'var(--brand-primary)', opacity: 0.7 }}>
+        <Lightbulb className="h-4 w-4" />
+        Tell us more
       </h3>
-      <p className="text-sm text-gray-600 mb-4">
-        Based on what you've shared, these would enrich your graph:
-      </p>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {suggestedPrompts.map((prompt) => (
           <div
             key={prompt.id}
-            className="p-4 rounded-lg border-2 border-purple-200 bg-purple-50"
+            className="p-4 rounded-xl transition-all"
+            style={{
+              background: 'var(--glass-surface)',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid rgba(255, 255, 255, 0.06)',
+            }}
           >
             <div className="flex items-start gap-3">
-              <Lightbulb className="h-5 w-5 text-brand-primary flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <h4 className="font-semibold text-gray-900">{prompt.prompt_text}</h4>
+                <h4 className="font-semibold text-sm" style={{ color: 'var(--brand-text-primary)' }}>{prompt.prompt_text}</h4>
                 {prompt.prompt_description && (
-                  <p className="text-sm text-gray-600 mt-1">{prompt.prompt_description}</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--brand-text-secondary)', opacity: 0.7 }}>{prompt.prompt_description}</p>
                 )}
               </div>
             </div>
@@ -65,16 +66,22 @@ export function SuggestedPrompts() {
             <div className="flex gap-2 mt-3">
               <button
                 onClick={() => handleDismiss(prompt.id)}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 hover:bg-white rounded-lg transition-colors"
+                className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg transition-colors"
+                style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
               >
-                <X className="h-4 w-4" />
-                Dismiss
+                <X className="h-3 w-3" />
+                Skip
               </button>
               <button
                 onClick={() => handleAdd(prompt)}
-                className="flex-1 px-4 py-1.5 text-sm font-medium text-[var(--brand-text-primary)] bg-brand-primary hover:bg-brand-primary rounded-lg transition-colors"
+                className="flex-1 px-4 py-1.5 text-xs font-bold rounded-lg transition-all hover:opacity-90"
+                style={{
+                  background: 'rgba(var(--brand-primary-rgb, 6, 182, 212), 0.15)',
+                  color: 'var(--brand-primary)',
+                  border: '1px solid rgba(var(--brand-primary-rgb, 6, 182, 212), 0.2)',
+                }}
               >
-                Add 
+                Answer
               </button>
             </div>
           </div>

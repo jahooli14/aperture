@@ -30,6 +30,8 @@ interface PostOnboardingFlowProps {
     description: string
     reasoning: string
   } | null
+  /** Voice transcripts from onboarding, used for auto-crediting foundational prompts */
+  transcripts?: string[]
 }
 
 type FlowPhase = 'welcome' | 'chat' | 'reveal'
@@ -54,7 +56,7 @@ function getProjectColor(type: string): string {
   return PROJECT_COLORS[t] || PROJECT_COLORS['default']
 }
 
-export function PostOnboardingFlow({ analysis, sparkedSuggestion }: PostOnboardingFlowProps) {
+export function PostOnboardingFlow({ analysis, sparkedSuggestion, transcripts = [] }: PostOnboardingFlowProps) {
   const navigate = useNavigate()
   const { startJourney, completeChallenge, setFirstProjectId } = useJourneyStore()
   const { allProjects } = useProjectStore()
@@ -64,13 +66,22 @@ export function PostOnboardingFlow({ analysis, sparkedSuggestion }: PostOnboardi
   const [revealBeat, setRevealBeat] = useState(0)
   const [whyYouStatement, setWhyYouStatement] = useState<string | null>(null)
 
-  // Start the journey and persist onboarding analysis
+  // Start the journey, persist onboarding analysis, and auto-credit foundational prompts
   useEffect(() => {
     startJourney({
       themes: analysis.themes || [],
       capabilities: analysis.capabilities || [],
       firstInsight: analysis.first_insight || '',
     })
+
+    // Auto-credit foundational prompts from onboarding analysis (fire-and-forget)
+    if (transcripts.length > 0) {
+      fetch('/api/memories?auto_credit=true', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ analysis, transcripts }),
+      }).catch(e => console.warn('[PostOnboarding] Auto-credit failed, non-blocking:', e))
+    }
   }, [])
 
   // Pull actual project data once created
