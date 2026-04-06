@@ -33,7 +33,6 @@ import type { RSSFeedItem as RSSItem } from '../types/rss'
 import type { Article } from '../types/reading'
 
 // Lazy load heavy dialog components to reduce initial bundle size
-const SaveArticleDialog = lazy(() => import('../components/reading/SaveArticleDialog').then(m => ({ default: m.SaveArticleDialog })))
 const ProcessingDebugPanel = lazy(() => import('../components/reading/ProcessingDebugPanel').then(m => ({ default: m.ProcessingDebugPanel })))
 
 type FilterTab = 'queue' | 'updates' | 'unread' | 'reading' | 'archived'
@@ -1140,14 +1139,6 @@ export function ReadingPage() {
           </div>
         </div >
 
-        {/* Save Article Dialog */}
-        <Suspense fallback={null}>
-          <SaveArticleDialog
-            open={showSaveDialog}
-            onClose={() => setShowSaveDialog(false)
-            }
-          />
-        </Suspense>
 
 
         {/* Bulk Actions Bar */}

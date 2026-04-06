@@ -1578,6 +1578,103 @@ Return JSON only:
     }
   }
 
+  // EVOLUTION FEED RESOURCE — GET recent evolution events for the home feed
+  if (resource === 'evolution-feed') {
+    if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
+    const limit = parseInt(req.query.limit as string || '10', 10)
+    try {
+      const { data: events, error } = await supabase
+        .from('evolution_events')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(limit)
+
+      if (error && error.code !== 'PGRST116') {
+        // Table may not exist yet — return empty
+        return res.status(200).json({ events: [] })
+      }
+      return res.status(200).json({ events: events || [] })
+    } catch {
+      return res.status(200).json({ events: [] })
+    }
+  }
+
+  // EVOLVE RESOURCE — POST to trigger project evolution / nightly reshaping
+  if (resource === 'evolve') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+    const { project_id } = req.body || {}
+    try {
+      // Fetch projects to evolve
+      let projectsQuery = supabase.from('projects').select('*').eq('user_id', userId)
+      if (project_id) projectsQuery = projectsQuery.eq('id', project_id)
+      else projectsQuery = projectsQuery.in('status', ['active', 'upcoming'])
+
+      const { data: projects, error: projectsError } = await projectsQuery
+      if (projectsError) return res.status(500).json({ error: projectsError.message })
+
+      const evolved: string[] = []
+      for (const project of (projects || []).slice(0, 10)) {
+        try {
+          // Generate a reshaping insight
+          const prompt = `You are a creative catalyst AI. Given this project, generate a fresh evolution insight — a new angle, intersection, or breakthrough idea that could reshape it.
+
+Project: ${project.title}
+Description: ${project.description || 'No description'}
+Current notes: ${JSON.stringify(project.metadata?.tasks?.slice(0, 3) || [])}
+
+Respond with JSON: { "event_type": "intersection"|"reshape"|"reflection", "description": "one specific, surprising insight in plain language (max 2 sentences)" }`
+
+          const response = await generateText(prompt, { responseFormat: 'json', temperature: 0.8 })
+          const insight = JSON.parse(response)
+
+          if (insight.description) {
+            await supabase.from('evolution_events').insert({
+              user_id: userId,
+              project_id: project.id,
+              event_type: insight.event_type || 'reshape',
+              highlight: evolved.length === 0, // first one is highlight
+              description: insight.description,
+              created_at: new Date().toISOString(),
+            })
+            evolved.push(project.id)
+          }
+        } catch { /* skip failed projects */ }
+      }
+
+      return res.status(200).json({ evolved: evolved.length, project_ids: evolved })
+    } catch (error) {
+      return res.status(500).json({ error: error instanceof Error ? error.message : 'Evolution failed' })
+    }
+  }
+
+  // SAVE-IDEA RESOURCE — POST to save an onboarding suggestion as a saved idea
+  if (resource === 'save-idea') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+    const { title, description, reasoning, source } = req.body || {}
+    if (!title) return res.status(400).json({ error: 'title is required' })
+    try {
+      const { data, error } = await supabase
+        .from('project_suggestions')
+        .insert({
+          user_id: userId,
+          title,
+          description: description || '',
+          reasoning: reasoning || '',
+          status: 'pending',
+          total_points: 0,
+          metadata: { source: source || 'onboarding', saved_at: new Date().toISOString() },
+        })
+        .select()
+        .single()
+
+      if (error) return res.status(500).json({ error: error.message })
+      return res.status(201).json({ idea: data })
+    } catch (error) {
+      return res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to save idea' })
+    }
+  }
+
   return res.status(405).json({ error: 'Method not allowed' })
 }
 

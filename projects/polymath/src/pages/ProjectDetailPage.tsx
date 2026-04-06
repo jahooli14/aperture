@@ -25,6 +25,7 @@ import { ProjectChatPanel } from '../components/projects/ProjectChatPanel'
 import { CatalystsPanel } from '../components/projects/CatalystsPanel'
 import { CompletionRitual } from '../components/projects/CompletionRitual'
 import { LineageBreadcrumb } from '../components/projects/LineageBreadcrumb'
+import { ProjectLineage } from '../components/projects/ProjectLineage'
 import type { Project, Memory } from '../types'
 import { supabase } from '../lib/supabase'
 import { useMemoryStore } from '../stores/useMemoryStore'
@@ -913,6 +914,9 @@ export function ProjectDetailPage() {
                         </div>
                       )}
                     </div>
+
+                    {/* Version history */}
+                    <ProjectLineage project={project} />
 
                     {/* Why + Done when */}
                     <div className="pt-4 border-t border-[var(--glass-surface)] grid sm:grid-cols-2 gap-4">
