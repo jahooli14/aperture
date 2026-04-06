@@ -878,22 +878,26 @@ export function ProjectDetailPage() {
                     {/* Version history */}
                     <ProjectLineage project={project} />
 
-                    {/* Done when */}
-                    <div className="pt-4 border-t border-[var(--glass-surface)]">
+                    {/* Finish Line */}
+                    <div className="pt-5 border-t border-[var(--glass-surface)]">
                       <div>
-                        <span className="text-[9px] font-black uppercase tracking-[0.25em] text-[var(--brand-text-primary)]/30 block mb-1.5">Done when</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] block mb-3 flex items-center gap-2" style={{ color: 'rgba(52,211,153,0.5)' }}>
+                          <Target className="h-3.5 w-3.5" />
+                          Finish Line
+                        </span>
                         <div
                           className="cursor-pointer hover:opacity-80 transition-opacity"
                           onClick={!editingGoal ? startEditGoal : undefined}
                         >
                           {editingGoal ? (
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                               <textarea
                                 ref={goalInputRef}
                                 value={tempGoal}
                                 onChange={(e) => setTempGoal(e.target.value)}
-                                className="w-full bg-black/40 border border-[var(--glass-surface-hover)] rounded-lg p-2 text-sm resize-none focus:outline-none focus:border-green-500/50 text-[var(--brand-text-primary)] leading-relaxed"
-                                rows={2}
+                                className="w-full bg-black/40 border border-[var(--glass-surface-hover)] rounded-xl p-4 text-lg sm:text-xl font-medium resize-none focus:outline-none text-[var(--brand-text-primary)] leading-relaxed italic font-serif text-center"
+                                style={{ borderColor: 'rgba(52,211,153,0.2)' }}
+                                rows={3}
                                 placeholder="What does done look like?"
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -913,18 +917,19 @@ export function ProjectDetailPage() {
                                 </button>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); saveGoal() }}
-                                  className="px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-lg bg-brand-primary/50 text-brand-text-secondary border border-green-500/20 hover:bg-brand-primary/80"
+                                  className="px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-lg border transition-all"
+                                  style={{ background: 'rgba(52,211,153,0.15)', borderColor: 'rgba(52,211,153,0.3)', color: 'rgb(52,211,153)' }}
                                 >
                                   Save
                                 </button>
                               </div>
                             </div>
                           ) : (
-                            <div className="text-sm text-[var(--brand-text-primary)]/60 leading-relaxed font-serif italic">
+                            <div className="text-lg sm:text-xl font-medium text-[var(--brand-text-primary)]/80 leading-relaxed italic font-serif text-center">
                               {project.metadata?.end_goal ? (
-                                <MarkdownRenderer content={project.metadata.end_goal} />
+                                <MarkdownRenderer content={project.metadata.end_goal} className="text-center" />
                               ) : (
-                                <span>What does done look like?</span>
+                                <span className="opacity-30">What does done look like?</span>
                               )}
                             </div>
                           )}

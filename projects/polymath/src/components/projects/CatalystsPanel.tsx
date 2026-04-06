@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronRight, Wand2, Loader2 } from 'lucide-react'
+import { Radar, Loader2, RefreshCw, Zap, Clock } from 'lucide-react'
 import { api } from '../../lib/apiClient'
 import { useProjectStore } from '../../stores/useProjectStore'
 import type { Project, Catalyst } from '../../types'
@@ -8,23 +8,33 @@ interface CatalystsPanelProps {
   project: Project
 }
 
-const KIND_LABEL: Record<string, string> = {
-  skill: 'Skill',
-  collaborator: 'Collaborator',
-  tool: 'Tool',
-  time: 'Time',
-  life_event: 'Life event',
-  other: 'Other',
+const KIND_ICONS: Record<string, string> = {
+  skill: '🧠',
+  collaborator: '🤝',
+  tool: '🔧',
+  time: '⏰',
+  life_event: '🌱',
+  other: '✦',
+}
+
+function formatMatchDate(dateStr?: string): string {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  const now = Date.now()
+  const days = Math.floor((now - d.getTime()) / (1000 * 60 * 60 * 24))
+  if (days === 0) return 'today'
+  if (days === 1) return 'yesterday'
+  if (days < 7) return `${days}d ago`
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 export function CatalystsPanel({ project }: CatalystsPanelProps) {
   const { fetchProjects } = useProjectStore()
-  const [open, setOpen] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
 
   const catalysts: Catalyst[] = Array.isArray(project.catalysts) ? project.catalysts : []
 
-  const handleInfer = async () => {
+  const handleRefresh = async () => {
     setRefreshing(true)
     try {
       await api.post('brainstorm', {
@@ -35,84 +45,89 @@ export function CatalystsPanel({ project }: CatalystsPanelProps) {
       })
       await fetchProjects()
     } catch {
-      // Silent failure — catalysts are a nice-to-have, never blocking.
+      // Silent failure — catalysts are a nice-to-have
     } finally {
       setRefreshing(false)
     }
   }
 
-  // Invisible when there are no catalysts AND nothing is being refreshed.
-  // Give the user an opt-in "infer" button instead of an empty-state card.
-  if (catalysts.length === 0) {
-    return (
-      <div className="p-3 rounded-xl border text-xs"
-        style={{ borderColor: 'var(--glass-surface-hover)', background: 'rgba(255,255,255,0.02)' }}
-      >
-        <button
-          onClick={handleInfer}
-          disabled={refreshing}
-          className="flex items-center gap-2 text-[var(--brand-text-muted)] hover:text-[var(--brand-primary)] transition-colors"
-        >
-          {refreshing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
-          <span className="font-bold uppercase tracking-widest text-[10px]">
-            {refreshing ? 'Inferring catalysts…' : 'Infer catalysts'}
-          </span>
-        </button>
-      </div>
-    )
-  }
+  // Hide entirely when empty — catalysts are auto-inferred on project creation
+  if (catalysts.length === 0) return null
+
+  const matched = catalysts.filter(c => c.matched)
+  const waiting = catalysts.filter(c => !c.matched)
 
   return (
-    <div className="rounded-xl border overflow-hidden"
-      style={{ borderColor: 'var(--glass-surface-hover)', background: 'rgba(255,255,255,0.02)' }}
-    >
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.02] transition-colors"
-      >
+    <div className="rounded-2xl overflow-hidden" style={{
+      background: matched.length > 0
+        ? 'linear-gradient(135deg, rgba(52,211,153,0.06) 0%, rgba(15,24,41,0.4) 100%)'
+        : 'rgba(255,255,255,0.02)',
+      border: matched.length > 0
+        ? '1px solid rgba(52,211,153,0.15)'
+        : '1px solid var(--glass-surface-hover)',
+    }}>
+      {/* Header */}
+      <div className="px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-          <Wand2 className="h-3 w-3" style={{ color: 'var(--brand-primary)' }} />
-          <span className="text-[10px] font-black uppercase tracking-widest text-[var(--brand-text-muted)]">
-            Catalysts · {catalysts.length}
+          <Radar className="h-3.5 w-3.5" style={{ color: matched.length > 0 ? 'rgb(52,211,153)' : 'var(--brand-text-muted)' }} />
+          <span className="text-[10px] font-black uppercase tracking-[0.2em]" style={{
+            color: matched.length > 0 ? 'rgb(52,211,153)' : 'var(--brand-text-muted)'
+          }}>
+            Waiting for…
           </span>
         </div>
-        <span className="text-[9px] uppercase tracking-widest text-[var(--brand-text-muted)] opacity-60">
-          {catalysts.filter(c => c.matched).length} matched
-        </span>
-      </button>
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="h-6 w-6 rounded-md flex items-center justify-center transition-colors hover:bg-white/5"
+          title="Re-analyse conditions"
+        >
+          {refreshing
+            ? <Loader2 className="h-3 w-3 animate-spin text-[var(--brand-text-muted)]" />
+            : <RefreshCw className="h-3 w-3 text-[var(--brand-text-muted)] opacity-40 hover:opacity-80" />
+          }
+        </button>
+      </div>
 
-      {open && (
-        <div className="px-4 pb-3 space-y-2">
-          {catalysts.map((c, i) => (
-            <div key={i} className="flex items-start gap-2 text-xs">
-              <span
-                className="mt-1 h-1.5 w-1.5 rounded-full flex-shrink-0"
-                style={{
-                  background: c.matched ? '#34d399' : 'rgba(255,255,255,0.2)',
-                  boxShadow: c.matched ? '0 0 8px rgba(52,211,153,0.6)' : undefined,
-                }}
-              />
-              <div className="flex-1 min-w-0">
-                <p className="text-[var(--brand-text-primary)] leading-snug">{c.text}</p>
-                <p className="text-[9px] uppercase tracking-widest text-[var(--brand-text-muted)] opacity-60 mt-0.5">
-                  {KIND_LABEL[c.kind || 'other']}
-                  {c.matched && c.matched_evidence ? ` · ${c.matched_evidence}` : ''}
-                </p>
-              </div>
-            </div>
-          ))}
-
-          <button
-            onClick={handleInfer}
-            disabled={refreshing}
-            className="mt-2 text-[9px] uppercase tracking-widest font-bold text-[var(--brand-text-muted)] hover:text-[var(--brand-primary)] transition-colors flex items-center gap-1"
+      <div className="px-4 pb-4 space-y-2">
+        {/* Matched catalysts — these conditions appeared! */}
+        {matched.map((c, i) => (
+          <div
+            key={`m-${i}`}
+            className="flex items-start gap-3 p-3 rounded-xl"
+            style={{
+              background: 'rgba(52,211,153,0.08)',
+              border: '1px solid rgba(52,211,153,0.15)',
+            }}
           >
-            {refreshing ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Wand2 className="h-2.5 w-2.5" />}
-            {refreshing ? 'Re-inferring…' : 'Refresh'}
-          </button>
-        </div>
-      )}
+            <div className="flex-shrink-0 mt-0.5">
+              <Zap className="h-3.5 w-3.5" style={{ color: 'rgb(52,211,153)' }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-[var(--brand-text-primary)] leading-snug">{c.text}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider mt-1" style={{ color: 'rgba(52,211,153,0.7)' }}>
+                Spotted {formatMatchDate(c.matched_at)}
+              </p>
+            </div>
+          </div>
+        ))}
+
+        {/* Unmatched — still waiting */}
+        {waiting.map((c, i) => (
+          <div
+            key={`w-${i}`}
+            className="flex items-start gap-3 px-3 py-2"
+          >
+            <div className="flex-shrink-0 mt-0.5 text-sm opacity-50">
+              {KIND_ICONS[c.kind || 'other']}
+            </div>
+            <div className="flex-1 min-w-0 flex items-start gap-2">
+              <p className="text-sm text-[var(--brand-text-secondary)] leading-snug opacity-70">{c.text}</p>
+              <Clock className="h-3 w-3 flex-shrink-0 mt-0.5" style={{ color: 'var(--brand-text-muted)', opacity: 0.3 }} />
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
