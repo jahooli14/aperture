@@ -75,7 +75,7 @@ function NowConsumingWidget() {
   const shown = activeItems.slice(0, 4)
 
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 aperture-shelf">
       <h2 className="section-header">
         what you're <span>consuming</span>
       </h2>
@@ -301,12 +301,12 @@ export function HomePage() {
         )}
 
         {/* 2. NETFLIX HERO CARDS — Keep going + Try something new */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
           <NetflixHeroCards />
         </section>
 
         {/* 3. EVOLUTION FEED — AI working in background */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 aperture-shelf">
           <EvolutionFeed />
         </section>
 
@@ -320,10 +320,8 @@ export function HomePage() {
 
 
         {/* 5. EXPLORE */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 flex flex-col aperture-shelf">
-          <div className="mb-4">
-            <h2 className="section-header">or just <span>explore</span></h2>
-          </div>
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 flex flex-col aperture-shelf">
+          <h2 className="section-header">or just <span>explore</span></h2>
 
           <ShadowProjectCard />
 
@@ -403,7 +401,7 @@ export function HomePage() {
           </div>
         </section>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 flex justify-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-4 flex justify-center">
           <Link
             to="/settings"
             className="flex items-center gap-2 px-6 py-3 rounded-lg transition-all border-2 border-[var(--glass-surface-hover)] hover:bg-[var(--glass-surface)] glass-card glass-card-hover text-sm font-medium"
