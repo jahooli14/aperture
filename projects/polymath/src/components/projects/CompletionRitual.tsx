@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Sparkles, Loader2, Check } from 'lucide-react'
+import { X, Wand2, Loader2, Check } from 'lucide-react'
 import { api } from '../../lib/apiClient'
 import type { Project } from '../../types'
 
@@ -157,7 +157,7 @@ export function CompletionRitual({ project, isOpen, onClose }: CompletionRitualP
                       color: '#34d399',
                     }}
                   >
-                    {submitting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                    {submitting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
                     {submitting ? 'Sparking…' : 'Finish & spark'}
                   </button>
                 </div>

@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Layers, Brain, BookOpen, Sparkles } from 'lucide-react'
+import { X, Layers, Brain, BookOpen, Wand2 } from 'lucide-react'
 import type { ConnectionSourceType } from '../../types'
 
 interface PathNode {
@@ -200,7 +200,7 @@ export function ConnectionRevealOverlay({
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-brand-primary" />
+              <Wand2 className="w-4 h-4 text-brand-primary" />
               <span className="text-sm font-semibold text-[var(--brand-text-secondary)]">Connection Path</span>
             </div>
             <button

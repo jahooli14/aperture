@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronRight, Sparkles, Loader2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, Wand2, Loader2 } from 'lucide-react'
 import { api } from '../../lib/apiClient'
 import { useProjectStore } from '../../stores/useProjectStore'
 import type { Project, Catalyst } from '../../types'
@@ -53,7 +53,7 @@ export function CatalystsPanel({ project }: CatalystsPanelProps) {
           disabled={refreshing}
           className="flex items-center gap-2 text-[var(--brand-text-muted)] hover:text-[var(--brand-primary)] transition-colors"
         >
-          {refreshing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+          {refreshing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
           <span className="font-bold uppercase tracking-widest text-[10px]">
             {refreshing ? 'Inferring catalysts…' : 'Infer catalysts'}
           </span>
@@ -72,7 +72,7 @@ export function CatalystsPanel({ project }: CatalystsPanelProps) {
       >
         <div className="flex items-center gap-2">
           {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-          <Sparkles className="h-3 w-3" style={{ color: 'var(--brand-primary)' }} />
+          <Wand2 className="h-3 w-3" style={{ color: 'var(--brand-primary)' }} />
           <span className="text-[10px] font-black uppercase tracking-widest text-[var(--brand-text-muted)]">
             Catalysts · {catalysts.length}
           </span>
@@ -108,7 +108,7 @@ export function CatalystsPanel({ project }: CatalystsPanelProps) {
             disabled={refreshing}
             className="mt-2 text-[9px] uppercase tracking-widest font-bold text-[var(--brand-text-muted)] hover:text-[var(--brand-primary)] transition-colors flex items-center gap-1"
           >
-            {refreshing ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Sparkles className="h-2.5 w-2.5" />}
+            {refreshing ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Wand2 className="h-2.5 w-2.5" />}
             {refreshing ? 'Re-inferring…' : 'Refresh'}
           </button>
         </div>

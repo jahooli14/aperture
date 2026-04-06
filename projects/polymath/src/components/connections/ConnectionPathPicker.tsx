@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Layers, Brain, BookOpen, Sparkles, X } from 'lucide-react'
+import { Search, Layers, Brain, BookOpen, Wand2, X } from 'lucide-react'
 import type { ConnectionSourceType } from '../../types'
 
 interface PickerItem {
@@ -190,7 +190,7 @@ export function ConnectionPathPicker({ sourceId, sourceType, open, onClose, onSe
                 {/* Section header */}
                 {!query.trim() && (
                   <div className="px-5 py-2 flex items-center gap-2">
-                    <Sparkles className="w-3 h-3 text-brand-primary" />
+                    <Wand2 className="w-3 h-3 text-brand-primary" />
                     <span className="text-[10px] font-bold uppercase tracking-wider text-brand-primary">
                       {suggestions.length > 0 ? 'Suggested connections' : 'Your items'}
                     </span>

@@ -12,7 +12,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, X, ArrowRight, FolderPlus } from 'lucide-react'
+import { Zap, X, ArrowRight, FolderPlus } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 interface ShadowProjectData {
@@ -112,7 +112,7 @@ export function ShadowProjectCard() {
                 className="flex items-center justify-center h-6 w-6 rounded-lg flex-shrink-0"
                 style={{ background: 'rgba(139,92,246,0.2)' }}
               >
-                <Sparkles className="h-3.5 w-3.5" style={{ color: 'rgb(167,139,250)' }} />
+                <Zap className="h-3.5 w-3.5" style={{ color: 'rgb(167,139,250)' }} />
               </div>
               <span
                 className="text-[10px] font-black uppercase tracking-[0.25em]"

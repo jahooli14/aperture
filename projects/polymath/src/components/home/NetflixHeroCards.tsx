@@ -9,9 +9,10 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Play, ChevronLeft, ChevronRight, Zap, ArrowRight, Sparkles } from 'lucide-react'
+import { Play, ChevronLeft, ChevronRight, Zap, ArrowRight, Wand2 } from 'lucide-react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useProjectStore } from '../../stores/useProjectStore'
+import { useSuggestionStore } from '../../stores/useSuggestionStore'
 import { getTheme } from '../../lib/projectTheme'
 import { haptic } from '../../utils/haptics'
 import type { Project } from '../../types'
@@ -141,22 +142,61 @@ function KeepGoingCard() {
   )
 }
 
-const DRAWER_STATUSES = new Set(['upcoming', 'dormant', 'on-hold', 'maintaining'])
+/**
+ * Unified idea item — either an unstarted project (upcoming, not priority)
+ * or an AI-generated intersection suggestion (pending/saved).
+ */
+interface IdeaItem {
+  id: string
+  title: string
+  description: string
+  isAISuggestion: boolean
+  /** For projects: has it been reshaped? For suggestions: always true. */
+  hasEvolved: boolean
+  navigateTo: string
+  sortKey: number // ms timestamp, higher = more recent
+}
 
 function TrySomethingNewCard() {
   const navigate = useNavigate()
   const { allProjects } = useProjectStore()
+  const { suggestions, fetchSuggestions } = useSuggestionStore()
   const [idx, setIdx] = useState(0)
 
-  // Same logic as DrawerPage — non-priority projects in drawer statuses
-  const ideas = allProjects
-    .filter(p => DRAWER_STATUSES.has(p.status) && !p.is_priority)
-    .sort((a, b) => {
-      const da = new Date(a.last_active || a.created_at).getTime()
-      const db = new Date(b.last_active || b.created_at).getTime()
-      return db - da
-    })
-    .slice(0, 5)
+  // Fetch AI suggestions once on mount
+  React.useEffect(() => { fetchSuggestions() }, [fetchSuggestions])
+
+  // Unstarted project ideas — upcoming status, not priority (idea has been considered but never started)
+  const unstartedProjects: IdeaItem[] = allProjects
+    .filter(p => p.status === 'upcoming' && !p.is_priority)
+    .map(p => ({
+      id: `proj-${p.id}`,
+      title: p.title,
+      description: p.description || 'An idea waiting to be explored.',
+      isAISuggestion: false,
+      hasEvolved: !!(p.metadata?.versions?.length),
+      navigateTo: `/projects/${p.id}`,
+      sortKey: new Date(p.metadata?.versions?.at(-1)?.created_at || p.updated_at || p.created_at).getTime(),
+    }))
+
+  // AI intersection suggestions — pending or saved, not yet built
+  const aiSuggestions: IdeaItem[] = suggestions
+    .filter(s => s.status === 'pending' || s.status === 'saved' || s.status === 'spark')
+    .map(s => ({
+      id: `sug-${s.id}`,
+      title: s.title,
+      description: s.description,
+      isAISuggestion: true,
+      hasEvolved: true,
+      navigateTo: '/projects/drawer',
+      sortKey: new Date(s.created_at).getTime(),
+    }))
+
+  // Merge: AI suggestions first (most recent), then unstarted projects (most evolved/recent)
+  const ideas: IdeaItem[] = [
+    ...aiSuggestions.sort((a, b) => b.sortKey - a.sortKey),
+    ...unstartedProjects.sort((a, b) => b.sortKey - a.sortKey),
+  ].slice(0, 6)
 
   const total = ideas.length
   const current = ideas[idx] || null
@@ -164,7 +204,6 @@ function TrySomethingNewCard() {
   if (total === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full min-h-[200px] p-6 text-center">
-        <Sparkles className="h-8 w-8 text-[var(--brand-primary)] opacity-30 mb-3" />
         <p className="text-sm font-medium text-[var(--brand-text-secondary)] opacity-60">No saved ideas yet</p>
         <p className="text-xs text-[var(--brand-text-secondary)] opacity-40 mt-1">Add voice notes to get ideas shaped for you</p>
       </div>
@@ -208,6 +247,16 @@ function TrySomethingNewCard() {
           >
             <div className="h-1 rounded-full mb-4 opacity-60" style={{ background: 'linear-gradient(90deg, var(--brand-primary), rgba(168,85,247,0.8))' }} />
 
+            {/* AI suggestion badge */}
+            {current.isAISuggestion && (
+              <div className="flex items-center gap-1.5 mb-2">
+                <Wand2 className="h-3 w-3" style={{ color: 'var(--brand-primary)', opacity: 0.6 }} />
+                <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: 'var(--brand-primary)', opacity: 0.6 }}>
+                  AI intersection
+                </span>
+              </div>
+            )}
+
             <h3 className="text-lg font-bold text-[var(--brand-text-primary)] leading-tight mb-1 aperture-header line-clamp-2">
               {current.title}
             </h3>
@@ -218,7 +267,7 @@ function TrySomethingNewCard() {
             <div className="flex-1" />
 
             <button
-              onClick={() => { haptic.medium(); navigate(`/projects/${current.id}`) }}
+              onClick={() => { haptic.medium(); navigate(current.navigateTo) }}
               className="w-full py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all hover:bg-[var(--glass-surface)]"
               style={{ border: '1px solid rgba(99,179,237,0.2)', color: 'var(--brand-primary)' }}
             >

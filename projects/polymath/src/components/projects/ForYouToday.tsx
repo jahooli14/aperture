@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles } from 'lucide-react'
+import { Zap } from 'lucide-react'
 import { api } from '../../lib/apiClient'
 import type { Project } from '../../types'
 
@@ -46,7 +46,7 @@ export function ForYouToday() {
   return (
     <section className="mb-8">
       <div className="mb-4 px-1 flex items-center gap-2">
-        <Sparkles className="h-3.5 w-3.5" style={{ color: 'var(--brand-primary)' }} />
+        <Zap className="h-3.5 w-3.5" style={{ color: 'var(--brand-primary)' }} />
         <h3 className="text-xs font-bold text-[var(--brand-text-muted)] uppercase tracking-widest aperture-header">
           For you today
         </h3>

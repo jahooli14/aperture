@@ -9,7 +9,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react'
+import { ChevronDown, ChevronUp, ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 interface EvolutionEvent {
@@ -71,11 +71,11 @@ export function EvolutionFeed() {
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
         <motion.div
-          animate={{ opacity: [0.4, 1, 0.4] }}
+          animate={{ opacity: [0.3, 0.8, 0.3] }}
           transition={{ duration: 2.5, repeat: Infinity }}
-        >
-          <Sparkles className="h-4 w-4" style={{ color: 'var(--brand-primary)' }} />
-        </motion.div>
+          className="h-1.5 w-1.5 rounded-full"
+          style={{ background: 'var(--brand-primary)' }}
+        />
         <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[var(--brand-text-secondary)] opacity-50">
           ideas evolving
         </span>
