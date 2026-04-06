@@ -19,7 +19,7 @@ import { useToast } from '../components/ui/toast'
 import { haptic } from '../utils/haptics'
 import { CreateMemoryDialog } from '../components/memories/CreateMemoryDialog'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
-import { Layers, ArrowRight, Mic, Brain, Search, Moon, Lightbulb, Wind, X, AlertCircle, Zap, MoreHorizontal, Film, Music, Monitor, Book, MapPin, Gamepad2, Calendar, FileText, Quote, Box } from 'lucide-react'
+import { ArrowRight, Search, Moon, Lightbulb, Wind, X, AlertCircle, MoreHorizontal, Film, Music, Monitor, Book, MapPin, Gamepad2, Calendar, FileText, Quote, Box } from 'lucide-react'
 import { BrandName } from '../components/BrandName'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { DriftMode } from '../components/bedtime/DriftMode'
@@ -299,38 +299,6 @@ export function HomePage() {
             }}
           />
         )}
-
-        {/* 1. ADD SOMETHING NEW */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6 mt-4">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => window.dispatchEvent(new CustomEvent('openVoiceCapture'))}
-              className="flex-1 h-14 glass-button hover:bg-brand-surface group flex flex-col items-center justify-center gap-1"
-              title="Voice Note"
-            >
-              <Mic className="h-5 w-5 text-brand-primary group-hover:scale-110 transition-transform" />
-              <span className="text-[10px] text-white/50">Voice</span>
-            </button>
-
-            <button
-              onClick={() => setCreateThoughtOpen(true)}
-              className="flex-1 h-14 glass-button hover:bg-brand-surface group flex flex-col items-center justify-center gap-1"
-              title="Thought"
-            >
-              <Brain className="h-5 w-5 text-brand-primary group-hover:scale-110 transition-transform" />
-              <span className="text-[10px] text-white/50">Thought</span>
-            </button>
-
-            <button
-              onClick={() => setCreateProjectOpen(true)}
-              className="flex-1 h-14 glass-button hover:bg-brand-surface group flex flex-col items-center justify-center gap-1"
-              title="Project idea"
-            >
-              <Layers className="h-5 w-5 text-brand-primary group-hover:scale-110 transition-transform" />
-              <span className="text-[10px] text-white/50">Idea</span>
-            </button>
-          </div>
-        </section>
 
         {/* 2. NETFLIX HERO CARDS — Keep going + Try something new */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
