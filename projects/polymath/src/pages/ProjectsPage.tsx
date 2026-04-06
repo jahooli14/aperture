@@ -242,11 +242,12 @@ export function ProjectsPage() {
       .sort((a, b) =>
         new Date(b.last_active || b.created_at).getTime() - new Date(a.last_active || a.created_at).getTime()
       )
-      .filter(p => p.status === 'active' && !priorityIds.has(p.id))
+      .filter(p => !p.is_priority && !priorityIds.has(p.id))
       .slice(0, Math.max(0, FOCUS_CAP - priorityProjects.length))
 
     const activeList = [...priorityProjects, ...recentActiveNonPriority] as Project[]
     const activeIds = new Set(activeList.map(p => p.id))
+    // Everything not in the focus area goes in the drawer
     const drawerList = projects.filter(p => !activeIds.has(p.id))
 
     return { activeList, drawerList }
