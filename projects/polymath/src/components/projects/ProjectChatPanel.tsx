@@ -214,7 +214,7 @@ export function ProjectChatPanel({
     setAddedTasks(new Set())
     setInput('')
     setContextTab('goal')
-    setShowCouncil(false)
+    // setShowCouncil(false) — council feature removed
 
     // Focus input after animation settles
     setTimeout(() => inputRef.current?.focus(), 350)

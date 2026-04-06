@@ -278,7 +278,7 @@ export default function ListsPage() {
                     <div className="text-center py-10 px-4 mb-10">
                         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-primary/10 mb-6"
                             style={{ boxShadow: 'inset 0 0 0 1px rgba(56,189,248,0.15)' }}>
-                            <Box className="h-8 w-8 text-brand-primary" />
+                            <ListOrdered className="h-8 w-8 text-brand-primary" />
                         </div>
                         <h3 className="text-xl font-black uppercase tracking-tight text-[var(--brand-text-primary)] mb-2">Start a collection</h3>
                         <p className="text-sm text-brand-text-muted mb-8 max-w-xs mx-auto leading-relaxed">

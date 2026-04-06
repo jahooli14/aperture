@@ -104,7 +104,6 @@ export function ReaderPage() {
   useEffect(() => {
     if (!id) return
     checkOfflineStatus()
-    fetchSuggestions()
     return () => {
       clearContext()
     }
@@ -650,7 +649,7 @@ export function ReaderPage() {
           />
 
           <div className="mt-20 pt-12 border-t border-[var(--glass-surface)]">
-            <ItemInsightStrip title={article.title} themes={article.themes ?? undefined} itemId={article.id} itemType="article" />
+            <ItemInsightStrip title={article.title ?? ''} itemId={article.id} itemType="article" />
           </div>
         </main>
 

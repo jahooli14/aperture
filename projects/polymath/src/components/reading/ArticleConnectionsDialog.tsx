@@ -14,6 +14,7 @@ interface ArticleConnectionsDialogProps {
     title: string
     content: string
     excerpt?: string
+    themes?: string[]
   }
   isOpen: boolean
   onClose: () => void

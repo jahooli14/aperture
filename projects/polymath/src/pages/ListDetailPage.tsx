@@ -901,8 +901,8 @@ function ArticleListMode({ list, navigate }: ArticleListModeProps) {
             }
         }
 
-        window.addEventListener('pwa-share', handlePWAShare as EventListener)
-        return () => window.removeEventListener('pwa-share', handlePWAShare as EventListener)
+        window.addEventListener('pwa-share', handlePWAShare as unknown as EventListener)
+        return () => window.removeEventListener('pwa-share', handlePWAShare as unknown as EventListener)
     }, [saveArticle, fetchArticles, addToast])
 
     const handleAddUrl = async (e: React.FormEvent) => {

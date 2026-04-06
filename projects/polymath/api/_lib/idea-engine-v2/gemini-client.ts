@@ -67,7 +67,7 @@ export async function generateIdea(
   frontierMode: FrontierMode,
   feedbackContext?: string
 ): Promise<GeminiResponse> {
-  const mode = frontierModes.modes.find((m) => m.id === frontierMode);
+  const mode = frontierModes.modes.find((m: { id: string }) => m.id === frontierMode);
 
   if (!mode) {
     throw new Error(`Unknown frontier mode: ${frontierMode}`);
