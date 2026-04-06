@@ -27,27 +27,28 @@ import { dataSynchronizer } from './lib/sync/DataSynchronizer'
 import { useOfflineStore } from './stores/useOfflineStore'
 import './App.css'
 import './styles/theme.css'
+import { lazyRetry } from './lib/lazyRetry'
 
-// Lazy load pages for better bundle splitting (code splitting enabled for all routes)
-const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })))
-const MemoriesPage = lazy(() => import('./pages/MemoriesPage').then(m => ({ default: m.MemoriesPage })))
-const ReadingPage = lazy(() => import('./pages/ReadingPage').then(m => ({ default: m.ReadingPage })))
-const ReaderPage = lazy(() => import('./pages/ReaderPage').then(m => ({ default: m.ReaderPage })))
-const SuggestionsPage = lazy(() => import('./pages/SuggestionsPage').then(m => ({ default: m.SuggestionsPage })))
-const ProjectsPage = lazy(() => import('./pages/ProjectsPage').then(m => ({ default: m.ProjectsPage })))
-const DrawerPage = lazy(() => import('./pages/DrawerPage'))
-const ProjectDetailPage = lazy(() => import('./pages/ProjectDetailPage'))
-const OnboardingPage = lazy(() => import('./pages/OnboardingPage').then(m => ({ default: m.OnboardingPage })))
-const TimelinePage = lazy(() => import('./pages/TimelinePage').then(m => ({ default: m.TimelinePage })))
-const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })))
-const SearchPage = lazy(() => import('./pages/SearchPage').then(m => ({ default: m.SearchPage })))
-const BedtimePage = lazy(() => import('./pages/BedtimePage').then(m => ({ default: m.BedtimePage })))
-const ListsPage = lazy(() => import('./pages/ListsPage'))
-const ListDetailPage = lazy(() => import('./pages/ListDetailPage'))
-const TodosPage = lazy(() => import('./pages/TodosPage').then(m => ({ default: m.TodosPage })))
-const FixQueuePage = lazy(() => import('./pages/FixQueuePage'))
-const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })))
-const CognitiveReplayPage = lazy(() => import('./pages/CognitiveReplayPage').then(m => ({ default: m.CognitiveReplayPage })))
+// Lazy load pages with retry logic for chunk loading failures after deployments
+const HomePage = lazy(lazyRetry(() => import('./pages/HomePage').then(m => ({ default: m.HomePage }))))
+const MemoriesPage = lazy(lazyRetry(() => import('./pages/MemoriesPage').then(m => ({ default: m.MemoriesPage }))))
+const ReadingPage = lazy(lazyRetry(() => import('./pages/ReadingPage').then(m => ({ default: m.ReadingPage }))))
+const ReaderPage = lazy(lazyRetry(() => import('./pages/ReaderPage').then(m => ({ default: m.ReaderPage }))))
+const SuggestionsPage = lazy(lazyRetry(() => import('./pages/SuggestionsPage').then(m => ({ default: m.SuggestionsPage }))))
+const ProjectsPage = lazy(lazyRetry(() => import('./pages/ProjectsPage').then(m => ({ default: m.ProjectsPage }))))
+const DrawerPage = lazy(lazyRetry(() => import('./pages/DrawerPage')))
+const ProjectDetailPage = lazy(lazyRetry(() => import('./pages/ProjectDetailPage')))
+const OnboardingPage = lazy(lazyRetry(() => import('./pages/OnboardingPage').then(m => ({ default: m.OnboardingPage }))))
+const TimelinePage = lazy(lazyRetry(() => import('./pages/TimelinePage').then(m => ({ default: m.TimelinePage }))))
+const SettingsPage = lazy(lazyRetry(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage }))))
+const SearchPage = lazy(lazyRetry(() => import('./pages/SearchPage').then(m => ({ default: m.SearchPage }))))
+const BedtimePage = lazy(lazyRetry(() => import('./pages/BedtimePage').then(m => ({ default: m.BedtimePage }))))
+const ListsPage = lazy(lazyRetry(() => import('./pages/ListsPage')))
+const ListDetailPage = lazy(lazyRetry(() => import('./pages/ListDetailPage')))
+const TodosPage = lazy(lazyRetry(() => import('./pages/TodosPage').then(m => ({ default: m.TodosPage }))))
+const FixQueuePage = lazy(lazyRetry(() => import('./pages/FixQueuePage')))
+const LoginPage = lazy(lazyRetry(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage }))))
+const CognitiveReplayPage = lazy(lazyRetry(() => import('./pages/CognitiveReplayPage').then(m => ({ default: m.CognitiveReplayPage }))))
 
 // Loading fallback component with skeleton
 import { useBedtimeNotifications } from './hooks/useBedtimeNotifications'
