@@ -35,7 +35,8 @@ function KeepGoingCard() {
   const { allProjects } = useProjectStore()
   const [idx, setIdx] = useState(0)
 
-  const activeProjects = allProjects.filter(p => ['active', 'upcoming', 'maintaining'].includes(p.status))
+  // Only truly active projects — not upcoming (those are ideas, they belong in Try Something New)
+  const activeProjects = allProjects.filter(p => p.status === 'active' || p.status === 'maintaining')
   const pinned = activeProjects.filter(p => p.is_priority).slice(0, FOCUS_CAP)
   const slots: (Project | null)[] = [...pinned]
 

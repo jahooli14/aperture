@@ -180,8 +180,6 @@ export function HomePage() {
     } catch {}
   }
 
-  const pendingSuggestions = Array.isArray(suggestions) ? suggestions.filter(s => s.status === 'pending') : []
-
   const storedErrors = (() => { try { const e = localStorage.getItem('app_errors'); return e ? JSON.parse(e) : [] } catch { return [] } })()
   const isDev = import.meta.env.DEV
 
@@ -352,19 +350,6 @@ export function HomePage() {
         {/* 4. WHAT YOU'RE CONSUMING */}
         <NowConsumingWidget />
 
-        {/* Pending saved ideas banner */}
-        {pendingSuggestions.length > 0 && (
-          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-            <Link
-              to="/suggestions"
-              className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all hover:bg-[rgba(255,255,255,0.1)] border border-[var(--glass-surface)] text-[var(--brand-primary)] aperture-header"
-            >
-              <Zap className="h-4 w-4" />
-              {`${pendingSuggestions.length} ${pendingSuggestions.length === 1 ? 'idea' : 'ideas'} waiting`}
-              <ArrowRight className="h-4 w-4 ml-1" />
-            </Link>
-          </section>
-        )}
 
         {/* 5. EXPLORE */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 flex flex-col aperture-shelf">
@@ -433,7 +418,7 @@ export function HomePage() {
               </div>
             </button>
 
-            <Link to="/suggestions" className="group p-5 glass-card glass-card-hover transition-all" onMouseEnter={e => { e.currentTarget.style.background = 'var(--glass-surface)' }} onMouseLeave={e => { e.currentTarget.style.background = 'var(--brand-glass-bg)' }}>
+            <Link to="/projects/drawer" className="group p-5 glass-card glass-card-hover transition-all" onMouseEnter={e => { e.currentTarget.style.background = 'var(--glass-surface)' }} onMouseLeave={e => { e.currentTarget.style.background = 'var(--brand-glass-bg)' }}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1 bg-[var(--glass-surface)] border-2 border-[var(--glass-surface-hover)]">
