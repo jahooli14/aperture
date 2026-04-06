@@ -323,3 +323,151 @@ Return JSON only:
     return []
   }
 }
+
+/**
+ * Generate a drawer digest for the user. Finds warmed projects (heat > 0 with
+ * a cited reason) and generates 0–2 evolution proposals via Gemini. Inserts a
+ * single `drawer_digests` row. Called by the Sunday cron.
+ */
+export async function generateDigestForUser(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<{ warmed: number; evolutions: number; skipped?: string }> {
+  const { data: warmedProjects } = await supabase
+    .from('projects')
+    .select('id, title, description, heat_score, heat_reason, catalysts, status, metadata')
+    .eq('user_id', userId)
+    .in('status', DRAWER_STATUSES)
+    .eq('is_priority', false)
+    .gt('heat_score', 0)
+    .not('heat_reason', 'is', null)
+    .order('heat_score', { ascending: false })
+    .limit(5)
+
+  const warmed = warmedProjects || []
+  if (warmed.length === 0) return { warmed: 0, evolutions: 0, skipped: 'no-warmed' }
+
+  const { data: userSettings } = await supabase
+    .from('user_settings')
+    .select('allow_handoff_mutations')
+    .eq('user_id', userId)
+    .maybeSingle()
+  const allowHandoff = !!userSettings?.allow_handoff_mutations
+
+  interface Evolution {
+    project_id: string
+    project_title: string
+    mode: MutationMode
+    title: string
+    proposal: string
+    evidence: string
+  }
+
+  const proposals = await Promise.all(warmed.slice(0, 3).map(async (p): Promise<Evolution | null> => {
+    const evidence = (p as any).heat_reason || ''
+    const prompt = `You are helping evolve a dormant project. Pick ONE mutation mode and return a proposal.
+
+PROJECT
+title: ${p.title}
+description: ${p.description || '(none)'}
+recent evidence that it's warming: ${evidence}
+
+MODES (pick ONE that fits best)
+- shrink: propose a much smaller 1-3 day version
+- merge: propose combining with another related project (requires mentioning which)
+- split: propose splitting into 2 focused children
+- reframe: propose a new angle / positioning
+- snapshot: propose capturing current state as a standalone artifact (essay, note, sketch) and retiring the full project${allowHandoff ? '\n- handoff: propose handing off to someone else' : ''}
+
+RULES
+- The proposal must cite the provided evidence. If you can't, return mode='none'.
+- Return concrete, specific text. No platitudes.
+
+Return JSON only:
+{ "mode": "shrink|merge|split|reframe|snapshot${allowHandoff ? '|handoff' : ''}|none", "title": "new title if applicable", "proposal": "2-3 sentence concrete proposal", "evidence": "the evidence you cited" }`
+    try {
+      const raw = await generateText(prompt, { temperature: 0.5, maxTokens: 400, responseFormat: 'json' })
+      const parsed = JSON.parse(raw)
+      if (!parsed?.mode || parsed.mode === 'none' || !parsed.proposal) return null
+      if (!(MUTATION_MODES as readonly string[]).includes(parsed.mode)) return null
+      if (parsed.mode === 'handoff' && !allowHandoff) return null
+      return {
+        project_id: p.id,
+        project_title: p.title,
+        mode: parsed.mode,
+        title: parsed.title || p.title,
+        proposal: parsed.proposal,
+        evidence: parsed.evidence || evidence,
+      }
+    } catch (e) {
+      console.warn('[generateDigestForUser] evolve-project failed for', p.id, e)
+      return null
+    }
+  }))
+
+  const evolutions = proposals.filter((e): e is Evolution => e !== null).slice(0, 2)
+
+  await supabase
+    .from('drawer_digests')
+    .insert([{
+      user_id: userId,
+      warmed: warmed.map((p) => ({
+        id: p.id,
+        title: p.title,
+        heat_score: (p as any).heat_score,
+        heat_reason: (p as any).heat_reason,
+      })),
+      evolutions,
+      status: 'unread',
+    }])
+
+  return { warmed: warmed.length, evolutions: evolutions.length }
+}
+
+/**
+ * Generate evolution events for a user's active/upcoming projects. Calls Gemini
+ * to produce a fresh insight per project and stores results in `evolution_events`.
+ * Called by the daily cron.
+ */
+export async function evolveProjectsForUser(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<{ evolved: number; project_ids: string[] }> {
+  const { data: projects } = await supabase
+    .from('projects')
+    .select('id, title, description, metadata')
+    .eq('user_id', userId)
+    .in('status', ['active', 'upcoming'])
+
+  if (!projects || projects.length === 0) return { evolved: 0, project_ids: [] }
+
+  const evolved: string[] = []
+  for (const project of projects.slice(0, 10)) {
+    try {
+      const prompt = `You are a creative catalyst AI. Given this project, generate a fresh evolution insight — a new angle, intersection, or breakthrough idea that could reshape it.
+
+Project: ${project.title}
+Description: ${project.description || 'No description'}
+Current notes: ${JSON.stringify((project.metadata as any)?.tasks?.slice(0, 3) || [])}
+
+Respond with JSON: { "event_type": "intersection"|"reshape"|"reflection", "description": "one specific, surprising insight in plain language (max 2 sentences)" }`
+
+      const response = await generateText(prompt, { responseFormat: 'json', temperature: 0.8 })
+      const insight = JSON.parse(response)
+
+      if (insight.description) {
+        await supabase.from('evolution_events').insert({
+          user_id: userId,
+          project_id: project.id,
+          event_type: insight.event_type || 'reshape',
+          highlight: evolved.length === 0,
+          description: insight.description,
+          created_at: new Date().toISOString(),
+        })
+        evolved.push(project.id)
+      }
+    } catch { /* skip failed projects */ }
+  }
+
+  return { evolved: evolved.length, project_ids: evolved }
+}

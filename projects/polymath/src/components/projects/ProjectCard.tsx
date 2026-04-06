@@ -318,7 +318,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
                     <CheckCircle className="h-5 w-5 flex-shrink-0" style={{ color: 'rgb(34,197,94)' }} />
                     <div>
                       <p className="text-sm font-bold">Mark Complete</p>
-                      <p className="text-[11px] opacity-60 mt-0.5">Ship it and celebrate</p>
+                      <p className="text-[11px] opacity-60 mt-0.5">Finish it and celebrate</p>
                     </div>
                   </button>
 
