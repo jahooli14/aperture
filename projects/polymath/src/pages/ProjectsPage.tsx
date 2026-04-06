@@ -254,7 +254,6 @@ export function ProjectsPage() {
   }
 
   const FOCUS_CAP = 3
-  const DRAWER_STATUSES = new Set(['upcoming', 'dormant', 'on-hold', 'maintaining'])
   const { activeList, drawerList } = React.useMemo(() => {
     const priorityProjects = projects
       .filter(p => p.is_priority)
@@ -265,13 +264,13 @@ export function ProjectsPage() {
       .sort((a, b) =>
         new Date(b.last_active || b.created_at).getTime() - new Date(a.last_active || a.created_at).getTime()
       )
-      .filter(p => p.status === 'active' && !priorityIds.has(p.id))
+      .filter(p => !p.is_priority && !priorityIds.has(p.id))
       .slice(0, Math.max(0, FOCUS_CAP - priorityProjects.length))
 
     const activeList = [...priorityProjects, ...recentActiveNonPriority] as Project[]
     const activeIds = new Set(activeList.map(p => p.id))
-    // Only count projects with actual drawer statuses — must match DrawerPage's filter
-    const drawerList = projects.filter(p => !activeIds.has(p.id) && DRAWER_STATUSES.has(p.status) && !p.is_priority)
+    // Everything not in the focus area goes in the drawer
+    const drawerList = projects.filter(p => !activeIds.has(p.id))
 
     return { activeList, drawerList }
   }, [projects])

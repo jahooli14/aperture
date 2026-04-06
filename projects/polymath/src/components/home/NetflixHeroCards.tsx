@@ -53,15 +53,14 @@ function KeepGoingCard() {
   const { allProjects } = useProjectStore()
   const [idx, setIdx] = useState(0)
 
-  // Only truly active projects — not upcoming (those are ideas, they belong in Try Something New)
-  const activeProjects = allProjects.filter(p => p.status === 'active' || p.status === 'maintaining')
-  const pinned = activeProjects.filter(p => p.is_priority).slice(0, FOCUS_CAP)
+  // Priority projects first, then most recently active — no status filtering
+  const pinned = allProjects.filter(p => p.is_priority).slice(0, FOCUS_CAP)
   const slots: (Project | null)[] = [...pinned]
 
   // Auto-fill empty slots with most recently active
   if (slots.length < FOCUS_CAP) {
     const pinnedIds = new Set(slots.map(p => p?.id))
-    const recent = [...activeProjects]
+    const recent = [...allProjects]
       .filter(p => !p.is_priority && !pinnedIds.has(p.id))
       .sort((a, b) => new Date(b.last_active || b.updated_at || b.created_at).getTime() - new Date(a.last_active || a.updated_at || a.created_at).getTime())
       .slice(0, FOCUS_CAP - slots.length)
@@ -177,8 +176,6 @@ interface IdeaItem {
   sortKey: number // ms timestamp, higher = more recent
 }
 
-const FRESH_STATUSES = new Set(['upcoming', 'dormant', 'on-hold', 'maintaining'])
-
 function TrySomethingNewCard() {
   const navigate = useNavigate()
   const { allProjects } = useProjectStore()
@@ -187,6 +184,20 @@ function TrySomethingNewCard() {
   const [tsnDirection, setTsnDirection] = useState(1)
 
   React.useEffect(() => { fetchSuggestions() }, [fetchSuggestions])
+
+  // Compute the focus set so drawer = everything else
+  const focusIds = React.useMemo(() => {
+    const priorityProjects = allProjects.filter(p => p.is_priority).slice(0, FOCUS_CAP)
+    const priorityIds = new Set(priorityProjects.map(p => p.id))
+    const recentNonPriority = [...allProjects]
+      .sort((a, b) =>
+        new Date(b.last_active || b.updated_at || b.created_at).getTime() -
+        new Date(a.last_active || a.updated_at || a.created_at).getTime()
+      )
+      .filter(p => !p.is_priority && !priorityIds.has(p.id))
+      .slice(0, Math.max(0, FOCUS_CAP - priorityProjects.length))
+    return new Set([...priorityProjects, ...recentNonPriority].map(p => p.id))
+  }, [allProjects])
 
   // AI intersection ideas first (most recently generated)
   const aiIdeas: IdeaItem[] = suggestions
@@ -202,11 +213,10 @@ function TrySomethingNewCard() {
       sortKey: new Date(s.created_at).getTime(),
     }))
 
-  // Drawer projects — all non-active statuses, not pinned as "working on now"
+  // Drawer projects — everything not in the focus area
   const drawerIdeas: IdeaItem[] = allProjects
-    .filter(p => FRESH_STATUSES.has(p.status) && !p.is_priority)
+    .filter(p => !focusIds.has(p.id))
     .sort((a, b) => {
-      // Most recently evolved/updated first
       const aKey = new Date(a.metadata?.versions?.at(-1)?.created_at || a.updated_at || a.created_at).getTime()
       const bKey = new Date(b.metadata?.versions?.at(-1)?.created_at || b.updated_at || b.created_at).getTime()
       return bKey - aKey
@@ -224,7 +234,7 @@ function TrySomethingNewCard() {
   // AI ideas first, then drawer — cap at 5 to keep it curated
   const ideas = [...aiIdeas, ...drawerIdeas].slice(0, 5)
   const total = ideas.length
-  const totalDrawerCount = allProjects.filter(p => FRESH_STATUSES.has(p.status) && !p.is_priority).length + aiIdeas.length
+  const totalDrawerCount = drawerIdeas.length + aiIdeas.length
   const current = ideas[idx] || null
 
   if (total === 0) {

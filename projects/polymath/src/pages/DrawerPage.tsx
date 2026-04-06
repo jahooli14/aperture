@@ -11,7 +11,7 @@ interface WarmedProject extends Project {
   heat_reason?: string
 }
 
-const DRAWER_STATUS_SET: ReadonlySet<string> = new Set(['upcoming', 'dormant', 'on-hold', 'maintaining'])
+const FOCUS_CAP = 3
 
 export default function DrawerPage() {
   const { allProjects, fetchProjects, loading } = useProjectStore()
@@ -23,9 +23,20 @@ export default function DrawerPage() {
 
   const drawerProjects = useMemo(() => {
     const list = (Array.isArray(allProjects) ? allProjects : []) as WarmedProject[]
-    const filtered = list.filter(p =>
-      DRAWER_STATUS_SET.has(p.status) && !p.is_priority
-    )
+
+    // Compute the focus set (priority + recent) so drawer = everything else
+    const priorityProjects = list.filter(p => p.is_priority).slice(0, FOCUS_CAP)
+    const priorityIds = new Set(priorityProjects.map(p => p.id))
+    const recentNonPriority = [...list]
+      .sort((a, b) =>
+        new Date(b.last_active || b.updated_at || b.created_at).getTime() -
+        new Date(a.last_active || a.updated_at || a.created_at).getTime()
+      )
+      .filter(p => !p.is_priority && !priorityIds.has(p.id))
+      .slice(0, Math.max(0, FOCUS_CAP - priorityProjects.length))
+    const focusIds = new Set([...priorityProjects, ...recentNonPriority].map(p => p.id))
+
+    const filtered = list.filter(p => !focusIds.has(p.id))
     const q = query.trim().toLowerCase()
     const searched = q
       ? filtered.filter(p =>

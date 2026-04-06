@@ -406,19 +406,34 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
       return res.status(405).json({ error: 'Method not allowed' })
     }
     try {
+      // Fetch all projects — the drawer is everything not in the focus area
+      // (focus = priority + top recent). No status filtering needed.
       const { data: projects, error } = await supabase
         .from('projects')
         .select('*')
         .eq('user_id', userId)
-        .in('status', DRAWER_STATUSES)
-        .eq('is_priority', false)
         .order('heat_score', { ascending: false, nullsFirst: false })
 
       if (error) {
         return res.status(500).json({ error: 'Failed to fetch drawer', details: error.message })
       }
 
-      const all = projects || []
+      const allProjects = projects || []
+
+      // Compute focus set (priority + top recent) to exclude from drawer
+      const FOCUS_CAP = 3
+      const priorityProjects = allProjects.filter((p: any) => p.is_priority).slice(0, FOCUS_CAP)
+      const priorityIds = new Set(priorityProjects.map((p: any) => p.id))
+      const recentNonPriority = [...allProjects]
+        .sort((a: any, b: any) =>
+          new Date(b.last_active || b.updated_at || b.created_at).getTime() -
+          new Date(a.last_active || a.updated_at || a.created_at).getTime()
+        )
+        .filter((p: any) => !p.is_priority && !priorityIds.has(p.id))
+        .slice(0, Math.max(0, FOCUS_CAP - priorityProjects.length))
+      const focusIds = new Set([...priorityProjects, ...recentNonPriority].map((p: any) => p.id))
+
+      const all = allProjects.filter((p: any) => !focusIds.has(p.id))
       const warmed = all.filter((p: any) => (p.heat_score || 0) > 0 && p.heat_reason)
       const warmedIds = new Set(warmed.map((p: any) => p.id))
       const rest = all.filter((p: any) => !warmedIds.has(p.id))
