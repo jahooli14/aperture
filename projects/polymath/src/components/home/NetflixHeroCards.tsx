@@ -166,9 +166,10 @@ function TrySomethingNewCard() {
   // Fetch AI suggestions once on mount
   React.useEffect(() => { fetchSuggestions() }, [fetchSuggestions])
 
-  // Unstarted project ideas — upcoming status, not priority (idea has been considered but never started)
+  // Ideas not being actively worked on — all drawer statuses, not priority
+  const FRESH_STATUSES = new Set(['upcoming', 'dormant', 'on-hold', 'maintaining'])
   const unstartedProjects: IdeaItem[] = allProjects
-    .filter(p => p.status === 'upcoming' && !p.is_priority)
+    .filter(p => FRESH_STATUSES.has(p.status) && !p.is_priority)
     .map(p => ({
       id: `proj-${p.id}`,
       title: p.title,
