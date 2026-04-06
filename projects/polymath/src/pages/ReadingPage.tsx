@@ -4,6 +4,7 @@
  */
 
 import React, { useEffect, useState, useCallback, useRef, lazy, Suspense } from 'react'
+import { lazyRetry } from '../lib/lazyRetry'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Loader2, BookOpen, Archive, List, Rss, RefreshCw, CheckSquare, Trash2, Tag, Check, Search, FileText, AlertCircle, RotateCw, Link as LinkIcon, Play, ChevronRight } from 'lucide-react'
@@ -33,7 +34,7 @@ import type { RSSFeedItem as RSSItem } from '../types/rss'
 import type { Article } from '../types/reading'
 
 // Lazy load heavy dialog components to reduce initial bundle size
-const ProcessingDebugPanel = lazy(() => import('../components/reading/ProcessingDebugPanel').then(m => ({ default: m.ProcessingDebugPanel })))
+const ProcessingDebugPanel = lazy(lazyRetry(() => import('../components/reading/ProcessingDebugPanel').then(m => ({ default: m.ProcessingDebugPanel }))))
 
 type FilterTab = 'queue' | 'updates' | 'unread' | 'reading' | 'archived'
 

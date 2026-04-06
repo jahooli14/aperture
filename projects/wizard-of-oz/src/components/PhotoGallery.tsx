@@ -1,5 +1,6 @@
 import { useEffect, useState, lazy, Suspense, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import { lazyRetry } from '../lib/lazyRetry';
 import { usePhotoStore } from '../stores/usePhotoStore';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
@@ -78,7 +79,7 @@ function ImageWithRetry({ src, alt, className, privacyMode }: ImageWithRetryProp
 }
 
 // Lazy load PhotoOverlay since it's only shown on user interaction
-const PhotoOverlay = lazy(() => import('./PhotoOverlay').then(m => ({ default: m.PhotoOverlay })));
+const PhotoOverlay = lazy(lazyRetry(() => import('./PhotoOverlay').then(m => ({ default: m.PhotoOverlay }))));
 
 type Photo = Database['public']['Tables']['photos']['Row'];
 

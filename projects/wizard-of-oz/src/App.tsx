@@ -19,12 +19,13 @@ import { UpdateNotification } from './components/UpdateNotification';
 import { QuickAddFAB } from './components/QuickAddFAB';
 import { AddPlaceModal } from './components/AddPlaceModal';
 import { isSupabaseConfigured } from './lib/supabase';
+import { lazyRetry } from './lib/lazyRetry';
 
-// Lazy load heavy components
-const CalendarView = lazy(() => import('./components/CalendarView').then(m => ({ default: m.CalendarView })));
-const ComparisonView = lazy(() => import('./components/ComparisonView').then(m => ({ default: m.ComparisonView })));
-const MilestonesView = lazy(() => import('./components/MilestonesView').then(m => ({ default: m.MilestonesView })));
-const PlacesView = lazy(() => import('./components/PlacesView').then(m => ({ default: m.default })));
+// Lazy load heavy components with retry logic for chunk loading failures after deployments
+const CalendarView = lazy(lazyRetry(() => import('./components/CalendarView').then(m => ({ default: m.CalendarView }))));
+const ComparisonView = lazy(lazyRetry(() => import('./components/ComparisonView').then(m => ({ default: m.ComparisonView }))));
+const MilestonesView = lazy(lazyRetry(() => import('./components/MilestonesView').then(m => ({ default: m.MilestonesView }))));
+const PlacesView = lazy(lazyRetry(() => import('./components/PlacesView').then(m => ({ default: m.default }))));
 
 type ViewType = 'gallery' | 'calendar' | 'compare' | 'milestones' | 'places';
 
