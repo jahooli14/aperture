@@ -132,11 +132,11 @@ export function FixQueuePage() {
     })
 
     if (resp.ok) {
-      addToast({ message: `Approved: ${draft?.name}`, variant: 'success' })
+      addToast({ title: `Approved: ${draft?.name}`, variant: 'success' })
       fetchItems()
     } else {
       const err = await resp.json().catch(() => ({ error: 'Failed' }))
-      addToast({ message: err.error || 'Approval failed', variant: 'default' })
+      addToast({ title: err.error || 'Approval failed', variant: 'default' })
     }
     setApproving(null)
   }
@@ -149,7 +149,7 @@ export function FixQueuePage() {
       body: JSON.stringify({ item_id: item.id })
     })
 
-    addToast({ message: 'Fix rejected', variant: 'default' })
+    addToast({ title: 'Fix rejected', variant: 'default' })
     fetchItems()
   }
 
@@ -166,7 +166,7 @@ export function FixQueuePage() {
       })
       .eq('id', item.id)
 
-    addToast({ message: 'Marked as fixed!', variant: 'success' })
+    addToast({ title: 'Marked as fixed!', variant: 'success' })
     fetchItems()
   }
 

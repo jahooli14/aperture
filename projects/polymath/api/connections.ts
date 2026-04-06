@@ -788,8 +788,8 @@ Don't soften it. Don't end with encouragement. Just the challenge. Use their own
         const directSimilarity = cosineSimilarity(sourceItem.embedding, targetItem.embedding)
 
         const scored = allItems.map(item => {
-          const simToSource = cosineSimilarity(item.embedding, sourceItem.embedding)
-          const simToTarget = cosineSimilarity(item.embedding, targetItem.embedding)
+          const simToSource = cosineSimilarity(item.embedding, sourceItem.embedding!)
+          const simToTarget = cosineSimilarity(item.embedding, targetItem.embedding!)
           // Bridge score: geometric mean of both similarities, penalized if too close to just one side
           const bridgeScore = Math.sqrt(simToSource * simToTarget)
           // Bonus for items that are between source and target conceptually (not just close to one)

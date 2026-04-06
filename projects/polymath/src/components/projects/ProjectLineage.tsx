@@ -51,10 +51,10 @@ export function ProjectLineage({ project }: ProjectLineageProps) {
           versions: project.metadata?.versions,
         }
       })
-      addToast({ type: 'success', message: `Reverted to version from ${formatVersionDate(version.created_at)}` })
+      addToast({ title: 'Reverted', description: `Reverted to version from ${formatVersionDate(version.created_at)}`, variant: 'success' })
       setOpen(false)
     } catch {
-      addToast({ type: 'error', message: 'Failed to revert' })
+      addToast({ title: 'Error', description: 'Failed to revert', variant: 'destructive' })
     }
     setReverting(null)
   }

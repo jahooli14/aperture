@@ -150,7 +150,7 @@ export function ArticleCompletionDialog({
               />
             </div>
 
-            <ItemInsightStrip title={article.title} />
+            <ItemInsightStrip title={article.title ?? ''} />
 
             <div className="flex gap-3 justify-end pt-2">
               <button

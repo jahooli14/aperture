@@ -13,8 +13,10 @@ import { getTheme, PROJECT_COLORS } from '../../lib/projectTheme'
 import { getNextTask } from '../../lib/taskUtils'
 
 interface Task {
+  id: string
   text: string
   done: boolean
+  created_at: string
   order: number
 }
 
@@ -104,7 +106,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
   const handleQuickAddTask = async () => {
     if (!quickTaskText.trim()) return
     const existingTasks = (project.metadata?.tasks || []) as Task[]
-    const newTask = {
+    const newTask: Task = {
       id: crypto.randomUUID(),
       text: quickTaskText.trim(),
       done: false,

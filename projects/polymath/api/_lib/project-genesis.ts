@@ -77,7 +77,7 @@ export async function detectProjectGenesis(userId: string): Promise<GeneratedIns
         theme: key,
         count: 0,
         recentCount: 0,
-        titles: [],
+        titles: [] as string[],
         oldestDate: memory.created_at,
       }
 
