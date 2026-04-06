@@ -11,7 +11,7 @@ import { DrawerDigestSheet } from '../components/projects/DrawerDigestSheet'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
 import { Button } from '../components/ui/button'
 import { PremiumTabs } from '../components/ui/premium-tabs'
-import { Layers, Search, Check } from 'lucide-react'
+import { Search, Check } from 'lucide-react'
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import { SubtleBackground } from '../components/SubtleBackground'
@@ -149,7 +149,6 @@ export function ProjectsPage() {
     loading,
     filter,
     fetchProjects,
-    deleteProject,
     setFilter
   } = useProjectStore()
 
@@ -166,27 +165,6 @@ export function ProjectsPage() {
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
   const { addToast } = useToast()
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
-
-  // Graveyard projects (from already-fetched allProjects)
-  const safeAllProjects = Array.isArray(allProjects) ? allProjects : []
-  const graveyardProjects = React.useMemo(
-    () => safeAllProjects.filter(p => p.status === 'graveyard'),
-    [safeAllProjects]
-  )
-
-  // Weekly spotlight: deterministic pick from graveyard (changes weekly)
-  const weeklyArchiveSpotlight = React.useMemo(() => {
-    if (graveyardProjects.length === 0) return null
-    const weekSeed = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000)).toString()
-    const seededRandom = (str: string) => {
-      let h = 0xdeadbeef
-      for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 2654435761)
-      return ((h ^ h >>> 16) >>> 0) / 4294967296
-    }
-    const sorted = [...graveyardProjects].sort((a, b) => a.id.localeCompare(b.id))
-    const idx = Math.floor(seededRandom(weekSeed) * sorted.length)
-    return sorted[idx]
-  }, [graveyardProjects])
 
   // Debounce tag selection to avoid excessive re-filtering
   useEffect(() => {
@@ -284,7 +262,6 @@ export function ProjectsPage() {
               <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
                 your <span className="text-brand-primary">projects</span>
               </h1>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mt-1">Your projects</p>
             </div>
             <div className="flex items-center gap-2">
               <CreateProjectDialog />
@@ -307,8 +284,7 @@ export function ProjectsPage() {
                 { id: 'upcoming', label: 'Next' },
                 { id: 'active', label: 'Active' },
                 { id: 'dormant', label: 'Dormant' },
-                { id: 'completed', label: 'Done' },
-                { id: 'graveyard', label: 'Graveyard' }
+                { id: 'completed', label: 'Done' }
               ]}
               activeTab={filter}
               onChange={(tabId) => setFilter(tabId as typeof filter)}
@@ -336,16 +312,6 @@ export function ProjectsPage() {
               background: 'var(--brand-glass-bg)',
               border: '2px solid var(--glass-surface-hover)',
             }}>
-              {/* Title Section */}
-              <div className="mb-6 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <h2 className="text-xl font-black uppercase tracking-tight text-[var(--brand-text-primary)]">
-                    Live <span className="text-brand-primary">Projects</span>
-                  </h2>
-                </div>
-              </div>
-
-              {/* Inner Content */}
               <div>
                 {/* Search Box */}
                 <div className="mb-6">
@@ -416,7 +382,7 @@ export function ProjectsPage() {
                 <ProjectsPageCarousel
                   activeProjects={activeList}
                   drawerProjects={drawerList}
-                  archiveSpotlight={filter === 'all' ? weeklyArchiveSpotlight : null}
+                  archiveSpotlight={null}
                   loading={loading}
                   onClearSuggestions={clearSuggestions}
                 />
