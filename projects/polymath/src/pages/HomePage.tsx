@@ -9,7 +9,7 @@
  */
 
 import React, { useEffect, useState } from 'react'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSuggestionStore } from '../stores/useSuggestionStore'
 import { useProjectStore } from '../stores/useProjectStore'
@@ -19,7 +19,7 @@ import { useToast } from '../components/ui/toast'
 import { haptic } from '../utils/haptics'
 import { CreateMemoryDialog } from '../components/memories/CreateMemoryDialog'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
-import { Layers, ArrowRight, Mic, FileText, Brain, Search, Moon, Lightbulb, Wind, X, AlertCircle, Zap, MoreHorizontal, Film, Music, Monitor, Book, MapPin, Gamepad2, Calendar, Quote, Box } from 'lucide-react'
+import { Layers, ArrowRight, Mic, Brain, Search, Moon, Lightbulb, Wind, X, AlertCircle, Zap, MoreHorizontal, Film, Music, Monitor, Book, MapPin, Gamepad2, Calendar, FileText, Quote, Box } from 'lucide-react'
 import { BrandName } from '../components/BrandName'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { DriftMode } from '../components/bedtime/DriftMode'

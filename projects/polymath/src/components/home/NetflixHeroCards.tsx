@@ -10,9 +10,8 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Play, ChevronLeft, ChevronRight, Zap, ArrowRight, Sparkles } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useProjectStore } from '../../stores/useProjectStore'
-import { useSuggestionStore } from '../../stores/useSuggestionStore'
 import { getTheme } from '../../lib/projectTheme'
 import { haptic } from '../../utils/haptics'
 import type { Project } from '../../types'
@@ -142,14 +141,22 @@ function KeepGoingCard() {
   )
 }
 
+const DRAWER_STATUSES = new Set(['upcoming', 'dormant', 'on-hold', 'maintaining'])
+
 function TrySomethingNewCard() {
   const navigate = useNavigate()
-  const { suggestions } = useSuggestionStore()
+  const { allProjects } = useProjectStore()
   const [idx, setIdx] = useState(0)
 
-  const ideas = Array.isArray(suggestions)
-    ? suggestions.filter(s => s.status === 'pending').slice(0, 5)
-    : []
+  // Same logic as DrawerPage — non-priority projects in drawer statuses
+  const ideas = allProjects
+    .filter(p => DRAWER_STATUSES.has(p.status) && !p.is_priority)
+    .sort((a, b) => {
+      const da = new Date(a.last_active || a.created_at).getTime()
+      const db = new Date(b.last_active || b.created_at).getTime()
+      return db - da
+    })
+    .slice(0, 5)
 
   const total = ideas.length
   const current = ideas[idx] || null
@@ -199,7 +206,6 @@ function TrySomethingNewCard() {
             transition={{ duration: 0.2 }}
             className="flex flex-col flex-1"
           >
-            {/* Accent */}
             <div className="h-1 rounded-full mb-4 opacity-60" style={{ background: 'linear-gradient(90deg, var(--brand-primary), rgba(168,85,247,0.8))' }} />
 
             <h3 className="text-lg font-bold text-[var(--brand-text-primary)] leading-tight mb-1 aperture-header line-clamp-2">
@@ -211,25 +217,20 @@ function TrySomethingNewCard() {
 
             <div className="flex-1" />
 
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  haptic.medium()
-                  navigate('/suggestions')
-                }}
-                className="flex-1 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all hover:bg-[var(--glass-surface)]"
-                style={{ border: '1px solid rgba(99,179,237,0.2)', color: 'var(--brand-primary)' }}
-              >
-                <Zap className="h-3.5 w-3.5" />
-                Explore idea
-              </button>
-            </div>
+            <button
+              onClick={() => { haptic.medium(); navigate(`/projects/${current.id}`) }}
+              className="w-full py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all hover:bg-[var(--glass-surface)]"
+              style={{ border: '1px solid rgba(99,179,237,0.2)', color: 'var(--brand-primary)' }}
+            >
+              <Zap className="h-3.5 w-3.5" />
+              Explore idea
+            </button>
 
             <Link
-              to="/suggestions"
+              to="/projects/drawer"
               className="mt-3 text-center text-[10px] text-[var(--brand-text-secondary)] opacity-40 hover:opacity-70 transition-opacity flex items-center justify-center gap-1"
             >
-              See all {total} saved {total === 1 ? 'idea' : 'ideas'}
+              See all saved ideas
               <ArrowRight className="h-3 w-3" />
             </Link>
           </motion.div>
