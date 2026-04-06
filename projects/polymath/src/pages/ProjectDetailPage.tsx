@@ -116,18 +116,15 @@ export function ProjectDetailPage() {
   }, [id])
   const [editingTitle, setEditingTitle] = useState(false)
   const [editingDescription, setEditingDescription] = useState(false)
-  const [editingMotivation, setEditingMotivation] = useState(false)
   const [editingGoal, setEditingGoal] = useState(false)
   const [tempTitle, setTempTitle] = useState('')
   const [tempDescription, setTempDescription] = useState('')
-  const [tempMotivation, setTempMotivation] = useState('')
   const [tempGoal, setTempGoal] = useState('')
   const [draggedPinnedTaskId, setDraggedPinnedTaskId] = useState<string | null>(null)
   const [showStatusMenu, setShowStatusMenu] = useState(false)
   const [showCategoryMenu, setShowCategoryMenu] = useState(false)
   const titleInputRef = useRef<HTMLInputElement>(null)
   const descriptionInputRef = useRef<HTMLTextAreaElement>(null)
-  const motivationInputRef = useRef<HTMLTextAreaElement>(null)
   const goalInputRef = useRef<HTMLTextAreaElement>(null)
   const endGoalInputRef = useRef<HTMLTextAreaElement>(null)
   const { addToast } = useToast()
@@ -312,33 +309,6 @@ export function ProjectDetailPage() {
     }
   }
 
-  const saveMotivation = async () => {
-    if (!project) {
-      setEditingMotivation(false)
-      return
-    }
-
-    setEditingMotivation(false)
-
-    try {
-      await updateProject(project.id, {
-        metadata: {
-          ...project.metadata,
-          motivation: tempMotivation.trim()
-        }
-      })
-      addToast({
-        title: 'Purpose updated',
-        variant: 'success',
-      })
-    } catch (error) {
-      addToast({
-        title: 'Failed to update purpose',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        variant: 'destructive',
-      })
-    }
-  }
 
   const saveGoal = async () => {
     if (!project) {
@@ -371,14 +341,7 @@ export function ProjectDetailPage() {
   const cancelEdit = () => {
     setEditingTitle(false)
     setEditingDescription(false)
-    setEditingMotivation(false)
     setEditingGoal(false)
-  }
-
-  const startEditMotivation = () => {
-    setTempMotivation(project?.metadata?.motivation || '')
-    setEditingMotivation(true)
-    setTimeout(() => motivationInputRef.current?.focus(), 0)
   }
 
   const startEditGoal = () => {
@@ -660,17 +623,14 @@ export function ProjectDetailPage() {
             >
               ← Projects
             </button>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="px-2 py-0.5 rounded-md bg-brand-primary/10 border border-brand-primary/20 text-[10px] font-black uppercase tracking-widest text-brand-primary">
-                Project Detail
-              </span>
-              {project.is_priority && (
+            {project.is_priority && (
+              <div className="flex items-center gap-2 mb-1">
                 <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-[10px] font-black uppercase tracking-widest text-amber-500">
                   <Star className="h-2.5 w-2.5 fill-current" />
                   Priority
                 </span>
-              )}
-            </div>
+              </div>
+            )}
             <LineageBreadcrumb project={project} />
             <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] leading-none">
               {project.title}
@@ -918,60 +878,26 @@ export function ProjectDetailPage() {
                     {/* Version history */}
                     <ProjectLineage project={project} />
 
-                    {/* Why + Done when */}
-                    <div className="pt-4 border-t border-[var(--glass-surface)] grid sm:grid-cols-2 gap-4">
-                      {/* Why */}
+                    {/* Finish Line */}
+                    <div className="pt-5 border-t border-[var(--glass-surface)]">
                       <div>
-                        <span className="text-[9px] font-black uppercase tracking-[0.25em] text-[var(--brand-text-primary)]/30 block mb-1.5">Why</span>
-                        <div
-                          className="cursor-pointer hover:opacity-80 transition-opacity"
-                          onClick={() => {
-                            setTempMotivation(project.metadata?.motivation || '')
-                            setEditingMotivation(true)
-                            setTimeout(() => motivationInputRef.current?.focus(), 100)
-                          }}
-                        >
-                          {editingMotivation ? (
-                            <textarea
-                              ref={motivationInputRef}
-                              value={tempMotivation}
-                              onChange={(e) => setTempMotivation(e.target.value)}
-                              onBlur={saveMotivation}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                  e.preventDefault()
-                                  saveMotivation()
-                                }
-                                if (e.key === 'Escape') cancelEdit()
-                              }}
-                              className="w-full bg-black/40 border-[var(--glass-surface-hover)] rounded-lg p-2 text-sm text-[var(--brand-text-primary)] leading-relaxed outline-none focus:border-blue-500/50"
-                              autoFocus
-                              rows={2}
-                            />
-                          ) : (
-                            <MarkdownRenderer
-                              content={project.metadata?.motivation || 'What drives this?'}
-                              className="text-sm text-[var(--brand-text-primary)]/60 font-serif italic"
-                            />
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Done when */}
-                      <div>
-                        <span className="text-[9px] font-black uppercase tracking-[0.25em] text-[var(--brand-text-primary)]/30 block mb-1.5">Done when</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] block mb-3 flex items-center gap-2" style={{ color: 'rgba(52,211,153,0.5)' }}>
+                          <Target className="h-3.5 w-3.5" />
+                          Finish Line
+                        </span>
                         <div
                           className="cursor-pointer hover:opacity-80 transition-opacity"
                           onClick={!editingGoal ? startEditGoal : undefined}
                         >
                           {editingGoal ? (
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                               <textarea
                                 ref={goalInputRef}
                                 value={tempGoal}
                                 onChange={(e) => setTempGoal(e.target.value)}
-                                className="w-full bg-black/40 border border-[var(--glass-surface-hover)] rounded-lg p-2 text-sm resize-none focus:outline-none focus:border-green-500/50 text-[var(--brand-text-primary)] leading-relaxed"
-                                rows={2}
+                                className="w-full bg-black/40 border border-[var(--glass-surface-hover)] rounded-xl p-4 text-lg sm:text-xl font-medium resize-none focus:outline-none text-[var(--brand-text-primary)] leading-relaxed italic font-serif text-center"
+                                style={{ borderColor: 'rgba(52,211,153,0.2)' }}
+                                rows={3}
                                 placeholder="What does done look like?"
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -991,18 +917,19 @@ export function ProjectDetailPage() {
                                 </button>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); saveGoal() }}
-                                  className="px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-lg bg-brand-primary/50 text-brand-text-secondary border border-green-500/20 hover:bg-brand-primary/80"
+                                  className="px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-lg border transition-all"
+                                  style={{ background: 'rgba(52,211,153,0.15)', borderColor: 'rgba(52,211,153,0.3)', color: 'rgb(52,211,153)' }}
                                 >
                                   Save
                                 </button>
                               </div>
                             </div>
                           ) : (
-                            <div className="text-sm text-[var(--brand-text-primary)]/60 leading-relaxed font-serif italic">
+                            <div className="text-lg sm:text-xl font-medium text-[var(--brand-text-primary)]/80 leading-relaxed italic font-serif text-center">
                               {project.metadata?.end_goal ? (
-                                <MarkdownRenderer content={project.metadata.end_goal} />
+                                <MarkdownRenderer content={project.metadata.end_goal} className="text-center" />
                               ) : (
-                                <span>What does done look like?</span>
+                                <span className="opacity-30">What does done look like?</span>
                               )}
                             </div>
                           )}

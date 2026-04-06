@@ -75,18 +75,18 @@ function NowConsumingWidget() {
   const shown = activeItems.slice(0, 4)
 
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 aperture-shelf">
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 aperture-shelf">
       <h2 className="section-header">
         what you're <span>consuming</span>
       </h2>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 p-4 rounded-2xl" style={{ background: 'rgba(245,158,11,0.03)', border: '1px solid rgba(245,158,11,0.08)' }}>
         {shown.map((item) => {
           const Icon = LIST_TYPE_ICONS[item.listType] || Box
           return (
             <Link
               key={item.itemId}
               to={`/lists/${item.listId}`}
-              className="flex items-center gap-3 p-3 rounded-xl transition-all hover:bg-[var(--glass-surface)] border border-[var(--glass-surface)]"
+              className="flex items-center gap-3 p-3 rounded-xl transition-all hover:bg-[rgba(245,158,11,0.06)] border border-transparent hover:border-[rgba(245,158,11,0.1)]"
             >
               <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] flex-shrink-0">
                 <Icon className="h-4 w-4 text-[var(--brand-text-secondary)]" />
@@ -267,12 +267,12 @@ export function HomePage() {
         )}
 
         {/* 2. NETFLIX HERO CARDS — Keep going + Try something new */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
           <NetflixHeroCards />
         </section>
 
         {/* 3. EVOLUTION FEED — AI working in background */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 aperture-shelf">
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 aperture-shelf">
           <EvolutionFeed />
         </section>
 
@@ -286,7 +286,7 @@ export function HomePage() {
 
 
         {/* 5. EXPLORE */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 flex flex-col aperture-shelf">
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 flex flex-col aperture-shelf">
           <h2 className="section-header">or just <span>explore</span></h2>
 
           <ShadowProjectCard />
@@ -301,17 +301,21 @@ export function HomePage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5, ease: "easeOut" }}
-              className="glass-card glass-card-hover p-6 relative overflow-hidden mb-6 bg-white/[0.03] border-[var(--glass-surface)]"
-              style={{ boxShadow: '3px 3px 0 rgba(0,0,0,0.5)' }}
+              className="p-6 sm:p-8 relative overflow-hidden mb-8 rounded-2xl"
+              style={{
+                background: 'linear-gradient(145deg, rgba(6,182,212,0.08) 0%, rgba(15,24,41,0.6) 50%, rgba(168,85,247,0.05) 100%)',
+                border: '1px solid rgba(6,182,212,0.12)',
+                boxShadow: '0 0 40px rgba(6,182,212,0.04), 3px 3px 0 rgba(0,0,0,0.5)',
+              }}
             >
-              <div className="absolute inset-0 opacity-5" style={{ background: 'radial-gradient(circle at 30% 30%, var(--brand-primary), transparent 60%)', pointerEvents: 'none' }} />
+              <div className="absolute top-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(6,182,212,0.3), rgba(168,85,247,0.2), transparent)' }} />
               <div className="relative z-10">
-                <h3 className="font-bold text-lg aperture-header mb-4" style={{ color: "var(--brand-primary)" }}>Thought of the day</h3>
-                <p className="mb-4 leading-relaxed text-lg italic aperture-body" style={{ color: 'var(--brand-text-primary)', fontWeight: 500 }}>
+                <h3 className="font-bold text-xs aperture-header mb-4 uppercase tracking-[0.2em]" style={{ color: "rgba(6,182,212,0.6)" }}>Thought of the day</h3>
+                <p className="mb-4 leading-relaxed text-lg sm:text-xl italic aperture-body" style={{ color: 'var(--brand-text-primary)', fontWeight: 500 }}>
                   "{cardOfTheDay.body}"
                 </p>
-                <div className="flex items-center gap-2 text-sm aperture-body" style={{ color: "var(--brand-primary)" }}>
-                  <span className="inline-block h-1 w-1 rounded-full" style={{ backgroundColor: 'var(--brand-secondary)' }} />
+                <div className="flex items-center gap-2 text-sm aperture-body" style={{ color: "rgba(6,182,212,0.5)" }}>
+                  <span className="inline-block h-1 w-1 rounded-full" style={{ backgroundColor: 'rgba(6,182,212,0.4)' }} />
                   <span>From {new Date(cardOfTheDay.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                 </div>
               </div>
@@ -319,49 +323,49 @@ export function HomePage() {
           )}
 
           {/* Discovery Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            <Link to="/bedtime" className="group p-5 glass-card glass-card-hover transition-all" onMouseEnter={e => { e.currentTarget.style.background = 'var(--glass-surface)' }} onMouseLeave={e => { e.currentTarget.style.background = 'var(--brand-glass-bg)' }}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1 bg-[var(--glass-surface)] border-2 border-[var(--glass-surface-hover)]">
-                    <Moon className="h-5 w-5 text-[var(--brand-text-secondary)]" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <Link to="/bedtime" className="group p-5 rounded-2xl transition-all hover:scale-[1.02]" style={{ background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.1)' }}>
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div className="h-10 w-10 rounded-xl flex items-center justify-center" style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.15)' }}>
+                    <Moon className="h-5 w-5" style={{ color: 'rgba(129,140,248,0.8)' }} />
                   </div>
-                  <div>
-                    <h3 className="font-bold mb-1 aperture-header">Bedtime ideas</h3>
-                    <p className="text-sm aperture-body text-[var(--brand-text-secondary)]">Creative inspiration for sleep</p>
-                  </div>
+                  <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-all" style={{ color: 'rgba(129,140,248,0.6)' }} />
                 </div>
-                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all text-[var(--brand-primary)]" />
+                <div>
+                  <h3 className="font-bold mb-0.5 aperture-header text-[var(--brand-text-primary)]">Bedtime ideas</h3>
+                  <p className="text-xs aperture-body" style={{ color: 'rgba(129,140,248,0.5)' }}>Creative inspiration for sleep</p>
+                </div>
               </div>
             </Link>
 
-            <button onClick={handleOpenDrift} className="group p-5 glass-card glass-card-hover transition-all text-left" onMouseEnter={e => { e.currentTarget.style.background = 'var(--glass-surface)' }} onMouseLeave={e => { e.currentTarget.style.background = 'var(--brand-glass-bg)' }}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1 bg-[var(--glass-surface)] border-2 border-[var(--glass-surface-hover)]">
-                    <Wind className="h-5 w-5 text-[var(--brand-text-secondary)]" />
+            <button onClick={handleOpenDrift} className="group p-5 rounded-2xl transition-all text-left hover:scale-[1.02]" style={{ background: 'rgba(16,185,129,0.04)', border: '1px solid rgba(16,185,129,0.08)' }}>
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div className="h-10 w-10 rounded-xl flex items-center justify-center" style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.12)' }}>
+                    <Wind className="h-5 w-5" style={{ color: 'rgba(52,211,153,0.7)' }} />
                   </div>
-                  <div>
-                    <h3 className="font-bold mb-1 aperture-header">Drift Mode</h3>
-                    <p className="text-sm aperture-body text-[var(--brand-text-secondary)]">Mental reset and hypnagogic insights</p>
-                  </div>
+                  <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-all" style={{ color: 'rgba(52,211,153,0.5)' }} />
                 </div>
-                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all text-[var(--brand-primary)]" />
+                <div>
+                  <h3 className="font-bold mb-0.5 aperture-header text-[var(--brand-text-primary)]">Drift Mode</h3>
+                  <p className="text-xs aperture-body" style={{ color: 'rgba(52,211,153,0.4)' }}>Mental reset & hypnagogic insights</p>
+                </div>
               </div>
             </button>
 
-            <Link to="/projects/drawer" className="group p-5 glass-card glass-card-hover transition-all" onMouseEnter={e => { e.currentTarget.style.background = 'var(--glass-surface)' }} onMouseLeave={e => { e.currentTarget.style.background = 'var(--brand-glass-bg)' }}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1 bg-[var(--glass-surface)] border-2 border-[var(--glass-surface-hover)]">
-                    <Lightbulb className="h-5 w-5 text-[var(--brand-text-secondary)]" />
+            <Link to="/projects/drawer" className="group p-5 rounded-2xl transition-all hover:scale-[1.02]" style={{ background: 'rgba(245,158,11,0.04)', border: '1px solid rgba(245,158,11,0.08)' }}>
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div className="h-10 w-10 rounded-xl flex items-center justify-center" style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.12)' }}>
+                    <Lightbulb className="h-5 w-5" style={{ color: 'rgba(245,158,11,0.7)' }} />
                   </div>
-                  <div>
-                    <h3 className="font-bold mb-1 aperture-header">Saved ideas</h3>
-                    <p className="text-sm aperture-body text-[var(--brand-text-secondary)]">Ideas waiting to be built</p>
-                  </div>
+                  <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-all" style={{ color: 'rgba(245,158,11,0.5)' }} />
                 </div>
-                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all text-[var(--brand-primary)]" />
+                <div>
+                  <h3 className="font-bold mb-0.5 aperture-header text-[var(--brand-text-primary)]">Saved ideas</h3>
+                  <p className="text-xs aperture-body" style={{ color: 'rgba(245,158,11,0.4)' }}>Ideas waiting to be built</p>
+                </div>
               </div>
             </Link>
           </div>

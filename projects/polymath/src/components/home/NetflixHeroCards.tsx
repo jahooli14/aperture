@@ -53,14 +53,15 @@ function KeepGoingCard() {
   const { allProjects } = useProjectStore()
   const [idx, setIdx] = useState(0)
 
-  // Priority projects first, then most recently active — no status filtering
-  const pinned = allProjects.filter(p => p.is_priority).slice(0, FOCUS_CAP)
+  // Priority projects first, then most recently active — exclude completed/graveyard
+  const nonCompleted = allProjects.filter(p => p.status !== 'completed' && p.status !== 'graveyard')
+  const pinned = nonCompleted.filter(p => p.is_priority).slice(0, FOCUS_CAP)
   const slots: (Project | null)[] = [...pinned]
 
   // Auto-fill empty slots with most recently active
   if (slots.length < FOCUS_CAP) {
     const pinnedIds = new Set(slots.map(p => p?.id))
-    const recent = [...allProjects]
+    const recent = [...nonCompleted]
       .filter(p => !p.is_priority && !pinnedIds.has(p.id))
       .sort((a, b) => new Date(b.last_active || b.updated_at || b.created_at).getTime() - new Date(a.last_active || a.updated_at || a.created_at).getTime())
       .slice(0, FOCUS_CAP - slots.length)
@@ -185,11 +186,15 @@ function TrySomethingNewCard() {
 
   React.useEffect(() => { fetchSuggestions() }, [fetchSuggestions])
 
-  // Compute the focus set so drawer = everything else
+  // Compute the focus set so drawer = everything else (exclude completed/graveyard)
+  const nonCompletedProjects = React.useMemo(() =>
+    allProjects.filter(p => p.status !== 'completed' && p.status !== 'graveyard'),
+    [allProjects]
+  )
   const focusIds = React.useMemo(() => {
-    const priorityProjects = allProjects.filter(p => p.is_priority).slice(0, FOCUS_CAP)
+    const priorityProjects = nonCompletedProjects.filter(p => p.is_priority).slice(0, FOCUS_CAP)
     const priorityIds = new Set(priorityProjects.map(p => p.id))
-    const recentNonPriority = [...allProjects]
+    const recentNonPriority = [...nonCompletedProjects]
       .sort((a, b) =>
         new Date(b.last_active || b.updated_at || b.created_at).getTime() -
         new Date(a.last_active || a.updated_at || a.created_at).getTime()
@@ -197,7 +202,7 @@ function TrySomethingNewCard() {
       .filter(p => !p.is_priority && !priorityIds.has(p.id))
       .slice(0, Math.max(0, FOCUS_CAP - priorityProjects.length))
     return new Set([...priorityProjects, ...recentNonPriority].map(p => p.id))
-  }, [allProjects])
+  }, [nonCompletedProjects])
 
   // AI intersection ideas first (most recently generated)
   const aiIdeas: IdeaItem[] = suggestions
@@ -213,8 +218,8 @@ function TrySomethingNewCard() {
       sortKey: new Date(s.created_at).getTime(),
     }))
 
-  // Drawer projects — everything not in the focus area
-  const drawerIdeas: IdeaItem[] = allProjects
+  // Drawer projects — everything not in the focus area (excluding completed/graveyard)
+  const drawerIdeas: IdeaItem[] = nonCompletedProjects
     .filter(p => !focusIds.has(p.id))
     .sort((a, b) => {
       const aKey = new Date(a.metadata?.versions?.at(-1)?.created_at || a.updated_at || a.created_at).getTime()
@@ -342,20 +347,22 @@ function TrySomethingNewCard() {
 
 export function NetflixHeroCards() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       {/* Keep going */}
       <div>
         <h2 className="section-header">keep <span>going</span></h2>
         <div
-          className="rounded-2xl p-5 flex flex-col overflow-hidden"
+          className="rounded-2xl p-5 flex flex-col overflow-hidden relative"
           style={{
-            background: 'var(--brand-glass-bg)',
+            background: 'linear-gradient(135deg, rgba(56,189,248,0.06) 0%, rgba(15,24,41,0.5) 60%)',
             backdropFilter: 'blur(16px)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            boxShadow: '3px 3px 0 rgba(0,0,0,0.4)',
+            border: '1px solid rgba(56,189,248,0.15)',
+            boxShadow: '0 0 30px rgba(56,189,248,0.05), 3px 3px 0 rgba(0,0,0,0.4)',
             minHeight: '280px',
           }}
         >
+          {/* Accent glow */}
+          <div className="absolute top-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(56,189,248,0.4), transparent)' }} />
           <KeepGoingCard />
         </div>
       </div>
@@ -364,15 +371,17 @@ export function NetflixHeroCards() {
       <div>
         <h2 className="section-header">try something <span>new</span></h2>
         <div
-          className="rounded-2xl p-5 flex flex-col overflow-hidden"
+          className="rounded-2xl p-5 flex flex-col overflow-hidden relative"
           style={{
-            background: 'var(--brand-glass-bg)',
+            background: 'linear-gradient(135deg, rgba(168,85,247,0.05) 0%, rgba(15,24,41,0.5) 60%)',
             backdropFilter: 'blur(16px)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            boxShadow: '3px 3px 0 rgba(0,0,0,0.4)',
+            border: '1px solid rgba(168,85,247,0.12)',
+            boxShadow: '0 0 30px rgba(168,85,247,0.04), 3px 3px 0 rgba(0,0,0,0.4)',
             minHeight: '280px',
           }}
         >
+          {/* Accent glow */}
+          <div className="absolute top-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(168,85,247,0.4), transparent)' }} />
           <TrySomethingNewCard />
         </div>
       </div>
