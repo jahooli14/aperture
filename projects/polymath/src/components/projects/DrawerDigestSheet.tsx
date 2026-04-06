@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Sparkles, ArrowRight, Check } from 'lucide-react'
+import { X, Wand2, ArrowRight, Check } from 'lucide-react'
 import { api } from '../../lib/apiClient'
 import { useProjectStore } from '../../stores/useProjectStore'
 
@@ -98,7 +98,7 @@ export function DrawerDigestSheet() {
           borderColor: 'rgba(168,85,247,0.25)',
         }}
       >
-        <Sparkles className="h-4 w-4 flex-shrink-0" style={{ color: '#a855f7' }} />
+        <Wand2 className="h-4 w-4 flex-shrink-0" style={{ color: '#a855f7' }} />
         <div className="flex-1 min-w-0">
           <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#a855f7' }}>
             Weekly drawer digest
@@ -140,7 +140,7 @@ export function DrawerDigestSheet() {
               </button>
 
               <div className="flex items-center gap-2 mb-5">
-                <Sparkles className="h-4 w-4" style={{ color: '#a855f7' }} />
+                <Wand2 className="h-4 w-4" style={{ color: '#a855f7' }} />
                 <h2 className="text-lg font-black italic uppercase tracking-tight text-[var(--brand-text-primary)]">
                   Drawer digest
                 </h2>

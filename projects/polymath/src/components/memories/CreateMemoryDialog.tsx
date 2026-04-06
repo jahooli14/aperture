@@ -13,7 +13,7 @@ import {
 } from '../ui/bottom-sheet'
 import { useMemoryStore } from '../../stores/useMemoryStore'
 import { useToast } from '../ui/toast'
-import { Plus, ArrowUp, Bold, Italic, List, Image as ImageIcon, X, Sparkles, CheckSquare, Square } from 'lucide-react'
+import { Plus, ArrowUp, Bold, Italic, List, Image as ImageIcon, X, Wand2, CheckSquare, Square } from 'lucide-react'
 import { celebrate, checkThoughtMilestone, getMilestoneMessage } from '../../utils/celebrations'
 import { handleInputFocus } from '../../utils/keyboard'
 import { useAutoSuggestion } from '../../contexts/AutoSuggestionContext'
@@ -79,7 +79,7 @@ function VoiceSeeds({
       style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
     >
       <div className="flex items-center gap-1.5 mb-2">
-        <Sparkles className="h-3 w-3 opacity-30" style={{ color: 'var(--brand-primary)' }} />
+        <Wand2 className="h-3 w-3 opacity-30" style={{ color: 'var(--brand-primary)' }} />
         <span
           className="text-[10px] font-medium tracking-widest uppercase"
           style={{ color: 'var(--brand-text-secondary)', opacity: 0.3 }}

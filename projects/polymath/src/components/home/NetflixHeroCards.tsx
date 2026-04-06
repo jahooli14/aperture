@@ -9,8 +9,8 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Play, ChevronLeft, ChevronRight, Zap, ArrowRight, Sparkles } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { Play, ChevronLeft, ChevronRight, Zap, ArrowRight, Wand2 } from 'lucide-react'
+import { useNavigate, Link } from 'react-router-dom'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useSuggestionStore } from '../../stores/useSuggestionStore'
 import { getTheme } from '../../lib/projectTheme'
@@ -35,7 +35,8 @@ function KeepGoingCard() {
   const { allProjects } = useProjectStore()
   const [idx, setIdx] = useState(0)
 
-  const activeProjects = allProjects.filter(p => ['active', 'upcoming', 'maintaining'].includes(p.status))
+  // Only truly active projects — not upcoming (those are ideas, they belong in Try Something New)
+  const activeProjects = allProjects.filter(p => p.status === 'active' || p.status === 'maintaining')
   const pinned = activeProjects.filter(p => p.is_priority).slice(0, FOCUS_CAP)
   const slots: (Project | null)[] = [...pinned]
 
@@ -142,30 +143,87 @@ function KeepGoingCard() {
   )
 }
 
+/**
+ * Unified idea item — either an unstarted project (upcoming, not priority)
+ * or an AI-generated intersection suggestion (pending/saved).
+ */
+interface IdeaItem {
+  id: string
+  title: string
+  description: string
+  isAISuggestion: boolean
+  /** For projects: has it been reshaped? For suggestions: always true. */
+  hasEvolved: boolean
+  navigateTo: string
+  sortKey: number // ms timestamp, higher = more recent
+}
+
+const FRESH_STATUSES = new Set(['upcoming', 'dormant', 'on-hold', 'maintaining'])
+
 function TrySomethingNewCard() {
   const navigate = useNavigate()
-  const { suggestions } = useSuggestionStore()
+  const { allProjects } = useProjectStore()
+  const { suggestions, fetchSuggestions } = useSuggestionStore()
   const [idx, setIdx] = useState(0)
 
-  const ideas = Array.isArray(suggestions)
-    ? suggestions.filter(s => s.status === 'pending').slice(0, 5)
-    : []
+  React.useEffect(() => { fetchSuggestions() }, [fetchSuggestions])
 
+  // AI intersection ideas first (most recently generated)
+  const aiIdeas: IdeaItem[] = suggestions
+    .filter(s => s.status === 'pending' || s.status === 'saved' || s.status === 'spark')
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .map(s => ({
+      id: `sug-${s.id}`,
+      title: s.title,
+      description: s.description,
+      isAISuggestion: true,
+      hasEvolved: true,
+      navigateTo: '/suggestions',
+      sortKey: new Date(s.created_at).getTime(),
+    }))
+
+  // Drawer projects — all non-active statuses, not pinned as "working on now"
+  const drawerIdeas: IdeaItem[] = allProjects
+    .filter(p => FRESH_STATUSES.has(p.status) && !p.is_priority)
+    .sort((a, b) => {
+      // Most recently evolved/updated first
+      const aKey = new Date(a.metadata?.versions?.at(-1)?.created_at || a.updated_at || a.created_at).getTime()
+      const bKey = new Date(b.metadata?.versions?.at(-1)?.created_at || b.updated_at || b.created_at).getTime()
+      return bKey - aKey
+    })
+    .map(p => ({
+      id: `proj-${p.id}`,
+      title: p.title,
+      description: p.description || '',
+      isAISuggestion: false,
+      hasEvolved: !!(p.metadata?.versions?.length),
+      navigateTo: `/projects/${p.id}`,
+      sortKey: new Date(p.metadata?.versions?.at(-1)?.created_at || p.updated_at || p.created_at).getTime(),
+    }))
+
+  // AI ideas first, then drawer — cap at 5 to keep it curated
+  const ideas = [...aiIdeas, ...drawerIdeas].slice(0, 5)
   const total = ideas.length
+  const totalDrawerCount = allProjects.filter(p => FRESH_STATUSES.has(p.status) && !p.is_priority).length + aiIdeas.length
   const current = ideas[idx] || null
 
   if (total === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full min-h-[200px] p-6 text-center">
-        <Sparkles className="h-8 w-8 text-[var(--brand-primary)] opacity-30 mb-3" />
-        <p className="text-sm font-medium text-[var(--brand-text-secondary)] opacity-60">No saved ideas yet</p>
-        <p className="text-xs text-[var(--brand-text-secondary)] opacity-40 mt-1">Add voice notes to get ideas shaped for you</p>
+      <div className="flex flex-col h-full">
+        <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[var(--brand-text-secondary)] opacity-50 mb-3">
+          try something new
+        </span>
+        <div className="flex-1 flex flex-col items-center justify-center text-center p-4">
+          <p className="text-sm font-medium text-[var(--brand-text-secondary)] opacity-60">No saved ideas yet</p>
+          <p className="text-xs text-[var(--brand-text-secondary)] opacity-40 mt-1">Add voice notes to get ideas shaped for you</p>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="flex flex-col h-full">
+      {/* Header with navigation */}
       <div className="flex items-center justify-between mb-3">
         <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[var(--brand-text-secondary)] opacity-50">
           try something new
@@ -199,8 +257,16 @@ function TrySomethingNewCard() {
             transition={{ duration: 0.2 }}
             className="flex flex-col flex-1"
           >
-            {/* Accent */}
             <div className="h-1 rounded-full mb-4 opacity-60" style={{ background: 'linear-gradient(90deg, var(--brand-primary), rgba(168,85,247,0.8))' }} />
+
+            {current.isAISuggestion && (
+              <div className="flex items-center gap-1.5 mb-2">
+                <Wand2 className="h-3 w-3" style={{ color: 'var(--brand-primary)', opacity: 0.6 }} />
+                <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: 'var(--brand-primary)', opacity: 0.6 }}>
+                  AI intersection
+                </span>
+              </div>
+            )}
 
             <h3 className="text-lg font-bold text-[var(--brand-text-primary)] leading-tight mb-1 aperture-header line-clamp-2">
               {current.title}
@@ -211,25 +277,20 @@ function TrySomethingNewCard() {
 
             <div className="flex-1" />
 
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  haptic.medium()
-                  navigate('/suggestions')
-                }}
-                className="flex-1 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all hover:bg-[var(--glass-surface)]"
-                style={{ border: '1px solid rgba(99,179,237,0.2)', color: 'var(--brand-primary)' }}
-              >
-                <Zap className="h-3.5 w-3.5" />
-                Explore idea
-              </button>
-            </div>
+            <button
+              onClick={() => { haptic.medium(); navigate(current.navigateTo) }}
+              className="w-full py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all hover:bg-[var(--glass-surface)]"
+              style={{ border: '1px solid rgba(99,179,237,0.2)', color: 'var(--brand-primary)' }}
+            >
+              <Zap className="h-3.5 w-3.5" />
+              Explore idea
+            </button>
 
             <Link
-              to="/suggestions"
+              to="/projects/drawer"
               className="mt-3 text-center text-[10px] text-[var(--brand-text-secondary)] opacity-40 hover:opacity-70 transition-opacity flex items-center justify-center gap-1"
             >
-              See all {total} saved {total === 1 ? 'idea' : 'ideas'}
+              {totalDrawerCount > 5 ? `${totalDrawerCount - 5} more in saved ideas` : 'See all saved ideas'}
               <ArrowRight className="h-3 w-3" />
             </Link>
           </motion.div>

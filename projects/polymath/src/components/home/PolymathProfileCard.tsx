@@ -11,7 +11,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Brain, Mic, Plus, X, Sparkles } from 'lucide-react'
+import { Brain, Mic, Plus, X, Zap } from 'lucide-react'
 import { useJourneyStore } from '../../stores/useJourneyStore'
 
 export function PolymathProfileCard() {
@@ -160,7 +160,7 @@ export function PolymathProfileCard() {
                     The more you share, the sharper your suggestions get.
                   </p>
                 </div>
-                <Sparkles className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--brand-primary)', opacity: 0.4 }} />
+                <Zap className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--brand-primary)', opacity: 0.4 }} />
               </div>
             </motion.div>
           )}
