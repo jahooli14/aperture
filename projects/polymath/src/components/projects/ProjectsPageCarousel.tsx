@@ -265,15 +265,29 @@ export function ProjectsPageCarousel({
       )}
 
       {drawerList.length > 0 && (
-        <div className="mt-8 pt-8 border-t border-[var(--glass-surface)] text-center">
-          <Link
-            to="/projects/drawer"
-            className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[var(--brand-text-muted)] hover:text-[var(--brand-primary)] transition-colors"
-          >
-            <Archive className="h-3.5 w-3.5" />
-            {drawerList.length} resting in the drawer
-          </Link>
-        </div>
+        <section>
+          <div className="mb-4 px-1 flex items-center justify-between">
+            <h3 className="text-xs font-bold text-[var(--brand-text-muted)] uppercase tracking-widest aperture-header">In the Drawer</h3>
+            <Link
+              to="/projects/drawer"
+              className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-[var(--brand-text-muted)] hover:text-[var(--brand-primary)] transition-colors"
+            >
+              View all <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {drawerList.map(project => (
+              <motion.div
+                key={project.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <ProjectCard project={project} />
+              </motion.div>
+            ))}
+          </div>
+        </section>
       )}
 
       {/* SECTION 3: FROM THE ARCHIVES (weekly graveyard spotlight) */}
