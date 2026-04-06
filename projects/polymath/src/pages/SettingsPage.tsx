@@ -105,21 +105,15 @@ export function SettingsPage() {
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Settings className="h-7 w-7" style={{ color: 'var(--brand-primary)', opacity: 0.8 }} />
-            <h1 className="text-2xl sm:text-3xl" style={{
-              fontWeight: 600,
-              letterSpacing: '-0.04em',
-              color: 'var(--brand-text-secondary)',
-              opacity: 0.9
-            }}>
-              Settings
+          <div>
+            <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
+              your <span className="page-accent">settings</span>
             </h1>
           </div>
           <button
             onClick={() => navigate('/search')}
-            className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-[var(--glass-surface)]"
-            style={{ color: "var(--brand-primary)" }}
+            className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-[var(--glass-surface)] press-spring"
+            style={{ color: 'rgb(var(--page-accent-rgb, var(--brand-primary-rgb)))' }}
             title="Search everything"
           >
             <Search className="h-5 w-5" />

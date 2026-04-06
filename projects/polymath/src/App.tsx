@@ -10,6 +10,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { PinOverlay } from './components/PinOverlay'
 import { AutoSuggestionProvider } from './contexts/AutoSuggestionContext'
 import { ScrollToTop } from './components/ScrollToTop'
+import { AnimatedPage } from './components/AnimatedPage'
 import { DebugPanel } from './components/DebugPanel'
 import { ExtractionSummary } from './components/memories/ExtractionSummary'
 import { SteeringCard } from './components/memories/SteeringCard'
@@ -309,24 +310,24 @@ export default function App() {
                 <ErrorBoundary>
                   <Suspense fallback={<PageLoader />}>
                     <Routes>
-                      <Route path="/" element={<HomePage />} />
+                      <Route path="/" element={<AnimatedPage page="home"><HomePage /></AnimatedPage>} />
                       <Route path="/onboarding" element={<OnboardingPage />} />
-                      <Route path="/memories" element={<MemoriesPage />} />
-                      <Route path="/reading" element={<ReadingPage />} />
-                      <Route path="/reading/:id" element={<ReaderPage />} />
-                      <Route path="/suggestions" element={<SuggestionsPage />} />
-                      <Route path="/projects" element={<ProjectsPage />} />
-                      <Route path="/projects/drawer" element={<DrawerPage />} />
-                      <Route path="/projects/:id" element={<ProjectDetailPage />} />
-                      <Route path="/timeline" element={<TimelinePage />} />
-                      <Route path="/replay" element={<CognitiveReplayPage />} />
-                      <Route path="/settings" element={<SettingsPage />} />
-                      <Route path="/search" element={<SearchPage />} />
-                      <Route path="/bedtime" element={<BedtimePage />} />
-                      <Route path="/lists" element={<ListsPage />} />
-                      <Route path="/lists/:id" element={<ListDetailPage />} />
-                      <Route path="/todos" element={<TodosPage />} />
-                      <Route path="/fixes" element={<FixQueuePage />} />
+                      <Route path="/memories" element={<AnimatedPage page="thoughts"><MemoriesPage /></AnimatedPage>} />
+                      <Route path="/reading" element={<AnimatedPage page="reading"><ReadingPage /></AnimatedPage>} />
+                      <Route path="/reading/:id" element={<AnimatedPage page="reading"><ReaderPage /></AnimatedPage>} />
+                      <Route path="/suggestions" element={<AnimatedPage page="suggestions"><SuggestionsPage /></AnimatedPage>} />
+                      <Route path="/projects" element={<AnimatedPage page="projects"><ProjectsPage /></AnimatedPage>} />
+                      <Route path="/projects/drawer" element={<AnimatedPage page="projects"><DrawerPage /></AnimatedPage>} />
+                      <Route path="/projects/:id" element={<AnimatedPage page="projects"><ProjectDetailPage /></AnimatedPage>} />
+                      <Route path="/timeline" element={<AnimatedPage page="timeline"><TimelinePage /></AnimatedPage>} />
+                      <Route path="/replay" element={<AnimatedPage page="timeline"><CognitiveReplayPage /></AnimatedPage>} />
+                      <Route path="/settings" element={<AnimatedPage page="settings"><SettingsPage /></AnimatedPage>} />
+                      <Route path="/search" element={<AnimatedPage page="search"><SearchPage /></AnimatedPage>} />
+                      <Route path="/bedtime" element={<AnimatedPage page="bedtime"><BedtimePage /></AnimatedPage>} />
+                      <Route path="/lists" element={<AnimatedPage page="lists"><ListsPage /></AnimatedPage>} />
+                      <Route path="/lists/:id" element={<AnimatedPage page="lists"><ListDetailPage /></AnimatedPage>} />
+                      <Route path="/todos" element={<AnimatedPage page="todos"><TodosPage /></AnimatedPage>} />
+                      <Route path="/fixes" element={<AnimatedPage page="todos"><FixQueuePage /></AnimatedPage>} />
                       <Route path="/login" element={<LoginPage />} />
                       <Route path="/share-target" element={<ShareTargetFallback />} />
                     </Routes>

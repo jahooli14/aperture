@@ -746,9 +746,9 @@ export function ReadingPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
-                your <span className="text-brand-primary">reading</span>
+                your <span className="page-accent">reading</span>
               </h1>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mt-1">Deep dives and quick catches.</p>
+              <p className="section-subtitle mt-1">Deep dives and quick catches.</p>
             </div>
             <button
               onClick={() => navigate('/search')}

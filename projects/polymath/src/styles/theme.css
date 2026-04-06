@@ -43,6 +43,21 @@
     /* Font Standards */
     --brand-font-header: 'Outfit', 'Inter', sans-serif;
     --brand-font-body: 'Inter', -apple-system, sans-serif;
+    --brand-font-serif: 'Playfair Display', Georgia, 'Times New Roman', serif;
+
+    /* ─── Page Color Identity System ─────────────────────────── */
+    /* Each page section gets a unique accent to reduce blue monotony */
+    --page-home-rgb: 56, 189, 248;         /* Cyan — brand primary */
+    --page-thoughts-rgb: 168, 85, 247;     /* Purple — introspective */
+    --page-projects-rgb: 59, 130, 246;     /* Blue — productive */
+    --page-lists-rgb: 245, 158, 11;        /* Amber — curated */
+    --page-reading-rgb: 16, 185, 129;      /* Emerald — growth */
+    --page-search-rgb: 156, 163, 175;      /* Silver — neutral */
+    --page-settings-rgb: 107, 114, 128;    /* Slate — utility */
+    --page-bedtime-rgb: 139, 92, 246;      /* Violet — dreamy */
+    --page-timeline-rgb: 34, 211, 238;     /* Cyan — analytical */
+    --page-suggestions-rgb: 251, 191, 36;  /* Gold — creative */
+    --page-todos-rgb: 239, 68, 68;         /* Red — urgent */
 
     /* UI State Surfaces */
     --glass-surface: rgba(255, 255, 255, 0.05);
@@ -235,4 +250,159 @@ h6 {
     font-size: 1rem !important; /* 16px */
     font-weight: 600 !important;
     line-height: 1.5 !important;
+}
+
+/* ─── Page Color Identity Classes ────────────────────────── */
+/* Apply to page root to shift the accent color per-section  */
+
+[data-page="home"]      { --page-accent-rgb: var(--page-home-rgb); }
+[data-page="thoughts"]  { --page-accent-rgb: var(--page-thoughts-rgb); }
+[data-page="projects"]  { --page-accent-rgb: var(--page-projects-rgb); }
+[data-page="lists"]     { --page-accent-rgb: var(--page-lists-rgb); }
+[data-page="reading"]   { --page-accent-rgb: var(--page-reading-rgb); }
+[data-page="search"]    { --page-accent-rgb: var(--page-search-rgb); }
+[data-page="settings"]  { --page-accent-rgb: var(--page-settings-rgb); }
+[data-page="bedtime"]   { --page-accent-rgb: var(--page-bedtime-rgb); }
+[data-page="timeline"]  { --page-accent-rgb: var(--page-timeline-rgb); }
+[data-page="suggestions"] { --page-accent-rgb: var(--page-suggestions-rgb); }
+[data-page="todos"]     { --page-accent-rgb: var(--page-todos-rgb); }
+
+.page-accent       { color: rgb(var(--page-accent-rgb)); }
+.page-accent-bg    { background-color: rgba(var(--page-accent-rgb), 0.12); }
+.page-accent-border { border-color: rgba(var(--page-accent-rgb), 0.25); }
+.page-accent-glow  { box-shadow: 0 0 20px rgba(var(--page-accent-rgb), 0.15); }
+
+/* ─── Serif Typography Utilities ─────────────────────────── */
+/* Use for content, descriptions, quotes — contrasts with Inter UI chrome */
+
+.font-serif-display {
+    font-family: var(--brand-font-serif);
+}
+
+.section-subtitle {
+    font-family: var(--brand-font-serif);
+    font-style: italic;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 1rem;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+}
+
+/* ─── Micro-interaction Utilities ────────────────────────── */
+
+/* Count badge pop — apply when count changes */
+@keyframes countPop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.25); }
+    100% { transform: scale(1); }
+}
+
+.animate-count-pop {
+    animation: countPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Checkmark draw animation */
+@keyframes checkDraw {
+    0% { stroke-dashoffset: 24; }
+    100% { stroke-dashoffset: 0; }
+}
+
+.animate-check-draw path {
+    stroke-dasharray: 24;
+    stroke-dashoffset: 24;
+    animation: checkDraw 0.4s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+
+/* Hover bounce for interactive cards */
+@keyframes hoverBounce {
+    0% { transform: translateY(0); }
+    40% { transform: translateY(-6px); }
+    60% { transform: translateY(-3px); }
+    100% { transform: translateY(-4px); }
+}
+
+.hover-bounce:hover {
+    animation: hoverBounce 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Button press with spring-back */
+.press-spring:active {
+    transform: scale(0.93);
+    transition: transform 0.08s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.press-spring:not(:active) {
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Smooth entrance for page content */
+@keyframes pageEnter {
+    0% {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-page-enter {
+    animation: pageEnter 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Stagger delay utilities for children */
+.stagger-micro > *:nth-child(1) { animation-delay: 0.03s; }
+.stagger-micro > *:nth-child(2) { animation-delay: 0.06s; }
+.stagger-micro > *:nth-child(3) { animation-delay: 0.09s; }
+.stagger-micro > *:nth-child(4) { animation-delay: 0.12s; }
+.stagger-micro > *:nth-child(5) { animation-delay: 0.15s; }
+.stagger-micro > *:nth-child(6) { animation-delay: 0.18s; }
+
+/* Toggle switch micro-animation */
+@keyframes toggleOn {
+    0% { transform: translateX(0); }
+    60% { transform: translateX(22px); }
+    80% { transform: translateX(18px); }
+    100% { transform: translateX(20px); }
+}
+
+.animate-toggle-on {
+    animation: toggleOn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Ripple effect on tap */
+@keyframes ripple {
+    0% {
+        transform: scale(0);
+        opacity: 0.4;
+    }
+    100% {
+        transform: scale(2.5);
+        opacity: 0;
+    }
+}
+
+.ripple-effect {
+    position: relative;
+    overflow: hidden;
+}
+
+.ripple-effect::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+    transform: scale(0);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.ripple-effect:active::after {
+    animation: ripple 0.5s cubic-bezier(0, 0, 0.2, 1) forwards;
 }

@@ -17,16 +17,16 @@ import { useToast } from './ui/toast'
 import { useAuthContext } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 
-// Schema colors for each section - unified blue theme
+// Schema colors for each section — unique per page to reduce blue monotony
 const SCHEMA_COLORS = {
-  home: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
-  thoughts: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
+  home: { primary: '#38bdf8', glow: 'rgba(56, 189, 248, 0.4)' },
+  thoughts: { primary: '#a855f7', glow: 'rgba(168, 85, 247, 0.4)' },
   projects: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
-  reading: { primary: 'rgba(34, 211, 238, 0.9)', glow: 'rgba(34, 211, 238, 0.3)' },
-  timeline: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
+  reading: { primary: '#10b981', glow: 'rgba(16, 185, 129, 0.3)' },
+  timeline: { primary: '#22d3ee', glow: 'rgba(34, 211, 238, 0.4)' },
   context: { primary: '#a855f7', glow: 'rgba(168, 85, 247, 0.4)' },
-  lists: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
-  todos: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
+  lists: { primary: '#f59e0b', glow: 'rgba(245, 158, 11, 0.4)' },
+  todos: { primary: '#ef4444', glow: 'rgba(239, 68, 68, 0.4)' },
 } as const
 
 interface NavOption {
