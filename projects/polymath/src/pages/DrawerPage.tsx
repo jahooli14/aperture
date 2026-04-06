@@ -14,7 +14,7 @@ interface WarmedProject extends Project {
 const DRAWER_STATUS_SET: ReadonlySet<string> = new Set(['upcoming', 'dormant', 'on-hold', 'maintaining'])
 
 export default function DrawerPage() {
-  const { projects, fetchProjects, loading } = useProjectStore()
+  const { allProjects, fetchProjects, loading } = useProjectStore()
   const [query, setQuery] = useState('')
 
   useEffect(() => {
@@ -22,7 +22,7 @@ export default function DrawerPage() {
   }, [])
 
   const drawerProjects = useMemo(() => {
-    const list = (Array.isArray(projects) ? projects : []) as WarmedProject[]
+    const list = (Array.isArray(allProjects) ? allProjects : []) as WarmedProject[]
     const filtered = list.filter(p =>
       DRAWER_STATUS_SET.has(p.status) && !p.is_priority
     )
@@ -42,7 +42,7 @@ export default function DrawerPage() {
       const db = new Date(b.last_active || b.created_at).getTime()
       return db - da
     })
-  }, [projects, query])
+  }, [allProjects, query])
 
   const warmedCount = drawerProjects.filter(p => (p.heat_score || 0) > 0 && !!p.heat_reason).length
 

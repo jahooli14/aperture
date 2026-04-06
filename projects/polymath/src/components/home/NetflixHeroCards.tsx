@@ -7,8 +7,8 @@
  * On narrow mobile: stacked vertically. On tablet/desktop: side by side.
  */
 
-import React, { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import React, { useState, useCallback } from 'react'
+import { motion, AnimatePresence, type PanInfo } from 'framer-motion'
 import { Play, ChevronLeft, ChevronRight, Zap, ArrowRight, Wand2 } from 'lucide-react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useProjectStore } from '../../stores/useProjectStore'
@@ -18,6 +18,24 @@ import { haptic } from '../../utils/haptics'
 import type { Project } from '../../types'
 
 const FOCUS_CAP = 3
+const SWIPE_THRESHOLD = 50
+
+function useSwipeNav(total: number, setIdx: React.Dispatch<React.SetStateAction<number>>) {
+  const [direction, setDirection] = useState(1)
+  const onDragEnd = useCallback((_: any, info: PanInfo) => {
+    if (Math.abs(info.offset.x) < SWIPE_THRESHOLD) return
+    if (info.offset.x < 0) {
+      setDirection(1)
+      haptic.light()
+      setIdx(i => (i + 1) % total)
+    } else {
+      setDirection(-1)
+      haptic.light()
+      setIdx(i => (i - 1 + total) % total)
+    }
+  }, [total, setIdx])
+  return { direction, setDirection, onDragEnd }
+}
 
 function formatRelativeTime(dateStr?: string): string {
   if (!dateStr) return 'not started yet'
@@ -55,6 +73,7 @@ function KeepGoingCard() {
 
   const current = slots[idx] || null
   const total = slots.length
+  const { direction, setDirection, onDragEnd } = useSwipeNav(total, setIdx)
 
   if (total === 0) {
     return (
@@ -76,38 +95,38 @@ function KeepGoingCard() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[var(--brand-text-secondary)] opacity-50">
-          keep going
-        </span>
-        {total > 1 && (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => { haptic.light(); setIdx(i => (i - 1 + total) % total) }}
-              className="h-6 w-6 rounded-md flex items-center justify-center hover:bg-[var(--glass-surface)] transition-colors"
-            >
-              <ChevronLeft className="h-3.5 w-3.5 text-[var(--brand-text-secondary)] opacity-50" />
-            </button>
-            <span className="text-[10px] text-[var(--brand-text-secondary)] opacity-40">{idx + 1}/{total}</span>
-            <button
-              onClick={() => { haptic.light(); setIdx(i => (i + 1) % total) }}
-              className="h-6 w-6 rounded-md flex items-center justify-center hover:bg-[var(--glass-surface)] transition-colors"
-            >
-              <ChevronRight className="h-3.5 w-3.5 text-[var(--brand-text-secondary)] opacity-50" />
-            </button>
-          </div>
-        )}
-      </div>
+      {total > 1 && (
+        <div className="flex items-center justify-end gap-1 mb-3">
+          <button
+            onClick={() => { haptic.light(); setDirection(-1); setIdx(i => (i - 1 + total) % total) }}
+            className="h-6 w-6 rounded-md flex items-center justify-center hover:bg-[var(--glass-surface)] transition-colors"
+          >
+            <ChevronLeft className="h-3.5 w-3.5 text-[var(--brand-text-secondary)] opacity-50" />
+          </button>
+          <span className="text-[10px] text-[var(--brand-text-secondary)] opacity-40">{idx + 1}/{total}</span>
+          <button
+            onClick={() => { haptic.light(); setDirection(1); setIdx(i => (i + 1) % total) }}
+            className="h-6 w-6 rounded-md flex items-center justify-center hover:bg-[var(--glass-surface)] transition-colors"
+          >
+            <ChevronRight className="h-3.5 w-3.5 text-[var(--brand-text-secondary)] opacity-50" />
+          </button>
+        </div>
+      )}
 
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode="wait" initial={false}>
         {current && (
           <motion.div
             key={current.id}
-            initial={{ opacity: 0, x: 10 }}
+            initial={{ opacity: 0, x: direction * 40 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -10 }}
+            exit={{ opacity: 0, x: direction * -40 }}
             transition={{ duration: 0.2 }}
-            className="flex flex-col flex-1"
+            drag={total > 1 ? 'x' : false}
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.15}
+            onDragEnd={onDragEnd}
+            className="flex flex-col flex-1 touch-pan-y"
+            style={{ cursor: total > 1 ? 'grab' : undefined }}
           >
             {/* Project colour accent */}
             <div className="h-1 rounded-full mb-4 opacity-60" style={{ background: theme.text }} />
@@ -165,6 +184,7 @@ function TrySomethingNewCard() {
   const { allProjects } = useProjectStore()
   const { suggestions, fetchSuggestions } = useSuggestionStore()
   const [idx, setIdx] = useState(0)
+  const [tsnDirection, setTsnDirection] = useState(1)
 
   React.useEffect(() => { fetchSuggestions() }, [fetchSuggestions])
 
@@ -210,9 +230,6 @@ function TrySomethingNewCard() {
   if (total === 0) {
     return (
       <div className="flex flex-col h-full">
-        <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[var(--brand-text-secondary)] opacity-50 mb-3">
-          try something new
-        </span>
         <div className="flex-1 flex flex-col items-center justify-center text-center p-4">
           <p className="text-sm font-medium text-[var(--brand-text-secondary)] opacity-60">No saved ideas yet</p>
           <p className="text-xs text-[var(--brand-text-secondary)] opacity-40 mt-1">Add voice notes to get ideas shaped for you</p>
@@ -221,41 +238,54 @@ function TrySomethingNewCard() {
     )
   }
 
+  const onTsnDragEnd = useCallback((_: any, info: PanInfo) => {
+    if (Math.abs(info.offset.x) < SWIPE_THRESHOLD) return
+    if (info.offset.x < 0) {
+      setTsnDirection(1)
+      haptic.light()
+      setIdx(i => (i + 1) % total)
+    } else {
+      setTsnDirection(-1)
+      haptic.light()
+      setIdx(i => (i - 1 + total) % total)
+    }
+  }, [total])
+
   return (
     <div className="flex flex-col h-full">
-      {/* Header with navigation */}
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[var(--brand-text-secondary)] opacity-50">
-          try something new
-        </span>
-        {total > 1 && (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => { haptic.light(); setIdx(i => (i - 1 + total) % total) }}
-              className="h-6 w-6 rounded-md flex items-center justify-center hover:bg-[var(--glass-surface)] transition-colors"
-            >
-              <ChevronLeft className="h-3.5 w-3.5 text-[var(--brand-text-secondary)] opacity-50" />
-            </button>
-            <span className="text-[10px] text-[var(--brand-text-secondary)] opacity-40">{idx + 1}/{total}</span>
-            <button
-              onClick={() => { haptic.light(); setIdx(i => (i + 1) % total) }}
-              className="h-6 w-6 rounded-md flex items-center justify-center hover:bg-[var(--glass-surface)] transition-colors"
-            >
-              <ChevronRight className="h-3.5 w-3.5 text-[var(--brand-text-secondary)] opacity-50" />
-            </button>
-          </div>
-        )}
-      </div>
+      {/* Navigation */}
+      {total > 1 && (
+        <div className="flex items-center justify-end gap-1 mb-3">
+          <button
+            onClick={() => { haptic.light(); setTsnDirection(-1); setIdx(i => (i - 1 + total) % total) }}
+            className="h-6 w-6 rounded-md flex items-center justify-center hover:bg-[var(--glass-surface)] transition-colors"
+          >
+            <ChevronLeft className="h-3.5 w-3.5 text-[var(--brand-text-secondary)] opacity-50" />
+          </button>
+          <span className="text-[10px] text-[var(--brand-text-secondary)] opacity-40">{idx + 1}/{total}</span>
+          <button
+            onClick={() => { haptic.light(); setTsnDirection(1); setIdx(i => (i + 1) % total) }}
+            className="h-6 w-6 rounded-md flex items-center justify-center hover:bg-[var(--glass-surface)] transition-colors"
+          >
+            <ChevronRight className="h-3.5 w-3.5 text-[var(--brand-text-secondary)] opacity-50" />
+          </button>
+        </div>
+      )}
 
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode="wait" initial={false}>
         {current && (
           <motion.div
             key={current.id}
-            initial={{ opacity: 0, x: 10 }}
+            initial={{ opacity: 0, x: tsnDirection * 40 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -10 }}
+            exit={{ opacity: 0, x: tsnDirection * -40 }}
             transition={{ duration: 0.2 }}
-            className="flex flex-col flex-1"
+            drag={total > 1 ? 'x' : false}
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.15}
+            onDragEnd={onTsnDragEnd}
+            className="flex flex-col flex-1 touch-pan-y"
+            style={{ cursor: total > 1 ? 'grab' : undefined }}
           >
             <div className="h-1 rounded-full mb-4 opacity-60" style={{ background: 'linear-gradient(90deg, var(--brand-primary), rgba(168,85,247,0.8))' }} />
 
@@ -302,33 +332,39 @@ function TrySomethingNewCard() {
 
 export function NetflixHeroCards() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className="space-y-8">
       {/* Keep going */}
-      <div
-        className="rounded-2xl p-5 flex flex-col"
-        style={{
-          background: 'var(--brand-glass-bg)',
-          backdropFilter: 'blur(16px)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          boxShadow: '3px 3px 0 rgba(0,0,0,0.4)',
-          minHeight: '280px',
-        }}
-      >
-        <KeepGoingCard />
+      <div>
+        <h2 className="section-header">keep <span>going</span></h2>
+        <div
+          className="rounded-2xl p-5 flex flex-col overflow-hidden"
+          style={{
+            background: 'var(--brand-glass-bg)',
+            backdropFilter: 'blur(16px)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            boxShadow: '3px 3px 0 rgba(0,0,0,0.4)',
+            minHeight: '280px',
+          }}
+        >
+          <KeepGoingCard />
+        </div>
       </div>
 
       {/* Try something new */}
-      <div
-        className="rounded-2xl p-5 flex flex-col"
-        style={{
-          background: 'var(--brand-glass-bg)',
-          backdropFilter: 'blur(16px)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          boxShadow: '3px 3px 0 rgba(0,0,0,0.4)',
-          minHeight: '280px',
-        }}
-      >
-        <TrySomethingNewCard />
+      <div>
+        <h2 className="section-header">try something <span>new</span></h2>
+        <div
+          className="rounded-2xl p-5 flex flex-col overflow-hidden"
+          style={{
+            background: 'var(--brand-glass-bg)',
+            backdropFilter: 'blur(16px)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            boxShadow: '3px 3px 0 rgba(0,0,0,0.4)',
+            minHeight: '280px',
+          }}
+        >
+          <TrySomethingNewCard />
+        </div>
       </div>
     </div>
   )
