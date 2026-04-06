@@ -233,12 +233,15 @@ export function ProjectsPage() {
 
   const FOCUS_CAP = 3
   const { activeList, drawerList } = React.useMemo(() => {
-    const priorityProjects = projects
+    // Exclude completed/graveyard projects from active and drawer sections
+    const nonCompleted = projects.filter(p => p.status !== 'completed' && p.status !== 'graveyard')
+
+    const priorityProjects = nonCompleted
       .filter(p => p.is_priority)
       .slice(0, FOCUS_CAP)
     const priorityIds = new Set(priorityProjects.map(p => p.id))
 
-    const recentActiveNonPriority = [...projects]
+    const recentActiveNonPriority = [...nonCompleted]
       .sort((a, b) =>
         new Date(b.last_active || b.created_at).getTime() - new Date(a.last_active || a.created_at).getTime()
       )
@@ -248,7 +251,7 @@ export function ProjectsPage() {
     const activeList = [...priorityProjects, ...recentActiveNonPriority] as Project[]
     const activeIds = new Set(activeList.map(p => p.id))
     // Everything not in the focus area goes in the drawer
-    const drawerList = projects.filter(p => !activeIds.has(p.id))
+    const drawerList = nonCompleted.filter(p => !activeIds.has(p.id))
 
     return { activeList, drawerList }
   }, [projects])
