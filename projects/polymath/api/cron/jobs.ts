@@ -27,6 +27,7 @@ import { generateBedtimePrompts } from '../_lib/bedtime-ideas.js'
 import { maintainEmbeddings } from '../_lib/embeddings-maintenance.js'
 import { extractCapabilities } from '../_lib/capabilities-extraction.js'
 import { identifyRottingProjects } from '../_lib/project-maintenance.js'
+import { recomputeHeatForUser } from '../_lib/metabolism.js'
 import webpush from 'web-push'
 import { Resend } from 'resend'
 import { createClient } from '@supabase/supabase-js'
@@ -277,6 +278,57 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         results.tasks.maintenance = {
           success: false,
           error: error instanceof Error ? error.message : 'Unknown error'
+        }
+      }
+
+      // 8. Metabolism: Recompute heat scores for drawer projects (daily)
+      if (userId) {
+        try {
+          console.log('[cron/jobs/daily] Recomputing heat scores...')
+          const heatResult = await recomputeHeatForUser(supabase, userId)
+          results.tasks.recompute_heat = { success: true, ...heatResult }
+          console.log(`[cron/jobs/daily] Heat recomputed: ${heatResult.updated} updated, ${heatResult.skipped} skipped`)
+        } catch (error) {
+          console.error('[cron/jobs/daily] Heat recompute failed:', error)
+          results.tasks.recompute_heat = {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          }
+        }
+      }
+
+      // 9. Metabolism: Generate drawer digest (Sundays only)
+      const isSunday = now.getUTCDay() === 0
+      if (isSunday && userId) {
+        try {
+          console.log('[cron/jobs/daily] Generating drawer digest...')
+          const { generateDigestForUser } = await import('../_lib/metabolism.js')
+          const digestResult = await generateDigestForUser(supabase, userId)
+          results.tasks.drawer_digest = { success: true, ...digestResult }
+          console.log(`[cron/jobs/daily] Drawer digest: ${digestResult.warmed} warmed, ${digestResult.evolutions} evolutions`)
+        } catch (error) {
+          console.error('[cron/jobs/daily] Drawer digest failed:', error)
+          results.tasks.drawer_digest = {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          }
+        }
+      }
+
+      // 10. Evolution: Generate evolution events for active projects (daily)
+      if (userId) {
+        try {
+          console.log('[cron/jobs/daily] Generating evolution events...')
+          const { evolveProjectsForUser } = await import('../_lib/metabolism.js')
+          const evolveResult = await evolveProjectsForUser(supabase, userId)
+          results.tasks.evolve = { success: true, ...evolveResult }
+          console.log(`[cron/jobs/daily] Evolution: ${evolveResult.evolved} projects evolved`)
+        } catch (error) {
+          console.error('[cron/jobs/daily] Evolution failed:', error)
+          results.tasks.evolve = {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          }
         }
       }
 
