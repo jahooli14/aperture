@@ -53,7 +53,29 @@ export function EvolutionFeed() {
     )
   }
 
-  if (events.length === 0) return null
+  if (events.length === 0) {
+    return (
+      <div
+        className="rounded-2xl p-5"
+        style={{
+          background: 'var(--brand-glass-bg)',
+          backdropFilter: 'blur(16px)',
+          border: '1px solid rgba(99,179,237,0.08)',
+          boxShadow: '3px 3px 0 rgba(0,0,0,0.3)',
+        }}
+      >
+        <div className="flex items-center gap-2 mb-2">
+          <div className="h-1.5 w-1.5 rounded-full opacity-30" style={{ background: 'var(--brand-primary)' }} />
+          <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[var(--brand-text-secondary)] opacity-50">
+            ideas evolving
+          </span>
+        </div>
+        <p className="text-sm text-[var(--brand-text-secondary)] opacity-50 leading-relaxed">
+          The AI runs overnight and will surface connections between your projects and thoughts here. Add more voice notes to speed things up.
+        </p>
+      </div>
+    )
+  }
 
   const highlight = events.find(e => e.highlight) || events[0]
   const others = events.filter(e => e.id !== highlight.id)

@@ -10,7 +10,6 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Play, ChevronLeft, ChevronRight, Zap, ArrowRight, Wand2 } from 'lucide-react'
-// ChevronLeft/ChevronRight still used by KeepGoingCard pagination
 import { useNavigate, Link } from 'react-router-dom'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useSuggestionStore } from '../../stores/useSuggestionStore'
@@ -159,29 +158,19 @@ interface IdeaItem {
 }
 
 const FRESH_STATUSES = new Set(['upcoming', 'dormant', 'on-hold', 'maintaining'])
-const SHOW_COUNT = 3
 
 function TrySomethingNewCard() {
   const navigate = useNavigate()
   const { allProjects } = useProjectStore()
   const { suggestions, fetchSuggestions } = useSuggestionStore()
+  const [idx, setIdx] = useState(0)
 
   React.useEffect(() => { fetchSuggestions() }, [fetchSuggestions])
 
-  const drawerProjects: IdeaItem[] = allProjects
-    .filter(p => FRESH_STATUSES.has(p.status) && !p.is_priority)
-    .map(p => ({
-      id: `proj-${p.id}`,
-      title: p.title,
-      description: p.description || '',
-      isAISuggestion: false,
-      hasEvolved: !!(p.metadata?.versions?.length),
-      navigateTo: `/projects/${p.id}`,
-      sortKey: new Date(p.metadata?.versions?.at(-1)?.created_at || p.updated_at || p.created_at).getTime(),
-    }))
-
-  const aiSuggestions: IdeaItem[] = suggestions
+  // AI intersection ideas first (most recently generated)
+  const aiIdeas: IdeaItem[] = suggestions
     .filter(s => s.status === 'pending' || s.status === 'saved' || s.status === 'spark')
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .map(s => ({
       id: `sug-${s.id}`,
       title: s.title,
@@ -192,22 +181,38 @@ function TrySomethingNewCard() {
       sortKey: new Date(s.created_at).getTime(),
     }))
 
-  // AI suggestions first, then drawer projects sorted by most recently evolved
-  const allIdeas: IdeaItem[] = [
-    ...aiSuggestions.sort((a, b) => b.sortKey - a.sortKey),
-    ...drawerProjects.sort((a, b) => b.sortKey - a.sortKey),
-  ]
+  // Drawer projects — all non-active statuses, not pinned as "working on now"
+  const drawerIdeas: IdeaItem[] = allProjects
+    .filter(p => FRESH_STATUSES.has(p.status) && !p.is_priority)
+    .sort((a, b) => {
+      // Most recently evolved/updated first
+      const aKey = new Date(a.metadata?.versions?.at(-1)?.created_at || a.updated_at || a.created_at).getTime()
+      const bKey = new Date(b.metadata?.versions?.at(-1)?.created_at || b.updated_at || b.created_at).getTime()
+      return bKey - aKey
+    })
+    .map(p => ({
+      id: `proj-${p.id}`,
+      title: p.title,
+      description: p.description || '',
+      isAISuggestion: false,
+      hasEvolved: !!(p.metadata?.versions?.length),
+      navigateTo: `/projects/${p.id}`,
+      sortKey: new Date(p.metadata?.versions?.at(-1)?.created_at || p.updated_at || p.created_at).getTime(),
+    }))
 
-  const shown = allIdeas.slice(0, SHOW_COUNT)
-  const totalCount = allIdeas.length
+  // AI ideas first, then drawer — cap at 5 to keep it curated
+  const ideas = [...aiIdeas, ...drawerIdeas].slice(0, 5)
+  const total = ideas.length
+  const totalDrawerCount = allProjects.filter(p => FRESH_STATUSES.has(p.status) && !p.is_priority).length + aiIdeas.length
+  const current = ideas[idx] || null
 
-  if (totalCount === 0) {
+  if (total === 0) {
     return (
       <div className="flex flex-col h-full">
         <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[var(--brand-text-secondary)] opacity-50 mb-3">
           try something new
         </span>
-        <div className="flex-1 flex flex-col items-center justify-center text-center">
+        <div className="flex-1 flex flex-col items-center justify-center text-center p-4">
           <p className="text-sm font-medium text-[var(--brand-text-secondary)] opacity-60">No saved ideas yet</p>
           <p className="text-xs text-[var(--brand-text-secondary)] opacity-40 mt-1">Add voice notes to get ideas shaped for you</p>
         </div>
@@ -217,45 +222,79 @@ function TrySomethingNewCard() {
 
   return (
     <div className="flex flex-col h-full">
+      {/* Header with navigation */}
       <div className="flex items-center justify-between mb-3">
         <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[var(--brand-text-secondary)] opacity-50">
           try something new
         </span>
+        {total > 1 && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => { haptic.light(); setIdx(i => (i - 1 + total) % total) }}
+              className="h-6 w-6 rounded-md flex items-center justify-center hover:bg-[var(--glass-surface)] transition-colors"
+            >
+              <ChevronLeft className="h-3.5 w-3.5 text-[var(--brand-text-secondary)] opacity-50" />
+            </button>
+            <span className="text-[10px] text-[var(--brand-text-secondary)] opacity-40">{idx + 1}/{total}</span>
+            <button
+              onClick={() => { haptic.light(); setIdx(i => (i + 1) % total) }}
+              className="h-6 w-6 rounded-md flex items-center justify-center hover:bg-[var(--glass-surface)] transition-colors"
+            >
+              <ChevronRight className="h-3.5 w-3.5 text-[var(--brand-text-secondary)] opacity-50" />
+            </button>
+          </div>
+        )}
       </div>
 
-      <div className="h-1 rounded-full mb-4 opacity-60" style={{ background: 'linear-gradient(90deg, var(--brand-primary), rgba(168,85,247,0.8))' }} />
-
-      <div className="flex flex-col gap-2 flex-1">
-        {shown.map((idea) => (
-          <button
-            key={idea.id}
-            onClick={() => { haptic.light(); navigate(idea.navigateTo) }}
-            className="w-full flex items-start gap-2.5 p-2.5 rounded-xl text-left transition-all hover:bg-[rgba(255,255,255,0.04)]"
-            style={{ border: '1px solid rgba(255,255,255,0.05)' }}
+      <AnimatePresence mode="wait">
+        {current && (
+          <motion.div
+            key={current.id}
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -10 }}
+            transition={{ duration: 0.2 }}
+            className="flex flex-col flex-1"
           >
-            {idea.isAISuggestion && (
-              <Wand2 className="h-3 w-3 mt-0.5 flex-shrink-0" style={{ color: 'var(--brand-primary)', opacity: 0.5 }} />
-            )}
-            {!idea.isAISuggestion && (
-              <div className="h-1.5 w-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: 'rgba(168,85,247,0.6)' }} />
-            )}
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-[var(--brand-text-primary)] leading-snug aperture-header line-clamp-1">{idea.title}</p>
-              {idea.description && (
-                <p className="text-[11px] text-[var(--brand-text-secondary)] opacity-50 mt-0.5 line-clamp-1">{idea.description}</p>
-              )}
-            </div>
-          </button>
-        ))}
-      </div>
+            <div className="h-1 rounded-full mb-4 opacity-60" style={{ background: 'linear-gradient(90deg, var(--brand-primary), rgba(168,85,247,0.8))' }} />
 
-      <Link
-        to="/projects/drawer"
-        className="mt-4 text-center text-[10px] text-[var(--brand-text-secondary)] opacity-40 hover:opacity-70 transition-opacity flex items-center justify-center gap-1"
-      >
-        {totalCount > SHOW_COUNT ? `${totalCount - SHOW_COUNT} more in the drawer` : 'See all in the drawer'}
-        <ArrowRight className="h-3 w-3" />
-      </Link>
+            {current.isAISuggestion && (
+              <div className="flex items-center gap-1.5 mb-2">
+                <Wand2 className="h-3 w-3" style={{ color: 'var(--brand-primary)', opacity: 0.6 }} />
+                <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: 'var(--brand-primary)', opacity: 0.6 }}>
+                  AI intersection
+                </span>
+              </div>
+            )}
+
+            <h3 className="text-lg font-bold text-[var(--brand-text-primary)] leading-tight mb-1 aperture-header line-clamp-2">
+              {current.title}
+            </h3>
+            <p className="text-sm text-[var(--brand-text-secondary)] leading-relaxed mb-4 line-clamp-3 opacity-70">
+              {current.description}
+            </p>
+
+            <div className="flex-1" />
+
+            <button
+              onClick={() => { haptic.medium(); navigate(current.navigateTo) }}
+              className="w-full py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all hover:bg-[var(--glass-surface)]"
+              style={{ border: '1px solid rgba(99,179,237,0.2)', color: 'var(--brand-primary)' }}
+            >
+              <Zap className="h-3.5 w-3.5" />
+              Explore idea
+            </button>
+
+            <Link
+              to="/projects/drawer"
+              className="mt-3 text-center text-[10px] text-[var(--brand-text-secondary)] opacity-40 hover:opacity-70 transition-opacity flex items-center justify-center gap-1"
+            >
+              {totalDrawerCount > 5 ? `${totalDrawerCount - 5} more in saved ideas` : 'See all saved ideas'}
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
