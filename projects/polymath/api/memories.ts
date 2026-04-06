@@ -113,7 +113,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseClient()
 
   try {
-    const { resurfacing, bridges, themes, prompts, id, capture, submit_response, q, action, seeds } = req.query
+    const { resurfacing, bridges, themes, prompts, id, capture, submit_response, auto_credit, q, action, seeds } = req.query
 
     // POST: Media analysis (audio transcription or image description)
     // Allow without auth — transcription is stateless
@@ -146,6 +146,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         req.body = JSON.parse(Buffer.concat(chunks).toString())
       }
       return await handleSubmitResponse(req, res, supabase, userId)
+    }
+
+    // POST: Auto-credit foundational prompts from onboarding analysis
+    if (req.method === 'POST' && auto_credit === 'true') {
+      if (!req.body && req.headers['content-type']?.includes('application/json')) {
+        const chunks = []
+        for await (const chunk of req) chunks.push(chunk)
+        req.body = JSON.parse(Buffer.concat(chunks).toString())
+      }
+      return await handleAutoCredit(req, res, supabase, userId)
     }
 
     // POST: Voice capture (supports both capture=true and action=capture)
@@ -1224,6 +1234,224 @@ async function handleThemes(res: VercelResponse, supabase: any) {
       total_memories: 0,
       uncategorized_count: 0
     })
+  }
+}
+
+/**
+ * Auto-credit foundational prompts from onboarding analysis.
+ * Maps AI-extracted themes, capabilities, and entities to required prompts,
+ * marks them all as completed, and generates 2-3 follow-up suggestions.
+ */
+async function handleAutoCredit(req: VercelRequest, res: VercelResponse, supabase: any, userId: string) {
+  try {
+    const { analysis, transcripts } = req.body as {
+      analysis: {
+        themes?: string[]
+        capabilities?: string[]
+        patterns?: string[]
+        entities?: { people?: string[]; places?: string[]; topics?: string[]; skills?: string[] }
+        first_insight?: string
+      }
+      transcripts: string[]
+    }
+
+    if (!analysis || !transcripts || transcripts.length === 0) {
+      return res.status(400).json({ error: 'analysis and transcripts required' })
+    }
+
+    // Fetch all required prompts
+    const { data: requiredPrompts, error: promptsError } = await supabase
+      .from('memory_prompts')
+      .select('*')
+      .eq('is_required', true)
+      .order('priority_order', { ascending: true })
+
+    if (promptsError || !requiredPrompts?.length) {
+      return res.status(500).json({ error: 'Failed to fetch required prompts' })
+    }
+
+    // Check which are already completed
+    const { data: existingStatuses } = await supabase
+      .from('user_prompt_status')
+      .select('prompt_id, status')
+      .eq('user_id', userId)
+
+    const completedIds = new Set(
+      (existingStatuses || [])
+        .filter((s: any) => s.status === 'completed')
+        .map((s: any) => s.prompt_id)
+    )
+
+    // Map analysis data to prompt responses
+    const { themes = [], capabilities = [], patterns = [], entities = {} } = analysis
+    const { people = [], places = [], topics = [], skills = [] } = entities
+    const allTranscript = transcripts.join(' ')
+
+    // Build bullets for each required prompt from the analysis
+    const promptBullets: Record<string, string[]> = {}
+
+    for (const prompt of requiredPrompts) {
+      const key = prompt.prompt_text.toLowerCase()
+
+      if (key.includes('life overview')) {
+        promptBullets[prompt.id] = [
+          ...(patterns.length > 0 ? [patterns[0]] : []),
+          ...(themes.length > 0 ? [`Key themes: ${themes.slice(0, 3).join(', ')}`] : []),
+          analysis.first_insight || `Drawn to ${topics.slice(0, 2).join(' and ') || 'varied interests'}`,
+        ].filter(Boolean).slice(0, 5)
+      } else if (key.includes('current situation')) {
+        promptBullets[prompt.id] = [
+          `Currently exploring: ${topics.slice(0, 3).join(', ') || themes[0] || 'new ideas'}`,
+          ...(capabilities.length > 0 ? [`Active skills: ${capabilities.slice(0, 2).join(', ')}`] : []),
+          `Interests span ${themes.slice(0, 3).join(', ') || 'multiple areas'}`,
+        ].filter(Boolean).slice(0, 5)
+      } else if (key.includes('values') || key.includes('strengths')) {
+        promptBullets[prompt.id] = [
+          ...capabilities.slice(0, 3).map(c => `Strength: ${c}`),
+          ...(patterns.length > 1 ? [patterns[1]] : []),
+        ].filter(Boolean).slice(0, 5)
+      } else if (key.includes('partner') || key.includes('close relationship')) {
+        promptBullets[prompt.id] = people.length > 0
+          ? people.slice(0, 3).map(p => `Mentioned: ${p}`)
+          : ['Captured from voice onboarding — details to be enriched']
+      } else if (key.includes('family')) {
+        promptBullets[prompt.id] = people.length > 1
+          ? people.slice(0, 3).map(p => `Family member: ${p}`)
+          : ['Captured from voice onboarding — details to be enriched']
+      } else if (key.includes('friends')) {
+        promptBullets[prompt.id] = people.length > 2
+          ? people.slice(1, 4).map(p => `Close friend: ${p}`)
+          : ['Captured from voice onboarding — details to be enriched']
+      } else if (key.includes('career')) {
+        promptBullets[prompt.id] = [
+          ...skills.slice(0, 2).map(s => `Skill: ${s}`),
+          ...(capabilities.length > 0 ? [`Capability: ${capabilities[0]}`] : []),
+        ].filter(Boolean).slice(0, 5)
+      } else if (key.includes('current work')) {
+        promptBullets[prompt.id] = [
+          ...(topics.length > 0 ? [`Working on: ${topics.slice(0, 2).join(', ')}`] : []),
+          ...(skills.length > 0 ? [`Using: ${skills.slice(0, 2).join(', ')}`] : []),
+          ...(capabilities.length > 1 ? [`Strength: ${capabilities[1]}`] : []),
+        ].filter(Boolean).slice(0, 5)
+      } else if (key.includes('hobbies') || key.includes('passions')) {
+        promptBullets[prompt.id] = [
+          ...topics.slice(0, 3).map(t => `Interest: ${t}`),
+          ...(themes.length > 2 ? [`Theme: ${themes[2]}`] : []),
+        ].filter(Boolean).slice(0, 5)
+      } else if (key.includes('goals') || key.includes('aspirations')) {
+        promptBullets[prompt.id] = [
+          ...(themes.length > 0 ? [`Driven by: ${themes[0]}`] : []),
+          ...(patterns.length > 0 ? [patterns[0]] : []),
+          ...(capabilities.length > 0 ? [`Leveraging: ${capabilities.slice(0, 2).join(', ')}`] : []),
+        ].filter(Boolean).slice(0, 5)
+      }
+    }
+
+    // Insert responses and mark as completed for prompts not already done
+    let credited = 0
+    for (const prompt of requiredPrompts) {
+      if (completedIds.has(prompt.id)) continue
+
+      const bullets = promptBullets[prompt.id]
+      if (!bullets || bullets.length === 0) continue
+
+      // Ensure minimum 3 bullets
+      while (bullets.length < 3) {
+        bullets.push('Captured from voice onboarding')
+      }
+
+      // Create memory response
+      const { data: response, error: responseError } = await supabase
+        .from('memory_responses')
+        .insert([{
+          user_id: userId,
+          prompt_id: prompt.id,
+          bullets,
+          is_template: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }])
+        .select()
+        .single()
+
+      if (responseError) {
+        console.error(`[autoCredit] Failed to insert response for ${prompt.prompt_text}:`, responseError)
+        continue
+      }
+
+      // Mark as completed
+      await supabase
+        .from('user_prompt_status')
+        .upsert({
+          user_id: userId,
+          prompt_id: prompt.id,
+          status: 'completed',
+          response_id: response.id,
+          completed_at: new Date().toISOString(),
+          created_at: new Date().toISOString()
+        }, { onConflict: 'user_id,prompt_id' })
+
+      credited++
+    }
+
+    // Generate 2-3 follow-up suggestions based on onboarding content
+    try {
+      const prompt = `Based on this person's onboarding, suggest 2-3 follow-up questions that would deepen the app's understanding of them. These should feel natural and curious, not like a form.
+
+Their themes: ${themes.join(', ')}
+Their capabilities: ${capabilities.join(', ')}
+Their patterns: ${patterns.join(', ')}
+Topics mentioned: ${topics.join(', ')}
+People mentioned: ${people.join(', ')}
+
+Generate questions that:
+1. Dig into something specific they mentioned
+2. Explore an emotional or personal angle
+3. Connect two different things they talked about
+
+Return JSON: {"suggestions":[{"promptText":"...","description":"..."}]}
+Return 2-3 suggestions. Keep them conversational and specific.`
+
+      const text = await generateText(prompt, {
+        maxTokens: 800,
+        temperature: 0.7,
+        responseFormat: 'json'
+      })
+
+      if (text) {
+        const parsed = JSON.parse(text)
+        for (const suggestion of (parsed.suggestions || []).slice(0, 3)) {
+          const { data: newPrompt } = await supabase
+            .from('memory_prompts')
+            .insert({
+              prompt_text: suggestion.promptText,
+              prompt_description: suggestion.description || '',
+              category: 'ai_suggested',
+              is_required: false
+            })
+            .select()
+            .single()
+
+          if (newPrompt) {
+            await supabase
+              .from('user_prompt_status')
+              .insert({
+                user_id: userId,
+                prompt_id: newPrompt.id,
+                status: 'suggested',
+                suggested_at: new Date().toISOString()
+              })
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[autoCredit] Follow-up suggestion generation failed, continuing:', e)
+    }
+
+    return res.status(200).json({ success: true, credited })
+  } catch (error) {
+    console.error('[autoCredit] Error:', error)
+    return res.status(500).json({ error: 'Failed to auto-credit prompts' })
   }
 }
 

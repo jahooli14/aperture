@@ -19,7 +19,7 @@ import { useToast } from '../components/ui/toast'
 import { haptic } from '../utils/haptics'
 import { CreateMemoryDialog } from '../components/memories/CreateMemoryDialog'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
-import { ArrowRight, Search, Moon, Lightbulb, Wind, X, AlertCircle, MoreHorizontal, Film, Music, Monitor, Book, MapPin, Gamepad2, Calendar, FileText, Quote, Box } from 'lucide-react'
+import { ArrowRight, Search, Moon, Lightbulb, Wind, AlertCircle, MoreHorizontal, Film, Music, Monitor, Book, MapPin, Gamepad2, Calendar, FileText, Quote, Box } from 'lucide-react'
 import { BrandName } from '../components/BrandName'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { DriftMode } from '../components/bedtime/DriftMode'
@@ -110,7 +110,7 @@ export function HomePage() {
   const { suggestions, fetchSuggestions } = useSuggestionStore()
   const { projects, fetchProjects } = useProjectStore()
   const { memories, fetchMemories, createMemory } = useMemoryStore()
-  const { progress, fetchPrompts } = useOnboardingStore()
+  const { fetchPrompts } = useOnboardingStore()
   const { setContext } = useContextEngineStore()
   const { onboardingCompletedAt, startSession } = useJourneyStore()
 
@@ -122,7 +122,6 @@ export function HomePage() {
   const { addToast } = useToast()
 
   const [cardOfTheDay, setCardOfTheDay] = useState<Memory | null>(null)
-  const [showOnboardingBanner, setShowOnboardingBanner] = useState(false)
   const [createThoughtOpen, setCreateThoughtOpen] = useState(false)
   const [createProjectOpen, setCreateProjectOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -161,12 +160,6 @@ export function HomePage() {
     }
   }
 
-  useEffect(() => {
-    if (progress && progress.completed_required < progress.total_required) {
-      const timer = setTimeout(() => setShowOnboardingBanner(true), 3000)
-      return () => clearTimeout(timer)
-    }
-  }, [progress])
 
   const fetchCardOfTheDay = async () => {
     try {
@@ -262,33 +255,6 @@ export function HomePage() {
 
       <div className="min-h-screen pb-24" style={{ paddingTop: '5.5rem' }}>
 
-        {/* Onboarding Banner */}
-        <AnimatePresence>
-          {showOnboardingBanner && progress && (
-            <motion.div
-              initial={{ opacity: 0, y: -80, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -80, scale: 0.95 }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8"
-            >
-              <div className="p-6 relative rounded-2xl border border-[rgba(6,182,212,0.3)]" style={{ background: 'rgba(6, 182, 212, 0.1)', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
-                <button onClick={() => setShowOnboardingBanner(false)} className="absolute top-3 right-3 h-8 w-8 rounded-lg hover:bg-[rgba(255,255,255,0.1)] flex items-center justify-center transition-colors" style={{ color: "var(--brand-primary)" }}>
-                  <X className="h-4 w-4" />
-                </button>
-                <div className="flex items-start gap-4 pr-10">
-                  <div className="flex-1">
-                    <h3 className="font-bold mb-1" style={{ color: "var(--brand-primary)" }}>Complete your profile</h3>
-                    <p className="text-sm mb-3" style={{ color: "var(--brand-primary)" }}>Answer a few questions to get ideas tailored to what only you can build.</p>
-                    <Link to="/onboarding" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition-all hover:opacity-90 brand-gradient text-brand-text-primary shadow-lg shadow-cyan-500/20">
-                      Get started
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* Morning Follow-Up */}
         {showMorningFollowUp && (

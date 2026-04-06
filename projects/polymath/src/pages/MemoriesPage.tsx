@@ -16,7 +16,6 @@ import { useOfflineSync } from '../hooks/useOfflineSync'
 import { MemoryCard } from '../components/MemoryCard'
 import { CreateMemoryDialog } from '../components/memories/CreateMemoryDialog'
 // // import { EditMemoryDialog } from '../components/memories/EditMemoryDialog' // Now handled by MemoryDetailModal // Now handled by MemoryDetailModal
-import { FoundationalPrompts } from '../components/onboarding/FoundationalPrompts'
 import { SuggestedPrompts } from '../components/onboarding/SuggestedPrompts'
 import { ThemeClusterCard } from '../components/memories/ThemeClusterCard'
 import { Button } from '../components/ui/button'
@@ -106,7 +105,7 @@ export function MemoriesPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { memories, fetchMemories, loading, error, deleteMemory, clearError } = useMemoryStore()
-  const { progress } = useOnboardingStore()
+  const { fetchPrompts: fetchOnboardingPrompts } = useOnboardingStore()
   const { addToast } = useToast()
   const { setContext } = useContextEngineStore()
 
@@ -254,6 +253,7 @@ export function MemoriesPage() {
         await fetchThemeClusters()
       } else {
         await loadMemories()
+        fetchOnboardingPrompts() // Load suggested follow-up prompts
       }
     }
     loadData()
@@ -681,12 +681,7 @@ export function MemoriesPage() {
                 </div>
               )}
 
-              {/* Core Beliefs banner — show for new users who haven't completed onboarding */}
-              {view === 'recent' && progress && progress.completed_required < progress.total_required && (
-                <div className="mb-6">
-                  <FoundationalPrompts />
-                </div>
-              )}
+              {/* Follow-up suggestions from onboarding analysis */}
 
               {/* Recent Memories Tab */}
               {view === 'recent' && (

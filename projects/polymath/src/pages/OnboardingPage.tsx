@@ -296,7 +296,7 @@ export function OnboardingPage() {
   // ── Analyzing + Reveal ──────────────────────────────────────────────
   if (phase === 'analyzing' || phase === 'reveal') {
     if (phase === 'reveal' && analysis) {
-      return <RevealSequence analysis={analysis} books={books} />
+      return <RevealSequence analysis={analysis} books={books} transcripts={transcripts} />
     }
 
     // Still analyzing — RevealSequence handles its own loading state,

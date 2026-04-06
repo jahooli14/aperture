@@ -24,6 +24,7 @@ import type { OnboardingAnalysis, BookSearchResult } from '../../types'
 interface RevealSequenceProps {
   analysis: OnboardingAnalysis
   books: BookSearchResult[]
+  transcripts?: string[]
 }
 
 const LOADING_MESSAGES = [
@@ -46,7 +47,7 @@ interface Suggestion {
   reasoning: string
 }
 
-export function RevealSequence({ analysis, books }: RevealSequenceProps) {
+export function RevealSequence({ analysis, books, transcripts = [] }: RevealSequenceProps) {
   const { isAuthenticated } = useAuthContext()
   const navigate = useNavigate()
   const [beat, setBeat] = useState<'loading' | 'profile' | 'ideas' | 'refining' | 'saved' | 'post-onboarding'>('loading')
@@ -560,6 +561,7 @@ export function RevealSequence({ analysis, books }: RevealSequenceProps) {
         <PostOnboardingFlow
           analysis={analysis}
           sparkedSuggestion={sparkSuggestion}
+          transcripts={transcripts}
         />
       )}
     </div>
