@@ -507,9 +507,9 @@ export function MemoriesPage() {
           <div className="mb-6 flex items-center justify-between">
             <div>
               <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
-                your <span className="text-brand-primary">thoughts</span>
+                your <span className="page-accent">thoughts</span>
               </h1>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mt-1">Your thoughts, all in one place.</p>
+              <p className="section-subtitle mt-1">Everything you've captured, all in one place.</p>
             </div>
             <div className="flex items-center gap-2">
               {view !== 'resurfacing' && <CreateMemoryDialog />}

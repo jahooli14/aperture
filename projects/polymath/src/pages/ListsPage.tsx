@@ -222,9 +222,9 @@ export default function ListsPage() {
             <div className="flex items-center justify-between mb-8">
                 <div className="flex flex-col gap-2">
                     <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] leading-none">
-                        your <span className="text-brand-primary">collections</span>
+                        your <span className="page-accent">collections</span>
                     </h1>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mt-1">The stuff you love.</p>
+                    <p className="section-subtitle mt-1">The stuff you love, curated.</p>
                 </div>
                 <div className="flex items-center gap-2">
                     {lists.length > 0 && (

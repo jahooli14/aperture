@@ -109,13 +109,11 @@ export function TimelinePage() {
       <SubtleBackground />
       {/* Header */}
       <div className="max-w-6xl mx-auto px-4 mb-12">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-3" style={{ color: "var(--brand-primary)" }}>
-            Your Thinking Times
+        <div>
+          <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
+            your <span className="page-accent">timeline</span>
           </h1>
-          <p className="text-xl" style={{ color: "var(--brand-primary)" }}>
-            When you do your best thinking
-          </p>
+          <p className="section-subtitle mt-1">When you do your best thinking</p>
         </div>
       </div>
 

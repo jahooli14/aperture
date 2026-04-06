@@ -311,7 +311,7 @@ export function SearchPage() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-6">
           <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
-            your <span className="text-brand-primary">stuff</span>
+            your <span className="page-accent">stuff</span>
           </h1>
           <p className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mt-1">Search memories, projects, and articles.</p>
         </div>

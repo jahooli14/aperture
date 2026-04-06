@@ -263,10 +263,10 @@ export function TodosPage() {
         <div className="px-4 pt-10 pb-6 max-w-3xl mx-auto w-full">
           <div className="mb-6">
             <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
-              your <span className="text-brand-primary">todos</span>
+              your <span className="page-accent">todos</span>
             </h1>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mt-1">
-              {dayName}, {dateStr} • {streakMessage || 'Keep going.'}
+            <p className="section-subtitle mt-1">
+              {dayName}, {dateStr} — {streakMessage || 'Keep going.'}
             </p>
           </div>
 

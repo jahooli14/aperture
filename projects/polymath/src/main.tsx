@@ -13,6 +13,12 @@ import '@fontsource/inter/500.css' // Medium
 import '@fontsource/inter/600.css' // Semibold
 import '@fontsource/inter/700.css' // Bold
 
+// Import Playfair Display serif font (for typography contrast)
+import '@fontsource/playfair-display/400.css'
+import '@fontsource/playfair-display/400-italic.css'
+import '@fontsource/playfair-display/600.css'
+import '@fontsource/playfair-display/700.css'
+
 // Import Zebra design system
 import './styles/zebra.css'
 import './styles/premium-dark.css'

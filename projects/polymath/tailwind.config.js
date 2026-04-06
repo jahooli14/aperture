@@ -7,6 +7,9 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        serif: ['Playfair Display', 'Georgia', 'Times New Roman', 'serif'],
+      },
       spacing: {
         'space-1': '8px',
         'space-2': '16px',
