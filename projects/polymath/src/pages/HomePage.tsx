@@ -21,7 +21,6 @@ import { CreateMemoryDialog } from '../components/memories/CreateMemoryDialog'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
 import { Layers, ArrowRight, Mic, Brain, Search, Moon, Lightbulb, Wind, X, AlertCircle, Zap, MoreHorizontal, Film, Music, Monitor, Book, MapPin, Gamepad2, Calendar, FileText, Quote, Box } from 'lucide-react'
 import { BrandName } from '../components/BrandName'
-import { getTheme } from '../lib/projectTheme'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { DriftMode } from '../components/bedtime/DriftMode'
 import { MorningFollowUp } from '../components/bedtime/MorningFollowUp'
@@ -101,87 +100,6 @@ function NowConsumingWidget() {
           )
         })}
       </div>
-    </section>
-  )
-}
-
-const STATUS_ORDER: Record<string, number> = { active: 0, maintaining: 1, upcoming: 2, 'on-hold': 3, dormant: 4 }
-const DRAWER_STATUSES = new Set(['upcoming', 'dormant', 'on-hold', 'maintaining'])
-
-function AllProjectsSection() {
-  const navigate = useNavigate()
-  const { allProjects } = useProjectStore()
-
-  const active = allProjects
-    .filter(p => p.status === 'active' || (p.status === 'maintaining' && p.is_priority))
-    .sort((a, b) => (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9))
-
-  const drawer = allProjects.filter(p => DRAWER_STATUSES.has(p.status) && !p.is_priority)
-
-  if (allProjects.length === 0) return null
-
-  return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-      {/* Active projects */}
-      {active.length > 0 && (
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[var(--brand-text-secondary)] opacity-50">
-              your projects
-            </span>
-            <Link
-              to="/projects"
-              className="text-[10px] font-bold uppercase tracking-widest text-[var(--brand-primary)] opacity-60 hover:opacity-100 transition-opacity flex items-center gap-1"
-            >
-              all {allProjects.filter(p => !['completed','graveyard'].includes(p.status)).length}
-              <ArrowRight className="h-3 w-3" />
-            </Link>
-          </div>
-          <div className="flex flex-col gap-2">
-            {active.map(p => {
-              const theme = getTheme(p.type || 'other', p.title)
-              const nextStep = p.metadata?.next_step || p.metadata?.tasks?.find((t: any) => !t.done)?.text
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => { haptic.light(); navigate(`/projects/${p.id}`) }}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all hover:bg-[var(--glass-surface)]"
-                  style={{ border: '1px solid rgba(255,255,255,0.06)' }}
-                >
-                  <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ background: theme.text }} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-[var(--brand-text-primary)] truncate aperture-header">{p.title}</p>
-                    {nextStep && (
-                      <p className="text-[11px] text-[var(--brand-text-secondary)] opacity-50 truncate mt-0.5">{nextStep}</p>
-                    )}
-                  </div>
-                  {p.is_priority && (
-                    <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded flex-shrink-0" style={{ background: 'rgba(99,179,237,0.1)', color: 'var(--brand-primary)' }}>focus</span>
-                  )}
-                  <ArrowRight className="h-3.5 w-3.5 text-[var(--brand-text-secondary)] opacity-30 flex-shrink-0" />
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Drawer summary */}
-      {drawer.length > 0 && (
-        <Link
-          to="/projects/drawer"
-          className="flex items-center justify-between p-3 rounded-xl transition-all hover:bg-[var(--glass-surface)]"
-          style={{ border: '1px solid rgba(255,255,255,0.06)' }}
-        >
-          <div className="flex items-center gap-3">
-            <div className="h-2 w-2 rounded-full flex-shrink-0 opacity-40" style={{ background: 'var(--brand-primary)' }} />
-            <span className="text-sm text-[var(--brand-text-secondary)] opacity-60">
-              {drawer.length} saved {drawer.length === 1 ? 'idea' : 'ideas'} in the drawer
-            </span>
-          </div>
-          <ArrowRight className="h-3.5 w-3.5 text-[var(--brand-text-secondary)] opacity-30" />
-        </Link>
-      )}
     </section>
   )
 }
@@ -421,10 +339,7 @@ export function HomePage() {
           <NetflixHeroCards />
         </section>
 
-        {/* 3. ALL YOUR PROJECTS */}
-        <AllProjectsSection />
-
-        {/* 4. EVOLUTION FEED — AI working in background */}
+        {/* 3. EVOLUTION FEED — AI working in background */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
           <EvolutionFeed />
         </section>
