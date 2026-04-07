@@ -5,16 +5,16 @@
 
 export const MODELS = {
   // Generation: Cheap and fast for idea creation
-  GENERATE: 'gemini-2.0-flash-lite',
+  GENERATE: 'gemini-3.1-flash-lite-preview',
 
   // Pre-filter: Better quality for scoring ideas
-  FILTER: 'gemini-2.0-flash',
+  FILTER: 'gemini-3-flash-preview',
 
   // Review: High quality for final verdicts
-  REVIEW: 'gemini-2.5-pro-preview-05-06',
+  REVIEW: 'gemini-3.1-pro-preview',
 
   // Summarize: Good enough for feedback compression
-  SUMMARIZE: 'gemini-2.0-flash',
+  SUMMARIZE: 'gemini-3-flash-preview',
 
   // Embedding: For deduplication vectors
   EMBEDDING: 'text-embedding-004',
