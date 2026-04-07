@@ -151,7 +151,7 @@ async function handleGenerate(res: VercelResponse) {
       .update({
         ideas_count: 1,
         prefilter_pass_count: passCount,
-        prefilter_pass_rate: passCount,
+        prefilter_pass_rate: passCount === 1 ? 100 : 0,
         status: 'completed',
         completed_at: new Date().toISOString(),
       })

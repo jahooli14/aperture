@@ -1,10 +1,21 @@
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { supabase } from './supabase.js';
+import { MODELS } from './models.js';
 import type { Idea } from './types.js';
 
 /**
  * Deduplication using pgvector similarity search
  * Threshold: 0.88 cosine similarity = ~duplicate
  */
+
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
+function getGenAI() {
+  if (!GEMINI_API_KEY) {
+    throw new Error('GEMINI_API_KEY environment variable is required');
+  }
+  return new GoogleGenerativeAI(GEMINI_API_KEY);
+}
 
 export interface DuplicateCheck {
   isDuplicate: boolean;
@@ -42,7 +53,7 @@ export async function checkDuplicate(
   const matches = data || [];
 
   return {
-    isDuplicate: matches.length > 0 && matches[0].similarity > similarityThreshold,
+    isDuplicate: matches.length > 0 && matches[0].similarity >= similarityThreshold,
     similarIdeas: matches.map((m: any) => ({
       id: m.id,
       title: m.title,
@@ -52,22 +63,13 @@ export async function checkDuplicate(
 }
 
 /**
- * Generate embedding using a simple approach
- * TODO: Replace with actual embedding model (sentence-transformers or OpenAI)
+ * Generate embedding using Google's text-embedding-004 model
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
-  // For now, use a placeholder
-  // In production, you'd use:
-  // - sentence-transformers via Python service
-  // - OpenAI embeddings API
-  // - Google embedding API
+  const model = getGenAI().getGenerativeModel({ model: MODELS.EMBEDDING });
 
-  // Placeholder: return a random 768-dimensional vector
-  // THIS WILL NOT WORK FOR REAL DEDUPLICATION
-  console.warn('Using placeholder embedding - replace with real embedding model');
-
-  // Return zero vector for now
-  return new Array(768).fill(0);
+  const result = await model.embedContent(text);
+  return result.embedding.values;
 }
 
 /**
