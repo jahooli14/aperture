@@ -1031,6 +1031,178 @@ Return JSON only:
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
+  // INTERSECTIONS RESOURCE — Find multi-project crossovers scored by (project count × relevance)
+  if (resource === 'intersections') {
+    if (req.method === 'GET') {
+      try {
+        // Fetch active projects with embeddings
+        const { data: projects, error: projError } = await supabase
+          .from('projects')
+          .select('id, title, description, embedding, metadata, status')
+          .eq('user_id', userId)
+          .in('status', ['active', 'upcoming'])
+          .not('embedding', 'is', null)
+
+        if (projError) throw projError
+        if (!projects || projects.length < 2) {
+          return res.status(200).json({ intersections: [] })
+        }
+
+        // Also fetch recent memories/articles to find shared themes
+        const twoWeeksAgo = new Date()
+        twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
+
+        const { data: recentMemories } = await supabase
+          .from('memories')
+          .select('id, title, body, themes, embedding')
+          .eq('user_id', userId)
+          .gte('created_at', twoWeeksAgo.toISOString())
+          .not('embedding', 'is', null)
+          .limit(30)
+
+        const { data: recentArticles } = await supabase
+          .from('reading_queue')
+          .select('id, title, summary, embedding')
+          .eq('user_id', userId)
+          .gte('created_at', twoWeeksAgo.toISOString())
+          .not('embedding', 'is', null)
+          .limit(20)
+
+        // Find all project pairs and their similarity
+        const pairs: Array<{
+          projects: typeof projects
+          similarity: number
+          sharedFuel: Array<{ type: 'memory' | 'article'; title: string; id: string }>
+        }> = []
+
+        for (let i = 0; i < projects.length; i++) {
+          for (let j = i + 1; j < projects.length; j++) {
+            const a = projects[i]
+            const b = projects[j]
+            if (!a.embedding || !b.embedding) continue
+
+            const sim = cosineSimilarity(a.embedding, b.embedding)
+
+            // Find fuel (memories/articles) that are relevant to BOTH projects
+            const sharedFuel: Array<{ type: 'memory' | 'article'; title: string; id: string }> = []
+            const FUEL_THRESHOLD = 0.6
+
+            for (const mem of (recentMemories || [])) {
+              if (!mem.embedding) continue
+              const simA = cosineSimilarity(mem.embedding, a.embedding)
+              const simB = cosineSimilarity(mem.embedding, b.embedding)
+              if (simA > FUEL_THRESHOLD && simB > FUEL_THRESHOLD) {
+                sharedFuel.push({ type: 'memory', title: mem.title || mem.body?.substring(0, 60) || 'Thought', id: mem.id })
+              }
+            }
+
+            for (const art of (recentArticles || [])) {
+              if (!art.embedding) continue
+              const simA = cosineSimilarity(art.embedding, a.embedding)
+              const simB = cosineSimilarity(art.embedding, b.embedding)
+              if (simA > FUEL_THRESHOLD && simB > FUEL_THRESHOLD) {
+                sharedFuel.push({ type: 'article', title: art.title || 'Article', id: art.id })
+              }
+            }
+
+            pairs.push({ projects: [a, b], similarity: sim, sharedFuel })
+          }
+        }
+
+        // Now check for multi-project clusters (3+ projects sharing fuel)
+        const fuelToProjects: Record<string, Set<string>> = {}
+        for (const pair of pairs) {
+          for (const fuel of pair.sharedFuel) {
+            if (!fuelToProjects[fuel.id]) fuelToProjects[fuel.id] = new Set()
+            fuelToProjects[fuel.id].add(pair.projects[0].id)
+            fuelToProjects[fuel.id].add(pair.projects[1].id)
+          }
+        }
+
+        // Build intersection results — score = projectCount × avgRelevance
+        const intersections: Array<{
+          id: string
+          projectIds: string[]
+          projects: Array<{ id: string; title: string }>
+          score: number
+          sharedFuel: Array<{ type: string; title: string; id: string }>
+          reason?: string
+        }> = []
+
+        // Multi-project clusters from shared fuel
+        const seenClusters = new Set<string>()
+        for (const [fuelId, projectIds] of Object.entries(fuelToProjects)) {
+          if (projectIds.size < 2) continue
+          const clusterKey = [...projectIds].sort().join(',')
+          if (seenClusters.has(clusterKey)) {
+            // Add fuel to existing cluster
+            const existing = intersections.find(i => i.id === clusterKey)
+            if (existing) {
+              const fuelItem = pairs.flatMap(p => p.sharedFuel).find(f => f.id === fuelId)
+              if (fuelItem && !existing.sharedFuel.some(f => f.id === fuelId)) {
+                existing.sharedFuel.push(fuelItem)
+                existing.score = projectIds.size * (1 + existing.sharedFuel.length * 0.2)
+              }
+            }
+            continue
+          }
+          seenClusters.add(clusterKey)
+
+          const clusterProjects = projects.filter(p => projectIds.has(p.id))
+          const fuelItem = pairs.flatMap(p => p.sharedFuel).find(f => f.id === fuelId)
+
+          intersections.push({
+            id: clusterKey,
+            projectIds: [...projectIds],
+            projects: clusterProjects.map(p => ({ id: p.id, title: p.title })),
+            score: projectIds.size * 1.2,
+            sharedFuel: fuelItem ? [fuelItem] : [],
+          })
+        }
+
+        // Also add high-similarity pairs that might not have shared fuel
+        for (const pair of pairs) {
+          if (pair.similarity < 0.4) continue
+          const key = pair.projects.map(p => p.id).sort().join(',')
+          if (seenClusters.has(key)) continue
+
+          intersections.push({
+            id: key,
+            projectIds: pair.projects.map(p => p.id),
+            projects: pair.projects.map(p => ({ id: p.id, title: p.title })),
+            score: 2 * pair.similarity + pair.sharedFuel.length * 0.3,
+            sharedFuel: pair.sharedFuel,
+          })
+        }
+
+        // Sort by score descending, return top 3
+        intersections.sort((a, b) => b.score - a.score)
+
+        // Generate AI reasoning for the top intersection
+        if (intersections.length > 0) {
+          const top = intersections[0]
+          const projectNames = top.projects.map(p => p.title).join(' × ')
+          const fuelContext = top.sharedFuel.map(f => `${f.type}: "${f.title}"`).join(', ')
+
+          try {
+            const reasoning = await generateText(
+              `In 1-2 sentences, explain the exciting intersection between these projects: ${projectNames}.${fuelContext ? ` They share these connections: ${fuelContext}.` : ''} What could emerge from combining them? Be specific and inspiring, not generic.`
+            )
+            intersections[0].reason = reasoning
+          } catch {
+            // Non-critical
+          }
+        }
+
+        return res.status(200).json({ intersections: intersections.slice(0, 3) })
+      } catch (error) {
+        console.error('[intersections] Error:', error)
+        return res.status(500).json({ error: 'Failed to find intersections' })
+      }
+    }
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
   // BREAK PROMPTS RESOURCE (Daytime Drift)
   if (resource === 'break') {
     if (req.method === 'GET') {
