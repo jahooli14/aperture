@@ -595,51 +595,24 @@ export function ProjectDetailPage() {
   return (
     <div className="min-h-screen pb-24 relative" style={{ backgroundColor: 'var(--brand-bg)' }}>
       <SubtleBackground />
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-10 pb-6 flex flex-col gap-6">
-        <div className="flex items-start justify-between">
-          <div className="flex-1 min-w-0">
-            {/* Breadcrumb */}
-            <button
-              onClick={() => navigate('/projects')}
-              className="text-[10px] font-black uppercase tracking-widest opacity-40 hover:opacity-70 transition-opacity mb-2 flex items-center gap-1"
-              style={{ color: 'var(--brand-primary)' }}
-            >
-              ← Projects
-            </button>
-            {project.is_priority && (
-              <div className="flex items-center gap-2 mb-1">
-                <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-[10px] font-black uppercase tracking-widest text-amber-500">
-                  <Star className="h-2.5 w-2.5 fill-current" />
-                  Priority
-                </span>
-              </div>
-            )}
-            <LineageBreadcrumb project={project} />
-            <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] leading-none">
-              {project.title}
-            </h1>
-          </div>
-
-          {/* Hidden PinButton to preserve useEffect content sync */}
-          <div className="hidden">
-            <PinButton
-              type="project"
-              id={project.id}
-              title={project.title}
-              currentId={id}
-              contentVersion={tasks.length}
-              content={pinnedContent}
-            />
-          </div>
-
-          <div className="relative flex items-center gap-2 flex-shrink-0 ml-3">
+      <div className="max-w-2xl mx-auto px-5 sm:px-6 pt-8 pb-4">
+        {/* Nav row */}
+        <div className="flex items-center justify-between mb-6">
+          <button
+            onClick={() => navigate('/projects')}
+            className="text-[13px] font-medium opacity-40 hover:opacity-70 transition-opacity"
+            style={{ color: 'var(--brand-text-primary)' }}
+          >
+            ← Back
+          </button>
+          <div className="relative flex items-center gap-2">
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className="h-10 w-10 flex items-center justify-center rounded-xl bg-[var(--glass-surface)] border border-white/10 transition-all"
-              style={{ color: "var(--brand-primary)" }}
+              className="h-9 w-9 flex items-center justify-center rounded-xl transition-all hover:bg-white/[0.06]"
+              style={{ color: 'var(--brand-text-secondary)' }}
               aria-label="More options"
             >
-              <MoreVertical className="h-5 w-5" />
+              <MoreVertical className="h-4 w-4" />
             </button>
 
             {showMenu && (
@@ -648,14 +621,11 @@ export function ProjectDetailPage() {
                   className="fixed inset-0 z-50"
                   onClick={() => setShowMenu(false)}
                 />
-                <div className="absolute right-0 top-full mt-2 w-52 rounded-xl p-1 z-[60] premium-glass border border-white/10 shadow-2xl">
+                <div className="absolute right-0 top-full mt-2 w-48 rounded-2xl p-1.5 z-[60] bg-[#1a1a24] border border-white/[0.08] shadow-2xl">
                   <button
-                    onClick={() => {
-                      setShowMenu(false)
-                      setShowEditDialog(true)
-                    }}
-                    className="w-full px-4 py-2 text-left text-sm font-bold uppercase tracking-wide transition-colors hover:bg-white/5 rounded-lg"
-                    style={{ color: "var(--brand-primary)" }}
+                    onClick={() => { setShowMenu(false); setShowEditDialog(true) }}
+                    className="w-full px-3.5 py-2.5 text-left text-[13px] font-medium transition-colors hover:bg-white/[0.05] rounded-xl"
+                    style={{ color: 'var(--brand-text-primary)', opacity: 0.7 }}
                   >
                     Edit Details
                   </button>
@@ -663,29 +633,18 @@ export function ProjectDetailPage() {
                     onClick={() => {
                       setShowMenu(false)
                       const isThisPinned = pinnedItem !== null && (pinnedItem.id === project.id || pinnedItem.id === id)
-                      if (isThisPinned) {
-                        unpinItem()
-                      } else {
-                        pinItem({ type: 'project', id: project.id, title: project.title, content: pinnedContent })
-                      }
+                      if (isThisPinned) { unpinItem() } else { pinItem({ type: 'project', id: project.id, title: project.title, content: pinnedContent }) }
                     }}
-                    className="w-full px-4 py-2 text-left text-sm font-bold uppercase tracking-wide transition-colors hover:bg-white/5 rounded-lg flex items-center gap-2"
-                    style={{ color: "var(--brand-primary)" }}
+                    className="w-full px-3.5 py-2.5 text-left text-[13px] font-medium transition-colors hover:bg-white/[0.05] rounded-xl flex items-center gap-2"
+                    style={{ color: 'var(--brand-text-primary)', opacity: 0.7 }}
                   >
-                    {pinnedItem?.id === project.id ? (
-                      <><PinOff className="h-3.5 w-3.5" /> Unpin</>
-                    ) : (
-                      <><Pin className="h-3.5 w-3.5" /> Pin to Compare</>
-                    )}
+                    {pinnedItem?.id === project.id ? <><PinOff className="h-3.5 w-3.5" /> Unpin</> : <><Pin className="h-3.5 w-3.5" /> Pin</>}
                   </button>
                   <button
-                    onClick={() => {
-                      setShowMenu(false)
-                      handleDelete()
-                    }}
-                    className="w-full px-4 py-2 text-left text-sm font-bold uppercase tracking-wide transition-colors hover:bg-red-500/10 rounded-lg text-red-400"
+                    onClick={() => { setShowMenu(false); handleDelete() }}
+                    className="w-full px-3.5 py-2.5 text-left text-[13px] font-medium transition-colors hover:bg-red-500/10 rounded-xl text-red-400/70"
                   >
-                    Delete Project
+                    Delete
                   </button>
                 </div>
               </>
@@ -693,33 +652,45 @@ export function ProjectDetailPage() {
           </div>
         </div>
 
-        {/* Status & Meta Bar */}
-        <div className="flex flex-wrap items-center gap-3 relative">
-          {/* Status dropdown */}
+        {/* Hidden PinButton to preserve useEffect content sync */}
+        <div className="hidden">
+          <PinButton type="project" id={project.id} title={project.title} currentId={id} contentVersion={tasks.length} content={pinnedContent} />
+        </div>
+
+        <LineageBreadcrumb project={project} />
+
+        {/* Title */}
+        <h1 className="text-3xl sm:text-4xl font-black italic uppercase tracking-tight text-[var(--brand-text-primary)] leading-[0.95] mb-4">
+          {project.title}
+        </h1>
+
+        {/* Meta row — status + type as inline chips */}
+        <div className="flex flex-wrap items-center gap-2 mb-8 relative">
+          {project.is_priority && (
+            <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-amber-400" style={{ background: 'rgba(251,191,36,0.08)' }}>
+              <Star className="h-3 w-3 fill-current" /> Priority
+            </span>
+          )}
           <div className="relative">
             <button
               onClick={() => setShowStatusMenu(!showStatusMenu)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--glass-surface)] border border-white/5 transition-all hover:border-brand-primary/30"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-all hover:bg-white/[0.04]"
+              style={{ background: 'rgba(255,255,255,0.03)' }}
             >
-              <Target className="h-3.5 w-3.5 text-brand-primary" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-brand-primary">{project.status}</span>
-              <ChevronDown className="h-3 w-3 text-brand-primary opacity-60" />
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: project.status === 'active' ? 'rgb(52,211,153)' : project.status === 'completed' ? 'rgb(59,130,246)' : 'rgba(255,255,255,0.25)' }} />
+              <span className="text-[11px] font-semibold capitalize" style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}>{project.status}</span>
+              <ChevronDown className="h-2.5 w-2.5" style={{ color: 'var(--brand-text-secondary)', opacity: 0.3 }} />
             </button>
             {showStatusMenu && (
               <>
                 <div className="fixed inset-0 z-50" onClick={() => setShowStatusMenu(false)} />
-                <div className="absolute left-0 top-full mt-1.5 w-44 rounded-xl p-1 z-[60] premium-glass border border-white/10 shadow-2xl">
+                <div className="absolute left-0 top-full mt-1.5 w-40 rounded-2xl p-1.5 z-[60] bg-[#1a1a24] border border-white/[0.08] shadow-2xl">
                   {(['active', 'next', 'dormant', 'completed', 'graveyard'] as Project['status'][]).map((s) => (
                     <button
                       key={s}
-                      onClick={() => {
-                        setShowStatusMenu(false)
-                        handleStatusChange(s)
-                      }}
-                      className={`w-full px-3 py-2 text-left text-[10px] font-black uppercase tracking-widest rounded-lg transition-colors ${
-                        project.status === s
-                          ? 'bg-brand-primary/10 text-brand-primary'
-                          : 'hover:bg-white/5 text-brand-text-secondary'
+                      onClick={() => { setShowStatusMenu(false); handleStatusChange(s) }}
+                      className={`w-full px-3 py-2 text-left text-[12px] font-medium capitalize rounded-xl transition-colors ${
+                        project.status === s ? 'bg-white/[0.06] text-[var(--brand-text-primary)]' : 'hover:bg-white/[0.04] text-[var(--brand-text-secondary)] opacity-60'
                       }`}
                     >
                       {s}
@@ -729,303 +700,206 @@ export function ProjectDetailPage() {
               </>
             )}
           </div>
-
-          {/* Type badge */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--glass-surface)] border border-white/5">
-            <span className="text-[10px] font-black uppercase tracking-widest text-brand-text-muted">{project.type || 'Uncategorized'}</span>
-          </div>
+          {project.type && (
+            <span className="text-[11px] font-medium px-2.5 py-1 rounded-lg" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4, background: 'rgba(255,255,255,0.03)' }}>
+              {project.type}
+            </span>
+          )}
         </div>
       </div>
 
       {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        <div className="space-y-6">
+      <div className="max-w-2xl mx-auto px-5 sm:px-6 space-y-8">
               {/* Power Hour Focus Mode */}
               {powerHourTask && (
-                <div className="p-8 border-2 border-blue-500/50 relative overflow-hidden group mb-8 bg-brand-primary/20">
-                  <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform duration-700">
-                    <Zap className="h-48 w-48 text-brand-primary" />
-                  </div>
+                <div className="p-6 rounded-2xl relative overflow-hidden group" style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.12)' }}>
                   <div className="relative z-10">
-                    <div className="flex items-center gap-2 mb-4 text-brand-primary font-black uppercase tracking-[0.2em] text-[10px]">
-                      <Zap className="h-4 w-4 fill-current" />
-                      Focus Session
+                    <div className="flex items-center gap-2 mb-3">
+                      <Zap className="h-3.5 w-3.5 fill-current" style={{ color: 'rgb(59,130,246)' }} />
+                      <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'rgb(59,130,246)', opacity: 0.7 }}>Focus Session</span>
                     </div>
 
-                    <h2 className="text-3xl font-black text-[var(--brand-text-primary)] mb-3 uppercase italic tracking-tighter leading-none">
+                    <h2 className="text-xl font-bold text-[var(--brand-text-primary)] mb-2 leading-snug">
                       {powerHourTask.task_title}
                     </h2>
 
                     {powerHourTask.session_summary ? (
-                      <p className="text-xl font-medium text-brand-primary/80 mb-6 max-w-2xl leading-relaxed italic font-serif">
-                        "{powerHourTask.session_summary}"
+                      <p className="text-[15px] text-[var(--brand-text-secondary)] mb-5 leading-relaxed opacity-70">
+                        {powerHourTask.session_summary}
                       </p>
                     ) : (
-                      <p className="text-lg text-[var(--brand-text-secondary)] mb-6 max-w-2xl leading-relaxed">
+                      <p className="text-[15px] text-[var(--brand-text-secondary)] mb-5 leading-relaxed opacity-60">
                         {powerHourTask.task_description}
                       </p>
                     )}
 
-                    <div className="flex items-center gap-4">
-                      <button
-                        onClick={() => {
-                          const el = document.querySelector('[data-task-list]')
-                          if (el) {
-                            window.scrollTo({
-                              top: el.getBoundingClientRect().top + window.scrollY - 120,
-                              behavior: 'smooth'
-                            })
-                          }
-                          addToast({ title: 'Focus on your hit-list below', variant: 'default' })
-                        }}
-                        className="px-6 py-3 bg-brand-primary hover:bg-brand-primary text-[var(--brand-text-primary)] font-black uppercase text-xs tracking-widest rounded-xl transition-all flex items-center gap-3 group/btn"
-                      >
-                        <Check className="h-4 w-4 group-hover/btn:scale-125 transition-transform" />
-                        Execute Hit-List
-                      </button>
-
-                      <div className="text-[10px] font-black uppercase tracking-widest text-brand-primary/50">
-                        60 Minutes Remaining
-                      </div>
-                    </div>
+                    <button
+                      onClick={() => {
+                        const el = document.querySelector('[data-task-list]')
+                        if (el) { window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 120, behavior: 'smooth' }) }
+                        addToast({ title: 'Focus on your hit-list below', variant: 'default' })
+                      }}
+                      className="px-5 py-2.5 rounded-xl text-[12px] font-semibold transition-all active:scale-95 flex items-center gap-2"
+                      style={{ background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.2)', color: 'rgb(59,130,246)' }}
+                    >
+                      <Check className="h-3.5 w-3.5" /> Start
+                    </button>
                   </div>
-
-                  {/* Aesthetic Lines */}
-                  <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-30" />
                 </div>
               )}
 
-              <div className="space-y-6">
-                {/* Sparked By: Origin thoughts that inspired this project */}
-                {sparkedByMemories.length > 0 && (
-                  <div className="p-4 rounded-xl border border-[var(--glass-surface)] bg-white/[0.02]">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Sprout className="h-4 w-4" style={{ color: 'var(--brand-text-secondary)' }} />
-                      <span className="text-[10px] font-black uppercase tracking-[0.3em]" style={{ color: 'var(--brand-text-secondary)' }}>Sparked by</span>
-                    </div>
-                    <div className="space-y-2">
-                      {sparkedByMemories.map(m => (
-                        <div key={m.id} className="p-3 rounded-lg bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)]">
-                          <p className="text-sm italic leading-relaxed line-clamp-2" style={{ color: 'var(--brand-text-primary)' }}>
-                            "{m.body || m.title}"
-                          </p>
-                          <p className="text-[10px] mt-1 opacity-50" style={{ color: 'var(--brand-primary)' }}>
-                            {new Date(m.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
+              {/* Sparked By */}
+              {sparkedByMemories.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Sprout className="h-3.5 w-3.5" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }} />
+                    <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--brand-text-secondary)', opacity: 0.3 }}>Sparked by</span>
                   </div>
-                )}
+                  <div className="space-y-2">
+                    {sparkedByMemories.map(m => (
+                      <div key={m.id} className="px-4 py-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                        <p className="text-[13px] italic leading-relaxed line-clamp-2" style={{ color: 'var(--brand-text-primary)', opacity: 0.6 }}>
+                          "{m.body || m.title}"
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-                {/* About this project: description, why, done when */}
-                <div className="relative group">
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
-                  <div className="relative p-6 sm:p-8 rounded-2xl bg-white/[0.03] border border-[var(--glass-surface)] space-y-5">
-
-                    {/* Description — big italic headline */}
-                    <div
-                      className="cursor-pointer hover:opacity-80 transition-opacity"
-                      onClick={() => {
-                        setTempDescription(project.description || '')
-                        setEditingDescription(true)
-                        setTimeout(() => descriptionInputRef.current?.focus(), 100)
+              {/* About — description + finish line in one clean card */}
+              <div className="p-5 sm:p-6 rounded-2xl space-y-5" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                {/* Description */}
+                <div
+                  className="cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => {
+                    setTempDescription(project.description || '')
+                    setEditingDescription(true)
+                    setTimeout(() => descriptionInputRef.current?.focus(), 100)
+                  }}
+                >
+                  {editingDescription ? (
+                    <textarea
+                      ref={descriptionInputRef}
+                      value={tempDescription}
+                      onChange={(e) => setTempDescription(e.target.value)}
+                      onBlur={saveDescription}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveDescription() }
+                        if (e.key === 'Escape') cancelEdit()
                       }}
-                    >
-                      {editingDescription ? (
-                        <textarea
-                          ref={descriptionInputRef}
-                          value={tempDescription}
-                          onChange={(e) => setTempDescription(e.target.value)}
-                          onBlur={saveDescription}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                              e.preventDefault()
-                              saveDescription()
-                            }
-                            if (e.key === 'Escape') cancelEdit()
-                          }}
-                          className="w-full bg-black/40 border-[var(--glass-surface-hover)] rounded-xl p-4 text-xl sm:text-2xl font-medium text-[var(--brand-text-primary)] leading-relaxed italic font-serif text-center outline-none focus:border-blue-500/50"
-                          autoFocus
-                        />
-                      ) : (
-                        <div className="text-xl sm:text-2xl font-medium text-[var(--brand-text-primary)]/90 italic font-serif text-center">
-                          <MarkdownRenderer
-                            content={project.description ? `"${project.description}"` : '"What is this project about?"'}
-                            className="text-center"
-                          />
-                        </div>
-                      )}
+                      className="w-full bg-black/30 rounded-xl p-4 text-[17px] sm:text-lg font-medium text-[var(--brand-text-primary)] leading-relaxed italic font-serif text-center outline-none border border-white/[0.08] focus:border-white/[0.15]"
+                      autoFocus
+                    />
+                  ) : (
+                    <div className="text-[17px] sm:text-lg font-medium leading-relaxed italic font-serif text-center" style={{ color: 'var(--brand-text-primary)', opacity: 0.75 }}>
+                      <MarkdownRenderer
+                        content={project.description ? `"${project.description}"` : '"What is this project about?"'}
+                        className="text-center"
+                      />
                     </div>
+                  )}
+                </div>
 
-                    {/* Version history */}
-                    <ProjectLineage project={project} />
+                {/* Version history */}
+                <ProjectLineage project={project} />
 
-                    {/* Finish Line */}
-                    <div className="pt-5 border-t border-[var(--glass-surface)]">
-                      <div>
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] block mb-3 flex items-center gap-2" style={{ color: 'rgba(52,211,153,0.5)' }}>
-                          <Target className="h-3.5 w-3.5" />
-                          Finish Line
-                        </span>
-                        <div
-                          className="cursor-pointer hover:opacity-80 transition-opacity"
-                          onClick={!editingGoal ? startEditGoal : undefined}
-                        >
-                          {editingGoal ? (
-                            <div className="space-y-3">
-                              <textarea
-                                ref={goalInputRef}
-                                value={tempGoal}
-                                onChange={(e) => setTempGoal(e.target.value)}
-                                className="w-full bg-black/40 border border-[var(--glass-surface-hover)] rounded-xl p-4 text-lg sm:text-xl font-medium resize-none focus:outline-none text-[var(--brand-text-primary)] leading-relaxed italic font-serif text-center"
-                                style={{ borderColor: 'rgba(52,211,153,0.2)' }}
-                                rows={3}
-                                placeholder="What does done look like?"
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter' && !e.shiftKey) {
-                                    e.preventDefault()
-                                    saveGoal()
-                                  } else if (e.key === 'Escape') {
-                                    cancelEdit()
-                                  }
-                                }}
-                              />
-                              <div className="flex gap-2 justify-end">
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); cancelEdit() }}
-                                  className="px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-lg bg-zinc-800 hover:bg-zinc-700 text-brand-text-muted"
-                                >
-                                  Cancel
-                                </button>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); saveGoal() }}
-                                  className="px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-lg border transition-all"
-                                  style={{ background: 'rgba(52,211,153,0.15)', borderColor: 'rgba(52,211,153,0.3)', color: 'rgb(52,211,153)' }}
-                                >
-                                  Save
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="text-lg sm:text-xl font-medium text-[var(--brand-text-primary)]/80 leading-relaxed italic font-serif text-center">
-                              {project.metadata?.end_goal ? (
-                                <MarkdownRenderer content={project.metadata.end_goal} className="text-center" />
-                              ) : (
-                                <span className="opacity-30">What does done look like?</span>
-                              )}
-                            </div>
-                          )}
+                {/* Finish Line */}
+                <div className="pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                  <span className="text-[11px] font-semibold uppercase tracking-wider block mb-2 flex items-center gap-1.5" style={{ color: 'rgb(52,211,153)', opacity: 0.5 }}>
+                    <Target className="h-3 w-3" /> Finish line
+                  </span>
+                  <div
+                    className="cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={!editingGoal ? startEditGoal : undefined}
+                  >
+                    {editingGoal ? (
+                      <div className="space-y-3">
+                        <textarea
+                          ref={goalInputRef}
+                          value={tempGoal}
+                          onChange={(e) => setTempGoal(e.target.value)}
+                          className="w-full bg-black/30 rounded-xl p-4 text-[15px] sm:text-base font-medium resize-none focus:outline-none text-[var(--brand-text-primary)] leading-relaxed italic font-serif text-center border border-white/[0.08] focus:border-white/[0.15]"
+                          rows={3}
+                          placeholder="What does done look like?"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveGoal() }
+                            else if (e.key === 'Escape') { cancelEdit() }
+                          }}
+                        />
+                        <div className="flex gap-2 justify-end">
+                          <button onClick={(e) => { e.stopPropagation(); cancelEdit() }} className="px-3 py-1.5 text-[11px] font-medium rounded-lg hover:bg-white/[0.05] transition-colors" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>Cancel</button>
+                          <button onClick={(e) => { e.stopPropagation(); saveGoal() }} className="px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all" style={{ background: 'rgba(52,211,153,0.1)', color: 'rgb(52,211,153)' }}>Save</button>
                         </div>
                       </div>
-                    </div>
+                    ) : (
+                      <p className="text-[15px] sm:text-base font-medium leading-relaxed italic font-serif text-center" style={{ color: 'var(--brand-text-primary)', opacity: 0.6 }}>
+                        {project.metadata?.end_goal || <span style={{ opacity: 0.4 }}>What does done look like?</span>}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* The Path — phased project journey */}
-              <div data-task-list className="mt-8">
+              {/* The Path */}
+              <div data-task-list>
                 {/* All Tasks Complete Banner */}
                 {tasks.length > 0 && tasks.every((t: any) => t.done) && (
-                  <div
-                    className="mb-4 p-5 rounded-2xl text-center"
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(34,197,94,0.15) 0%, rgba(59,130,246,0.12) 50%, rgba(168,85,247,0.1) 100%)',
-                      border: '1.5px solid rgba(34,197,94,0.3)',
-                      boxShadow: '0 0 24px rgba(34,197,94,0.08)',
-                    }}
-                  >
-                    <p className="text-lg font-black uppercase tracking-wider text-emerald-400 mb-1">
-                      All tasks complete!
-                    </p>
-                    <p className="text-xs text-[var(--brand-text-secondary)] mb-4 opacity-70">
-                      Every action item is done. Time to finish?
-                    </p>
+                  <div className="mb-5 p-5 rounded-2xl text-center" style={{ background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.12)' }}>
+                    <p className="text-[15px] font-bold text-emerald-400 mb-1">All tasks complete</p>
+                    <p className="text-[13px] mb-4" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>Every action item is done. Ready to wrap up?</p>
                     <button
-                      onClick={() => {
-                        handleStatusChange('completed')
-                      }}
-                      className="px-6 py-3 rounded-xl font-black uppercase text-sm tracking-widest transition-all active:scale-95"
-                      style={{
-                        background: 'linear-gradient(135deg, rgba(34,197,94,0.25) 0%, rgba(59,130,246,0.2) 100%)',
-                        border: '2px solid rgba(34,197,94,0.5)',
-                        color: 'rgb(34,197,94)',
-                        boxShadow: '0 4px 16px rgba(34,197,94,0.15)',
-                      }}
+                      onClick={() => handleStatusChange('completed')}
+                      className="px-5 py-2.5 rounded-xl text-[12px] font-semibold transition-all active:scale-95"
+                      style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)', color: 'rgb(52,211,153)' }}
                     >
-                      Finish It
+                      Mark Complete
                     </button>
                   </div>
                 )}
 
                 <ProjectPath
                   tasks={project.metadata?.tasks?.filter((task: any, index: number, self: any[]) =>
-                    index === self.findIndex((t: any) => (
-                      t.text.trim().toLowerCase() === task.text.trim().toLowerCase()
-                    ))
+                    index === self.findIndex((t: any) => t.text.trim().toLowerCase() === task.text.trim().toLowerCase())
                   ) || []}
                   highlightedTasks={location.state?.powerHourTasks || []}
                   projectId={project.id}
                   onUpdate={async (tasks) => {
                     if (!project) return
-
-                    // Track newly completed tasks so the chat panel can show them inline
-                    const newlyCompleted = tasks.filter(
-                      t => t.done && !prevTasksRef.current.find(p => p.id === t.id && p.done)
-                    )
-                    if (newlyCompleted.length > 0) {
-                      setRecentCompletions(prev => [...prev, ...newlyCompleted.map(t => t.text)])
-                    }
+                    const newlyCompleted = tasks.filter(t => t.done && !prevTasksRef.current.find(p => p.id === t.id && p.done))
+                    if (newlyCompleted.length > 0) { setRecentCompletions(prev => [...prev, ...newlyCompleted.map(t => t.text)]) }
                     prevTasksRef.current = tasks.map(t => ({ id: t.id, done: t.done }))
-
                     const now = new Date().toISOString()
-                    const newMetadata = {
-                      ...project.metadata,
-                      tasks: tasks,
-                      progress: Math.round((tasks.filter(t => t.done).length / tasks.length) * 100) || 0
-                    }
-
                     try {
                       await updateProject(project.id, {
-                        metadata: newMetadata,
-                        last_active: now,
-                        updated_at: now
+                        metadata: { ...project.metadata, tasks, progress: Math.round((tasks.filter(t => t.done).length / tasks.length) * 100) || 0 },
+                        last_active: now, updated_at: now,
                       })
-                    } catch (error) {
-                      console.error('[ProjectDetail] Update failed:', error)
-                    }
+                    } catch (error) { console.error('[ProjectDetail] Update failed:', error) }
                   }}
                 />
               </div>
 
-              {/* Inline Guide — AI conversation thread */}
+              {/* Guide */}
               {project && (
-                <div className="mt-8">
-                  <InlineGuide
-                    project={project}
-                    recentCompletions={recentCompletions}
-                    onAddTask={handleChatAddTask}
-                    onUpdateTasks={handleChatUpdateTasks}
-                  />
-                </div>
+                <InlineGuide
+                  project={project}
+                  recentCompletions={recentCompletions}
+                  onAddTask={handleChatAddTask}
+                  onUpdateTasks={handleChatUpdateTasks}
+                />
               )}
 
-              {/* Add Note button */}
-              <div className="mt-12 pb-32">
+              {/* Add Note */}
+              <div className="pb-32">
                 <button
                   onClick={() => setShowAddNote(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold uppercase tracking-wide transition-colors active:scale-95"
-                  style={{
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    color: 'var(--brand-primary)',
-                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[12px] font-medium transition-all active:scale-95 hover:bg-white/[0.04]"
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', color: 'var(--brand-text-secondary)', opacity: 0.5 }}
                 >
-                  <Plus className="h-3 w-3" />
-                  Add Note
+                  <Plus className="h-3 w-3" /> Add Note
                 </button>
               </div>
-        </div>
       </div>
 
 
