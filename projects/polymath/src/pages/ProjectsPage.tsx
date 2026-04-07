@@ -287,7 +287,7 @@ export function ProjectsPage() {
                 { id: 'all', label: 'All' },
                 { id: 'upcoming', label: 'Next' },
                 { id: 'active', label: 'Active' },
-                { id: 'dormant', label: 'Dormant' },
+                { id: 'dormant', label: 'Ideas' },
                 { id: 'completed', label: 'Done' }
               ]}
               activeTab={filter}

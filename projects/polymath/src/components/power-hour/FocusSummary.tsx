@@ -4,27 +4,50 @@ import { CheckCircle2, ArrowRight, Bookmark } from 'lucide-react'
 import { useFocusStore } from '../../stores/useFocusStore'
 import { useProjectStore } from '../../stores/useProjectStore'
 
+const REFLECTION_EMOJIS = [
+  { emoji: '😤', label: 'Frustrating', value: 1 },
+  { emoji: '😐', label: 'Meh', value: 2 },
+  { emoji: '🙂', label: 'Decent', value: 3 },
+  { emoji: '😊', label: 'Good', value: 4 },
+  { emoji: '🔥', label: 'Crushed it', value: 5 },
+] as const
+
 export function FocusSummary() {
     const { tasks, elapsedSeconds, reset, projectId } = useFocusStore()
     const { updateProject } = useProjectStore()
     const [nextStep, setNextStep] = useState('')
+    const [rating, setRating] = useState<number | null>(null)
 
     const completedTasks = tasks.filter(t => t.completed)
+    const skippedTasks = tasks.filter(t => !t.completed)
     const durationMinutes = Math.floor(elapsedSeconds / 60)
 
     const handleExit = async () => {
-        // 1. Save "Bookmark" if provided
-        if (projectId && nextStep.trim()) {
+        if (projectId) {
+            const project = useProjectStore.getState().allProjects.find(p => p.id === projectId)
+            const existingSessions = project?.metadata?.sessions || []
+
             await updateProject(projectId, {
                 metadata: {
-                    next_step: nextStep.trim(),
+                    ...project?.metadata,
+                    next_step: nextStep.trim() || undefined,
                     last_session: new Date().toISOString(),
-                    last_duration: durationMinutes
+                    last_duration: durationMinutes,
+                    sessions: [
+                        ...existingSessions,
+                        {
+                            date: new Date().toISOString(),
+                            duration_minutes: durationMinutes,
+                            tasks_completed: completedTasks.length,
+                            tasks_skipped: skippedTasks.length,
+                            rating: rating || undefined,
+                            bookmark: nextStep.trim() || undefined,
+                        },
+                    ].slice(-20), // Keep last 20 sessions
                 }
             })
         }
 
-        // 2. Just reset store, which unmounts the overlay
         reset()
     }
 
@@ -41,17 +64,40 @@ export function FocusSummary() {
                     </div>
                     <h2 className="text-3xl font-serif mb-2">Session Logged</h2>
                     <p className="text-[#64748b]">
-                        {durationMinutes}m focus session  {completedTasks.length} tasks completed
+                        {durationMinutes}m focus session  {completedTasks.length} task{completedTasks.length !== 1 ? 's' : ''} completed
                     </p>
                 </div>
 
-                {/* Task List - Minimal */}
-                <div className="bg-[var(--glass-surface)] rounded-2xl p-6 mb-6 border border-[var(--glass-surface)] max-h-[30vh] overflow-y-auto">
-
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#64748b] mb-4">
-                        Completed
+                {/* How did that go? */}
+                <div className="mb-8">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#64748b] mb-4 text-center">
+                        How did that go?
                     </h3>
-                    {completedTasks.length > 0 ? (
+                    <div className="flex items-center justify-center gap-3">
+                        {REFLECTION_EMOJIS.map(r => (
+                            <button
+                                key={r.value}
+                                onClick={() => setRating(r.value)}
+                                className="flex flex-col items-center gap-1 transition-all"
+                                style={{
+                                    opacity: rating === null ? 0.6 : rating === r.value ? 1 : 0.25,
+                                    transform: rating === r.value ? 'scale(1.2)' : 'scale(1)',
+                                }}
+                                title={r.label}
+                            >
+                                <span className="text-2xl">{r.emoji}</span>
+                                <span className="text-[9px] text-[#64748b]">{r.label}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Task List - Minimal */}
+                {completedTasks.length > 0 && (
+                    <div className="bg-[var(--glass-surface)] rounded-2xl p-6 mb-6 border border-[var(--glass-surface)] max-h-[25vh] overflow-y-auto">
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-[#64748b] mb-4">
+                            Completed
+                        </h3>
                         <ul className="space-y-3">
                             {completedTasks.map(task => (
                                 <li key={task.id} className="text-sm text-[#cbd5e1] leading-relaxed flex gap-3">
@@ -60,10 +106,8 @@ export function FocusSummary() {
                                 </li>
                             ))}
                         </ul>
-                    ) : (
-                        <p className="text-sm text-[#64748b] italic">No tasks completed this session.</p>
-                    )}
-                </div>
+                    </div>
+                )}
 
                 {/* Bookmark / Next Step */}
                 <div className="mb-8">
@@ -94,7 +138,6 @@ export function FocusSummary() {
                         <span>Return to Day</span>
                         <ArrowRight className="h-4 w-4" />
                     </button>
-                    {/* Could add a "Continue Project" button here if deep linking back to project page */}
                 </div>
             </div>
         </motion.div>
