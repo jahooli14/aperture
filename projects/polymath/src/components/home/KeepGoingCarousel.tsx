@@ -4,7 +4,7 @@
  * "Start session" drops directly into FocusSession.
  */
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence, type PanInfo } from 'framer-motion'
 import { Play, ChevronLeft, ChevronRight, Zap } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -39,21 +39,28 @@ export function KeepGoingCarousel() {
   // Prefetch power hour plans for visible projects
   const [sessionPlans, setSessionPlans] = useState<Record<string, any>>({})
 
+  // Stabilise the dependency: only re-run when the set of project IDs changes
+  const projectIds = useMemo(() => projects.map(p => p.id).join(','), [projects])
+  const sessionPlansRef = useRef(sessionPlans)
+  sessionPlansRef.current = sessionPlans
+
   useEffect(() => {
+    if (!projectIds) return
+    const ids = projectIds.split(',')
     const duration = Number(localStorage.getItem(DURATION_KEY)) || 60
-    projects.forEach(async (p) => {
-      if (sessionPlans[p.id]) return
+    ids.forEach(async (id) => {
+      if (sessionPlansRef.current[id]) return
       try {
-        const res = await fetch(`/api/power-hour?projectId=${p.id}&duration=${duration}`)
+        const res = await fetch(`/api/power-hour?projectId=${id}&duration=${duration}`)
         if (res.ok) {
           const data = await res.json()
           if (data.tasks?.[0]) {
-            setSessionPlans(prev => ({ ...prev, [p.id]: data.tasks[0] }))
+            setSessionPlans(prev => ({ ...prev, [id]: data.tasks[0] }))
           }
         }
       } catch {}
     })
-  }, [projects])
+  }, [projectIds])
 
   const total = projects.length
   const current = projects[idx] || null
