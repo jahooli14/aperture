@@ -23,6 +23,7 @@ export interface BedtimePrompt {
   type: 'connection' | 'divergent' | 'revisit' | 'transform'
   relatedIds: string[] // Memory/project/article IDs that inspired this
   metaphor?: string // Optional poetic framing for enhanced contemplation
+  context?: string // Brief seed thought shown before drifting to prime the subconscious
   format?: 'question' | 'statement' | 'visualization' | 'scenario' | 'incubation' // Prompt variety
 }
 
@@ -47,11 +48,16 @@ export async function generateBreakPrompts(userId: string): Promise<BedtimePromp
   1. **Oblique Strategy**: Use randomness or paradox. "Honor thy error as a hidden intention."
   2. **Inversion**: "What if you did the opposite?"
   3. **Scale Shift**: "View this from 10,000 feet."
-  
+
+  Each prompt needs:
+  - "context": A brief seed thought (1-2 sentences) shown BEFORE drifting — sets the mood and primes the reset.
+  - "prompt": The specific question shown AFTER waking from the drift — the insight trigger.
+
   Return JSON array:
   [
     {
       "prompt": "...",
+      "context": "A brief framing thought to hold during the reset...",
       "type": "transform",
       "metaphor": "..."
     }
@@ -461,6 +467,8 @@ Select strategies based on the inputs to generate 3-4 prompts.
 **OUTPUT INSTRUCTIONS:**
 - Generate 3-4 distinct prompts using different strategies.
 - Keep prompts clear, conversational, and grounded.
+- **context**: A brief, evocative seed thought (1-2 sentences) shown BEFORE drifting to prime the subconscious. This sets the scene — a mood, a tension, a frame to hold loosely as the user falls asleep or takes a break.
+- **prompt**: The specific question or insight shown AFTER waking from the drift. This should be sharp and actionable — the "aha" moment.
 - **Metaphor**: Provide a simple, concrete visual metaphor (optional).
 - **Type**: Must be one of: 'connection', 'divergent', 'revisit', 'transform'.
 
@@ -473,6 +481,7 @@ Return JSON array:
 [
   {
     "prompt": "...",
+    "context": "A brief seed thought to hold as you drift...",
     "type": "transform",
     "metaphor": "Clearing the path...",
     "strategy": "Strategic Overview",

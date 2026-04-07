@@ -311,10 +311,24 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
 
             <h2 className="text-2xl font-serif font-medium mb-4 text-[#E2E8F0]">
               {mode === 'sleep' ? 'The Steel Ball' : 'The Reset Sphere'}
-            </h2>            <p className="text-lg text-[var(--brand-text-secondary)] leading-relaxed mb-8">
+            </h2>
+
+            {/* Context prompt — seed the subconscious before drifting */}
+            {currentPrompt && (
+              <div className="mb-6 p-4 rounded-xl bg-violet-500/5 border border-violet-500/10">
+                <p className="text-xs uppercase tracking-widest text-violet-400 font-bold mb-2">
+                  {mode === 'sleep' ? 'Tonight\'s Seed' : 'Your Reset Context'}
+                </p>
+                <p className="text-base font-serif italic text-[#E2E8F0] leading-relaxed">
+                  {currentPrompt.context || currentPrompt.metaphor || currentPrompt.prompt}
+                </p>
+              </div>
+            )}
+
+            <p className="text-sm text-[var(--brand-text-secondary)] leading-relaxed mb-8">
               {mode === 'sleep'
-                ? "Hold your phone loosely in your hand. Close your eyes.\n\nWhen you drift into the edge of sleep and your hand slips...\nWe will catch the insight."
-                : "Hold your phone loosely. Close your eyes.\n\nLet your mind wander away from the problem.\nWhen your focus breaks and your hand slips..."}
+                ? "Hold your phone loosely. Close your eyes. Let the thought sit with you as you drift..."
+                : "Hold your phone loosely. Close your eyes. Let your mind wander away from the problem..."}
             </p>
 
             <button

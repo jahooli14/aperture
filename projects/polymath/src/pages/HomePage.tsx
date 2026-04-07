@@ -28,6 +28,7 @@ import { KeepGoingCarousel } from '../components/home/KeepGoingCarousel'
 import { TrySomethingNewCarousel, type IdeaItem } from '../components/home/TrySomethingNewCarousel'
 import { UnshapedNudgeBar } from '../components/home/UnshapedNudgeBar'
 import { ThoughtOfTheDay } from '../components/home/ThoughtOfTheDay'
+import { WeeklyIntersection } from '../components/home/WeeklyIntersection'
 import { BedtimeFloatingIcon } from '../components/home/BedtimeFloatingIcon'
 import { AlertCircle, ArrowRight, Film, Music, Monitor, Book, MapPin, Gamepad2, Calendar, FileText, Quote, Box } from 'lucide-react'
 
@@ -186,6 +187,11 @@ export function HomePage() {
           {/* Keep Going */}
           <div className="mb-8">
             <KeepGoingCarousel />
+          </div>
+
+          {/* Weekly Intersection — multi-project crossover highlight */}
+          <div className="mb-8">
+            <WeeklyIntersection />
           </div>
 
           {/* Try Something New */}

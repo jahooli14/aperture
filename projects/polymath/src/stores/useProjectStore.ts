@@ -555,6 +555,7 @@ export const useFocusedProjects = () =>
   useProjectStore(useShallow(state => {
     const active = state.allProjects.filter(p =>
       ['active', 'upcoming'].includes(p.status) && p.status !== 'graveyard'
+      && p.metadata?.is_shaped !== false
     )
     const priority = active.filter(p => p.is_priority)
     const recent = active
