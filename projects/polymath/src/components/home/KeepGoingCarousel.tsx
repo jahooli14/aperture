@@ -12,7 +12,6 @@ import { useFocusedProjects } from '../../stores/useProjectStore'
 import { useFocusStore } from '../../stores/useFocusStore'
 import { getTheme } from '../../lib/projectTheme'
 import { haptic } from '../../utils/haptics'
-import { useToast } from '../ui/toast'
 
 const SWIPE_THRESHOLD = 50
 const DURATION_KEY = 'polymath-power-hour-duration'
@@ -32,8 +31,6 @@ export function KeepGoingCarousel() {
   const navigate = useNavigate()
   const projects = useFocusedProjects()
   const startSession = useFocusStore(s => s.startSession)
-  const { addToast } = useToast()
-
   const [idx, setIdx] = useState(0)
   const [direction, setDirection] = useState(1)
   const [loadingSession, setLoadingSession] = useState<string | null>(null)
@@ -93,7 +90,7 @@ export function KeepGoingCarousel() {
         await prefetchPromises.current[projectId]
       }
 
-      // Re-read from ref since prefetch may have just completed
+      // 1. Try AI-generated power hour plan (cached from prefetch)
       const plan = sessionPlansRef.current[projectId]
       if (plan) {
         const tasks = [
@@ -107,7 +104,7 @@ export function KeepGoingCarousel() {
         }
       }
 
-      // Fallback: fetch fresh plan
+      // 2. Try fetching a fresh AI plan
       const duration = Number(localStorage.getItem(DURATION_KEY)) || 60
       const res = await fetch(`/api/power-hour?projectId=${projectId}&duration=${duration}`)
       if (res.ok) {
@@ -126,12 +123,27 @@ export function KeepGoingCarousel() {
         }
       }
 
-      // Plan generation failed — show error instead of silently redirecting
-      addToast({ title: "Couldn't generate session plan. Try again in a moment.", variant: "destructive" })
+      // 3. Fall back to the project's own task list
+      startSessionFromProjectTasks(projectId)
     } catch {
-      addToast({ title: "Couldn't start session. Try again.", variant: "destructive" })
+      // Even on network error, start from existing tasks
+      startSessionFromProjectTasks(projectId)
     } finally {
       setLoadingSession(null)
+    }
+  }
+
+  const startSessionFromProjectTasks = (projectId: string) => {
+    const project = projects.find(p => p.id === projectId)
+    const projectTasks = (project?.metadata?.tasks || [])
+      .filter((t: any) => !t.done)
+      .map((t: any) => ({ id: t.id, text: t.text }))
+
+    if (projectTasks.length > 0) {
+      startSession(projectId, projectTasks)
+    } else {
+      // No tasks at all — go to the project so they can add some
+      navigate(`/projects/${projectId}`)
     }
   }
 
