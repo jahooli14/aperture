@@ -526,6 +526,9 @@ export interface ProjectMetadata {
   project_mode?: 'completion' | 'recurring' // completion = has end goal, recurring = ongoing habit
   rejected_suggestions?: string[] // AI suggestions user removed - avoid suggesting again
   conversation?: ChatTurn[] // Persisted project chat history (Phase 2)
+  is_shaped?: boolean // Whether the project has been through the shaping conversation (default true for legacy)
+  session_headline?: string // AI-generated headline for Power Hour card (cached)
+  session_pitch?: string // AI-generated one-liner pitch for Power Hour card (cached)
   [key: string]: any // Allow arbitrary metadata
   // DEPRECATED: next_step field removed - use tasks?.find(t => !t.done)?.text instead
 }

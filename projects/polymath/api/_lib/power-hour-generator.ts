@@ -59,6 +59,10 @@ export async function generatePowerHourPlan(userId: string, projectId?: string, 
     if (projectsError) throw projectsError
     if (!projects || projects.length === 0) return []
 
+    // Filter out unshaped projects — they can't get session plans until shaped
+    const shapedProjects = projects.filter(p => p.metadata?.is_shaped !== false)
+    if (shapedProjects.length === 0) return []
+
     // 2. Fetch recent unread articles (Fuel) with embeddings
     const { data: fuel, error: fuelError } = await supabase
         .from('reading_queue')
@@ -84,7 +88,7 @@ export async function generatePowerHourPlan(userId: string, projectId?: string, 
     const now = Date.now()
 
     // Generate context for each project with semantically matched fuel/inspiration
-    const projectsContext = (await Promise.all(projects.map(async p => {
+    const projectsContext = (await Promise.all(shapedProjects.map(async p => {
         // Find relevant fuel and inspiration for this specific project using vector search
         let relevantFuel: any[] = []
         let relevantInspiration: any[] = []
@@ -399,7 +403,7 @@ REMEMBER: The user is looking at this list to decide "What do I do?". Make it ap
     // 5. Validate & Return
     const validatedTasks: PowerHourTask[] = tasksData.tasks.map((task: any) => {
         // Look up dormancy info for this project to pass through
-        const project = projects.find(p => p.id === task.project_id)
+        const project = shapedProjects.find(p => p.id === task.project_id)
         const lastActiveDate = project?.last_active ? new Date(project.last_active).getTime() : now
         const daysDormant = Math.floor((now - lastActiveDate) / (1000 * 60 * 60 * 24))
         const isDormant = daysDormant >= 14
