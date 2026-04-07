@@ -12,6 +12,7 @@ import { useFocusedProjects } from '../../stores/useProjectStore'
 import { useFocusStore } from '../../stores/useFocusStore'
 import { getTheme } from '../../lib/projectTheme'
 import { haptic } from '../../utils/haptics'
+import { useToast } from '../ui/toast'
 
 const SWIPE_THRESHOLD = 50
 const DURATION_KEY = 'polymath-power-hour-duration'
@@ -31,6 +32,7 @@ export function KeepGoingCarousel() {
   const navigate = useNavigate()
   const projects = useFocusedProjects()
   const startSession = useFocusStore(s => s.startSession)
+  const { addToast } = useToast()
 
   const [idx, setIdx] = useState(0)
   const [direction, setDirection] = useState(1)
@@ -38,6 +40,7 @@ export function KeepGoingCarousel() {
 
   // Prefetch power hour plans for visible projects
   const [sessionPlans, setSessionPlans] = useState<Record<string, any>>({})
+  const prefetchPromises = useRef<Record<string, Promise<void>>>({})
 
   // Stabilise the dependency: only re-run when the set of project IDs changes
   const projectIds = useMemo(() => projects.map(p => p.id).join(','), [projects])
@@ -48,17 +51,19 @@ export function KeepGoingCarousel() {
     if (!projectIds) return
     const ids = projectIds.split(',')
     const duration = Number(localStorage.getItem(DURATION_KEY)) || 60
-    ids.forEach(async (id) => {
-      if (sessionPlansRef.current[id]) return
-      try {
-        const res = await fetch(`/api/power-hour?projectId=${id}&duration=${duration}`)
-        if (res.ok) {
-          const data = await res.json()
-          if (data.tasks?.[0]) {
-            setSessionPlans(prev => ({ ...prev, [id]: data.tasks[0] }))
+    ids.forEach((id) => {
+      if (sessionPlansRef.current[id] || prefetchPromises.current[id]) return
+      prefetchPromises.current[id] = (async () => {
+        try {
+          const res = await fetch(`/api/power-hour?projectId=${id}&duration=${duration}`)
+          if (res.ok) {
+            const data = await res.json()
+            if (data.tasks?.[0]) {
+              setSessionPlans(prev => ({ ...prev, [id]: data.tasks[0] }))
+            }
           }
-        }
-      } catch {}
+        } catch {}
+      })()
     })
   }, [projectIds])
 
@@ -83,9 +88,14 @@ export function KeepGoingCarousel() {
     setLoadingSession(projectId)
 
     try {
-      const plan = sessionPlans[projectId]
+      // Wait for any in-flight prefetch to finish before checking cache
+      if (prefetchPromises.current[projectId]) {
+        await prefetchPromises.current[projectId]
+      }
+
+      // Re-read from ref since prefetch may have just completed
+      const plan = sessionPlansRef.current[projectId]
       if (plan) {
-        // Build task list from the cached plan
         const tasks = [
           ...(plan.ignition_tasks || []).map((t: any, i: number) => ({ id: `ign-${i}`, text: t.text })),
           ...(plan.checklist_items || []).map((t: any, i: number) => ({ id: `core-${i}`, text: t.text })),
@@ -116,10 +126,10 @@ export function KeepGoingCarousel() {
         }
       }
 
-      // Last fallback: navigate to project page
-      navigate(`/projects/${projectId}`)
+      // Plan generation failed — show error instead of silently redirecting
+      addToast({ title: "Couldn't generate session plan. Try again in a moment.", variant: "destructive" })
     } catch {
-      navigate(`/projects/${projectId}`)
+      addToast({ title: "Couldn't start session. Try again.", variant: "destructive" })
     } finally {
       setLoadingSession(null)
     }
