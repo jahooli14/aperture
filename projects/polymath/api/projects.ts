@@ -1031,7 +1031,10 @@ Return JSON only:
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  // INTERSECTIONS RESOURCE — Find multi-project crossovers scored by (project count × relevance)
+  // INTERSECTIONS — The Medici Effect in your knowledge graph.
+  // Finds where separate domains collide: shared fuel (memories/articles) bridging multiple
+  // projects reveals non-obvious cross-pollination. Scored by projectCount × relevance.
+  // See docs/INTERSECTIONS.md for the full intellectual framework.
   if (resource === 'intersections') {
     if (req.method === 'GET') {
       try {
@@ -1186,7 +1189,9 @@ Return JSON only:
 
           try {
             const reasoning = await generateText(
-              `In 1-2 sentences, explain the exciting intersection between these projects: ${projectNames}.${fuelContext ? ` They share these connections: ${fuelContext}.` : ''} What could emerge from combining them? Be specific and inspiring, not generic.`
+              `You are identifying Medici Effect intersections — the most valuable ideas emerge where unrelated domains collide (Packy McCormick, Frans Johansson). These projects live in one person's mind: ${projectNames}.${fuelContext ? ` Shared fuel bridging them: ${fuelContext}.` : ''}
+
+In 2-3 punchy sentences: What is the NON-OBVIOUS collision here? Don't just say they overlap — name what becomes possible ONLY when these specific domains cross-pollinate. What would someone working in just one of these fields never see? Be concrete about what could emerge at this intersection. The best intersections feel like a revelation, not a summary.`
             )
             intersections[0].reason = reasoning
           } catch {
