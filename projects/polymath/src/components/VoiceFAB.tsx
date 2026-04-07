@@ -20,6 +20,7 @@ import { haptic } from '../utils/haptics'
 import { CreateMemoryDialog } from './memories/CreateMemoryDialog'
 import { CreateProjectDialog } from './projects/CreateProjectDialog'
 import { AddItemToListDialog } from './lists/AddItemToListDialog'
+import { SaveArticleDialog } from './reading/SaveArticleDialog'
 import { CreateMenuModal } from './CreateMenuModal'
 import { TodoInput } from './todos/TodoInput'
 import { useTodoStore } from '../stores/useTodoStore'
@@ -108,6 +109,7 @@ export function VoiceFAB({
   const [showProjectDialog, setShowProjectDialog] = useState(false)
   const [showThoughtDialog, setShowThoughtDialog] = useState(false)
   const [showListDialog, setShowListDialog] = useState(false)
+  const [showArticleDialog, setShowArticleDialog] = useState(false)
   const { addTodo, areas } = useTodoStore()
 
   const [shouldStopRecording, setShouldStopRecording] = useState(false)
@@ -265,6 +267,7 @@ export function VoiceFAB({
         onAction={(action) => {
           if (action === 'thought') setShowThoughtDialog(true)
           if (action === 'project') setShowProjectDialog(true)
+          if (action === 'article') setShowArticleDialog(true)
           if (action === 'list') setShowListDialog(true)
         }}
       />
@@ -331,6 +334,7 @@ export function VoiceFAB({
       <CreateProjectDialog isOpen={showProjectDialog} onOpenChange={setShowProjectDialog} hideTrigger />
       <CreateMemoryDialog isOpen={showThoughtDialog} onOpenChange={setShowThoughtDialog} hideTrigger />
       <AddItemToListDialog isOpen={showListDialog} onOpenChange={setShowListDialog} />
+      <SaveArticleDialog isOpen={showArticleDialog} onOpenChange={setShowArticleDialog} />
 
       {/* Todo quick-add modal */}
       {createPortal(
