@@ -181,11 +181,24 @@ function selectDailyQueue(scores: ProjectScore[]): ProjectScore[] {
   return sorted.slice(0, 3)
 }
 
+/** Cron-triggered resources that use IDEA_ENGINE_SECRET instead of Supabase JWT */
+const CRON_RESOURCES = ['recompute-heat', 'evolve', 'generate-digest']
+
+function getCronUserId(req: VercelRequest): string | null {
+  const authHeader = req.headers.authorization
+  const expectedToken = process.env.IDEA_ENGINE_SECRET
+  if (!expectedToken || authHeader !== `Bearer ${expectedToken}`) return null
+  return process.env.IDEA_ENGINE_USER_ID || null
+}
+
 async function internalHandler(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseClient()
-  const userId = await getUserId(req)
-  if (!userId) return res.status(401).json({ error: 'Sign in to access your data' })
   const { resource } = req.query
+
+  // Cron-triggered resources accept IDEA_ENGINE_SECRET token auth
+  const isCronResource = CRON_RESOURCES.includes(resource as string)
+  const userId = isCronResource ? getCronUserId(req) : await getUserId(req)
+  if (!userId) return res.status(401).json({ error: 'Sign in to access your data' })
 
   // DEFAULT RESOURCE (Projects CRUD)
   if (!resource) {
