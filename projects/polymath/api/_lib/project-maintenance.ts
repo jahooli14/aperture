@@ -103,3 +103,77 @@ export async function pickSynthesisResurfaceCandidate(userId: string): Promise<a
   scored.sort((a, b) => b.score - a.score)
   return scored[0].project
 }
+
+/**
+ * Reshape dormant non-focused projects.
+ * Instead of nagging the user, the engine quietly evolves dormant project
+ * descriptions to stay relevant, then surfaces them in "Try Something New".
+ */
+export async function reshapeDormantProjects(userId: string): Promise<number> {
+  const { data: projects, error } = await supabase
+    .from('projects')
+    .select('id, title, description, metadata, last_active, status, is_priority, heat_score, heat_reason')
+    .eq('user_id', userId)
+    .in('status', ['dormant', 'on-hold', 'upcoming'])
+    .eq('is_priority', false)
+
+  if (error || !projects?.length) return 0
+
+  // Only reshape projects dormant 30+ days that haven't been reshaped recently
+  const now = Date.now()
+  const candidates = projects.filter(p => {
+    const lastActive = new Date(p.last_active || '2000-01-01').getTime()
+    const daysDormant = (now - lastActive) / (1000 * 60 * 60 * 24)
+    const lastReshaped = p.metadata?.last_reshaped ? new Date(p.metadata.last_reshaped).getTime() : 0
+    const daysSinceReshape = (now - lastReshaped) / (1000 * 60 * 60 * 24)
+    return daysDormant >= 30 && daysSinceReshape >= 14
+  })
+
+  if (candidates.length === 0) return 0
+
+  // Reshape up to 3 per run
+  let reshaped = 0
+  for (const project of candidates.slice(0, 3)) {
+    try {
+      const prompt = `This is a dormant creative project that someone started but hasn't touched in a while. Your job is to reimagine it — same core idea, but evolved. Make it feel fresh, not stale.
+
+Project: "${project.title}"
+Description: "${project.description || 'No description'}"
+
+Write a 1-sentence evolved description that:
+- Keeps the core essence but reframes it in a way that feels new
+- Suggests a different angle or approach they might not have considered
+- Makes the user think "oh, I could do THAT instead"
+
+Also write a heat_reason — a 1-sentence explanation of why this is worth revisiting now.
+
+Return JSON only:
+{
+  "evolved_description": "...",
+  "heat_reason": "..."
+}`
+
+      const raw = await generateText(prompt, { temperature: 0.85, maxTokens: 200 })
+      const parsed = JSON.parse(raw)
+
+      await supabase
+        .from('projects')
+        .update({
+          heat_score: Math.max(project.heat_score || 0, 5),
+          heat_reason: parsed.heat_reason || 'Reshaped — worth another look',
+          metadata: {
+            ...project.metadata,
+            evolved_description: parsed.evolved_description,
+            last_reshaped: new Date().toISOString(),
+          },
+        })
+        .eq('id', project.id)
+
+      reshaped++
+    } catch (err) {
+      console.error(`[reshapeDormantProjects] Failed to reshape ${project.id}:`, err)
+    }
+  }
+
+  return reshaped
+}
