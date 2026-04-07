@@ -35,7 +35,6 @@ const HomePage = lazy(lazyRetry(() => import('./pages/HomePage').then(m => ({ de
 const MemoriesPage = lazy(lazyRetry(() => import('./pages/MemoriesPage').then(m => ({ default: m.MemoriesPage }))))
 const ReadingPage = lazy(lazyRetry(() => import('./pages/ReadingPage').then(m => ({ default: m.ReadingPage }))))
 const ReaderPage = lazy(lazyRetry(() => import('./pages/ReaderPage').then(m => ({ default: m.ReaderPage }))))
-// SuggestionsPage removed — folded into Try Something New carousel on home
 const ProjectsPage = lazy(lazyRetry(() => import('./pages/ProjectsPage').then(m => ({ default: m.ProjectsPage }))))
 const DrawerPage = lazy(lazyRetry(() => import('./pages/DrawerPage')))
 const ProjectDetailPage = lazy(lazyRetry(() => import('./pages/ProjectDetailPage')))
