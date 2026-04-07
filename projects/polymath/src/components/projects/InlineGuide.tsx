@@ -93,7 +93,6 @@ export function InlineGuide({
   const inputRef = useRef<HTMLInputElement>(null)
   const updateProjectMeta = useProjectStore(state => state.updateProject)
 
-  // Build conversation history for API
   const getApiHistory = useCallback(() => {
     return messages
       .map(m => ({
@@ -102,7 +101,6 @@ export function InlineGuide({
       }))
   }, [messages])
 
-  // Persist conversation to project metadata
   const persistConversation = useCallback((msgs: Message[]) => {
     try {
       const turns: ChatTurn[] = msgs
@@ -136,17 +134,11 @@ export function InlineGuide({
         if (cancelled) return
 
         setBrief(data)
-
-        // Build the opening message: greeting + proactive question
         const opening = data.greeting + (data.proactiveQuestion ? `\n\n${data.proactiveQuestion}` : '')
         setMessages([{ kind: 'guide', content: opening }])
       } catch {
         if (!cancelled) {
-          // Fallback opening
-          setMessages([{
-            kind: 'guide',
-            content: 'What are you thinking about for this project?',
-          }])
+          setMessages([{ kind: 'guide', content: 'What are you thinking about for this project?' }])
         }
       } finally {
         if (!cancelled) setBriefLoading(false)
@@ -157,7 +149,6 @@ export function InlineGuide({
     return () => { cancelled = true }
   }, [project.id])
 
-  // Auto-scroll thread
   useEffect(() => {
     if (threadRef.current && expanded) {
       threadRef.current.scrollTop = threadRef.current.scrollHeight
@@ -169,7 +160,6 @@ export function InlineGuide({
     if (!message || thinking) return
 
     const tasks: Task[] = (project.metadata?.tasks as Task[] | undefined) || []
-
     const nextMessages: Message[] = [...messages, { kind: 'you', content: message }]
     setMessages(nextMessages)
     setInput('')
@@ -192,11 +182,8 @@ export function InlineGuide({
           projectMotivation: project.metadata?.motivation,
           projectGoal: project.metadata?.end_goal,
           tasks: tasks.map(t => ({
-            id: t.id,
-            text: t.text,
-            done: t.done,
-            is_ai_suggested: t.is_ai_suggested,
-            task_type: t.task_type,
+            id: t.id, text: t.text, done: t.done,
+            is_ai_suggested: t.is_ai_suggested, task_type: t.task_type,
           })),
           message,
           history: getApiHistory(),
@@ -204,9 +191,7 @@ export function InlineGuide({
       })
 
       let data: Record<string, unknown>
-      try {
-        data = await res.json()
-      } catch {
+      try { data = await res.json() } catch {
         setMessages(prev => [...prev, { kind: 'guide', content: "Something went wrong — try again." }])
         return
       }
@@ -222,19 +207,13 @@ export function InlineGuide({
         let updatedTasks = [...currentTasks]
         for (const op of data.taskOps as TaskOp[]) {
           if (op.action === 'complete') {
-            updatedTasks = updatedTasks.map(t =>
-              t.id === op.taskId ? { ...t, done: true, completed_at: new Date().toISOString() } : t
-            )
+            updatedTasks = updatedTasks.map(t => t.id === op.taskId ? { ...t, done: true, completed_at: new Date().toISOString() } : t)
           } else if (op.action === 'uncomplete') {
-            updatedTasks = updatedTasks.map(t =>
-              t.id === op.taskId ? { ...t, done: false, completed_at: undefined } : t
-            )
+            updatedTasks = updatedTasks.map(t => t.id === op.taskId ? { ...t, done: false, completed_at: undefined } : t)
           } else if (op.action === 'delete') {
             updatedTasks = updatedTasks.filter(t => t.id !== op.taskId)
           } else if (op.action === 'edit' && op.newText) {
-            updatedTasks = updatedTasks.map(t =>
-              t.id === op.taskId ? { ...t, text: op.newText! } : t
-            )
+            updatedTasks = updatedTasks.map(t => t.id === op.taskId ? { ...t, text: op.newText! } : t)
           }
         }
         await onUpdateTasks(updatedTasks)
@@ -269,22 +248,21 @@ export function InlineGuide({
     setAddedTasks(prev => new Set(prev).add(task.text))
   }
 
-  // The guide section
   return (
-    <div className="space-y-0">
+    <div>
       {/* Header */}
-      <div className="flex items-center gap-3 mb-3 opacity-50">
-        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--brand-text-primary)]/50">
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--brand-text-secondary)', opacity: 0.3 }}>
           Guide
         </span>
-        <div className="h-px bg-white/20 flex-grow" />
+        <div className="h-px flex-grow" style={{ background: 'rgba(255,255,255,0.04)' }} />
       </div>
 
       {/* Loading state */}
       {briefLoading && (
-        <div className="space-y-3 animate-pulse">
-          <div className="h-4 w-3/4 rounded bg-white/5" />
-          <div className="h-4 w-1/2 rounded bg-white/4" />
+        <div className="space-y-3 animate-pulse px-1">
+          <div className="h-4 w-3/4 rounded-lg" style={{ background: 'rgba(255,255,255,0.04)' }} />
+          <div className="h-4 w-1/2 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)' }} />
         </div>
       )}
 
@@ -298,16 +276,13 @@ export function InlineGuide({
             {messages.map((msg, i) => (
               <motion.div
                 key={i}
-                initial={{ opacity: 0, y: 6 }}
+                initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2, delay: i === 0 ? 0.15 : 0 }}
               >
                 {msg.kind === 'guide' ? (
-                  <div className="space-y-2">
-                    <p
-                      className="text-[15px] leading-relaxed whitespace-pre-wrap"
-                      style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}
-                    >
+                  <div className="space-y-3">
+                    <p className="text-[15px] leading-[1.65] whitespace-pre-wrap" style={{ color: 'var(--brand-text-primary)', opacity: 0.6 }}>
                       {msg.content}
                     </p>
 
@@ -317,13 +292,8 @@ export function InlineGuide({
                         {msg.echoes.map((echo, j) => (
                           <span
                             key={j}
-                            className="text-[10px] px-2 py-0.5 rounded-full"
-                            style={{
-                              background: 'rgba(255,255,255,0.03)',
-                              color: 'var(--brand-text-secondary)',
-                              opacity: 0.4,
-                              border: '1px solid rgba(255,255,255,0.06)',
-                            }}
+                            className="text-[10px] px-2 py-0.5 rounded-lg"
+                            style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--brand-text-secondary)', opacity: 0.35, border: '1px solid rgba(255,255,255,0.04)' }}
                             title={echo.snippet}
                           >
                             {echo.title}
@@ -340,32 +310,23 @@ export function InlineGuide({
                           return (
                             <div
                               key={j}
-                              className="flex items-center gap-2.5 px-3 py-2 rounded-xl"
-                              style={{
-                                background: 'rgba(255,255,255,0.03)',
-                                border: '1px solid rgba(255,255,255,0.06)',
-                              }}
+                              className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+                              style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}
                             >
-                              <p
-                                className="text-[13px] leading-snug flex-1"
-                                style={{ color: 'var(--brand-text-primary)', opacity: 0.7 }}
-                              >
+                              <p className="text-[13px] leading-snug flex-1" style={{ color: 'var(--brand-text-primary)', opacity: 0.6 }}>
                                 {task.text}
                               </p>
                               <button
                                 onClick={() => handleAddTask(task)}
                                 disabled={added}
-                                className="flex-shrink-0 flex items-center gap-1 px-2 py-1 rounded-lg transition-all disabled:opacity-40"
+                                className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all text-[11px] font-medium"
                                 style={{
-                                  background: added ? 'rgba(255,255,255,0.04)' : 'rgba(var(--brand-primary-rgb),0.12)',
-                                  border: `1px solid ${added ? 'rgba(255,255,255,0.06)' : 'rgba(var(--brand-primary-rgb),0.2)'}`,
-                                  color: added ? 'var(--brand-text-secondary)' : 'var(--brand-primary)',
+                                  background: added ? 'rgba(255,255,255,0.03)' : 'rgba(var(--brand-primary-rgb),0.08)',
+                                  color: added ? 'var(--brand-text-secondary)' : 'rgb(var(--brand-primary-rgb))',
+                                  opacity: added ? 0.4 : 0.7,
                                 }}
                               >
-                                {added
-                                  ? <><Check className="h-3 w-3" /><span className="text-[10px]">Added</span></>
-                                  : <><Plus className="h-3 w-3" /><span className="text-[10px]">Add</span></>
-                                }
+                                {added ? <><Check className="h-3 w-3" /> Added</> : <><Plus className="h-3 w-3" /> Add</>}
                               </button>
                             </div>
                           )
@@ -377,13 +338,8 @@ export function InlineGuide({
                   /* User message */
                   <div className="flex justify-end">
                     <p
-                      className="text-[15px] leading-relaxed px-4 py-2.5 rounded-2xl rounded-br-md max-w-[85%]"
-                      style={{
-                        background: 'rgba(var(--brand-primary-rgb),0.1)',
-                        border: '1px solid rgba(var(--brand-primary-rgb),0.15)',
-                        color: 'var(--brand-text-primary)',
-                        opacity: 0.9,
-                      }}
+                      className="text-[15px] leading-[1.65] px-4 py-2.5 rounded-2xl rounded-br-md max-w-[85%]"
+                      style={{ background: 'rgba(var(--brand-primary-rgb),0.08)', border: '1px solid rgba(var(--brand-primary-rgb),0.1)', color: 'var(--brand-text-primary)', opacity: 0.85 }}
                     >
                       {msg.content}
                     </p>
@@ -395,13 +351,13 @@ export function InlineGuide({
 
           {/* Thinking indicator */}
           {thinking && (
-            <div className="flex gap-1 pt-1">
+            <div className="flex gap-1 pt-1 px-1">
               {[0, 1, 2].map(i => (
                 <motion.span
                   key={i}
                   className="block w-1.5 h-1.5 rounded-full"
-                  style={{ background: 'var(--brand-text-secondary)', opacity: 0.3 }}
-                  animate={{ opacity: [0.15, 0.5, 0.15] }}
+                  style={{ background: 'var(--brand-text-secondary)', opacity: 0.2 }}
+                  animate={{ opacity: [0.1, 0.4, 0.1] }}
                   transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
                 />
               ))}
@@ -410,20 +366,17 @@ export function InlineGuide({
         </div>
       )}
 
-      {/* Knowledge nudge pill */}
+      {/* Knowledge nudge */}
       {brief?.knowledgeNudge && messages.length <= 1 && (
         <motion.div
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
           className="flex items-center gap-2 mt-3 px-3 py-2 rounded-xl"
-          style={{
-            background: 'rgba(255,255,255,0.02)',
-            border: '1px solid rgba(255,255,255,0.05)',
-          }}
+          style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}
         >
-          <Sparkles className="h-3 w-3 flex-shrink-0" style={{ color: 'var(--brand-text-secondary)', opacity: 0.3 }} />
-          <span className="text-[12px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>
+          <Sparkles className="h-3 w-3 flex-shrink-0" style={{ color: 'var(--brand-text-secondary)', opacity: 0.25 }} />
+          <span className="text-[12px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.35 }}>
             {brief.knowledgeNudge}
           </span>
         </motion.div>
@@ -439,26 +392,24 @@ export function InlineGuide({
             onChange={e => setInput(e.target.value)}
             onFocus={() => setExpanded(true)}
             onKeyDown={e => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                handleSend()
-              }
+              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
             }}
             autoComplete="off"
-            className="flex-1 px-4 py-3 rounded-xl border-0 focus:outline-none focus:ring-0 bg-white/[0.04] text-[15px]"
+            className="flex-1 px-4 py-3 rounded-xl text-[15px] focus:outline-none focus:ring-0"
             style={{
               color: 'var(--brand-text-primary)',
-              border: '1px solid rgba(255,255,255,0.07)',
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid rgba(255,255,255,0.06)',
             }}
           />
           <button
             type="button"
             onClick={handleSend}
             disabled={!input.trim() || thinking}
-            className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all disabled:opacity-15"
+            className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all disabled:opacity-10"
             style={{
-              background: input.trim() ? 'rgba(var(--brand-primary-rgb),0.15)' : 'transparent',
-              border: `1px solid ${input.trim() ? 'rgba(var(--brand-primary-rgb),0.25)' : 'rgba(255,255,255,0.05)'}`,
+              background: input.trim() ? 'rgba(var(--brand-primary-rgb),0.1)' : 'transparent',
+              border: `1px solid ${input.trim() ? 'rgba(var(--brand-primary-rgb),0.15)' : 'rgba(255,255,255,0.04)'}`,
               color: 'var(--brand-text-primary)',
             }}
           >
