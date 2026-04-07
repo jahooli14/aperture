@@ -8,12 +8,11 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { Loader2, MoreVertical, Plus, Check, X, GripVertical, ChevronDown, Zap, Target, Star, Sprout, Pin, PinOff } from 'lucide-react'
 import { MarkdownRenderer } from '../components/ui/MarkdownRenderer'
 import { useProjectStore } from '../stores/useProjectStore'
-import { SessionBriefCard } from '../components/projects/SessionBriefCard'
 import { AddNoteDialog } from '../components/projects/AddNoteDialog'
 import { ProjectPath } from '../components/projects/ProjectPath'
-import { TaskList, type Task } from '../components/projects/TaskList'
+import type { Task } from '../components/projects/TaskList'
 import { PinnedTaskList } from '../components/projects/PinnedTaskList'
-import { ProactiveGuideBar } from '../components/projects/ProactiveGuideBar'
+import { InlineGuide } from '../components/projects/InlineGuide'
 import { PinButton } from '../components/PinButton'
 import { Button } from '../components/ui/button'
 import { useToast } from '../components/ui/toast'
@@ -21,7 +20,6 @@ import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import { handleInputFocus } from '../utils/keyboard'
 import { EditProjectDialog } from '../components/projects/EditProjectDialog'
 import { ProjectCompletionModal } from '../components/projects/ProjectCompletionModal'
-import { ProjectChatPanel } from '../components/projects/ProjectChatPanel'
 import { CompletionRitual } from '../components/projects/CompletionRitual'
 import { LineageBreadcrumb } from '../components/projects/LineageBreadcrumb'
 import { ProjectLineage } from '../components/projects/ProjectLineage'
@@ -47,10 +45,6 @@ export function ProjectDetailPage() {
   const location = useLocation()
   const powerHourTask = location.state?.powerHourTask
 
-  // Auto-open chat when navigating from post-onboarding reveal
-  const shouldOpenChat = location.state?.openChat === true
-  const chatAutoMessage = location.state?.chatAutoMessage as string | undefined
-
   const { projects, fetchProjects, deleteProject, updateProject, syncProject, setPriority } = useProjectStore()
   const { setContext, clearContext } = useContextEngineStore()
   const { pinnedItem, pinItem, unpinItem } = usePin()
@@ -73,35 +67,9 @@ export function ProjectDetailPage() {
   const [showCompletionModal, setShowCompletionModal] = useState(false)
   const [showRetroRitual, setShowRetroRitual] = useState(false)
 
-  // Chat panel state
-  const [showChat, setShowChat] = useState(false)
+  // Inline guide state
   const [recentCompletions, setRecentCompletions] = useState<string[]>([])
   const prevTasksRef = useRef<{ id: string; done: boolean }[]>([])
-
-  // Session brief data — feeds the ProactiveGuideBar and SessionBriefCard
-  const [sessionBriefData, setSessionBriefData] = useState<{
-    phase?: 'shaping' | 'building' | 'closing' | 'stale' | 'fresh'
-    focusSuggestion?: string
-    knowledgeNudge?: string | null
-  } | null>(null)
-
-  // Capture session brief data when the SessionBriefCard loads
-  const handleSessionBriefLoaded = useCallback((data: {
-    phase: 'shaping' | 'building' | 'closing' | 'stale' | 'fresh'
-    focusSuggestion: string
-    knowledgeNudge: string | null
-  }) => {
-    setSessionBriefData(data)
-  }, [])
-
-  // Auto-open chat when arriving from post-onboarding reveal
-  useEffect(() => {
-    if (shouldOpenChat && project && !loading) {
-      // Small delay so the page renders first
-      const timer = setTimeout(() => setShowChat(true), 600)
-      return () => clearTimeout(timer)
-    }
-  }, [shouldOpenChat, project, loading])
 
   // Listen for custom event from FloatingNav to open AddNote dialog
   useEffect(() => {
@@ -828,16 +796,6 @@ export function ProjectDetailPage() {
               )}
 
               <div className="space-y-6">
-                {/* Session Brief — AI-generated contextual greeting */}
-                <SessionBriefCard
-                  project={project}
-                  onOpenChat={(message) => {
-                    setShowChat(true)
-                    // If there's a message, it'll be the knowledge nudge — we could pass it as autoMessage
-                  }}
-                  onBriefLoaded={handleSessionBriefLoaded}
-                />
-
                 {/* Sparked By: Origin thoughts that inspired this project */}
                 {sparkedByMemories.length > 0 && (
                   <div className="p-4 rounded-xl border border-[var(--glass-surface)] bg-white/[0.02]">
@@ -1040,6 +998,18 @@ export function ProjectDetailPage() {
                 />
               </div>
 
+              {/* Inline Guide — AI conversation thread */}
+              {project && (
+                <div className="mt-8">
+                  <InlineGuide
+                    project={project}
+                    recentCompletions={recentCompletions}
+                    onAddTask={handleChatAddTask}
+                    onUpdateTasks={handleChatUpdateTasks}
+                  />
+                </div>
+              )}
+
               {/* Add Note button */}
               <div className="mt-12 pb-32">
                 <button
@@ -1058,15 +1028,6 @@ export function ProjectDetailPage() {
         </div>
       </div>
 
-      {/* Proactive Guide Bar */}
-      <ProactiveGuideBar
-        onOpen={() => setShowChat(true)}
-        phase={sessionBriefData?.phase}
-        focusSuggestion={sessionBriefData?.focusSuggestion}
-        knowledgeNudge={sessionBriefData?.knowledgeNudge}
-        incompleteTasks={tasks.filter((t: any) => !t.done).length}
-        projectTitle={project.title}
-      />
 
       {/* Add Note Dialog */}
       <AddNoteDialog
@@ -1107,28 +1068,6 @@ export function ProjectDetailPage() {
         />
       )}
 
-      {/* Project Chat Panel */}
-      {project && (
-        <ProjectChatPanel
-          isOpen={showChat}
-          onClose={() => {
-            setShowChat(false)
-            setRecentCompletions([])
-          }}
-          project={project}
-          recentCompletions={recentCompletions}
-          onAddTask={handleChatAddTask}
-          onUpdateTasks={handleChatUpdateTasks}
-          autoMessage={shouldOpenChat ? (chatAutoMessage || "This is my first project. Look at what I said during onboarding and connect the dots — what's the thread between my earlier thoughts and this project? Then suggest what I should build first.") : undefined}
-          onRefinePlan={async () => {
-            const token = (await supabase.auth.getSession()).data.session?.access_token
-            await fetch(`${import.meta.env.VITE_API_URL || ''}/api/power-hour?projectId=${project.id}&enrich=true`, {
-              headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-            })
-            await loadProjectDetails()
-          }}
-        />
-      )}
     </div>
   )
 }

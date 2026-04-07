@@ -30,6 +30,7 @@ interface SessionBrief {
   phase: 'shaping' | 'building' | 'closing' | 'stale' | 'fresh'
   phaseLabel: string
   focusSuggestion: string
+  proactiveQuestion: string
   knowledgeNudge: string | null
   momentum: 'rising' | 'steady' | 'fading' | 'cold'
   completedSinceLastVisit: string[]
@@ -214,15 +215,25 @@ PROGRESS: ${completedTasks}/${totalTasks} tasks (${progressPercent}%)
 ${taskSummary}
 ${completionSummary}
 
-Write two things:
+Write three things:
 
-1. "greeting" — 1-2 sentences. This is the opening line of their session. Make it feel like picking up a conversation, not a status report. Reference what they finished last time, what's next, or how the project has been sitting. Match the phase:
-   - shaping: Ask a clarifying question or suggest defining the shape
-   - building: Reference momentum and suggest what to tackle
+1. "greeting" — 1-2 sentences. Opening line of their session. Feel like picking up a conversation, not a status report. Reference what they finished, what's next, or how long it's been sitting. Match the phase:
+   - shaping: Reference what's still undefined
+   - building: Reference momentum and what to tackle
    - closing: Build excitement about how close they are
-   - stale: Acknowledge the gap warmly, suggest one small re-entry point
+   - stale: Acknowledge the gap warmly, suggest one small re-entry
 
-2. "focusSuggestion" — One sentence. The specific thing you'd do in this session. Not "work on tasks" — name the actual task or approach. If shaping, suggest what to define. If building, name the next task. If closing, name what's left. If stale, suggest the easiest re-entry.
+2. "focusSuggestion" — One sentence. The specific thing you'd do this session. Not "work on tasks" — name the actual task or approach.
+
+3. "proactiveQuestion" — ONE question that moves the project forward based on what's MISSING. This is the most important field. Ask about the gap:
+   - No end goal defined? → Ask what "done" looks like concretely
+   - No motivation? → Ask why this matters to them specifically
+   - No tasks? → Ask what the first concrete step would be
+   - Tasks but no progress? → Ask what's blocking them or which feels most approachable
+   - Stale for 14+ days? → Ask if this is still worth pursuing, or what pulled them away
+   - Building with momentum? → Ask about the hardest part of the next task, or what they learned from the last one
+   - Closing? → Ask what's left that they're avoiding, or what they'll do when it's done
+   Be SPECIFIC to this project. Not generic. Reference actual task names, the description, the goal.
 
 Rules:
 - No filler. No "Great to see you", "Welcome back", "Let's dive in".
@@ -234,7 +245,8 @@ Rules:
 Return JSON only:
 {
   "greeting": "your opening line",
-  "focusSuggestion": "your one-sentence focus suggestion"
+  "focusSuggestion": "your one-sentence focus suggestion",
+  "proactiveQuestion": "your one question"
 }`
 
   const [aiRaw, knowledgeNudge] = await Promise.all([
@@ -244,14 +256,19 @@ Return JSON only:
 
   let greeting = ''
   let focusSuggestion = ''
+  let proactiveQuestion = ''
 
   try {
     const parsed = JSON.parse(aiRaw)
     greeting = (parsed.greeting || '').trim()
     focusSuggestion = (parsed.focusSuggestion || '').trim()
+    proactiveQuestion = (parsed.proactiveQuestion || '').trim()
   } catch {
     greeting = 'Ready to pick up where you left off.'
     focusSuggestion = incompleteTasks[0]?.text || 'Define what you want to build.'
+    proactiveQuestion = !project.metadata?.end_goal
+      ? 'What does done actually look like for this?'
+      : 'What would you work on if you had 30 minutes right now?'
   }
 
   const brief: SessionBrief = {
@@ -259,6 +276,7 @@ Return JSON only:
     phase,
     phaseLabel: PHASE_LABELS[phase],
     focusSuggestion,
+    proactiveQuestion,
     knowledgeNudge: knowledgeNudge,
     momentum,
     completedSinceLastVisit: recentCompletionTexts,
