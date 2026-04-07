@@ -328,7 +328,7 @@ export function TodoInput({
               className="flex-shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-black uppercase tracking-wide transition-all active:scale-95"
               style={{
                 color: "var(--brand-text-secondary)",
-                background: 'rgba(59,130,246,0.1)',
+                background: 'rgba(var(--brand-primary-rgb),0.1)',
                 border: '2px solid rgba(99,179,237,0.35)',
                 boxShadow: '2px 2px 0 rgba(0,0,0,0.5)',
               }}

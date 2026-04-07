@@ -312,7 +312,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
             to="/projects"
             className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-lg font-medium"
             style={{
-              backgroundColor: 'rgba(59, 130, 246, 0.2)',
+              backgroundColor: 'rgba(var(--brand-primary-rgb), 0.2)',
               color: 'var(--brand-primary)'
             }}
           >

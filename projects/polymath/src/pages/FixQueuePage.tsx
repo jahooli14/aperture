@@ -44,18 +44,18 @@ interface FixItem {
 }
 
 const SEVERITY_CONFIG = {
-  critical: { color: '#ef4444', label: 'Critical', icon: AlertTriangle },
-  annoying: { color: '#f59e0b', label: 'Annoying', icon: Zap },
+  critical: { color: 'rgb(var(--color-error-rgb))', label: 'Critical', icon: AlertTriangle },
+  annoying: { color: 'rgb(var(--brand-primary-rgb))', label: 'Annoying', icon: Zap },
   minor: { color: '#6b7280', label: 'Minor', icon: Clock },
 } as const
 
 const STATUS_CONFIG: Record<string, { color: string; label: string; bg: string }> = {
   draft_pending: { color: '#9ca3af', label: 'Drafting...', bg: 'rgba(156, 163, 175, 0.1)' },
-  drafted: { color: '#f59e0b', label: 'Ready to approve', bg: 'rgba(245, 158, 11, 0.1)' },
-  approved: { color: '#3b82f6', label: 'Approved', bg: 'rgba(59, 130, 246, 0.1)' },
-  deployed: { color: '#10b981', label: 'Running', bg: 'rgba(16, 185, 129, 0.1)' },
-  manual: { color: '#8b5cf6', label: 'Manual fix needed', bg: 'rgba(139, 92, 246, 0.1)' },
-  rejected: { color: '#ef4444', label: 'Rejected', bg: 'rgba(239, 68, 68, 0.1)' },
+  drafted: { color: 'rgb(var(--brand-primary-rgb))', label: 'Ready to approve', bg: 'rgba(var(--brand-primary-rgb), 0.1)' },
+  approved: { color: 'rgb(var(--brand-primary-rgb))', label: 'Approved', bg: 'rgba(var(--brand-primary-rgb), 0.1)' },
+  deployed: { color: 'rgb(var(--brand-primary-rgb))', label: 'Running', bg: 'rgba(var(--brand-primary-rgb), 0.1)' },
+  manual: { color: 'rgb(var(--brand-primary-rgb))', label: 'Manual fix needed', bg: 'rgba(var(--brand-primary-rgb), 0.1)' },
+  rejected: { color: 'rgb(var(--color-error-rgb))', label: 'Rejected', bg: 'rgba(var(--color-error-rgb), 0.1)' },
 }
 
 function ActionTypeIcon({ type }: { type: string }) {
@@ -187,7 +187,7 @@ export function FixQueuePage() {
           <button onClick={() => navigate(-1)} className="p-2 rounded-xl hover:bg-white/5 transition-colors">
             <ArrowLeft className="h-5 w-5" style={{ color: 'var(--brand-text-secondary)' }} />
           </button>
-          <Wrench className="h-5 w-5" style={{ color: '#f59e0b' }} />
+          <Wrench className="h-5 w-5" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
           <h1 className="text-xl font-bold" style={{ color: 'var(--brand-text)' }}>Fix Queue</h1>
           <span className="text-sm ml-auto" style={{ color: 'var(--brand-text-tertiary)' }}>
             {deployed.length} running
@@ -213,7 +213,7 @@ export function FixQueuePage() {
 
         {/* Ready to approve */}
         {drafted.length > 0 && (
-          <Section title="Ready to Approve" count={drafted.length} color="#f59e0b">
+          <Section title="Ready to Approve" count={drafted.length} color="rgb(var(--brand-primary-rgb))">
             {drafted.map(item => (
               <FixCard
                 key={item.id}
@@ -226,7 +226,7 @@ export function FixQueuePage() {
                       onClick={() => handleApprove(item)}
                       disabled={approving === item.id}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:scale-105"
-                      style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}
+                      style={{ backgroundColor: 'rgba(var(--brand-primary-rgb), 0.15)', color: 'rgb(var(--brand-primary-rgb))' }}
                     >
                       <Check className="h-3.5 w-3.5" />
                       {approving === item.id ? 'Approving...' : 'Approve'}
@@ -234,7 +234,7 @@ export function FixQueuePage() {
                     <button
                       onClick={() => handleReject(item)}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:scale-105"
-                      style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}
+                      style={{ backgroundColor: 'rgba(var(--color-error-rgb), 0.1)', color: 'rgb(var(--color-error-rgb))' }}
                     >
                       <X className="h-3.5 w-3.5" />
                       Reject
@@ -248,7 +248,7 @@ export function FixQueuePage() {
 
         {/* Currently running */}
         {deployed.length > 0 && (
-          <Section title="Running" count={deployed.length} color="#10b981">
+          <Section title="Running" count={deployed.length} color="rgb(var(--brand-primary-rgb))">
             {deployed.map(item => (
               <FixCard
                 key={item.id}
@@ -259,7 +259,7 @@ export function FixQueuePage() {
                   <button
                     onClick={() => handleMarkDone(item)}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:scale-105"
-                    style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6' }}
+                    style={{ backgroundColor: 'rgba(var(--brand-primary-rgb), 0.1)', color: 'rgb(var(--brand-primary-rgb))' }}
                   >
                     <Check className="h-3.5 w-3.5" />
                     Mark Fixed
@@ -286,7 +286,7 @@ export function FixQueuePage() {
 
         {/* Manual fixes */}
         {manual.length > 0 && (
-          <Section title="Manual Fixes" count={manual.length} color="#8b5cf6">
+          <Section title="Manual Fixes" count={manual.length} color="rgb(var(--brand-primary-rgb))">
             {manual.map(item => (
               <FixCard
                 key={item.id}
@@ -297,7 +297,7 @@ export function FixQueuePage() {
                   <button
                     onClick={() => handleMarkDone(item)}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:scale-105"
-                    style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}
+                    style={{ backgroundColor: 'rgba(var(--brand-primary-rgb), 0.1)', color: 'rgb(var(--brand-primary-rgb))' }}
                   >
                     <Check className="h-3.5 w-3.5" />
                     Done
@@ -427,7 +427,7 @@ function FixCard({ item, expanded, onToggle, actions }: {
               </span>
             )}
             {meta.last_run_at && (
-              <span className="text-[10px]" style={{ color: meta.last_run_success ? '#10b981' : '#ef4444' }}>
+              <span className="text-[10px]" style={{ color: meta.last_run_success ? 'rgb(var(--brand-primary-rgb))' : 'rgb(var(--color-error-rgb))' }}>
                 {meta.last_run_success ? 'Last run' : 'Failed'}: {new Date(meta.last_run_at).toLocaleDateString()}
                 {meta.run_count ? ` (${meta.run_count}x)` : ''}
               </span>
@@ -503,13 +503,13 @@ function FixCard({ item, expanded, onToggle, actions }: {
 
               {/* Requirements / not-ready warning */}
               {draft?.ready === false && draft?.requirements && draft.requirements.length > 0 && (
-                <div className="p-2.5 rounded-xl" style={{ backgroundColor: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: '#f59e0b' }}>
+                <div className="p-2.5 rounded-xl" style={{ backgroundColor: 'rgba(var(--brand-primary-rgb), 0.08)', border: '1px solid rgba(var(--brand-primary-rgb), 0.2)' }}>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'rgb(var(--brand-primary-rgb))' }}>
                     Setup needed before this can run
                   </p>
                   {draft.requirements.map((req, i) => (
                     <div key={i} className="flex items-start gap-2 mt-1">
-                      <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" style={{ color: '#f59e0b' }} />
+                      <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
                       <div>
                         <p className="text-xs font-medium" style={{ color: 'var(--brand-text)' }}>{req.label}</p>
                         <p className="text-[10px]" style={{ color: 'var(--brand-text-tertiary)' }}>{req.description}</p>

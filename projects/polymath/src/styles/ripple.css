@@ -35,19 +35,19 @@
 
 /* Ripple variants */
 .btn-ripple-blue::after {
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.4) 0%, rgba(59, 130, 246, 0) 70%);
+  background: radial-gradient(circle, rgba(var(--brand-primary-rgb), 0.4) 0%, rgba(var(--brand-primary-rgb), 0) 70%);
 }
 
 .btn-ripple-amber::after {
-  background: radial-gradient(circle, rgba(245, 158, 11, 0.4) 0%, rgba(245, 158, 11, 0) 70%);
+  background: radial-gradient(circle, rgba(var(--brand-primary-rgb), 0.4) 0%, rgba(var(--brand-primary-rgb), 0) 70%);
 }
 
 .btn-ripple-emerald::after {
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.4) 0%, rgba(16, 185, 129, 0) 70%);
+  background: radial-gradient(circle, rgba(var(--brand-primary-rgb), 0.4) 0%, rgba(var(--brand-primary-rgb), 0) 70%);
 }
 
 .btn-ripple-red::after {
-  background: radial-gradient(circle, rgba(239, 68, 68, 0.4) 0%, rgba(239, 68, 68, 0) 70%);
+  background: radial-gradient(circle, rgba(var(--color-error-rgb), 0.4) 0%, rgba(var(--color-error-rgb), 0) 70%);
 }
 
 /* Subtle ripple for cards */
@@ -81,13 +81,13 @@
 /* Pulse effect for important actions */
 @keyframes pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+    box-shadow: 0 0 0 0 rgba(var(--brand-primary-rgb), 0.7);
   }
   70% {
-    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+    box-shadow: 0 0 0 10px rgba(var(--brand-primary-rgb), 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+    box-shadow: 0 0 0 0 rgba(var(--brand-primary-rgb), 0);
   }
 }
 
@@ -101,13 +101,13 @@
 
 @keyframes pulse-amber {
   0% {
-    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+    box-shadow: 0 0 0 0 rgba(var(--brand-primary-rgb), 0.7);
   }
   70% {
-    box-shadow: 0 0 0 10px rgba(245, 158, 11, 0);
+    box-shadow: 0 0 0 10px rgba(var(--brand-primary-rgb), 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+    box-shadow: 0 0 0 0 rgba(var(--brand-primary-rgb), 0);
   }
 }
 

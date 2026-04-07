@@ -28,10 +28,10 @@ type SearchableItem = {
 }
 
 const SCHEMA_COLORS = {
-  project: { primary: '#3b82f6', icon: Layers },
-  thought: { primary: '#3b82f6', icon: Brain },
-  article: { primary: '#3b82f6', icon: BookOpen },
-  suggestion: { primary: '#f59e0b', icon: Lightbulb }
+  project: { primary: 'rgb(var(--brand-primary-rgb))', icon: Layers },
+  thought: { primary: 'rgb(var(--brand-primary-rgb))', icon: Brain },
+  article: { primary: 'rgb(var(--brand-primary-rgb))', icon: BookOpen },
+  suggestion: { primary: 'rgb(var(--brand-primary-rgb))', icon: Lightbulb }
 }
 
 export function CreateConnectionDialog({
@@ -396,7 +396,7 @@ function ItemCard({
             </div>
             {showSimilarity && item.similarity !== undefined && (
               <div className="text-xs font-bold px-2 py-0.5 rounded-full" style={{
-                backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                backgroundColor: 'rgba(var(--brand-primary-rgb), 0.15)',
                 color: 'var(--brand-primary)'
               }}>
                 {Math.round(item.similarity * 100)}% match

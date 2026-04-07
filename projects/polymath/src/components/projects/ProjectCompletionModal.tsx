@@ -112,7 +112,7 @@ export function ProjectCompletionModal({ project, sparkedByMemories, isOpen, onC
               style={{
                 background: 'var(--brand-glass-bg)',
                 backdropFilter: 'blur(24px)',
-                boxShadow: '0 0 60px rgba(52, 211, 153, 0.15), 3px 3px 0 rgba(0,0,0,0.5)',
+                boxShadow: '0 0 60px rgba(var(--brand-primary-rgb), 0.15), 3px 3px 0 rgba(0,0,0,0.5)',
               }}
             >
               {/* Close button */}
@@ -126,7 +126,7 @@ export function ProjectCompletionModal({ project, sparkedByMemories, isOpen, onC
 
               {/* Glow */}
               <div className="absolute inset-0 pointer-events-none" style={{
-                background: 'radial-gradient(ellipse at 50% 0%, rgba(52, 211, 153, 0.12), transparent 70%)'
+                background: 'radial-gradient(ellipse at 50% 0%, rgba(var(--brand-primary-rgb), 0.12), transparent 70%)'
               }} />
 
               <AnimatePresence mode="wait">
@@ -134,12 +134,12 @@ export function ProjectCompletionModal({ project, sparkedByMemories, isOpen, onC
                   <motion.div key="celebration" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="relative z-10 text-center">
                     {/* Check icon */}
                     <div className="mx-auto mb-4 h-16 w-16 rounded-full flex items-center justify-center"
-                      style={{ background: 'rgba(52, 211, 153, 0.15)', border: '2px solid rgba(52, 211, 153, 0.3)' }}
+                      style={{ background: 'rgba(var(--brand-primary-rgb), 0.15)', border: '2px solid rgba(var(--brand-primary-rgb), 0.3)' }}
                     >
-                      <Check className="h-8 w-8" style={{ color: '#34d399' }} />
+                      <Check className="h-8 w-8" style={{ color: 'rgb(var(--color-accent-light-rgb))' }} />
                     </div>
 
-                    <p className="text-[10px] font-black uppercase tracking-[0.3em] mb-2" style={{ color: '#34d399' }}>
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] mb-2" style={{ color: 'rgb(var(--color-accent-light-rgb))' }}>
                       You built this
                     </p>
                     <h2 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] mb-2">
@@ -152,11 +152,11 @@ export function ProjectCompletionModal({ project, sparkedByMemories, isOpen, onC
                     {/* Origin thought */}
                     {firstSpark && (
                       <div className="mt-6 p-4 rounded-xl text-left"
-                        style={{ background: 'rgba(52, 211, 153, 0.06)', border: '1px solid rgba(52, 211, 153, 0.2)' }}
+                        style={{ background: 'rgba(var(--brand-primary-rgb), 0.06)', border: '1px solid rgba(var(--brand-primary-rgb), 0.2)' }}
                       >
                         <div className="flex items-center gap-2 mb-2">
-                          <Sprout className="h-3.5 w-3.5" style={{ color: '#34d399' }} />
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#34d399' }}>
+                          <Sprout className="h-3.5 w-3.5" style={{ color: 'rgb(var(--color-accent-light-rgb))' }} />
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: 'rgb(var(--color-accent-light-rgb))' }}>
                             This started as a thought
                           </span>
                         </div>
@@ -173,9 +173,9 @@ export function ProjectCompletionModal({ project, sparkedByMemories, isOpen, onC
                       onClick={handleDone}
                       className="mt-6 w-full py-3 rounded-xl font-black uppercase text-xs tracking-widest transition-all"
                       style={{
-                        background: 'rgba(52, 211, 153, 0.15)',
-                        border: '1px solid rgba(52, 211, 153, 0.3)',
-                        color: '#34d399'
+                        background: 'rgba(var(--brand-primary-rgb), 0.15)',
+                        border: '1px solid rgba(var(--brand-primary-rgb), 0.3)',
+                        color: 'rgb(var(--color-accent-light-rgb))'
                       }}
                     >
                       Done
@@ -184,7 +184,7 @@ export function ProjectCompletionModal({ project, sparkedByMemories, isOpen, onC
                 ) : (
                   <motion.div key="reflection" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="relative z-10 text-center">
                     <div className="text-4xl mb-4">🧠</div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.3em] mb-2" style={{ color: '#34d399' }}>
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] mb-2" style={{ color: 'rgb(var(--color-accent-light-rgb))' }}>
                       What did you learn?
                     </p>
                     <h2 className="text-lg font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] mb-1">
@@ -208,7 +208,7 @@ export function ProjectCompletionModal({ project, sparkedByMemories, isOpen, onC
                         onClick={handleSaveReflection}
                         disabled={saving}
                         className="flex-1 py-2.5 rounded-xl font-black uppercase text-xs tracking-widest transition-all"
-                        style={{ background: 'rgba(52, 211, 153, 0.15)', border: '1px solid rgba(52, 211, 153, 0.3)', color: '#34d399' }}
+                        style={{ background: 'rgba(var(--brand-primary-rgb), 0.15)', border: '1px solid rgba(var(--brand-primary-rgb), 0.3)', color: 'rgb(var(--color-accent-light-rgb))' }}
                       >
                         {saving ? 'Saving...' : reflection.trim() ? 'Save reflection' : 'Done'}
                       </button>

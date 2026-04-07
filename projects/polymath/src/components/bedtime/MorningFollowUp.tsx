@@ -65,7 +65,7 @@ export function MorningFollowUp({ onDismiss, onCapture }: MorningFollowUpProps) 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
-          className="mx-4 mb-4 p-4 rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-orange-500/5"
+          className="mx-4 mb-4 p-4 rounded-2xl border border-brand-primary/20 bg-gradient-to-br from-brand-primary/10 to-brand-primary/5"
         >
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -87,7 +87,7 @@ export function MorningFollowUp({ onDismiss, onCapture }: MorningFollowUpProps) 
               onChange={e => setResponse(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSubmit()}
               placeholder="A thought, connection, or nothing at all..."
-              className="flex-1 bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] rounded-xl px-3 py-2 text-sm text-[var(--brand-text-primary)] placeholder-gray-500 focus:outline-none focus:border-amber-500/30"
+              className="flex-1 bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] rounded-xl px-3 py-2 text-sm text-[var(--brand-text-primary)] placeholder-gray-500 focus:outline-none focus:border-brand-primary/30"
               autoFocus
             />
             <button
@@ -104,7 +104,7 @@ export function MorningFollowUp({ onDismiss, onCapture }: MorningFollowUpProps) 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="mx-4 mb-4 p-4 rounded-2xl border border-emerald-500/20 bg-brand-primary/5 flex items-center gap-2"
+          className="mx-4 mb-4 p-4 rounded-2xl border border-brand-primary/20 bg-brand-primary/5 flex items-center gap-2"
         >
           <Zap className="w-4 h-4 text-brand-text-secondary" />
           <span className="text-sm text-brand-primary">Captured.</span>

@@ -405,7 +405,7 @@ export function RevealSequence({ analysis, books, transcripts = [] }: RevealSequ
                 <button
                   onClick={() => navigate('/login')}
                   className="flex items-center justify-center gap-2 px-8 py-3 rounded-xl font-bold text-sm transition-all hover:opacity-90"
-                  style={{ background: 'linear-gradient(135deg, var(--brand-primary), #818cf8)', color: '#fff' }}
+                  style={{ background: 'linear-gradient(135deg, var(--brand-primary), rgb(var(--color-accent-light-rgb)))', color: '#fff' }}
                 >
                   <Lock className="h-3.5 w-3.5" />
                   Sign in to save your idea
@@ -432,7 +432,7 @@ export function RevealSequence({ analysis, books, transcripts = [] }: RevealSequ
               <button
                 onClick={() => navigate('/login')}
                 className="flex items-center justify-center gap-2 px-8 py-3 rounded-xl font-bold text-sm transition-all hover:opacity-90"
-                style={{ background: 'linear-gradient(135deg, var(--brand-primary), #818cf8)', color: '#fff' }}
+                style={{ background: 'linear-gradient(135deg, var(--brand-primary), rgb(var(--color-accent-light-rgb)))', color: '#fff' }}
               >
                 <Lock className="h-3.5 w-3.5" />
                 Sign in to unlock

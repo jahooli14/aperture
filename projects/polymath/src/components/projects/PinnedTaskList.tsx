@@ -94,7 +94,7 @@ export function PinnedTaskList({
 
       {/* Add task input - fixed at bottom */}
       <div className="mt-4 pt-4 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.15)' }}>
-        <div className="flex items-center gap-2 p-3 rounded-lg" style={{ backgroundColor: 'rgba(59, 130, 246, 0.2)', border: '1px solid rgba(59, 130, 246, 0.4)' }}>
+        <div className="flex items-center gap-2 p-3 rounded-lg" style={{ backgroundColor: 'rgba(var(--brand-primary-rgb), 0.2)', border: '1px solid rgba(var(--brand-primary-rgb), 0.4)' }}>
           <Plus className="h-5 w-5 flex-shrink-0" style={{ color: "var(--brand-primary)" }} />
           <input
             ref={inputRef}
@@ -114,7 +114,7 @@ export function PinnedTaskList({
             className="flex-1 px-3 py-2 text-sm rounded-md focus:outline-none bg-transparent"
             style={{
               color: 'var(--brand-text-primary)',
-              border: '1px solid rgba(59, 130, 246, 0.4)'
+              border: '1px solid rgba(var(--brand-primary-rgb), 0.4)'
             }}
           />
         </div>

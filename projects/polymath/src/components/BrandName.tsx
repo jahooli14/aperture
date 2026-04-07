@@ -31,13 +31,13 @@ export function BrandName({ className = '', size = 'md', showLogo = false }: Bra
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           className={iconSizes[size]}
-          style={{ filter: 'drop-shadow(0 0 8px rgba(59, 130, 246, 0.4))' }}
+          style={{ filter: 'drop-shadow(0 0 8px rgba(var(--brand-primary-rgb), 0.4))' }}
         >
           {/* Outer Ring */}
-          <circle cx="12" cy="12" r="10" stroke="#3b82f6" strokeWidth="1" strokeOpacity="0.4" />
+          <circle cx="12" cy="12" r="10" stroke="rgb(var(--brand-primary-rgb))" strokeWidth="1" strokeOpacity="0.4" />
 
           {/* Iris Blades - Tangential Design */}
-          <g stroke="#3b82f6" strokeWidth="1.2" strokeLinecap="round">
+          <g stroke="rgb(var(--brand-primary-rgb))" strokeWidth="1.2" strokeLinecap="round">
             <path d="M12 2L18.5 6" />
             <path d="M18.5 6L22 12" />
             <path d="M22 12L18.5 18" />
@@ -55,12 +55,12 @@ export function BrandName({ className = '', size = 'md', showLogo = false }: Bra
           </g>
 
           {/* Center Aperture Hole */}
-          <circle cx="12" cy="12" r="3.5" fill="black" stroke="#3b82f6" strokeWidth="1" />
+          <circle cx="12" cy="12" r="3.5" fill="black" stroke="rgb(var(--brand-primary-rgb))" strokeWidth="1" />
           {/* Iris shutter lines */}
-          <path d="M12 8.5V10.5" stroke="#3b82f6" strokeWidth="0.5" strokeOpacity="0.5" />
-          <path d="M12 13.5V15.5" stroke="#3b82f6" strokeWidth="0.5" strokeOpacity="0.5" />
-          <path d="M8.5 12H10.5" stroke="#3b82f6" strokeWidth="0.5" strokeOpacity="0.5" />
-          <path d="M13.5 12H15.5" stroke="#3b82f6" strokeWidth="0.5" strokeOpacity="0.5" />
+          <path d="M12 8.5V10.5" stroke="rgb(var(--brand-primary-rgb))" strokeWidth="0.5" strokeOpacity="0.5" />
+          <path d="M12 13.5V15.5" stroke="rgb(var(--brand-primary-rgb))" strokeWidth="0.5" strokeOpacity="0.5" />
+          <path d="M8.5 12H10.5" stroke="rgb(var(--brand-primary-rgb))" strokeWidth="0.5" strokeOpacity="0.5" />
+          <path d="M13.5 12H15.5" stroke="rgb(var(--brand-primary-rgb))" strokeWidth="0.5" strokeOpacity="0.5" />
         </svg>
       )}
       <span className="font-black tracking-tighter lowercase">

@@ -6,7 +6,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-export type AccentColor = 'blue' | 'indigo' | 'emerald' | 'amber' | 'rose' | 'purple'
+export type AccentColor = 'cyan'
 export type ThemeIntensity = 'subtle' | 'normal' | 'vibrant'
 export type FontSize = 'small' | 'normal' | 'large'
 
@@ -26,7 +26,7 @@ interface ThemeState {
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set) => ({
-      accentColor: 'blue',
+      accentColor: 'cyan',
       intensity: 'normal',
       fontSize: 'normal',
       showBugTracker: false,

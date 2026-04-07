@@ -77,8 +77,8 @@ export function ContextMenu({ items, isOpen, onClose, title }: ContextMenuProps)
                   disabled={item.disabled}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
-                    backgroundColor: item.variant === 'destructive' ? 'rgba(239, 68, 68, 0.15)' : 'var(--glass-surface)',
-                    color: item.variant === 'destructive' ? '#ef4444' : 'var(--brand-text-primary)',
+                    backgroundColor: item.variant === 'destructive' ? 'rgba(var(--color-error-rgb), 0.15)' : 'var(--glass-surface)',
+                    color: item.variant === 'destructive' ? 'rgb(var(--color-error-rgb))' : 'var(--brand-text-primary)',
                   }}
                 >
                   {item.icon && <span className="flex-shrink-0">{item.icon}</span>}

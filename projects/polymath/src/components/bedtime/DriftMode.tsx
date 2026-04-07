@@ -299,7 +299,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
                 <motion.circle
                   cx="50" cy="50" r="45"
                   fill="none"
-                  stroke="#8b5cf6" // violet-500
+                  stroke="rgb(var(--brand-primary-rgb))" // violet-500
                   strokeWidth="4"
                   strokeDasharray="283"
                   strokeDashoffset={283 - (283 * progress) / 100}
@@ -315,8 +315,8 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
 
             {/* Context prompt — seed the subconscious before drifting */}
             {currentPrompt && (
-              <div className="mb-6 p-4 rounded-xl bg-violet-500/5 border border-violet-500/10">
-                <p className="text-xs uppercase tracking-widest text-violet-400 font-bold mb-2">
+              <div className="mb-6 p-4 rounded-xl bg-brand-primary/5 border border-brand-primary/10">
+                <p className="text-xs uppercase tracking-widest text-brand-primary font-bold mb-2">
                   {mode === 'sleep' ? 'Tonight\'s Seed' : 'Your Reset Context'}
                 </p>
                 <p className="text-base font-serif italic text-[#E2E8F0] leading-relaxed">
@@ -362,7 +362,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
               }
             }}
           >
-            <div className="w-3 h-3 rounded-full bg-violet-500/50 animate-ping" />
+            <div className="w-3 h-3 rounded-full bg-brand-primary/50 animate-ping" />
             {/* Show hint if no motion detected after entering drift */}
             {!motionEventsReceived.current && (
               <motion.p
@@ -390,7 +390,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
                 <motion.div
                   initial={{ opacity: 0, scale: 0.5 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="mb-4 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-primary/20 border border-yellow-500/50 text-brand-primary text-sm font-bold uppercase tracking-widest shadow-[0_0_20px_rgba(234,179,8,0.3)]"
+                  className="mb-4 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-primary/20 border border-brand-primary/50 text-brand-primary text-sm font-bold uppercase tracking-widest shadow-[0_0_20px_rgba(var(--brand-primary-rgb),0.3)]"
                 >
                   <Zap className="h-4 w-4 fill-current" />
                   Jolt Detected
@@ -455,7 +455,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
             className="text-center px-8 max-w-md"
           >
             <div className="mb-8 relative">
-              <div className="absolute inset-0 bg-violet-500/20 blur-3xl rounded-full" />
+              <div className="absolute inset-0 bg-brand-primary/20 blur-3xl rounded-full" />
               <div className="relative p-6 rounded-2xl bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)]">
                 <Zap className="h-12 w-12 text-brand-text-secondary mx-auto mb-4" />
                 <h2 className="text-3xl font-serif text-[#E2E8F0] mb-2">Session Complete</h2>
@@ -469,7 +469,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
                 <span className="text-2xl font-bold text-brand-primary">{capturedInsightsCount}</span>
               </div>
 
-              <div className="p-4 rounded-xl bg-violet-500/5 border border-violet-500/10 text-left">
+              <div className="p-4 rounded-xl bg-brand-primary/5 border border-brand-primary/10 text-left">
                 <p className="text-xs uppercase tracking-widest text-brand-primary font-bold mb-2">Closing Reflection</p>
                 <p className="text-sm italic text-[var(--brand-text-secondary)] leading-relaxed">
                   "The most profound connections often emerge when we stop looking for them. Sleep well, let these seeds grow."

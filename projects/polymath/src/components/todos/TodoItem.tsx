@@ -37,7 +37,7 @@ const PRIORITY_CONFIG = {
     cardTint: 'rgba(239,68,68,0.07)',
     chipBg: 'rgba(239,68,68,0.2)',
     chipColor: 'rgb(252,165,165)',
-    shadow: '3px 3px 0 rgba(248,113,113,0.25)',
+    shadow: '3px 3px 0 rgba(var(--brand-primary-rgb),0.25)',
   },
   2: {
     label: 'HIGH',
@@ -46,16 +46,16 @@ const PRIORITY_CONFIG = {
     cardTint: 'rgba(251,191,36,0.06)',
     chipBg: 'rgba(251,191,36,0.18)',
     chipColor: 'rgb(253,224,71)',
-    shadow: '3px 3px 0 rgba(251,191,36,0.2)',
+    shadow: '3px 3px 0 rgba(var(--brand-primary-rgb),0.2)',
   },
   1: {
     label: 'LOW',
     dot: 'rgb(96,165,250)',
     border: '4px solid rgb(96,165,250)',
-    cardTint: 'rgba(59,130,246,0.05)',
-    chipBg: 'rgba(59,130,246,0.18)',
+    cardTint: 'rgba(var(--brand-primary-rgb),0.05)',
+    chipBg: 'rgba(var(--brand-primary-rgb),0.18)',
     chipColor: 'rgb(147,197,253)',
-    shadow: '3px 3px 0 rgba(96,165,250,0.2)',
+    shadow: '3px 3px 0 rgba(var(--brand-primary-rgb),0.2)',
   },
 } as const
 

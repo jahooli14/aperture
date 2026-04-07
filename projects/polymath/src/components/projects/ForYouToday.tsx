@@ -64,8 +64,8 @@ export function ForYouToday() {
               onClick={() => navigate(`/projects/${p.id}`)}
               className="text-left p-4 rounded-xl border transition-all hover:scale-[1.01]"
               style={{
-                background: 'linear-gradient(135deg, rgba(59,130,246,0.08), rgba(59,130,246,0.02))',
-                borderColor: 'rgba(59,130,246,0.25)',
+                background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.08), rgba(var(--brand-primary-rgb),0.02))',
+                borderColor: 'rgba(var(--brand-primary-rgb),0.25)',
               }}
             >
               <div className="flex items-start justify-between gap-2 mb-1">

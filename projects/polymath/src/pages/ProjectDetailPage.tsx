@@ -608,7 +608,7 @@ export function ProjectDetailPage() {
             </button>
             {project.is_priority && (
               <div className="flex items-center gap-2 mb-1">
-                <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-[10px] font-black uppercase tracking-widest text-amber-500">
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-brand-primary/10 border border-brand-primary/20 text-[10px] font-black uppercase tracking-widest text-brand-primary">
                   <Star className="h-2.5 w-2.5 fill-current" />
                   Priority
                 </span>
@@ -742,7 +742,7 @@ export function ProjectDetailPage() {
         <div className="space-y-6">
               {/* Power Hour Focus Mode */}
               {powerHourTask && (
-                <div className="p-8 border-2 border-blue-500/50 relative overflow-hidden group mb-8 bg-brand-primary/20">
+                <div className="p-8 border-2 border-brand-primary/50 relative overflow-hidden group mb-8 bg-brand-primary/20">
                   <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform duration-700">
                     <Zap className="h-48 w-48 text-brand-primary" />
                   </div>
@@ -791,7 +791,7 @@ export function ProjectDetailPage() {
                   </div>
 
                   {/* Aesthetic Lines */}
-                  <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-30" />
+                  <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-brand-primary to-transparent opacity-30" />
                 </div>
               )}
 
@@ -820,7 +820,7 @@ export function ProjectDetailPage() {
 
                 {/* About this project: description, why, done when */}
                 <div className="relative group">
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-brand-primary/20 to-brand-primary/20 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
                   <div className="relative p-6 sm:p-8 rounded-2xl bg-white/[0.03] border border-[var(--glass-surface)] space-y-5">
 
                     {/* Description — big italic headline */}
@@ -845,7 +845,7 @@ export function ProjectDetailPage() {
                             }
                             if (e.key === 'Escape') cancelEdit()
                           }}
-                          className="w-full bg-black/40 border-[var(--glass-surface-hover)] rounded-xl p-4 text-xl sm:text-2xl font-medium text-[var(--brand-text-primary)] leading-relaxed italic font-serif text-center outline-none focus:border-blue-500/50"
+                          className="w-full bg-black/40 border-[var(--glass-surface-hover)] rounded-xl p-4 text-xl sm:text-2xl font-medium text-[var(--brand-text-primary)] leading-relaxed italic font-serif text-center outline-none focus:border-brand-primary/50"
                           autoFocus
                         />
                       ) : (
@@ -930,12 +930,12 @@ export function ProjectDetailPage() {
                   <div
                     className="mb-4 p-5 rounded-2xl text-center"
                     style={{
-                      background: 'linear-gradient(135deg, rgba(34,197,94,0.15) 0%, rgba(59,130,246,0.12) 50%, rgba(168,85,247,0.1) 100%)',
+                      background: 'linear-gradient(135deg, rgba(34,197,94,0.15) 0%, rgba(var(--brand-primary-rgb),0.12) 50%, rgba(168,85,247,0.1) 100%)',
                       border: '1.5px solid rgba(34,197,94,0.3)',
                       boxShadow: '0 0 24px rgba(34,197,94,0.08)',
                     }}
                   >
-                    <p className="text-lg font-black uppercase tracking-wider text-emerald-400 mb-1">
+                    <p className="text-lg font-black uppercase tracking-wider text-brand-primary mb-1">
                       All tasks complete!
                     </p>
                     <p className="text-xs text-[var(--brand-text-secondary)] mb-4 opacity-70">
@@ -947,7 +947,7 @@ export function ProjectDetailPage() {
                       }}
                       className="px-6 py-3 rounded-xl font-black uppercase text-sm tracking-widest transition-all active:scale-95"
                       style={{
-                        background: 'linear-gradient(135deg, rgba(34,197,94,0.25) 0%, rgba(59,130,246,0.2) 100%)',
+                        background: 'linear-gradient(135deg, rgba(34,197,94,0.25) 0%, rgba(var(--brand-primary-rgb),0.2) 100%)',
                         border: '2px solid rgba(34,197,94,0.5)',
                         color: 'rgb(34,197,94)',
                         boxShadow: '0 4px 16px rgba(34,197,94,0.15)',

@@ -100,7 +100,7 @@ function RelatedItemCard({ item }: { item: RelatedItem }) {
   }
 
   const Content = (
-    <div className="flex items-start gap-3 p-3 rounded-lg border border-neutral-200 hover:border-blue-300 hover:bg-blue-50/30 transition-all group">
+    <div className="flex items-start gap-3 p-3 rounded-lg border border-neutral-200 hover:border-brand-primary hover:bg-blue-50/30 transition-all group">
       <div className="flex-shrink-0 h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center group-hover:bg-brand-primary transition-colors">
         <Icon className="h-4 w-4 text-brand-primary" />
       </div>
@@ -125,7 +125,7 @@ function RelatedItemCard({ item }: { item: RelatedItem }) {
           <div className="mt-2 flex items-center gap-2">
             <div className="h-1 flex-1 bg-neutral-200 rounded-full overflow-hidden max-w-[100px]">
               <div
-                className="h-full bg-gradient-to-r from-blue-500 to-blue-900"
+                className="h-full bg-gradient-to-r from-brand-primary to-brand-primary"
                 style={{ width: `${item.relevance * 100}%` }}
               />
             </div>

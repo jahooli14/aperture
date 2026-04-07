@@ -53,7 +53,7 @@ const PHASES: PhaseConfig[] = [
     icon: Hammer,
     emptyPrompt: 'What does the main effort look like?',
     accent: 'rgb(59,130,246)',
-    accentBg: 'rgba(59,130,246,0.1)',
+    accentBg: 'rgba(var(--brand-primary-rgb),0.1)',
   },
   {
     key: 'shutdown',
@@ -306,7 +306,7 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
                             isNext
                               ? "bg-white/[0.04] border border-white/[0.08]"
                               : isHighlighted
-                                ? "bg-blue-500/5 border border-blue-500/20"
+                                ? "bg-brand-primary/5 border border-brand-primary/20"
                                 : "hover:bg-white/[0.02] border border-transparent"
                           )}
                         >
@@ -342,7 +342,7 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
                                   if (e.key === 'Enter') handleEditSave(task.id)
                                   if (e.key === 'Escape') { setEditingTaskId(null); setEditingText('') }
                                 }}
-                                className="w-full px-2 py-1 text-sm rounded-lg bg-white/10 outline-none ring-1 ring-blue-500/50"
+                                className="w-full px-2 py-1 text-sm rounded-lg bg-white/10 outline-none ring-1 ring-brand-primary/50"
                                 style={{ color: 'var(--brand-text-primary)' }}
                                 autoFocus
                               />
@@ -584,7 +584,7 @@ function LinkedTodos({ projectId }: { projectId: string }) {
         <span className="text-[10px] font-bold uppercase tracking-[0.15em]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.3 }}>
           Linked Todos
         </span>
-        <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--brand-text-secondary)', opacity: 0.4 }}>
+        <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(var(--brand-primary-rgb),0.1)', color: 'var(--brand-text-secondary)', opacity: 0.4 }}>
           {activeTodos.length}
         </span>
       </div>
@@ -593,7 +593,7 @@ function LinkedTodos({ projectId }: { projectId: string }) {
           <div key={todo.id} className="flex items-center gap-2.5 py-1.5 rounded-lg hover:bg-white/[0.02] transition-colors">
             <button
               onClick={() => toggleTodo(todo.id)}
-              className="flex-shrink-0 h-4.5 w-4.5 rounded-md flex items-center justify-center border-2 border-white/15 bg-black/20 transition-all hover:border-blue-500/40"
+              className="flex-shrink-0 h-4.5 w-4.5 rounded-md flex items-center justify-center border-2 border-white/15 bg-black/20 transition-all hover:border-brand-primary/40"
             >
               {todo.done && <Check className="h-2.5 w-2.5 text-brand-text-primary" />}
             </button>

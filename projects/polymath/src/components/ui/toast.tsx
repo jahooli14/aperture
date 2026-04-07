@@ -98,17 +98,17 @@ function ToastItem({ toast, isRemoving, onClose }: { toast: Toast; isRemoving: b
     switch (toast.variant) {
       case "destructive":
         return {
-          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+          backgroundColor: 'rgba(var(--color-error-rgb), 0.1)',
           color: "var(--brand-text-secondary)",
-          border: '1.5px solid rgba(239, 68, 68, 0.35)',
+          border: '1.5px solid rgba(var(--color-error-rgb), 0.35)',
           borderRadius: '4px',
           boxShadow: '3px 3px 0 rgba(0,0,0,0.6)',
         }
       case "success":
         return {
-          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          backgroundColor: 'rgba(var(--brand-primary-rgb), 0.1)',
           color: 'var(--brand-text-primary)',
-          border: '1.5px solid rgba(16, 185, 129, 0.35)',
+          border: '1.5px solid rgba(var(--brand-primary-rgb), 0.35)',
           borderRadius: '4px',
           boxShadow: '3px 3px 0 rgba(0,0,0,0.6)',
         }

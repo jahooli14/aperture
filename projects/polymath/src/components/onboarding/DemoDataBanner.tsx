@@ -69,7 +69,7 @@ export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps
 
   if (showConfirm) {
     return (
-      <div className="sticky top-16 z-40 backdrop-blur-xl bg-gradient-to-r from-amber-500/95 to-blue-500/95 border-b border-amber-600/20 shadow-lg">
+      <div className="sticky top-16 z-40 backdrop-blur-xl bg-gradient-to-r from-brand-primary/95 to-brand-primary/95 border-b border-brand-primary/20 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-start gap-4">
             <div className="flex-shrink-0">
@@ -79,7 +79,7 @@ export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps
               <h3 className="text-lg font-semibold text-[var(--brand-text-primary)] mb-2">
                 Clear all demo data?
               </h3>
-              <p className="text-sm text-amber-50 mb-4">
+              <p className="text-sm text-white/90 mb-4">
                 This will delete all template memories, suggestions, and projects. You'll start with a clean slate. This action cannot be undone.
               </p>
               <div className="flex gap-3">
@@ -87,7 +87,7 @@ export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps
                   onClick={handleClearDemoData}
                   disabled={isClearing}
                   className="backdrop-blur-xl bg-white/90 border-2 shadow-xl rounded-lg px-4 py-2 font-medium transition-all hover:shadow-2xl disabled:opacity-50"
-                  style={{ borderColor: 'rgba(239, 68, 68, 0.5)', color: "var(--brand-text-secondary)" }}
+                  style={{ borderColor: 'rgba(var(--color-error-rgb), 0.5)', color: "var(--brand-text-secondary)" }}
                 >
                   {isClearing ? 'Clearing...' : 'Yes, Clear Everything'}
                 </button>
@@ -107,7 +107,7 @@ export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps
   }
 
   return (
-    <div className="sticky top-16 z-40 backdrop-blur-xl bg-gradient-to-r from-amber-500/95 to-blue-500/95 border-b border-amber-600/20 shadow-lg">
+    <div className="sticky top-16 z-40 backdrop-blur-xl bg-gradient-to-r from-brand-primary/95 to-brand-primary/95 border-b border-brand-primary/20 shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex items-start gap-4">
           <div className="flex-shrink-0">
@@ -117,7 +117,7 @@ export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps
             <h3 className="text-lg font-semibold text-[var(--brand-text-primary)] mb-1">
               You're viewing demo data
             </h3>
-            <p className="text-sm text-amber-50 mb-3">
+            <p className="text-sm text-white/90 mb-3">
               Explore <strong>8 diverse memories</strong> spanning tech, hobbies, and life insights.{' '}
               <strong>Click "Generate Ideas"</strong> to see how it finds unexpected links between your interests!
             </p>
@@ -125,7 +125,7 @@ export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps
               <button
                 onClick={onDismiss}
                 className="inline-flex items-center gap-2 backdrop-blur-xl bg-white/90 border-2 shadow-xl rounded-lg px-4 py-2 font-medium transition-all hover:shadow-2xl"
-                style={{ borderColor: 'rgba(59, 130, 246, 0.5)', color: "var(--brand-text-secondary)" }}
+                style={{ borderColor: 'rgba(var(--brand-primary-rgb), 0.5)', color: "var(--brand-text-secondary)" }}
               >
                 <Eye className="h-4 w-4" />
                 Keep Exploring

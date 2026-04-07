@@ -62,7 +62,7 @@ export function PinOverlay() {
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <span className="text-xs font-semibold px-2 py-1 rounded-full" style={{
-              backgroundColor: 'rgba(59, 130, 246, 0.2)',
+              backgroundColor: 'rgba(var(--brand-primary-rgb), 0.2)',
               color: 'var(--brand-primary)'
             }}>
               Pinned
@@ -115,7 +115,7 @@ export function PinOverlay() {
         >
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <span className="text-xs font-semibold px-2 py-1 rounded-full" style={{
-              backgroundColor: 'rgba(59, 130, 246, 0.2)',
+              backgroundColor: 'rgba(var(--brand-primary-rgb), 0.2)',
               color: 'var(--brand-primary)'
             }}>
               Pinned

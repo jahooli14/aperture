@@ -118,7 +118,7 @@ export function VoiceCommandButton() {
                   className="relative rounded-2xl p-8 flex flex-col items-center justify-center min-h-[200px]"
                   style={{
                     background: isListening
-                      ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(99, 102, 241, 0.1))'
+                      ? 'linear-gradient(135deg, rgba(var(--brand-primary-rgb), 0.1), rgba(var(--brand-primary-rgb), 0.1))'
                       : 'var(--glass-surface)',
                     border: `2px solid ${isListening ? 'var(--brand-primary)' : 'rgba(255, 255, 255, 0.1)'}`
                   }}
@@ -130,7 +130,7 @@ export function VoiceCommandButton() {
                     className="relative h-20 w-20 rounded-full flex items-center justify-center mb-4 shadow-xl"
                     style={{
                       background: isListening
-                        ? 'linear-gradient(135deg, #ef4444, #dc2626)'
+                        ? 'linear-gradient(135deg, rgb(var(--color-error-rgb)), rgb(var(--color-error-rgb)))'
                         : 'linear-gradient(135deg, var(--brand-primary), var(--brand-primary))',
                       color: 'white'
                     }}
@@ -147,7 +147,7 @@ export function VoiceCommandButton() {
                         <motion.div
                           className="absolute inset-0 rounded-full"
                           style={{
-                            background: 'rgba(239, 68, 68, 0.4)',
+                            background: 'rgba(var(--color-error-rgb), 0.4)',
                             zIndex: -1
                           }}
                           animate={{
@@ -163,7 +163,7 @@ export function VoiceCommandButton() {
                         <motion.div
                           className="absolute inset-0 rounded-full"
                           style={{
-                            background: 'rgba(239, 68, 68, 0.3)',
+                            background: 'rgba(var(--color-error-rgb), 0.3)',
                             zIndex: -2
                           }}
                           animate={{
@@ -229,8 +229,8 @@ export function VoiceCommandButton() {
                       animate={{ opacity: 1, y: 0 }}
                       className="mt-4 px-4 py-3 rounded-lg"
                       style={{
-                        background: 'rgba(239, 68, 68, 0.1)',
-                        border: '1px solid rgba(239, 68, 68, 0.3)'
+                        background: 'rgba(var(--color-error-rgb), 0.1)',
+                        border: '1px solid rgba(var(--color-error-rgb), 0.3)'
                       }}
                     >
                       <p className="text-sm" style={{ color: "var(--brand-primary)" }}>

@@ -27,7 +27,7 @@ const DEMO_STORIES: DemoStory[] = [
     project: {
       title: 'Relocation Plan',
       status: 'next step: research cost of living',
-      color: '#10B981',
+      color: 'rgb(var(--brand-primary-rgb))',
     },
     fromCount: 6,
   },
@@ -37,7 +37,7 @@ const DEMO_STORIES: DemoStory[] = [
     project: {
       title: 'Emergent Systems Essay',
       status: 'draft outline ready',
-      color: '#8B5CF6',
+      color: 'rgb(var(--brand-primary-rgb))',
     },
     fromCount: 4,
   },
@@ -47,7 +47,7 @@ const DEMO_STORIES: DemoStory[] = [
     project: {
       title: 'Reading Companion App',
       status: 'next step: sketch the core flow',
-      color: '#3B82F6',
+      color: 'rgb(var(--brand-primary-rgb))',
     },
     fromCount: 8,
   },
@@ -152,7 +152,7 @@ export function UnauthHome() {
               <div className="flex items-center gap-3 mb-3">
                 <div
                   className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: 'rgba(56, 189, 248, 0.12)' }}
+                  style={{ backgroundColor: 'rgba(var(--brand-primary-rgb), 0.12)' }}
                 >
                   <Mic className="w-3.5 h-3.5" style={{ color: 'var(--brand-primary)' }} />
                 </div>
@@ -252,7 +252,7 @@ export function UnauthHome() {
           onClick={() => navigate('/onboarding')}
           className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl font-bold text-sm transition-all hover:opacity-90 active:scale-[0.98] aperture-header"
           style={{
-            background: 'linear-gradient(135deg, var(--brand-primary), #818cf8)',
+            background: 'linear-gradient(135deg, var(--brand-primary), rgb(var(--color-accent-light-rgb)))',
             color: '#fff',
           }}
         >

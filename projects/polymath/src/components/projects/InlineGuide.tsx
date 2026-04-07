@@ -357,8 +357,8 @@ export function InlineGuide({
                                 disabled={added}
                                 className="flex-shrink-0 flex items-center gap-1 px-2 py-1 rounded-lg transition-all disabled:opacity-40"
                                 style={{
-                                  background: added ? 'rgba(255,255,255,0.04)' : 'rgba(59,130,246,0.12)',
-                                  border: `1px solid ${added ? 'rgba(255,255,255,0.06)' : 'rgba(59,130,246,0.2)'}`,
+                                  background: added ? 'rgba(255,255,255,0.04)' : 'rgba(var(--brand-primary-rgb),0.12)',
+                                  border: `1px solid ${added ? 'rgba(255,255,255,0.06)' : 'rgba(var(--brand-primary-rgb),0.2)'}`,
                                   color: added ? 'var(--brand-text-secondary)' : 'var(--brand-primary)',
                                 }}
                               >
@@ -379,8 +379,8 @@ export function InlineGuide({
                     <p
                       className="text-[15px] leading-relaxed px-4 py-2.5 rounded-2xl rounded-br-md max-w-[85%]"
                       style={{
-                        background: 'rgba(59,130,246,0.1)',
-                        border: '1px solid rgba(59,130,246,0.15)',
+                        background: 'rgba(var(--brand-primary-rgb),0.1)',
+                        border: '1px solid rgba(var(--brand-primary-rgb),0.15)',
                         color: 'var(--brand-text-primary)',
                         opacity: 0.9,
                       }}
@@ -457,8 +457,8 @@ export function InlineGuide({
             disabled={!input.trim() || thinking}
             className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all disabled:opacity-15"
             style={{
-              background: input.trim() ? 'rgba(59,130,246,0.15)' : 'transparent',
-              border: `1px solid ${input.trim() ? 'rgba(59,130,246,0.25)' : 'rgba(255,255,255,0.05)'}`,
+              background: input.trim() ? 'rgba(var(--brand-primary-rgb),0.15)' : 'transparent',
+              border: `1px solid ${input.trim() ? 'rgba(var(--brand-primary-rgb),0.25)' : 'rgba(255,255,255,0.05)'}`,
               color: 'var(--brand-text-primary)',
             }}
           >

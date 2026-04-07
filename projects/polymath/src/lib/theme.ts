@@ -7,35 +7,10 @@ import type { AccentColor, ThemeIntensity, FontSize } from '../stores/useThemeSt
 
 // Color palettes for each accent color
 const colorPalettes: Record<AccentColor, { primary: string; light: string; dark: string }> = {
-  blue: {
-    primary: '#3b82f6',
-    light: '#60a5fa',
-    dark: '#2563eb',
-  },
-  indigo: {
-    primary: '#6366f1',
-    light: '#818cf8',
-    dark: '#4f46e5',
-  },
-  emerald: {
-    primary: '#10b981',
-    light: '#34d399',
-    dark: '#059669',
-  },
-  amber: {
-    primary: '#f59e0b',
-    light: '#fbbf24',
-    dark: '#d97706',
-  },
-  rose: {
-    primary: '#f43f5e',
-    light: '#fb7185',
-    dark: '#e11d48',
-  },
-  purple: {
-    primary: '#a855f7',
-    light: '#c084fc',
-    dark: '#9333ea',
+  cyan: {
+    primary: 'rgb(var(--brand-primary-rgb))',
+    light: 'rgb(var(--color-accent-light-rgb))',
+    dark: 'rgb(var(--color-accent-dark-rgb))',
   },
 }
 
