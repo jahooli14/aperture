@@ -284,6 +284,7 @@ async function handleExtract(
   project_mode: string
   end_goal: string
   first_step: string
+  initial_tasks?: { text: string; task_type: 'ignition' | 'core' | 'shutdown' }[]
   genesisDraft: string
 }> {
   const { history } = body
@@ -300,6 +301,8 @@ Extract a structured project definition from this conversation. Be specific — 
 
 Also write a "genesis draft": the conversation retold as a first-person journal entry (3-5 sentences, conversational). This becomes the project's initial Studio note.
 
+Generate 3-6 concrete initial tasks that break the project into actionable steps. These should be specific to what was discussed — not generic. Each task should be a verb phrase. Mark them as "ignition" (tiny warmup, <2 min), "core" (main work), or "shutdown" (wrap-up/cleanup). Order them logically. The first task should be the smallest thing to break inertia.
+
 Return JSON only:
 {
   "title": "concise active-voice title, 6 words max",
@@ -308,6 +311,9 @@ Return JSON only:
   "project_mode": "completion or recurring",
   "end_goal": "a plain sentence describing when this is finished — e.g. 'A working iOS app in the App Store' or 'The manuscript is edited and sent to beta readers'. Concrete, not abstract.",
   "first_step": "the smallest concrete action to begin — a verb phrase",
+  "initial_tasks": [
+    { "text": "verb phrase task", "task_type": "ignition|core|shutdown" }
+  ],
   "genesisDraft": "the conversation as a first-person journal entry"
 }`
 

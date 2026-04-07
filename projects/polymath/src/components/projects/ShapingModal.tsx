@@ -121,6 +121,31 @@ export function ShapingModal({ project, isOpen, onClose }: ShapingModalProps) {
       })
       const data = await res.json()
 
+      // Build initial task list from extract response
+      const now = new Date().toISOString()
+      const existingTasks = project.metadata?.tasks || []
+      let tasks: { id: string; text: string; done: boolean; created_at: string; order: number; task_type?: string }[]
+
+      if (data.initial_tasks?.length > 0) {
+        // Use the full task list from the AI
+        tasks = data.initial_tasks.map((t: { text: string; task_type?: string }, i: number) => ({
+          id: crypto.randomUUID(),
+          text: t.text,
+          done: false,
+          created_at: now,
+          order: i,
+          task_type: t.task_type,
+        }))
+      } else if (data.first_step) {
+        // Fallback to single first_step
+        tasks = [
+          { id: crypto.randomUUID(), text: data.first_step, done: false, created_at: now, order: 0 },
+          ...(existingTasks as any[]),
+        ]
+      } else {
+        tasks = existingTasks as any[]
+      }
+
       // Update the existing project with shaped data
       await updateProject(project.id, {
         title: data.title || project.title,
@@ -132,12 +157,7 @@ export function ShapingModal({ project, isOpen, onClose }: ShapingModalProps) {
           end_goal: data.end_goal || project.metadata?.end_goal,
           project_mode: data.project_mode || project.metadata?.project_mode || 'completion',
           studio_draft: data.genesisDraft || project.metadata?.studio_draft,
-          tasks: data.first_step
-            ? [
-                { id: crypto.randomUUID(), text: data.first_step, done: false, created_at: new Date().toISOString(), order: 0 },
-                ...(project.metadata?.tasks || []),
-              ]
-            : project.metadata?.tasks || [],
+          tasks,
         },
       })
 
