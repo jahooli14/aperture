@@ -254,13 +254,22 @@ export function ProjectChatPanel({
         })
         const data = await res.json()
         if (res.ok && data.reply) {
+          // Auto-add suggested tasks to the project task list
+          const autoSuggestions = (data.suggestedTasks || []) as SuggestedTask[]
+          for (const task of autoSuggestions) {
+            if (!addedTasks.has(task.text)) {
+              onAddTask(task)
+              setAddedTasks(prev => new Set(prev).add(task.text))
+            }
+          }
+
           setMessages(prev => {
             const next: ChatMessage[] = [
               ...prev,
               {
                 kind: 'model',
                 content: data.reply,
-                suggestedTasks: data.suggestedTasks || [],
+                suggestedTasks: autoSuggestions,
                 echoes: data.echoes || [],
               },
             ]
@@ -400,13 +409,22 @@ export function ProjectChatPanel({
         }
       }
 
+      // Auto-add suggested tasks to the project task list
+      const suggestions = (data.suggestedTasks as SuggestedTask[]) || []
+      for (const task of suggestions) {
+        if (!addedTasks.has(task.text)) {
+          onAddTask(task)
+          setAddedTasks(prev => new Set(prev).add(task.text))
+        }
+      }
+
       setMessages(prev => {
         const next: ChatMessage[] = [
           ...prev,
           {
             kind: 'model',
             content: (data.reply as string) || "Couldn't reach the server — try again.",
-            suggestedTasks: (data.suggestedTasks as SuggestedTask[]) || [],
+            suggestedTasks: suggestions,
             echoes: (data.echoes as EchoItem[]) || [],
           },
         ]
@@ -492,13 +510,22 @@ export function ProjectChatPanel({
               ])
               return
             }
+            // Auto-add suggested tasks to the project task list
+            const qpSuggestions = (data.suggestedTasks as SuggestedTask[]) || []
+            for (const task of qpSuggestions) {
+              if (!addedTasks.has(task.text)) {
+                onAddTask(task)
+                setAddedTasks(prev => new Set(prev).add(task.text))
+              }
+            }
+
             setMessages(prev => {
               const next: ChatMessage[] = [
                 ...prev,
                 {
                   kind: 'model',
                   content: (data.reply as string) || "Couldn't reach the server — try again.",
-                  suggestedTasks: (data.suggestedTasks as SuggestedTask[]) || [],
+                  suggestedTasks: qpSuggestions,
                   echoes: (data.echoes as EchoItem[]) || [],
                 },
               ]
@@ -820,21 +847,17 @@ export function ProjectChatPanel({
                                   </p>
                                 )}
                               </div>
-                              <button
-                                onClick={() => handleAddTask(task)}
-                                disabled={added}
-                                className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all disabled:opacity-50"
+                              <div
+                                className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg"
                                 style={{
-                                  background: added ? 'rgba(255,255,255,0.06)' : 'rgba(99,102,241,0.15)',
+                                  background: 'rgba(255,255,255,0.06)',
                                   border: '1px solid rgba(99,102,241,0.25)',
-                                  color: added ? 'var(--brand-text-secondary)' : 'var(--brand-primary)',
+                                  color: 'var(--brand-text-secondary)',
+                                  opacity: 0.5,
                                 }}
                               >
-                                {added
-                                  ? <><Check className="h-3 w-3" /><span className="text-[10px] font-medium">Added</span></>
-                                  : <><Plus className="h-3 w-3" /><span className="text-[10px] font-medium">Add</span></>
-                                }
-                              </button>
+                                <Check className="h-3 w-3" /><span className="text-[10px] font-medium">Added</span>
+                              </div>
                             </motion.div>
                           )
                         })}

@@ -545,7 +545,7 @@ PRIORITIES (in order):
 1. UNDERSTAND before advising. If they say something, probe it. Ask WHY, ask WHAT SPECIFICALLY, ask WHAT'S BLOCKING IT. Don't jump to solutions.
 2. ASK QUESTIONS that move the project forward. One good question is worth ten task suggestions. End your reply with a question when there's genuine ambiguity.
 3. REFERENCE WHAT YOU KNOW. Name specific tasks, the goal, the motivation. Show you've been paying attention. If their knowledge lake has relevant entries, connect the dots.
-4. Only suggest tasks if they EXPLICITLY ask for them, or if the conversation has naturally arrived at a clear next action. Never randomly generate tasks.
+4. EVOLVE THE TASK LIST as the conversation progresses. When discussion reveals a clear next action, a task that should be broken down, reworded, or removed — act on it. Use suggestedTasks to add new tasks and taskOps to edit/delete/complete existing ones. The task list should always reflect the current state of thinking, not just the initial plan. Don't ask permission — just update it naturally as part of the conversation.
 
 Rules:
 - 2-4 sentences. End with a question when appropriate.
@@ -563,9 +563,10 @@ Return JSON only:
   "taskOps": []
 }
 
-suggestedTasks format (only when explicitly warranted): { "text": "task", "task_type": "ignition"|"core"|"shutdown", "estimated_minutes": 15, "reasoning": "why" }
-taskOps format (only when user asks): { "action": "complete"|"uncomplete"|"delete"|"edit", "taskId": "id", "newText": "for edit only" }
-Default both to []. task_type: ignition = breaks inertia, core = main work, shutdown = wraps up.`
+suggestedTasks format (when conversation reveals new actions): { "text": "task", "task_type": "ignition"|"core"|"shutdown", "estimated_minutes": 15, "reasoning": "why" }
+taskOps format (to modify existing tasks): { "action": "complete"|"uncomplete"|"delete"|"edit", "taskId": "id", "newText": "for edit only" }
+Default both to []. task_type: ignition = breaks inertia, core = main work, shutdown = wraps up.
+Use suggestedTasks + taskOps together to keep the list evolving. If a vague task should become two specific ones, delete the old (taskOps) and add the new (suggestedTasks). If a task is clearly done from context, complete it.`
 
   const raw = await generateText(prompt, { temperature: 0.72, responseFormat: 'json' })
 
