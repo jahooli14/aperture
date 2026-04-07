@@ -92,7 +92,7 @@ export function PWAUpdateNotification() {
       >
         <div
           className="premium-glass-strong border rounded-2xl p-4 shadow-2xl"
-          style={{ borderColor: 'rgba(16, 185, 129, 0.3)' }}
+          style={{ borderColor: 'rgba(var(--brand-primary-rgb), 0.3)' }}
         >
           {/* Close Button */}
           <button
@@ -131,7 +131,7 @@ export function PWAUpdateNotification() {
             style={{
               background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-primary))',
               color: 'white',
-              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+              boxShadow: '0 4px 12px rgba(var(--brand-primary-rgb), 0.3)'
             }}
           >
             <RefreshCw className="h-4 w-4" />

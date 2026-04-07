@@ -94,20 +94,20 @@ export function SmartSuggestionWidget() {
       case 'project':
         return {
           primary: 'var(--brand-primary)',
-          bg: 'rgba(59, 130, 246, 0.15)',
-          border: 'rgba(59, 130, 246, 0.3)'
+          bg: 'rgba(var(--brand-primary-rgb), 0.15)',
+          border: 'rgba(var(--brand-primary-rgb), 0.3)'
         }
       case 'reading':
         return {
           primary: 'var(--brand-primary)',
-          bg: 'rgba(16, 185, 129, 0.15)',
-          border: 'rgba(16, 185, 129, 0.3)'
+          bg: 'rgba(var(--brand-primary-rgb), 0.15)',
+          border: 'rgba(var(--brand-primary-rgb), 0.3)'
         }
       case 'capture':
         return {
           primary: 'var(--brand-primary)',
-          bg: 'rgba(99, 102, 241, 0.15)',
-          border: 'rgba(99, 102, 241, 0.3)'
+          bg: 'rgba(var(--brand-primary-rgb), 0.15)',
+          border: 'rgba(var(--brand-primary-rgb), 0.3)'
         }
       case 'rest':
         return {
@@ -118,8 +118,8 @@ export function SmartSuggestionWidget() {
       default:
         return {
           primary: 'var(--brand-primary)',
-          bg: 'rgba(245, 158, 11, 0.15)',
-          border: 'rgba(245, 158, 11, 0.3)'
+          bg: 'rgba(var(--brand-primary-rgb), 0.15)',
+          border: 'rgba(var(--brand-primary-rgb), 0.3)'
         }
     }
   }

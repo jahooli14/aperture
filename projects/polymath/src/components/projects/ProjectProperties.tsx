@@ -59,9 +59,9 @@ export function ProjectProperties({ project, onUpdate }: ProjectPropertiesProps)
                   key={index}
                   className="px-2 py-1 text-xs rounded-md border flex-shrink-0"
                   style={{
-                    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                    backgroundColor: 'rgba(var(--brand-primary-rgb), 0.15)',
                     color: "var(--brand-text-secondary)",
-                    borderColor: 'rgba(59, 130, 246, 0.3)'
+                    borderColor: 'rgba(var(--brand-primary-rgb), 0.3)'
                   }}
                 >
                   {req}

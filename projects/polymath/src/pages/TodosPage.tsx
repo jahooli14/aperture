@@ -316,7 +316,7 @@ export function TodosPage() {
                     {overdueCount > 0 && (
                       <span
                         className="text-[10px] font-black px-2 py-0.5 rounded-lg uppercase tracking-wide"
-                        style={{ background: 'rgba(239,68,68,0.15)', color: "#f87171" }}
+                        style={{ background: 'rgba(239,68,68,0.15)', color: "rgb(var(--color-error-rgb))" }}
                       >
                         {overdueCount} overdue
                       </span>
@@ -484,7 +484,7 @@ export function TodosPage() {
                 }}
                 className="w-full flex items-center justify-between mb-3 px-3.5 py-2.5 rounded-lg text-left"
                 style={{
-                  background: 'rgba(59,130,246,0.08)',
+                  background: 'rgba(var(--brand-primary-rgb),0.08)',
                   border: '2px solid rgba(99,179,237,0.3)',
                   boxShadow: '3px 3px 0 rgba(99,179,237,0.1)',
                 }}
@@ -1121,7 +1121,7 @@ function EmptyState({ view }: { view: TodoView }) {
       <div
         className="h-14 w-14 rounded-lg flex items-center justify-center mb-5"
         style={{
-          background: 'rgba(59,130,246,0.07)',
+          background: 'rgba(var(--brand-primary-rgb),0.07)',
           border: '2px solid rgba(99,179,237,0.2)',
           boxShadow: '3px 3px 0 rgba(0,0,0,0.6)',
         }}

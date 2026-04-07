@@ -63,16 +63,16 @@ function getPresetDates(preset: PresetPeriod): { start: string; end: string } {
 }
 
 const TONE_COLORS: Record<string, string> = {
-  excited: 'bg-amber-500',
-  curious: 'bg-blue-400',
-  focused: 'bg-emerald-500',
-  reflective: 'bg-purple-400',
-  anxious: 'bg-orange-400',
-  frustrated: 'bg-red-400',
-  calm: 'bg-teal-400',
+  excited: 'bg-brand-primary',
+  curious: 'bg-brand-primary',
+  focused: 'bg-brand-primary',
+  reflective: 'bg-brand-primary/60',
+  anxious: 'bg-brand-primary',
+  frustrated: 'bg-brand-primary/40',
+  calm: 'bg-brand-primary/80',
   neutral: 'bg-slate-400',
-  inspired: 'bg-yellow-400',
-  determined: 'bg-indigo-400',
+  inspired: 'bg-brand-primary',
+  determined: 'bg-brand-primary',
 }
 
 function getToneColor(tone: string): string {
@@ -82,8 +82,8 @@ function getToneColor(tone: string): string {
 
 const MomentumIcon = ({ momentum }: { momentum: string }) => {
   switch (momentum) {
-    case 'rising': return <TrendingUp className="w-4 h-4 text-emerald-400" />
-    case 'fading': return <TrendingDown className="w-4 h-4 text-orange-400" />
+    case 'rising': return <TrendingUp className="w-4 h-4 text-brand-primary" />
+    case 'fading': return <TrendingDown className="w-4 h-4 text-brand-primary" />
     default: return <Minus className="w-4 h-4 text-slate-400" />
   }
 }
@@ -162,10 +162,10 @@ export function CognitiveReplayPage() {
         </div>
 
         {isOffline && (
-          <Card className="mb-6 border-amber-500/20 bg-amber-500/5">
+          <Card className="mb-6 border-brand-primary/20 bg-brand-primary/5">
             <CardContent className="p-4 flex items-center gap-3">
-              <WifiOff className="w-5 h-5 text-amber-400" />
-              <p className="text-sm text-amber-300">Replay requires a connection to generate narratives.</p>
+              <WifiOff className="w-5 h-5 text-brand-primary" />
+              <p className="text-sm text-brand-primary">Replay requires a connection to generate narratives.</p>
             </CardContent>
           </Card>
         )}
@@ -182,7 +182,7 @@ export function CognitiveReplayPage() {
               className={cn(
                 'px-4 py-2 rounded-full text-sm font-medium transition-all border',
                 selectedPreset === preset.id
-                  ? 'bg-brand-primary/20 text-brand-primary border-blue-500/30'
+                  ? 'bg-brand-primary/20 text-brand-primary border-brand-primary/30'
                   : 'bg-[var(--glass-surface)] text-[var(--brand-text-secondary)] border-[var(--glass-surface-hover)] hover:bg-[rgba(255,255,255,0.1)]'
               )}
             >
@@ -254,7 +254,7 @@ export function CognitiveReplayPage() {
             >
               {/* Chapter Header */}
               <div className="text-center mb-8">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-primary/10 border border-blue-500/20 text-brand-primary text-xs font-bold uppercase tracking-wider mb-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-primary/10 border border-brand-primary/20 text-brand-primary text-xs font-bold uppercase tracking-wider mb-4">
                   <BookOpen className="w-3 h-3" />
                   {new Date(chapter.period.start).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} — {new Date(chapter.period.end).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </div>
@@ -351,16 +351,16 @@ export function CognitiveReplayPage() {
 
               {/* Breakthroughs */}
               {chapter.breakthroughs.length > 0 && (
-                <Card className="premium-card border-amber-500/20">
+                <Card className="premium-card border-brand-primary/20">
                   <CardContent className="p-6">
-                    <h3 className="text-sm font-bold text-amber-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-brand-primary uppercase tracking-wider mb-4 flex items-center gap-2">
                       <Wand2 className="w-4 h-4" />
                       Breakthrough Moments
                     </h3>
                     <ul className="space-y-2">
                       {chapter.breakthroughs.map((b, i) => (
                         <li key={i} className="text-sm text-[var(--brand-text-secondary)] flex items-start gap-2">
-                          <span className="text-amber-400 mt-1">*</span>
+                          <span className="text-brand-primary mt-1">*</span>
                           {b}
                         </li>
                       ))}

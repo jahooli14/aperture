@@ -49,35 +49,35 @@ const PHASE_CONFIG: Record<Phase, {
 }> = {
   shaping: {
     icon: Compass,
-    gradient: 'from-violet-500/15 to-indigo-500/10',
+    gradient: 'from-brand-primary/15 to-brand-primary/10',
     border: 'rgba(139,92,246,0.35)',
     glow: 'rgba(139,92,246,0.1)',
     accent: 'rgb(139,92,246)',
   },
   building: {
     icon: Hammer,
-    gradient: 'from-blue-500/15 to-cyan-500/10',
-    border: 'rgba(59,130,246,0.35)',
-    glow: 'rgba(59,130,246,0.1)',
+    gradient: 'from-brand-primary/15 to-brand-primary/10',
+    border: 'rgba(var(--brand-primary-rgb),0.35)',
+    glow: 'rgba(var(--brand-primary-rgb),0.1)',
     accent: 'rgb(59,130,246)',
   },
   closing: {
     icon: Flag,
-    gradient: 'from-emerald-500/15 to-teal-500/10',
+    gradient: 'from-brand-primary/15 to-brand-primary/10',
     border: 'rgba(16,185,129,0.35)',
     glow: 'rgba(16,185,129,0.1)',
     accent: 'rgb(16,185,129)',
   },
   stale: {
     icon: Sunrise,
-    gradient: 'from-amber-500/15 to-orange-500/10',
+    gradient: 'from-brand-primary/15 to-brand-primary/10',
     border: 'rgba(245,158,11,0.35)',
     glow: 'rgba(245,158,11,0.08)',
     accent: 'rgb(245,158,11)',
   },
   fresh: {
     icon: Sparkles,
-    gradient: 'from-violet-500/15 to-indigo-500/10',
+    gradient: 'from-brand-primary/15 to-brand-primary/10',
     border: 'rgba(139,92,246,0.35)',
     glow: 'rgba(139,92,246,0.1)',
     accent: 'rgb(139,92,246)',
@@ -165,7 +165,7 @@ export function SessionBriefCard({ project, onOpenChat, onBriefLoaded }: Session
         className="rounded-2xl p-6"
         style={{
           background: 'rgba(255,255,255,0.02)',
-          border: '1.5px solid rgba(59,130,246,0.2)',
+          border: '1.5px solid rgba(var(--brand-primary-rgb),0.2)',
         }}
       >
         <p className="text-[15px] leading-relaxed" style={{ color: 'var(--brand-text-primary)', opacity: 0.8 }}>

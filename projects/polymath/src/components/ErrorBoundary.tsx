@@ -75,7 +75,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <div className="inline-flex items-center justify-center mb-4">
               <div
                 className="h-16 w-16 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
+                style={{ backgroundColor: 'rgba(var(--color-error-rgb), 0.1)' }}
               >
                 <AlertTriangle
                   className="h-8 w-8"

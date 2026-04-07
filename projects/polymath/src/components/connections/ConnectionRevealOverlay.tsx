@@ -35,10 +35,10 @@ const TYPE_ICONS: Record<string, typeof Layers> = {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  project: '#3b82f6',
-  thought: '#8b5cf6',
-  memory: '#8b5cf6',
-  article: '#10b981',
+  project: 'rgb(var(--brand-primary-rgb))',
+  thought: 'rgb(var(--brand-primary-rgb))',
+  memory: 'rgb(var(--brand-primary-rgb))',
+  article: 'rgb(var(--brand-primary-rgb))',
 }
 
 type Phase = 'tracing' | 'revealing' | 'complete'
@@ -220,7 +220,7 @@ export function ConnectionRevealOverlay({
               {path.length > 0 ? (
                 path.map((node, i) => {
                   const Icon = TYPE_ICONS[node.type] || Layers
-                  const color = TYPE_COLORS[node.type] || '#3b82f6'
+                  const color = TYPE_COLORS[node.type] || 'rgb(var(--brand-primary-rgb))'
                   const isActive = i <= activeNodeIndex
                   const isCurrentStep = i === activeNodeIndex
 
@@ -342,7 +342,7 @@ export function ConnectionRevealOverlay({
               </p>
               <button
                 onClick={onClose}
-                className="px-4 py-2 rounded-xl bg-brand-primary/10 text-brand-primary text-sm font-medium border border-blue-500/20 hover:bg-brand-primary/20 transition-all"
+                className="px-4 py-2 rounded-xl bg-brand-primary/10 text-brand-primary text-sm font-medium border border-brand-primary/20 hover:bg-brand-primary/20 transition-all"
               >
                 Done
               </button>

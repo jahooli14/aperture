@@ -173,7 +173,7 @@ export function KeepGoingCarousel() {
     )
   }
 
-  const theme = current ? getTheme(current.type || 'other', current.title) : { text: '#63B3ED', rgb: '99,179,237' }
+  const theme = current ? getTheme(current.type || 'other', current.title) : { text: 'rgb(var(--brand-primary-rgb))', rgb: 'var(--brand-primary-rgb)' }
   const plan = current ? sessionPlans[current.id] : null
   const headline = plan?.task_title || current?.metadata?.session_headline
   const pitch = plan?.task_description || current?.metadata?.session_pitch

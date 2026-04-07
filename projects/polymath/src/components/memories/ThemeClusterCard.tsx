@@ -30,8 +30,8 @@ export const ThemeClusterCard = React.memo(function ThemeClusterCard({ cluster, 
       <div
         className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
         style={{
-          background: 'rgba(59,130,246,0.12)',
-          border: '2px solid rgba(59,130,246,0.3)',
+          background: 'rgba(var(--brand-primary-rgb),0.12)',
+          border: '2px solid rgba(var(--brand-primary-rgb),0.3)',
           boxShadow: '2px 2px 0 rgba(0,0,0,0.5)',
         }}
       >
@@ -57,9 +57,9 @@ export const ThemeClusterCard = React.memo(function ThemeClusterCard({ cluster, 
               key={i}
               className="text-[10px] px-2 py-0.5 rounded-lg font-black uppercase tracking-wide"
               style={{
-                background: 'rgba(59,130,246,0.1)',
+                background: 'rgba(var(--brand-primary-rgb),0.1)',
                 color: "var(--brand-text-secondary)",
-                border: '1.5px solid rgba(59,130,246,0.3)',
+                border: '1.5px solid rgba(var(--brand-primary-rgb),0.3)',
               }}
             >
               {keyword}
@@ -90,9 +90,9 @@ export const ThemeClusterCard = React.memo(function ThemeClusterCard({ cluster, 
           onClick={(e) => { e.stopPropagation(); setSeedOpen(true) }}
           className="absolute top-3 right-3 z-10 flex items-center gap-1 px-2 py-1 rounded-lg transition-all active:scale-95"
           style={{
-            background: 'rgba(52, 211, 153, 0.1)',
-            border: '1px solid rgba(52, 211, 153, 0.25)',
-            color: '#34d399',
+            background: 'rgba(var(--brand-primary-rgb), 0.1)',
+            border: '1px solid rgba(var(--brand-primary-rgb), 0.25)',
+            color: 'rgb(var(--color-accent-light-rgb))',
             fontSize: '9px',
             fontWeight: 900,
             letterSpacing: '0.1em',

@@ -28,7 +28,7 @@ const TYPE_ICON = {
 }
 
 const TYPE_COLOR = {
-  evolution: 'rgba(59,130,246,0.15)',
+  evolution: 'rgba(var(--brand-primary-rgb),0.15)',
   pattern: 'rgba(139,92,246,0.15)',
   collision: 'rgba(245,158,11,0.15)',
   opportunity: 'rgba(16,185,129,0.15)',
@@ -74,7 +74,7 @@ export function ItemInsightStrip({ title, themes, itemId, itemType }: ItemInsigh
         <>
           <button
             onClick={() => setShowPathPicker(true)}
-            className="w-full p-3 rounded-xl transition-all hover:bg-brand-primary/5 flex items-center justify-center gap-2 border border-dashed border-blue-500/15 group"
+            className="w-full p-3 rounded-xl transition-all hover:bg-brand-primary/5 flex items-center justify-center gap-2 border border-dashed border-brand-primary/15 group"
           >
             <Route className="h-3.5 w-3.5 text-brand-primary opacity-50 group-hover:opacity-100 transition-opacity" />
             <span className="text-xs font-medium text-brand-primary opacity-50 group-hover:opacity-100 transition-opacity">

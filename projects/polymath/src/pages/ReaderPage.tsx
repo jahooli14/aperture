@@ -431,7 +431,7 @@ export function ReaderPage() {
           transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
           className="absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] rounded-full"
           style={{
-            background: 'radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0) 70%)',
+            background: 'radial-gradient(circle, rgba(var(--brand-primary-rgb), 0.15) 0%, rgba(var(--brand-primary-rgb), 0) 70%)',
             filter: 'blur(100px)',
           }}
         />
@@ -445,7 +445,7 @@ export function ReaderPage() {
           transition={{ duration: 20, repeat: Infinity, ease: "easeInOut", delay: 2 }}
           className="absolute top-[20%] -right-[15%] w-[80vw] h-[80vw] rounded-full"
           style={{
-            background: 'radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, rgba(99, 102, 241, 0) 70%)',
+            background: 'radial-gradient(circle, rgba(var(--brand-primary-rgb), 0.1) 0%, rgba(var(--brand-primary-rgb), 0) 70%)',
             filter: 'blur(120px)',
           }}
         />
@@ -459,7 +459,7 @@ export function ReaderPage() {
           transition={{ duration: 18, repeat: Infinity, ease: "easeInOut", delay: 5 }}
           className="absolute bottom-[-10%] left-[20%] w-[60vw] h-[60vw] rounded-full"
           style={{
-            background: 'radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0) 70%)',
+            background: 'radial-gradient(circle, rgba(var(--brand-primary-rgb), 0.08) 0%, rgba(var(--brand-primary-rgb), 0) 70%)',
             filter: 'blur(80px)',
           }}
         />
@@ -482,12 +482,12 @@ export function ReaderPage() {
           margin-bottom: 1.5rem;
         }
         .reader-content blockquote {
-          border-left: 3px solid #3b82f6;
+          border-left: 3px solid rgb(var(--brand-primary-rgb));
           padding: 0.5rem 0 0.5rem 1.5rem;
           margin: 2rem 0;
           font-style: italic;
           color: #a1a1aa;
-          background: rgba(59, 130, 246, 0.05);
+          background: rgba(var(--brand-primary-rgb), 0.05);
           border-radius: 0 0.5rem 0.5rem 0;
         }
         .reader-content pre {
@@ -511,13 +511,13 @@ export function ReaderPage() {
           box-shadow: 0 20px 40px rgba(0,0,0,0.4);
         }
         .reader-content a {
-          color: #3b82f6;
+          color: rgb(var(--brand-primary-rgb));
           text-decoration: underline;
           text-underline-offset: 4px;
           transition: color 0.2s;
         }
         .reader-content a:hover {
-          color: #60a5fa;
+          color: rgb(var(--color-accent-light-rgb));
         }
         .reader-content ul, .reader-content ol {
           margin: 1.5rem 0;
@@ -599,7 +599,7 @@ export function ReaderPage() {
           {/* Reading Progress Line */}
           <div className="max-w-3xl mx-auto mt-2 h-1 bg-[var(--glass-surface)] rounded-full overflow-hidden">
             <motion.div
-              className="h-full bg-brand-primary shadow-[0_0_10px_rgba(59,130,246,0.5)]"
+              className="h-full bg-brand-primary shadow-[0_0_10px_rgba(var(--brand-primary-rgb),0.5)]"
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
             />
@@ -667,12 +667,12 @@ export function ReaderPage() {
                 transform: 'translateX(-50%) translateY(-100%)'
               }}
             >
-              {['yellow', 'green', 'blue', 'pink', 'purple'].map((color) => (
+              {['light', 'medium', 'dark'].map((shade) => (
                 <button
-                  key={color}
-                  onClick={() => handleHighlight(color)}
+                  key={shade}
+                  onClick={() => handleHighlight(shade)}
                   className="w-8 h-8 rounded-full border border-[var(--glass-surface-hover)] hover:scale-110 transition-transform"
-                  style={{ backgroundColor: color === 'yellow' ? '#fde047' : color === 'green' ? '#4ade80' : color === 'blue' ? '#60a5fa' : color === 'pink' ? '#f472b6' : '#c084fc' }}
+                  style={{ backgroundColor: shade === 'light' ? 'rgba(var(--color-accent-light-rgb), 0.5)' : shade === 'medium' ? 'rgba(var(--brand-primary-rgb), 0.5)' : 'rgba(var(--color-accent-dark-rgb), 0.5)' }}
                 />
               ))}
             </motion.div>

@@ -48,7 +48,7 @@ export function DebugPanel() {
           bottom: '20px',
           right: '20px',
           zIndex: 9999,
-          background: '#3b82f6',
+          background: 'rgb(var(--brand-primary-rgb))',
           color: 'white',
           border: 'none',
           borderRadius: '50%',
@@ -77,7 +77,7 @@ export function DebugPanel() {
         zIndex: 9999,
         display: 'flex',
         flexDirection: 'column',
-        borderTop: '2px solid #3b82f6',
+        borderTop: '2px solid rgb(var(--brand-primary-rgb))',
         fontFamily: 'monospace',
         fontSize: '12px'
       }}
@@ -108,7 +108,7 @@ export function DebugPanel() {
           <button
             onClick={() => setIsVisible(false)}
             style={{
-              background: '#ef4444',
+              background: 'rgb(var(--color-error-rgb))',
               color: 'white',
               border: 'none',
               padding: '6px 12px',
@@ -136,7 +136,7 @@ export function DebugPanel() {
               style={{
                 padding: '4px 0',
                 borderBottom: '1px solid #333',
-                color: log.startsWith('[ERROR]') ? '#ef4444' : '#10b981'
+                color: log.startsWith('[ERROR]') ? 'rgb(var(--color-error-rgb))' : 'rgb(var(--brand-primary-rgb))'
               }}
             >
               {log}

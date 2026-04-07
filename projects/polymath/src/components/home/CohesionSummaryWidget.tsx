@@ -53,7 +53,7 @@ export function CohesionSummaryWidget() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-3xl p-8 border border-[var(--glass-surface-hover)] backdrop-blur-3xl bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-transparent"
+        className="relative overflow-hidden rounded-3xl p-8 border border-[var(--glass-surface-hover)] backdrop-blur-3xl bg-gradient-to-br from-brand-primary/10 via-brand-primary/5 to-transparent"
       >
         <div className="absolute top-0 right-0 p-4 opacity-20">
           <Zap className="h-12 w-12 text-brand-primary" />
@@ -79,7 +79,7 @@ export function CohesionSummaryWidget() {
               <Link
                 key={idx}
                 to={flow.action_url}
-                className="group flex items-center gap-4 p-4 rounded-2xl bg-[var(--glass-surface)] border border-[var(--glass-surface)] hover:border-indigo-500/30 hover:bg-[rgba(255,255,255,0.1)] transition-all duration-300"
+                className="group flex items-center gap-4 p-4 rounded-2xl bg-[var(--glass-surface)] border border-[var(--glass-surface)] hover:border-brand-primary/30 hover:bg-[rgba(255,255,255,0.1)] transition-all duration-300"
               >
                 <div className="h-10 w-10 flex-shrink-0 rounded-xl bg-brand-primary/20 flex items-center justify-center text-brand-primary group-hover:scale-110 transition-transform">
                   {flow.icon === 'zap' && <Zap className="h-5 w-5" />}

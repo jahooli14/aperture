@@ -87,30 +87,30 @@ export function WeeklyIntersection() {
       </h2>
 
       {loading && !intersection ? (
-        <div className="p-6 rounded-2xl border border-violet-500/10 bg-violet-500/5 flex items-center justify-center">
-          <RefreshCw className="h-5 w-5 text-violet-400 animate-spin" />
+        <div className="p-6 rounded-2xl border border-brand-primary/10 bg-brand-primary/5 flex items-center justify-center">
+          <RefreshCw className="h-5 w-5 text-brand-primary animate-spin" />
         </div>
       ) : intersection ? (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-5 rounded-2xl border border-violet-500/15 bg-gradient-to-br from-violet-500/5 to-indigo-500/5"
+          className="p-5 rounded-2xl border border-brand-primary/15 bg-gradient-to-br from-brand-primary/5 to-brand-primary/5"
         >
           {/* Project names as intersection */}
           <div className="flex items-center gap-2 mb-3 flex-wrap">
-            <Sparkles className="h-4 w-4 text-violet-400 flex-shrink-0" />
+            <Sparkles className="h-4 w-4 text-brand-primary flex-shrink-0" />
             {intersection.projects.map((p, i) => (
               <span key={p.id} className="flex items-center gap-2">
-                {i > 0 && <span className="text-violet-400 font-bold">×</span>}
+                {i > 0 && <span className="text-brand-primary font-bold">×</span>}
                 <Link
                   to={`/projects/${p.id}`}
-                  className="text-sm font-semibold text-[var(--brand-text-primary)] hover:text-violet-300 transition-colors"
+                  className="text-sm font-semibold text-[var(--brand-text-primary)] hover:text-brand-primary transition-colors"
                 >
                   {p.title}
                 </Link>
               </span>
             ))}
-            <span className="ml-auto text-xs text-violet-400/60 font-mono">
+            <span className="ml-auto text-xs text-brand-primary/60 font-mono">
               {intersection.projects.length} projects · {intersection.score.toFixed(1)} score
             </span>
           </div>
@@ -140,7 +140,7 @@ export function WeeklyIntersection() {
           <div className="flex items-center gap-3 mt-1">
             <Link
               to={`/projects/${intersection.projects[0]?.id}`}
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-violet-400 hover:text-violet-300 transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-primary hover:text-brand-primary transition-colors"
             >
               Explore <ArrowRight className="h-3 w-3" />
             </Link>

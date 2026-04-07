@@ -96,7 +96,7 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
                                     placeholder="Search collections..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="pl-10 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/15"
+                                    className="pl-10 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary placeholder:text-[var(--brand-text-primary)]/15"
                                     style={{ color: "var(--brand-primary)" }}
                                     autoFocus
                                 />
@@ -118,8 +118,8 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
                                                 <div
                                                     className="h-8 w-8 rounded-lg flex items-center justify-center border"
                                                     style={{
-                                                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                                                        borderColor: 'rgba(59, 130, 246, 0.2)',
+                                                        backgroundColor: 'rgba(var(--brand-primary-rgb), 0.1)',
+                                                        borderColor: 'rgba(var(--brand-primary-rgb), 0.2)',
                                                     }}
                                                 >
                                                     <span className="text-lg">{list.icon || ''}</span>
@@ -149,15 +149,15 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
                             <div
                                 className="flex items-center gap-3 p-3 rounded-xl border"
                                 style={{
-                                    backgroundColor: 'rgba(59, 130, 246, 0.08)',
-                                    borderColor: 'rgba(59, 130, 246, 0.2)',
+                                    backgroundColor: 'rgba(var(--brand-primary-rgb), 0.08)',
+                                    borderColor: 'rgba(var(--brand-primary-rgb), 0.2)',
                                 }}
                             >
                                 <div
                                     className="h-10 w-10 rounded-lg flex items-center justify-center border"
                                     style={{
-                                        backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                                        borderColor: 'rgba(59, 130, 246, 0.25)',
+                                        backgroundColor: 'rgba(var(--brand-primary-rgb), 0.15)',
+                                        borderColor: 'rgba(var(--brand-primary-rgb), 0.25)',
                                     }}
                                 >
                                     <span className="text-xl">{selectedList?.icon || ''}</span>
@@ -183,7 +183,7 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
                                         placeholder="Enter item name..."
                                         value={content}
                                         onChange={(e) => setContent(e.target.value)}
-                                        className="bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/15 py-6 text-lg"
+                                        className="bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary placeholder:text-[var(--brand-text-primary)]/15 py-6 text-lg"
                                         style={{ color: "var(--brand-primary)" }}
                                     />
                                 </div>
@@ -194,8 +194,8 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
                                         disabled={isSubmitting || !content.trim()}
                                         className="w-full h-12 font-bold flex items-center justify-center gap-2 touch-manipulation"
                                         style={{
-                                          background: 'rgba(59,130,246,0.15)',
-                                          border: '2px solid rgba(59,130,246,0.5)',
+                                          background: 'rgba(var(--brand-primary-rgb),0.15)',
+                                          border: '2px solid rgba(var(--brand-primary-rgb),0.5)',
                                           borderRadius: '4px',
                                           boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
                                           color: 'var(--brand-primary)',

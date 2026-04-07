@@ -141,7 +141,7 @@ export function ArticleCompletionDialog({
                 }}
                 onFocus={(e) => {
                   e.target.style.borderColor = 'var(--brand-primary)'
-                  e.target.style.backgroundColor = 'rgba(59, 130, 246, 0.05)'
+                  e.target.style.backgroundColor = 'rgba(var(--brand-primary-rgb), 0.05)'
                 }}
                 onBlur={(e) => {
                   e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)'
@@ -167,7 +167,7 @@ export function ArticleCompletionDialog({
                 disabled={!textInput.trim() || loading}
                 className="flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all disabled:opacity-50"
                 style={{
-                  backgroundColor: !textInput.trim() || loading ? 'rgba(59, 130, 246, 0.3)' : 'var(--brand-primary)',
+                  backgroundColor: !textInput.trim() || loading ? 'rgba(var(--brand-primary-rgb), 0.3)' : 'var(--brand-primary)',
                   color: 'white'
                 }}
               >

@@ -29,8 +29,8 @@ export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProp
       onClick={() => setExpanded(!expanded)}
       style={{
         background: expanded ? '#111113' : 'transparent',
-        border: expanded ? '2px solid rgba(59,130,246,0.4)' : '2px solid var(--glass-surface-hover)',
-        boxShadow: expanded ? '3px 3px 0 rgba(59,130,246,0.1)' : '3px 3px 0 rgba(0,0,0,0.6)',
+        border: expanded ? '2px solid rgba(var(--brand-primary-rgb),0.4)' : '2px solid var(--glass-surface-hover)',
+        boxShadow: expanded ? '3px 3px 0 rgba(var(--brand-primary-rgb),0.1)' : '3px 3px 0 rgba(0,0,0,0.6)',
       }}
     >
       <style>{`
@@ -43,7 +43,7 @@ export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProp
           margin-bottom: 0.75rem;
         }
         .rss-content a {
-          color: #3b82f6;
+          color: rgb(var(--brand-primary-rgb));
           text-decoration: underline;
           text-underline-offset: 2px;
         }
@@ -54,7 +54,7 @@ export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProp
           height: auto;
         }
         .rss-content blockquote {
-          border-left: 2px solid rgba(59, 130, 246, 0.5);
+          border-left: 2px solid rgba(var(--brand-primary-rgb), 0.5);
           padding-left: 1rem;
           margin: 1rem 0;
           font-style: italic;
@@ -91,7 +91,7 @@ export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProp
                 onSave()
               }}
               className="p-1.5 rounded-lg text-brand-primary transition-all duration-200"
-              style={{ background: 'rgba(59,130,246,0.12)', border: '1.5px solid rgba(59,130,246,0.3)', boxShadow: '2px 2px 0 rgba(0,0,0,0.5)' }}
+              style={{ background: 'rgba(var(--brand-primary-rgb),0.12)', border: '1.5px solid rgba(var(--brand-primary-rgb),0.3)', boxShadow: '2px 2px 0 rgba(0,0,0,0.5)' }}
               title="Save to Read Later"
             >
               <BookmarkPlus className="h-3.5 w-3.5" />

@@ -152,7 +152,7 @@ export function VoiceSearch({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       className="premium-glass-strong border rounded-2xl p-6 shadow-2xl"
-      style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}
+      style={{ borderColor: 'rgba(var(--brand-primary-rgb), 0.3)' }}
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
@@ -207,11 +207,11 @@ export function VoiceSearch({
           }`}
           style={{
             background: isListening
-              ? 'linear-gradient(135deg, #ef4444, #dc2626)'
+              ? 'linear-gradient(135deg, rgb(var(--color-error-rgb)), rgb(var(--color-error-rgb)))'
               : 'linear-gradient(135deg, var(--brand-primary), var(--brand-primary))',
             boxShadow: isListening
-              ? '0 0 20px rgba(239, 68, 68, 0.5)'
-              : '0 4px 12px rgba(59, 130, 246, 0.3)'
+              ? '0 0 20px rgba(var(--color-error-rgb), 0.5)'
+              : '0 4px 12px rgba(var(--brand-primary-rgb), 0.3)'
           }}
         >
           {isListening ? (
@@ -243,7 +243,7 @@ export function VoiceSearch({
             style={{
               background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-primary))',
               color: 'white',
-              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+              boxShadow: '0 4px 12px rgba(var(--brand-primary-rgb), 0.3)'
             }}
           >
             Search

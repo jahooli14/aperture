@@ -85,7 +85,7 @@ export function CompletionRitual({ project, isOpen, onClose }: CompletionRitualP
             {!sparks && (
               <>
                 <div className="mb-5">
-                  <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: '#34d399' }}>
+                  <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: 'rgb(var(--color-accent-light-rgb))' }}>
                     Finished · {project.title}
                   </p>
                   <h2 className="text-2xl font-black italic uppercase tracking-tight text-[var(--brand-text-primary)]">
@@ -154,7 +154,7 @@ export function CompletionRitual({ project, isOpen, onClose }: CompletionRitualP
                     style={{
                       background: 'rgba(52,211,153,0.12)',
                       border: '1px solid rgba(52,211,153,0.3)',
-                      color: '#34d399',
+                      color: 'rgb(var(--color-accent-light-rgb))',
                     }}
                   >
                     {submitting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
@@ -169,10 +169,10 @@ export function CompletionRitual({ project, isOpen, onClose }: CompletionRitualP
                 <div className="mb-5 flex items-center gap-3">
                   <div className="h-10 w-10 rounded-full flex items-center justify-center"
                     style={{ background: 'rgba(52,211,153,0.15)', border: '1px solid rgba(52,211,153,0.35)' }}>
-                    <Check className="h-5 w-5" style={{ color: '#34d399' }} />
+                    <Check className="h-5 w-5" style={{ color: 'rgb(var(--color-accent-light-rgb))' }} />
                   </div>
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#34d399' }}>
+                    <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'rgb(var(--color-accent-light-rgb))' }}>
                       Retrospective saved
                     </p>
                     <h3 className="text-lg font-black italic uppercase tracking-tight text-[var(--brand-text-primary)]">

@@ -217,7 +217,7 @@ function ArchivesSpotlightCard({ project }: { project: Project }) {
         onClick={handleResurrect}
         disabled={resurrecting}
         className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all hover:scale-105"
-        style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)', color: '#34d399' }}
+        style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)', color: 'rgb(var(--color-accent-light-rgb))' }}
       >
         {resurrecting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sprout className="h-3 w-3" />}
         Revive
@@ -308,7 +308,7 @@ export function ProjectsPageCarousel({
           <div className="max-w-sm mx-auto">
             {/* Ghost project card */}
             <div className="mb-8 p-5 rounded-2xl text-left opacity-30"
-              style={{ background: 'rgba(59,130,246,0.06)', border: '1px dashed rgba(59,130,246,0.3)' }}>
+              style={{ background: 'rgba(var(--brand-primary-rgb),0.06)', border: '1px dashed rgba(var(--brand-primary-rgb),0.3)' }}>
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="space-y-2 flex-1">
                   <div className="h-4 w-2/3 rounded-lg bg-[var(--glass-surface)]" />
@@ -317,7 +317,7 @@ export function ProjectsPageCarousel({
                 </div>
                 <Star className="h-4 w-4 text-[var(--brand-primary)] flex-shrink-0 mt-1" />
               </div>
-              <div className="p-3 rounded-xl" style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)' }}>
+              <div className="p-3 rounded-xl" style={{ background: 'rgba(var(--brand-primary-rgb),0.08)', border: '1px solid rgba(var(--brand-primary-rgb),0.15)' }}>
                 <div className="h-3 w-1/2 rounded bg-[var(--glass-surface)] mb-1" />
                 <div className="h-3 w-4/5 rounded bg-[var(--glass-surface)]" />
               </div>

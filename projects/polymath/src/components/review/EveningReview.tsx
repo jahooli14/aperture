@@ -282,7 +282,7 @@ export function EveningReview({ todos, onUpdateTodo, onAddTodo, onDeleteTodo, on
                             onClick={() => handleDoTomorrow(todo.id)}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-medium transition-all"
                             style={{
-                              background: 'rgba(59,130,246,0.1)',
+                              background: 'rgba(var(--brand-primary-rgb),0.1)',
                               color: "var(--brand-text-secondary)",
                               border: '1px solid rgba(99,179,237,0.2)',
                             }}

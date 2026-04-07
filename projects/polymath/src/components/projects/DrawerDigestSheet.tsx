@@ -94,13 +94,13 @@ export function DrawerDigestSheet() {
         onClick={() => setOpen(true)}
         className="w-full mb-4 p-3 rounded-xl border flex items-center gap-3 text-left transition-all hover:scale-[1.005]"
         style={{
-          background: 'linear-gradient(135deg, rgba(168,85,247,0.08), rgba(59,130,246,0.04))',
+          background: 'linear-gradient(135deg, rgba(168,85,247,0.08), rgba(var(--brand-primary-rgb),0.04))',
           borderColor: 'rgba(168,85,247,0.25)',
         }}
       >
-        <Wand2 className="h-4 w-4 flex-shrink-0" style={{ color: '#a855f7' }} />
+        <Wand2 className="h-4 w-4 flex-shrink-0" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
         <div className="flex-1 min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#a855f7' }}>
+          <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'rgb(var(--brand-primary-rgb))' }}>
             Weekly drawer digest
           </p>
           <p className="text-xs text-[var(--brand-text-primary)] leading-snug">
@@ -140,7 +140,7 @@ export function DrawerDigestSheet() {
               </button>
 
               <div className="flex items-center gap-2 mb-5">
-                <Wand2 className="h-4 w-4" style={{ color: '#a855f7' }} />
+                <Wand2 className="h-4 w-4" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
                 <h2 className="text-lg font-black italic uppercase tracking-tight text-[var(--brand-text-primary)]">
                   Drawer digest
                 </h2>
@@ -164,7 +164,7 @@ export function DrawerDigestSheet() {
                     >
                       <div className="flex items-center gap-2 mb-2">
                         <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest"
-                          style={{ background: 'rgba(168,85,247,0.15)', color: '#c084fc' }}>
+                          style={{ background: 'rgba(168,85,247,0.15)', color: 'rgb(var(--color-accent-light-rgb))' }}>
                           {mode.label}
                         </span>
                         <span className="text-[10px] text-[var(--brand-text-muted)]">{mode.blurb}</span>
@@ -191,7 +191,7 @@ export function DrawerDigestSheet() {
                           style={{
                             background: 'rgba(52,211,153,0.12)',
                             border: '1px solid rgba(52,211,153,0.3)',
-                            color: '#34d399',
+                            color: 'rgb(var(--color-accent-light-rgb))',
                           }}
                         >
                           <Check className="h-3 w-3" />

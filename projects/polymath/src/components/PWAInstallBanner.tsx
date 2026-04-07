@@ -61,7 +61,7 @@ export function PWAInstallBanner() {
       >
         <div
           className="premium-glass-strong border rounded-2xl p-5 shadow-2xl"
-          style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}
+          style={{ borderColor: 'rgba(var(--brand-primary-rgb), 0.3)' }}
         >
           {/* Close Button */}
           <button
@@ -126,7 +126,7 @@ export function PWAInstallBanner() {
               style={{
                 background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-primary))',
                 color: 'white',
-                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+                boxShadow: '0 4px 12px rgba(var(--brand-primary-rgb), 0.3)'
               }}
             >
               <Download className="h-4 w-4" />

@@ -124,9 +124,9 @@ export default function DrawerPage() {
                     className="block p-4 rounded-xl border transition-all hover:scale-[1.01]"
                     style={{
                       background: isWarm
-                        ? 'linear-gradient(135deg, rgba(59,130,246,0.08), rgba(59,130,246,0.02))'
+                        ? 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.08), rgba(var(--brand-primary-rgb),0.02))'
                         : 'var(--brand-glass-bg)',
-                      borderColor: isWarm ? 'rgba(59,130,246,0.25)' : 'var(--glass-surface-hover)',
+                      borderColor: isWarm ? 'rgba(var(--brand-primary-rgb),0.25)' : 'var(--glass-surface-hover)',
                     }}
                   >
                     <div className="flex items-start justify-between gap-2 mb-1">

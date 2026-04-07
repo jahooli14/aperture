@@ -162,7 +162,7 @@ const DialogContent = React.forwardRef<
               "z-10"
             )}
             style={{
-              background: 'rgba(59, 130, 246, 0.15)',
+              background: 'rgba(var(--brand-primary-rgb), 0.15)',
               backdropFilter: 'blur(12px) saturate(180%)',
               WebkitBackdropFilter: 'blur(12px) saturate(180%)',
               borderColor: 'rgba(255, 255, 255, 0.2)',

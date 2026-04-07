@@ -36,7 +36,7 @@ export function ReadingProvocation() {
         initial={{ opacity: 0, height: 0 }}
         animate={{ opacity: 1, height: 'auto' }}
         exit={{ opacity: 0, height: 0 }}
-        className="mx-4 mb-3 p-3 rounded-xl border border-amber-500/20 bg-brand-primary/5"
+        className="mx-4 mb-3 p-3 rounded-xl border border-brand-primary/20 bg-brand-primary/5"
       >
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-start gap-2 flex-1 min-w-0">

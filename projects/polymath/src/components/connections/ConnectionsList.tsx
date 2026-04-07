@@ -38,18 +38,18 @@ interface DisplayItem {
 
 const SCHEMA_COLORS = {
   project: {
-    primary: '#3b82f6',
-    bg: 'rgba(59, 130, 246, 0.1)',
+    primary: 'rgb(var(--brand-primary-rgb))',
+    bg: 'rgba(var(--brand-primary-rgb), 0.1)',
     icon: Layers
   },
   thought: {
-    primary: '#8b5cf6',
-    bg: 'rgba(139, 92, 246, 0.1)',
+    primary: 'rgb(var(--brand-primary-rgb))',
+    bg: 'rgba(var(--brand-primary-rgb), 0.1)',
     icon: Brain
   },
   article: {
-    primary: '#10b981',
-    bg: 'rgba(16, 185, 129, 0.1)',
+    primary: 'rgb(var(--brand-primary-rgb))',
+    bg: 'rgba(var(--brand-primary-rgb), 0.1)',
     icon: BookOpen
   },
 
@@ -265,7 +265,7 @@ export function ConnectionsList({ itemType, itemId, itemTitle, onConnectionDelet
       <div>
         <button
           onClick={() => setShowPathPicker(true)}
-          className="w-full py-3 rounded-xl border border-dashed border-blue-500/20 flex items-center justify-center gap-2 text-xs font-medium transition-all hover:bg-brand-primary/5 hover:border-blue-500/30 group"
+          className="w-full py-3 rounded-xl border border-dashed border-brand-primary/20 flex items-center justify-center gap-2 text-xs font-medium transition-all hover:bg-brand-primary/5 hover:border-brand-primary/30 group"
           style={{ color: "var(--brand-primary)" }}
         >
           <Route className="h-4 w-4 group-hover:text-brand-primary transition-colors" />
