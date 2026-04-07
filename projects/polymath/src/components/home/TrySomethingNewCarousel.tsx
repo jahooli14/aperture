@@ -3,7 +3,7 @@
  * "Shape this idea" opens shaping conversation. Last card links to drawer.
  */
 
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback } from 'react'
 import { motion, AnimatePresence, type PanInfo } from 'framer-motion'
 import { ChevronLeft, ChevronRight, Wand2, Sparkles, ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -28,12 +28,11 @@ interface TrySomethingNewCarouselProps {
 }
 
 export function TrySomethingNewCarousel({ onShapeIdea }: TrySomethingNewCarouselProps) {
-  const { allProjects } = useProjectStore()
-  const { suggestions, fetchSuggestions } = useSuggestionStore()
+  const allProjects = useProjectStore(s => s.allProjects)
+  const suggestions = useSuggestionStore(s => s.suggestions)
+  const fetchSuggestions = useSuggestionStore(s => s.fetchSuggestions)
   const [idx, setIdx] = useState(0)
   const [direction, setDirection] = useState(1)
-
-  useEffect(() => { fetchSuggestions() }, [fetchSuggestions])
 
   // Build focused project IDs (same logic as useFocusedProjects)
   const focusIds = React.useMemo(() => {

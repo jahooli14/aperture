@@ -549,7 +549,7 @@ export const useProjectStore = create<ProjectState>()(
 
 // Selectors — derived data from the store
 export const useUnshapedProjects = () =>
-  useProjectStore(state => state.allProjects.filter(p => p.metadata?.is_shaped === false))
+  useProjectStore(useShallow(state => state.allProjects.filter(p => p.metadata?.is_shaped === false)))
 
 export const useFocusedProjects = () =>
   useProjectStore(useShallow(state => {

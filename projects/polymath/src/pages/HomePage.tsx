@@ -38,13 +38,14 @@ const LIST_TYPE_ICONS: Record<string, React.ElementType> = {
 }
 
 function NowConsumingWidget() {
-  const { lists, fetchLists } = useListStore()
+  const lists = useListStore(s => s.lists)
+  const fetchLists = useListStore(s => s.fetchLists)
   const [activeItems, setActiveItems] = useState<{ listId: string; listTitle: string; listType: string; itemId: string; itemContent: string }[]>([])
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     if (lists.length === 0) fetchLists()
-  }, [])
+  }, [lists.length, fetchLists])
 
   useEffect(() => {
     if (lists.length === 0) return
@@ -101,11 +102,13 @@ function NowConsumingWidget() {
 }
 
 export function HomePage() {
-  const { fetchProjects, projects } = useProjectStore()
-  const { fetchSuggestions } = useSuggestionStore()
-  const { fetchMemories } = useMemoryStore()
-  const { setContext } = useContextEngineStore()
-  const { onboardingCompletedAt, startSession } = useJourneyStore()
+  const fetchProjects = useProjectStore(s => s.fetchProjects)
+  const projects = useProjectStore(s => s.projects)
+  const fetchSuggestions = useSuggestionStore(s => s.fetchSuggestions)
+  const fetchMemories = useMemoryStore(s => s.fetchMemories)
+  const setContext = useContextEngineStore(s => s.setContext)
+  const onboardingCompletedAt = useJourneyStore(s => s.onboardingCompletedAt)
+  const startSession = useJourneyStore(s => s.startSession)
 
   const [error, setError] = useState<string | null>(null)
   const [createProjectOpen, setCreateProjectOpen] = useState(false)
