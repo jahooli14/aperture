@@ -8,10 +8,12 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { Loader2, MoreVertical, Plus, Check, X, GripVertical, ChevronDown, Zap, Target, Star, Sprout, Pin, PinOff } from 'lucide-react'
 import { MarkdownRenderer } from '../components/ui/MarkdownRenderer'
 import { useProjectStore } from '../stores/useProjectStore'
-import { NextActionCard } from '../components/projects/NextActionCard'
+import { SessionBriefCard } from '../components/projects/SessionBriefCard'
 import { AddNoteDialog } from '../components/projects/AddNoteDialog'
+import { ProjectPath } from '../components/projects/ProjectPath'
 import { TaskList, type Task } from '../components/projects/TaskList'
 import { PinnedTaskList } from '../components/projects/PinnedTaskList'
+import { ProactiveGuideBar } from '../components/projects/ProactiveGuideBar'
 import { PinButton } from '../components/PinButton'
 import { Button } from '../components/ui/button'
 import { useToast } from '../components/ui/toast'
@@ -75,6 +77,22 @@ export function ProjectDetailPage() {
   const [showChat, setShowChat] = useState(false)
   const [recentCompletions, setRecentCompletions] = useState<string[]>([])
   const prevTasksRef = useRef<{ id: string; done: boolean }[]>([])
+
+  // Session brief data — feeds the ProactiveGuideBar and SessionBriefCard
+  const [sessionBriefData, setSessionBriefData] = useState<{
+    phase?: 'shaping' | 'building' | 'closing' | 'stale' | 'fresh'
+    focusSuggestion?: string
+    knowledgeNudge?: string | null
+  } | null>(null)
+
+  // Capture session brief data when the SessionBriefCard loads
+  const handleSessionBriefLoaded = useCallback((data: {
+    phase: 'shaping' | 'building' | 'closing' | 'stale' | 'fresh'
+    focusSuggestion: string
+    knowledgeNudge: string | null
+  }) => {
+    setSessionBriefData(data)
+  }, [])
 
   // Auto-open chat when arriving from post-onboarding reveal
   useEffect(() => {
@@ -810,6 +828,16 @@ export function ProjectDetailPage() {
               )}
 
               <div className="space-y-6">
+                {/* Session Brief — AI-generated contextual greeting */}
+                <SessionBriefCard
+                  project={project}
+                  onOpenChat={(message) => {
+                    setShowChat(true)
+                    // If there's a message, it'll be the knowledge nudge — we could pass it as autoMessage
+                  }}
+                  onBriefLoaded={handleSessionBriefLoaded}
+                />
+
                 {/* Sparked By: Origin thoughts that inspired this project */}
                 {sparkedByMemories.length > 0 && (
                   <div className="p-4 rounded-xl border border-[var(--glass-surface)] bg-white/[0.02]">
@@ -937,15 +965,8 @@ export function ProjectDetailPage() {
                 </div>
               </div>
 
-              {/* Task Checklist */}
+              {/* The Path — phased project journey */}
               <div data-task-list className="mt-8">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3 flex-grow opacity-50">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--brand-text-primary)]/50">Execution Plan</span>
-                    <div className="h-px bg-white/20 flex-grow" />
-                  </div>
-                </div>
-
                 {/* All Tasks Complete Banner */}
                 {tasks.length > 0 && tasks.every((t: any) => t.done) && (
                   <div
@@ -979,9 +1000,9 @@ export function ProjectDetailPage() {
                   </div>
                 )}
 
-                <TaskList
-                  tasks={project.metadata?.tasks?.filter((task, index, self) =>
-                    index === self.findIndex((t) => (
+                <ProjectPath
+                  tasks={project.metadata?.tasks?.filter((task: any, index: number, self: any[]) =>
+                    index === self.findIndex((t: any) => (
                       t.text.trim().toLowerCase() === task.text.trim().toLowerCase()
                     ))
                   ) || []}
@@ -989,7 +1010,6 @@ export function ProjectDetailPage() {
                   projectId={project.id}
                   onUpdate={async (tasks) => {
                     if (!project) return
-                    console.log('[ProjectDetail] Task update triggered')
 
                     // Track newly completed tasks so the chat panel can show them inline
                     const newlyCompleted = tasks.filter(
@@ -1038,35 +1058,15 @@ export function ProjectDetailPage() {
         </div>
       </div>
 
-      {/* Project Guide — Prominent floating bar */}
-      <div className="fixed bottom-20 left-4 right-4 z-30 max-w-2xl mx-auto">
-        <button
-          onClick={() => setShowChat(true)}
-          className="w-full flex items-center gap-3 px-5 py-4 rounded-2xl transition-all active:scale-[0.98] group"
-          style={{
-            background: 'linear-gradient(135deg, rgba(59,130,246,0.15) 0%, rgba(99,102,241,0.1) 100%)',
-            border: '1.5px solid rgba(59,130,246,0.35)',
-            boxShadow: '0 0 24px rgba(59,130,246,0.12), 0 4px 16px rgba(0,0,0,0.4)',
-            backdropFilter: 'blur(12px)',
-          }}
-        >
-          <div
-            className="h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform"
-            style={{ background: 'rgba(59,130,246,0.2)', border: '1px solid rgba(59,130,246,0.3)' }}
-          >
-            <Zap className="h-4.5 w-4.5" style={{ color: 'var(--brand-primary)' }} />
-          </div>
-          <div className="flex-1 text-left min-w-0">
-            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-brand-primary opacity-70">Your Project Guide</p>
-            <p className="text-sm font-medium text-[var(--brand-text-primary)] opacity-80 truncate">Chat, plan, get unstuck…</p>
-          </div>
-          <div className="flex-shrink-0 opacity-40 group-hover:opacity-70 transition-opacity">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="var(--brand-primary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
-        </button>
-      </div>
+      {/* Proactive Guide Bar */}
+      <ProactiveGuideBar
+        onOpen={() => setShowChat(true)}
+        phase={sessionBriefData?.phase}
+        focusSuggestion={sessionBriefData?.focusSuggestion}
+        knowledgeNudge={sessionBriefData?.knowledgeNudge}
+        incompleteTasks={tasks.filter((t: any) => !t.done).length}
+        projectTitle={project.title}
+      />
 
       {/* Add Note Dialog */}
       <AddNoteDialog
