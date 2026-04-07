@@ -1,7 +1,13 @@
 /**
- * WeeklyIntersection — Highlights the most interesting multi-project crossover.
- * Shows 1x/week, scored by (number of projects × relevance).
- * Finds shared fuel (memories/articles) that bridge multiple projects.
+ * WeeklyIntersection — The Medici Effect in your knowledge graph.
+ *
+ * "The most valuable companies, ideas, and breakthroughs emerge at the
+ * intersection of previously unrelated fields." — Packy McCormick
+ *
+ * Finds where your projects collide in non-obvious ways: shared fuel
+ * (memories/articles) that bridge multiple domains, scored by
+ * projectCount × relevance. The best ideas live between fields,
+ * not within them.
  */
 
 import { useState, useEffect } from 'react'
@@ -83,7 +89,7 @@ export function WeeklyIntersection() {
   return (
     <section className="pb-6">
       <h2 className="section-header">
-        weekly <span>intersection</span>
+        <span>intersection</span>
       </h2>
 
       {loading && !intersection ? (
@@ -111,7 +117,7 @@ export function WeeklyIntersection() {
               </span>
             ))}
             <span className="ml-auto text-xs text-brand-primary/60 font-mono">
-              {intersection.projects.length} projects · {intersection.score.toFixed(1)} score
+              {intersection.projects.length} domains colliding
             </span>
           </div>
 
@@ -122,7 +128,7 @@ export function WeeklyIntersection() {
             </p>
           )}
 
-          {/* Shared fuel */}
+          {/* Shared fuel — the ideas bridging domains */}
           {intersection.sharedFuel.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-3">
               {intersection.sharedFuel.slice(0, 4).map((fuel) => (
