@@ -8,6 +8,7 @@
  */
 
 import { create } from 'zustand'
+import { useShallow } from 'zustand/react/shallow'
 import { persist } from 'zustand/middleware'
 import type { Project } from '../types'
 import { api } from '../lib/apiClient'
@@ -551,7 +552,7 @@ export const useUnshapedProjects = () =>
   useProjectStore(state => state.allProjects.filter(p => p.metadata?.is_shaped === false))
 
 export const useFocusedProjects = () =>
-  useProjectStore(state => {
+  useProjectStore(useShallow(state => {
     const active = state.allProjects.filter(p =>
       ['active', 'upcoming'].includes(p.status) && p.status !== 'graveyard'
     )
@@ -565,4 +566,4 @@ export const useFocusedProjects = () =>
       })
     // Priority first, then fill remaining slots with most recently active (max 3 total)
     return [...priority, ...recent].slice(0, 3)
-  })
+  }))
