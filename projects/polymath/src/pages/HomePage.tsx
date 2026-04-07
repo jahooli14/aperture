@@ -22,6 +22,7 @@ import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { useJourneyStore } from '../stores/useJourneyStore'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
+import { ShapingModal } from '../components/projects/ShapingModal'
 import { YourHourHeader } from '../components/home/YourHourHeader'
 import { KeepGoingCarousel } from '../components/home/KeepGoingCarousel'
 import { TrySomethingNewCarousel, type IdeaItem } from '../components/home/TrySomethingNewCarousel'
@@ -109,6 +110,11 @@ export function HomePage() {
   const [error, setError] = useState<string | null>(null)
   const [createProjectOpen, setCreateProjectOpen] = useState(false)
   const [seedConversation, setSeedConversation] = useState<{ title: string; description: string } | undefined>()
+  const [shapingProjectId, setShapingProjectId] = useState<string | null>(null)
+
+  const shapingProject = shapingProjectId
+    ? useProjectStore.getState().allProjects.find(p => p.id === shapingProjectId) || null
+    : null
 
   useEffect(() => {
     setContext('home', 'home', 'Home')
@@ -138,13 +144,7 @@ export function HomePage() {
   }
 
   const handleShapeProject = (projectId: string) => {
-    // TODO: Phase 3 — open ShapingModal for existing unshaped project
-    // For now, navigate to the project
-    const project = useProjectStore.getState().allProjects.find(p => p.id === projectId)
-    if (project) {
-      setSeedConversation({ title: project.title, description: project.description || '' })
-      setCreateProjectOpen(true)
-    }
+    setShapingProjectId(projectId)
   }
 
   if (error) {
@@ -206,6 +206,15 @@ export function HomePage() {
 
       {/* Bedtime floating icon — appears after 9:30pm */}
       <BedtimeFloatingIcon />
+
+      {/* Shaping modal for existing unshaped projects */}
+      {shapingProject && (
+        <ShapingModal
+          project={shapingProject}
+          isOpen={!!shapingProjectId}
+          onClose={() => setShapingProjectId(null)}
+        />
+      )}
 
       {/* Create/Shape project dialog */}
       <CreateProjectDialog

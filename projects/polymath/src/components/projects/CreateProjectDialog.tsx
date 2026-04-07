@@ -131,6 +131,9 @@ export function CreateProjectDialog({
     setThinking(false)
     setIsReady(false)
     setGenesisDraft('')
+    setQuickAddMode(false)
+    setQuickTitle('')
+    setQuickDesc('')
     setFormData({
       title: initialTitle || '',
       description: initialDescription || '',
@@ -162,7 +165,7 @@ export function CreateProjectDialog({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          step: 'chat',
+          step: 'shaping',
           message,
           history: history.map(m => ({ role: m.role, content: m.content })),
         }),
@@ -215,6 +218,48 @@ export function CreateProjectDialog({
   }
 
   // ── Submit ────────────────────────────────────────────────────────
+  // ── Quick-add: title + description, marked as unshaped ────────────
+  const [quickAddMode, setQuickAddMode] = useState(false)
+  const [quickTitle, setQuickTitle] = useState('')
+  const [quickDesc, setQuickDesc] = useState('')
+
+  const handleQuickAdd = async () => {
+    if (!quickTitle.trim()) return
+    setLoading(true)
+    try {
+      await createProject({
+        title: quickTitle.trim(),
+        description: quickDesc.trim() || '',
+        status: 'active',
+        type: 'Creative',
+        metadata: {
+          tasks: [],
+          progress: 0,
+          is_shaped: false,
+        },
+      })
+      addToast({
+        title: 'Project saved',
+        description: `"${quickTitle.trim()}" added — shape it to unlock Power Hour.`,
+        variant: 'success',
+      })
+      setQuickTitle('')
+      setQuickDesc('')
+      setQuickAddMode(false)
+      resetAll()
+      setOpen(false)
+    } catch (error) {
+      addToast({
+        title: 'Failed to save project',
+        description: error instanceof Error ? error.message : 'An error occurred',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // ── Submit (full shaped project) ─────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -237,6 +282,7 @@ export function CreateProjectDialog({
           end_goal: formData.project_mode === 'completion' ? (formData.end_goal || undefined) : undefined,
           project_mode: formData.project_mode,
           studio_draft: genesisDraft || undefined,
+          is_shaped: true,
         },
       })
 
@@ -286,7 +332,7 @@ export function CreateProjectDialog({
 
           <AnimatePresence mode="wait">
             {/* ── Chat mode ─────────────────────────────────────────── */}
-            {(mode === 'chat' || mode === 'extracting') && (
+            {(mode === 'chat' || mode === 'extracting') && !quickAddMode && (
               <motion.div
                 key="chat"
                 initial={{ opacity: 0, y: 8 }}
@@ -401,11 +447,11 @@ export function CreateProjectDialog({
                   <div className="flex items-center justify-between mt-3">
                     <button
                       type="button"
-                      onClick={() => { setMode('commit'); setFormData(f => ({ ...f, title: '', description: '' })) }}
+                      onClick={() => setQuickAddMode(true)}
                       className="text-[11px] transition-all"
                       style={{ color: 'var(--brand-text-secondary)', opacity: 0.3 }}
                     >
-                      I know what I'm building →
+                      Just quick-add →
                     </button>
 
                     <motion.button
@@ -436,7 +482,7 @@ export function CreateProjectDialog({
             )}
 
             {/* ── Commit mode ───────────────────────────────────────── */}
-            {mode === 'commit' && (
+            {mode === 'commit' && !quickAddMode && (
               <motion.form
                 key="commit"
                 initial={{ opacity: 0, y: 8 }}
@@ -567,6 +613,65 @@ export function CreateProjectDialog({
                   </button>
                 </div>
               </motion.form>
+            )}
+            {/* ── Quick-add mode ──────────────────────────────────── */}
+            {quickAddMode && (
+              <motion.div
+                key="quick-add"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.18 }}
+                className="flex flex-col pt-1"
+              >
+                <button
+                  type="button"
+                  onClick={() => setQuickAddMode(false)}
+                  className="flex items-center gap-1 text-[11px] mb-3 self-start transition-all"
+                  style={{ color: 'var(--brand-text-secondary)', opacity: 0.35 }}
+                >
+                  <ArrowLeft className="h-3 w-3" /> back to conversation
+                </button>
+
+                <input
+                  placeholder="Project name…"
+                  value={quickTitle}
+                  onChange={e => setQuickTitle(e.target.value)}
+                  onFocus={handleInputFocus}
+                  autoComplete="off"
+                  autoFocus
+                  className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none"
+                  style={{ color: 'var(--brand-text-primary)', fontSize: '22px', fontWeight: 700, lineHeight: '1.3' }}
+                />
+
+                <input
+                  placeholder="One sentence about it (optional)"
+                  value={quickDesc}
+                  onChange={e => setQuickDesc(e.target.value)}
+                  onFocus={handleInputFocus}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleQuickAdd() } }}
+                  autoComplete="off"
+                  className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none mt-2 mb-4"
+                  style={{ color: 'var(--brand-text-secondary)', fontSize: '15px', opacity: quickDesc ? 0.7 : 0.4 }}
+                />
+
+                <p className="text-[10px] mb-3" style={{ color: 'rgba(245,158,11,0.6)' }}>
+                  Quick-added projects need shaping before they can get Power Hour plans.
+                </p>
+
+                <button
+                  onClick={handleQuickAdd}
+                  disabled={loading || !quickTitle.trim()}
+                  className="w-full py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all disabled:opacity-25"
+                  style={{
+                    background: quickTitle.trim() ? 'rgba(255,255,255,0.1)' : 'transparent',
+                    color: 'var(--brand-text-primary)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                  }}
+                >
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save for later'}
+                </button>
+              </motion.div>
             )}
           </AnimatePresence>
         </BottomSheetContent>
