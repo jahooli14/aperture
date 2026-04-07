@@ -3,14 +3,7 @@ import type { Idea } from './types.js';
 import { supabase } from './supabase.js';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const DIGEST_EMAIL = process.env.DIGEST_EMAIL;
-
-function getDigestEmail() {
-  if (!DIGEST_EMAIL) {
-    throw new Error('DIGEST_EMAIL not configured');
-  }
-  return DIGEST_EMAIL;
-}
+const DIGEST_EMAIL = process.env.DIGEST_EMAIL || 'dmahorgan@gmail.com';
 
 function getResend() {
   if (!RESEND_API_KEY) {
@@ -131,7 +124,7 @@ export async function sendDailyDigest(userId: string, ideas: Idea[]) {
 
   const { data, error } = await resend.emails.send({
     from: 'Idea Engine <onboarding@resend.dev>',
-    to: getDigestEmail(),
+    to: DIGEST_EMAIL,
     subject: `Idea Engine — ${subject}`,
     html,
   });
@@ -141,7 +134,7 @@ export async function sendDailyDigest(userId: string, ideas: Idea[]) {
     throw error;
   }
 
-  console.log(`Digest email sent to ${getDigestEmail()} with ${approvedIdeas.length} approved ideas`);
+  console.log(`Digest email sent to ${DIGEST_EMAIL} with ${approvedIdeas.length} approved ideas`);
   return { success: true, data, message: approvedIdeas.length > 0 ? 'Digest sent' : 'Empty digest sent (no approved ideas today)' };
 }
 
