@@ -777,7 +777,7 @@ export function ReadingPage() {
               <div
                 className="flex items-center gap-2 flex-1 rounded-lg px-3 h-10 transition-all duration-200"
                 style={{
-                  backgroundColor: '#111113',
+                  backgroundColor: 'var(--brand-glass-bg)',
                   border: inlineUrlFocused ? '2px solid rgba(34,211,238,0.5)' : '2px solid var(--glass-surface-hover)',
                   boxShadow: inlineUrlFocused ? '0 0 20px rgba(34,211,238,0.1)' : '0 4px 16px rgba(0,0,0,0.6)',
                 }}
@@ -830,7 +830,7 @@ export function ReadingPage() {
                   key={articleId}
                   className="rounded-lg p-4 mb-2 flex items-center gap-3"
                   style={{
-                    backgroundColor: '#111113',
+                    backgroundColor: 'var(--brand-glass-bg)',
                     border: `2px solid ${status === 'retrying' ? 'rgba(251,191,36,0.5)' : 'rgba(99,179,237,0.5)'}`,
                     boxShadow: `3px 3px 0 ${status === 'retrying' ? 'rgba(251,191,36,0.15)' : 'rgba(0,0,0,0.7)'}`,
                   }}
@@ -1106,8 +1106,8 @@ export function ReadingPage() {
                                     <div
                                       className="absolute top-4 left-4 z-10 w-6 h-6 rounded-lg flex items-center justify-center transition-all"
                                       style={{
-                                        backgroundColor: isSelected ? 'rgba(59,130,246,0.9)' : '#111113',
-                                        border: isSelected ? '2px solid rgb(96,165,250)' : '2px solid rgba(255,255,255,0.2)',
+                                        backgroundColor: isSelected ? 'rgba(59,130,246,0.9)' : 'var(--brand-glass-bg)',
+                                        border: isSelected ? '1px solid rgb(96,165,250)' : '1px solid rgba(255,255,255,0.2)',
                                         boxShadow: '0 2px 8px rgba(0,0,0,0.6)',
                                         pointerEvents: 'auto'
                                       }}

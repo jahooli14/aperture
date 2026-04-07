@@ -79,7 +79,7 @@ export function OptimizedImage({
       className={cn('relative overflow-hidden', className)}
       style={{
         aspectRatio: aspectRatio || 'auto',
-        background: '#0f172a',
+        background: 'var(--brand-bg)',
       }}
     >
       {/* Placeholder shimmer - shown while loading */}

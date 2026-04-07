@@ -116,7 +116,7 @@ export function FocusSession() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-[#09090b] text-[#E2E8F0] flex flex-col overflow-hidden"
+            className="fixed inset-0 z-[100] bg-[var(--brand-bg)] text-[var(--brand-text-secondary)] flex flex-col overflow-hidden"
         >
             {/* Header / Top Bar */}
             <div className="flex items-center justify-between p-6">
@@ -143,7 +143,7 @@ export function FocusSession() {
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="absolute inset-0 z-20 flex items-center justify-center bg-[#09090b]/90 backdrop-blur-md"
+                            className="absolute inset-0 z-20 flex items-center justify-center bg-[var(--brand-bg)]/90 backdrop-blur-md"
                         >
                             <form onSubmit={handleParkThought} className="w-full max-w-md">
                                 <label className="block text-xs font-bold uppercase tracking-widest text-[#94a3b8] mb-2">
@@ -165,7 +165,7 @@ export function FocusSession() {
                                     <button
                                         type="button"
                                         onClick={() => setIsParking(false)}
-                                        className="text-sm text-[#64748b] hover:text-[var(--brand-text-primary)] transition-colors"
+                                        className="text-sm text-[var(--brand-text-muted)] hover:text-[var(--brand-text-primary)] transition-colors"
                                     >
                                         Cancel
                                     </button>
@@ -214,7 +214,7 @@ export function FocusSession() {
                             exit={{ opacity: 0, y: -20 }}
                             className="text-center w-full"
                         >
-                            <div className="mb-8 text-xs font-bold uppercase tracking-[0.2em] text-[#64748b]">
+                            <div className="mb-8 text-xs font-bold uppercase tracking-[0.2em] text-[var(--brand-text-muted)]">
                                 Current Task {currentTaskIndex + 1} of {tasks.length}
                             </div>
 
@@ -229,7 +229,7 @@ export function FocusSession() {
                                     className="group relative flex items-center justify-center w-24 h-24 rounded-full border border-[var(--glass-surface-hover)] hover:border-white/30 hover:bg-[var(--glass-surface)] transition-all"
                                 >
                                     <div className="absolute inset-0 rounded-full border border-[var(--glass-surface)] scale-110 group-hover:scale-125 transition-transform duration-500 opacity-50" />
-                                    <Check className="h-8 w-8 text-[#cbd5e1] group-hover:text-[var(--brand-text-primary)] transition-colors" />
+                                    <Check className="h-8 w-8 text-[var(--brand-text-secondary)] group-hover:text-[var(--brand-text-primary)] transition-colors" />
                                     <span className="sr-only">Complete Task</span>
                                 </button>
 
@@ -262,7 +262,7 @@ export function FocusSession() {
                 {/* Park Thought Trigger */}
                 <button
                     onClick={() => setIsParking(true)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-full border border-[var(--glass-surface)] text-[#64748b] hover:text-[#e2e8f0] hover:bg-[var(--glass-surface)] transition-colors text-xs font-bold uppercase tracking-widest"
+                    className="flex items-center gap-2 px-4 py-2 rounded-full border border-[var(--glass-surface)] text-[var(--brand-text-muted)] hover:text-[#e2e8f0] hover:bg-[var(--glass-surface)] transition-colors text-xs font-bold uppercase tracking-widest"
                 >
                     <PenTool className="h-3 w-3" />
                     Park Thought

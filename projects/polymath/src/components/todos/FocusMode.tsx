@@ -126,7 +126,7 @@ export function FocusMode({ todos, onComplete, onClose }: FocusModeProps) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         className="fixed inset-0 z-50 flex flex-col items-center justify-center"
-        style={{ background: '#0a1020' }}
+        style={{ background: 'var(--brand-bg)' }}
       >
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
@@ -169,7 +169,7 @@ export function FocusMode({ todos, onComplete, onClose }: FocusModeProps) {
       exit={{ opacity: 0, y: 20 }}
       transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
       className="fixed inset-0 z-50 flex flex-col"
-      style={{ background: '#0a1020' }}
+      style={{ background: 'var(--brand-bg)' }}
     >
       {/* Top bar */}
       <div className="flex items-center justify-between px-5 pt-12 pb-4">

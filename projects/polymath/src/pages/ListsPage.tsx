@@ -588,7 +588,7 @@ export default function ListsPage() {
                             transition={{ type: 'spring', damping: 30, stiffness: 400 }}
                             className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl pb-safe"
                             style={{
-                                backgroundColor: '#141f32',
+                                backgroundColor: 'var(--glass-surface)',
                                 boxShadow: '0 -20px 60px rgba(0,0,0,0.6), inset 0 1px 0 var(--glass-surface-hover)'
                             }}
                         >

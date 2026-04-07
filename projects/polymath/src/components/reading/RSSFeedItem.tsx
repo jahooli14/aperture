@@ -28,7 +28,7 @@ export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProp
       className="group block rounded-lg transition-all duration-200 break-inside-avoid cursor-pointer relative mb-2 overflow-hidden"
       onClick={() => setExpanded(!expanded)}
       style={{
-        background: expanded ? '#111113' : 'transparent',
+        background: expanded ? 'var(--brand-glass-bg)' : 'transparent',
         border: expanded ? '2px solid rgba(59,130,246,0.4)' : '2px solid var(--glass-surface-hover)',
         boxShadow: expanded ? '0 0 20px rgba(59,130,246,0.1)' : '0 4px 16px rgba(0,0,0,0.6)',
       }}

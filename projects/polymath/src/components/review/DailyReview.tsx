@@ -44,7 +44,7 @@ export function DailyReview({ onClose, todos, onUpdateTodo, onAddTodo, onDeleteT
       exit={{ y: '100%' }}
       transition={{ type: 'spring', stiffness: 380, damping: 42 }}
       className="fixed inset-0 z-50 flex flex-col overflow-hidden"
-      style={{ background: '#0a1020' }}
+      style={{ background: 'var(--brand-bg)' }}
     >
       {/* X dismiss button */}
       <button

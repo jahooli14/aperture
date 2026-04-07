@@ -309,7 +309,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
               <Wind className="h-10 w-10 text-[var(--brand-text-secondary)]" />
             </div>
 
-            <h2 className="text-2xl font-serif font-medium mb-4 text-[#E2E8F0]">
+            <h2 className="text-2xl font-serif font-medium mb-4 text-[var(--brand-text-secondary)]">
               {mode === 'sleep' ? 'The Steel Ball' : 'The Reset Sphere'}
             </h2>
 
@@ -319,7 +319,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
                 <p className="text-xs uppercase tracking-widest text-violet-400 font-bold mb-2">
                   {mode === 'sleep' ? 'Tonight\'s Seed' : 'Your Reset Context'}
                 </p>
-                <p className="text-base font-serif italic text-[#E2E8F0] leading-relaxed">
+                <p className="text-base font-serif italic text-[var(--brand-text-secondary)] leading-relaxed">
                   {currentPrompt.context || currentPrompt.metaphor || currentPrompt.prompt}
                 </p>
               </div>
@@ -333,7 +333,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
 
             <button
               onClick={requestMotionPermission}
-              className="px-8 py-3 rounded-full bg-[rgba(255,255,255,0.1)] text-[#E2E8F0] font-medium hover:bg-white/20 transition-all border border-[var(--glass-surface)]"
+              className="px-8 py-3 rounded-full bg-[rgba(255,255,255,0.1)] text-[var(--brand-text-secondary)] font-medium hover:bg-white/20 transition-all border border-[var(--glass-surface)]"
             >
               Begin Session
             </button>
@@ -399,7 +399,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
               <span className="inline-block px-3 py-1 rounded-full border border-[var(--glass-surface-hover)] text-xs font-medium tracking-widest uppercase text-[var(--brand-text-secondary)] mb-4">
                 {mode === 'sleep' ? 'Hypnagogic Insight' : 'Logic Breaker'}
               </span>
-              <h1 className="text-3xl md:text-4xl font-serif text-[#E2E8F0] leading-tight">
+              <h1 className="text-3xl md:text-4xl font-serif text-[var(--brand-text-secondary)] leading-tight">
                 {currentPrompt.prompt}
               </h1>
               {currentPrompt.metaphor && (
@@ -458,7 +458,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
               <div className="absolute inset-0 bg-violet-500/20 blur-3xl rounded-full" />
               <div className="relative p-6 rounded-2xl bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)]">
                 <Zap className="h-12 w-12 text-brand-text-secondary mx-auto mb-4" />
-                <h2 className="text-3xl font-serif text-[#E2E8F0] mb-2">Session Complete</h2>
+                <h2 className="text-3xl font-serif text-[var(--brand-text-secondary)] mb-2">Session Complete</h2>
                 <p className="text-[var(--brand-text-secondary)]">Your subconscious has been primed.</p>
               </div>
             </div>

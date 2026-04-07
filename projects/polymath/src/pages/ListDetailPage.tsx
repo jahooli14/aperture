@@ -131,7 +131,7 @@ const CompletionCelebration = ({
                 onClick={e => e.stopPropagation()}
                 className="relative w-full max-w-sm rounded-3xl px-6 py-8 text-center"
                 style={{
-                    backgroundColor: '#141f32',
+                    backgroundColor: 'var(--glass-surface)',
                     boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1), 0 40px 80px rgba(0,0,0,0.6)'
                 }}
             >
@@ -1315,7 +1315,7 @@ export default function ListDetailPage() {
                                         onClick={e => e.stopPropagation()}
                                         className="absolute right-0 top-full mt-2 z-20 rounded-2xl py-2 min-w-[160px]"
                                         style={{
-                                            backgroundColor: '#1a2540',
+                                            backgroundColor: 'var(--glass-surface)',
                                             boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1), 0 20px 40px rgba(0,0,0,0.5)'
                                         }}
                                     >

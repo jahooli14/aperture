@@ -272,7 +272,7 @@ export function SettingsPage() {
                       style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
                     >
                       {Array.from({ length: 24 }, (_, i) => (
-                        <option key={i} value={i} style={{ background: '#1a2740' }}>
+                        <option key={i} value={i} style={{ background: 'var(--brand-bg)' }}>
                           {String(i).padStart(2, '0')}
                         </option>
                       ))}
@@ -285,7 +285,7 @@ export function SettingsPage() {
                       style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
                     >
                       {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => (
-                        <option key={m} value={m} style={{ background: '#1a2740' }}>
+                        <option key={m} value={m} style={{ background: 'var(--brand-bg)' }}>
                           {String(m).padStart(2, '0')}
                         </option>
                       ))}
@@ -319,7 +319,7 @@ export function SettingsPage() {
                       style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
                     >
                       {Array.from({ length: 24 }, (_, i) => (
-                        <option key={i} value={i} style={{ background: '#1a2740' }}>
+                        <option key={i} value={i} style={{ background: 'var(--brand-bg)' }}>
                           {String(i).padStart(2, '0')}
                         </option>
                       ))}
@@ -332,7 +332,7 @@ export function SettingsPage() {
                       style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
                     >
                       {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => (
-                        <option key={m} value={m} style={{ background: '#1a2740' }}>
+                        <option key={m} value={m} style={{ background: 'var(--brand-bg)' }}>
                           {String(m).padStart(2, '0')}
                         </option>
                       ))}
@@ -381,7 +381,7 @@ export function SettingsPage() {
                       style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
                     >
                       {Array.from({ length: 24 }, (_, i) => (
-                        <option key={i} value={i} style={{ background: '#1a2740' }}>
+                        <option key={i} value={i} style={{ background: 'var(--brand-bg)' }}>
                           {String(i).padStart(2, '0')}
                         </option>
                       ))}
@@ -394,7 +394,7 @@ export function SettingsPage() {
                       style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
                     >
                       {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => (
-                        <option key={m} value={m} style={{ background: '#1a2740' }}>
+                        <option key={m} value={m} style={{ background: 'var(--brand-bg)' }}>
                           {String(m).padStart(2, '0')}
                         </option>
                       ))}
