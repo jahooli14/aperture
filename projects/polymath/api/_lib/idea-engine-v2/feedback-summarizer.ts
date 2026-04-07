@@ -221,7 +221,7 @@ export async function createFeedbackSummary(
   ]);
 
   const totalReviewed = window.rejections.length + window.approvals.length;
-  const approvalRate = window.approvals.length / totalReviewed;
+  const approvalRate = totalReviewed > 0 ? window.approvals.length / totalReviewed : 0;
 
   const { data, error } = await supabase
     .from('ie_feedback_summaries')

@@ -247,7 +247,7 @@ export async function createFrontierBlock(
       novelty_at_creation: idea.novelty_score,
       surprise_score: fas.surprise_factor,
       frontier_advancement_score: fas.overall,
-      generation: idea.generation_number + 1,
+      generation: (idea.generation_number || 0) + 1,
       parent_blocks: idea.source_frontier_block_id ? [idea.source_frontier_block_id] : [],
       spawn_count: 0,
       success_rate: 0,

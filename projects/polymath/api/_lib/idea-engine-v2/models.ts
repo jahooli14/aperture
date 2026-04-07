@@ -15,6 +15,9 @@ export const MODELS = {
 
   // Summarize: Good enough for feedback compression
   SUMMARIZE: 'gemini-3-flash-preview',
+
+  // Embedding: For deduplication vectors
+  EMBEDDING: 'text-embedding-004',
 } as const;
 
 export type ModelType = typeof MODELS[keyof typeof MODELS];
