@@ -157,9 +157,9 @@ export function EditArticleDialog({ article, open, onOpenChange }: EditArticleDi
               className="w-full h-14 font-black uppercase tracking-widest touch-manipulation"
               style={{
                 background: 'rgba(59,130,246,0.15)',
-                border: '2px solid rgba(59,130,246,0.5)',
+                border: '1px solid rgba(59,130,246,0.5)',
                 borderRadius: '4px',
-                boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
                 color: 'var(--brand-primary)',
               }}
             >

@@ -30,7 +30,7 @@ export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProp
       style={{
         background: expanded ? '#111113' : 'transparent',
         border: expanded ? '2px solid rgba(59,130,246,0.4)' : '2px solid var(--glass-surface-hover)',
-        boxShadow: expanded ? '3px 3px 0 rgba(59,130,246,0.1)' : '3px 3px 0 rgba(0,0,0,0.6)',
+        boxShadow: expanded ? '0 0 20px rgba(59,130,246,0.1)' : '0 4px 16px rgba(0,0,0,0.6)',
       }}
     >
       <style>{`
@@ -91,7 +91,7 @@ export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProp
                 onSave()
               }}
               className="p-1.5 rounded-lg text-brand-primary transition-all duration-200"
-              style={{ background: 'rgba(59,130,246,0.12)', border: '1.5px solid rgba(59,130,246,0.3)', boxShadow: '2px 2px 0 rgba(0,0,0,0.5)' }}
+              style={{ background: 'rgba(59,130,246,0.12)', border: '1.5px solid rgba(59,130,246,0.3)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
               title="Save to Read Later"
             >
               <BookmarkPlus className="h-3.5 w-3.5" />

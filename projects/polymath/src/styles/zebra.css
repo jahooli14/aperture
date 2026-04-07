@@ -19,7 +19,7 @@
   --aperture-surface-hover: var(--zebra-gray-mid);
 
   /* Shadows */
-  --zebra-shadow-sharp: 4px 4px 0px var(--zebra-accent);
+  --zebra-shadow-sharp: 0 4px 16px var(--zebra-accent);
   --zebra-shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.5);
 
   /* Borders */
@@ -52,7 +52,7 @@ body {
   background: var(--zebra-white);
   color: var(--zebra-black);
   transform: translate(-4px, -4px);
-  box-shadow: 4px 4px 0px var(--zebra-accent);
+  box-shadow: 0 4px 16px var(--zebra-accent);
 }
 
 .zebra-card-active {

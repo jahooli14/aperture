@@ -373,7 +373,7 @@ export function CreateProjectDialog({
                                   }}
                                   title={echo.snippet}
                                 >
-                                  ◈ {echo.title}
+                                  {echo.title}
                                 </span>
                               ))}
                             </div>

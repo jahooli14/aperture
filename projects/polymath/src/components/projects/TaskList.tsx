@@ -348,7 +348,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                       className="flex-shrink-0 h-5 w-5 rounded-xl flex items-center justify-center transition-all"
                       style={{
                         backgroundColor: 'var(--brand-primary)',
-                        border: '2px solid var(--brand-primary)'
+                        border: '1px solid var(--brand-primary)'
                       }}
                     >
                       <Check className="h-3 w-3 text-[var(--brand-text-primary)]" />
@@ -431,7 +431,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
               background: 'rgba(59,130,246,0.15)',
               border: '1.5px solid rgba(59,130,246,0.4)',
               borderRadius: '4px',
-              boxShadow: '2px 2px 0 rgba(0,0,0,0.4)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
               color: 'var(--brand-primary)',
             }}
           >

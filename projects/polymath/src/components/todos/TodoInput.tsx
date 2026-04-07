@@ -135,9 +135,9 @@ export function TodoInput({
     <div
       className="rounded-lg transition-all duration-200"
       style={{
-        background: '#111113',
+        background: 'var(--brand-glass-bg)',
         border: focused ? '2px solid rgba(255,255,255,0.28)' : '2px solid var(--glass-surface-hover)',
-        boxShadow: focused ? '4px 4px 0 rgba(0,0,0,0.8)' : '3px 3px 0 rgba(0,0,0,0.6)',
+        boxShadow: focused ? '4px 4px 0 rgba(0,0,0,0.8)' : '0 4px 16px rgba(0,0,0,0.6)',
       }}
     >
       {/* Hint  shown when focused+empty */}
@@ -329,8 +329,8 @@ export function TodoInput({
               style={{
                 color: "var(--brand-text-secondary)",
                 background: 'rgba(59,130,246,0.1)',
-                border: '2px solid rgba(99,179,237,0.35)',
-                boxShadow: '2px 2px 0 rgba(0,0,0,0.5)',
+                border: '1px solid rgba(99,179,237,0.35)',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
               }}
             >
               Return
@@ -348,7 +348,7 @@ export function TodoInput({
                 color: typeMeta.color,
                 background: typeMeta.color.replace('0.8)', '0.1)'),
                 border: `2px solid ${typeMeta.color.replace('0.8)', '0.4)')}`,
-                boxShadow: '2px 2px 0 rgba(0,0,0,0.5)',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
               }}
             >
               

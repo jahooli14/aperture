@@ -28,34 +28,34 @@ interface TodoItemProps {
   areaName?: string
 }
 
-// Priority config  neobrutalist: full-opacity colors, thick borders
+// Priority config — neon glow borders
 const PRIORITY_CONFIG = {
   3: {
     label: 'URGENT',
     dot: 'rgb(248,113,113)',
-    border: '4px solid rgb(248,113,113)',
+    border: '1.5px solid rgba(248,113,113,0.5)',
     cardTint: 'rgba(239,68,68,0.07)',
     chipBg: 'rgba(239,68,68,0.2)',
     chipColor: 'rgb(252,165,165)',
-    shadow: '3px 3px 0 rgba(248,113,113,0.25)',
+    shadow: '0 0 24px rgba(248,113,113,0.15)',
   },
   2: {
     label: 'HIGH',
     dot: 'rgb(251,191,36)',
-    border: '4px solid rgb(251,191,36)',
+    border: '1.5px solid rgba(251,191,36,0.4)',
     cardTint: 'rgba(251,191,36,0.06)',
     chipBg: 'rgba(251,191,36,0.18)',
     chipColor: 'rgb(253,224,71)',
-    shadow: '3px 3px 0 rgba(251,191,36,0.2)',
+    shadow: '0 0 24px rgba(251,191,36,0.12)',
   },
   1: {
     label: 'LOW',
     dot: 'rgb(96,165,250)',
-    border: '4px solid rgb(96,165,250)',
+    border: '1.5px solid rgba(96,165,250,0.3)',
     cardTint: 'rgba(59,130,246,0.05)',
     chipBg: 'rgba(59,130,246,0.18)',
     chipColor: 'rgb(147,197,253)',
-    shadow: '3px 3px 0 rgba(96,165,250,0.2)',
+    shadow: '0 0 24px rgba(96,165,250,0.12)',
   },
 } as const
 
@@ -181,10 +181,10 @@ export function TodoItem({
   const boxShadow = todo.done || completing
     ? 'none'
     : isInProgress
-      ? '3px 3px 0 rgba(251,146,60,0.2)'
+      ? '0 0 20px rgba(251,146,60,0.12)'
       : priorityCfg
         ? priorityCfg.shadow
-        : '3px 3px 0 var(--glass-surface)'
+        : '0 4px 12px rgba(0,0,0,0.15)'
 
   return (
     <motion.div
@@ -216,7 +216,7 @@ export function TodoItem({
           )}
           style={{
             background: itemBackground,
-            border: '1.5px solid rgba(255,255,255,0.15)',
+            border: '1px solid rgba(255,255,255,0.08)',
             borderLeft,
             boxShadow,
           }}

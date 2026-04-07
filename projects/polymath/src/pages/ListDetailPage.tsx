@@ -179,7 +179,7 @@ const CompletionCelebration = ({
                         </motion.div>
                     ) : (
                         <motion.div key="thought" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                            <div className="text-3xl mb-4">💭</div>
+                            <Brain className="h-8 w-8 mb-4 mx-auto" style={{ color: 'var(--brand-text-muted)' }} />
                             <h3 className="text-base font-black text-[var(--brand-text-primary)] uppercase tracking-tight mb-1">
                                 Any thoughts?
                             </h3>
@@ -503,7 +503,7 @@ function getMetaLine(item: ListItem, listType: string): string[] {
             if (m.specs?.Year || m.year) parts.push(m.specs?.Year || m.year)
             if (m.specs?.Runtime) parts.push(m.specs.Runtime)
             if (m.director) parts.push(`dir. ${m.director}`)
-            if (m.specs?.Rating) parts.push(`★ ${m.specs.Rating}`)
+            if (m.specs?.Rating) parts.push(`${m.specs.Rating}`)
             break
         case 'book':
             if (m.author) parts.push(m.author)

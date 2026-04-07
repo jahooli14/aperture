@@ -52,7 +52,7 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
   return (
     <Link
       to={`/projects/${project.id}`}
-      className={`group block glass-card glass-card-hover transition-all duration-300 break-inside-avoid ${prominent ? 'p-5 scale-[1.02]' : 'p-4'}`}
+      className={`group block glass-card glass-card-hover transition-all duration-300 break-inside-avoid overflow-hidden ${prominent ? 'p-4 scale-[1.02]' : 'p-3'}`}
       style={{
         boxShadow: prominent || project.is_priority ? `0 12px 40px rgba(${theme.rgb}, 0.2)` : '0 4px 12px rgba(0, 0, 0, 0.2)',
         borderColor: prominent || project.is_priority ? 'var(--brand-primary)' : theme.borderColor,
@@ -95,40 +95,36 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
         </div>
       </div>
 
-      {/* Description */}
-      {project.description && (
-        <p className={`text-[var(--brand-text-secondary)] mb-4 italic aperture-body ${prominent ? 'text-sm line-clamp-3' : 'text-xs line-clamp-4'}`}>
-          "{project.description}"
-        </p>
-      )}
-
-      {/* Next Action (The "Unblocker") */}
-      {nextTask && (
+      {/* Next Action or Description (show one, not both) */}
+      {nextTask ? (
         <div
-          className={`rounded-xl p-3 mb-3 flex items-start gap-3 transition-colors`}
+          className="rounded-lg p-2.5 mb-3 flex items-start gap-2 transition-colors min-w-0"
           style={{
             backgroundColor: `rgba(${theme.rgb}, 0.1)`,
             border: `1px solid rgba(${theme.rgb}, 0.2)`
           }}
         >
-          <div className="mt-0.5" style={{ color: theme.textColor }}>
-            <CheckCircle2 className="h-4 w-4" />
+          <div className="mt-0.5 flex-shrink-0" style={{ color: theme.textColor }}>
+            <CheckCircle2 className="h-3.5 w-3.5" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-bold text-[var(--brand-text-muted)] uppercase tracking-wider mb-0.5 aperture-header">Next Step</p>
-            <p className={`text-sm font-medium text-[var(--brand-text-primary)] line-clamp-2 aperture-body`}>
+            <p className={`text-xs font-medium text-[var(--brand-text-primary)] line-clamp-2 aperture-body`}>
               {nextTask.text}
             </p>
           </div>
         </div>
-      )}
+      ) : project.description ? (
+        <p className={`text-[var(--brand-text-secondary)] mb-3 italic aperture-body ${prominent ? 'text-xs line-clamp-3' : 'text-[11px] line-clamp-3'}`}>
+          "{project.description}"
+        </p>
+      ) : null}
 
       {/* Footer / Meta */}
-      <div className="flex items-center justify-between pt-2 border-t border-[var(--glass-surface)]">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-2 pt-2 border-t border-[var(--glass-surface)]">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           {totalTasks > 0 ? (
-            <div className="flex items-center gap-2">
-              <div className="h-1 w-16 bg-[var(--glass-surface)] rounded-full overflow-hidden">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <div className="h-1 flex-1 min-w-[2rem] bg-[var(--glass-surface)] rounded-full overflow-hidden">
                 <div
                   className="h-full"
                   style={{
@@ -137,27 +133,26 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
                   }}
                 />
               </div>
-              <span className="text-[10px] font-bold text-[var(--brand-text-muted)] aperture-header uppercase tracking-wider">{completedTasks}/{totalTasks}</span>
+              <span className="text-[10px] font-bold text-[var(--brand-text-muted)] aperture-header uppercase tracking-wider flex-shrink-0">{completedTasks}/{totalTasks}</span>
             </div>
           ) : (
-            <span className="text-[10px] font-bold text-[var(--brand-text-muted)] flex items-center gap-1 aperture-header uppercase tracking-wider">
-              <Clock className="h-3 w-3" />
+            <span className="text-[10px] font-bold text-[var(--brand-text-muted)] flex items-center gap-1 aperture-header uppercase tracking-wider truncate">
+              <Clock className="h-3 w-3 flex-shrink-0" />
               {new Date(project.last_active || project.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 flex-shrink-0">
           {project.status === 'dormant' && (
-            <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md"
+            <span className="flex items-center gap-0.5 text-[8px] font-black uppercase tracking-widest px-1 py-0.5 rounded-md"
               style={{ color: 'rgba(148,163,184,0.7)', background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.15)' }}>
               <Snowflake className="h-2.5 w-2.5" />
-              cooling
             </span>
           )}
           {prominent && (
-            <div className="p-1.5 rounded-full bg-[var(--glass-surface)] group-hover:bg-[var(--brand-secondary)] group-hover:text-black transition-colors text-[var(--brand-secondary)]">
-              <ArrowRight className="h-4 w-4" />
+            <div className="p-1 rounded-full bg-[var(--glass-surface)] group-hover:bg-[var(--brand-secondary)] group-hover:text-black transition-colors text-[var(--brand-secondary)]">
+              <ArrowRight className="h-3.5 w-3.5" />
             </div>
           )}
         </div>
@@ -266,14 +261,8 @@ export function ProjectsPageCarousel({
 
       {drawerList.length > 0 && (
         <section>
-          <div className="mb-4 px-1 flex items-center justify-between">
+          <div className="mb-4 px-1">
             <h3 className="text-xs font-bold text-[var(--brand-text-muted)] uppercase tracking-widest aperture-header">In the Drawer</h3>
-            <Link
-              to="/projects/drawer"
-              className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-[var(--brand-text-muted)] hover:text-[var(--brand-primary)] transition-colors"
-            >
-              View all <ArrowRight className="h-3 w-3" />
-            </Link>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">

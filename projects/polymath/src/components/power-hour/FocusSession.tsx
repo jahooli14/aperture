@@ -197,9 +197,9 @@ export function FocusSession() {
                                 className="px-8 py-3 font-medium transition-colors"
                                 style={{
                                   background: 'rgba(255,255,255,0.1)',
-                                  border: '2px solid rgba(255,255,255,0.3)',
+                                  border: '1px solid rgba(255,255,255,0.3)',
                                   borderRadius: '4px',
-                                  boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
+                                  boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
                                   color: 'white',
                                 }}
                             >

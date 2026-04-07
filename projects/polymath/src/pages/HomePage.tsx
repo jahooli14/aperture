@@ -77,7 +77,7 @@ function NowConsumingWidget() {
   return (
     <section className="pb-6">
       <h2 className="section-header">what you're <span>consuming</span></h2>
-      <div className="flex flex-col gap-1 p-3 rounded-2xl" style={{ background: 'rgba(245,158,11,0.03)', border: '1px solid rgba(245,158,11,0.08)' }}>
+      <div className="flex flex-col gap-1 p-3 rounded-2xl neon-card">
         {shown.map((item) => {
           const Icon = LIST_TYPE_ICONS[item.listType] || Box
           return (

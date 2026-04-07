@@ -92,7 +92,7 @@ export function ArticleCompletionDialog({
             className="flex items-center gap-2 px-6 py-3 font-medium transition-all"
             style={{
               borderRadius: '4px',
-              boxShadow: mode === 'text' ? '3px 3px 0 rgba(0,0,0,0.5)' : '2px 2px 0 rgba(0,0,0,0.3)',
+              boxShadow: mode === 'text' ? '0 4px 16px rgba(0,0,0,0.5)' : '0 2px 8px rgba(0,0,0,0.3)',
               backgroundColor: mode === 'text' ? 'var(--brand-primary)' : 'var(--glass-surface)',
               color: mode === 'text' ? 'white' : 'var(--brand-text-secondary)',
               transform: mode === 'text' ? 'scale(1.05)' : 'scale(1)'
@@ -106,7 +106,7 @@ export function ArticleCompletionDialog({
             className="flex items-center gap-2 px-6 py-3 font-medium transition-all"
             style={{
               borderRadius: '4px',
-              boxShadow: mode === 'voice' ? '3px 3px 0 rgba(0,0,0,0.5)' : '2px 2px 0 rgba(0,0,0,0.3)',
+              boxShadow: mode === 'voice' ? '0 4px 16px rgba(0,0,0,0.5)' : '0 2px 8px rgba(0,0,0,0.3)',
               backgroundColor: mode === 'voice' ? 'var(--brand-primary)' : 'var(--glass-surface)',
               color: mode === 'voice' ? 'white' : 'var(--brand-text-secondary)',
               transform: mode === 'voice' ? 'scale(1.05)' : 'scale(1)'

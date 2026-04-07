@@ -398,6 +398,8 @@ export function FloatingNav() {
               backdropFilter: 'var(--brand-glass-blur)',
               WebkitBackdropFilter: 'var(--brand-glass-blur)',
               padding: '4px 6px',
+              border: '1px solid rgba(56,189,248,0.1)',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3), 0 0 30px rgba(56,189,248,0.06)',
             }}
           >
             {/* Nav tabs */}

@@ -6,7 +6,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Sparkles, ArrowRight, RefreshCw } from 'lucide-react'
+import { Sparkles, ArrowRight, RefreshCw, FileText, MessageCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 interface IntersectionProject {
@@ -130,7 +130,7 @@ export function WeeklyIntersection() {
                   key={fuel.id}
                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] text-[var(--brand-text-secondary)]"
                 >
-                  {fuel.type === 'article' ? '📄' : '💭'} {fuel.title.length > 30 ? fuel.title.substring(0, 30) + '...' : fuel.title}
+                  {fuel.type === 'article' ? <FileText className="h-3 w-3 flex-shrink-0" /> : <MessageCircle className="h-3 w-3 flex-shrink-0" />} {fuel.title.length > 30 ? fuel.title.substring(0, 30) + '...' : fuel.title}
                 </span>
               ))}
             </div>

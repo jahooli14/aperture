@@ -40,7 +40,7 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
         className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto"
         style={{
           background: 'rgba(15, 24, 41, 0.98)',
-          border: '2px solid rgba(255,255,255,0.35)',
+          border: '1px solid rgba(255,255,255,0.35)',
           borderRadius: '4px',
           boxShadow: '6px 6px 0 rgba(0,0,0,0.8), 0 0 40px rgba(59,130,246,0.15)',
         }}
@@ -81,7 +81,7 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
                   background: 'rgba(59,130,246,0.1)',
                   border: '1.5px solid rgba(59,130,246,0.3)',
                   borderRadius: '4px',
-                  boxShadow: '2px 2px 0 rgba(0,0,0,0.4)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
                 }}
               >
                 <Brain className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
@@ -104,7 +104,7 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
                   background: 'rgba(245,158,11,0.1)',
                   border: '1.5px solid rgba(245,158,11,0.3)',
                   borderRadius: '4px',
-                  boxShadow: '2px 2px 0 rgba(0,0,0,0.4)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
                 }}
               >
                 <Lightbulb className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
@@ -127,7 +127,7 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
                   background: 'rgba(59,130,246,0.1)',
                   border: '1.5px solid rgba(59,130,246,0.3)',
                   borderRadius: '4px',
-                  boxShadow: '2px 2px 0 rgba(0,0,0,0.4)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
                 }}
               >
                 <Layers className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
@@ -150,7 +150,7 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
               background: 'rgba(245,158,11,0.08)',
               border: '1.5px solid rgba(245,158,11,0.25)',
               borderRadius: '4px',
-              boxShadow: '3px 3px 0 rgba(0,0,0,0.4)',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
             }}
           >
             <h3 className="font-semibold mb-2 flex items-center gap-2" style={{ color: "var(--brand-primary)" }}>
@@ -175,9 +175,9 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
               className="flex-1 inline-flex items-center justify-center gap-2 py-3 font-bold uppercase tracking-wider text-sm transition-all disabled:opacity-50"
               style={{
                 background: 'rgba(59,130,246,0.15)',
-                border: '2px solid rgba(59,130,246,0.5)',
+                border: '1px solid rgba(59,130,246,0.5)',
                 borderRadius: '4px',
-                boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
                 color: 'var(--brand-primary)',
               }}
             >
@@ -194,9 +194,9 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
               onClick={() => { onStartFresh(); navigate('/onboarding') }}
               className="flex-1 inline-flex items-center justify-center gap-2 py-3 font-bold uppercase tracking-wider text-sm transition-all hover:bg-brand-surface"
               style={{
-                border: '2px solid rgba(255,255,255,0.2)',
+                border: '1px solid rgba(255,255,255,0.2)',
                 borderRadius: '4px',
-                boxShadow: '3px 3px 0 rgba(0,0,0,0.4)',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
                 color: 'var(--brand-text-secondary)',
               }}
             >

@@ -79,7 +79,7 @@ export function DailyReview({ onClose, todos, onUpdateTodo, onAddTodo, onDeleteT
                   background: 'rgba(251,191,36,0.10)',
                   border: '1.5px solid rgba(251,191,36,0.35)',
                   borderRadius: '4px',
-                  boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
                 }}
               >
                 <Sun className="h-5 w-5 flex-shrink-0" style={{ color: "var(--brand-primary)" }} />
@@ -100,7 +100,7 @@ export function DailyReview({ onClose, todos, onUpdateTodo, onAddTodo, onDeleteT
                   background: 'rgba(139,92,246,0.10)',
                   border: '1.5px solid rgba(139,92,246,0.35)',
                   borderRadius: '4px',
-                  boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
                 }}
               >
                 <Moon className="h-5 w-5 flex-shrink-0" style={{ color: "var(--brand-primary)" }} />

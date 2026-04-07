@@ -7,7 +7,7 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Feather, Sprout, Library, ArrowRight, ChevronRight } from 'lucide-react'
+import { Feather, Sprout, Library, ArrowRight, ChevronRight, BookOpen, Film, MapPin } from 'lucide-react'
 
 type Variant = 'thoughts' | 'projects' | 'lists'
 
@@ -128,14 +128,16 @@ function ProjectsVisual() {
 
 function ListsVisual() {
   const lists = [
-    { label: 'books', color: '#F59E0B', emoji: '📚' },
-    { label: 'films', color: '#EC4899', emoji: '🎬' },
-    { label: 'places', color: '#10B981', emoji: '📍' },
+    { label: 'books', color: '#F59E0B', icon: BookOpen },
+    { label: 'films', color: '#EC4899', icon: Film },
+    { label: 'places', color: '#10B981', icon: MapPin },
   ]
 
   return (
     <div className="flex gap-3 justify-center mb-2">
-      {lists.map((list, i) => (
+      {lists.map((list, i) => {
+        const Icon = list.icon
+        return (
         <motion.div
           key={list.label}
           initial={{ opacity: 0, scale: 0.9 }}
@@ -147,12 +149,13 @@ function ListsVisual() {
             border: '1px solid var(--glass-surface-hover)',
           }}
         >
-          <span className="text-xl">{list.emoji}</span>
+          <Icon className="h-5 w-5" style={{ color: list.color }} />
           <span className="text-xs" style={{ color: list.color }}>
             {list.label}
           </span>
         </motion.div>
-      ))}
+        )
+      })}
     </div>
   )
 }

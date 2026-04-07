@@ -29,7 +29,7 @@ export function ThoughtOfTheDay() {
       style={{
         background: 'linear-gradient(145deg, rgba(6,182,212,0.08) 0%, rgba(15,24,41,0.6) 50%, rgba(168,85,247,0.05) 100%)',
         border: '1px solid rgba(6,182,212,0.12)',
-        boxShadow: '0 0 40px rgba(6,182,212,0.04), 3px 3px 0 rgba(0,0,0,0.5)',
+        boxShadow: '0 0 40px rgba(6,182,212,0.04), 0 4px 16px rgba(0,0,0,0.5)',
       }}
     >
       <div className="absolute top-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(6,182,212,0.3), rgba(168,85,247,0.2), transparent)' }} />

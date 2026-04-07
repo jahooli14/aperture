@@ -1,15 +1,15 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { CheckCircle2, ArrowRight, Bookmark } from 'lucide-react'
+import { CheckCircle2, ArrowRight, Bookmark, ThumbsDown, Minus, ThumbsUp, Smile, Flame } from 'lucide-react'
 import { useFocusStore } from '../../stores/useFocusStore'
 import { useProjectStore } from '../../stores/useProjectStore'
 
-const REFLECTION_EMOJIS = [
-  { emoji: '😤', label: 'Frustrating', value: 1 },
-  { emoji: '😐', label: 'Meh', value: 2 },
-  { emoji: '🙂', label: 'Decent', value: 3 },
-  { emoji: '😊', label: 'Good', value: 4 },
-  { emoji: '🔥', label: 'Crushed it', value: 5 },
+const REFLECTION_RATINGS = [
+  { icon: ThumbsDown, label: 'Frustrating', value: 1 },
+  { icon: Minus, label: 'Meh', value: 2 },
+  { icon: ThumbsUp, label: 'Decent', value: 3 },
+  { icon: Smile, label: 'Good', value: 4 },
+  { icon: Flame, label: 'Crushed it', value: 5 },
 ] as const
 
 export function FocusSummary() {
@@ -74,21 +74,24 @@ export function FocusSummary() {
                         How did that go?
                     </h3>
                     <div className="flex items-center justify-center gap-3">
-                        {REFLECTION_EMOJIS.map(r => (
-                            <button
-                                key={r.value}
-                                onClick={() => setRating(r.value)}
-                                className="flex flex-col items-center gap-1 transition-all"
-                                style={{
-                                    opacity: rating === null ? 0.6 : rating === r.value ? 1 : 0.25,
-                                    transform: rating === r.value ? 'scale(1.2)' : 'scale(1)',
-                                }}
-                                title={r.label}
-                            >
-                                <span className="text-2xl">{r.emoji}</span>
-                                <span className="text-[9px] text-[#64748b]">{r.label}</span>
-                            </button>
-                        ))}
+                        {REFLECTION_RATINGS.map(r => {
+                            const Icon = r.icon
+                            return (
+                                <button
+                                    key={r.value}
+                                    onClick={() => setRating(r.value)}
+                                    className="flex flex-col items-center gap-1 transition-all"
+                                    style={{
+                                        opacity: rating === null ? 0.6 : rating === r.value ? 1 : 0.25,
+                                        transform: rating === r.value ? 'scale(1.2)' : 'scale(1)',
+                                    }}
+                                    title={r.label}
+                                >
+                                    <Icon className="h-6 w-6" style={{ color: 'var(--brand-text-secondary)' }} />
+                                    <span className="text-[9px] text-[#64748b]">{r.label}</span>
+                                </button>
+                            )
+                        })}
                     </div>
                 </div>
 
@@ -129,9 +132,9 @@ export function FocusSummary() {
                         className="w-full py-4 font-bold transition-colors flex items-center justify-center gap-2"
                         style={{
                           background: 'rgba(255,255,255,0.1)',
-                          border: '2px solid rgba(255,255,255,0.25)',
+                          border: '1px solid rgba(255,255,255,0.25)',
                           borderRadius: '4px',
-                          boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
+                          boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
                           color: 'white',
                         }}
                     >

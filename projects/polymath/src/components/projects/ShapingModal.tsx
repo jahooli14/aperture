@@ -216,7 +216,7 @@ export function ShapingModal({ project, isOpen, onClose }: ShapingModalProps) {
                           style={{ background: 'rgba(255,255,255,0.04)', color: 'var(--brand-text-secondary)', opacity: 0.5, border: '1px solid rgba(255,255,255,0.07)' }}
                           title={echo.snippet}
                         >
-                          ◈ {echo.title}
+                          {echo.title}
                         </span>
                       ))}
                     </div>

@@ -226,7 +226,7 @@
     @apply rounded;
     background-color: var(--md-sys-color-surface-container);
     color: var(--md-sys-color-on-surface);
-    box-shadow: 3px 3px 0 rgba(0,0,0,0.5);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
   }
 
   /* Material You gradient text */

@@ -138,7 +138,7 @@ export function DailySpark() {
             {spark.item_a.title.length > 32 ? '…' : ''}
           </span>
           <span style={{ color: 'var(--brand-text-secondary)', opacity: 0.3, fontSize: '11px' }}>
-            ↔
+            --
           </span>
           <span
             className="text-[11px] px-2 py-0.5 rounded-full"

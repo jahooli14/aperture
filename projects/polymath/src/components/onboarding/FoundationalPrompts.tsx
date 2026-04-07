@@ -133,7 +133,7 @@ export function FoundationalPrompts() {
                   ) : locked ? (
                     <Lock className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
                   ) : (
-                    <div className="h-6 w-6 rounded-full" style={{ border: '2px solid var(--brand-primary)' }} />
+                    <div className="h-6 w-6 rounded-full" style={{ border: '1px solid var(--brand-primary)' }} />
                   )}
                 </div>
 

@@ -322,7 +322,7 @@ export function SearchPage() {
           {/* Search Input */}
           <div className="p-4 rounded-2xl mb-6 relative overflow-hidden premium-glass shadow-2xl" style={{
             background: 'var(--brand-glass-bg)',
-            border: '2px solid var(--glass-surface-hover)',
+            border: '1px solid var(--glass-surface-hover)',
           }}>
             <form onSubmit={handleTextSearch} className="flex gap-2">
               <div className="flex-1 relative">
@@ -405,7 +405,7 @@ export function SearchPage() {
           {loading && (
             <div className="p-6 rounded-lg" style={{
               background: 'var(--brand-glass-bg)',
-              border: '2px solid var(--glass-surface-hover)',
+              border: '1px solid var(--glass-surface-hover)',
               boxShadow: '4px 4px 0 rgba(0,0,0,0.5)'
             }}>
               <div className="text-center py-20">
@@ -420,7 +420,7 @@ export function SearchPage() {
               {/* Results Summary */}
               <div className="p-6 rounded-lg mb-6" style={{
                 background: 'var(--brand-glass-bg)',
-                border: '2px solid var(--glass-surface-hover)',
+                border: '1px solid var(--glass-surface-hover)',
                 boxShadow: '4px 4px 0 rgba(0,0,0,0.5)'
               }}>
                 <h2 className="text-xl font-semibold mb-2 premium-text-platinum">
@@ -461,7 +461,7 @@ export function SearchPage() {
                       className="p-5 rounded-lg cursor-pointer"
                       style={{
                         background: 'var(--brand-glass-bg)',
-                        border: '2px solid var(--glass-surface-hover)',
+                        border: '1px solid var(--glass-surface-hover)',
                         boxShadow: '4px 4px 0 rgba(0,0,0,0.5)'
                       }}
                     >

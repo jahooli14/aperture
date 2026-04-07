@@ -948,7 +948,7 @@ export function ProjectDetailPage() {
                       className="px-6 py-3 rounded-xl font-black uppercase text-sm tracking-widest transition-all active:scale-95"
                       style={{
                         background: 'linear-gradient(135deg, rgba(34,197,94,0.25) 0%, rgba(59,130,246,0.2) 100%)',
-                        border: '2px solid rgba(34,197,94,0.5)',
+                        border: '1px solid rgba(34,197,94,0.5)',
                         color: 'rgb(34,197,94)',
                         boxShadow: '0 4px 16px rgba(34,197,94,0.15)',
                       }}
