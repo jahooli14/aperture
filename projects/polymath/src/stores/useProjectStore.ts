@@ -545,3 +545,24 @@ export const useProjectStore = create<ProjectState>()(
     }
   )
 )
+
+// Selectors — derived data from the store
+export const useUnshapedProjects = () =>
+  useProjectStore(state => state.allProjects.filter(p => p.metadata?.is_shaped === false))
+
+export const useFocusedProjects = () =>
+  useProjectStore(state => {
+    const active = state.allProjects.filter(p =>
+      ['active', 'upcoming'].includes(p.status) && p.status !== 'graveyard'
+    )
+    const priority = active.filter(p => p.is_priority)
+    const recent = active
+      .filter(p => !p.is_priority)
+      .sort((a, b) => {
+        const aTime = new Date(a.updated_at || a.last_active || 0).getTime()
+        const bTime = new Date(b.updated_at || b.last_active || 0).getTime()
+        return bTime - aTime
+      })
+    // Priority first, then fill remaining slots with most recently active (max 3 total)
+    return [...priority, ...recent].slice(0, 3)
+  })

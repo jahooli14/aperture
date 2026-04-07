@@ -66,6 +66,14 @@ interface Capability {
   source_project: string
 }
 
+interface RichListItem {
+  id: string
+  content: string
+  list_type: string
+  list_title: string
+  embedding: number[] | null
+}
+
 interface Observation {
   type: 'cross_source_echo' | 'capability_gap' | 'memory_cluster' | 'new_project_idea'
   description: string
@@ -152,6 +160,42 @@ async function loadRichProjects(userId: string): Promise<RichProject[]> {
     status: p.status || '',
     metadata: p.metadata || {},
   }))
+}
+
+async function loadRichListItems(userId: string): Promise<RichListItem[]> {
+  // Load enriched list items with embeddings — these represent what the user is consuming
+  const { data: lists, error: listsError } = await supabase
+    .from('lists')
+    .select('id, title, type')
+    .eq('user_id', userId)
+
+  if (listsError || !lists?.length) return []
+
+  const listMap = new Map(lists.map((l: any) => [l.id, { title: l.title, type: l.type }]))
+
+  const { data: items, error: itemsError } = await supabase
+    .from('list_items')
+    .select('id, content, list_id, metadata, embedding')
+    .eq('user_id', userId)
+    .eq('enrichment_status', 'complete')
+    .order('created_at', { ascending: false })
+    .limit(30)
+
+  if (itemsError) {
+    logger.error({ error: itemsError }, 'Failed to load list items')
+    return []
+  }
+
+  return (items || []).map((item: any) => {
+    const list = listMap.get(item.list_id) || { title: 'Unknown', type: 'generic' }
+    return {
+      id: item.id,
+      content: item.content || '',
+      list_type: list.type,
+      list_title: list.title,
+      embedding: item.embedding || null,
+    }
+  })
 }
 
 async function loadCapabilities(_userId: string): Promise<Capability[]> {
@@ -329,7 +373,8 @@ async function generateFromObservations(
   count: number,
   previousTitles: string[],
   pairWeightsSection: string = '',
-  modeSection: string = ''
+  modeSection: string = '',
+  listItems: RichListItem[] = []
 ): Promise<any[]> {
   const capabilityList = capabilities.slice(0, 15)
     .map(c => `- [${c.id}] ${c.name}: ${c.description}`)
@@ -346,6 +391,10 @@ async function generateFromObservations(
 
   const avoidSection = previousTitles.length > 0
     ? `\nALREADY SUGGESTED (do not repeat or closely resemble):\n${previousTitles.map(t => `- ${t}`).join('\n')}\n`
+    : ''
+
+  const consumingSection = listItems.length > 0
+    ? `\n═══ WHAT THEY'RE CONSUMING ═══\n${listItems.slice(0, 15).map(li => `- ${li.content} (${li.list_type}: ${li.list_title})`).join('\n')}\n\nThese are books, films, music, etc. they're actively engaged with. Use these as creative fuel — if they're watching a lot of sci-fi, or reading about design, that's signal for what kind of project might excite them.\n`
     : ''
 
   const prompt = `You are a perceptive friend who has read all of someone's notes and saved articles. Your job is to connect dots they haven't connected yet and suggest projects in plain English — the kind of thing a smart friend says over coffee, not a startup pitch deck.
@@ -366,7 +415,7 @@ ${capabilityList}
 ${pairWeightsSection}
 ═══ ACTIVE PROJECTS (don't suggest things already being built) ═══
 ${activeProjectsList}
-${avoidSection}${modeSection}
+${consumingSection}${avoidSection}${modeSection}
 ═══ YOUR TASK ═══
 
 Generate ${count} project ideas. For each idea:
@@ -629,13 +678,14 @@ export async function runSynthesis(userId: string, mode?: string) {
   logger.info({ userId, mode }, 'Starting Deep Synthesis')
 
   // Load full data lake + feedback signals in parallel
-  const [memories, articles, projects, capabilities, dismissalPatterns, obsPreferences] = await Promise.all([
+  const [memories, articles, projects, capabilities, dismissalPatterns, obsPreferences, listItems] = await Promise.all([
     loadRichMemories(userId),
     loadRichArticles(userId),
     loadRichProjects(userId),
     loadCapabilities(userId),
     analyzeDismissalPatterns(userId),
     getObservationPreferences(userId),
+    loadRichListItems(userId),
   ])
 
   logger.info({
@@ -643,6 +693,7 @@ export async function runSynthesis(userId: string, mode?: string) {
     articles: articles.length,
     projects: projects.length,
     capabilities: capabilities.length,
+    listItems: listItems.length,
     dismissalReasons: dismissalPatterns.topReasons.length,
     preferredObsTypes: obsPreferences.preferred,
   }, 'Data lake + feedback signals loaded')
@@ -721,7 +772,8 @@ export async function runSynthesis(userId: string, mode?: string) {
     CONFIG.SUGGESTIONS_PER_RUN,
     previousTitles,
     pairWeightsSection + dismissalSection + obsPreferenceSection,
-    modeSection
+    modeSection,
+    listItems
   )
 
   const suggestions = await filterAndScoreSuggestions(

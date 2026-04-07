@@ -35,7 +35,6 @@ const HomePage = lazy(lazyRetry(() => import('./pages/HomePage').then(m => ({ de
 const MemoriesPage = lazy(lazyRetry(() => import('./pages/MemoriesPage').then(m => ({ default: m.MemoriesPage }))))
 const ReadingPage = lazy(lazyRetry(() => import('./pages/ReadingPage').then(m => ({ default: m.ReadingPage }))))
 const ReaderPage = lazy(lazyRetry(() => import('./pages/ReaderPage').then(m => ({ default: m.ReaderPage }))))
-const SuggestionsPage = lazy(lazyRetry(() => import('./pages/SuggestionsPage').then(m => ({ default: m.SuggestionsPage }))))
 const ProjectsPage = lazy(lazyRetry(() => import('./pages/ProjectsPage').then(m => ({ default: m.ProjectsPage }))))
 const DrawerPage = lazy(lazyRetry(() => import('./pages/DrawerPage')))
 const ProjectDetailPage = lazy(lazyRetry(() => import('./pages/ProjectDetailPage')))
@@ -316,7 +315,7 @@ export default function App() {
                       <Route path="/memories" element={<AnimatedPage page="thoughts"><MemoriesPage /></AnimatedPage>} />
                       <Route path="/reading" element={<AnimatedPage page="reading"><ReadingPage /></AnimatedPage>} />
                       <Route path="/reading/:id" element={<AnimatedPage page="reading"><ReaderPage /></AnimatedPage>} />
-                      <Route path="/suggestions" element={<AnimatedPage page="suggestions"><SuggestionsPage /></AnimatedPage>} />
+                      {/* /suggestions route removed — content folded into home page carousel */}
                       <Route path="/projects" element={<AnimatedPage page="projects"><ProjectsPage /></AnimatedPage>} />
                       <Route path="/projects/drawer" element={<AnimatedPage page="projects"><DrawerPage /></AnimatedPage>} />
                       <Route path="/projects/:id" element={<AnimatedPage page="projects"><ProjectDetailPage /></AnimatedPage>} />

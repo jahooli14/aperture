@@ -6,11 +6,9 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { Loader2, MoreVertical, Plus, Check, X, GripVertical, ChevronDown, Zap, Target, Star, Sprout, Pin, PinOff } from 'lucide-react'
-import { StudioTab } from '../components/projects/StudioTab'
 import { MarkdownRenderer } from '../components/ui/MarkdownRenderer'
 import { useProjectStore } from '../stores/useProjectStore'
 import { NextActionCard } from '../components/projects/NextActionCard'
-import { ProjectActivityStream } from '../components/projects/ProjectActivityStream'
 import { AddNoteDialog } from '../components/projects/AddNoteDialog'
 import { TaskList, type Task } from '../components/projects/TaskList'
 import { PinnedTaskList } from '../components/projects/PinnedTaskList'
@@ -22,7 +20,6 @@ import { handleInputFocus } from '../utils/keyboard'
 import { EditProjectDialog } from '../components/projects/EditProjectDialog'
 import { ProjectCompletionModal } from '../components/projects/ProjectCompletionModal'
 import { ProjectChatPanel } from '../components/projects/ProjectChatPanel'
-import { CatalystsPanel } from '../components/projects/CatalystsPanel'
 import { CompletionRitual } from '../components/projects/CompletionRitual'
 import { LineageBreadcrumb } from '../components/projects/LineageBreadcrumb'
 import { ProjectLineage } from '../components/projects/ProjectLineage'
@@ -940,11 +937,6 @@ export function ProjectDetailPage() {
                 </div>
               </div>
 
-              {/* Catalysts — conditions that would unlock this project */}
-              <div className="mt-4">
-                <CatalystsPanel project={project} />
-              </div>
-
               {/* Task Checklist */}
               <div data-task-list className="mt-8">
                 <div className="flex items-center justify-between mb-4">
@@ -1028,57 +1020,21 @@ export function ProjectDetailPage() {
                 />
               </div>
 
-              {/* Activity — decision log */}
+              {/* Add Note button */}
               <div className="mt-12 pb-32">
-                <div className="flex items-center justify-between mb-6">
-                  <h3
-                    className="text-[11px] font-black uppercase tracking-widest"
-                    style={{ color: 'rgba(255,255,255,0.3)' }}
-                  >
-                    Log
-                  </h3>
-                  <button
-                    onClick={() => setShowAddNote(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold uppercase tracking-wide transition-colors active:scale-95"
-                    style={{
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      color: 'var(--brand-primary)',
-                    }}
-                  >
-                    <Plus className="h-3 w-3" />
-                    Add Note
-                  </button>
-                </div>
-                <ProjectActivityStream
-                  notes={[...notes].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())}
-                  onRefresh={loadProjectDetails}
-                />
-              </div>
-          {/* Brain Dump / Studio */}
-          <details className="mt-8 pb-8 group" open={!!project.metadata?.studio_draft}>
-            <summary className="cursor-pointer text-[10px] font-black uppercase tracking-[0.3em] flex items-center gap-2 list-none select-none"
-              style={{ color: 'var(--brand-text-secondary)' }}
-            >
-              <span className="flex-1">Brain Dump</span>
-              {project.metadata?.studio_draft && (
-                <span
-                  className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full mr-1"
+                <button
+                  onClick={() => setShowAddNote(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold uppercase tracking-wide transition-colors active:scale-95"
                   style={{
-                    background: 'rgba(99,102,241,0.12)',
-                    color: 'rgba(129,140,248,0.9)',
-                    border: '1px solid rgba(99,102,241,0.2)',
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    color: 'var(--brand-primary)',
                   }}
                 >
-                  Draft in progress
-                </span>
-              )}
-              <ChevronDown className="h-3 w-3 transition-transform group-open:rotate-180" />
-            </summary>
-            <div className="mt-4">
-              <StudioTab project={project} />
-            </div>
-          </details>
+                  <Plus className="h-3 w-3" />
+                  Add Note
+                </button>
+              </div>
         </div>
       </div>
 
