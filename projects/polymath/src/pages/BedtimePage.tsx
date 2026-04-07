@@ -479,8 +479,8 @@ export function BedtimePage() {
                               toggleBreakthrough(prompt.id)
                             }}
                             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${prompt.resulted_in_breakthrough
-                              ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/40'
-                              : 'border border-[var(--glass-surface-hover)] hover:border-yellow-500/30'
+                              ? 'bg-gradient-to-r from-brand-primary/20 to-brand-primary/20 border border-brand-primary/40'
+                              : 'border border-[var(--glass-surface-hover)] hover:border-brand-primary/30'
                               }`}
                             title={prompt.resulted_in_breakthrough ? 'Led to a breakthrough!' : 'Mark as breakthrough'}
                           >
@@ -522,7 +522,7 @@ export function BedtimePage() {
               <Moon className="w-8 h-8 text-brand-primary" />
             </div>
 
-            <h1 className="text-4xl md:text-5xl font-serif text-transparent bg-clip-text bg-gradient-to-b from-indigo-100 via-purple-200 to-indigo-400 mb-6 tracking-tight drop-shadow-[0_0_15px_rgba(165,180,252,0.3)]">
+            <h1 className="text-4xl md:text-5xl font-serif text-transparent bg-clip-text bg-gradient-to-b from-brand-primary via-brand-primary to-brand-primary mb-6 tracking-tight drop-shadow-[0_0_15px_rgba(var(--brand-primary-rgb),0.3)]">
               Bedtime Ideas
             </h1>
 
@@ -598,8 +598,8 @@ export function BedtimePage() {
           transition={{ delay: 1, duration: 0.8 }}
           className="max-w-2xl mx-auto mt-12 p-6 rounded-xl premium-glass-subtle text-center relative z-10 border-2"
           style={{
-            borderColor: 'rgba(251, 191, 36, 0.2)',
-            background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.05), rgba(139, 92, 246, 0.05))'
+            borderColor: 'rgba(var(--brand-primary-rgb), 0.2)',
+            background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb), 0.05), rgba(var(--brand-primary-rgb), 0.05))'
           }}
         >
           <p className="text-sm leading-relaxed" style={{ color: "var(--brand-primary)" }}>

@@ -21,21 +21,21 @@ const typeConfig = {
     label: 'Pinned',
     icon: Pin,
     color: "var(--brand-text-secondary)",
-    borderColor: 'rgba(59, 130, 246, 0.3)',
+    borderColor: 'rgba(var(--brand-primary-rgb), 0.3)',
     textColor: 'var(--brand-primary)'
   },
   recent: {
     label: 'Recent',
     icon: null,
     color: "var(--brand-text-secondary)",
-    borderColor: 'rgba(168, 85, 247, 0.3)',
-    textColor: 'rgba(168, 85, 247, 0.8)'
+    borderColor: 'rgba(var(--brand-primary-rgb), 0.3)',
+    textColor: 'rgba(var(--brand-primary-rgb), 0.8)'
   },
   resurfaced: {
     label: 'Resurface',
     icon: null,
     color: "var(--brand-text-secondary)",
-    borderColor: 'rgba(16, 185, 129, 0.3)',
+    borderColor: 'rgba(var(--brand-primary-rgb), 0.3)',
     textColor: 'var(--brand-primary)'
   }
 }

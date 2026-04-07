@@ -677,7 +677,7 @@ export function ProjectDetailPage() {
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-all hover:bg-white/[0.04]"
               style={{ background: 'rgba(255,255,255,0.03)' }}
             >
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: project.status === 'active' ? 'rgb(52,211,153)' : project.status === 'completed' ? 'rgb(59,130,246)' : 'rgba(255,255,255,0.25)' }} />
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: project.status === 'active' ? 'rgb(var(--brand-primary-rgb))' : project.status === 'completed' ? 'rgb(var(--brand-primary-rgb))' : 'rgba(255,255,255,0.25)' }} />
               <span className="text-[11px] font-semibold capitalize" style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}>{project.status}</span>
               <ChevronDown className="h-2.5 w-2.5" style={{ color: 'var(--brand-text-secondary)', opacity: 0.3 }} />
             </button>
@@ -712,11 +712,11 @@ export function ProjectDetailPage() {
       <div className="max-w-2xl mx-auto px-5 sm:px-6 space-y-8">
               {/* Power Hour Focus Mode */}
               {powerHourTask && (
-                <div className="p-6 rounded-2xl relative overflow-hidden group" style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.12)' }}>
+                <div className="p-6 rounded-2xl relative overflow-hidden group" style={{ background: 'rgba(var(--brand-primary-rgb),0.06)', border: '1px solid rgba(var(--brand-primary-rgb),0.12)' }}>
                   <div className="relative z-10">
                     <div className="flex items-center gap-2 mb-3">
-                      <Zap className="h-3.5 w-3.5 fill-current" style={{ color: 'rgb(59,130,246)' }} />
-                      <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'rgb(59,130,246)', opacity: 0.7 }}>Focus Session</span>
+                      <Zap className="h-3.5 w-3.5 fill-current" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
+                      <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.7 }}>Focus Session</span>
                     </div>
 
                     <h2 className="text-xl font-bold text-[var(--brand-text-primary)] mb-2 leading-snug">
@@ -740,7 +740,7 @@ export function ProjectDetailPage() {
                         addToast({ title: 'Focus on your hit-list below', variant: 'default' })
                       }}
                       className="px-5 py-2.5 rounded-xl text-[12px] font-semibold transition-all active:scale-95 flex items-center gap-2"
-                      style={{ background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.2)', color: 'rgb(59,130,246)' }}
+                      style={{ background: 'rgba(var(--brand-primary-rgb),0.12)', border: '1px solid rgba(var(--brand-primary-rgb),0.2)', color: 'rgb(var(--brand-primary-rgb))' }}
                     >
                       <Check className="h-3.5 w-3.5" /> Start
                     </button>
@@ -806,7 +806,7 @@ export function ProjectDetailPage() {
 
                 {/* Finish Line */}
                 <div className="pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-                  <span className="text-[11px] font-semibold uppercase tracking-wider block mb-2 flex items-center gap-1.5" style={{ color: 'rgb(52,211,153)', opacity: 0.5 }}>
+                  <span className="text-[11px] font-semibold uppercase tracking-wider block mb-2 flex items-center gap-1.5" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.5 }}>
                     <Target className="h-3 w-3" /> Finish line
                   </span>
                   <div
@@ -829,7 +829,7 @@ export function ProjectDetailPage() {
                         />
                         <div className="flex gap-2 justify-end">
                           <button onClick={(e) => { e.stopPropagation(); cancelEdit() }} className="px-3 py-1.5 text-[11px] font-medium rounded-lg hover:bg-white/[0.05] transition-colors" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>Cancel</button>
-                          <button onClick={(e) => { e.stopPropagation(); saveGoal() }} className="px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all" style={{ background: 'rgba(52,211,153,0.1)', color: 'rgb(52,211,153)' }}>Save</button>
+                          <button onClick={(e) => { e.stopPropagation(); saveGoal() }} className="px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all" style={{ background: 'rgba(52,211,153,0.1)', color: 'rgb(var(--brand-primary-rgb))' }}>Save</button>
                         </div>
                       </div>
                     ) : (
@@ -845,13 +845,13 @@ export function ProjectDetailPage() {
               <div data-task-list>
                 {/* All Tasks Complete Banner */}
                 {tasks.length > 0 && tasks.every((t: any) => t.done) && (
-                  <div className="mb-5 p-5 rounded-2xl text-center" style={{ background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.12)' }}>
-                    <p className="text-[15px] font-bold text-emerald-400 mb-1">All tasks complete</p>
+                  <div className="mb-5 p-5 rounded-2xl text-center" style={{ background: 'rgba(var(--brand-primary-rgb),0.06)', border: '1px solid rgba(var(--brand-primary-rgb),0.12)' }}>
+                    <p className="text-[15px] font-bold text-brand-primary mb-1">All tasks complete</p>
                     <p className="text-[13px] mb-4" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>Every action item is done. Ready to wrap up?</p>
                     <button
                       onClick={() => handleStatusChange('completed')}
                       className="px-5 py-2.5 rounded-xl text-[12px] font-semibold transition-all active:scale-95"
-                      style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)', color: 'rgb(52,211,153)' }}
+                      style={{ background: 'rgba(var(--brand-primary-rgb),0.1)', border: '1px solid rgba(var(--brand-primary-rgb),0.2)', color: 'rgb(var(--brand-primary-rgb))' }}
                     >
                       Mark Complete
                     </button>

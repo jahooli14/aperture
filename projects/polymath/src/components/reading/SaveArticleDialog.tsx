@@ -72,7 +72,7 @@ export function SaveArticleDialog({ isOpen, onOpenChange }: SaveArticleDialogPro
             <BottomSheetContent>
                 <BottomSheetHeader>
                     <BottomSheetTitle className="flex items-center gap-2">
-                        <BookmarkPlus className="h-5 w-5 text-emerald-400" />
+                        <BookmarkPlus className="h-5 w-5 text-brand-primary" />
                         Save Short Read
                     </BottomSheetTitle>
                     <BottomSheetDescription>

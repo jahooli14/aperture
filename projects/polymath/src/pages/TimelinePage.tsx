@@ -189,7 +189,7 @@ export function TimelinePage() {
                                 className="absolute bottom-0 left-0 right-0 rounded-t"
                                 style={{
                                   height: `${(week.count / Math.max(...pattern.data.map((w: any) => w.count))) * 100}%`,
-                                  background: 'linear-gradient(to top, var(--brand-primary), rgba(59, 130, 246, 0.5))'
+                                  background: 'linear-gradient(to top, var(--brand-primary), rgba(var(--brand-primary-rgb), 0.5))'
                                 }}
                               />
                             </div>

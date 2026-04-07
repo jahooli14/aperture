@@ -55,7 +55,7 @@ export function MemoryLinks({ currentMemoryId, bridges, onMemoryClick }: MemoryL
         <span
           className="text-xs px-2 py-0.5 rounded-full"
           style={{
-            backgroundColor: 'rgba(59, 130, 246, 0.2)',
+            backgroundColor: 'rgba(var(--brand-primary-rgb), 0.2)',
             color: 'var(--brand-primary)',
           }}
         >
@@ -79,8 +79,8 @@ export function MemoryLinks({ currentMemoryId, bridges, onMemoryClick }: MemoryL
                 whileTap={{ scale: 0.98 }}
                 className="w-full text-left rounded-lg px-3 py-2 border transition-colors"
                 style={{
-                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                  borderColor: 'rgba(59, 130, 246, 0.3)',
+                  backgroundColor: 'rgba(var(--brand-primary-rgb), 0.1)',
+                  borderColor: 'rgba(var(--brand-primary-rgb), 0.3)',
                 }}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -95,7 +95,7 @@ export function MemoryLinks({ currentMemoryId, bridges, onMemoryClick }: MemoryL
                   <div
                     className="px-2 py-0.5 rounded-full font-bold text-xs flex-shrink-0"
                     style={{
-                      background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.8), rgba(99, 102, 241, 0.8))',
+                      background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb), 0.8), rgba(var(--brand-primary-rgb), 0.8))',
                       color: "var(--brand-text-secondary)",
                     }}
                   >
@@ -122,8 +122,8 @@ export function MemoryLinks({ currentMemoryId, bridges, onMemoryClick }: MemoryL
                 whileTap={{ scale: 0.98 }}
                 className="w-full text-left rounded-lg px-3 py-2 border transition-colors"
                 style={{
-                  backgroundColor: 'rgba(6, 182, 212, 0.1)',
-                  borderColor: 'rgba(6, 182, 212, 0.3)',
+                  backgroundColor: 'rgba(var(--color-accent-dark-rgb), 0.1)',
+                  borderColor: 'rgba(var(--color-accent-dark-rgb), 0.3)',
                 }}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -138,7 +138,7 @@ export function MemoryLinks({ currentMemoryId, bridges, onMemoryClick }: MemoryL
                   <div
                     className="px-2 py-0.5 rounded-full font-bold text-xs flex-shrink-0"
                     style={{
-                      background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.8), rgba(14, 165, 233, 0.8))',
+                      background: 'linear-gradient(135deg, rgba(var(--color-accent-dark-rgb), 0.8), rgba(var(--brand-primary-rgb), 0.8))',
                       color: "var(--brand-text-secondary)",
                     }}
                   >

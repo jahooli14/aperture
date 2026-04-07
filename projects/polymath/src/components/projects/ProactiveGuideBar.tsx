@@ -45,7 +45,7 @@ const PHASE_ICONS: Record<Phase, typeof Zap> = {
 
 const PHASE_ACCENTS: Record<Phase, string> = {
   shaping: 'rgba(139,92,246,',
-  building: 'rgba(59,130,246,',
+  building: 'rgba(var(--brand-primary-rgb),',
   closing: 'rgba(16,185,129,',
   stale: 'rgba(245,158,11,',
   fresh: 'rgba(139,92,246,',

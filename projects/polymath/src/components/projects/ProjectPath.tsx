@@ -50,7 +50,7 @@ const PHASES: PhaseConfig[] = [
     sublabel: 'Where the real building happens',
     icon: Hammer,
     emptyPrompt: 'What does the main effort look like?',
-    accent: 'rgb(59,130,246)',
+    accent: 'rgb(var(--brand-primary-rgb))',
   },
   {
     key: 'shutdown',
@@ -260,7 +260,7 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
                             transition={{ duration: 0.15, delay: index * 0.03 }}
                             className={cn(
                               "group flex items-start gap-3 px-3 py-2.5 rounded-xl transition-all relative",
-                              isHighlighted && "bg-blue-500/[0.04]"
+                              isHighlighted && "bg-brand-primary/[0.04]"
                             )}
                           >
                             {/* Checkbox */}
@@ -483,7 +483,7 @@ function LinkedTodos({ projectId }: { projectId: string }) {
         <span className="text-[11px] font-medium" style={{ color: 'var(--brand-text-secondary)', opacity: 0.25 }}>
           Linked Todos
         </span>
-        <span className="text-[10px] px-1.5 py-0.5 rounded-md" style={{ background: 'rgba(59,130,246,0.06)', color: 'var(--brand-text-secondary)', opacity: 0.3 }}>
+        <span className="text-[10px] px-1.5 py-0.5 rounded-md" style={{ background: 'rgba(var(--brand-primary-rgb),0.06)', color: 'var(--brand-text-secondary)', opacity: 0.3 }}>
           {activeTodos.length}
         </span>
       </div>

@@ -152,10 +152,10 @@ try {
     root.innerHTML = `
       <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #0a0a0a; color: #fff; font-family: system-ui, sans-serif; padding: 20px;">
         <div style="max-width: 600px; text-align: center;">
-          <h1 style="color: #ef4444; margin-bottom: 20px;">App Failed to Load</h1>
+          <h1 style="color: rgb(var(--color-error-rgb)); margin-bottom: 20px;">App Failed to Load</h1>
           <p style="color: #9ca3af; margin-bottom: 20px;">The app encountered a fatal error during initialization.</p>
           <pre style="background: #1a1a1a; padding: 20px; borderRadius: 8px; text-align: left; overflow-x: auto; font-size: 12px;">${error instanceof Error ? error.stack : String(error)}</pre>
-          <button onclick="localStorage.clear(); window.location.reload();" style="margin-top: 20px; padding: 12px 24px; background: #3b82f6; color: white; borderRadius: 8px; cursor: pointer;">Clear Cache & Reload</button>
+          <button onclick="localStorage.clear(); window.location.reload();" style="margin-top: 20px; padding: 12px 24px; background: rgb(var(--brand-primary-rgb)); color: white; borderRadius: 8px; cursor: pointer;">Clear Cache & Reload</button>
         </div>
       </div>
     `

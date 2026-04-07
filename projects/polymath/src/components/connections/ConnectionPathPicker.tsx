@@ -32,10 +32,10 @@ const TYPE_ICONS: Record<string, typeof Layers> = {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  project: '#3b82f6',
-  thought: '#8b5cf6',
-  memory: '#8b5cf6',
-  article: '#10b981',
+  project: 'rgb(var(--brand-primary-rgb))',
+  thought: 'rgb(var(--brand-primary-rgb))',
+  memory: 'rgb(var(--brand-primary-rgb))',
+  article: 'rgb(var(--brand-primary-rgb))',
 }
 
 export function ConnectionPathPicker({ sourceId, sourceType, open, onClose, onSelect }: ConnectionPathPickerProps) {
@@ -176,7 +176,7 @@ export function ConnectionPathPicker({ sourceId, sourceType, open, onClose, onSe
           <div className="max-h-[50vh] overflow-y-auto">
             {loading ? (
               <div className="px-5 py-8 flex items-center justify-center gap-3">
-                <div className="h-4 w-4 border-2 border-blue-500/30 border-t-blue-500 animate-spin rounded-full" />
+                <div className="h-4 w-4 border-2 border-brand-primary/30 border-t-blue-500 animate-spin rounded-full" />
                 <span className="text-sm text-[var(--brand-text-muted)]">Finding related items...</span>
               </div>
             ) : displayItems.length === 0 ? (
@@ -199,7 +199,7 @@ export function ConnectionPathPicker({ sourceId, sourceType, open, onClose, onSe
 
                 {displayItems.map((item, i) => {
                   const Icon = TYPE_ICONS[item.type] || Layers
-                  const color = TYPE_COLORS[item.type] || '#3b82f6'
+                  const color = TYPE_COLORS[item.type] || 'rgb(var(--brand-primary-rgb))'
 
                   return (
                     <motion.button

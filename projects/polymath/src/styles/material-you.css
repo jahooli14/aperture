@@ -12,28 +12,28 @@
 :root {
   /* === Material You Color System (Dark Mode) === */
 
-  /* Primary - Main brand color (Blue) - Brighter for dark backgrounds */
-  --md-sys-color-primary: #60a5fa;
+  /* Primary - Cyan brand color */
+  --md-sys-color-primary: rgb(var(--brand-primary-rgb));
   --md-sys-color-on-primary: #0f1829;
-  --md-sys-color-primary-container: #1e3a8a;
-  --md-sys-color-on-primary-container: #dbeafe;
+  --md-sys-color-primary-container: rgba(var(--brand-primary-rgb), 0.15);
+  --md-sys-color-on-primary-container: rgb(var(--color-accent-light-rgb));
 
-  /* Secondary - Complementary (Indigo) - Brighter for dark backgrounds */
-  --md-sys-color-secondary: #818cf8;
+  /* Secondary - Cyan variant */
+  --md-sys-color-secondary: rgb(var(--color-accent-light-rgb));
   --md-sys-color-on-secondary: #0f1829;
-  --md-sys-color-secondary-container: #312e81;
-  --md-sys-color-on-secondary-container: #e0e7ff;
+  --md-sys-color-secondary-container: rgba(var(--brand-primary-rgb), 0.12);
+  --md-sys-color-on-secondary-container: rgb(var(--color-accent-light-rgb));
 
-  /* Tertiary - Accent (Amber) - Brighter for dark backgrounds */
-  --md-sys-color-tertiary: #fbbf24;
+  /* Tertiary - Cyan darker variant */
+  --md-sys-color-tertiary: rgb(var(--color-accent-dark-rgb));
   --md-sys-color-on-tertiary: #0f1829;
-  --md-sys-color-tertiary-container: #78350f;
-  --md-sys-color-on-tertiary-container: #fef3c7;
+  --md-sys-color-tertiary-container: rgba(var(--color-accent-dark-rgb), 0.15);
+  --md-sys-color-on-tertiary-container: rgb(var(--color-accent-light-rgb));
 
-  /* Error - Brighter for dark backgrounds */
-  --md-sys-color-error: #f87171;
+  /* Error - Semantic red */
+  --md-sys-color-error: rgb(var(--color-error-rgb));
   --md-sys-color-on-error: #0f1829;
-  --md-sys-color-error-container: #991b1b;
+  --md-sys-color-error-container: rgba(var(--color-error-rgb), 0.15);
   --md-sys-color-on-error-container: #fee2e2;
 
   /* Surface & Background - Dark theme */
@@ -259,7 +259,7 @@
 }
 
 .md-outlined-button:hover {
-  background-color: rgba(30, 64, 175, 0.08);
+  background-color: rgba(var(--brand-primary-rgb), 0.08);
 }
 
 /* Text buttons */
@@ -275,7 +275,7 @@
 }
 
 .md-text-button:hover {
-  background-color: rgba(30, 64, 175, 0.08);
+  background-color: rgba(var(--brand-primary-rgb), 0.08);
 }
 
 /* Cards */

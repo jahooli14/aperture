@@ -601,7 +601,7 @@ export function CreateProjectDialog({
                     disabled={loading || !isFormValid}
                     className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all touch-manipulation disabled:opacity-25 ml-1"
                     style={{
-                      background: isFormValid ? 'var(--brand-primary, #63b3ed)' : 'rgba(255,255,255,0.1)',
+                      background: isFormValid ? 'var(--brand-primary, rgb(var(--brand-primary-rgb)))' : 'rgba(255,255,255,0.1)',
                       color: isFormValid ? '#000' : 'var(--brand-text-secondary)',
                     }}
                     title={loading ? 'Creating…' : 'Create project'}

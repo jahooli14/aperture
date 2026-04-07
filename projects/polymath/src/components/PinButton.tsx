@@ -46,7 +46,7 @@ export function PinButton({ type, id, title, content, currentId, contentVersion 
       onClick={handlePin}
       className="h-9 w-9 rounded-lg flex items-center justify-center text-sm font-medium transition-all border hover:bg-[var(--glass-surface)]"
       style={{
-        borderColor: isThisPinned ? 'rgba(59, 130, 246, 0.5)' : 'rgba(255, 255, 255, 0.2)',
+        borderColor: isThisPinned ? 'rgba(var(--brand-primary-rgb), 0.5)' : 'rgba(255, 255, 255, 0.2)',
         color: isThisPinned ? 'var(--brand-primary)' : 'var(--brand-text-secondary)'
       }}
       title={isThisPinned ? 'Unpin' : 'Pin to compare'}

@@ -229,7 +229,7 @@ export function ContextSidebar() {
                         <div className="flex-1 overflow-y-auto p-4 space-y-4">
                             {/* AI Analysis Section */}
                             {activeContext.type !== 'page' && activeContext.type !== 'home' && (
-                                <div className="rounded-xl p-4 bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20">
+                                <div className="rounded-xl p-4 bg-gradient-to-br from-brand-primary/10 to-brand-primary/10 border border-purple-500/20">
                                     <div className="flex items-center justify-between mb-3">
                                         <div className="flex items-center gap-2">
                                             <Lightbulb className="h-4 w-4 text-brand-primary" />
@@ -238,8 +238,8 @@ export function ContextSidebar() {
                                             </span>
                                             {analysisData?.lakeItemCount != null && analysisData.lakeItemCount > 0 && (
                                                 <div className="flex items-center gap-1" title={`Looked at ${analysisData.lakeItemCount} of your notes and articles`}>
-                                                    <Database className="h-3 w-3 text-cyan-400" />
-                                                    <span className="text-[10px] text-cyan-400 font-medium">{analysisData.lakeItemCount}</span>
+                                                    <Database className="h-3 w-3 text-brand-primary" />
+                                                    <span className="text-[10px] text-brand-primary font-medium">{analysisData.lakeItemCount}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -315,16 +315,16 @@ export function ContextSidebar() {
                                             Knowledge Actions
                                         </p>
                                         <div className="flex items-center gap-1 ml-auto opacity-50">
-                                            <Database className="h-3 w-3 text-cyan-400" />
-                                            <span className="text-[10px] text-cyan-400 font-medium">lake-aware</span>
+                                            <Database className="h-3 w-3 text-brand-primary" />
+                                            <span className="text-[10px] text-brand-primary font-medium">lake-aware</span>
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-2">
                                         {([
-                                            { id: 'chase-thread', label: 'Chase Thread', icon: GitBranch, color: 'text-violet-400', hint: 'follow the idea' },
-                                            { id: 'find-gaps', label: 'Find Gaps', icon: HelpCircle, color: 'text-amber-400', hint: 'blind spots' },
-                                            { id: 'provoke', label: 'Provoke', icon: Zap, color: 'text-orange-400', hint: 'challenge me' },
-                                            { id: 'connect-dots', label: 'Reveal Pattern', icon: Shuffle, color: 'text-pink-400', hint: 'full corpus' },
+                                            { id: 'chase-thread', label: 'Chase Thread', icon: GitBranch, color: 'text-brand-primary', hint: 'follow the idea' },
+                                            { id: 'find-gaps', label: 'Find Gaps', icon: HelpCircle, color: 'text-brand-primary', hint: 'blind spots' },
+                                            { id: 'provoke', label: 'Provoke', icon: Zap, color: 'text-brand-primary', hint: 'challenge me' },
+                                            { id: 'connect-dots', label: 'Reveal Pattern', icon: Shuffle, color: 'text-brand-primary', hint: 'full corpus' },
                                         ] as const).map(({ id, label, icon: Icon, color, hint }) => (
                                             <button
                                                 key={id}
@@ -363,7 +363,7 @@ export function ContextSidebar() {
                                                             : 'Pattern Revealed'}
                                                     </span>
                                                     {actionResult.totalContextItems != null && actionResult.totalContextItems > 0 && (
-                                                        <span className="text-[10px] text-cyan-500 font-medium opacity-70">
+                                                        <span className="text-[10px] text-brand-primary font-medium opacity-70">
                                                             {actionResult.totalContextItems} items
                                                         </span>
                                                     )}
@@ -431,7 +431,7 @@ export function ContextSidebar() {
                                             layout
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            className="group relative bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] rounded-xl p-3 cursor-pointer transition-all border border-transparent hover:border-purple-500/30"
+                                            className="group relative bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] rounded-xl p-3 cursor-pointer transition-all border border-transparent hover:border-brand-primary/30"
                                             onClick={() => handleItemClick(item)}
                                         >
                                             <div className="flex items-start gap-3">

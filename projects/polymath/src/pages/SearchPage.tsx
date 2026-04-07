@@ -287,13 +287,13 @@ export function SearchPage() {
   const getResultBadgeColor = (type: string) => {
     switch (type) {
       case 'memory':
-        return 'rgba(99, 102, 241, 0.15)'
+        return 'rgba(var(--brand-primary-rgb), 0.15)'
       case 'project':
-        return 'rgba(59, 130, 246, 0.15)'
+        return 'rgba(var(--brand-primary-rgb), 0.15)'
       case 'article':
-        return 'rgba(16, 185, 129, 0.15)'
+        return 'rgba(var(--brand-primary-rgb), 0.15)'
       case 'suggestion':
-        return 'rgba(251, 191, 36, 0.15)'
+        return 'rgba(var(--brand-primary-rgb), 0.15)'
       default:
         return 'var(--glass-surface)'
     }
@@ -340,7 +340,7 @@ export function SearchPage() {
                   className="w-full h-12 pl-12 pr-4 rounded-lg border-2 text-base focus:outline-none transition-all duration-200"
                   style={{
                     background: 'var(--glass-surface)',
-                    borderColor: searchFocused ? 'rgba(59, 130, 246, 0.6)' : 'rgba(59, 130, 246, 0.2)',
+                    borderColor: searchFocused ? 'rgba(var(--brand-primary-rgb), 0.6)' : 'rgba(var(--brand-primary-rgb), 0.2)',
                     color: 'var(--brand-text-primary)',
                   }}
                 />
@@ -351,8 +351,8 @@ export function SearchPage() {
                 onClick={() => setShowVoiceSearch(v => !v)}
                 className="h-12 w-12 flex-shrink-0 rounded-lg flex items-center justify-center transition-all active:scale-95"
                 style={{
-                  background: showVoiceSearch ? 'rgba(59,130,246,0.2)' : 'var(--glass-surface)',
-                  border: `1px solid ${showVoiceSearch ? 'rgba(59,130,246,0.4)' : 'rgba(59,130,246,0.2)'}`,
+                  background: showVoiceSearch ? 'rgba(var(--brand-primary-rgb),0.2)' : 'var(--glass-surface)',
+                  border: `1px solid ${showVoiceSearch ? 'rgba(var(--brand-primary-rgb),0.4)' : 'rgba(var(--brand-primary-rgb),0.2)'}`,
                   color: showVoiceSearch ? 'var(--brand-primary)' : 'var(--brand-text-muted)',
                 }}
                 aria-label="Voice search"
@@ -498,7 +498,7 @@ export function SearchPage() {
                                   key={i}
                                   className="text-xs px-2 py-0.5 rounded-lg"
                                   style={{
-                                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                    backgroundColor: 'rgba(var(--brand-primary-rgb), 0.1)',
                                     color: 'var(--brand-primary)'
                                   }}
                                 >

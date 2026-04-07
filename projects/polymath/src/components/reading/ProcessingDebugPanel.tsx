@@ -92,13 +92,13 @@ export function ProcessingDebugPanel({ articles, onRetry, onFlushAll }: Processi
           borderColor: 'var(--premium-red)',
           borderWidth: '2px',
           borderStyle: 'solid',
-          boxShadow: '0 10px 40px rgba(239, 68, 68, 0.3)'
+          boxShadow: '0 10px 40px rgba(var(--color-error-rgb), 0.3)'
         }}
       >
         {/* Header */}
         <div
           className="flex items-center justify-between p-4 border-b"
-          style={{ borderColor: 'rgba(239, 68, 68, 0.3)' }}
+          style={{ borderColor: 'rgba(var(--color-error-rgb), 0.3)' }}
         >
           <div
             className="flex items-center gap-3 flex-1 cursor-pointer"
@@ -132,9 +132,9 @@ export function ProcessingDebugPanel({ articles, onRetry, onFlushAll }: Processi
               }}
               className="ml-3 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
               style={{
-                backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                backgroundColor: 'rgba(var(--color-error-rgb), 0.2)',
                 color: 'var(--premium-red)',
-                border: '1px solid rgba(239, 68, 68, 0.3)'
+                border: '1px solid rgba(var(--color-error-rgb), 0.3)'
               }}
             >
               <Trash2 className="h-3 w-3" />
@@ -181,7 +181,7 @@ export function ProcessingDebugPanel({ articles, onRetry, onFlushAll }: Processi
                         disabled={processing}
                         className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
                         style={{
-                          backgroundColor: processing ? 'rgba(59, 130, 246, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                          backgroundColor: processing ? 'rgba(var(--brand-primary-rgb), 0.1)' : 'rgba(var(--color-error-rgb), 0.1)',
                           color: processing ? 'var(--brand-primary)' : 'var(--premium-red)',
                         }}
                       >
@@ -210,7 +210,7 @@ export function ProcessingDebugPanel({ articles, onRetry, onFlushAll }: Processi
                       {processing && processingState && (
                         <>
                           <div className="text-xs p-2 rounded-xl mb-1" style={{
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            backgroundColor: 'rgba(var(--brand-primary-rgb), 0.1)',
                             borderLeft: '2px solid var(--brand-primary)',
                             color: 'var(--brand-primary)'
                           }}>
@@ -250,7 +250,7 @@ export function ProcessingDebugPanel({ articles, onRetry, onFlushAll }: Processi
             {/* Activity Log */}
             <div
               className="p-4 border-t space-y-2"
-              style={{ borderColor: 'rgba(239, 68, 68, 0.3)' }}
+              style={{ borderColor: 'rgba(var(--color-error-rgb), 0.3)' }}
             >
               <p className="text-xs font-semibold" style={{ color: "var(--brand-primary)" }}>
                 ACTIVITY LOG
