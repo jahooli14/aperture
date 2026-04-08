@@ -132,7 +132,7 @@ export async function sampleDomainPair(
     for (let j = i + 1; j < allDomains.length; j++) {
       const domainA = allDomains[i];
       const domainB = allDomains[j];
-      const key = [domainA.domain_id, domainB.domain_id].sort().join('|');
+      const key = [domainA.id, domainB.id].sort().join('|');
       const stats = domainPairStats.get(key);
 
       // Check if this pair is penalized by rejection patterns
@@ -147,7 +147,7 @@ export async function sampleDomainPair(
       const distance = calculateDomainDistance(domainA, domainB);
 
       allPairs.push({
-        domains: [domainA.domain_id, domainB.domain_id],
+        domains: [domainA.id, domainB.id],
         distance,
         stats,
         penalty,
@@ -157,14 +157,14 @@ export async function sampleDomainPair(
 
   // Single-domain pairs (for deep iteration)
   for (const domain of allDomains) {
-    const key = `${domain.domain_id}|${domain.domain_id}`;
+    const key = `${domain.id}|${domain.id}`;
     const stats = domainPairStats.get(key);
     const isPenalized = rejectionPatterns.includes(key);
     const penalty = isPenalized ? (stats?.penalty_weight || 0.5) : 0;
 
     if (penalty <= config.penaltyThreshold) {
       allPairs.push({
-        domains: [domain.domain_id, domain.domain_id],
+        domains: [domain.id, domain.id],
         distance: 0, // Zero distance for same domain
         stats,
         penalty,
@@ -256,7 +256,7 @@ export async function initializeDomainPairs(userId: string): Promise<void> {
       const domainB = allDomains[j];
       const distance = calculateDomainDistance(domainA, domainB);
 
-      const [a, b] = [domainA.domain_id, domainB.domain_id].sort();
+      const [a, b] = [domainA.id, domainB.id].sort();
 
       pairs.push({
         user_id: userId,
