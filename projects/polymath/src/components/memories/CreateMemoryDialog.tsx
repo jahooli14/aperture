@@ -13,7 +13,7 @@ import {
 } from '../ui/bottom-sheet'
 import { useMemoryStore } from '../../stores/useMemoryStore'
 import { useToast } from '../ui/toast'
-import { Plus, ArrowUp, Bold, Italic, List, Image as ImageIcon, X, Wand2, CheckSquare, Square } from 'lucide-react'
+import { Plus, ArrowUp, Bold, Italic, List, Image as ImageIcon, X, CheckSquare, Square } from 'lucide-react'
 import { celebrate, checkThoughtMilestone, getMilestoneMessage } from '../../utils/celebrations'
 import { handleInputFocus } from '../../utils/keyboard'
 import { useAutoSuggestion } from '../../contexts/AutoSuggestionContext'
@@ -79,7 +79,7 @@ function VoiceSeeds({
       style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
     >
       <div className="flex items-center gap-1.5 mb-2">
-        <Wand2 className="h-3 w-3 opacity-30" style={{ color: 'var(--brand-primary)' }} />
+        <span className="w-1 h-1 rounded-full opacity-30" style={{ background: 'var(--brand-primary)' }} />
         <span
           className="text-[10px] font-medium tracking-widest uppercase"
           style={{ color: 'var(--brand-text-secondary)', opacity: 0.3 }}
@@ -720,10 +720,10 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                       className="px-2.5 py-1 rounded-full text-[11px] font-medium transition-all active:scale-95"
                       style={{
                         background: isSelected
-                          ? 'rgba(99,102,241,0.15)'
+                          ? 'rgba(var(--brand-primary-rgb),0.15)'
                           : 'rgba(255,255,255,0.04)',
                         border: isSelected
-                          ? '1px solid rgba(99,102,241,0.35)'
+                          ? '1px solid rgba(var(--brand-primary-rgb),0.35)'
                           : '1px solid rgba(255,255,255,0.08)',
                         color: isSelected
                           ? 'rgba(165,148,249,0.9)'

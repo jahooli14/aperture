@@ -29,7 +29,7 @@ const TYPE_ICON = {
 
 const TYPE_COLOR = {
   evolution: 'rgba(var(--brand-primary-rgb),0.15)',
-  pattern: 'rgba(139,92,246,0.15)',
+  pattern: 'rgba(var(--brand-primary-rgb),0.15)',
   collision: 'rgba(245,158,11,0.15)',
   opportunity: 'rgba(16,185,129,0.15)',
 }

@@ -63,7 +63,7 @@ export function ZenMode({ prompts, onClose, onMarkViewed }: ZenModeProps) {
     switch (type) {
       case 'connection': return 'var(--brand-primary)'
       case 'divergent': return 'var(--brand-primary)'
-      case 'revisit': return 'var(--premium-purple)'
+      case 'revisit': return 'var(--brand-primary)'
       case 'transform': return 'var(--premium-gold)'
       default: return 'var(--premium-platinum)'
     }

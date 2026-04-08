@@ -176,7 +176,7 @@ export function SmartCaptureBar({
   const borderColor = showClassification
     ? typeMeta.color.replace('0.8)', '0.45)')
     : focused
-    ? 'rgba(99,179,237,0.4)'
+    ? 'rgba(var(--brand-primary-rgb),0.4)'
     : 'var(--glass-surface-hover)'
 
   return (
@@ -281,7 +281,7 @@ export function SmartCaptureBar({
                     : {
                         color: "var(--brand-text-secondary)",
                         background: 'rgba(var(--brand-primary-rgb),0.12)',
-                        boxShadow: 'inset 0 0 0 1px rgba(99,179,237,0.2)',
+                        boxShadow: 'inset 0 0 0 1px rgba(var(--brand-primary-rgb),0.2)',
                       }
                 }
               >

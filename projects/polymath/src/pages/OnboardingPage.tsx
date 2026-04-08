@@ -203,7 +203,7 @@ export function OnboardingPage() {
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
             className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-6"
-            style={{ background: 'rgba(99,179,237,0.12)' }}
+            style={{ background: 'rgba(var(--brand-primary-rgb),0.12)' }}
           >
             <Mic className="h-7 w-7" style={{ color: 'var(--brand-primary)' }} />
           </motion.div>
@@ -245,7 +245,7 @@ export function OnboardingPage() {
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
             className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-6"
-            style={{ background: 'linear-gradient(135deg, rgba(99,179,237,0.08), rgba(245,158,11,0.12))' }}
+            style={{ background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.08), rgba(245,158,11,0.12))' }}
           >
             <svg
               className="h-7 w-7"
@@ -373,7 +373,7 @@ export function OnboardingPage() {
                 const colors = [
                   'var(--brand-primary)',
                   'rgba(245,158,11,0.8)',
-                  'rgba(168,85,247,0.7)',
+                  'rgba(var(--brand-primary-rgb),0.7)',
                 ]
                 return (
                   <motion.span

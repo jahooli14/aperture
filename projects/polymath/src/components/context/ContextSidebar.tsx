@@ -229,7 +229,7 @@ export function ContextSidebar() {
                         <div className="flex-1 overflow-y-auto p-4 space-y-4">
                             {/* AI Analysis Section */}
                             {activeContext.type !== 'page' && activeContext.type !== 'home' && (
-                                <div className="rounded-xl p-4 bg-gradient-to-br from-brand-primary/10 to-brand-primary/10 border border-purple-500/20">
+                                <div className="rounded-xl p-4 bg-gradient-to-br from-brand-primary/10 to-brand-primary/10 border border-brand-primary/20">
                                     <div className="flex items-center justify-between mb-3">
                                         <div className="flex items-center gap-2">
                                             <Lightbulb className="h-4 w-4 text-brand-primary" />

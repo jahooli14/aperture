@@ -268,8 +268,8 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
                 <div
                   className="flex items-start gap-2.5 mb-4 px-3 py-2.5 rounded-xl"
                   style={{
-                    background: 'rgba(99,102,241,0.06)',
-                    border: '1px solid rgba(99,102,241,0.12)',
+                    background: 'rgba(var(--brand-primary-rgb),0.06)',
+                    border: '1px solid rgba(var(--brand-primary-rgb),0.12)',
                   }}
                 >
                   <Brain className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" style={{ color: "var(--brand-primary)" }} />
@@ -300,7 +300,7 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
                         className="flex items-start gap-3 text-left w-full group py-0.5"
                       >
                         {item.checked
-                          ? <CheckSquare className="h-5 w-5 flex-shrink-0 mt-0.5" style={{ color: 'rgba(99,179,237,0.8)' }} />
+                          ? <CheckSquare className="h-5 w-5 flex-shrink-0 mt-0.5" style={{ color: 'rgba(var(--brand-primary-rgb),0.8)' }} />
                           : <Square className="h-5 w-5 flex-shrink-0 mt-0.5" style={{ color: 'rgba(255,255,255,0.25)' }} />
                         }
                         <span
@@ -359,7 +359,7 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
                     <span className="text-xs font-medium" style={{ color: 'var(--brand-text-secondary)' }}>
                       Connected Thoughts
                     </span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(99,102,241,0.1)', color: 'var(--brand-text-muted)' }}>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(var(--brand-primary-rgb),0.1)', color: 'var(--brand-text-muted)' }}>
                       {bridges.length}
                     </span>
                   </div>

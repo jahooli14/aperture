@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { SubtleBackground } from '../components/SubtleBackground'
-import { BookOpen, Calendar, Brain, TrendingUp, TrendingDown, Minus, Wand2, ChevronDown, Zap, WifiOff } from 'lucide-react'
+import { BookOpen, Calendar, Brain, TrendingUp, TrendingDown, Minus, ChevronDown, Zap, WifiOff } from 'lucide-react'
 import { cn } from '../lib/utils'
 
 interface EmotionalPoint {
@@ -284,7 +284,7 @@ export function CognitiveReplayPage() {
                 <Card className="premium-card overflow-hidden">
                   <CardContent className="p-6">
                     <h3 className="text-sm font-bold text-brand-primary uppercase tracking-wider mb-4 flex items-center gap-2">
-                      <Wand2 className="w-4 h-4" />
+                      <TrendingUp className="w-4 h-4" />
                       Emotional Arc
                     </h3>
                     <div className="space-y-2">
@@ -354,7 +354,7 @@ export function CognitiveReplayPage() {
                 <Card className="premium-card border-brand-primary/20">
                   <CardContent className="p-6">
                     <h3 className="text-sm font-bold text-brand-primary uppercase tracking-wider mb-4 flex items-center gap-2">
-                      <Wand2 className="w-4 h-4" />
+                      <TrendingUp className="w-4 h-4" />
                       Breakthrough Moments
                     </h3>
                     <ul className="space-y-2">

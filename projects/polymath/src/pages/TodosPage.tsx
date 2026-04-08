@@ -372,9 +372,9 @@ export function TodosPage() {
                         color: "rgb(251,191,36)",
                         border: '1px solid rgba(251,191,36,0.3)',
                       } : {
-                        background: 'rgba(139,92,246,0.08)',
-                        color: "rgb(167,139,250)",
-                        border: '1px solid rgba(139,92,246,0.3)',
+                        background: 'rgba(var(--brand-primary-rgb),0.08)',
+                        color: "var(--brand-primary)",
+                        border: '1px solid rgba(var(--brand-primary-rgb),0.3)',
                       }}
                     >
                       {hour < 12 ? <Sun className="h-3 w-3" /> : <Moon className="h-3 w-3" />}
@@ -485,8 +485,8 @@ export function TodosPage() {
                 className="w-full flex items-center justify-between mb-3 px-3.5 py-2.5 rounded-lg text-left"
                 style={{
                   background: 'rgba(var(--brand-primary-rgb),0.08)',
-                  border: '1px solid rgba(99,179,237,0.3)',
-                  boxShadow: '0 0 20px rgba(99,179,237,0.1)',
+                  border: '1px solid rgba(var(--brand-primary-rgb),0.3)',
+                  boxShadow: '0 0 20px rgba(var(--brand-primary-rgb),0.1)',
                 }}
               >
                 <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>
@@ -931,9 +931,9 @@ function MorningBanner({ unscheduledCount }: { unscheduledCount: number }) {
       <div
         className="flex items-start gap-3 px-3.5 py-3 rounded-lg"
         style={{
-          background: 'rgba(99,179,237,0.06)',
-          borderLeft: '4px solid rgba(99,179,237,0.6)',
-          border: '1.5px solid rgba(99,179,237,0.2)',
+          background: 'rgba(var(--brand-primary-rgb),0.06)',
+          borderLeft: '4px solid rgba(var(--brand-primary-rgb),0.6)',
+          border: '1.5px solid rgba(var(--brand-primary-rgb),0.2)',
           boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
         }}
       >
@@ -976,9 +976,9 @@ function EveningCaptureBanner({ tomorrowDayName }: { tomorrowDayName: string }) 
       <div
         className="flex items-start gap-3 px-3.5 py-3 rounded-lg"
         style={{
-          background: 'rgba(139,92,246,0.05)',
-          border: '1.5px solid rgba(139,92,246,0.25)',
-          borderLeft: '4px solid rgba(139,92,246,0.6)',
+          background: 'rgba(var(--brand-primary-rgb),0.05)',
+          border: '1.5px solid rgba(var(--brand-primary-rgb),0.25)',
+          borderLeft: '4px solid rgba(var(--brand-primary-rgb),0.6)',
           boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
         }}
       >
@@ -1122,7 +1122,7 @@ function EmptyState({ view }: { view: TodoView }) {
         className="h-14 w-14 rounded-lg flex items-center justify-center mb-5"
         style={{
           background: 'rgba(var(--brand-primary-rgb),0.07)',
-          border: '1px solid rgba(99,179,237,0.2)',
+          border: '1px solid rgba(var(--brand-primary-rgb),0.2)',
           boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
         }}
       >

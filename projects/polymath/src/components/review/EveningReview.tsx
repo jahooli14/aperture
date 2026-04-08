@@ -215,9 +215,9 @@ export function EveningReview({ todos, onUpdateTodo, onAddTodo, onDeleteTodo, on
                 whileTap={{ scale: 0.98 }}
                 className="w-full py-4 rounded-2xl font-bold text-[16px] flex items-center justify-center gap-2"
                 style={{
-                  background: 'rgba(139,92,246,0.15)',
+                  background: 'rgba(var(--brand-primary-rgb),0.15)',
                   color: "var(--brand-text-secondary)",
-                  border: '1px solid rgba(139,92,246,0.25)',
+                  border: '1px solid rgba(var(--brand-primary-rgb),0.25)',
                 }}
               >
                 Continue
@@ -284,7 +284,7 @@ export function EveningReview({ todos, onUpdateTodo, onAddTodo, onDeleteTodo, on
                             style={{
                               background: 'rgba(var(--brand-primary-rgb),0.1)',
                               color: "var(--brand-text-secondary)",
-                              border: '1px solid rgba(99,179,237,0.2)',
+                              border: '1px solid rgba(var(--brand-primary-rgb),0.2)',
                             }}
                           >
                             <CalendarDays className="h-3 w-3" />
@@ -482,9 +482,9 @@ export function EveningReview({ todos, onUpdateTodo, onAddTodo, onDeleteTodo, on
                       onClick={handleAddTomorrow}
                       className="px-4 py-3 rounded-xl text-[13px] font-semibold flex-shrink-0"
                       style={{
-                        background: 'rgba(99,179,237,0.15)',
+                        background: 'rgba(var(--brand-primary-rgb),0.15)',
                         color: "var(--brand-text-secondary)",
-                        border: '1px solid rgba(99,179,237,0.25)',
+                        border: '1px solid rgba(var(--brand-primary-rgb),0.25)',
                       }}
                     >
                       Add
@@ -497,9 +497,9 @@ export function EveningReview({ todos, onUpdateTodo, onAddTodo, onDeleteTodo, on
                 onClick={advance}
                 className="w-full py-4 rounded-2xl font-bold text-[16px] flex items-center justify-center gap-2"
                 style={{
-                  background: 'rgba(99,179,237,0.12)',
+                  background: 'rgba(var(--brand-primary-rgb),0.12)',
                   color: "var(--brand-text-secondary)",
-                  border: '1px solid rgba(99,179,237,0.22)',
+                  border: '1px solid rgba(var(--brand-primary-rgb),0.22)',
                 }}
               >
                 Continue
@@ -528,8 +528,8 @@ export function EveningReview({ todos, onUpdateTodo, onAddTodo, onDeleteTodo, on
                 <div
                   className="h-20 w-20 rounded-3xl flex items-center justify-center mb-6"
                   style={{
-                    background: 'rgba(139,92,246,0.12)',
-                    boxShadow: '0 0 40px rgba(139,92,246,0.15)',
+                    background: 'rgba(var(--brand-primary-rgb),0.12)',
+                    boxShadow: '0 0 40px rgba(var(--brand-primary-rgb),0.15)',
                   }}
                 >
                   <span className="text-4xl"></span>
@@ -594,9 +594,9 @@ export function EveningReview({ todos, onUpdateTodo, onAddTodo, onDeleteTodo, on
                 whileTap={{ scale: 0.98 }}
                 className="w-full py-4 rounded-2xl font-bold text-[16px]"
                 style={{
-                  background: 'rgba(139,92,246,0.15)',
+                  background: 'rgba(var(--brand-primary-rgb),0.15)',
                   color: "var(--brand-text-secondary)",
-                  border: '1px solid rgba(139,92,246,0.25)',
+                  border: '1px solid rgba(var(--brand-primary-rgb),0.25)',
                 }}
               >
                 Close

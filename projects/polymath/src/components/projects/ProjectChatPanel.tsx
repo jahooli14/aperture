@@ -703,8 +703,8 @@ export function ProjectChatPanel({
                     disabled={isRefining}
                     className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-all disabled:opacity-40"
                     style={{
-                      background: 'rgba(99,102,241,0.05)',
-                      border: '1px solid rgba(99,102,241,0.15)',
+                      background: 'rgba(var(--brand-primary-rgb),0.05)',
+                      border: '1px solid rgba(var(--brand-primary-rgb),0.15)',
                       color: 'var(--brand-text-secondary)',
                     }}
                   >
@@ -825,8 +825,8 @@ export function ProjectChatPanel({
                                 disabled={added}
                                 className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all disabled:opacity-50"
                                 style={{
-                                  background: added ? 'rgba(255,255,255,0.06)' : 'rgba(99,102,241,0.15)',
-                                  border: '1px solid rgba(99,102,241,0.25)',
+                                  background: added ? 'rgba(255,255,255,0.06)' : 'rgba(var(--brand-primary-rgb),0.15)',
+                                  border: '1px solid rgba(var(--brand-primary-rgb),0.25)',
                                   color: added ? 'var(--brand-text-secondary)' : 'var(--brand-primary)',
                                 }}
                               >

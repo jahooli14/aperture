@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Compass, Hammer, Flag, Sunrise, Sparkles, ArrowRight, Zap } from 'lucide-react'
+import { Compass, Hammer, Flag, Sunrise, ArrowRight, Zap } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../../lib/supabase'
 import type { Project } from '../../types'
@@ -50,9 +50,9 @@ const PHASE_CONFIG: Record<Phase, {
   shaping: {
     icon: Compass,
     gradient: 'from-brand-primary/15 to-brand-primary/10',
-    border: 'rgba(139,92,246,0.35)',
-    glow: 'rgba(139,92,246,0.1)',
-    accent: 'rgb(139,92,246)',
+    border: 'rgba(var(--brand-primary-rgb),0.35)',
+    glow: 'rgba(var(--brand-primary-rgb),0.1)',
+    accent: 'rgb(var(--brand-primary-rgb))',
   },
   building: {
     icon: Hammer,
@@ -76,11 +76,11 @@ const PHASE_CONFIG: Record<Phase, {
     accent: 'rgb(245,158,11)',
   },
   fresh: {
-    icon: Sparkles,
+    icon: Zap,
     gradient: 'from-brand-primary/15 to-brand-primary/10',
-    border: 'rgba(139,92,246,0.35)',
-    glow: 'rgba(139,92,246,0.1)',
-    accent: 'rgb(139,92,246)',
+    border: 'rgba(var(--brand-primary-rgb),0.35)',
+    glow: 'rgba(var(--brand-primary-rgb),0.1)',
+    accent: 'rgb(var(--brand-primary-rgb))',
   },
 }
 
@@ -276,7 +276,7 @@ export function SessionBriefCard({ project, onOpenChat, onBriefLoaded }: Session
               border: '1px solid rgba(255,255,255,0.05)',
             }}
           >
-            <Sparkles className="h-3 w-3 flex-shrink-0" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }} />
+            <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: 'var(--brand-text-secondary)', opacity: 0.4 }} />
             <span
               className="text-[12px] leading-snug flex-1"
               style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}

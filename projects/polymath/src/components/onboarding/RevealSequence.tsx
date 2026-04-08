@@ -230,9 +230,9 @@ export function RevealSequence({ analysis, books, transcripts = [] }: RevealSequ
                   transition={{ delay: 0.5 }}
                   className="p-6 rounded-xl"
                   style={{
-                    background: 'linear-gradient(135deg, rgba(99,179,237,0.08), rgba(168,85,247,0.08))',
+                    background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.08), rgba(var(--brand-primary-rgb),0.06))',
                     backdropFilter: 'blur(12px)',
-                    border: '1px solid rgba(99,179,237,0.15)',
+                    border: '1px solid rgba(var(--brand-primary-rgb),0.15)',
                   }}
                 >
                   <p className="text-base leading-relaxed" style={{ color: 'var(--brand-text-primary)' }}>
@@ -261,7 +261,7 @@ export function RevealSequence({ analysis, books, transcripts = [] }: RevealSequ
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 0.9 + i * 0.12 }}
                         className="px-3 py-1.5 rounded-full text-sm font-medium"
-                        style={{ background: 'linear-gradient(135deg, rgba(99,179,237,0.15), rgba(99,179,237,0.08))', color: 'var(--brand-primary)', border: '1px solid rgba(99,179,237,0.2)' }}
+                        style={{ background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.15), rgba(var(--brand-primary-rgb),0.08))', color: 'var(--brand-primary)', border: '1px solid rgba(var(--brand-primary-rgb),0.2)' }}
                       >
                         {theme}
                       </motion.span>
@@ -288,7 +288,7 @@ export function RevealSequence({ analysis, books, transcripts = [] }: RevealSequ
                         {book.thumbnail ? (
                           <img src={book.thumbnail} alt="" className="w-8 h-12 rounded object-cover flex-shrink-0" />
                         ) : (
-                          <div className="w-8 h-12 rounded flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(99,179,237,0.12)' }}>
+                          <div className="w-8 h-12 rounded flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(var(--brand-primary-rgb),0.12)' }}>
                             <Book className="h-4 w-4" style={{ color: 'var(--brand-primary)', opacity: 0.5 }} />
                           </div>
                         )}
@@ -375,7 +375,7 @@ export function RevealSequence({ analysis, books, transcripts = [] }: RevealSequ
                   <h3 className="text-base font-semibold mb-2" style={{ color: 'var(--brand-text-primary)' }}>{suggestion.title}</h3>
                   <p className="text-sm mb-3 leading-relaxed" style={{ color: 'var(--brand-text-secondary)' }}>{suggestion.description}</p>
 
-                  <div className="p-3 rounded-lg mb-4 flex-1" style={{ background: 'rgba(99,179,237,0.06)' }}>
+                  <div className="p-3 rounded-lg mb-4 flex-1" style={{ background: 'rgba(var(--brand-primary-rgb),0.06)' }}>
                     <p className="text-xs font-medium mb-1 uppercase tracking-wider" style={{ color: 'var(--brand-primary)', opacity: 0.7 }}>Why you?</p>
                     <p className="text-xs leading-relaxed" style={{ color: 'var(--brand-text-secondary)', opacity: 0.8 }}>{suggestion.reasoning}</p>
                   </div>
@@ -465,7 +465,7 @@ export function RevealSequence({ analysis, books, transcripts = [] }: RevealSequ
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="p-4 rounded-xl mb-6 text-sm leading-relaxed whitespace-pre-line"
-                style={{ background: 'rgba(99,179,237,0.06)', border: '1px solid rgba(99,179,237,0.12)', color: 'var(--brand-text-secondary)' }}
+                style={{ background: 'rgba(var(--brand-primary-rgb),0.06)', border: '1px solid rgba(var(--brand-primary-rgb),0.12)', color: 'var(--brand-text-secondary)' }}
               >
                 {REFINEMENT_MESSAGES[refinementCount]}
               </motion.div>
@@ -546,7 +546,7 @@ export function RevealSequence({ analysis, books, transcripts = [] }: RevealSequ
               animate={{ scale: [1, 1.1, 1] }}
               transition={{ duration: 0.5 }}
               className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6"
-              style={{ background: 'rgba(99,179,237,0.12)' }}
+              style={{ background: 'rgba(var(--brand-primary-rgb),0.12)' }}
             >
               <CheckCircle className="h-8 w-8" style={{ color: 'var(--brand-primary)' }} />
             </motion.div>

@@ -236,7 +236,7 @@ export function BedtimePage() {
     switch (type) {
       case 'connection': return 'var(--brand-primary)'
       case 'divergent': return 'var(--brand-primary)'
-      case 'revisit': return 'var(--premium-purple)'
+      case 'revisit': return 'var(--brand-primary)'
       case 'transform': return 'var(--premium-gold)'
       default: return 'var(--premium-platinum)'
     }
@@ -571,7 +571,7 @@ export function BedtimePage() {
                   disabled={generating}
                   className="px-6 py-3 rounded-lg transition-all inline-flex items-center gap-2"
                   style={{
-                    background: 'linear-gradient(135deg, var(--brand-primary), var(--premium-purple))',
+                    background: 'var(--brand-primary)',
                     color: 'white'
                   }}
                 >

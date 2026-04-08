@@ -12,7 +12,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { ArrowUp, Plus, Check, Sparkles } from 'lucide-react'
+import { ArrowUp, Plus, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../../lib/supabase'
 import type { Project } from '../../types'
@@ -375,7 +375,7 @@ export function InlineGuide({
           className="flex items-center gap-2 mt-3 px-3 py-2 rounded-xl"
           style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}
         >
-          <Sparkles className="h-3 w-3 flex-shrink-0" style={{ color: 'var(--brand-text-secondary)', opacity: 0.25 }} />
+          <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: 'var(--brand-text-secondary)', opacity: 0.25 }} />
           <span className="text-[12px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.35 }}>
             {brief.knowledgeNudge}
           </span>

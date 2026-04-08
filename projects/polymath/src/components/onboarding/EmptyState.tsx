@@ -38,7 +38,7 @@ export function EmptyState() {
         {/* Progress hint */}
         <div
           className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs mb-8"
-          style={{ background: 'rgba(99,179,237,0.08)', color: 'var(--brand-primary)', border: '1px solid rgba(99,179,237,0.15)' }}
+          style={{ background: 'rgba(var(--brand-primary-rgb),0.08)', color: 'var(--brand-primary)', border: '1px solid rgba(var(--brand-primary-rgb),0.15)' }}
         >
           0 of 5 thoughts captured
         </div>

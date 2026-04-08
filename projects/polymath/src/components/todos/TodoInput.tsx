@@ -270,7 +270,7 @@ export function TodoInput({
               transition={{ duration: 0.15 }}
               className="flex-shrink-0 h-[18px] w-[18px] rounded-lg transition-all duration-200"
               style={{
-                border: hasText ? '2px solid rgba(147,197,253,0.6)' : '2px solid rgba(255,255,255,0.2)',
+                border: hasText ? '2px solid rgba(var(--brand-primary-rgb),0.6)' : '2px solid rgba(255,255,255,0.2)',
               }}
             />
           )}
@@ -329,7 +329,7 @@ export function TodoInput({
               style={{
                 color: "var(--brand-text-secondary)",
                 background: 'rgba(var(--brand-primary-rgb),0.1)',
-                border: '1px solid rgba(99,179,237,0.35)',
+                border: '1px solid rgba(var(--brand-primary-rgb),0.35)',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
               }}
             >

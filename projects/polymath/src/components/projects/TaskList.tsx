@@ -517,7 +517,7 @@ function LinkedTodos({ projectId }: { projectId: string }) {
               {todo.text}
             </span>
             {todo.source_memory_id && (
-              <span className="text-[9px] px-1.5 py-0.5 rounded-full ml-auto" style={{ backgroundColor: 'rgba(6,182,212,0.1)', color: "var(--brand-text-secondary)" }}>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full ml-auto" style={{ backgroundColor: 'rgba(var(--brand-primary-rgb),0.1)', color: "var(--brand-text-secondary)" }}>
                 from thought
               </span>
             )}

@@ -97,8 +97,8 @@ export function DailyReview({ onClose, todos, onUpdateTodo, onAddTodo, onDeleteT
                 onClick={() => setReviewType('evening')}
                 className="flex items-center gap-3 px-5 py-4 text-left transition-all"
                 style={{
-                  background: 'rgba(139,92,246,0.10)',
-                  border: '1.5px solid rgba(139,92,246,0.35)',
+                  background: 'rgba(var(--brand-primary-rgb),0.10)',
+                  border: '1.5px solid rgba(var(--brand-primary-rgb),0.35)',
                   borderRadius: '4px',
                   boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
                 }}

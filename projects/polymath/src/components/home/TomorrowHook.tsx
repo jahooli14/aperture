@@ -73,7 +73,7 @@ export function TomorrowHook() {
           <div
             className="relative p-5 rounded-2xl"
             style={{
-              background: 'linear-gradient(135deg, rgba(245,158,11,0.06), rgba(168,85,247,0.06))',
+              background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.06), rgba(var(--brand-primary-rgb),0.04))',
               border: '1px solid rgba(245,158,11,0.15)',
             }}
           >
