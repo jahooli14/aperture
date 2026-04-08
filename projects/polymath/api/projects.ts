@@ -1299,33 +1299,32 @@ Output ONLY valid JSON, no markdown:
           }
         }
 
-        // Store the best crossover idea as a project suggestion
-        if (top3[0]?.crossover) {
+        // Store all AI-reasoned crossover ideas as project suggestions (up to top3)
+        for (const intersection of top3.filter(i => i.crossover)) {
           try {
-            const top = top3[0]
             const { data: existing } = await supabase
               .from('project_suggestions')
               .select('id')
               .eq('user_id', userId)
-              .eq('title', top.crossover!.crossover_title)
+              .eq('title', intersection.crossover!.crossover_title)
               .limit(1)
 
             if (!existing?.length) {
               await supabase.from('project_suggestions').insert({
                 user_id: userId,
-                title: top.crossover!.crossover_title,
-                description: top.crossover!.concept,
-                synthesis_reasoning: top.crossover!.why_it_works,
-                novelty_score: Math.round(top.score * 10),
+                title: intersection.crossover!.crossover_title,
+                description: intersection.crossover!.concept,
+                synthesis_reasoning: intersection.crossover!.why_it_works,
+                novelty_score: Math.round(intersection.score * 10),
                 feasibility_score: 70,
                 interest_score: 80,
-                total_points: Math.round(top.score * 10 + 150),
+                total_points: Math.round(intersection.score * 10 + 150),
                 is_wildcard: false,
                 status: 'pending',
                 metadata: {
                   observation_basis: 'intersection',
-                  source_project_ids: top.projectIds,
-                  first_steps: top.crossover!.first_steps,
+                  source_project_ids: intersection.projectIds,
+                  first_steps: intersection.crossover!.first_steps,
                 }
               })
             }
