@@ -207,18 +207,22 @@ export function TrySomethingNewCarousel({ onShapeIdea }: TrySomethingNewCarousel
 
               {/* Source badge / collision header */}
               {current.isIntersection && current.sourceProjectIds?.length ? (
-                <div className="flex items-center gap-1.5 flex-wrap mb-3">
-                  {current.sourceProjectIds.map((id, i) => (
-                    <span key={id} className="flex items-center gap-1.5">
-                      {i > 0 && (
-                        <span className="text-[var(--brand-primary)] font-bold text-xs opacity-70">×</span>
-                      )}
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--brand-text-primary)] opacity-80">
+                <div className="flex items-center gap-2 flex-wrap mb-3">
+                  {current.sourceProjectIds.map((id, i) =>
+                    i === 0 ? (
+                      <span key={id} className="text-[10px] font-bold uppercase tracking-wider text-[var(--brand-text-primary)] opacity-80">
                         {projectMap.get(id) ?? '—'}
                       </span>
-                    </span>
-                  ))}
-                  <span className="ml-auto flex items-center gap-1.5">
+                    ) : (
+                      <span key={id} className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[var(--brand-primary)] font-bold text-sm leading-none">×</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--brand-text-primary)] opacity-80">
+                          {projectMap.get(id) ?? '—'}
+                        </span>
+                      </span>
+                    )
+                  )}
+                  <span className="ml-auto flex items-center gap-1.5 shrink-0">
                     {current.sourceProjectIds.length >= 3 && (
                       <span
                         className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full"
@@ -250,11 +254,11 @@ export function TrySomethingNewCarousel({ onShapeIdea }: TrySomethingNewCarousel
 
               <div className="flex-1 mb-4">
                 {current.isIntersection ? (
-                  // Intersection card: why it works + first steps
+                  // Intersection card: why it works + first steps (description as fallback)
                   <>
-                    {current.reasoning && (
+                    {(current.reasoning || current.description) && (
                       <p className="text-sm text-[var(--brand-text-secondary)] leading-relaxed opacity-70 mb-3">
-                        {current.reasoning}
+                        {current.reasoning || current.description}
                       </p>
                     )}
                     {current.firstSteps && current.firstSteps.length > 0 && (

@@ -367,9 +367,10 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
             {!motionEventsReceived.current && (
               <motion.p
                 initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 2 }}
-                className="absolute bottom-20 text-slate-600 text-sm text-center px-8"
+                animate={{ opacity: 0.75 }}
+                exit={{ opacity: 0 }}
+                transition={{ delay: 1.5, duration: 2, exit: { duration: 4 } }}
+                className="absolute bottom-20 text-white/75 text-base text-center px-8 leading-relaxed"
               >
                 Tap anywhere when you're ready to capture your insight
               </motion.p>
