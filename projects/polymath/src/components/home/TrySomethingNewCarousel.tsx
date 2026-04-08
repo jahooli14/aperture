@@ -21,6 +21,7 @@ interface IdeaItem {
   reasoning?: string
   source: 'suggestion' | 'drawer' | 'insight'
   projectId?: string // For drawer projects, the real project ID
+  isIntersection?: boolean // True only for intersection-detector-sourced suggestions
 }
 
 interface TrySomethingNewCarouselProps {
@@ -53,13 +54,14 @@ export function TrySomethingNewCarousel({ onShapeIdea }: TrySomethingNewCarousel
   // AI suggestions
   const aiIdeas: IdeaItem[] = suggestions
     .filter(s => s.status === 'pending' || s.status === 'saved' || s.status === 'spark')
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .sort((a, b) => new Date(b.suggested_at).getTime() - new Date(a.suggested_at).getTime())
     .map(s => ({
       id: `sug-${s.id}`,
       title: s.title,
       description: s.description,
       reasoning: s.synthesis_reasoning,
       source: 'suggestion' as const,
+      isIntersection: s.metadata?.observation_basis === 'intersection',
     }))
 
   // Drawer projects (not in focus set, not completed/graveyard)
@@ -168,7 +170,7 @@ export function TrySomethingNewCarousel({ onShapeIdea }: TrySomethingNewCarousel
               {current.source === 'suggestion' && (
                 <div className="flex items-center gap-1.5 mb-2">
                   <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--brand-primary)] opacity-60">
-                    AI intersection
+                    {current.isIntersection ? 'AI intersection' : 'AI synthesized'}
                   </span>
                 </div>
               )}

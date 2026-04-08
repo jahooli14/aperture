@@ -21,8 +21,8 @@ interface ProjectSuggestion {
   total_points: number
   is_wildcard: boolean
   status: 'pending' | 'spark' | 'meh' | 'built' | 'dismissed' | 'saved'
-  created_at: string
-  metadata?: any
+  suggested_at: string
+  metadata?: Record<string, unknown>
 }
 
 interface SuggestionState {
@@ -64,6 +64,11 @@ export const useSuggestionStore = create<SuggestionState>((set, get) => ({
 
       if (filter !== 'all') {
         params.append('status', filter)
+        // When fetching the default view, include spark/saved so the home
+        // carousel (which client-filters for pending|saved|spark) actually sees them.
+        if (filter === 'pending') {
+          params.append('include_rated', 'true')
+        }
       }
 
       const response = await fetch(`${API_BASE}/projects?resource=suggestions&${params}`)
@@ -211,7 +216,7 @@ export const useSuggestionStore = create<SuggestionState>((set, get) => ({
     const { suggestions } = get()
     const sorted = [...suggestions].sort((a, b) => {
       if (sortBy === 'points') return b.total_points - a.total_points
-      if (sortBy === 'recent') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      if (sortBy === 'recent') return new Date(b.suggested_at).getTime() - new Date(a.suggested_at).getTime()
       if (sortBy === 'rating') {
         const ratingOrder = { spark: 3, saved: 2, pending: 1, meh: 0, dismissed: -1, built: 4 }
         return ratingOrder[b.status] - ratingOrder[a.status]
