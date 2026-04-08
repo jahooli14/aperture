@@ -20,6 +20,7 @@ import { useMemoryStore } from '../stores/useMemoryStore'
 import { useListStore } from '../stores/useListStore'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { useJourneyStore } from '../stores/useJourneyStore'
+import { useAuthContext } from '../contexts/AuthContext'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
 import { ShapingModal } from '../components/projects/ShapingModal'
@@ -30,6 +31,7 @@ import { UnshapedNudgeBar } from '../components/home/UnshapedNudgeBar'
 import { ThoughtOfTheDay } from '../components/home/ThoughtOfTheDay'
 import { WeeklyIntersection } from '../components/home/WeeklyIntersection'
 import { BedtimeFloatingIcon } from '../components/home/BedtimeFloatingIcon'
+import { UnauthHome } from '../components/onboarding/UnauthHome'
 import { AlertCircle, ArrowRight, Film, Music, Monitor, Book, MapPin, Gamepad2, Calendar, FileText, Quote, Box } from 'lucide-react'
 
 const LIST_TYPE_ICONS: Record<string, React.ElementType> = {
@@ -103,6 +105,7 @@ function NowConsumingWidget() {
 }
 
 export function HomePage() {
+  const { isAuthenticated } = useAuthContext()
   const fetchProjects = useProjectStore(s => s.fetchProjects)
   const projects = useProjectStore(s => s.projects)
   const fetchSuggestions = useSuggestionStore(s => s.fetchSuggestions)
@@ -121,11 +124,13 @@ export function HomePage() {
     : null
 
   useEffect(() => {
+    if (!isAuthenticated) return
     setContext('home', 'home', 'Home')
     if (onboardingCompletedAt) startSession()
-  }, [])
+  }, [isAuthenticated])
 
   useEffect(() => {
+    if (!isAuthenticated) return
     const loadData = async () => {
       try {
         if (projects.length === 0) {
@@ -140,7 +145,7 @@ export function HomePage() {
       }
     }
     loadData()
-  }, [])
+  }, [isAuthenticated])
 
   const handleShapeIdea = (idea: IdeaItem) => {
     setSeedConversation({ title: idea.title, description: idea.description })
@@ -149,6 +154,11 @@ export function HomePage() {
 
   const handleShapeProject = (projectId: string) => {
     setShapingProjectId(projectId)
+  }
+
+  // Show landing page for unauthenticated users instead of empty black screen
+  if (!isAuthenticated) {
+    return <UnauthHome />
   }
 
   if (error) {
