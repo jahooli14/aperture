@@ -76,6 +76,7 @@ Use `/skill` for complex workflows:
 - **Deploy**: Push to `main` branch (Vercel auto-deploys)
 - **Env vars**: Set in Vercel dashboard
 - **Style**: TypeScript strict, functional React, no `any` types
+- **AI model names**: ALWAYS verify model IDs against the latest online documentation (e.g. [Google Gemini models](https://ai.google.dev/gemini-api/docs/models)) before changing them. Never guess or rely on memory — models get deprecated and renamed frequently.
 
 ## Session Start
 

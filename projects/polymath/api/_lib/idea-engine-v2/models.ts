@@ -17,7 +17,7 @@ export const MODELS = {
   SUMMARIZE: 'gemini-3-flash-preview',
 
   // Embedding: For deduplication vectors
-  EMBEDDING: 'text-embedding-004',
+  EMBEDDING: 'gemini-embedding-001',
 } as const;
 
 export type ModelType = typeof MODELS[keyof typeof MODELS];

@@ -63,12 +63,15 @@ export async function checkDuplicate(
 }
 
 /**
- * Generate embedding using Google's text-embedding-004 model
+ * Generate embedding using Google's gemini-embedding-001 model
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
   const model = getGenAI().getGenerativeModel({ model: MODELS.EMBEDDING });
 
-  const result = await model.embedContent(text);
+  const result = await model.embedContent({
+    content: { role: 'user', parts: [{ text }] },
+    outputDimensionality: 768,
+  });
   return result.embedding.values;
 }
 
