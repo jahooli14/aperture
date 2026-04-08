@@ -221,6 +221,34 @@ function ArchivesSpotlightCard({ project }: { project: Project }) {
   )
 }
 
+function MasonryGrid({ projects, prominent = false }: { projects: Project[], prominent?: boolean }) {
+  const columns = 2
+  const cols: Project[][] = Array.from({ length: columns }, () => [])
+  projects.forEach((p, i) => {
+    cols[i % columns].push(p)
+  })
+
+  return (
+    <div className="flex gap-3 items-start w-full">
+      {cols.map((colProjects, colIndex) => (
+        <div key={colIndex} className="flex-1 flex flex-col gap-3 min-w-0">
+          {colProjects.map((project, index) => (
+            <motion.div
+              key={project.id}
+              className="w-full"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2, delay: index * 0.04 }}
+            >
+              <ProjectCard project={project} prominent={prominent} />
+            </motion.div>
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function ProjectsPageCarousel({
   loading = false,
   activeProjects: activeList,
@@ -245,17 +273,7 @@ export function ProjectsPageCarousel({
             <h3 className="text-xs font-bold text-[var(--brand-text-muted)] uppercase tracking-widest aperture-header">Active Focus</h3>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {activeList.map(project => (
-              <motion.div
-                key={project.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                <ProjectCard project={project} prominent={true} />
-              </motion.div>
-            ))}
-          </div>
+          <MasonryGrid projects={activeList} prominent={true} />
         </section>
       )}
 
@@ -265,17 +283,7 @@ export function ProjectsPageCarousel({
             <h3 className="text-xs font-bold text-[var(--brand-text-muted)] uppercase tracking-widest aperture-header">In the Drawer</h3>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {drawerList.map(project => (
-              <motion.div
-                key={project.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                <ProjectCard project={project} />
-              </motion.div>
-            ))}
-          </div>
+          <MasonryGrid projects={drawerList} />
         </section>
       )}
 

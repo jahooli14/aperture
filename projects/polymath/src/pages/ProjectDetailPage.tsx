@@ -6,7 +6,6 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { Loader2, MoreVertical, Plus, Check, X, GripVertical, ChevronDown, Zap, Target, Star, Sprout, Pin, PinOff } from 'lucide-react'
-import { MarkdownRenderer } from '../components/ui/MarkdownRenderer'
 import { useProjectStore } from '../stores/useProjectStore'
 import { AddNoteDialog } from '../components/projects/AddNoteDialog'
 import { ProjectPath } from '../components/projects/ProjectPath'
@@ -22,7 +21,6 @@ import { EditProjectDialog } from '../components/projects/EditProjectDialog'
 import { ProjectCompletionModal } from '../components/projects/ProjectCompletionModal'
 import { CompletionRitual } from '../components/projects/CompletionRitual'
 import { LineageBreadcrumb } from '../components/projects/LineageBreadcrumb'
-import { ProjectLineage } from '../components/projects/ProjectLineage'
 import type { Project, Memory } from '../types'
 import { supabase } from '../lib/supabase'
 import { useMemoryStore } from '../stores/useMemoryStore'
@@ -98,16 +96,13 @@ export function ProjectDetailPage() {
     return () => window.removeEventListener('projectEnriched', handleEnriched as EventListener)
   }, [id])
   const [editingTitle, setEditingTitle] = useState(false)
-  const [editingDescription, setEditingDescription] = useState(false)
   const [editingGoal, setEditingGoal] = useState(false)
   const [tempTitle, setTempTitle] = useState('')
-  const [tempDescription, setTempDescription] = useState('')
   const [tempGoal, setTempGoal] = useState('')
   const [draggedPinnedTaskId, setDraggedPinnedTaskId] = useState<string | null>(null)
   const [showStatusMenu, setShowStatusMenu] = useState(false)
   const [showCategoryMenu, setShowCategoryMenu] = useState(false)
   const titleInputRef = useRef<HTMLInputElement>(null)
-  const descriptionInputRef = useRef<HTMLTextAreaElement>(null)
   const goalInputRef = useRef<HTMLTextAreaElement>(null)
   const endGoalInputRef = useRef<HTMLTextAreaElement>(null)
   const { addToast } = useToast()
@@ -239,12 +234,6 @@ export function ProjectDetailPage() {
     setTimeout(() => titleInputRef.current?.select(), 0)
   }
 
-  const startEditDescription = () => {
-    setTempDescription(project?.description || '')
-    setEditingDescription(true)
-    setTimeout(() => descriptionInputRef.current?.select(), 0)
-  }
-
   const saveTitle = async () => {
     if (!project || !tempTitle.trim()) {
       setEditingTitle(false)
@@ -268,30 +257,6 @@ export function ProjectDetailPage() {
       })
     }
   }
-
-  const saveDescription = async () => {
-    if (!project) {
-      setEditingDescription(false)
-      return
-    }
-
-    setEditingDescription(false)
-
-    try {
-      await updateProject(project.id, { description: tempDescription.trim() })
-      addToast({
-        title: 'Description updated',
-        variant: 'success',
-      })
-    } catch (error) {
-      addToast({
-        title: 'Failed to update description',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        variant: 'destructive',
-      })
-    }
-  }
-
 
   const saveGoal = async () => {
     if (!project) {
@@ -323,7 +288,6 @@ export function ProjectDetailPage() {
 
   const cancelEdit = () => {
     setEditingTitle(false)
-    setEditingDescription(false)
     setEditingGoal(false)
   }
 
@@ -660,7 +624,7 @@ export function ProjectDetailPage() {
         <LineageBreadcrumb project={project} />
 
         {/* Title */}
-        <h1 className="text-3xl sm:text-4xl font-black italic uppercase tracking-tight text-[var(--brand-text-primary)] leading-[0.95] mb-4">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--brand-text-primary)] leading-[0.95] mb-4">
           {project.title}
         </h1>
 
@@ -748,12 +712,58 @@ export function ProjectDetailPage() {
                 </div>
               )}
 
+              {/* Finish Line */}
+              <div className="p-5 sm:p-6 rounded-2xl" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <span className="text-[11px] font-medium tracking-wide block mb-2 flex items-center gap-1.5 lowercase" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.5 }}>
+                  <Target className="h-3 w-3" /> finish line
+                </span>
+                <div
+                  className="cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={!editingGoal ? startEditGoal : undefined}
+                >
+                  {editingGoal ? (
+                    <div className="space-y-3">
+                      <textarea
+                        ref={goalInputRef}
+                        value={tempGoal}
+                        onChange={(e) => setTempGoal(e.target.value)}
+                        className="w-full bg-black/30 rounded-xl p-4 text-[15px] sm:text-base font-medium resize-none focus:outline-none text-[var(--brand-text-primary)] leading-relaxed italic font-serif text-center border border-white/[0.08] focus:border-white/[0.15]"
+                        rows={3}
+                        placeholder="What does done look like?"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveGoal() }
+                          else if (e.key === 'Escape') { cancelEdit() }
+                        }}
+                      />
+                      <div className="flex gap-2 justify-end">
+                        <button onClick={(e) => { e.stopPropagation(); cancelEdit() }} className="px-3 py-1.5 text-[11px] font-medium rounded-lg hover:bg-white/[0.05] transition-colors" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>Cancel</button>
+                        <button onClick={(e) => { e.stopPropagation(); saveGoal() }} className="px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all" style={{ background: 'rgba(var(--brand-primary-rgb),0.1)', color: 'rgb(var(--brand-primary-rgb))' }}>Save</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-[15px] sm:text-base font-medium leading-relaxed italic font-serif text-center" style={{ color: 'var(--brand-text-primary)', opacity: 0.6 }}>
+                      {project.metadata?.end_goal || <span style={{ opacity: 0.4 }}>What does done look like?</span>}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Guide */}
+              {project && (
+                <InlineGuide
+                  project={project}
+                  recentCompletions={recentCompletions}
+                  onAddTask={handleChatAddTask}
+                  onUpdateTasks={handleChatUpdateTasks}
+                />
+              )}
+
               {/* Sparked By */}
               {sparkedByMemories.length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 mb-3">
                     <Sprout className="h-3.5 w-3.5" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }} />
-                    <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--brand-text-secondary)', opacity: 0.3 }}>Sparked by</span>
+                    <span className="text-[11px] font-medium tracking-wide lowercase" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>sparked by</span>
                   </div>
                   <div className="space-y-2">
                     {sparkedByMemories.map(m => (
@@ -766,80 +776,6 @@ export function ProjectDetailPage() {
                   </div>
                 </div>
               )}
-
-              {/* About — description + finish line in one clean card */}
-              <div className="p-5 sm:p-6 rounded-2xl space-y-5" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                {/* Description */}
-                <div
-                  className="cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={() => {
-                    setTempDescription(project.description || '')
-                    setEditingDescription(true)
-                    setTimeout(() => descriptionInputRef.current?.focus(), 100)
-                  }}
-                >
-                  {editingDescription ? (
-                    <textarea
-                      ref={descriptionInputRef}
-                      value={tempDescription}
-                      onChange={(e) => setTempDescription(e.target.value)}
-                      onBlur={saveDescription}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveDescription() }
-                        if (e.key === 'Escape') cancelEdit()
-                      }}
-                      className="w-full bg-black/30 rounded-xl p-4 text-[17px] sm:text-lg font-medium text-[var(--brand-text-primary)] leading-relaxed italic font-serif text-center outline-none border border-white/[0.08] focus:border-white/[0.15]"
-                      autoFocus
-                    />
-                  ) : (
-                    <div className="text-[17px] sm:text-lg font-medium leading-relaxed italic font-serif text-center" style={{ color: 'var(--brand-text-primary)', opacity: 0.75 }}>
-                      <MarkdownRenderer
-                        content={project.description ? `"${project.description}"` : '"What is this project about?"'}
-                        className="text-center"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Version history */}
-                <ProjectLineage project={project} />
-
-                {/* Finish Line */}
-                <div className="pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-                  <span className="text-[11px] font-semibold uppercase tracking-wider block mb-2 flex items-center gap-1.5" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.5 }}>
-                    <Target className="h-3 w-3" /> Finish line
-                  </span>
-                  <div
-                    className="cursor-pointer hover:opacity-80 transition-opacity"
-                    onClick={!editingGoal ? startEditGoal : undefined}
-                  >
-                    {editingGoal ? (
-                      <div className="space-y-3">
-                        <textarea
-                          ref={goalInputRef}
-                          value={tempGoal}
-                          onChange={(e) => setTempGoal(e.target.value)}
-                          className="w-full bg-black/30 rounded-xl p-4 text-[15px] sm:text-base font-medium resize-none focus:outline-none text-[var(--brand-text-primary)] leading-relaxed italic font-serif text-center border border-white/[0.08] focus:border-white/[0.15]"
-                          rows={3}
-                          placeholder="What does done look like?"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveGoal() }
-                            else if (e.key === 'Escape') { cancelEdit() }
-                          }}
-                        />
-                        <div className="flex gap-2 justify-end">
-                          <button onClick={(e) => { e.stopPropagation(); cancelEdit() }} className="px-3 py-1.5 text-[11px] font-medium rounded-lg hover:bg-white/[0.05] transition-colors" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>Cancel</button>
-                          <button onClick={(e) => { e.stopPropagation(); saveGoal() }} className="px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all" style={{ background: 'rgba(52,211,153,0.1)', color: 'rgb(var(--brand-primary-rgb))' }}>Save</button>
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-[15px] sm:text-base font-medium leading-relaxed italic font-serif text-center" style={{ color: 'var(--brand-text-primary)', opacity: 0.6 }}>
-                        {project.metadata?.end_goal || <span style={{ opacity: 0.4 }}>What does done look like?</span>}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
 
               {/* The Path */}
               <div data-task-list>
@@ -879,16 +815,6 @@ export function ProjectDetailPage() {
                   }}
                 />
               </div>
-
-              {/* Guide */}
-              {project && (
-                <InlineGuide
-                  project={project}
-                  recentCompletions={recentCompletions}
-                  onAddTask={handleChatAddTask}
-                  onUpdateTasks={handleChatUpdateTasks}
-                />
-              )}
 
               {/* Add Note */}
               <div className="pb-32">

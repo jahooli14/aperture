@@ -10,6 +10,8 @@ export const PROJECT_COLORS: Record<string, string> = {
   music: 'var(--project-music-rgb)',
   business: 'var(--project-business-rgb)',
   life: 'var(--project-life-rgb)',
+  creative: 'var(--project-creative-rgb)',
+  learning: 'var(--project-learning-rgb)',
   default: 'var(--project-default-rgb)'
 }
 

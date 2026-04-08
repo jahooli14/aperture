@@ -6,7 +6,7 @@
 import React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Compass, Brain, Layers, List, User, LogOut } from 'lucide-react'
+import { Home, Lightbulb, Rocket, ListChecks, User, LogOut } from 'lucide-react'
 import { VoiceFAB } from './VoiceFAB'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useKeyboardVisible } from '../hooks/useKeyboardVisible'
@@ -40,10 +40,10 @@ interface NavOption {
 
 // 4 core nav tabs: Home, Thoughts, Projects, Lists
 const NAV_OPTIONS: NavOption[] = [
-  { id: 'home',     label: 'Home',     icon: Compass, path: '/',         action: 'navigate', color: 'home' },
-  { id: 'thoughts', label: 'Thoughts', icon: Brain,   path: '/memories', action: 'navigate', color: 'thoughts' },
-  { id: 'projects', label: 'Projects', icon: Layers,  path: '/projects', action: 'navigate', color: 'projects' },
-  { id: 'lists',    label: 'Lists',    icon: List,    path: '/lists',    action: 'navigate', color: 'lists' },
+  { id: 'home',     label: 'Home',     icon: Home,       path: '/',         action: 'navigate', color: 'home' },
+  { id: 'thoughts', label: 'Thoughts', icon: Lightbulb,  path: '/memories', action: 'navigate', color: 'thoughts' },
+  { id: 'projects', label: 'Projects', icon: Rocket,     path: '/projects', action: 'navigate', color: 'projects' },
+  { id: 'lists',    label: 'Lists',    icon: ListChecks, path: '/lists',    action: 'navigate', color: 'lists' },
 ]
 
 export function FloatingNav() {
@@ -397,7 +397,7 @@ export function FloatingNav() {
               backgroundColor: 'var(--brand-glass-bg)',
               backdropFilter: 'var(--brand-glass-blur)',
               WebkitBackdropFilter: 'var(--brand-glass-blur)',
-              padding: '4px 6px',
+              padding: '6px 8px',
               border: '1px solid rgba(56,189,248,0.1)',
               boxShadow: '0 4px 20px rgba(0,0,0,0.3), 0 0 30px rgba(56,189,248,0.06)',
             }}
@@ -419,37 +419,25 @@ export function FloatingNav() {
                     className="flex flex-col items-center justify-center relative min-w-0"
                     style={{
                       flex: '1 1 0px',
-                      paddingTop: '6px',
-                      paddingBottom: active ? '2px' : '6px',
-                      gap: active ? '3px' : '0px',
+                      paddingTop: '8px',
+                      paddingBottom: '8px',
+                      gap: '4px',
                     }}
                   >
-                    {/* Active pill indicator */}
-                    {active && (
-                      <motion.div
-                        layoutId="floatingNavActiveTab"
-                        className="absolute inset-0 rounded-xl"
-                        style={{
-                          background: `linear-gradient(to top, ${colors.glow}, transparent)`,
-                          border: `1px solid ${colors.primary}30`,
-                        }}
-                        transition={{ type: 'spring', stiffness: 400, damping: 35 }}
-                      />
-                    )}
-
                     {/* Icon + badge wrapper */}
                     <div className="relative z-10">
                       <motion.div
-                        animate={{ scale: active ? 1.12 : 1 }}
+                        animate={{ scale: active ? 1.1 : 1 }}
                         transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                       >
                         <Icon
                           style={{
-                            width: '22px',
-                            height: '22px',
-                            color: active ? colors.primary : 'rgba(255,255,255,0.38)',
+                            width: '20px',
+                            height: '20px',
+                            color: active ? colors.primary : 'rgba(255,255,255,0.5)',
                             transition: 'color 200ms',
-                            filter: active ? `drop-shadow(0 0 5px ${colors.glow})` : 'none'
+                            filter: active ? `drop-shadow(0 0 6px ${colors.glow})` : 'none',
+                            strokeWidth: active ? 2 : 1.5,
                           }}
                         />
                       </motion.div>
@@ -457,7 +445,7 @@ export function FloatingNav() {
                       {/* Dot badge (recent thoughts) */}
                       {dot && (
                         <span
-                          className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full"
+                          className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full"
                           style={{
                             background: colors.primary,
                             boxShadow: `0 0 4px ${colors.glow}`
@@ -466,37 +454,22 @@ export function FloatingNav() {
                       )}
                     </div>
 
-                    {/* Label - only visible for active tab */}
-                    <AnimatePresence>
-                      {active && (
-                        <motion.span
-                          key={option.id + '-label'}
-                          initial={{ opacity: 0, y: -4 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -4 }}
-                          transition={{ duration: 0.15 }}
-                          className="relative z-10 font-semibold"
-                          style={{
-                            color: colors.primary,
-                            fontSize: '10px',
-                            letterSpacing: '0.04em',
-                            lineHeight: 1,
-                          }}
-                        >
-                          {option.label}
-                        </motion.span>
-                      )}
-                    </AnimatePresence>
+                    {/* Glowing dot indicator for active tab */}
+                    {active && (
+                      <motion.div
+                        layoutId="floatingNavActiveDot"
+                        className="w-1 h-1 rounded-full"
+                        style={{
+                          background: colors.primary,
+                          boxShadow: `0 0 8px ${colors.glow}, 0 0 16px ${colors.glow}`,
+                        }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+                      />
+                    )}
                   </motion.button>
                 )
               })}
             </div>
-
-            {/* Divider */}
-            <div
-              className="w-px self-stretch mx-1 my-2 flex-shrink-0"
-              style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}
-            />
 
             {/* User / Login button */}
             <motion.button
@@ -510,10 +483,9 @@ export function FloatingNav() {
               }}
               className="flex flex-col items-center justify-center relative flex-shrink-0"
               style={{
-                width: '52px',
-                paddingTop: '6px',
-                paddingBottom: '6px',
-                gap: '3px',
+                width: '44px',
+                paddingTop: '8px',
+                paddingBottom: '8px',
               }}
             >
               {user ? (
