@@ -3,7 +3,8 @@
  */
 
 export const MODELS = {
-  DEFAULT_CHAT: 'gemini-3.1-flash-lite-preview',
+  DEFAULT_CHAT: 'gemini-3.1-flash-lite-preview', // Fast, cost-effective — bulk operations
+  FLASH_CHAT: 'gemini-3-flash-preview',           // Full Flash — high-quality creative generation
   DEFAULT_EMBEDDING: 'gemini-embedding-001',
   DEFAULT_EMBEDDING_DIMS: 768, // Use MRL to match existing DB vector(768) columns
 } as const
