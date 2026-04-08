@@ -55,18 +55,30 @@ async function getModeStats(userId: string): Promise<Map<FrontierMode, ModeStats
 /**
  * Calculate Shannon entropy of mode distribution
  * Returns 0-1 (0 = collapsed to one mode, 1 = uniform)
+ * Computed in TypeScript to avoid PostgreSQL log() type-cast issues.
  */
 export async function calculateModeEntropy(userId: string): Promise<number> {
-  const { data, error } = await supabase.rpc('calculate_mode_entropy', {
-    p_user_id: userId,
-  });
+  const stats = await getModeStats(userId);
 
-  if (error) {
-    console.error('Error calculating mode entropy:', error);
-    return 1.0; // Default to maximum entropy
+  if (stats.size === 0) return 1.0; // No data → assume maximum entropy
+
+  const totalUses = Array.from(stats.values()).reduce((sum, s) => sum + (s.times_used || 0), 0);
+  if (totalUses === 0) return 1.0;
+
+  const n = ALL_MODES.length;
+  const maxEntropy = Math.log2(n); // Uniform distribution entropy
+  if (maxEntropy === 0) return 1.0;
+
+  let entropy = 0;
+  for (const mode of ALL_MODES) {
+    const uses = stats.get(mode)?.times_used || 0;
+    if (uses > 0) {
+      const p = uses / totalUses;
+      entropy -= p * Math.log2(p);
+    }
   }
 
-  return data as number;
+  return entropy / maxEntropy; // Normalize to 0-1
 }
 
 /**
