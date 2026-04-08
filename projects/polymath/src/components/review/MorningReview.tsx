@@ -271,7 +271,7 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl"
-                  style={{ background: 'rgba(var(--brand-primary-rgb),0.08)', border: '1px solid rgba(99,179,237,0.2)' }}
+                  style={{ background: 'rgba(var(--brand-primary-rgb),0.08)', border: '1px solid rgba(var(--brand-primary-rgb),0.2)' }}
                 >
                   <Check className="h-3.5 w-3.5 flex-shrink-0" style={{ color: "var(--brand-primary)" }} />
                   <p className="text-[12px]" style={{ color: "var(--brand-primary)" }}>
@@ -299,7 +299,7 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
                           background: isSelected
                             ? 'rgba(var(--brand-primary-rgb),0.15)'
                             : 'var(--premium-surface-1)',
-                          border: `1px solid ${isSelected ? 'rgba(99,179,237,0.5)' : 'var(--glass-surface)'}`,
+                          border: `1px solid ${isSelected ? 'rgba(var(--brand-primary-rgb),0.5)' : 'var(--glass-surface)'}`,
                           opacity: isDisabled ? 0.4 : 1,
                           cursor: isDisabled ? 'not-allowed' : 'pointer',
                         }}
@@ -307,7 +307,7 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
                         <div
                           className="flex-shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all"
                           style={{
-                            borderColor: isSelected ? 'rgba(99,179,237,0.8)' : 'rgba(255,255,255,0.2)',
+                            borderColor: isSelected ? 'rgba(var(--brand-primary-rgb),0.8)' : 'rgba(255,255,255,0.2)',
                             background: isSelected ? 'rgba(var(--brand-primary-rgb),0.3)' : 'transparent',
                           }}
                         >
@@ -322,7 +322,7 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
                         {isSelected && (
                           <span
                             className="flex-shrink-0 text-[11px] font-bold px-1.5 py-0.5 rounded-full"
-                            style={{ background: 'rgba(99,179,237,0.2)', color: "var(--brand-text-secondary)" }}
+                            style={{ background: 'rgba(var(--brand-primary-rgb),0.2)', color: "var(--brand-text-secondary)" }}
                           >
                             MIT
                           </span>
@@ -338,8 +338,8 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
                 className="w-full py-4 rounded-2xl font-bold text-[16px] flex items-center justify-center gap-2"
                 style={{
                   background: mitIds.length > 0 ? 'rgba(var(--brand-primary-rgb),0.18)' : 'var(--glass-surface)',
-                  color: mitIds.length > 0 ? 'rgba(147,197,253,0.9)' : 'rgba(255,255,255,0.3)',
-                  border: `1px solid ${mitIds.length > 0 ? 'rgba(99,179,237,0.3)' : 'var(--glass-surface-hover)'}`,
+                  color: mitIds.length > 0 ? 'rgba(var(--brand-primary-rgb),0.9)' : 'rgba(255,255,255,0.3)',
+                  border: `1px solid ${mitIds.length > 0 ? 'rgba(var(--brand-primary-rgb),0.3)' : 'var(--glass-surface-hover)'}`,
                 }}
               >
                 {mitIds.length > 0 ? `${mitIds.length} MIT${mitIds.length !== 1 ? 's' : ''} set` : 'Skip'}
@@ -390,12 +390,12 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
                               className="px-3 py-1.5 rounded-xl text-[12px] font-medium transition-all"
                               style={{
                                 background: isSelected
-                                  ? 'rgba(139,92,246,0.2)'
+                                  ? 'rgba(var(--brand-primary-rgb),0.2)'
                                   : 'var(--glass-surface)',
                                 color: isSelected
-                                  ? 'rgba(196,181,253,0.95)'
+                                  ? 'rgba(var(--brand-primary-rgb),0.95)'
                                   : 'rgba(255,255,255,0.45)',
-                                border: `1px solid ${isSelected ? 'rgba(139,92,246,0.35)' : 'var(--glass-surface-hover)'}`,
+                                border: `1px solid ${isSelected ? 'rgba(var(--brand-primary-rgb),0.35)' : 'var(--glass-surface-hover)'}`,
                               }}
                             >
                               {opt.label}
@@ -412,9 +412,9 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
                 onClick={advance}
                 className="w-full py-4 rounded-2xl font-bold text-[16px] flex items-center justify-center gap-2"
                 style={{
-                  background: 'rgba(139,92,246,0.15)',
+                  background: 'rgba(var(--brand-primary-rgb),0.15)',
                   color: "var(--brand-text-secondary)",
-                  border: '1px solid rgba(139,92,246,0.25)',
+                  border: '1px solid rgba(var(--brand-primary-rgb),0.25)',
                 }}
               >
                 Continue

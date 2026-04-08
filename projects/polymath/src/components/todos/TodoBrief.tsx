@@ -76,8 +76,8 @@ export function TodoBrief() {
         <div
           className="rounded-2xl p-4 relative overflow-hidden"
           style={{
-            background: 'linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(139,92,246,0.05) 50%, rgba(6,182,212,0.04) 100%)',
-            boxShadow: 'inset 0 0 0 1px rgba(99,102,241,0.15), 0 4px 16px rgba(0,0,0,0.2)',
+            background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.08) 0%, rgba(var(--brand-primary-rgb),0.05) 50%, rgba(var(--brand-primary-rgb),0.04) 100%)',
+            boxShadow: 'inset 0 0 0 1px rgba(var(--brand-primary-rgb),0.15), 0 4px 16px rgba(0,0,0,0.2)',
           }}
         >
           {/* Header */}

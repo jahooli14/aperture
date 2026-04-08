@@ -38,10 +38,10 @@ export function BedtimeFloatingIcon() {
           }}
           className="fixed bottom-24 right-4 z-30 h-12 w-12 rounded-full flex items-center justify-center shadow-lg"
           style={{
-            background: 'linear-gradient(135deg, rgba(99,102,241,0.3), rgba(139,92,246,0.3))',
-            border: '1px solid rgba(129,140,248,0.3)',
+            background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.3), rgba(var(--brand-primary-rgb),0.3))',
+            border: '1px solid rgba(var(--brand-primary-rgb),0.3)',
             backdropFilter: 'blur(12px)',
-            boxShadow: '0 4px 20px rgba(99,102,241,0.2)',
+            boxShadow: '0 4px 20px rgba(var(--brand-primary-rgb),0.2)',
           }}
           title="Bedtime prompts"
         >

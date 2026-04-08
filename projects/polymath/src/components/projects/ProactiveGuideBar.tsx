@@ -44,11 +44,11 @@ const PHASE_ICONS: Record<Phase, typeof Zap> = {
 }
 
 const PHASE_ACCENTS: Record<Phase, string> = {
-  shaping: 'rgba(139,92,246,',
+  shaping: 'rgba(var(--brand-primary-rgb),',
   building: 'rgba(var(--brand-primary-rgb),',
   closing: 'rgba(16,185,129,',
   stale: 'rgba(245,158,11,',
-  fresh: 'rgba(139,92,246,',
+  fresh: 'rgba(var(--brand-primary-rgb),',
 }
 
 export function ProactiveGuideBar({

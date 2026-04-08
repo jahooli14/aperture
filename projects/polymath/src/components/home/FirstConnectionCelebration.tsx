@@ -65,7 +65,7 @@ export function FirstConnectionCelebration() {
               background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.15), rgba(var(--brand-primary-rgb),0.08))',
               backdropFilter: 'blur(20px)',
               WebkitBackdropFilter: 'blur(20px)',
-              border: '1px solid rgba(99,179,237,0.25)',
+              border: '1px solid rgba(var(--brand-primary-rgb),0.25)',
             }}
           >
             <button
@@ -85,7 +85,7 @@ export function FirstConnectionCelebration() {
                 className="flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center"
                 style={{
                   background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.2), rgba(var(--brand-primary-rgb),0.12))',
-                  border: '1px solid rgba(99,179,237,0.3)',
+                  border: '1px solid rgba(var(--brand-primary-rgb),0.3)',
                 }}
               >
                 <Link2 className="h-5 w-5" style={{ color: 'var(--brand-primary)' }} />
@@ -120,7 +120,7 @@ export function FirstConnectionCelebration() {
             {/* Subtle pulse ring */}
             <motion.div
               className="absolute -inset-px rounded-2xl pointer-events-none"
-              style={{ border: '1px solid rgba(99,179,237,0.3)' }}
+              style={{ border: '1px solid rgba(var(--brand-primary-rgb),0.3)' }}
               animate={{ opacity: [0.3, 0.6, 0.3] }}
               transition={{ duration: 2, repeat: 2 }}
             />

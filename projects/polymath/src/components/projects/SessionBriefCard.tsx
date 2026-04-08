@@ -50,9 +50,9 @@ const PHASE_CONFIG: Record<Phase, {
   shaping: {
     icon: Compass,
     gradient: 'from-brand-primary/15 to-brand-primary/10',
-    border: 'rgba(139,92,246,0.35)',
-    glow: 'rgba(139,92,246,0.1)',
-    accent: 'rgb(139,92,246)',
+    border: 'rgba(var(--brand-primary-rgb),0.35)',
+    glow: 'rgba(var(--brand-primary-rgb),0.1)',
+    accent: 'rgb(var(--brand-primary-rgb))',
   },
   building: {
     icon: Hammer,

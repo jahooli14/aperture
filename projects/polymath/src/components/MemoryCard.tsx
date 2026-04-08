@@ -78,13 +78,13 @@ const MEMORY_TYPE_CONFIG: Record<string, { label: string; bg: string; border: st
     label: 'Core',
     bg: 'rgba(var(--brand-primary-rgb),0.12)',
     border: '1px solid rgba(var(--brand-primary-rgb),0.3)',
-    text: 'rgba(147,197,253,0.9)',
+    text: 'rgba(var(--brand-primary-rgb),0.9)',
   },
   insight: {
     label: 'Insight',
-    bg: 'rgba(139,92,246,0.12)',
-    border: '1px solid rgba(139,92,246,0.3)',
-    text: 'rgba(196,181,253,0.9)',
+    bg: 'rgba(var(--brand-primary-rgb),0.12)',
+    border: '1px solid rgba(var(--brand-primary-rgb),0.3)',
+    text: 'rgba(var(--brand-primary-rgb),0.9)',
   },
   event: {
     label: 'Event',
@@ -376,7 +376,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
                 className="flex items-center gap-1.5 text-left w-full group"
               >
                 {item.checked
-                  ? <CheckSquare className="h-3 w-3 flex-shrink-0" style={{ color: 'rgba(99,179,237,0.7)' }} />
+                  ? <CheckSquare className="h-3 w-3 flex-shrink-0" style={{ color: 'rgba(var(--brand-primary-rgb),0.7)' }} />
                   : <Square className="h-3 w-3 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.2)' }} />
                 }
                 <span
@@ -459,9 +459,9 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
               <span
                 className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-medium"
                 style={{
-                  background: 'rgba(99,179,237,0.08)',
-                  border: '1px solid rgba(99,179,237,0.2)',
-                  color: 'rgba(99,179,237,0.65)',
+                  background: 'rgba(var(--brand-primary-rgb),0.08)',
+                  border: '1px solid rgba(var(--brand-primary-rgb),0.2)',
+                  color: 'rgba(var(--brand-primary-rgb),0.65)',
                 }}
               >
                 <CheckSquare className="w-2.5 h-2.5" />

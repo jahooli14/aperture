@@ -200,7 +200,7 @@ export function PostOnboardingFlow({ analysis, sparkedSuggestion, transcripts = 
               className="w-16 h-16 rounded-2xl flex items-center justify-center mb-8"
               style={{
                 background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.15), rgba(var(--brand-primary-rgb),0.1))',
-                border: '1px solid rgba(99,179,237,0.2)',
+                border: '1px solid rgba(var(--brand-primary-rgb),0.2)',
               }}
             >
               <Zap className="h-8 w-8" style={{ color: 'var(--brand-primary)' }} />

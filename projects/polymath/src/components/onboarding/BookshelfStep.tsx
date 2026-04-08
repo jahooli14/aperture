@@ -167,7 +167,7 @@ export function BookshelfStep({ onComplete, onSkip }: BookshelfStepProps) {
                     ) : (
                       <div
                         className="w-full h-full flex items-center justify-center"
-                        style={{ background: 'rgba(99,179,237,0.12)' }}
+                        style={{ background: 'rgba(var(--brand-primary-rgb),0.12)' }}
                       >
                         <Book className="h-8 w-8" style={{ color: 'var(--brand-primary)', opacity: 0.5 }} />
                       </div>
@@ -271,7 +271,7 @@ export function BookshelfStep({ onComplete, onSkip }: BookshelfStepProps) {
                   ) : (
                     <div
                       className="w-8 h-12 rounded flex items-center justify-center flex-shrink-0"
-                      style={{ background: 'rgba(99,179,237,0.12)' }}
+                      style={{ background: 'rgba(var(--brand-primary-rgb),0.12)' }}
                     >
                       <Book className="h-4 w-4" style={{ color: 'var(--brand-primary)', opacity: 0.5 }} />
                     </div>

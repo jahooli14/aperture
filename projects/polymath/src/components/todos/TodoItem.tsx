@@ -54,7 +54,7 @@ const PRIORITY_CONFIG = {
     border: '1.5px solid rgba(96,165,250,0.3)',
     cardTint: 'rgba(var(--brand-primary-rgb),0.05)',
     chipBg: 'rgba(var(--brand-primary-rgb),0.18)',
-    chipColor: 'rgb(147,197,253)',
+    chipColor: 'rgb(var(--brand-primary-rgb))',
     shadow: '0 0 24px rgba(96,165,250,0.12)',
   },
 } as const
@@ -274,7 +274,7 @@ export function TodoItem({
                 style={{
                   color: 'var(--brand-text-primary)',
                   backgroundColor: 'var(--glass-surface)',
-                  boxShadow: 'inset 0 0 0 2px rgba(99,179,237,0.5)',
+                  boxShadow: 'inset 0 0 0 2px rgba(var(--brand-primary-rgb),0.5)',
                 }}
                 autoFocus
               />
@@ -366,7 +366,7 @@ export function TodoItem({
                 {todo.scheduled_time && (
                   <span
                     className="flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-lg"
-                    style={{ background: 'rgba(99,179,237,0.12)', color: "var(--brand-text-secondary)" }}
+                    style={{ background: 'rgba(var(--brand-primary-rgb),0.12)', color: "var(--brand-text-secondary)" }}
                   >
                     <Clock className="h-2.5 w-2.5" />
                     {describeTime(todo.scheduled_time)}
@@ -430,7 +430,7 @@ export function TodoItem({
                 {projectName && (
                   <span
                     className="flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-md"
-                    style={{ background: 'rgba(139,92,246,0.1)', color: "var(--brand-text-secondary)" }}
+                    style={{ background: 'rgba(var(--brand-primary-rgb),0.1)', color: "var(--brand-text-secondary)" }}
                   >
                     <FolderKanban className="h-2.5 w-2.5" />
                     {projectName}
@@ -439,7 +439,7 @@ export function TodoItem({
                 {sourceMemoryTitle && (
                   <span
                     className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md truncate max-w-[200px]"
-                    style={{ background: 'rgba(6,182,212,0.08)', color: "var(--brand-text-secondary)" }}
+                    style={{ background: 'rgba(var(--brand-primary-rgb),0.08)', color: "var(--brand-text-secondary)" }}
                     title={`From thought: ${sourceMemoryTitle}`}
                   >
                     <Brain className="h-2.5 w-2.5 flex-shrink-0" />
@@ -449,7 +449,7 @@ export function TodoItem({
                 {isAiGenerated && !sourceMemoryTitle && (
                   <span
                     className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
-                    style={{ background: 'rgba(99,102,241,0.1)', color: "var(--brand-text-secondary)" }}
+                    style={{ background: 'rgba(var(--brand-primary-rgb),0.1)', color: "var(--brand-text-secondary)" }}
                   >
                     AI suggested
                   </span>

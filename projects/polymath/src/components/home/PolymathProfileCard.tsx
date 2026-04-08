@@ -51,7 +51,7 @@ export function PolymathProfileCard() {
         className="rounded-2xl overflow-hidden relative"
         style={{
           background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.05), rgba(var(--brand-primary-rgb),0.04))',
-          border: '1px solid rgba(99,179,237,0.1)',
+          border: '1px solid rgba(var(--brand-primary-rgb),0.1)',
         }}
       >
         <button
@@ -67,7 +67,7 @@ export function PolymathProfileCard() {
           <div className="flex items-center gap-2.5 mb-3">
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ background: 'rgba(99,179,237,0.1)' }}
+              style={{ background: 'rgba(var(--brand-primary-rgb),0.1)' }}
             >
               <Brain className="h-4 w-4" style={{ color: 'var(--brand-primary)' }} />
             </div>
@@ -95,9 +95,9 @@ export function PolymathProfileCard() {
                     key={i}
                     className="px-2.5 py-1 rounded-full text-xs font-medium"
                     style={{
-                      background: 'rgba(99,179,237,0.08)',
+                      background: 'rgba(var(--brand-primary-rgb),0.08)',
                       color: 'var(--brand-primary)',
-                      border: '1px solid rgba(99,179,237,0.12)',
+                      border: '1px solid rgba(var(--brand-primary-rgb),0.12)',
                     }}
                   >
                     {theme}
@@ -142,14 +142,14 @@ export function PolymathProfileCard() {
               className="px-5 pb-4"
             >
               <div
-                className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all hover:bg-[rgba(99,179,237,0.08)]"
+                className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all hover:bg-[rgba(var(--brand-primary-rgb),0.08)]"
                 onClick={handleVoiceCapture}
                 style={{
-                  background: 'rgba(99,179,237,0.04)',
-                  border: '1px dashed rgba(99,179,237,0.15)',
+                  background: 'rgba(var(--brand-primary-rgb),0.04)',
+                  border: '1px dashed rgba(var(--brand-primary-rgb),0.15)',
                 }}
               >
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(99,179,237,0.1)' }}>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(var(--brand-primary-rgb),0.1)' }}>
                   <Mic className="h-4 w-4" style={{ color: 'var(--brand-primary)' }} />
                 </div>
                 <div className="flex-1">

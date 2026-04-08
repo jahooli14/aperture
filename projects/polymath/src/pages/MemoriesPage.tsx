@@ -652,7 +652,7 @@ export function MemoriesPage() {
                           style={{
                             background: isActive ? 'rgba(var(--brand-primary-rgb),0.2)' : 'var(--glass-surface)',
                             border: isActive ? '1.5px solid rgba(var(--brand-primary-rgb),0.5)' : '1.5px solid rgba(255,255,255,0.1)',
-                            color: isActive ? 'rgba(147,197,253,1)' : 'rgba(255,255,255,0.45)',
+                            color: isActive ? 'rgba(var(--brand-primary-rgb),1)' : 'rgba(255,255,255,0.45)',
                             boxShadow: isActive ? '0 0 12px rgba(var(--brand-primary-rgb),0.15)' : '0 2px 8px rgba(0,0,0,0.4)',
                           }}
                         >
@@ -702,7 +702,7 @@ export function MemoriesPage() {
 
               {/* Resurfacing Info Banner */}
               {view === 'resurfacing' && resurfacing.length > 0 && (
-                <div className="mb-6 p-4 rounded-lg" style={{ background: 'var(--brand-glass-bg)', border: '1px solid rgba(139,92,246,0.25)', borderLeft: '4px solid rgba(139,92,246,0.5)', boxShadow: '0 4px 16px rgba(0,0,0,0.6)' }}>
+                <div className="mb-6 p-4 rounded-lg" style={{ background: 'var(--brand-glass-bg)', border: '1px solid rgba(var(--brand-primary-rgb),0.25)', borderLeft: '4px solid rgba(var(--brand-primary-rgb),0.5)', boxShadow: '0 4px 16px rgba(0,0,0,0.6)' }}>
                   <h3 className="font-black text-xs uppercase tracking-widest mb-2" style={{ color: "var(--brand-primary)" }}>
                     Up for review
                   </h3>
@@ -801,7 +801,7 @@ export function MemoriesPage() {
                       <div className="relative mx-auto w-28 h-28 mb-8">
                         <div className="absolute inset-0 rounded-full opacity-20 blur-2xl" style={{ background: 'radial-gradient(circle, var(--brand-primary), transparent)' }} />
                         <div className="relative flex items-center justify-center w-28 h-28 rounded-full"
-                          style={{ background: 'radial-gradient(circle at 35% 35%, rgba(var(--brand-primary-rgb),0.15), rgba(139,92,246,0.08))', border: '1px solid rgba(var(--brand-primary-rgb),0.2)' }}>
+                          style={{ background: 'radial-gradient(circle at 35% 35%, rgba(var(--brand-primary-rgb),0.15), rgba(var(--brand-primary-rgb),0.08))', border: '1px solid rgba(var(--brand-primary-rgb),0.2)' }}>
                           <Brain className="h-10 w-10 text-brand-primary opacity-60" />
                         </div>
                       </div>

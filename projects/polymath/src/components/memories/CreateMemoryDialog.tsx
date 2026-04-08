@@ -720,10 +720,10 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                       className="px-2.5 py-1 rounded-full text-[11px] font-medium transition-all active:scale-95"
                       style={{
                         background: isSelected
-                          ? 'rgba(99,102,241,0.15)'
+                          ? 'rgba(var(--brand-primary-rgb),0.15)'
                           : 'rgba(255,255,255,0.04)',
                         border: isSelected
-                          ? '1px solid rgba(99,102,241,0.35)'
+                          ? '1px solid rgba(var(--brand-primary-rgb),0.35)'
                           : '1px solid rgba(255,255,255,0.08)',
                         color: isSelected
                           ? 'rgba(165,148,249,0.9)'

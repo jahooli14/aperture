@@ -831,7 +831,7 @@ export function ReadingPage() {
                   className="rounded-lg p-4 mb-2 flex items-center gap-3"
                   style={{
                     backgroundColor: 'var(--brand-glass-bg)',
-                    border: `2px solid ${status === 'retrying' ? 'rgba(251,191,36,0.5)' : 'rgba(99,179,237,0.5)'}`,
+                    border: `2px solid ${status === 'retrying' ? 'rgba(251,191,36,0.5)' : 'rgba(var(--brand-primary-rgb),0.5)'}`,
                     boxShadow: `3px 3px 0 ${status === 'retrying' ? 'rgba(251,191,36,0.15)' : 'rgba(0,0,0,0.7)'}`,
                   }}
                 >

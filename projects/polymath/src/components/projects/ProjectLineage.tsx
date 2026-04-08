@@ -95,7 +95,7 @@ export function ProjectLineage({ project }: ProjectLineageProps) {
                     onClick={() => handleRevert(version)}
                     disabled={!!reverting}
                     className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-all hover:bg-[var(--glass-surface)] disabled:opacity-40"
-                    style={{ color: 'var(--brand-primary)', border: '1px solid rgba(99,179,237,0.2)' }}
+                    style={{ color: 'var(--brand-primary)', border: '1px solid rgba(var(--brand-primary-rgb),0.2)' }}
                   >
                     {reverting === version.version_id ? (
                       <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
