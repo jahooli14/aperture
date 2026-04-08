@@ -145,18 +145,28 @@ export function TrySomethingNewCarousel({ onShapeIdea }: TrySomethingNewCarousel
       <h2 className="section-header">try something <span>new</span></h2>
       <div
         className="rounded-2xl p-5 flex flex-col overflow-hidden relative"
-        style={{
-          background: current?.isIntersection
-            ? 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.10) 0%, rgba(15,24,41,0.6) 60%)'
-            : 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.06) 0%, rgba(15,24,41,0.5) 60%)',
-          backdropFilter: 'blur(16px)',
-          border: current?.isIntersection
-            ? '1px solid rgba(var(--brand-primary-rgb),0.25)'
-            : '1px solid rgba(var(--brand-primary-rgb),0.15)',
-          boxShadow: '0 0 30px rgba(var(--brand-primary-rgb),0.05), 0 4px 16px rgba(0,0,0,0.4)',
-          minHeight: '300px',
-          transition: 'border-color 0.3s, background 0.3s',
-        }}
+        style={(() => {
+          const domains = current?.sourceProjectIds?.length ?? 0
+          const isRare = current?.isIntersection && domains >= 3
+          return {
+            background: isRare
+              ? 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.14) 0%, rgba(15,24,41,0.65) 60%)'
+              : current?.isIntersection
+                ? 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.10) 0%, rgba(15,24,41,0.6) 60%)'
+                : 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.06) 0%, rgba(15,24,41,0.5) 60%)',
+            backdropFilter: 'blur(16px)',
+            border: isRare
+              ? '1px solid rgba(var(--brand-primary-rgb),0.45)'
+              : current?.isIntersection
+                ? '1px solid rgba(var(--brand-primary-rgb),0.25)'
+                : '1px solid rgba(var(--brand-primary-rgb),0.15)',
+            boxShadow: isRare
+              ? '0 0 40px rgba(var(--brand-primary-rgb),0.12), 0 4px 16px rgba(0,0,0,0.4)'
+              : '0 0 30px rgba(var(--brand-primary-rgb),0.05), 0 4px 16px rgba(0,0,0,0.4)',
+            minHeight: '300px',
+            transition: 'border-color 0.3s, background 0.3s, box-shadow 0.3s',
+          }
+        })()}
       >
         <div className="absolute top-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(var(--brand-primary-rgb),0.4), transparent)' }} />
 
@@ -208,6 +218,23 @@ export function TrySomethingNewCarousel({ onShapeIdea }: TrySomethingNewCarousel
                       </span>
                     </span>
                   ))}
+                  <span className="ml-auto flex items-center gap-1.5">
+                    {current.sourceProjectIds.length >= 3 && (
+                      <span
+                        className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full"
+                        style={{
+                          background: 'rgba(var(--brand-primary-rgb),0.15)',
+                          color: 'var(--brand-primary)',
+                          border: '1px solid rgba(var(--brand-primary-rgb),0.3)',
+                        }}
+                      >
+                        rare
+                      </span>
+                    )}
+                    <span className="text-[10px] text-[var(--brand-primary)] opacity-60 font-mono">
+                      {current.sourceProjectIds.length} domains
+                    </span>
+                  </span>
                 </div>
               ) : current.source === 'suggestion' ? (
                 <div className="flex items-center gap-1.5 mb-2">
