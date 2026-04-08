@@ -19,7 +19,7 @@ export function fireConfetti(options: ConfettiOptions = {}) {
     startVelocity = 30,
     decay = 0.9,
     scalar = 1,
-    colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899']
+    colors = ['rgb(var(--brand-primary-rgb))', 'rgb(var(--brand-primary-rgb))', 'rgb(var(--brand-primary-rgb))', 'rgb(var(--brand-primary-rgb))', 'rgb(var(--brand-primary-rgb))']
   } = options
 
   // Create canvas if it doesn't exist
@@ -138,14 +138,14 @@ export const ConfettiPresets = {
     particleCount: 100,
     spread: 90,
     startVelocity: 40,
-    colors: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6']
+    colors: ['rgb(var(--brand-primary-rgb))', 'rgb(var(--brand-primary-rgb))', 'rgb(var(--brand-primary-rgb))', 'rgb(var(--brand-primary-rgb))']
   }),
 
   milestone: () => fireConfetti({
     particleCount: 60,
     spread: 60,
     startVelocity: 35,
-    colors: ['#fbbf24', '#f59e0b', '#f97316']
+    colors: ['rgb(var(--color-accent-light-rgb))', 'rgb(var(--brand-primary-rgb))', 'rgb(var(--brand-primary-rgb))']
   }),
 
   subtle: () => fireConfetti({
@@ -153,6 +153,6 @@ export const ConfettiPresets = {
     spread: 50,
     startVelocity: 25,
     scalar: 0.8,
-    colors: ['#3b82f6', '#8b5cf6']
+    colors: ['rgb(var(--brand-primary-rgb))', 'rgb(var(--brand-primary-rgb))']
   })
 }

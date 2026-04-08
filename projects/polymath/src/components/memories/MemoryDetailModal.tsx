@@ -215,9 +215,9 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
                   {/* AI Analysis Dot (Interactive, Cyan) */}
                   <button
                     onClick={handleAnalyze}
-                    className="w-2 h-2 rounded-full mr-2 transition-all duration-300 hover:scale-150 hover:shadow-[0_0_8px_rgba(6,182,212,0.6)] cursor-pointer"
+                    className="w-2 h-2 rounded-full mr-2 transition-all duration-300 hover:scale-150 hover:shadow-[0_0_8px_rgba(var(--brand-primary-rgb),0.6)] cursor-pointer"
                     style={{
-                      backgroundColor: '#06b6d4', // Cyan-500
+                      backgroundColor: 'rgb(var(--color-accent-dark-rgb))', // Cyan-500
                       opacity: 1
                     }}
                     title="Analyze with AI"

@@ -42,7 +42,7 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
           background: 'rgba(15, 24, 41, 0.98)',
           border: '1px solid rgba(255,255,255,0.35)',
           borderRadius: '4px',
-          boxShadow: '6px 6px 0 rgba(0,0,0,0.8), 0 0 40px rgba(59,130,246,0.15)',
+          boxShadow: '6px 6px 0 rgba(0,0,0,0.8), 0 0 40px rgba(var(--brand-primary-rgb),0.15)',
         }}
       >
         {/* Close button */}
@@ -56,7 +56,7 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
 
         {/* Header */}
         <div className="text-center pt-12 pb-8 px-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-amber-500 mb-6">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-primary to-brand-primary mb-6">
             <Zap className="h-8 w-8 text-[var(--brand-text-primary)]" />
           </div>
           <h1 className="text-3xl font-bold mb-3 aperture-header" style={{ color: "var(--brand-primary)" }}>
@@ -78,8 +78,8 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
               <div
                 className="flex-shrink-0 w-12 h-12 flex items-center justify-center"
                 style={{
-                  background: 'rgba(59,130,246,0.1)',
-                  border: '1.5px solid rgba(59,130,246,0.3)',
+                  background: 'rgba(var(--brand-primary-rgb),0.1)',
+                  border: '1.5px solid rgba(var(--brand-primary-rgb),0.3)',
                   borderRadius: '4px',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
                 }}
@@ -124,8 +124,8 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
               <div
                 className="flex-shrink-0 w-12 h-12 flex items-center justify-center"
                 style={{
-                  background: 'rgba(59,130,246,0.1)',
-                  border: '1.5px solid rgba(59,130,246,0.3)',
+                  background: 'rgba(var(--brand-primary-rgb),0.1)',
+                  border: '1.5px solid rgba(var(--brand-primary-rgb),0.3)',
                   borderRadius: '4px',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
                 }}
@@ -174,8 +174,8 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
               disabled={isLoading}
               className="flex-1 inline-flex items-center justify-center gap-2 py-3 font-bold uppercase tracking-wider text-sm transition-all disabled:opacity-50"
               style={{
-                background: 'rgba(59,130,246,0.15)',
-                border: '1px solid rgba(59,130,246,0.5)',
+                background: 'rgba(var(--brand-primary-rgb),0.15)',
+                border: '1px solid rgba(var(--brand-primary-rgb),0.5)',
                 borderRadius: '4px',
                 boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
                 color: 'var(--brand-primary)',

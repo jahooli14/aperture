@@ -19,14 +19,14 @@ import { supabase } from '../lib/supabase'
 
 // Schema colors for each section — unique per page to reduce blue monotony
 const SCHEMA_COLORS = {
-  home: { primary: '#38bdf8', glow: 'rgba(56, 189, 248, 0.4)' },
-  thoughts: { primary: '#a855f7', glow: 'rgba(168, 85, 247, 0.4)' },
-  projects: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
-  reading: { primary: '#10b981', glow: 'rgba(16, 185, 129, 0.3)' },
-  timeline: { primary: '#22d3ee', glow: 'rgba(34, 211, 238, 0.4)' },
-  context: { primary: '#a855f7', glow: 'rgba(168, 85, 247, 0.4)' },
-  lists: { primary: '#f59e0b', glow: 'rgba(245, 158, 11, 0.4)' },
-  todos: { primary: '#ef4444', glow: 'rgba(239, 68, 68, 0.4)' },
+  home: { primary: 'rgb(var(--brand-primary-rgb))', glow: 'rgba(var(--brand-primary-rgb), 0.4)' },
+  thoughts: { primary: 'rgb(var(--brand-primary-rgb))', glow: 'rgba(var(--brand-primary-rgb), 0.4)' },
+  projects: { primary: 'rgb(var(--brand-primary-rgb))', glow: 'rgba(var(--brand-primary-rgb), 0.4)' },
+  reading: { primary: 'rgb(var(--brand-primary-rgb))', glow: 'rgba(var(--brand-primary-rgb), 0.3)' },
+  timeline: { primary: 'rgb(var(--brand-primary-rgb))', glow: 'rgba(var(--brand-primary-rgb), 0.4)' },
+  context: { primary: 'rgb(var(--brand-primary-rgb))', glow: 'rgba(var(--brand-primary-rgb), 0.4)' },
+  lists: { primary: 'rgb(var(--brand-primary-rgb))', glow: 'rgba(var(--brand-primary-rgb), 0.4)' },
+  todos: { primary: 'rgb(var(--color-error-rgb))', glow: 'rgba(var(--color-error-rgb), 0.4)' },
 } as const
 
 interface NavOption {
@@ -525,11 +525,11 @@ export function FloatingNav() {
                     className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold"
                     style={{
                       background: showUserMenu
-                        ? 'linear-gradient(135deg, #3b82f6, #818cf8)'
-                        : 'rgba(59, 130, 246, 0.2)',
-                      border: `1.5px solid ${showUserMenu ? '#3b82f6' : 'rgba(59,130,246,0.35)'}`,
-                      color: showUserMenu ? '#fff' : '#3b82f6',
-                      boxShadow: showUserMenu ? '0 0 10px rgba(59,130,246,0.4)' : 'none',
+                        ? 'linear-gradient(135deg, rgb(var(--brand-primary-rgb)), rgb(var(--color-accent-light-rgb)))'
+                        : 'rgba(var(--brand-primary-rgb), 0.2)',
+                      border: `1.5px solid ${showUserMenu ? 'rgb(var(--brand-primary-rgb))' : 'rgba(var(--brand-primary-rgb),0.35)'}`,
+                      color: showUserMenu ? '#fff' : 'rgb(var(--brand-primary-rgb))',
+                      boxShadow: showUserMenu ? '0 0 10px rgba(var(--brand-primary-rgb),0.4)' : 'none',
                       transition: 'all 200ms',
                     }}
                   >
@@ -541,7 +541,7 @@ export function FloatingNav() {
                       fontSize: '10px',
                       letterSpacing: '0.04em',
                       lineHeight: 1,
-                      color: showUserMenu ? '#3b82f6' : 'rgba(255,255,255,0.38)',
+                      color: showUserMenu ? 'rgb(var(--brand-primary-rgb))' : 'rgba(255,255,255,0.38)',
                       transition: 'color 200ms',
                     }}
                   >

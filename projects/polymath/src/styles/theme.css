@@ -10,13 +10,13 @@
     --brand-bg: #0f1829;
     --brand-bg-rgb: 15, 24, 41;
 
-    /* Project Types (Raw RGB for rgba usage) */
-    --project-tech-rgb: 59, 130, 246;    /* Blue-500 */
-    --project-art-rgb: 236, 72, 153;     /* Pink-500 */
-    --project-writing-rgb: 6, 182, 212;   /* Cyan-500 */
-    --project-music-rgb: 239, 68, 68;     /* Red-500 */
-    --project-business-rgb: 245, 158, 11; /* Amber-500 */
-    --project-life-rgb: 16, 185, 129;     /* Emerald-500 */
+    /* Project Types (Raw RGB for rgba usage) — unified cyan */
+    --project-tech-rgb: 56, 189, 248;     /* Cyan — brand primary */
+    --project-art-rgb: 56, 189, 248;      /* Cyan — brand primary */
+    --project-writing-rgb: 56, 189, 248;  /* Cyan — brand primary */
+    --project-music-rgb: 56, 189, 248;    /* Cyan — brand primary */
+    --project-business-rgb: 56, 189, 248; /* Cyan — brand primary */
+    --project-life-rgb: 56, 189, 248;     /* Cyan — brand primary */
     --project-default-rgb: 156, 163, 175;  /* Gray-400 */
 
     /* Project Types (Direct Colors) */
@@ -46,18 +46,27 @@
     --brand-font-serif: 'Playfair Display', Georgia, 'Times New Roman', serif;
 
     /* ─── Page Color Identity System ─────────────────────────── */
-    /* Each page section gets a unique accent to reduce blue monotony */
+    /* Unified cyan accent across all pages */
     --page-home-rgb: 56, 189, 248;         /* Cyan — brand primary */
-    --page-thoughts-rgb: 168, 85, 247;     /* Purple — introspective */
-    --page-projects-rgb: 59, 130, 246;     /* Blue — productive */
-    --page-lists-rgb: 245, 158, 11;        /* Amber — curated */
-    --page-reading-rgb: 16, 185, 129;      /* Emerald — growth */
+    --page-thoughts-rgb: 56, 189, 248;     /* Cyan */
+    --page-projects-rgb: 56, 189, 248;     /* Cyan */
+    --page-lists-rgb: 56, 189, 248;        /* Cyan */
+    --page-reading-rgb: 56, 189, 248;      /* Cyan */
     --page-search-rgb: 156, 163, 175;      /* Silver — neutral */
     --page-settings-rgb: 107, 114, 128;    /* Slate — utility */
-    --page-bedtime-rgb: 139, 92, 246;      /* Violet — dreamy */
-    --page-timeline-rgb: 34, 211, 238;     /* Cyan — analytical */
-    --page-suggestions-rgb: 251, 191, 36;  /* Gold — creative */
-    --page-todos-rgb: 239, 68, 68;         /* Red — urgent */
+    --page-bedtime-rgb: 56, 189, 248;      /* Cyan */
+    --page-timeline-rgb: 56, 189, 248;     /* Cyan */
+    --page-suggestions-rgb: 56, 189, 248;  /* Cyan */
+    --page-todos-rgb: 56, 189, 248;        /* Cyan */
+
+    /* Semantic State Colors (RGB for rgba usage) */
+    --color-success-rgb: 56, 189, 248;    /* Cyan — unified accent */
+    --color-warning-rgb: 56, 189, 248;    /* Cyan — unified accent */
+    --color-error-rgb: 239, 68, 68;       /* Red — semantic error only */
+    --color-info-rgb: 56, 189, 248;       /* Cyan — unified accent */
+    --color-accent-rgb: 56, 189, 248;     /* Cyan — unified accent */
+    --color-accent-light-rgb: 103, 232, 249; /* Cyan-300 lighter variant */
+    --color-accent-dark-rgb: 8, 145, 178; /* Cyan-700 darker variant */
 
     /* UI State Surfaces */
     --glass-surface: rgba(255, 255, 255, 0.05);
@@ -145,7 +154,7 @@
 /* ─── Focus rings ─────────────────────────────────────────── */
 
 :focus-visible {
-    outline: 2px solid rgba(99, 179, 237, 0.7);
+    outline: 2px solid rgba(var(--brand-primary-rgb), 0.7);
     outline-offset: 2px;
 }
 
@@ -158,7 +167,7 @@
 
 /* ─── Text selection ──────────────────────────────────────── */
 
-::selection { background: rgba(var(--project-tech-rgb), 0.35); color: white; }
+::selection { background: rgba(var(--brand-primary-rgb), 0.35); color: white; }
 
 /* ─── Glass System ────────────────────────────────────────── */
 

@@ -616,7 +616,7 @@ export function MemoriesPage() {
                       caretColor: 'var(--brand-primary)',
                       boxShadow: '0 2px 8px rgba(0,0,0,0.6)',
                     }}
-                    onFocus={e => { e.currentTarget.style.borderColor = 'rgba(59,130,246,0.5)' }}
+                    onFocus={e => { e.currentTarget.style.borderColor = 'rgba(var(--brand-primary-rgb),0.5)' }}
                     onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
                   />
                   {searchQuery && (
@@ -650,10 +650,10 @@ export function MemoriesPage() {
                           )}
                           className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide transition-all"
                           style={{
-                            background: isActive ? 'rgba(59,130,246,0.2)' : 'var(--glass-surface)',
-                            border: isActive ? '1.5px solid rgba(59,130,246,0.5)' : '1.5px solid rgba(255,255,255,0.1)',
+                            background: isActive ? 'rgba(var(--brand-primary-rgb),0.2)' : 'var(--glass-surface)',
+                            border: isActive ? '1.5px solid rgba(var(--brand-primary-rgb),0.5)' : '1.5px solid rgba(255,255,255,0.1)',
                             color: isActive ? 'rgba(147,197,253,1)' : 'rgba(255,255,255,0.45)',
-                            boxShadow: isActive ? '0 0 12px rgba(59,130,246,0.15)' : '0 2px 8px rgba(0,0,0,0.4)',
+                            boxShadow: isActive ? '0 0 12px rgba(var(--brand-primary-rgb),0.15)' : '0 2px 8px rgba(0,0,0,0.4)',
                           }}
                         >
                           <Tag className="h-2.5 w-2.5" />
@@ -685,7 +685,7 @@ export function MemoriesPage() {
             <div>
               {/* Demo Data Context Banner - Only show on "Recent" view with demo data */}
               {view === 'recent' && memories.length > 0 && memories.some(m => m.audiopen_id?.startsWith('demo-')) && (
-                <div className="mb-6 p-4 rounded-lg" style={{ background: 'var(--brand-glass-bg)', border: '1px solid rgba(59,130,246,0.25)', borderLeft: '4px solid rgba(59,130,246,0.6)', boxShadow: '0 4px 16px rgba(0,0,0,0.6)' }}>
+                <div className="mb-6 p-4 rounded-lg" style={{ background: 'var(--brand-glass-bg)', border: '1px solid rgba(var(--brand-primary-rgb),0.25)', borderLeft: '4px solid rgba(var(--brand-primary-rgb),0.6)', boxShadow: '0 4px 16px rgba(0,0,0,0.6)' }}>
                   <h3 className="font-black text-xs uppercase tracking-widest mb-2 flex items-center gap-2" style={{ color: "var(--brand-primary)" }}>
                     <Brain className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
                     Demo Thoughts  Cross-Domain Examples
@@ -729,7 +729,7 @@ export function MemoriesPage() {
 
                   {/* Voice Note Processing Banner */}
                   {processingVoiceNote && (
-                    <div className="mb-6 p-4 rounded-lg animate-pulse" style={{ background: 'var(--brand-glass-bg)', border: '1px solid rgba(59,130,246,0.3)', boxShadow: '0 0 20px rgba(59,130,246,0.1)' }}>
+                    <div className="mb-6 p-4 rounded-lg animate-pulse" style={{ background: 'var(--brand-glass-bg)', border: '1px solid rgba(var(--brand-primary-rgb),0.3)', boxShadow: '0 0 20px rgba(var(--brand-primary-rgb),0.1)' }}>
                       <div className="flex items-center gap-4">
                         <div className="inline-block h-8 w-8 animate-spin rounded-lg border-4 border-solid" style={{ borderColor: 'var(--brand-primary)', borderRightColor: 'transparent' }}></div>
                         <div className="flex-1">
@@ -776,7 +776,7 @@ export function MemoriesPage() {
                     /* Search returned no results */
                     <div className="max-w-xs mx-auto space-y-4">
                       <div className="inline-flex items-center justify-center w-14 h-14 rounded-full"
-                        style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)' }}>
+                        style={{ background: 'rgba(var(--brand-primary-rgb),0.08)', border: '1px solid rgba(var(--brand-primary-rgb),0.2)' }}>
                         <Search className="h-6 w-6 text-brand-primary opacity-50" />
                       </div>
                       <h3 className="text-lg font-black uppercase tracking-tight text-[var(--brand-text-primary)]">
@@ -788,7 +788,7 @@ export function MemoriesPage() {
                       <button
                         onClick={() => { setSearchQuery(''); setActiveTags([]) }}
                         className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-95"
-                        style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)', color: 'var(--brand-primary)' }}
+                        style={{ background: 'rgba(var(--brand-primary-rgb),0.1)', border: '1px solid rgba(var(--brand-primary-rgb),0.25)', color: 'var(--brand-primary)' }}
                       >
                         <X className="h-3.5 w-3.5" />
                         Clear filters
@@ -801,7 +801,7 @@ export function MemoriesPage() {
                       <div className="relative mx-auto w-28 h-28 mb-8">
                         <div className="absolute inset-0 rounded-full opacity-20 blur-2xl" style={{ background: 'radial-gradient(circle, var(--brand-primary), transparent)' }} />
                         <div className="relative flex items-center justify-center w-28 h-28 rounded-full"
-                          style={{ background: 'radial-gradient(circle at 35% 35%, rgba(59,130,246,0.15), rgba(139,92,246,0.08))', border: '1px solid rgba(59,130,246,0.2)' }}>
+                          style={{ background: 'radial-gradient(circle at 35% 35%, rgba(var(--brand-primary-rgb),0.15), rgba(139,92,246,0.08))', border: '1px solid rgba(var(--brand-primary-rgb),0.2)' }}>
                           <Brain className="h-10 w-10 text-brand-primary opacity-60" />
                         </div>
                       </div>
@@ -822,7 +822,7 @@ export function MemoriesPage() {
                           'A question you can\'t stop asking',
                         ].map((prompt) => (
                           <div key={prompt} className="flex items-start gap-3 px-4 py-3 rounded-xl"
-                            style={{ background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.1)' }}>
+                            style={{ background: 'rgba(var(--brand-primary-rgb),0.05)', border: '1px solid rgba(var(--brand-primary-rgb),0.1)' }}>
                             <span className="text-brand-primary opacity-50 mt-0.5 text-xs">-</span>
                             <p className="text-sm text-[var(--brand-text-muted)] italic">{prompt}</p>
                           </div>
@@ -835,7 +835,7 @@ export function MemoriesPage() {
                     /* Nothing to resurface */
                     <div className="max-w-xs mx-auto space-y-4">
                       <div className="inline-flex items-center justify-center w-14 h-14 rounded-full"
-                        style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)' }}>
+                        style={{ background: 'rgba(var(--brand-primary-rgb),0.08)', border: '1px solid rgba(var(--brand-primary-rgb),0.2)' }}>
                         <Zap className="h-6 w-6 text-brand-primary opacity-50" />
                       </div>
                       <h3 className="text-lg font-black uppercase tracking-tight text-[var(--brand-text-primary)]">All caught up</h3>
@@ -857,9 +857,9 @@ export function MemoriesPage() {
                         onClick={() => setSelectedCluster(null)}
                         className="mb-6 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all"
                         style={{
-                          background: 'rgba(59,130,246,0.08)',
+                          background: 'rgba(var(--brand-primary-rgb),0.08)',
                           color: "var(--brand-text-secondary)",
-                          border: '1.5px solid rgba(59,130,246,0.25)',
+                          border: '1.5px solid rgba(var(--brand-primary-rgb),0.25)',
                           boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
                         }}
                       >
@@ -870,8 +870,8 @@ export function MemoriesPage() {
                         <div
                           className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
                           style={{
-                            background: 'rgba(59,130,246,0.12)',
-                            border: '1px solid rgba(59,130,246,0.3)',
+                            background: 'rgba(var(--brand-primary-rgb),0.12)',
+                            border: '1px solid rgba(var(--brand-primary-rgb),0.3)',
                             boxShadow: '0 2px 8px rgba(0,0,0,0.6)',
                           }}
                         >

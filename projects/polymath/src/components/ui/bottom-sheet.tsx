@@ -164,7 +164,7 @@ const BottomSheetContent = React.forwardRef<
             'flex items-center justify-center',
             'rounded-full',
             'backdrop-blur-xl border-2',
-            'focus:outline-none focus:ring-2 focus:ring-blue-500',
+            'focus:outline-none focus:ring-2 focus:ring-brand-primary',
             'z-10',
             'touch-manipulation'
           )}

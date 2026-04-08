@@ -148,7 +148,7 @@ export function LoginPage() {
                     disabled={loading || otp.length < 6}
                     className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold transition-all disabled:opacity-40"
                     style={{
-                      background: 'linear-gradient(135deg, var(--brand-primary), #818cf8)',
+                      background: 'linear-gradient(135deg, var(--brand-primary), rgb(var(--color-accent-light-rgb)))',
                       color: '#fff',
                     }}
                   >
@@ -226,7 +226,7 @@ export function LoginPage() {
                     disabled={loading || !email.trim()}
                     className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold text-sm transition-all disabled:opacity-40 aperture-header"
                     style={{
-                      background: 'linear-gradient(135deg, var(--brand-primary), #818cf8)',
+                      background: 'linear-gradient(135deg, var(--brand-primary), rgb(var(--color-accent-light-rgb)))',
                       color: '#fff',
                     }}
                   >

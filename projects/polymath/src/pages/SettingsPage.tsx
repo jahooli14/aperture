@@ -185,9 +185,9 @@ export function SettingsPage() {
                       onClick={() => setIntensity(option.value)}
                       className={`p-4 rounded-xl backdrop-blur-xl transition-all text-left border`}
                       style={{
-                        background: isSelected ? 'rgba(6, 182, 212, 0.1)' : 'var(--glass-surface)',
+                        background: isSelected ? 'rgba(var(--color-accent-dark-rgb), 0.1)' : 'var(--glass-surface)',
                         borderColor: isSelected ? 'var(--brand-primary)' : 'var(--glass-surface)',
-                        boxShadow: isSelected ? '0 0 15px rgba(6, 182, 212, 0.1)' : 'none'
+                        boxShadow: isSelected ? '0 0 15px rgba(var(--color-accent-dark-rgb), 0.1)' : 'none'
                       }}
                     >
                       <div className={`font-semibold mb-1 ${isSelected ? '' : 'premium-text-platinum'}`} style={{ color: isSelected ? 'var(--brand-primary)' : undefined }}>
@@ -216,7 +216,7 @@ export function SettingsPage() {
                       onClick={() => setFontSize(option.value)}
                       className="p-3 rounded-xl backdrop-blur-xl transition-all text-center border"
                       style={{
-                        background: isSelected ? 'rgba(6, 182, 212, 0.1)' : 'var(--glass-surface)',
+                        background: isSelected ? 'rgba(var(--color-accent-dark-rgb), 0.1)' : 'var(--glass-surface)',
                         borderColor: isSelected ? 'var(--brand-primary)' : 'var(--glass-surface)',
                         fontSize: option.value === 'small' ? '14px' : option.value === 'large' ? '18px' : '16px'
                       }}
@@ -434,7 +434,7 @@ export function SettingsPage() {
                 }}
               >
                 <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{
-                  background: 'rgba(239, 68, 68, 0.15)'
+                  background: 'rgba(var(--color-error-rgb), 0.15)'
                 }}>
                   <Bug className="w-5 h-5" style={{ color: "var(--brand-primary)" }} />
                 </div>
@@ -465,8 +465,8 @@ export function SettingsPage() {
                 }}
               >
                 <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: 'rgba(168, 85, 247, 0.15)' }}>
-                  <GitBranch className="w-5 h-5" style={{ color: '#a855f7' }} />
+                  style={{ background: 'rgba(var(--brand-primary-rgb), 0.15)' }}>
+                  <GitBranch className="w-5 h-5" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold premium-text-platinum text-sm">
@@ -478,7 +478,7 @@ export function SettingsPage() {
                 </div>
                 <div>
                   {allowHandoff ? (
-                    <ToggleRight className="w-6 h-6" style={{ color: '#a855f7' }} />
+                    <ToggleRight className="w-6 h-6" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
                   ) : (
                     <ToggleLeft className="w-6 h-6" style={{ color: 'var(--brand-text-muted)' }} />
                   )}
@@ -489,14 +489,14 @@ export function SettingsPage() {
               <button
                 onClick={handleRegenerateConnections}
                 disabled={regenerating}
-                className="w-full flex items-center gap-4 p-4 rounded-xl backdrop-blur-xl transition-all text-left group hover:bg-brand-primary/5 hover:border-amber-500/20 border"
+                className="w-full flex items-center gap-4 p-4 rounded-xl backdrop-blur-xl transition-all text-left group hover:bg-brand-primary/5 hover:border-brand-primary/20 border"
                 style={{
-                  background: 'rgba(245, 158, 11, 0.05)',
-                  borderColor: 'rgba(245, 158, 11, 0.15)'
+                  background: 'rgba(var(--brand-primary-rgb), 0.05)',
+                  borderColor: 'rgba(var(--brand-primary-rgb), 0.15)'
                 }}
               >
                 <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{
-                  background: 'rgba(245, 158, 11, 0.15)'
+                  background: 'rgba(var(--brand-primary-rgb), 0.15)'
                 }}>
                   <RefreshCw className={`w-5 h-5 ${regenerating ? 'animate-spin' : ''}`} style={{ color: "var(--brand-primary)" }} />
                 </div>

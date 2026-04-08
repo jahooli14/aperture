@@ -151,7 +151,7 @@ export function Avatar({ src, alt, size = 'md', className, fallback }: AvatarPro
       <div
         className={cn(
           'rounded-full flex items-center justify-center font-semibold',
-          'bg-gradient-to-br from-blue-400 to-indigo-600 text-[var(--brand-text-primary)]',
+          'bg-gradient-to-br from-brand-primary to-brand-primary text-[var(--brand-text-primary)]',
           sizeClasses[size],
           className
         )}

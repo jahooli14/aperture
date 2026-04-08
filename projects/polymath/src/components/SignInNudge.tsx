@@ -43,7 +43,7 @@ function ThoughtsVisual() {
             style={{
               backgroundColor: i === 0
                 ? 'var(--brand-primary)'
-                : i === 1 ? '#8B5CF6' : '#10B981',
+                : i === 1 ? 'rgb(var(--brand-primary-rgb))' : 'rgb(var(--brand-primary-rgb))',
             }}
           />
           <div className="flex-1 min-w-0">
@@ -78,7 +78,7 @@ function ProjectsVisual() {
         <div className="flex items-center gap-2.5 mb-2">
           <div
             className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-            style={{ backgroundColor: '#8B5CF6' }}
+            style={{ backgroundColor: 'rgb(var(--brand-primary-rgb))' }}
           />
           <span
             className="text-sm font-semibold"
@@ -92,7 +92,7 @@ function ProjectsVisual() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.9 }}
           className="flex items-center gap-1 text-xs pl-5 mb-3"
-          style={{ color: '#8B5CF6', opacity: 0.8 }}
+          style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.8 }}
         >
           <ChevronRight className="w-3 h-3" />
           next: write the opening paragraph
@@ -105,7 +105,7 @@ function ProjectsVisual() {
               animate={{ width: '45%' }}
               transition={{ delay: 1.2, duration: 0.8, ease: 'easeOut' }}
               className="h-full rounded-full"
-              style={{ background: 'linear-gradient(90deg, #8B5CF6, var(--brand-primary))' }}
+              style={{ background: 'linear-gradient(90deg, rgb(var(--brand-primary-rgb)), var(--brand-primary))' }}
             />
           </div>
         </div>
@@ -211,7 +211,7 @@ export function SignInNudge({ variant }: SignInNudgeProps) {
           className="mx-auto mb-5 rounded-2xl p-4 inline-flex"
           style={{
             background:
-              'linear-gradient(135deg, rgba(56, 189, 248, 0.1), rgba(129, 140, 248, 0.1))',
+              'linear-gradient(135deg, rgba(var(--brand-primary-rgb), 0.1), rgba(var(--brand-primary-rgb), 0.1))',
           }}
         >
           <Icon className="h-7 w-7" style={{ color: 'var(--brand-primary)' }} />
@@ -243,7 +243,7 @@ export function SignInNudge({ variant }: SignInNudgeProps) {
           onClick={() => navigate('/login')}
           className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl font-bold text-sm transition-all hover:opacity-90 active:scale-[0.98] aperture-header"
           style={{
-            background: 'linear-gradient(135deg, var(--brand-primary), #818cf8)',
+            background: 'linear-gradient(135deg, var(--brand-primary), rgb(var(--color-accent-light-rgb)))',
             color: 'var(--brand-text-primary)',
           }}
         >

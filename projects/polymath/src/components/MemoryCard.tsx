@@ -76,8 +76,8 @@ const getListIcon = (type?: string) => type ? (LIST_TYPE_ICON[type] || Box) : Bo
 const MEMORY_TYPE_CONFIG: Record<string, { label: string; bg: string; border: string; text: string }> = {
   foundational: {
     label: 'Core',
-    bg: 'rgba(59,130,246,0.12)',
-    border: '1px solid rgba(59,130,246,0.3)',
+    bg: 'rgba(var(--brand-primary-rgb),0.12)',
+    border: '1px solid rgba(var(--brand-primary-rgb),0.3)',
     text: 'rgba(147,197,253,0.9)',
   },
   insight: {
@@ -258,7 +258,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
     },
     {
       label: 'Analyse with AI',
-      icon: <span className="w-5 h-5 flex items-center justify-center"><span className="w-2 h-2 rounded-full bg-[#06b6d4] block" /></span>,
+      icon: <span className="w-5 h-5 flex items-center justify-center"><span className="w-2 h-2 rounded-full bg-[rgb(var(--color-accent-dark-rgb))] block" /></span>,
       onClick: () => {
         setContext('memory', memory.id, memory.title, `${memory.title}\n\n${memory.body}`)
         toggleSidebar(true)

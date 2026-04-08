@@ -201,7 +201,7 @@ export function ReviewDeck({ projects, onClose }: ReviewDeckProps) {
                                     autoFocus
                                     value={taskInput}
                                     onChange={(e) => setTaskInput(e.target.value)}
-                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-[var(--brand-text-primary)] placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none h-32"
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-[var(--brand-text-primary)] placeholder-slate-500 focus:outline-none focus:border-brand-primary resize-none h-32"
                                     placeholder="What needs to be done?"
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter' && !e.shiftKey) {
@@ -244,7 +244,7 @@ export function ReviewDeck({ projects, onClose }: ReviewDeckProps) {
 
                                         setTaskInput(suggestion)
                                     }}
-                                    className="px-3 py-2 rounded-lg bg-brand-primary/20 text-xs text-brand-primary border border-indigo-500/30 hover:bg-brand-primary/30 transition-colors flex items-center gap-1"
+                                    className="px-3 py-2 rounded-lg bg-brand-primary/20 text-xs text-brand-primary border border-brand-primary/30 hover:bg-brand-primary/30 transition-colors flex items-center gap-1"
                                     disabled={isLoadingSuggestions}
                                 >
                                     {isLoadingSuggestions ? (
@@ -278,14 +278,14 @@ export function ReviewDeck({ projects, onClose }: ReviewDeckProps) {
                 </button>
 
                 <button onClick={() => handleSwipe('up')} className="flex flex-col items-center gap-2 text-brand-primary hover:text-brand-primary transition-colors">
-                    <div className="w-14 h-14 rounded-full bg-brand-primary/20 flex items-center justify-center border border-blue-500/50">
+                    <div className="w-14 h-14 rounded-full bg-brand-primary/20 flex items-center justify-center border border-brand-primary/50">
                         <Zap className="h-7 w-7" />
                     </div>
                     <span className="text-xs font-medium">Action</span>
                 </button>
 
                 <button onClick={() => handleSwipe('right')} className="flex flex-col items-center gap-2 text-brand-text-secondary hover:text-brand-primary transition-colors">
-                    <div className="w-12 h-12 rounded-full bg-brand-primary/20 flex items-center justify-center border border-emerald-500/50">
+                    <div className="w-12 h-12 rounded-full bg-brand-primary/20 flex items-center justify-center border border-brand-primary/50">
                         <Check className="h-6 w-6" />
                     </div>
                     <span className="text-xs font-medium">Active</span>
@@ -335,10 +335,10 @@ function Card({ project, onSwipe }: { project: Project, onSwipe: (dir: 'left' | 
                 <span className="text-4xl font-bold text-[var(--brand-text-secondary)] uppercase tracking-widest border-4 border-slate-300 p-2 rounded-lg transform rotate-12">Snooze</span>
             </motion.div>
             <motion.div style={{ opacity: rightColor }} className="absolute inset-0 bg-brand-primary/20 z-10 flex items-center justify-start pl-8 pointer-events-none">
-                <span className="text-4xl font-bold text-brand-text-secondary uppercase tracking-widest border-4 border-emerald-400 p-2 rounded-lg transform -rotate-12">Active</span>
+                <span className="text-4xl font-bold text-brand-text-secondary uppercase tracking-widest border-4 border-brand-primary p-2 rounded-lg transform -rotate-12">Active</span>
             </motion.div>
             <motion.div style={{ opacity: upColor }} className="absolute inset-0 bg-brand-primary/20 z-10 flex items-end justify-center pb-8 pointer-events-none">
-                <span className="text-4xl font-bold text-brand-primary uppercase tracking-widest border-4 border-blue-400 p-2 rounded-lg">Action</span>
+                <span className="text-4xl font-bold text-brand-primary uppercase tracking-widest border-4 border-brand-primary p-2 rounded-lg">Action</span>
             </motion.div>
 
             <div className="h-full flex flex-col p-6">

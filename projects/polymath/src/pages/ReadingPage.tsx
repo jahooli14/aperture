@@ -800,9 +800,9 @@ export function ReadingPage() {
                 disabled={inlineSaving || !inlineUrl.trim()}
                 className="h-10 px-4 rounded-lg text-[11px] font-black uppercase tracking-wide flex-shrink-0 flex items-center gap-1.5 transition-all disabled:opacity-40"
                 style={{
-                  backgroundColor: 'rgba(34, 211, 238, 0.1)',
+                  backgroundColor: 'rgba(var(--brand-primary-rgb), 0.1)',
                   color: "var(--brand-text-secondary)",
-                  border: '1px solid rgba(34, 211, 238, 0.4)',
+                  border: '1px solid rgba(var(--brand-primary-rgb), 0.4)',
                   boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
                 }}
               >
@@ -1106,7 +1106,7 @@ export function ReadingPage() {
                                     <div
                                       className="absolute top-4 left-4 z-10 w-6 h-6 rounded-lg flex items-center justify-center transition-all"
                                       style={{
-                                        backgroundColor: isSelected ? 'rgba(59,130,246,0.9)' : 'var(--brand-glass-bg)',
+                                        backgroundColor: isSelected ? 'rgba(var(--brand-primary-rgb),0.9)' : 'var(--brand-glass-bg)',
                                         border: isSelected ? '1px solid rgb(96,165,250)' : '1px solid rgba(255,255,255,0.2)',
                                         boxShadow: '0 2px 8px rgba(0,0,0,0.6)',
                                         pointerEvents: 'auto'

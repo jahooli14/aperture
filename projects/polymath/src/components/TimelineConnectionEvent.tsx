@@ -99,7 +99,7 @@ export function TimelineConnectionEvent({
         className="premium-glass rounded-2xl p-4 cursor-pointer hover:bg-[var(--glass-surface)] transition-all"
         onClick={handleSplitView}
         style={{
-          border: '1px solid rgba(6, 182, 212, 0.2)'
+          border: '1px solid rgba(var(--color-accent-dark-rgb), 0.2)'
         }}
       >
         {/* Header */}

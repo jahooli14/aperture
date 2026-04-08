@@ -106,7 +106,7 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
                             value={formData.title}
                             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                             onFocus={handleInputFocus}
-                            className="text-2xl h-16 font-bold bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-blue-400 focus:ring-0 transition-all"
+                            className="text-2xl h-16 font-bold bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary focus:ring-0 transition-all"
                             autoComplete="off"
                         />
                     </div>
@@ -142,7 +142,7 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                             onFocus={handleInputFocus}
-                            className="h-14 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-blue-400"
+                            className="h-14 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary"
                             autoComplete="off"
                         />
                         <p className="text-[10px] text-[var(--brand-text-muted)] text-right">{formData.description.length}/10 chars min</p>
@@ -159,7 +159,7 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
                             value={formData.end_goal}
                             onChange={(e) => setFormData({ ...formData, end_goal: e.target.value })}
                             onFocus={handleInputFocus}
-                            className="h-14 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/20"
+                            className="h-14 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary placeholder:text-[var(--brand-text-primary)]/20"
                             autoComplete="off"
                         />
                         <p className="text-[10px] text-[var(--brand-text-muted)]">Helps AI suggest tasks that drive toward completion</p>
@@ -172,8 +172,8 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
                             disabled={loading || !isFormValid}
                             className="w-full h-14 font-black uppercase tracking-widest touch-manipulation"
                             style={{
-                              background: 'rgba(59,130,246,0.15)',
-                              border: '1px solid rgba(59,130,246,0.5)',
+                              background: 'rgba(var(--brand-primary-rgb),0.15)',
+                              border: '1px solid rgba(var(--brand-primary-rgb),0.5)',
                               borderRadius: '4px',
                               boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
                               color: 'var(--brand-primary)',

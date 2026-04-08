@@ -686,7 +686,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                 disabled={loading || !canSubmit || uploading}
                 className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all touch-manipulation disabled:opacity-25"
                 style={{
-                  background: canSubmit ? 'var(--brand-primary, #63b3ed)' : 'rgba(255,255,255,0.1)',
+                  background: canSubmit ? 'var(--brand-primary, rgb(var(--brand-primary-rgb)))' : 'rgba(255,255,255,0.1)',
                   color: canSubmit ? '#000' : 'var(--brand-text-secondary)',
                 }}
                 title={uploading ? 'Uploading…' : loading ? 'Saving…' : 'Capture'}

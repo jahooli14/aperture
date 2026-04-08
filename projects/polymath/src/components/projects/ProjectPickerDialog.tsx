@@ -78,7 +78,7 @@ export function ProjectPickerDialog({
                                 placeholder="Search projects..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full bg-black/20 border border-[var(--glass-surface-hover)] rounded-xl py-2.5 pl-10 pr-4 text-[var(--brand-text-primary)] placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all"
+                                className="w-full bg-black/20 border border-[var(--glass-surface-hover)] rounded-xl py-2.5 pl-10 pr-4 text-[var(--brand-text-primary)] placeholder-gray-500 focus:outline-none focus:border-brand-primary/50 focus:ring-1 focus:ring-brand-primary/50 transition-all"
                                 autoFocus
                             />
                         </div>

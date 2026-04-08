@@ -202,7 +202,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
               className={cn(
                 "group relative flex items-center gap-3 p-3.5 rounded-xl transition-all cursor-move border border-[var(--glass-surface)]",
                 isHighlighted
-                  ? "border-blue-500/40 bg-brand-primary/10 shadow-[0_0_20px_rgba(59,130,246,0.1)]"
+                  ? "border-brand-primary/40 bg-brand-primary/10 shadow-[0_0_20px_rgba(var(--brand-primary-rgb),0.1)]"
                   : isNextTask
                     ? "bg-brand-surface border-[var(--glass-surface-hover)]"
                     : "hover:bg-white/[0.02]"
@@ -212,7 +212,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
               }}
             >
               {isHighlighted && (
-                <div className="absolute -left-1 top-0 bottom-0 w-1 bg-brand-primary rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+                <div className="absolute -left-1 top-0 bottom-0 w-1 bg-brand-primary rounded-full shadow-[0_0_10px_rgba(var(--brand-primary-rgb),0.5)]" />
               )}
 
               {/* Context Indicator (AI) */}
@@ -232,7 +232,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                 onClick={() => handleToggleTask(task.id)}
                 className={cn(
                   "flex-shrink-0 h-6 w-6 rounded-lg flex items-center justify-center transition-all border-2",
-                  isHighlighted ? "border-blue-500/50 bg-brand-primary/5" : "border-white/20 bg-black/20"
+                  isHighlighted ? "border-brand-primary/50 bg-brand-primary/5" : "border-white/20 bg-black/20"
                 )}
               >
                 {task.done && <Check className="h-3.5 w-3.5 text-[var(--brand-text-primary)]" />}
@@ -250,7 +250,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                       if (e.key === 'Enter') handleEditSave(task.id)
                       if (e.key === 'Escape') handleEditCancel()
                     }}
-                    className="w-full px-2 py-1 text-sm rounded-xl bg-[rgba(255,255,255,0.1)] outline-none ring-1 ring-blue-500/50"
+                    className="w-full px-2 py-1 text-sm rounded-xl bg-[rgba(255,255,255,0.1)] outline-none ring-1 ring-brand-primary/50"
                     style={{ color: "var(--brand-primary)" }}
                     autoFocus
                   />
@@ -428,8 +428,8 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
             disabled={!newTaskText.trim()}
             className="px-4 py-2 text-sm font-medium transition-all disabled:opacity-50"
             style={{
-              background: 'rgba(59,130,246,0.15)',
-              border: '1.5px solid rgba(59,130,246,0.4)',
+              background: 'rgba(var(--brand-primary-rgb),0.15)',
+              border: '1.5px solid rgba(var(--brand-primary-rgb),0.4)',
               borderRadius: '4px',
               boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
               color: 'var(--brand-primary)',
@@ -500,7 +500,7 @@ function LinkedTodos({ projectId }: { projectId: string }) {
         <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--brand-primary)" }}>
           Linked Todos
         </span>
-        <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(59,130,246,0.1)', color: "var(--brand-text-secondary)" }}>
+        <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(var(--brand-primary-rgb),0.1)', color: "var(--brand-text-secondary)" }}>
           {activeTodos.length}
         </span>
       </div>
@@ -509,7 +509,7 @@ function LinkedTodos({ projectId }: { projectId: string }) {
           <div key={todo.id} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-white/[0.03] transition-colors">
             <button
               onClick={() => toggleTodo(todo.id)}
-              className="flex-shrink-0 h-5 w-5 rounded-md flex items-center justify-center border-2 border-white/20 bg-black/20 transition-all hover:border-blue-500/50"
+              className="flex-shrink-0 h-5 w-5 rounded-md flex items-center justify-center border-2 border-white/20 bg-black/20 transition-all hover:border-brand-primary/50"
             >
               {todo.done && <Check className="h-3 w-3 text-brand-text-primary" />}
             </button>

@@ -104,7 +104,7 @@ export function EditArticleDialog({ article, open, onOpenChange }: EditArticleDi
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               onFocus={handleInputFocus}
               required
-              className="text-xl h-14 font-bold bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-blue-400 focus:ring-0"
+              className="text-xl h-14 font-bold bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary focus:ring-0"
               autoComplete="off"
             />
           </div>
@@ -118,7 +118,7 @@ export function EditArticleDialog({ article, open, onOpenChange }: EditArticleDi
               onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
               onFocus={handleInputFocus}
               rows={3}
-              className="bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/20"
+              className="bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary placeholder:text-[var(--brand-text-primary)]/20"
             />
           </div>
 
@@ -130,7 +130,7 @@ export function EditArticleDialog({ article, open, onOpenChange }: EditArticleDi
               value={formData.tags}
               onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
               onFocus={handleInputFocus}
-              className="h-14 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/20"
+              className="h-14 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary placeholder:text-[var(--brand-text-primary)]/20"
               autoComplete="off"
             />
             <p className="text-[10px] text-[var(--brand-text-muted)]">Comma-separated tags</p>
@@ -145,7 +145,7 @@ export function EditArticleDialog({ article, open, onOpenChange }: EditArticleDi
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               onFocus={handleInputFocus}
               rows={4}
-              className="bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-blue-400 placeholder:text-[var(--brand-text-primary)]/20"
+              className="bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary placeholder:text-[var(--brand-text-primary)]/20"
             />
             <p className="text-[10px] text-[var(--brand-text-muted)]">Add your personal insights and highlights</p>
           </div>
@@ -156,8 +156,8 @@ export function EditArticleDialog({ article, open, onOpenChange }: EditArticleDi
               disabled={loading || !formData.title}
               className="w-full h-14 font-black uppercase tracking-widest touch-manipulation"
               style={{
-                background: 'rgba(59,130,246,0.15)',
-                border: '1px solid rgba(59,130,246,0.5)',
+                background: 'rgba(var(--brand-primary-rgb),0.15)',
+                border: '1px solid rgba(var(--brand-primary-rgb),0.5)',
                 borderRadius: '4px',
                 boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
                 color: 'var(--brand-primary)',

@@ -224,7 +224,7 @@ export function FocusMode({ todos, onComplete, onClose }: FocusModeProps) {
                   style={{
                     background: timerProgress > 0.8
                       ? 'rgba(248,113,113,0.7)'
-                      : 'rgba(59,130,246,0.6)',
+                      : 'rgba(var(--brand-primary-rgb),0.6)',
                     width: `${timerProgress * 100}%`,
                   }}
                   transition={{ duration: 0.5 }}
@@ -332,7 +332,7 @@ export function FocusMode({ todos, onComplete, onClose }: FocusModeProps) {
             onClick={toggleTimer}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-medium transition-all"
             style={{
-              background: timerRunning ? 'rgba(59,130,246,0.18)' : 'var(--glass-surface)',
+              background: timerRunning ? 'rgba(var(--brand-primary-rgb),0.18)' : 'var(--glass-surface)',
               color: timerRunning ? 'rgba(147,197,253,0.9)' : 'rgba(255,255,255,0.3)',
               border: `1px solid ${timerRunning ? 'rgba(99,179,237,0.3)' : 'var(--glass-surface-hover)'}`,
             }}

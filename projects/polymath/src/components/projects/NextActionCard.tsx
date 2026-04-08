@@ -52,10 +52,10 @@ export function NextActionCard({ project }: NextActionCardProps) {
   // All tasks completed
   if (!nextTask) {
     return (
-      <Card className="border-2 premium-card" style={{ borderColor: 'rgba(16, 185, 129, 0.3)', backgroundColor: 'rgba(16, 185, 129, 0.05)' }}>
+      <Card className="border-2 premium-card" style={{ borderColor: 'rgba(var(--brand-primary-rgb), 0.3)', backgroundColor: 'rgba(var(--brand-primary-rgb), 0.05)' }}>
         <CardContent className="p-5">
           <div className="flex items-start gap-3">
-            <div className="h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ backgroundColor: 'rgba(16, 185, 129, 0.2)' }}>
+            <div className="h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ backgroundColor: 'rgba(var(--brand-primary-rgb), 0.2)' }}>
               <Target className="h-5 w-5" style={{ color: "var(--brand-primary)" }} />
             </div>
 
@@ -77,7 +77,7 @@ export function NextActionCard({ project }: NextActionCardProps) {
 
   // Display next action (first uncompleted task)
   return (
-    <Card className="border-2 premium-card" style={{ borderColor: 'rgba(59, 130, 246, 0.3)', backgroundColor: 'rgba(59, 130, 246, 0.05)' }}>
+    <Card className="border-2 premium-card" style={{ borderColor: 'rgba(var(--brand-primary-rgb), 0.3)', backgroundColor: 'rgba(var(--brand-primary-rgb), 0.05)' }}>
       <CardContent className="p-5">
         <div className="flex items-start gap-3">
           <div className="h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-primary))' }}>

@@ -57,8 +57,8 @@ const StarRating = memo(({
                         <Star
                             className={iconSize}
                             style={{
-                                fill: filled ? '#f59e0b' : 'transparent',
-                                color: filled ? '#f59e0b' : 'rgba(255,255,255,0.15)',
+                                fill: filled ? 'rgb(var(--brand-primary-rgb))' : 'transparent',
+                                color: filled ? 'rgb(var(--brand-primary-rgb))' : 'rgba(255,255,255,0.15)',
                                 transition: 'all 0.1s'
                             }}
                         />
@@ -201,7 +201,7 @@ const CompletionCelebration = ({
                                     onClick={handleSaveThought}
                                     disabled={savingThought}
                                     className="flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all"
-                                    style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', color: 'var(--brand-primary)' }}
+                                    style={{ background: 'rgba(var(--brand-primary-rgb),0.15)', border: '1px solid rgba(var(--brand-primary-rgb),0.3)', color: 'var(--brand-primary)' }}
                                 >
                                     {savingThought ? 'Saving...' : thoughtText.trim() ? 'Save thought' : 'Done'}
                                 </button>
@@ -285,11 +285,11 @@ function sortItems(items: ListItem[], sort: SortOption): ListItem[] {
 // ============================================================================
 
 const COLOR_SCHEMES = [
-    { primary: 'violet', gradient: 'from-violet-500/20 via-fuchsia-500/10 to-purple-500/20', rgb: '139, 92, 246' },
-    { primary: 'cyan', gradient: 'from-cyan-500/20 via-blue-500/10 to-sky-500/20', rgb: '6, 182, 212' },
-    { primary: 'rose', gradient: 'from-rose-500/20 via-pink-500/10 to-red-500/20', rgb: '244, 63, 94' },
-    { primary: 'amber', gradient: 'from-amber-500/20 via-orange-500/10 to-yellow-500/20', rgb: '245, 158, 11' },
-    { primary: 'emerald', gradient: 'from-emerald-500/20 via-teal-500/10 to-green-500/20', rgb: '16, 185, 129' }
+    { primary: 'violet', gradient: 'from-brand-primary/20 via-brand-primary/10 to-brand-primary/20', rgb: '139, 92, 246' },
+    { primary: 'cyan', gradient: 'from-brand-primary/20 via-brand-primary/10 to-brand-primary/20', rgb: '6, 182, 212' },
+    { primary: 'rose', gradient: 'from-brand-primary/20 via-brand-primary/10 to-brand-primary/20', rgb: '244, 63, 94' },
+    { primary: 'amber', gradient: 'from-brand-primary/20 via-brand-primary/10 to-brand-primary/20', rgb: '245, 158, 11' },
+    { primary: 'emerald', gradient: 'from-brand-primary/20 via-brand-primary/10 to-brand-primary/20', rgb: '16, 185, 129' }
 ] as const
 
 const getVariant = (id: string) => {
@@ -339,11 +339,11 @@ const QuoteCard = memo(({
     }
 
     const bgClasses: Record<number, string> = {
-        0: 'from-zinc-900/90 via-purple-950/20 to-zinc-900/90',
-        1: 'from-zinc-900/90 via-cyan-950/20 to-zinc-900/90',
-        2: 'from-zinc-900/90 via-rose-950/20 to-zinc-900/90',
-        3: 'from-zinc-900/90 via-amber-950/20 to-zinc-900/90',
-        4: 'from-zinc-900/90 via-emerald-950/20 to-zinc-900/90',
+        0: 'from-zinc-900/90 via-brand-primary/20 to-zinc-900/90',
+        1: 'from-zinc-900/90 via-brand-primary/20 to-zinc-900/90',
+        2: 'from-zinc-900/90 via-brand-primary/20 to-zinc-900/90',
+        3: 'from-zinc-900/90 via-brand-primary/20 to-zinc-900/90',
+        4: 'from-zinc-900/90 via-brand-primary/20 to-zinc-900/90',
     }
 
     const attributionColors: Record<number, string> = {
@@ -375,7 +375,7 @@ const QuoteCard = memo(({
                     <div className="absolute top-6 left-6 text-6xl font-serif text-[var(--brand-text-primary)]/[0.03] select-none leading-none">"</div>
                 )}
                 {variant === 1 && (
-                    <div className="absolute top-6 right-6 w-12 h-12 border-t-2 border-r-2 border-cyan-500/10 rounded-tr-3xl" />
+                    <div className="absolute top-6 right-6 w-12 h-12 border-t-2 border-r-2 border-brand-primary/10 rounded-tr-3xl" />
                 )}
 
                 {/* The Quote */}
@@ -700,7 +700,7 @@ const StandardItemCard = memo(({
                             return cleanTags.length > 0 ? (
                                 <div className="flex flex-wrap gap-1">
                                     {cleanTags.map((tag: string) => (
-                                        <span key={tag} className="text-[8px] bg-brand-primary/20 border border-sky-500/30 px-1.5 py-0.5 rounded-xl text-brand-primary font-medium">
+                                        <span key={tag} className="text-[8px] bg-brand-primary/20 border border-brand-primary/30 px-1.5 py-0.5 rounded-xl text-brand-primary font-medium">
                                             {tag}
                                         </span>
                                     ))}
@@ -1338,7 +1338,7 @@ export default function ListDetailPage() {
                         {/* Reorder toggle */}
                         <button
                             onClick={() => setIsReordering(!isReordering)}
-                            className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all ${isReordering ? 'bg-brand-primary border-sky-400 text-[var(--brand-text-primary)]' : 'border-[var(--glass-surface-hover)] text-brand-text-muted hover:text-[var(--brand-text-primary)] hover:border-white/20'}`}
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all ${isReordering ? 'bg-brand-primary border-brand-primary text-[var(--brand-text-primary)]' : 'border-[var(--glass-surface-hover)] text-brand-text-muted hover:text-[var(--brand-text-primary)] hover:border-white/20'}`}
                         >
                             {isReordering ? <Check className="h-3 w-3" /> : <ListOrdered className="h-3 w-3" />}
                             <span className="text-[10px] font-black uppercase tracking-widest">{isReordering ? 'Done' : 'Order'}</span>

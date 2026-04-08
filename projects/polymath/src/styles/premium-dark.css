@@ -26,26 +26,26 @@
   /* Metallic Accents */
   --premium-platinum: #e5e7eb;
   --premium-platinum-muted: #9ca3af;
-  --premium-gold: #fbbf24;
-  --premium-gold-muted: #d97706;
+  --premium-gold: rgb(var(--brand-primary-rgb));
+  --premium-gold-muted: rgb(var(--color-accent-dark-rgb));
   --premium-silver: #cbd5e1;
-  --premium-copper: #ea580c;
+  --premium-copper: rgb(var(--color-accent-dark-rgb));
 
-  /* Accent Colors - Sophisticated */
-  --premium-blue: #3b82f6;
-  --premium-blue-glow: rgba(59, 130, 246, 0.4);
-  --premium-indigo: #6366f1;
-  --premium-indigo-glow: rgba(99, 102, 241, 0.4);
-  --premium-emerald: #10b981;
-  --premium-emerald-glow: rgba(16, 185, 129, 0.4);
-  --premium-amber: #f59e0b;
-  --premium-amber-glow: rgba(245, 158, 11, 0.4);
+  /* Accent Colors — unified cyan */
+  --premium-blue: rgb(var(--brand-primary-rgb));
+  --premium-blue-glow: rgba(var(--brand-primary-rgb), 0.4);
+  --premium-indigo: rgb(var(--brand-primary-rgb));
+  --premium-indigo-glow: rgba(var(--brand-primary-rgb), 0.4);
+  --premium-emerald: rgb(var(--brand-primary-rgb));
+  --premium-emerald-glow: rgba(var(--brand-primary-rgb), 0.4);
+  --premium-amber: rgb(var(--brand-primary-rgb));
+  --premium-amber-glow: rgba(var(--brand-primary-rgb), 0.4);
 
   /* Background Colors - App-wide hierarchy */
   --premium-bg-1: rgba(10, 20, 45, 0.7);
   --premium-bg-2: rgba(30, 60, 120, 0.25);
-  --premium-bg-3: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.15));
-  --premium-bg-4: rgba(59, 130, 246, 0.55);
+  --premium-bg-3: linear-gradient(135deg, rgba(var(--brand-primary-rgb), 0.2), rgba(var(--color-accent-dark-rgb), 0.15));
+  --premium-bg-4: rgba(var(--brand-primary-rgb), 0.55);
 
   /* Text Colors */
   --premium-text-primary: #ffffff;
@@ -74,8 +74,8 @@
 
   /* Metallic glows */
   --premium-glow-platinum: 0 0 20px rgba(229, 231, 235, 0.15);
-  --premium-glow-gold: 0 0 20px rgba(251, 191, 36, 0.2);
-  --premium-glow-blue: 0 0 20px rgba(59, 130, 246, 0.25);
+  --premium-glow-gold: 0 0 20px rgba(var(--brand-primary-rgb), 0.2);
+  --premium-glow-blue: 0 0 20px rgba(var(--brand-primary-rgb), 0.25);
 
   /* === SHAPE SYSTEM === */
 
@@ -239,7 +239,7 @@
 
 /* Premium Button - Neobrutalism */
 .premium-btn-primary {
-  background: rgba(59, 130, 246, 0.15);
+  background: rgba(var(--brand-primary-rgb), 0.15);
   color: var(--premium-blue);
   border-radius: 4px;
   padding: var(--premium-space-3) var(--premium-space-6);
@@ -272,7 +272,7 @@
 }
 
 .premium-btn-primary:hover {
-  background: rgba(59, 130, 246, 0.25);
+  background: rgba(var(--brand-primary-rgb), 0.25);
   box-shadow:
     0 4px 16px rgba(0,0,0,0.6),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
@@ -329,7 +329,7 @@
   outline: none;
   background: rgba(20, 27, 38, 0.5);
   box-shadow:
-    0 0 0 3px rgba(59, 130, 246, 0.15),
+    0 0 0 3px rgba(var(--brand-primary-rgb), 0.15),
     2px 2px 0 rgba(0,0,0,0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
@@ -454,7 +454,7 @@
 .reader-content a {
   color: var(--premium-blue);
   text-decoration: underline;
-  text-decoration-color: rgba(59, 130, 246, 0.4);
+  text-decoration-color: rgba(var(--brand-primary-rgb), 0.4);
   text-underline-offset: 0.2em;
   transition: all var(--premium-transition-fast);
 }
@@ -462,7 +462,7 @@
 .reader-content a:hover {
   color: var(--premium-blue);
   text-decoration-color: var(--premium-blue);
-  text-shadow: 0 0 8px rgba(59, 130, 246, 0.3);
+  text-shadow: 0 0 8px rgba(var(--brand-primary-rgb), 0.3);
 }
 
 /* Lists */
@@ -504,7 +504,7 @@
   padding-left: 1.5em;
   font-style: italic;
   color: var(--premium-text-secondary);
-  background: rgba(59, 130, 246, 0.05);
+  background: rgba(var(--brand-primary-rgb), 0.05);
   padding: 1.5em;
   padding-left: 2em;
   border-radius: var(--premium-radius-md);
@@ -622,7 +622,7 @@
 
 /* Selection */
 .reader-content ::selection {
-  background: rgba(59, 130, 246, 0.3);
+  background: rgba(var(--brand-primary-rgb), 0.3);
   color: var(--premium-text-primary);
 }
 
@@ -649,8 +649,8 @@
 
 /* Links on light background */
 .reader-content a {
-  color: #2563eb;
-  text-decoration-color: rgba(37, 99, 235, 0.4);
+  color: rgb(var(--color-accent-dark-rgb));
+  text-decoration-color: rgba(var(--color-accent-dark-rgb), 0.4);
 }
 
 .reader-content a:hover {
@@ -666,8 +666,8 @@
 
 /* Blockquotes on light background */
 .reader-content blockquote {
-  background: rgba(59, 130, 246, 0.06);
-  border-left: 4px solid rgba(59, 130, 246, 0.5);
+  background: rgba(var(--brand-primary-rgb), 0.06);
+  border-left: 4px solid rgba(var(--brand-primary-rgb), 0.5);
   color: #3a3a3a;
   padding-left: 1.8em;
 }
@@ -675,7 +675,7 @@
 /* Code on light background */
 .reader-content code {
   background: rgba(0, 0, 0, 0.06);
-  color: #059669;
+  color: rgb(var(--brand-primary-rgb));
 }
 
 .reader-content pre {
@@ -714,7 +714,7 @@
 
 /* Selection on light background */
 .reader-content ::selection {
-  background: rgba(59, 130, 246, 0.25);
+  background: rgba(var(--brand-primary-rgb), 0.25);
   color: #1a1a1a;
 }
 
@@ -760,7 +760,7 @@
 
 /* Glass Filter Button - Active State */
 .glass-filter-btn-active {
-  background: rgba(59, 130, 246, 0.15);
+  background: rgba(var(--brand-primary-rgb), 0.15);
   color: var(--premium-blue);
   box-shadow:
     0 4px 12px rgba(0,0,0,0.5),
@@ -775,13 +775,13 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.1), transparent 70%);
+  background: radial-gradient(circle at 50% 50%, rgba(var(--brand-primary-rgb), 0.1), transparent 70%);
   opacity: 1;
   transition: opacity var(--premium-transition-base);
 }
 
 .glass-filter-btn-active:hover {
-  background: rgba(59, 130, 246, 0.2);
+  background: rgba(var(--brand-primary-rgb), 0.2);
   box-shadow:
     0 4px 16px rgba(0,0,0,0.6),
     inset 0 1px 0 rgba(255, 255, 255, 0.15);
@@ -923,7 +923,7 @@
   content: '';
   position: absolute;
   inset: -4px;
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.2), transparent 70%);
+  background: radial-gradient(circle, rgba(var(--brand-primary-rgb), 0.2), transparent 70%);
   opacity: 0;
   transition: opacity 0.3s var(--premium-ease-silk);
   pointer-events: none;

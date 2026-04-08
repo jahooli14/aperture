@@ -21,7 +21,7 @@ interface ProjectListRowProps {
 export function ProjectListRow({
   project,
   isSpotlighted = false,
-  spotlightColor = 'rgba(59, 130, 246, 0.1)' // default blue
+  spotlightColor = 'rgba(var(--brand-primary-rgb), 0.1)' // default blue
 }: ProjectListRowProps) {
   const { setPriority, updateProject } = useProjectStore()
   const { pinnedItem } = usePin()
@@ -77,10 +77,10 @@ export function ProjectListRow({
   }
 
   const statusColors: Record<string, string> = {
-    active: 'rgba(16, 185, 129, 0.2)',
+    active: 'rgba(var(--brand-primary-rgb), 0.2)',
     dormant: 'rgba(107, 114, 128, 0.2)',
-    upcoming: 'rgba(59, 130, 246, 0.2)',
-    completed: 'rgba(34, 197, 94, 0.2)'
+    upcoming: 'rgba(var(--brand-primary-rgb), 0.2)',
+    completed: 'rgba(var(--brand-primary-rgb), 0.2)'
   }
 
   return (
@@ -95,12 +95,12 @@ export function ProjectListRow({
         style={{
           backgroundColor: isSpotlighted ? spotlightColor : 'var(--glass-surface)',
           border: `1px solid ${isSpotlighted ? 'rgba(255, 255, 255, 0.2)' : 'var(--glass-surface)'}`,
-          boxShadow: project.is_priority ? '0 0 24px rgba(245, 158, 11, 0.5), 0 0 48px rgba(245, 158, 11, 0.25), 0 0 72px rgba(245, 158, 11, 0.1)' : 'none'
+          boxShadow: project.is_priority ? '0 0 24px rgba(var(--brand-primary-rgb), 0.5), 0 0 48px rgba(var(--brand-primary-rgb), 0.25), 0 0 72px rgba(var(--brand-primary-rgb), 0.1)' : 'none'
         }}
         whileHover={{
           backgroundColor: isSpotlighted ? spotlightColor : 'var(--glass-surface)',
           borderColor: 'rgba(255, 255, 255, 0.15)',
-          boxShadow: project.is_priority ? '0 0 32px rgba(245, 158, 11, 0.6), 0 0 64px rgba(245, 158, 11, 0.35), 0 0 96px rgba(245, 158, 11, 0.15)' : 'none'
+          boxShadow: project.is_priority ? '0 0 32px rgba(var(--brand-primary-rgb), 0.6), 0 0 64px rgba(var(--brand-primary-rgb), 0.35), 0 0 96px rgba(var(--brand-primary-rgb), 0.15)' : 'none'
         }}
       >
         {/* Title row with status badge */}
@@ -118,8 +118,8 @@ export function ProjectListRow({
               <Star
                 size={18}
                 style={{
-                  color: project.is_priority ? '#f59e0b' : 'rgba(255, 255, 255, 0.6)',
-                  fill: project.is_priority ? '#f59e0b' : 'none'
+                  color: project.is_priority ? 'rgb(var(--brand-primary-rgb))' : 'rgba(255, 255, 255, 0.6)',
+                  fill: project.is_priority ? 'rgb(var(--brand-primary-rgb))' : 'none'
                 }}
               />
             </button>

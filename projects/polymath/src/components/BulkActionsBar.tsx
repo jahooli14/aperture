@@ -39,7 +39,7 @@ export function BulkActionsBar({ selectedCount, onCancel, actions }: BulkActions
                   className="w-10 h-10 rounded-full flex items-center justify-center"
                   style={{
                     backgroundColor: 'var(--brand-primary)',
-                    boxShadow: '0 0 20px rgba(59, 130, 246, 0.3)'
+                    boxShadow: '0 0 20px rgba(var(--brand-primary-rgb), 0.3)'
                   }}
                 >
                   <Check className="h-5 w-5 text-[var(--brand-text-primary)]" />
@@ -78,12 +78,12 @@ export function BulkActionsBar({ selectedCount, onCancel, actions }: BulkActions
                   className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium text-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
                     backgroundColor: action.variant === 'destructive'
-                      ? 'rgba(239, 68, 68, 0.15)'
-                      : 'rgba(59, 130, 246, 0.15)',
+                      ? 'rgba(var(--color-error-rgb), 0.15)'
+                      : 'rgba(var(--brand-primary-rgb), 0.15)',
                     color: action.variant === 'destructive'
-                      ? '#ef4444'
+                      ? 'rgb(var(--color-error-rgb))'
                       : 'var(--brand-primary)',
-                    border: `1px solid ${action.variant === 'destructive' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`
+                    border: `1px solid ${action.variant === 'destructive' ? 'rgba(var(--color-error-rgb), 0.3)' : 'rgba(var(--brand-primary-rgb), 0.3)'}`
                   }}
                 >
                   {action.loading ? (

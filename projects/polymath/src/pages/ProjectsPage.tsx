@@ -57,13 +57,13 @@ function CompletedProjectsTimeline({ projects, onNavigate }: { projects: Project
           {sorted.length} project{sorted.length !== 1 ? 's' : ''} finished
         </p>
         <h2 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
-          What you've <span className="text-[#34d399]">built</span>
+          What you've <span className="text-[rgb(var(--color-accent-light-rgb))]">built</span>
         </h2>
       </div>
 
       <div className="relative">
         {/* Vertical timeline line */}
-        <div className="absolute left-5 top-0 bottom-0 w-px" style={{ background: 'rgba(52, 211, 153, 0.15)' }} />
+        <div className="absolute left-5 top-0 bottom-0 w-px" style={{ background: 'rgba(var(--brand-primary-rgb), 0.15)' }} />
 
         <div className="space-y-6">
           {sorted.map((project, i) => {
@@ -81,9 +81,9 @@ function CompletedProjectsTimeline({ projects, onNavigate }: { projects: Project
                 {/* Timeline dot */}
                 <div className="relative flex-shrink-0 mt-1">
                   <div className="w-10 h-10 rounded-full flex items-center justify-center z-10 relative"
-                    style={{ background: 'rgba(52, 211, 153, 0.12)', border: '1px solid rgba(52, 211, 153, 0.3)' }}
+                    style={{ background: 'rgba(var(--brand-primary-rgb), 0.12)', border: '1px solid rgba(var(--brand-primary-rgb), 0.3)' }}
                   >
-                    <Check className="w-4 h-4" style={{ color: '#34d399' }} />
+                    <Check className="w-4 h-4" style={{ color: 'rgb(var(--color-accent-light-rgb))' }} />
                   </div>
                 </div>
 
@@ -92,8 +92,8 @@ function CompletedProjectsTimeline({ projects, onNavigate }: { projects: Project
                   onClick={() => onNavigate(project.id)}
                   className="flex-1 text-left p-4 rounded-xl transition-all hover:scale-[1.01]"
                   style={{
-                    background: 'rgba(52, 211, 153, 0.04)',
-                    border: '1px solid rgba(52, 211, 153, 0.15)',
+                    background: 'rgba(var(--brand-primary-rgb), 0.04)',
+                    border: '1px solid rgba(var(--brand-primary-rgb), 0.15)',
                     boxShadow: '0 4px 16px rgba(0,0,0,0.4)'
                   }}
                 >
@@ -113,7 +113,7 @@ function CompletedProjectsTimeline({ projects, onNavigate }: { projects: Project
                       {project.description}
                     </p>
                   )}
-                  <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest" style={{ color: 'rgba(52, 211, 153, 0.6)' }}>
+                  <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest" style={{ color: 'rgba(var(--brand-primary-rgb), 0.6)' }}>
                     <span>{duration}</span>
                     {completedDate && (
                       <>

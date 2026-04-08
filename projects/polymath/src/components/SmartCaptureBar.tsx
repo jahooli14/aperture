@@ -280,7 +280,7 @@ export function SmartCaptureBar({
                       }
                     : {
                         color: "var(--brand-text-secondary)",
-                        background: 'rgba(59,130,246,0.12)',
+                        background: 'rgba(var(--brand-primary-rgb),0.12)',
                         boxShadow: 'inset 0 0 0 1px rgba(99,179,237,0.2)',
                       }
                 }

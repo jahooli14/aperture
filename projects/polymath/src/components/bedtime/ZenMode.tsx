@@ -83,15 +83,15 @@ export function ZenMode({ prompts, onClose, onMarkViewed }: ZenModeProps) {
   const getBackgroundGradient = (type: string) => {
     switch (type) {
       case 'connection':
-        return 'radial-gradient(circle at 30% 50%, rgba(59, 130, 246, 0.15), transparent 70%), radial-gradient(circle at 70% 80%, rgba(139, 92, 246, 0.10), transparent 70%)'
+        return 'radial-gradient(circle at 30% 50%, rgba(var(--brand-primary-rgb), 0.15), transparent 70%), radial-gradient(circle at 70% 80%, rgba(var(--brand-primary-rgb), 0.10), transparent 70%)'
       case 'divergent':
-        return 'radial-gradient(circle at 50% 30%, rgba(16, 185, 129, 0.15), transparent 70%), radial-gradient(circle at 80% 70%, rgba(59, 130, 246, 0.10), transparent 70%)'
+        return 'radial-gradient(circle at 50% 30%, rgba(var(--brand-primary-rgb), 0.15), transparent 70%), radial-gradient(circle at 80% 70%, rgba(var(--brand-primary-rgb), 0.10), transparent 70%)'
       case 'revisit':
-        return 'radial-gradient(circle at 40% 60%, rgba(139, 92, 246, 0.15), transparent 70%), radial-gradient(circle at 90% 40%, rgba(236, 72, 153, 0.10), transparent 70%)'
+        return 'radial-gradient(circle at 40% 60%, rgba(var(--brand-primary-rgb), 0.15), transparent 70%), radial-gradient(circle at 90% 40%, rgba(var(--brand-primary-rgb), 0.10), transparent 70%)'
       case 'transform':
-        return 'radial-gradient(circle at 60% 40%, rgba(245, 158, 11, 0.15), transparent 70%), radial-gradient(circle at 30% 80%, rgba(239, 68, 68, 0.10), transparent 70%)'
+        return 'radial-gradient(circle at 60% 40%, rgba(var(--brand-primary-rgb), 0.15), transparent 70%), radial-gradient(circle at 30% 80%, rgba(var(--color-error-rgb), 0.10), transparent 70%)'
       default:
-        return 'radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.10), transparent 70%)'
+        return 'radial-gradient(circle at 50% 50%, rgba(var(--brand-primary-rgb), 0.10), transparent 70%)'
     }
   }
 
@@ -132,7 +132,7 @@ export function ZenMode({ prompts, onClose, onMarkViewed }: ZenModeProps) {
               backgroundColor: index === currentIndex
                 ? 'var(--brand-primary)'
                 : index < currentIndex
-                ? 'rgba(59, 130, 246, 0.4)'
+                ? 'rgba(var(--brand-primary-rgb), 0.4)'
                 : 'rgba(255, 255, 255, 0.2)'
             }}
           />

@@ -21,10 +21,10 @@ import { haptic } from './haptics'
 
 // Premium theme colors
 const COLORS = {
-  blue: '#3b82f6',
-  indigo: '#6366f1',
-  amber: '#f59e0b',
-  emerald: '#10b981',
+  blue: 'rgb(var(--brand-primary-rgb))',
+  indigo: 'rgb(var(--brand-primary-rgb))',
+  amber: 'rgb(var(--brand-primary-rgb))',
+  emerald: 'rgb(var(--brand-primary-rgb))',
   platinum: '#e2e8f0',
 }
 

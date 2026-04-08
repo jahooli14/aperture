@@ -264,7 +264,7 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
                 style={{
                   width: `${progress}%`,
                   background: progress >= 95
-                    ? 'rgb(52, 211, 153)'
+                    ? 'rgb(var(--brand-primary-rgb))'
                     : 'var(--brand-primary)',
                 }}
               />
