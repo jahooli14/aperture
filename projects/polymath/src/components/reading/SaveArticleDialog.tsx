@@ -49,7 +49,7 @@ export function SaveArticleDialog({ isOpen, onOpenChange }: SaveArticleDialogPro
         try {
             new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`)
         } catch {
-            addToast({ title: 'Invalid URL', description: 'Please enter a valid link.', variant: 'error' })
+            addToast({ title: 'Invalid URL', description: 'Please enter a valid link.', variant: 'destructive' })
             return
         }
 
@@ -61,7 +61,7 @@ export function SaveArticleDialog({ isOpen, onOpenChange }: SaveArticleDialogPro
             addToast({ title: 'Saved!', description: 'Article added to your reading queue.', variant: 'success' })
             onOpenChange(false)
         } catch {
-            addToast({ title: 'Failed to save', description: 'Could not extract article. Try again.', variant: 'error' })
+            addToast({ title: 'Failed to save', description: 'Could not extract article. Try again.', variant: 'destructive' })
         } finally {
             setSaving(false)
         }

@@ -71,7 +71,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
   const result = await model.embedContent({
     content: { role: 'user', parts: [{ text }] },
     outputDimensionality: 768,
-  });
+  } as Parameters<typeof model.embedContent>[0]);
   return result.embedding.values;
 }
 
