@@ -125,7 +125,7 @@ export function TrySomethingNewCarousel({ onShapeIdea }: TrySomethingNewCarousel
           backdropFilter: 'blur(16px)',
           border: '1px solid rgba(var(--brand-primary-rgb),0.15)',
           boxShadow: '0 0 30px rgba(var(--brand-primary-rgb),0.05), 0 4px 16px rgba(0,0,0,0.4)',
-          minHeight: '280px',
+          minHeight: '300px',
         }}
       >
         <div className="absolute top-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(var(--brand-primary-rgb),0.4), transparent)' }} />
@@ -177,16 +177,26 @@ export function TrySomethingNewCarousel({ onShapeIdea }: TrySomethingNewCarousel
                 {current.title}
               </h3>
 
-              {/* Show reasoning/description */}
+              {/* Show reasoning/description — give primary text more room */}
               <div className="flex-1 mb-4">
-                {current.reasoning && (
-                  <p className="text-xs text-[var(--brand-text-secondary)] leading-relaxed line-clamp-3 opacity-60 mb-2 italic">
+                {current.reasoning && current.description ? (
+                  <>
+                    <p className="text-xs text-[var(--brand-text-secondary)] leading-relaxed opacity-60 mb-2 italic">
+                      {current.reasoning}
+                    </p>
+                    <p className="text-sm text-[var(--brand-text-secondary)] leading-relaxed line-clamp-2 opacity-70">
+                      {current.description}
+                    </p>
+                  </>
+                ) : current.reasoning ? (
+                  <p className="text-sm text-[var(--brand-text-secondary)] leading-relaxed line-clamp-4 opacity-70 italic">
                     {current.reasoning}
                   </p>
+                ) : (
+                  <p className="text-sm text-[var(--brand-text-secondary)] leading-relaxed line-clamp-4 opacity-70">
+                    {current.description}
+                  </p>
                 )}
-                <p className="text-sm text-[var(--brand-text-secondary)] leading-relaxed line-clamp-3 opacity-70">
-                  {current.description}
-                </p>
               </div>
 
               <button

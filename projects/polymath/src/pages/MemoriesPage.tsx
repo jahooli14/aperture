@@ -557,7 +557,7 @@ export function MemoriesPage() {
           <button
             onClick={handleOpenDrift}
             className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all hover:scale-[1.02] mb-3"
-            style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.12)', color: 'rgba(52,211,153,0.8)' }}
+            style={{ background: 'rgba(var(--brand-primary-rgb),0.06)', border: '1px solid rgba(var(--brand-primary-rgb),0.12)', color: 'rgba(var(--brand-primary-rgb),0.8)' }}
           >
             <Wind className="h-3.5 w-3.5" />
             Drift Mode — mental reset
@@ -943,9 +943,9 @@ export function MemoriesPage() {
                         className="mb-6 rounded-lg p-4"
                         style={{
                           background: 'var(--brand-glass-bg)',
-                          border: '1px solid rgba(251,191,36,0.3)',
-                          borderLeft: '4px solid rgba(251,191,36,0.6)',
-                          boxShadow: '0 0 20px rgba(251,191,36,0.08)',
+                          border: '1px solid rgba(var(--brand-primary-rgb),0.3)',
+                          borderLeft: '4px solid rgba(var(--brand-primary-rgb),0.6)',
+                          boxShadow: '0 0 20px rgba(var(--brand-primary-rgb),0.08)',
                         }}
                       >
                         <div className="flex items-start justify-between gap-3 mb-3">
@@ -983,10 +983,10 @@ export function MemoriesPage() {
                             onClick={() => handleOpenDetail(resurfacedMemory)}
                             className="text-[10px] px-3 py-1.5 rounded-lg font-black uppercase tracking-wide transition-colors"
                             style={{
-                              background: 'rgba(251,191,36,0.12)',
-                              border: '1.5px solid rgba(251,191,36,0.4)',
+                              background: 'rgba(var(--brand-primary-rgb),0.12)',
+                              border: '1.5px solid rgba(var(--brand-primary-rgb),0.4)',
                               color: "var(--brand-text-secondary)",
-                              boxShadow: '0 0 12px rgba(251,191,36,0.1)',
+                              boxShadow: '0 0 12px rgba(var(--brand-primary-rgb),0.1)',
                             }}
                           >
                             Connect to today
@@ -1012,8 +1012,8 @@ export function MemoriesPage() {
                             className="flex-shrink-0 w-56 rounded-xl p-3 cursor-pointer transition-all"
                             style={{
                               background: 'linear-gradient(135deg, var(--glass-surface-hover) 0%, var(--glass-surface) 100%)',
-                              boxShadow: 'inset 0 0 0 1px rgba(251,191,36,0.2), 0 4px 12px rgba(0,0,0,0.2)',
-                              borderTop: '2px solid rgba(251,191,36,0.4)',
+                              boxShadow: 'inset 0 0 0 1px rgba(var(--brand-primary-rgb),0.2), 0 4px 12px rgba(0,0,0,0.2)',
+                              borderTop: '2px solid rgba(var(--brand-primary-rgb),0.4)',
                             }}
                           >
                             <h4 className="text-sm font-semibold truncate mb-1" style={{ color: "var(--brand-primary)" }}>

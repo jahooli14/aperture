@@ -13,6 +13,7 @@ import { useState, useEffect } from 'react'
 import { Plus, Trash2, Check, ChevronDown, ChevronRight, Clock, Flame, Hammer, Flag } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '../../lib/utils'
+import { MarkdownRenderer } from '../ui/MarkdownRenderer'
 import { handleInputFocus } from '../../utils/keyboard'
 import { useTodoStore, selectByProject } from '../../stores/useTodoStore'
 import type { Task } from './TaskList'
@@ -293,13 +294,13 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
                                 />
                               ) : (
                                 <>
-                                  <span
-                                    className="text-[14px] leading-snug block cursor-text"
+                                  <div
+                                    className="cursor-text"
                                     style={{ color: 'var(--brand-text-primary)', opacity: isNext ? 0.9 : 0.65 }}
                                     onClick={() => handleEditStart(task.id, task.text)}
                                   >
-                                    {task.text}
-                                  </span>
+                                    <MarkdownRenderer content={task.text} className="text-[14px] leading-snug [&_p]:m-0" />
+                                  </div>
                                   <div className="flex items-center gap-2 mt-0.5">
                                     <button
                                       onClick={(e) => { e.stopPropagation(); handleEstimateChange(task.id, task.estimated_minutes) }}

@@ -10,13 +10,15 @@
     --brand-bg: #0f1829;
     --brand-bg-rgb: 15, 24, 41;
 
-    /* Project Types (Raw RGB for rgba usage) — unified cyan */
-    --project-tech-rgb: 56, 189, 248;     /* Cyan — brand primary */
-    --project-art-rgb: 56, 189, 248;      /* Cyan — brand primary */
-    --project-writing-rgb: 56, 189, 248;  /* Cyan — brand primary */
-    --project-music-rgb: 56, 189, 248;    /* Cyan — brand primary */
-    --project-business-rgb: 56, 189, 248; /* Cyan — brand primary */
-    --project-life-rgb: 56, 189, 248;     /* Cyan — brand primary */
+    /* Project Types (Raw RGB for rgba usage) — distinct per category */
+    --project-tech-rgb: 59, 130, 246;     /* Blue-500 */
+    --project-art-rgb: 236, 72, 153;      /* Pink-500 */
+    --project-writing-rgb: 6, 182, 212;   /* Cyan-500 */
+    --project-music-rgb: 239, 68, 68;     /* Red-500 */
+    --project-business-rgb: 245, 158, 11; /* Amber-500 */
+    --project-life-rgb: 16, 185, 129;     /* Emerald-500 */
+    --project-creative-rgb: 167, 139, 250; /* Violet-400 */
+    --project-learning-rgb: 251, 191, 36;  /* Amber-400 */
     --project-default-rgb: 156, 163, 175;  /* Gray-400 */
 
     /* Project Types (Direct Colors) */
@@ -26,6 +28,8 @@
     --project-music: rgb(var(--project-music-rgb));
     --project-business: rgb(var(--project-business-rgb));
     --project-life: rgb(var(--project-life-rgb));
+    --project-creative: rgb(var(--project-creative-rgb));
+    --project-learning: rgb(var(--project-learning-rgb));
     --project-default: rgb(var(--project-default-rgb));
 
     /* Text Standards */
@@ -106,11 +110,13 @@
     letter-spacing: -0.04em;
     font-family: var(--brand-font-header);
     margin-bottom: 2rem;
+    text-shadow: 0 0 40px rgba(255,255,255,0.06);
 }
 
 .section-header span {
     color: var(--brand-primary);
     opacity: 0.8;
+    text-shadow: 0 0 20px rgba(var(--brand-primary-rgb), 0.4);
 }
 
 /* The "Shelf" Separator */

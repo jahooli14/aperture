@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Layers, Settings2 } from 'lucide-react'
+import { Layers } from 'lucide-react'
 import { Button } from '../ui/button'
 import { handleInputFocus } from '../../utils/keyboard'
 import {
@@ -88,45 +88,42 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
         <BottomSheet open={isOpen} onOpenChange={onOpenChange}>
             <BottomSheetContent>
                 <BottomSheetHeader>
-                    <div className="flex items-center gap-3 mb-2">
-                        <Settings2 className="h-6 w-6 text-brand-primary" />
-                        <BottomSheetTitle>Edit Project</BottomSheetTitle>
-                    </div>
+                    <BottomSheetTitle>Edit Project</BottomSheetTitle>
                     <BottomSheetDescription>
-                        Update your project details for better AI analysis.
+                        Update your project details.
                     </BottomSheetDescription>
                 </BottomSheetHeader>
 
                 <div className="mt-6 space-y-5">
                     {/* Title */}
                     <div className="space-y-2">
-                        <Label htmlFor="title" className="font-bold text-xs uppercase tracking-widest text-brand-primary">Project Name</Label>
+                        <Label htmlFor="title" className="text-xs font-medium tracking-wide text-[var(--brand-text-secondary)]">project name</Label>
                         <Input
                             id="title"
                             value={formData.title}
                             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                             onFocus={handleInputFocus}
-                            className="text-2xl h-16 font-bold bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary focus:ring-0 transition-all"
+                            className="text-lg h-12 font-semibold bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary focus:ring-0 transition-all"
                             autoComplete="off"
                         />
                     </div>
 
                     {/* Classification */}
                     <div className="space-y-2">
-                        <Label className="font-bold text-xs uppercase tracking-widest text-[var(--brand-text-muted)]">Classification</Label>
+                        <Label className="text-xs font-medium tracking-wide text-[var(--brand-text-secondary)]">classification</Label>
                         <div className="flex flex-wrap gap-2">
                             {PROJECT_TYPES.map((cat) => (
                                 <button
                                     key={cat}
                                     type="button"
                                     onClick={() => setFormData({ ...formData, type: cat })}
-                                    className={`px-4 py-2.5 rounded-xl text-sm font-bold border transition-all flex items-center gap-2 ${formData.type === cat
-                                        ? 'bg-white text-black border-white'
-                                        : 'bg-black border-[var(--glass-surface-hover)] text-[var(--brand-text-secondary)] hover:border-white/30'
+                                    className={`px-3.5 py-2 rounded-xl text-sm font-medium border transition-all ${formData.type === cat
+                                        ? 'border-[rgba(var(--brand-primary-rgb),0.4)] text-[var(--brand-primary)]'
+                                        : 'border-[var(--glass-surface-hover)] text-[var(--brand-text-secondary)] hover:border-white/20'
                                         }`}
+                                    style={formData.type === cat ? { background: 'rgba(var(--brand-primary-rgb),0.12)' } : { background: 'var(--glass-surface)' }}
                                 >
-                                    <span>{cat}</span>
-                                    {formData.type === cat && <Layers className="h-3.5 w-3.5" />}
+                                    {cat}
                                 </button>
                             ))}
                         </div>
@@ -134,24 +131,23 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
 
                     {/* Description */}
                     <div className="space-y-2">
-                        <Label htmlFor="description" className="font-bold text-xs uppercase tracking-widest text-brand-primary">
-                            Description <span className="text-brand-text-secondary">*</span>
+                        <Label htmlFor="description" className="text-xs font-medium tracking-wide text-[var(--brand-text-secondary)]">
+                            description
                         </Label>
                         <Input
                             id="description"
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                             onFocus={handleInputFocus}
-                            className="h-14 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary"
+                            className="h-12 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary"
                             autoComplete="off"
                         />
-                        <p className="text-[10px] text-[var(--brand-text-muted)] text-right">{formData.description.length}/10 chars min</p>
                     </div>
 
                     {/* Definition of Done */}
                     <div className="space-y-2 pb-4">
-                        <Label htmlFor="end_goal" className="font-bold text-xs uppercase tracking-widest text-[var(--brand-text-muted)]">
-                            Definition of Done (Optional)
+                        <Label htmlFor="end_goal" className="text-xs font-medium tracking-wide text-[var(--brand-text-secondary)]">
+                            definition of done
                         </Label>
                         <Input
                             id="end_goal"
@@ -159,10 +155,9 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
                             value={formData.end_goal}
                             onChange={(e) => setFormData({ ...formData, end_goal: e.target.value })}
                             onFocus={handleInputFocus}
-                            className="h-14 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary placeholder:text-[var(--brand-text-primary)]/20"
+                            className="h-12 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary placeholder:text-[var(--brand-text-primary)]/20"
                             autoComplete="off"
                         />
-                        <p className="text-[10px] text-[var(--brand-text-muted)]">Helps AI suggest tasks that drive toward completion</p>
                     </div>
 
                     <BottomSheetFooter>
@@ -170,12 +165,12 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
                             type="button"
                             onClick={handleSubmit}
                             disabled={loading || !isFormValid}
-                            className="w-full h-14 font-black uppercase tracking-widest touch-manipulation"
+                            className="w-full h-12 font-semibold tracking-wide touch-manipulation"
                             style={{
                               background: 'rgba(var(--brand-primary-rgb),0.15)',
-                              border: '1px solid rgba(var(--brand-primary-rgb),0.5)',
-                              borderRadius: '4px',
-                              boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+                              border: '1px solid rgba(var(--brand-primary-rgb),0.4)',
+                              borderRadius: 'var(--brand-radius)',
+                              boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
                               color: 'var(--brand-primary)',
                             }}
                         >
