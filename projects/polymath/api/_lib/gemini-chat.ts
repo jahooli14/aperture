@@ -77,6 +77,7 @@ export async function generateText(
     maxTokens?: number
     temperature?: number
     responseFormat?: 'text' | 'json'
+    model?: string
   } = {}
 ): Promise<string> {
   if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'dummy-key-for-initialization') {
@@ -85,7 +86,7 @@ export async function generateText(
 
   try {
     const model = genAI.getGenerativeModel({
-      model: MODELS.DEFAULT_CHAT,
+      model: options.model || MODELS.DEFAULT_CHAT,
       safetySettings: [
         { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
         { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },

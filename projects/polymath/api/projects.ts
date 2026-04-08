@@ -9,6 +9,7 @@ import { getUserId } from './_lib/auth.js'
 import { z } from 'zod'
 import { generateEmbedding, cosineSimilarity } from './_lib/gemini-embeddings.js'
 import { generateText } from './_lib/gemini-chat.js'
+import { MODELS } from './_lib/models.js'
 import { generateBedtimePrompts, generateCatalystPrompts, generateBreakPrompts } from './_lib/bedtime-ideas.js'
 import { extractCapabilities } from './_lib/capabilities-extraction.js'
 import { analyzeTaskEnergy } from './_lib/task-energy-analyzer.js'
@@ -1272,28 +1273,27 @@ Return JSON only:
           const fuelContext = intersection.sharedFuel.map(f => `${f.type}: "${f.title}"`).join(', ')
 
           try {
-            // Generate reasoning
+            // Generate reasoning — full Flash for quality creative synthesis
             const reasoning = await generateText(
               `You are identifying Medici Effect intersections — the most valuable ideas emerge where unrelated domains collide (Packy McCormick, Frans Johansson). These projects live in one person's mind: ${projectNames}.${fuelContext ? ` Shared fuel bridging them: ${fuelContext}.` : ''}
 
-In 2-3 punchy sentences: What is the NON-OBVIOUS collision here? Don't just say they overlap — name what becomes possible ONLY when these specific domains cross-pollinate. What would someone working in just one of these fields never see? Be concrete about what could emerge at this intersection.`
+In 2-3 punchy sentences: What is the NON-OBVIOUS collision here? Don't just say they overlap — name what becomes possible ONLY when these specific domains cross-pollinate. What would someone working in just one of these fields never see? Be concrete about what could emerge at this intersection.`,
+              { model: MODELS.FLASH_CHAT, temperature: 0.8 }
             )
             intersection.reason = reasoning
 
-            // Generate crossover idea
+            // Generate crossover idea — native JSON mode for reliable parsing
             const crossoverRaw = await generateText(
               `You are the APERTURE VENN ENGINE. Find the non-obvious concept at the intersection of: ${projectNames}.
 ${fuelContext ? `Shared fuel bridging them: ${fuelContext}.` : 'These domains have thematic proximity.'}
 
 Generate a CONCRETE crossover project idea — something that could only exist at THIS intersection. Be specific and actionable.
 
-Output ONLY valid JSON, no markdown:
-{"crossover_title":"punchy 3-6 word title","why_it_works":"2-3 sentences — what becomes possible only at this intersection","concept":"concrete MVP description, 2-3 sentences","first_steps":["step 1","step 2","step 3"]}`
+Return JSON with exactly these fields:
+{"crossover_title":"punchy 3-6 word title","why_it_works":"2-3 sentences — what becomes possible only at this intersection","concept":"concrete MVP description, 2-3 sentences","first_steps":["step 1","step 2","step 3"]}`,
+              { model: MODELS.FLASH_CHAT, responseFormat: 'json', temperature: 0.8 }
             )
-            const match = crossoverRaw.match(/\{[\s\S]*\}/)
-            if (match) {
-              intersection.crossover = JSON.parse(match[0])
-            }
+            intersection.crossover = JSON.parse(crossoverRaw)
           } catch {
             // Non-critical — reasoning/crossover generation can fail gracefully
           }
