@@ -27,12 +27,12 @@ export function ThoughtOfTheDay() {
       transition={{ duration: 0.5, ease: 'easeOut' }}
       className="p-6 relative overflow-hidden rounded-2xl"
       style={{
-        background: 'linear-gradient(145deg, rgba(6,182,212,0.08) 0%, rgba(15,24,41,0.6) 50%, rgba(168,85,247,0.05) 100%)',
+        background: 'linear-gradient(145deg, rgba(var(--brand-primary-rgb),0.08) 0%, rgba(15,24,41,0.6) 50%, rgba(var(--brand-primary-rgb),0.04) 100%)',
         border: '1px solid rgba(6,182,212,0.12)',
         boxShadow: '0 0 40px rgba(6,182,212,0.04), 0 4px 16px rgba(0,0,0,0.5)',
       }}
     >
-      <div className="absolute top-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(6,182,212,0.3), rgba(168,85,247,0.2), transparent)' }} />
+      <div className="absolute top-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(var(--brand-primary-rgb),0.3), transparent)' }} />
       <div className="relative z-10">
         <h3 className="font-bold text-xs aperture-header mb-3 uppercase tracking-[0.2em]" style={{ color: 'rgba(6,182,212,0.6)' }}>
           Thought of the day

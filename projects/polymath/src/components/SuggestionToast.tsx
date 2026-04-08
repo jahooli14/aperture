@@ -167,7 +167,7 @@ export function SuggestionToast({ itemId, itemType, itemTitle }: SuggestionToast
                     transition={{ duration: 0.5, ease: 'easeOut' }}
                     className="h-full rounded-full"
                     style={{
-                      background: 'linear-gradient(90deg, var(--brand-primary), var(--premium-purple))'
+                      background: 'var(--brand-primary)'
                     }}
                   />
                 </div>

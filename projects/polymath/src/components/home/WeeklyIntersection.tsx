@@ -11,8 +11,8 @@
  */
 
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { Sparkles, ArrowRight, RefreshCw, FileText, MessageCircle } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { ArrowRight, RefreshCw, FileText, MessageCircle, ChevronDown, ChevronUp } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 interface IntersectionProject {
@@ -56,6 +56,7 @@ export function WeeklyIntersection() {
   const [intersection, setIntersection] = useState<Intersection | null>(null)
   const [loading, setLoading] = useState(false)
   const [dismissed, setDismissed] = useState(false)
+  const [expanded, setExpanded] = useState(false)
 
   useEffect(() => {
     const stored = getStoredIntersection()
@@ -104,10 +105,9 @@ export function WeeklyIntersection() {
         >
           {/* Project names as intersection */}
           <div className="flex items-center gap-2 mb-3 flex-wrap">
-            <Sparkles className="h-4 w-4 text-brand-primary flex-shrink-0" />
             {intersection.projects.map((p, i) => (
               <span key={p.id} className="flex items-center gap-2">
-                {i > 0 && <span className="text-brand-primary font-bold">×</span>}
+                {i > 0 && <span className="text-brand-primary font-bold">&times;</span>}
                 <Link
                   to={`/projects/${p.id}`}
                   className="text-sm font-semibold text-[var(--brand-text-primary)] hover:text-brand-primary transition-colors"
@@ -142,14 +142,60 @@ export function WeeklyIntersection() {
             </div>
           )}
 
+          {/* Expanded detail — shows all projects with links */}
+          <AnimatePresence>
+            {expanded && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden mb-3"
+              >
+                <div className="pt-3 border-t border-[var(--glass-border)] space-y-2">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--brand-text-muted)] mb-2">
+                    Explore each domain
+                  </p>
+                  {intersection.projects.map((p) => (
+                    <Link
+                      key={p.id}
+                      to={`/projects/${p.id}`}
+                      className="flex items-center justify-between p-2 rounded-lg hover:bg-[var(--glass-surface)] transition-colors group"
+                    >
+                      <span className="text-sm text-[var(--brand-text-secondary)] group-hover:text-[var(--brand-text-primary)] transition-colors">
+                        {p.title}
+                      </span>
+                      <ArrowRight className="h-3 w-3 text-[var(--brand-text-muted)] group-hover:text-brand-primary transition-colors" />
+                    </Link>
+                  ))}
+                  {intersection.sharedFuel.length > 4 && (
+                    <div className="pt-2">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--brand-text-muted)] mb-2">
+                        All bridging ideas ({intersection.sharedFuel.length})
+                      </p>
+                      {intersection.sharedFuel.slice(4).map((fuel) => (
+                        <span
+                          key={fuel.id}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] text-[var(--brand-text-secondary)] mr-1.5 mb-1.5"
+                        >
+                          {fuel.type === 'article' ? <FileText className="h-3 w-3 flex-shrink-0" /> : <MessageCircle className="h-3 w-3 flex-shrink-0" />} {fuel.title.length > 40 ? fuel.title.substring(0, 40) + '...' : fuel.title}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Actions */}
           <div className="flex items-center gap-3 mt-1">
-            <Link
-              to={`/projects/${intersection.projects[0]?.id}`}
+            <button
+              onClick={() => setExpanded(!expanded)}
               className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-primary hover:text-brand-primary transition-colors"
             >
-              Explore <ArrowRight className="h-3 w-3" />
-            </Link>
+              {expanded ? 'Less' : 'Explore'}
+              {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            </button>
             <button
               onClick={() => setDismissed(true)}
               className="text-xs text-[var(--brand-text-secondary)] opacity-50 hover:opacity-100 transition-opacity"

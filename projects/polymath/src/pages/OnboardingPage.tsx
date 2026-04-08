@@ -373,7 +373,7 @@ export function OnboardingPage() {
                 const colors = [
                   'var(--brand-primary)',
                   'rgba(245,158,11,0.8)',
-                  'rgba(168,85,247,0.7)',
+                  'rgba(var(--brand-primary-rgb),0.7)',
                 ]
                 return (
                   <motion.span

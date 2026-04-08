@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Check, X, ChevronRight, Zap, Loader2, PenTool } from 'lucide-react'
+import { Check, X, ChevronRight, Loader2, PenTool, ArrowRight } from 'lucide-react'
 import { useFocusStore } from '../../stores/useFocusStore'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useMemoryStore } from '../../stores/useMemoryStore'
@@ -11,18 +11,33 @@ import { FocusSummary } from './FocusSummary'
 // Helper for formatting time
 const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60)
-    // const s = seconds % 60
-    // Keep it minimal - just minutes is often enough for "Zen" feel, 
-    // but users might want to know if it's 5m or 50m.
     return `${m}m`
+}
+
+// Group tasks by their ID prefix for the overview
+function groupTasks(tasks: { id: string; text: string }[]) {
+    const ignition = tasks.filter(t => t.id.startsWith('ign-'))
+    const core = tasks.filter(t => t.id.startsWith('core-'))
+    const shutdown = tasks.filter(t => t.id.startsWith('shut-'))
+    // If no prefix-based grouping works, treat all as core
+    if (ignition.length === 0 && core.length === 0 && shutdown.length === 0) {
+        return [{ label: 'Tasks', tasks }]
+    }
+    const groups = []
+    if (ignition.length > 0) groups.push({ label: 'Warm up', tasks: ignition })
+    if (core.length > 0) groups.push({ label: 'Core work', tasks: core })
+    if (shutdown.length > 0) groups.push({ label: 'Wind down', tasks: shutdown })
+    return groups
 }
 
 export function FocusSession() {
     const {
         status,
+        phase,
         tasks,
         currentTaskIndex,
         elapsedSeconds,
+        beginTasks,
         completeTask,
         skipTask,
         endSession,
@@ -30,22 +45,22 @@ export function FocusSession() {
         projectId
     } = useFocusStore()
 
-    const { updateProject, allProjects } = useProjectStore() // To actually mark tasks done in DB
-    const { createMemory } = useMemoryStore() // For Park Thought
+    const { updateProject, allProjects } = useProjectStore()
+    const { createMemory } = useMemoryStore()
     const { addToast } = useToast()
 
     const [parkInput, setParkInput] = useState('')
     const [isParking, setIsParking] = useState(false)
     const parkInputRef = useRef<HTMLInputElement>(null)
 
-    // Timer effect
+    // Timer effect — only runs during task phase
     useEffect(() => {
         let interval: NodeJS.Timeout
-        if (status === 'focusing') {
+        if (status === 'focusing' && phase === 'tasks') {
             interval = setInterval(tick, 1000)
         }
         return () => clearInterval(interval)
-    }, [status, tick])
+    }, [status, phase, tick])
 
     // Focus input when parking starts
     useEffect(() => {
@@ -55,10 +70,9 @@ export function FocusSession() {
     }, [isParking])
 
     const currentTask = tasks[currentTaskIndex]
-    // If we've gone past the last task
     const isAllDone = currentTaskIndex >= tasks.length
 
-    // Get project context for colors/theme
+    // Get project context
     const project = allProjects.find(p => p.id === projectId)
 
     // Handlers
@@ -95,22 +109,114 @@ export function FocusSession() {
         setParkInput('')
         setIsParking(false)
 
-        // Optimistic UI interaction first
         haptic.light()
         addToast({ title: "Thought parked", variant: "default" })
 
-        // Save in background
         createMemory({
             body: text,
             title: "Parked Thought (Focus Session)",
-            // source: "focus_session", // Removed as it caused type error
-            memory_type: "quick-note" // Corrected type
+            memory_type: "quick-note"
         })
     }
 
     if (status === 'idle') return null
     if (status === 'summary') return <FocusSummary />
 
+    // ── Overview Phase ──────────────────────────────────────────
+    if (phase === 'overview') {
+        const taskGroups = groupTasks(tasks)
+
+        return (
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[100] bg-[var(--brand-bg)] text-[var(--brand-text-secondary)] flex flex-col overflow-hidden"
+            >
+                {/* Header */}
+                <div className="flex items-center justify-between p-6">
+                    <div className="flex items-center gap-2 opacity-50">
+                        <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                        <span className="text-xs font-bold uppercase tracking-widest">Session Plan</span>
+                    </div>
+                    <button
+                        onClick={() => { endSession(); useFocusStore.getState().reset() }}
+                        className="p-2 hover:bg-[rgba(255,255,255,0.1)] rounded-full transition-colors opacity-50 hover:opacity-100"
+                    >
+                        <X className="h-5 w-5" />
+                    </button>
+                </div>
+
+                {/* Task Overview */}
+                <div className="flex-1 flex flex-col items-center justify-center p-8 max-w-lg mx-auto w-full overflow-y-auto">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                        className="w-full"
+                    >
+                        {project && (
+                            <h2 className="text-2xl font-serif text-[var(--brand-text-primary)] mb-1 text-center">
+                                {project.title}
+                            </h2>
+                        )}
+                        <p className="text-xs text-[var(--brand-text-muted)] text-center mb-8">
+                            {tasks.length} task{tasks.length !== 1 ? 's' : ''} planned
+                        </p>
+
+                        <div className="space-y-6 mb-10">
+                            {taskGroups.map((group, gi) => (
+                                <motion.div
+                                    key={group.label}
+                                    initial={{ opacity: 0, y: 12 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.15 + gi * 0.08 }}
+                                >
+                                    <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--brand-text-muted)] mb-3">
+                                        {group.label}
+                                    </h3>
+                                    <ul className="space-y-2">
+                                        {group.tasks.map((task, ti) => (
+                                            <motion.li
+                                                key={task.id}
+                                                initial={{ opacity: 0, x: -8 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                transition={{ delay: 0.2 + gi * 0.08 + ti * 0.04 }}
+                                                className="text-sm text-[var(--brand-text-secondary)] leading-relaxed flex items-start gap-3"
+                                            >
+                                                <span className="w-1 h-1 rounded-full bg-[var(--brand-text-muted)] mt-2 flex-shrink-0" />
+                                                {task.text}
+                                            </motion.li>
+                                        ))}
+                                    </ul>
+                                </motion.div>
+                            ))}
+                        </div>
+
+                        <motion.button
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.4 }}
+                            onClick={() => { haptic.medium(); beginTasks() }}
+                            className="w-full py-3 font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all hover:brightness-110"
+                            style={{
+                                background: 'rgba(255,255,255,0.1)',
+                                border: '1px solid rgba(255,255,255,0.25)',
+                                borderRadius: '4px',
+                                boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+                                color: 'white',
+                            }}
+                        >
+                            Begin
+                            <ArrowRight className="h-3.5 w-3.5" />
+                        </motion.button>
+                    </motion.div>
+                </div>
+            </motion.div>
+        )
+    }
+
+    // ── Task-by-Task Phase ──────────────────────────────────────
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -156,10 +262,7 @@ export function FocusSession() {
                                     onChange={e => setParkInput(e.target.value)}
                                     placeholder="Get it out of your head..."
                                     className="w-full bg-transparent border-b-2 border-white/20 text-xl py-2 outline-none focus:border-brand-border0 transition-colors placeholder:text-[var(--brand-text-primary)]/20"
-                                    onBlur={() => {
-                                        // Optional: close on blur if empty? 
-                                        // kept manual close for now to avoid losing thought accidentally
-                                    }}
+                                    onBlur={() => {}}
                                 />
                                 <div className="flex justify-end gap-4 mt-4">
                                     <button
@@ -215,7 +318,7 @@ export function FocusSession() {
                             className="text-center w-full"
                         >
                             <div className="mb-8 text-xs font-bold uppercase tracking-[0.2em] text-[var(--brand-text-muted)]">
-                                Current Task {currentTaskIndex + 1} of {tasks.length}
+                                Task {currentTaskIndex + 1} of {tasks.length}
                             </div>
 
                             <h1 className="text-3xl md:text-5xl font-medium font-serif leading-tight mb-12 text-[#f1f5f9]">
@@ -223,25 +326,28 @@ export function FocusSession() {
                             </h1>
 
                             <div className="flex items-center justify-center gap-6">
-                                {/* Complete Button (Big) */}
-                                <button
-                                    onClick={handleComplete}
-                                    className="group relative flex items-center justify-center w-24 h-24 rounded-full border border-[var(--glass-surface-hover)] hover:border-white/30 hover:bg-[var(--glass-surface)] transition-all"
-                                >
-                                    <div className="absolute inset-0 rounded-full border border-[var(--glass-surface)] scale-110 group-hover:scale-125 transition-transform duration-500 opacity-50" />
-                                    <Check className="h-8 w-8 text-[var(--brand-text-secondary)] group-hover:text-[var(--brand-text-primary)] transition-colors" />
-                                    <span className="sr-only">Complete Task</span>
-                                </button>
-
-                                {/* Skip Button (Small) */}
+                                {/* Skip / Next Button (prominent) */}
                                 <button
                                     onClick={skipTask}
-                                    className="absolute right-0 top-1/2 -translate-y-1/2 p-4 text-[#475569] hover:text-[#94a3b8] transition-colors"
+                                    className="px-6 py-3 text-sm font-medium text-[var(--brand-text-muted)] hover:text-[var(--brand-text-secondary)] border border-[var(--glass-surface-hover)] hover:border-white/20 rounded-lg transition-all"
                                     title="Skip for now"
                                 >
-                                    <ChevronRight className="h-6 w-6" />
+                                    Next
+                                </button>
+
+                                {/* Complete Button */}
+                                <button
+                                    onClick={handleComplete}
+                                    className="group relative flex items-center justify-center w-16 h-16 rounded-full border border-[var(--glass-surface-hover)] hover:border-white/30 hover:bg-[var(--glass-surface)] transition-all"
+                                >
+                                    <Check className="h-6 w-6 text-[var(--brand-text-secondary)] group-hover:text-[var(--brand-text-primary)] transition-colors" />
+                                    <span className="sr-only">Done</span>
                                 </button>
                             </div>
+
+                            <p className="mt-4 text-[10px] text-[var(--brand-text-muted)] opacity-50">
+                                Next = skip &middot; Tick = mark done
+                            </p>
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -256,7 +362,6 @@ export function FocusSession() {
                     <div className="text-4xl font-light tabular-nums text-[#475569] font-serif">
                         {formatTime(elapsedSeconds)}
                     </div>
-                    {/* Subtle progress bar could go here if we had a target duration */}
                 </div>
 
                 {/* Park Thought Trigger */}

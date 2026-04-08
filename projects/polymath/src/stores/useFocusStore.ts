@@ -10,6 +10,7 @@ interface FocusTask {
 
 interface FocusSessionState {
     status: 'idle' | 'focusing' | 'summary'
+    phase: 'overview' | 'tasks' // Overview shows all tasks before diving in
     tasks: FocusTask[]
     currentTaskIndex: number
     startTime: number | null
@@ -19,6 +20,7 @@ interface FocusSessionState {
 
     // Actions
     startSession: (projectId: string, tasks: { id: string, text: string }[]) => void
+    beginTasks: () => void // Transition from overview to task-by-task
     completeTask: (taskId: string) => void
     skipTask: () => void // Just moves to next without completing
     endSession: () => void
@@ -30,6 +32,7 @@ export const useFocusStore = create<FocusSessionState>()(
     persist(
         (set, get) => ({
             status: 'idle',
+            phase: 'overview',
             tasks: [],
             currentTaskIndex: 0,
             startTime: null,
@@ -40,6 +43,7 @@ export const useFocusStore = create<FocusSessionState>()(
             startSession: (projectId, initialTasks) => {
                 set({
                     status: 'focusing',
+                    phase: 'overview',
                     projectId,
                     tasks: initialTasks.map((t, i) => ({
                         id: t.id,
@@ -48,9 +52,16 @@ export const useFocusStore = create<FocusSessionState>()(
                         originalIndex: i
                     })),
                     currentTaskIndex: 0,
-                    startTime: Date.now(),
+                    startTime: null,
                     elapsedSeconds: 0,
                     endTime: null
+                })
+            },
+
+            beginTasks: () => {
+                set({
+                    phase: 'tasks',
+                    startTime: Date.now(),
                 })
             },
 
@@ -94,6 +105,7 @@ export const useFocusStore = create<FocusSessionState>()(
             reset: () => {
                 set({
                     status: 'idle',
+                    phase: 'overview',
                     tasks: [],
                     currentTaskIndex: 0,
                     startTime: null,

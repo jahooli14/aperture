@@ -50,7 +50,7 @@ export function PolymathProfileCard() {
         animate={{ opacity: 1, y: 0 }}
         className="rounded-2xl overflow-hidden relative"
         style={{
-          background: 'linear-gradient(135deg, rgba(99,179,237,0.05), rgba(168,85,247,0.04))',
+          background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.05), rgba(var(--brand-primary-rgb),0.04))',
           border: '1px solid rgba(99,179,237,0.1)',
         }}
       >

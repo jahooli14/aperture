@@ -5,7 +5,7 @@
 
 import React, { useState, useCallback } from 'react'
 import { motion, AnimatePresence, type PanInfo } from 'framer-motion'
-import { ChevronLeft, ChevronRight, Wand2, Sparkles, ArrowRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useSuggestionStore } from '../../stores/useSuggestionStore'
@@ -102,13 +102,12 @@ export function TrySomethingNewCarousel({ onShapeIdea }: TrySomethingNewCarousel
         <div
           className="rounded-2xl p-6 flex flex-col items-center justify-center text-center"
           style={{
-            background: 'linear-gradient(135deg, rgba(168,85,247,0.05) 0%, rgba(15,24,41,0.5) 60%)',
-            border: '1px solid rgba(168,85,247,0.12)',
-            boxShadow: '0 0 30px rgba(168,85,247,0.04), 0 4px 16px rgba(0,0,0,0.4)',
+            background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.06) 0%, rgba(15,24,41,0.5) 60%)',
+            border: '1px solid rgba(var(--brand-primary-rgb),0.15)',
+            boxShadow: '0 0 30px rgba(var(--brand-primary-rgb),0.05), 0 4px 16px rgba(0,0,0,0.4)',
             minHeight: '220px',
           }}
         >
-          <Sparkles className="h-8 w-8 opacity-30 mb-3" style={{ color: 'rgba(168,85,247,0.6)' }} />
           <p className="text-sm font-medium text-[var(--brand-text-secondary)] opacity-60">No ideas yet</p>
           <p className="text-xs text-[var(--brand-text-secondary)] opacity-40 mt-1">Add voice notes to get ideas shaped for you</p>
         </div>
@@ -122,14 +121,14 @@ export function TrySomethingNewCarousel({ onShapeIdea }: TrySomethingNewCarousel
       <div
         className="rounded-2xl p-5 flex flex-col overflow-hidden relative"
         style={{
-          background: 'linear-gradient(135deg, rgba(168,85,247,0.05) 0%, rgba(15,24,41,0.5) 60%)',
+          background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.06) 0%, rgba(15,24,41,0.5) 60%)',
           backdropFilter: 'blur(16px)',
-          border: '1px solid rgba(168,85,247,0.12)',
-          boxShadow: '0 0 30px rgba(168,85,247,0.04), 0 4px 16px rgba(0,0,0,0.4)',
+          border: '1px solid rgba(var(--brand-primary-rgb),0.15)',
+          boxShadow: '0 0 30px rgba(var(--brand-primary-rgb),0.05), 0 4px 16px rgba(0,0,0,0.4)',
           minHeight: '280px',
         }}
       >
-        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(168,85,247,0.4), transparent)' }} />
+        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(var(--brand-primary-rgb),0.4), transparent)' }} />
 
         {total > 1 && (
           <div className="flex items-center justify-end gap-1 mb-3">
@@ -164,12 +163,11 @@ export function TrySomethingNewCarousel({ onShapeIdea }: TrySomethingNewCarousel
               className="flex flex-col flex-1 touch-pan-y"
               style={{ cursor: total > 1 ? 'grab' : undefined }}
             >
-              <div className="h-1 rounded-full mb-4 opacity-60" style={{ background: 'linear-gradient(90deg, var(--brand-primary), rgba(168,85,247,0.8))' }} />
+              <div className="h-1 rounded-full mb-4 opacity-60" style={{ background: 'var(--brand-primary)' }} />
 
               {current.source === 'suggestion' && (
                 <div className="flex items-center gap-1.5 mb-2">
-                  <Wand2 className="h-3 w-3" style={{ color: 'var(--brand-primary)', opacity: 0.6 }} />
-                  <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: 'var(--brand-primary)', opacity: 0.6 }}>
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--brand-primary)] opacity-60">
                     AI intersection
                   </span>
                 </div>
@@ -197,9 +195,8 @@ export function TrySomethingNewCarousel({ onShapeIdea }: TrySomethingNewCarousel
                   onShapeIdea(current)
                 }}
                 className="w-full py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all hover:bg-[var(--glass-surface)]"
-                style={{ border: '1px solid rgba(168,85,247,0.25)', color: 'rgba(168,85,247,0.8)' }}
+                style={{ border: '1px solid rgba(var(--brand-primary-rgb),0.25)', color: 'var(--brand-primary)' }}
               >
-                <Sparkles className="h-3.5 w-3.5" />
                 Shape this idea
               </button>
 

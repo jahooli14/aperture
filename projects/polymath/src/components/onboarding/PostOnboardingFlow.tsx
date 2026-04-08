@@ -14,7 +14,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowRight, MessageCircle, Wand2 } from 'lucide-react'
+import { ArrowRight, MessageCircle, Zap } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { CreateProjectDialog } from '../projects/CreateProjectDialog'
 import { useJourneyStore } from '../../stores/useJourneyStore'
@@ -199,11 +199,11 @@ export function PostOnboardingFlow({ analysis, sparkedSuggestion, transcripts = 
               transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
               className="w-16 h-16 rounded-2xl flex items-center justify-center mb-8"
               style={{
-                background: 'linear-gradient(135deg, rgba(99,179,237,0.15), rgba(168,85,247,0.15))',
+                background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.15), rgba(var(--brand-primary-rgb),0.1))',
                 border: '1px solid rgba(99,179,237,0.2)',
               }}
             >
-              <Wand2 className="h-8 w-8" style={{ color: 'var(--brand-primary)' }} />
+              <Zap className="h-8 w-8" style={{ color: 'var(--brand-primary)' }} />
             </motion.div>
 
             <motion.h1
@@ -425,7 +425,7 @@ export function PostOnboardingFlow({ analysis, sparkedSuggestion, transcripts = 
                   animate={revealBeat >= 2 ? { rotate: [0, 360] } : {}}
                   transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
                 >
-                  <Wand2
+                  <Zap
                     className="h-9 w-9"
                     style={{ color: `rgb(${projectColor})` }}
                   />

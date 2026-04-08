@@ -230,7 +230,7 @@ export function RevealSequence({ analysis, books, transcripts = [] }: RevealSequ
                   transition={{ delay: 0.5 }}
                   className="p-6 rounded-xl"
                   style={{
-                    background: 'linear-gradient(135deg, rgba(99,179,237,0.08), rgba(168,85,247,0.08))',
+                    background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.08), rgba(var(--brand-primary-rgb),0.06))',
                     backdropFilter: 'blur(12px)',
                     border: '1px solid rgba(99,179,237,0.15)',
                   }}
