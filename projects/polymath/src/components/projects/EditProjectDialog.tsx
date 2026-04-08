@@ -4,7 +4,6 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Layers } from 'lucide-react'
 import { Button } from '../ui/button'
 import { handleInputFocus } from '../../utils/keyboard'
 import {

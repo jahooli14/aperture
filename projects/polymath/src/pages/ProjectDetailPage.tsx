@@ -6,7 +6,6 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { Loader2, MoreVertical, Plus, Check, X, GripVertical, ChevronDown, Zap, Target, Star, Sprout, Pin, PinOff } from 'lucide-react'
-import { MarkdownRenderer } from '../components/ui/MarkdownRenderer'
 import { useProjectStore } from '../stores/useProjectStore'
 import { AddNoteDialog } from '../components/projects/AddNoteDialog'
 import { ProjectPath } from '../components/projects/ProjectPath'
@@ -22,7 +21,6 @@ import { EditProjectDialog } from '../components/projects/EditProjectDialog'
 import { ProjectCompletionModal } from '../components/projects/ProjectCompletionModal'
 import { CompletionRitual } from '../components/projects/CompletionRitual'
 import { LineageBreadcrumb } from '../components/projects/LineageBreadcrumb'
-import { ProjectLineage } from '../components/projects/ProjectLineage'
 import type { Project, Memory } from '../types'
 import { supabase } from '../lib/supabase'
 import { useMemoryStore } from '../stores/useMemoryStore'
@@ -98,16 +96,13 @@ export function ProjectDetailPage() {
     return () => window.removeEventListener('projectEnriched', handleEnriched as EventListener)
   }, [id])
   const [editingTitle, setEditingTitle] = useState(false)
-  const [editingDescription, setEditingDescription] = useState(false)
   const [editingGoal, setEditingGoal] = useState(false)
   const [tempTitle, setTempTitle] = useState('')
-  const [tempDescription, setTempDescription] = useState('')
   const [tempGoal, setTempGoal] = useState('')
   const [draggedPinnedTaskId, setDraggedPinnedTaskId] = useState<string | null>(null)
   const [showStatusMenu, setShowStatusMenu] = useState(false)
   const [showCategoryMenu, setShowCategoryMenu] = useState(false)
   const titleInputRef = useRef<HTMLInputElement>(null)
-  const descriptionInputRef = useRef<HTMLTextAreaElement>(null)
   const goalInputRef = useRef<HTMLTextAreaElement>(null)
   const endGoalInputRef = useRef<HTMLTextAreaElement>(null)
   const { addToast } = useToast()
@@ -239,12 +234,6 @@ export function ProjectDetailPage() {
     setTimeout(() => titleInputRef.current?.select(), 0)
   }
 
-  const startEditDescription = () => {
-    setTempDescription(project?.description || '')
-    setEditingDescription(true)
-    setTimeout(() => descriptionInputRef.current?.select(), 0)
-  }
-
   const saveTitle = async () => {
     if (!project || !tempTitle.trim()) {
       setEditingTitle(false)
@@ -268,30 +257,6 @@ export function ProjectDetailPage() {
       })
     }
   }
-
-  const saveDescription = async () => {
-    if (!project) {
-      setEditingDescription(false)
-      return
-    }
-
-    setEditingDescription(false)
-
-    try {
-      await updateProject(project.id, { description: tempDescription.trim() })
-      addToast({
-        title: 'Description updated',
-        variant: 'success',
-      })
-    } catch (error) {
-      addToast({
-        title: 'Failed to update description',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        variant: 'destructive',
-      })
-    }
-  }
-
 
   const saveGoal = async () => {
     if (!project) {
@@ -323,7 +288,6 @@ export function ProjectDetailPage() {
 
   const cancelEdit = () => {
     setEditingTitle(false)
-    setEditingDescription(false)
     setEditingGoal(false)
   }
 
