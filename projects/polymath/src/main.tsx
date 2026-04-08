@@ -26,7 +26,16 @@ import './styles/ripple.css'
 
 // Register service worker for PWA support
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  window.addEventListener('load', () => {
+  window.addEventListener('load', async () => {
+    // Clean up any stale service workers (e.g. old /service-worker.js that used cache-first)
+    const registrations = await navigator.serviceWorker.getRegistrations()
+    for (const reg of registrations) {
+      if (reg.active?.scriptURL && !reg.active.scriptURL.endsWith('/sw.js')) {
+        console.warn('[Main] Unregistering stale service worker:', reg.active.scriptURL)
+        await reg.unregister()
+      }
+    }
+
     navigator.serviceWorker.register('/sw.js')
       .then((registration) => {
         console.log('[Main] Service Worker registered:', registration.scope)
@@ -39,6 +48,12 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
       .catch((error) => {
         console.error('[Main] Service Worker registration failed:', error)
       })
+  })
+
+  // Reload page when a new service worker takes control (after deployment)
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    console.log('[Main] New service worker activated — reloading for fresh content')
+    window.location.reload()
   })
 
   // Listen for messages from service worker (share-target handling)
