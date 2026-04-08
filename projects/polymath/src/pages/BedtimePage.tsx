@@ -19,6 +19,7 @@ interface BedtimePrompt {
   type: 'connection' | 'divergent' | 'revisit' | 'transform'
   format?: 'question' | 'statement' | 'visualization' | 'scenario' | 'incubation'
   metaphor?: string
+  context?: string
   viewed: boolean
   rating?: number
   resulted_in_breakthrough?: boolean
