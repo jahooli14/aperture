@@ -27,6 +27,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const currentUserId = useRef<string | null>(null)
 
   useEffect(() => {
+    // Timeout: if auth doesn't resolve within 10s, stop loading and show the app
+    const timeoutId = setTimeout(() => {
+      setState(prev => {
+        if (prev.loading) {
+          console.warn('[Auth] Timed out waiting for session — continuing without auth')
+          return { user: null, session: null, loading: false }
+        }
+        return prev
+      })
+    }, 10_000)
+
     // Use getSession to restore from local storage, then immediately validate
     // with getUser to ensure the token is still valid (refreshes if needed)
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -48,6 +59,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         currentUserId.current = null
         setState({ user: null, session: null, loading: false })
       }
+    }).catch(error => {
+      console.error('[Auth] Failed to get session:', error)
+      currentUserId.current = null
+      setState({ user: null, session: null, loading: false })
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -62,7 +77,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setState({ user: session?.user ?? null, session, loading: false })
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      clearTimeout(timeoutId)
+      subscription.unsubscribe()
+    }
   }, [])
 
   // Block rendering until auth state is resolved — prevents API calls with stale/missing tokens
