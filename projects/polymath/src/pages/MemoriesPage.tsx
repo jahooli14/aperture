@@ -583,7 +583,7 @@ export function MemoriesPage() {
           {/* Outer Card Structure */}
           <div className="p-4 sm:p-6 rounded-2xl mb-6 w-full max-w-full relative premium-glass shadow-2xl" style={{
             background: 'var(--brand-glass-bg)',
-            border: '2px solid var(--glass-surface-hover)',
+            border: '1px solid var(--glass-surface-hover)',
           }}>
             {/* Title Section */}
             <div className="mb-6 flex items-center justify-between">
@@ -610,11 +610,11 @@ export function MemoriesPage() {
                     placeholder="Search thoughts..."
                     className="w-full pl-9 pr-9 py-2.5 rounded-lg text-sm outline-none transition-all"
                     style={{
-                      background: '#111113',
-                      border: '2px solid rgba(255,255,255,0.1)',
+                      background: 'var(--brand-glass-bg)',
+                      border: '1px solid rgba(255,255,255,0.1)',
                       color: "var(--brand-text-secondary)",
                       caretColor: 'var(--brand-primary)',
-                      boxShadow: '2px 2px 0 rgba(0,0,0,0.6)',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.6)',
                     }}
                     onFocus={e => { e.currentTarget.style.borderColor = 'rgba(var(--brand-primary-rgb),0.5)' }}
                     onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
@@ -653,7 +653,7 @@ export function MemoriesPage() {
                             background: isActive ? 'rgba(var(--brand-primary-rgb),0.2)' : 'var(--glass-surface)',
                             border: isActive ? '1.5px solid rgba(var(--brand-primary-rgb),0.5)' : '1.5px solid rgba(255,255,255,0.1)',
                             color: isActive ? 'rgba(147,197,253,1)' : 'rgba(255,255,255,0.45)',
-                            boxShadow: isActive ? '2px 2px 0 rgba(var(--brand-primary-rgb),0.15)' : '2px 2px 0 rgba(0,0,0,0.4)',
+                            boxShadow: isActive ? '0 0 12px rgba(var(--brand-primary-rgb),0.15)' : '0 2px 8px rgba(0,0,0,0.4)',
                           }}
                         >
                           <Tag className="h-2.5 w-2.5" />
@@ -669,7 +669,7 @@ export function MemoriesPage() {
                           background: 'rgba(239,68,68,0.1)',
                           border: '1.5px solid rgba(239,68,68,0.3)',
                           color: "var(--brand-text-secondary)",
-                          boxShadow: '2px 2px 0 rgba(239,68,68,0.1)',
+                          boxShadow: '0 0 12px rgba(239,68,68,0.1)',
                         }}
                       >
                         <X className="h-2.5 w-2.5" />
@@ -685,7 +685,7 @@ export function MemoriesPage() {
             <div>
               {/* Demo Data Context Banner - Only show on "Recent" view with demo data */}
               {view === 'recent' && memories.length > 0 && memories.some(m => m.audiopen_id?.startsWith('demo-')) && (
-                <div className="mb-6 p-4 rounded-lg" style={{ background: '#111113', border: '2px solid rgba(var(--brand-primary-rgb),0.25)', borderLeft: '4px solid rgba(var(--brand-primary-rgb),0.6)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
+                <div className="mb-6 p-4 rounded-lg" style={{ background: 'var(--brand-glass-bg)', border: '1px solid rgba(var(--brand-primary-rgb),0.25)', borderLeft: '4px solid rgba(var(--brand-primary-rgb),0.6)', boxShadow: '0 4px 16px rgba(0,0,0,0.6)' }}>
                   <h3 className="font-black text-xs uppercase tracking-widest mb-2 flex items-center gap-2" style={{ color: "var(--brand-primary)" }}>
                     <Brain className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
                     Demo Thoughts  Cross-Domain Examples
@@ -702,7 +702,7 @@ export function MemoriesPage() {
 
               {/* Resurfacing Info Banner */}
               {view === 'resurfacing' && resurfacing.length > 0 && (
-                <div className="mb-6 p-4 rounded-lg" style={{ background: '#111113', border: '2px solid rgba(139,92,246,0.25)', borderLeft: '4px solid rgba(139,92,246,0.5)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
+                <div className="mb-6 p-4 rounded-lg" style={{ background: 'var(--brand-glass-bg)', border: '1px solid rgba(139,92,246,0.25)', borderLeft: '4px solid rgba(139,92,246,0.5)', boxShadow: '0 4px 16px rgba(0,0,0,0.6)' }}>
                   <h3 className="font-black text-xs uppercase tracking-widest mb-2" style={{ color: "var(--brand-primary)" }}>
                     Up for review
                   </h3>
@@ -715,7 +715,7 @@ export function MemoriesPage() {
 
               {/* Error Banner */}
               {error && (
-                <div className="mb-6 rounded-lg p-4 sm:p-5" style={{ background: 'rgba(239,68,68,0.08)', border: '2px solid rgba(239,68,68,0.3)', boxShadow: '3px 3px 0 rgba(239,68,68,0.1)' }}>
+                <div className="mb-6 rounded-lg p-4 sm:p-5" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', boxShadow: '0 0 20px rgba(239,68,68,0.1)' }}>
                   <p className="text-sm text-brand-text-secondary">{error}</p>
                 </div>
               )}
@@ -729,7 +729,7 @@ export function MemoriesPage() {
 
                   {/* Voice Note Processing Banner */}
                   {processingVoiceNote && (
-                    <div className="mb-6 p-4 rounded-lg animate-pulse" style={{ background: '#111113', border: '2px solid rgba(var(--brand-primary-rgb),0.3)', boxShadow: '3px 3px 0 rgba(var(--brand-primary-rgb),0.1)' }}>
+                    <div className="mb-6 p-4 rounded-lg animate-pulse" style={{ background: 'var(--brand-glass-bg)', border: '1px solid rgba(var(--brand-primary-rgb),0.3)', boxShadow: '0 0 20px rgba(var(--brand-primary-rgb),0.1)' }}>
                       <div className="flex items-center gap-4">
                         <div className="inline-block h-8 w-8 animate-spin rounded-lg border-4 border-solid" style={{ borderColor: 'var(--brand-primary)', borderRightColor: 'transparent' }}></div>
                         <div className="flex-1">
@@ -823,7 +823,7 @@ export function MemoriesPage() {
                         ].map((prompt) => (
                           <div key={prompt} className="flex items-start gap-3 px-4 py-3 rounded-xl"
                             style={{ background: 'rgba(var(--brand-primary-rgb),0.05)', border: '1px solid rgba(var(--brand-primary-rgb),0.1)' }}>
-                            <span className="text-brand-primary opacity-50 mt-0.5 text-xs">✦</span>
+                            <span className="text-brand-primary opacity-50 mt-0.5 text-xs">-</span>
                             <p className="text-sm text-[var(--brand-text-muted)] italic">{prompt}</p>
                           </div>
                         ))}
@@ -860,7 +860,7 @@ export function MemoriesPage() {
                           background: 'rgba(var(--brand-primary-rgb),0.08)',
                           color: "var(--brand-text-secondary)",
                           border: '1.5px solid rgba(var(--brand-primary-rgb),0.25)',
-                          boxShadow: '2px 2px 0 rgba(0,0,0,0.5)',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
                         }}
                       >
                         <ArrowLeft className="h-3.5 w-3.5" />
@@ -871,8 +871,8 @@ export function MemoriesPage() {
                           className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
                           style={{
                             background: 'rgba(var(--brand-primary-rgb),0.12)',
-                            border: '2px solid rgba(var(--brand-primary-rgb),0.3)',
-                            boxShadow: '2px 2px 0 rgba(0,0,0,0.6)',
+                            border: '1px solid rgba(var(--brand-primary-rgb),0.3)',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.6)',
                           }}
                         >
                           {React.createElement(getIconComponent(selectedCluster.name), {
@@ -918,7 +918,7 @@ export function MemoriesPage() {
                           ))}
                         </div>
                       ) : (
-                        <div className="p-6 rounded-lg text-center" style={{ background: '#111113', border: '2px solid var(--glass-surface-hover)', boxShadow: '3px 3px 0 rgba(0,0,0,0.6)' }}>
+                        <div className="p-6 rounded-lg text-center" style={{ background: 'var(--brand-glass-bg)', border: '1px solid var(--glass-surface-hover)', boxShadow: '0 4px 16px rgba(0,0,0,0.6)' }}>
                           <p className="text-xs" style={{ color: "var(--brand-primary)" }}>No themes detected yet. Add more thoughts with diverse topics!</p>
                         </div>
                       )}
@@ -942,10 +942,10 @@ export function MemoriesPage() {
                         transition={{ duration: 0.25 }}
                         className="mb-6 rounded-lg p-4"
                         style={{
-                          background: '#111113',
-                          border: '2px solid rgba(251,191,36,0.3)',
+                          background: 'var(--brand-glass-bg)',
+                          border: '1px solid rgba(251,191,36,0.3)',
                           borderLeft: '4px solid rgba(251,191,36,0.6)',
-                          boxShadow: '3px 3px 0 rgba(251,191,36,0.08)',
+                          boxShadow: '0 0 20px rgba(251,191,36,0.08)',
                         }}
                       >
                         <div className="flex items-start justify-between gap-3 mb-3">
@@ -974,7 +974,7 @@ export function MemoriesPage() {
                               background: 'var(--glass-surface)',
                               border: '1.5px solid rgba(255,255,255,0.1)',
                               color: "var(--brand-text-secondary)",
-                              boxShadow: '2px 2px 0 rgba(0,0,0,0.4)',
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
                             }}
                           >
                             Dismiss
@@ -986,7 +986,7 @@ export function MemoriesPage() {
                               background: 'rgba(251,191,36,0.12)',
                               border: '1.5px solid rgba(251,191,36,0.4)',
                               color: "var(--brand-text-secondary)",
-                              boxShadow: '2px 2px 0 rgba(251,191,36,0.1)',
+                              boxShadow: '0 0 12px rgba(251,191,36,0.1)',
                             }}
                           >
                             Connect to today
@@ -1023,7 +1023,7 @@ export function MemoriesPage() {
                               <div className="flex flex-col gap-0.5">
                                 {memory.checklist_items.slice(0, 3).map((item) => (
                                   <div key={item.id} className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--brand-primary)', opacity: item.checked ? 0.4 : 0.8 }}>
-                                    <span style={{ fontSize: '9px' }}>{item.checked ? '☑' : '☐'}</span>
+                                    <span className="w-2.5 h-2.5 rounded-sm border flex-shrink-0" style={{ borderColor: item.checked ? 'var(--brand-primary)' : 'rgba(255,255,255,0.2)', background: item.checked ? 'var(--brand-primary)' : 'transparent' }} />
                                     <span style={{ textDecoration: item.checked ? 'line-through' : 'none' }} className="truncate">{item.text}</span>
                                   </div>
                                 ))}

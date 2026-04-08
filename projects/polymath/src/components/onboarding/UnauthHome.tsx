@@ -253,7 +253,7 @@ export function UnauthHome() {
           className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl font-bold text-sm transition-all hover:opacity-90 active:scale-[0.98] aperture-header"
           style={{
             background: 'linear-gradient(135deg, var(--brand-primary), rgb(var(--color-accent-light-rgb)))',
-            color: '#fff',
+            color: 'var(--brand-text-primary)',
           }}
         >
           start talking <ArrowRight className="h-4 w-4" />

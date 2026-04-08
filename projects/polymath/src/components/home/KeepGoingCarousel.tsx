@@ -134,7 +134,7 @@ export function KeepGoingCarousel() {
           style={{
             background: 'linear-gradient(135deg, rgba(56,189,248,0.06) 0%, rgba(15,24,41,0.5) 60%)',
             border: '1px solid rgba(56,189,248,0.15)',
-            boxShadow: '0 0 30px rgba(56,189,248,0.05), 3px 3px 0 rgba(0,0,0,0.4)',
+            boxShadow: '0 0 30px rgba(56,189,248,0.05), 0 4px 16px rgba(0,0,0,0.4)',
             minHeight: '220px',
           }}
         >
@@ -166,7 +166,7 @@ export function KeepGoingCarousel() {
           background: 'linear-gradient(135deg, rgba(56,189,248,0.06) 0%, rgba(15,24,41,0.5) 60%)',
           backdropFilter: 'blur(16px)',
           border: '1px solid rgba(56,189,248,0.15)',
-          boxShadow: '0 0 30px rgba(56,189,248,0.05), 3px 3px 0 rgba(0,0,0,0.4)',
+          boxShadow: '0 0 30px rgba(56,189,248,0.05), 0 4px 16px rgba(0,0,0,0.4)',
           minHeight: '280px',
         }}
       >

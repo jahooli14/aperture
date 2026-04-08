@@ -383,7 +383,7 @@ export function RevealSequence({ analysis, books, transcripts = [] }: RevealSequ
                   <button
                     onClick={() => handleSpark(suggestion)}
                     className="w-full py-2.5 rounded-lg text-sm font-semibold inline-flex items-center justify-center gap-2 transition-all hover:brightness-110 mb-2"
-                    style={{ background: 'var(--brand-primary)', color: '#fff' }}
+                    style={{ background: 'var(--brand-primary)', color: 'var(--brand-text-primary)' }}
                   >
                     <Zap className="h-3.5 w-3.5" />
                     Build this
@@ -405,7 +405,7 @@ export function RevealSequence({ analysis, books, transcripts = [] }: RevealSequ
                 <button
                   onClick={() => navigate('/login')}
                   className="flex items-center justify-center gap-2 px-8 py-3 rounded-xl font-bold text-sm transition-all hover:opacity-90"
-                  style={{ background: 'linear-gradient(135deg, var(--brand-primary), rgb(var(--color-accent-light-rgb)))', color: '#fff' }}
+                  style={{ background: 'linear-gradient(135deg, var(--brand-primary), rgb(var(--color-accent-light-rgb)))', color: 'var(--brand-text-primary)' }}
                 >
                   <Lock className="h-3.5 w-3.5" />
                   Sign in to save your idea
@@ -432,7 +432,7 @@ export function RevealSequence({ analysis, books, transcripts = [] }: RevealSequ
               <button
                 onClick={() => navigate('/login')}
                 className="flex items-center justify-center gap-2 px-8 py-3 rounded-xl font-bold text-sm transition-all hover:opacity-90"
-                style={{ background: 'linear-gradient(135deg, var(--brand-primary), rgb(var(--color-accent-light-rgb)))', color: '#fff' }}
+                style={{ background: 'linear-gradient(135deg, var(--brand-primary), rgb(var(--color-accent-light-rgb)))', color: 'var(--brand-text-primary)' }}
               >
                 <Lock className="h-3.5 w-3.5" />
                 Sign in to unlock
@@ -512,7 +512,7 @@ export function RevealSequence({ analysis, books, transcripts = [] }: RevealSequ
                 onClick={handleRefinementSubmit}
                 disabled={!refinementFeedback.trim() || isRefining}
                 className="flex-2 flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed transition-all hover:brightness-110"
-                style={{ background: 'var(--brand-primary)', color: '#fff' }}
+                style={{ background: 'var(--brand-primary)', color: 'var(--brand-text-primary)' }}
               >
                 {isRefining ? (
                   <>

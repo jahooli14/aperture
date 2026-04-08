@@ -133,7 +133,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
     <>
       <Link
         to={`/projects/${project.id}`}
-        className={`group block glass-card glass-card-hover transition-all duration-300 break-inside-avoid ${prominent ? 'p-5 scale-[1.02]' : 'p-4'}`}
+        className={`group block glass-card glass-card-hover transition-all duration-300 break-inside-avoid overflow-hidden ${prominent ? 'p-5 scale-[1.02]' : 'p-4'}`}
         style={{
           borderColor: project.is_priority ? 'var(--brand-primary)' : theme.border,
           background: `rgba(${theme.rgb}, 0.08)`,
@@ -184,10 +184,10 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-2" style={{ borderTop: `1px solid rgba(${theme.rgb}, 0.1)` }}>
+        <div className="flex items-center justify-between gap-2 pt-2" style={{ borderTop: `1px solid rgba(${theme.rgb}, 0.1)` }}>
           <div className="flex items-center gap-2 flex-1 min-w-0">
             {totalTasks > 0 ? (
-              <div className="flex flex-col gap-1 w-full">
+              <div className="flex flex-col gap-1 w-full min-w-0">
                 <div className="w-full h-1 bg-[var(--glass-surface)] rounded-full overflow-hidden">
                   <div
                     className="h-full transition-all duration-500"
@@ -197,13 +197,13 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
                     }}
                   />
                 </div>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--brand-text-muted)] aperture-header">
-                  {progress >= 80 ? 'Concept Proved' : `${Math.round(progress)}% Momentum`}
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--brand-text-muted)] aperture-header truncate">
+                  {completedTasks}/{totalTasks}
                 </span>
               </div>
             ) : (
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--brand-text-muted)] flex items-center gap-1 aperture-header">
-                <Clock className="h-3 w-3" />
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--brand-text-muted)] flex items-center gap-1 aperture-header truncate">
+                <Clock className="h-3 w-3 flex-shrink-0" />
                 {new Date(project.last_active || project.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
               </span>
             )}

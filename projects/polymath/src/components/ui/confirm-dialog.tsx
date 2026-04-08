@@ -52,7 +52,7 @@ export function ConfirmDialog({
                   background: 'rgba(239,68,68,0.12)',
                   border: '1.5px solid rgba(239,68,68,0.35)',
                   borderRadius: '4px',
-                  boxShadow: '2px 2px 0 rgba(0,0,0,0.4)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
                 }}
               >
                 <AlertCircle className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />

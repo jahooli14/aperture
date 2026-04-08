@@ -156,11 +156,8 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
 
       <div
         onClick={onClick}
-        className="group block rounded-lg transition-all duration-200 break-inside-avoid p-4 cursor-pointer relative"
+        className="group block glass-card glass-card-hover transition-all duration-200 break-inside-avoid p-4 cursor-pointer relative"
         style={{
-          background: '#111113',
-          border: '2px solid var(--glass-surface-hover)',
-          boxShadow: '3px 3px 0 rgba(0,0,0,0.8)',
           filter: is_rotting ? 'grayscale(80%)' : 'none',
         }}
       >

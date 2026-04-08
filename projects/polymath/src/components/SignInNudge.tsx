@@ -7,7 +7,7 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Feather, Sprout, Library, ArrowRight, ChevronRight } from 'lucide-react'
+import { Feather, Sprout, Library, ArrowRight, ChevronRight, BookOpen, Film, MapPin } from 'lucide-react'
 
 type Variant = 'thoughts' | 'projects' | 'lists'
 
@@ -128,14 +128,16 @@ function ProjectsVisual() {
 
 function ListsVisual() {
   const lists = [
-    { label: 'books', color: 'rgb(var(--brand-primary-rgb))', emoji: '📚' },
-    { label: 'films', color: 'rgb(var(--brand-primary-rgb))', emoji: '🎬' },
-    { label: 'places', color: 'rgb(var(--brand-primary-rgb))', emoji: '📍' },
+    { label: 'books', color: '#F59E0B', icon: BookOpen },
+    { label: 'films', color: '#EC4899', icon: Film },
+    { label: 'places', color: '#10B981', icon: MapPin },
   ]
 
   return (
     <div className="flex gap-3 justify-center mb-2">
-      {lists.map((list, i) => (
+      {lists.map((list, i) => {
+        const Icon = list.icon
+        return (
         <motion.div
           key={list.label}
           initial={{ opacity: 0, scale: 0.9 }}
@@ -147,12 +149,13 @@ function ListsVisual() {
             border: '1px solid var(--glass-surface-hover)',
           }}
         >
-          <span className="text-xl">{list.emoji}</span>
+          <Icon className="h-5 w-5" style={{ color: list.color }} />
           <span className="text-xs" style={{ color: list.color }}>
             {list.label}
           </span>
         </motion.div>
-      ))}
+        )
+      })}
     </div>
   )
 }
@@ -241,7 +244,7 @@ export function SignInNudge({ variant }: SignInNudgeProps) {
           className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl font-bold text-sm transition-all hover:opacity-90 active:scale-[0.98] aperture-header"
           style={{
             background: 'linear-gradient(135deg, var(--brand-primary), rgb(var(--color-accent-light-rgb)))',
-            color: '#fff',
+            color: 'var(--brand-text-primary)',
           }}
         >
           {cta} <ArrowRight className="h-4 w-4" />

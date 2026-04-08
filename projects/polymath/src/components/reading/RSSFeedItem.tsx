@@ -28,9 +28,9 @@ export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProp
       className="group block rounded-lg transition-all duration-200 break-inside-avoid cursor-pointer relative mb-2 overflow-hidden"
       onClick={() => setExpanded(!expanded)}
       style={{
-        background: expanded ? '#111113' : 'transparent',
-        border: expanded ? '2px solid rgba(var(--brand-primary-rgb),0.4)' : '2px solid var(--glass-surface-hover)',
-        boxShadow: expanded ? '3px 3px 0 rgba(var(--brand-primary-rgb),0.1)' : '3px 3px 0 rgba(0,0,0,0.6)',
+        background: expanded ? 'var(--brand-glass-bg)' : 'transparent',
+        border: expanded ? '1px solid rgba(var(--brand-primary-rgb),0.4)' : '1px solid var(--glass-surface-hover)',
+        boxShadow: expanded ? '0 0 20px rgba(var(--brand-primary-rgb),0.1)' : '0 4px 16px rgba(0,0,0,0.6)',
       }}
     >
       <style>{`
@@ -91,7 +91,7 @@ export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProp
                 onSave()
               }}
               className="p-1.5 rounded-lg text-brand-primary transition-all duration-200"
-              style={{ background: 'rgba(var(--brand-primary-rgb),0.12)', border: '1.5px solid rgba(var(--brand-primary-rgb),0.3)', boxShadow: '2px 2px 0 rgba(0,0,0,0.5)' }}
+              style={{ background: 'rgba(var(--brand-primary-rgb),0.12)', border: '1.5px solid rgba(var(--brand-primary-rgb),0.3)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
               title="Save to Read Later"
             >
               <BookmarkPlus className="h-3.5 w-3.5" />

@@ -19,20 +19,14 @@ export const ThemeClusterCard = React.memo(function ThemeClusterCard({ cluster, 
 
   return (
     <div
-      className="group relative p-4 rounded-lg text-left w-full flex flex-col items-start gap-3 transition-all duration-200"
-      style={{
-        background: '#111113',
-        border: '2px solid rgba(255,255,255,0.1)',
-        boxShadow: '3px 3px 0 rgba(0,0,0,0.8)',
-      }}
+      className="group relative p-4 rounded-lg text-left w-full flex flex-col items-start gap-3 transition-all duration-200 glass-card glass-card-hover"
     >
       {/* Icon */}
       <div
         className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
         style={{
           background: 'rgba(var(--brand-primary-rgb),0.12)',
-          border: '2px solid rgba(var(--brand-primary-rgb),0.3)',
-          boxShadow: '2px 2px 0 rgba(0,0,0,0.5)',
+          border: '1px solid rgba(var(--brand-primary-rgb),0.25)',
         }}
       >
         <IconComponent className="h-5 w-5" style={{ color: "var(--brand-primary)" }} />

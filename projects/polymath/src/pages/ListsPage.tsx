@@ -236,8 +236,8 @@ export default function ListsPage() {
                                     : 'text-[var(--brand-text-primary)] hover:bg-[var(--glass-surface)] rounded-lg'
                             }`}
                             style={isReordering
-                                ? { border: '2px solid rgba(125,211,252,0.5)' }
-                                : { border: '2px solid rgba(255,255,255,0.1)' }
+                                ? { border: '1px solid rgba(125,211,252,0.5)' }
+                                : { border: '1px solid rgba(255,255,255,0.1)' }
                             }
                         >
                             {isReordering ? <Check className="h-3 w-3" /> : <ListOrdered className="h-3 w-3" />}
@@ -249,7 +249,7 @@ export default function ListsPage() {
                     <Button
                         onClick={() => setCreateOpen(true)}
                         className="h-10 w-10 p-0 rounded-lg hover:bg-[var(--glass-surface)] bg-transparent text-[var(--brand-text-primary)]"
-                        style={{ border: '2px solid rgba(255,255,255,0.1)' }}
+                        style={{ border: '1px solid rgba(255,255,255,0.1)' }}
                     >
                         <Plus className="h-4 w-4" />
                     </Button>
@@ -588,7 +588,7 @@ export default function ListsPage() {
                             transition={{ type: 'spring', damping: 30, stiffness: 400 }}
                             className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl pb-safe"
                             style={{
-                                backgroundColor: '#141f32',
+                                backgroundColor: 'var(--glass-surface)',
                                 boxShadow: '0 -20px 60px rgba(0,0,0,0.6), inset 0 1px 0 var(--glass-surface-hover)'
                             }}
                         >

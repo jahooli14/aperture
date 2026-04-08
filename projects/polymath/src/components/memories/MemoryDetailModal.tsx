@@ -193,7 +193,7 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
               className="relative w-full max-w-2xl max-h-[calc(100vh-8rem)] rounded-2xl p-6 overflow-y-auto"
               style={{
-                backgroundColor: '#0f1829',
+                backgroundColor: 'var(--brand-bg)',
                 boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1), 0 20px 60px rgba(0,0,0,0.5)',
               }}
               onClick={(e) => e.stopPropagation()} // Prevent modal from closing when clicking inside

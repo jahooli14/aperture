@@ -96,7 +96,7 @@ function buildOpeningMessage(
 
   // Surface recent completions as system events
   for (const text of recentCompletions) {
-    messages.push({ kind: 'system', content: `✓ Completed: ${text}` })
+    messages.push({ kind: 'system', content: `Completed: ${text}` })
   }
 
   // Surface power hour suggestions as an AI message
@@ -126,8 +126,8 @@ function buildOpeningMessage(
 
 const QUICK_PROMPTS = [
   { label: 'What direction should I take this?', icon: '→' },
-  { label: 'Suggest tasks for my next session', icon: '⊕' },
-  { label: 'What am I avoiding?', icon: '◎' },
+  { label: 'Suggest tasks for my next session', icon: '+' },
+  { label: 'What am I avoiding?', icon: '?' },
 ]
 
 export function ProjectChatPanel({
@@ -285,10 +285,10 @@ export function ProjectChatPanel({
     setMessages(prev => {
       // Don't duplicate if it's already in there
       const alreadyShown = prev.some(
-        m => m.kind === 'system' && m.content === `✓ Completed: ${lastCompletion}`
+        m => m.kind === 'system' && m.content === `Completed: ${lastCompletion}`
       )
       if (alreadyShown) return prev
-      return [...prev, { kind: 'system', content: `✓ Completed: ${lastCompletion}` }]
+      return [...prev, { kind: 'system', content: `Completed: ${lastCompletion}` }]
     })
   }, [recentCompletions, isOpen])
 
@@ -372,23 +372,23 @@ export function ProjectChatPanel({
               t.id === op.taskId ? { ...t, done: true, completed_at: new Date().toISOString() } : t
             )
             const task = currentTasks.find(t => t.id === op.taskId)
-            if (task) opSummaries.push(`✓ Marked done: "${task.text}"`)
+            if (task) opSummaries.push(`Done: "${task.text}"`)
           } else if (op.action === 'uncomplete') {
             updatedTasks = updatedTasks.map(t =>
               t.id === op.taskId ? { ...t, done: false, completed_at: undefined } : t
             )
             const task = currentTasks.find(t => t.id === op.taskId)
-            if (task) opSummaries.push(`↩ Reopened: "${task.text}"`)
+            if (task) opSummaries.push(`Reopened: "${task.text}"`)
           } else if (op.action === 'delete') {
             const task = currentTasks.find(t => t.id === op.taskId)
             updatedTasks = updatedTasks.filter(t => t.id !== op.taskId)
-            if (task) opSummaries.push(`✕ Deleted: "${task.text}"`)
+            if (task) opSummaries.push(`Deleted: "${task.text}"`)
           } else if (op.action === 'edit' && op.newText) {
             const task = currentTasks.find(t => t.id === op.taskId)
             updatedTasks = updatedTasks.map(t =>
               t.id === op.taskId ? { ...t, text: op.newText! } : t
             )
-            if (task) opSummaries.push(`✎ Updated: "${task.text}" → "${op.newText}"`)
+            if (task) opSummaries.push(`Updated: "${task.text}" → "${op.newText}"`)
           }
         }
 
@@ -766,7 +766,7 @@ export function ProjectChatPanel({
                             }}
                             title={echo.snippet}
                           >
-                            ◈ {echo.title}
+                            {echo.title}
                           </span>
                         ))}
                       </div>

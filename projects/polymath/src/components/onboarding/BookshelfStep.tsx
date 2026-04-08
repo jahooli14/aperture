@@ -177,7 +177,7 @@ export function BookshelfStep({ onComplete, onSkip }: BookshelfStepProps) {
                       className="absolute bottom-0 left-0 right-0 p-2"
                       style={{ background: 'linear-gradient(transparent, rgba(0,0,0,0.85))' }}
                     >
-                      <p className="text-xs font-medium leading-tight line-clamp-2" style={{ color: '#fff' }}>
+                      <p className="text-xs font-medium leading-tight line-clamp-2" style={{ color: 'var(--brand-text-primary)' }}>
                         {book.title}
                       </p>
                       <p className="text-[10px] mt-0.5 line-clamp-1" style={{ color: 'rgba(255,255,255,0.6)' }}>

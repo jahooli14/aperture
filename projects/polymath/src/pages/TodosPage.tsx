@@ -272,7 +272,7 @@ export function TodosPage() {
 
           <div className="p-6 rounded-2xl mb-6 relative overflow-hidden premium-glass shadow-2xl" style={{
             background: 'var(--brand-glass-bg)',
-            border: '2px solid var(--glass-surface-hover)',
+            border: '1px solid var(--glass-surface-hover)',
           }}>
             {activeView === 'today' ? (
               /* Today: show progress, not a title */
@@ -485,8 +485,8 @@ export function TodosPage() {
                 className="w-full flex items-center justify-between mb-3 px-3.5 py-2.5 rounded-lg text-left"
                 style={{
                   background: 'rgba(var(--brand-primary-rgb),0.08)',
-                  border: '2px solid rgba(99,179,237,0.3)',
-                  boxShadow: '3px 3px 0 rgba(99,179,237,0.1)',
+                  border: '1px solid rgba(99,179,237,0.3)',
+                  boxShadow: '0 0 20px rgba(99,179,237,0.1)',
                 }}
               >
                 <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>
@@ -546,12 +546,12 @@ export function TodosPage() {
                   key={i}
                   className="flex items-center gap-3.5 px-4 py-3.5 rounded-xl animate-pulse"
                   style={{
-                    background: '#111113',
+                    background: 'var(--brand-glass-bg)',
                     border: '1.5px solid rgba(255,255,255,0.1)',
-                    boxShadow: '3px 3px 0 rgba(0,0,0,0.6)',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
                   }}
                 >
-                  <div className="flex-shrink-0 h-[18px] w-[18px] rounded-lg" style={{ background: 'var(--glass-surface-hover)', border: '2px solid var(--glass-surface-hover)' }} />
+                  <div className="flex-shrink-0 h-[18px] w-[18px] rounded-lg" style={{ background: 'var(--glass-surface-hover)', border: '1px solid var(--glass-surface-hover)' }} />
                   <div className="h-[13px] rounded-lg" style={{ width: `${45 + i * 15}%`, background: 'var(--glass-surface)' }} />
                 </div>
               ))}
@@ -799,11 +799,11 @@ function TodayView({
               <div
                 key={t.id}
                 className="flex items-center gap-3.5 px-4 py-2.5 rounded-xl"
-                style={{ background: '#111113', border: '1.5px solid var(--glass-surface-hover)' }}
+                style={{ background: 'var(--brand-glass-bg)', border: '1.5px solid var(--glass-surface-hover)' }}
               >
                 <div
                   className="flex-shrink-0 h-[16px] w-[16px] rounded-lg"
-                  style={{ border: '2px solid rgba(255,255,255,0.18)' }}
+                  style={{ border: '1px solid rgba(255,255,255,0.18)' }}
                 />
                 <span className="flex-1 text-[14px] truncate" style={{ color: "var(--brand-primary)" }}>
                   {t.text}
@@ -843,8 +843,8 @@ function QuickWinsSection({
       className="mb-5 px-3.5 py-3 rounded-lg"
       style={{
         background: 'rgba(251,191,36,0.05)',
-        border: '2px solid rgba(251,191,36,0.35)',
-        boxShadow: '3px 3px 0 rgba(251,191,36,0.1)',
+        border: '1px solid rgba(251,191,36,0.35)',
+        boxShadow: '0 0 20px rgba(251,191,36,0.1)',
       }}
     >
       <div className="flex items-center gap-2 mb-3">
@@ -934,7 +934,7 @@ function MorningBanner({ unscheduledCount }: { unscheduledCount: number }) {
           background: 'rgba(99,179,237,0.06)',
           borderLeft: '4px solid rgba(99,179,237,0.6)',
           border: '1.5px solid rgba(99,179,237,0.2)',
-          boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
         }}
       >
         <Sun className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: "var(--brand-primary)" }} />
@@ -979,7 +979,7 @@ function EveningCaptureBanner({ tomorrowDayName }: { tomorrowDayName: string }) 
           background: 'rgba(139,92,246,0.05)',
           border: '1.5px solid rgba(139,92,246,0.25)',
           borderLeft: '4px solid rgba(139,92,246,0.6)',
-          boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
         }}
       >
         <CalendarDays className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: "var(--brand-primary)" }} />
@@ -1122,8 +1122,8 @@ function EmptyState({ view }: { view: TodoView }) {
         className="h-14 w-14 rounded-lg flex items-center justify-center mb-5"
         style={{
           background: 'rgba(var(--brand-primary-rgb),0.07)',
-          border: '2px solid rgba(99,179,237,0.2)',
-          boxShadow: '3px 3px 0 rgba(0,0,0,0.6)',
+          border: '1px solid rgba(99,179,237,0.2)',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
         }}
       >
         <Icon className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />

@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Check, Sprout, X } from 'lucide-react'
+import { Check, Sprout, X, Brain } from 'lucide-react'
 import type { Memory, Project } from '../../types'
 
 interface ProjectCompletionModalProps {
@@ -112,7 +112,7 @@ export function ProjectCompletionModal({ project, sparkedByMemories, isOpen, onC
               style={{
                 background: 'var(--brand-glass-bg)',
                 backdropFilter: 'blur(24px)',
-                boxShadow: '0 0 60px rgba(var(--brand-primary-rgb), 0.15), 3px 3px 0 rgba(0,0,0,0.5)',
+                boxShadow: '0 0 60px rgba(52, 211, 153, 0.15), 0 4px 16px rgba(0,0,0,0.5)',
               }}
             >
               {/* Close button */}
@@ -134,7 +134,7 @@ export function ProjectCompletionModal({ project, sparkedByMemories, isOpen, onC
                   <motion.div key="celebration" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="relative z-10 text-center">
                     {/* Check icon */}
                     <div className="mx-auto mb-4 h-16 w-16 rounded-full flex items-center justify-center"
-                      style={{ background: 'rgba(var(--brand-primary-rgb), 0.15)', border: '2px solid rgba(var(--brand-primary-rgb), 0.3)' }}
+                      style={{ background: 'rgba(52, 211, 153, 0.15)', border: '1px solid rgba(52, 211, 153, 0.3)' }}
                     >
                       <Check className="h-8 w-8" style={{ color: 'rgb(var(--color-accent-light-rgb))' }} />
                     </div>
@@ -183,7 +183,7 @@ export function ProjectCompletionModal({ project, sparkedByMemories, isOpen, onC
                   </motion.div>
                 ) : (
                   <motion.div key="reflection" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="relative z-10 text-center">
-                    <div className="text-4xl mb-4">🧠</div>
+                    <Brain className="h-10 w-10 mb-4 mx-auto" style={{ color: 'rgb(var(--color-accent-light-rgb))' }} />
                     <p className="text-[10px] font-black uppercase tracking-[0.3em] mb-2" style={{ color: 'rgb(var(--color-accent-light-rgb))' }}>
                       What did you learn?
                     </p>

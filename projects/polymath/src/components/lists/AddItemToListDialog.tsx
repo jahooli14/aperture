@@ -195,9 +195,9 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
                                         className="w-full h-12 font-bold flex items-center justify-center gap-2 touch-manipulation"
                                         style={{
                                           background: 'rgba(var(--brand-primary-rgb),0.15)',
-                                          border: '2px solid rgba(var(--brand-primary-rgb),0.5)',
+                                          border: '1px solid rgba(var(--brand-primary-rgb),0.5)',
                                           borderRadius: '4px',
-                                          boxShadow: '3px 3px 0 rgba(0,0,0,0.5)',
+                                          boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
                                           color: 'var(--brand-primary)',
                                         }}
                                     >

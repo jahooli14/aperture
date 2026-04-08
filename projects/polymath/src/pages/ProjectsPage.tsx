@@ -43,7 +43,7 @@ function CompletedProjectsTimeline({ projects, onNavigate }: { projects: Project
   if (sorted.length === 0) {
     return (
       <div className="text-center py-24">
-        <div className="text-5xl mb-4">🏆</div>
+        <Check className="w-12 h-12 mb-4" style={{ color: '#34d399' }} />
         <p className="text-[var(--brand-text-primary)] font-black uppercase tracking-tight text-lg mb-2">No completed projects yet</p>
         <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>When you finish something, it'll live here.</p>
       </div>
@@ -81,7 +81,7 @@ function CompletedProjectsTimeline({ projects, onNavigate }: { projects: Project
                 {/* Timeline dot */}
                 <div className="relative flex-shrink-0 mt-1">
                   <div className="w-10 h-10 rounded-full flex items-center justify-center z-10 relative"
-                    style={{ background: 'rgba(var(--brand-primary-rgb), 0.12)', border: '2px solid rgba(var(--brand-primary-rgb), 0.3)' }}
+                    style={{ background: 'rgba(var(--brand-primary-rgb), 0.12)', border: '1px solid rgba(var(--brand-primary-rgb), 0.3)' }}
                   >
                     <Check className="w-4 h-4" style={{ color: 'rgb(var(--color-accent-light-rgb))' }} />
                   </div>
@@ -94,7 +94,7 @@ function CompletedProjectsTimeline({ projects, onNavigate }: { projects: Project
                   style={{
                     background: 'rgba(var(--brand-primary-rgb), 0.04)',
                     border: '1px solid rgba(var(--brand-primary-rgb), 0.15)',
-                    boxShadow: '3px 3px 0 rgba(0,0,0,0.4)'
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.4)'
                   }}
                 >
                   <div className="flex items-start justify-between gap-2 mb-1">
@@ -285,7 +285,6 @@ export function ProjectsPage() {
             <PremiumTabs
               tabs={[
                 { id: 'all', label: 'All' },
-                { id: 'upcoming', label: 'Next' },
                 { id: 'active', label: 'Active' },
                 { id: 'dormant', label: 'Ideas' },
                 { id: 'completed', label: 'Done' }
@@ -314,7 +313,7 @@ export function ProjectsPage() {
             {/* Outer Card Structure */}
             <div className="p-6 rounded-2xl mb-6 relative overflow-hidden premium-glass shadow-2xl" style={{
               background: 'var(--brand-glass-bg)',
-              border: '2px solid var(--glass-surface-hover)',
+              border: '1px solid var(--glass-surface-hover)',
             }}>
               <div>
                 {/* Search Box */}

@@ -104,7 +104,7 @@ export function TrySomethingNewCarousel({ onShapeIdea }: TrySomethingNewCarousel
           style={{
             background: 'linear-gradient(135deg, rgba(168,85,247,0.05) 0%, rgba(15,24,41,0.5) 60%)',
             border: '1px solid rgba(168,85,247,0.12)',
-            boxShadow: '0 0 30px rgba(168,85,247,0.04), 3px 3px 0 rgba(0,0,0,0.4)',
+            boxShadow: '0 0 30px rgba(168,85,247,0.04), 0 4px 16px rgba(0,0,0,0.4)',
             minHeight: '220px',
           }}
         >
@@ -125,7 +125,7 @@ export function TrySomethingNewCarousel({ onShapeIdea }: TrySomethingNewCarousel
           background: 'linear-gradient(135deg, rgba(168,85,247,0.05) 0%, rgba(15,24,41,0.5) 60%)',
           backdropFilter: 'blur(16px)',
           border: '1px solid rgba(168,85,247,0.12)',
-          boxShadow: '0 0 30px rgba(168,85,247,0.04), 3px 3px 0 rgba(0,0,0,0.4)',
+          boxShadow: '0 0 30px rgba(168,85,247,0.04), 0 4px 16px rgba(0,0,0,0.4)',
           minHeight: '280px',
         }}
       >

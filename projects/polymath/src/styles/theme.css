@@ -120,26 +120,27 @@
     margin-top: 0.5rem;
 }
 
-/* Unified Card - Neobrutalism (Attention) */
+/* Unified Card - Neon Glass (Attention) */
 .attention-card {
     background: var(--brand-glass-bg);
-    border: 1px solid #ffffff;
-    border-radius: var(--brand-radius-sm);
-    box-shadow: 4px 4px 0 rgba(0,0,0,0.8);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: var(--brand-radius);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2), 0 0 20px rgba(var(--brand-primary-rgb), 0.06);
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .attention-card:hover {
-    transform: translate(-1px, -1px);
-    box-shadow: 5px 5px 0 rgba(0,0,0,0.9);
+    transform: translateY(-1px);
+    border-color: rgba(255,255,255,0.25);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3), 0 0 32px rgba(var(--brand-primary-rgb), 0.1);
 }
 
-/* Aperture Hero Card - Neobrutalism */
+/* Aperture Hero Card - Neon Glass */
 .aperture-hero-card {
     background: rgba(0, 0, 0, 0.4);
-    border: 1px solid #ffffff;
-    border-radius: 4px;
-    box-shadow: 3px 3px 0 rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: var(--brand-radius);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3), 0 0 20px rgba(var(--brand-primary-rgb), 0.05);
 }
 
 /* ─── Accessible text utility classes ─────────────────────── */
@@ -280,6 +281,51 @@ h6 {
 .page-accent-bg    { background-color: rgba(var(--page-accent-rgb), 0.12); }
 .page-accent-border { border-color: rgba(var(--page-accent-rgb), 0.25); }
 .page-accent-glow  { box-shadow: 0 0 20px rgba(var(--page-accent-rgb), 0.15); }
+
+/* ─── Neon Glass System ──────────────────────────────────── */
+/* Glass cards within data-page contexts inherit page accent   */
+/* for neon border glow and subtle tinted backgrounds          */
+
+[data-page] .glass-card {
+    border-color: rgba(var(--page-accent-rgb), 0.15);
+    box-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.15),
+        0 0 20px rgba(var(--page-accent-rgb), 0.06);
+}
+
+[data-page] .glass-card-hover:hover {
+    border-color: rgba(var(--page-accent-rgb), 0.3);
+    box-shadow:
+        0 8px 24px rgba(0, 0, 0, 0.2),
+        0 0 32px rgba(var(--page-accent-rgb), 0.12);
+}
+
+/* Premium glass containers also get the neon treatment */
+[data-page] .premium-glass {
+    border-color: rgba(var(--page-accent-rgb), 0.12) !important;
+    box-shadow:
+        0 4px 16px rgba(0, 0, 0, 0.2),
+        0 0 40px rgba(var(--page-accent-rgb), 0.05),
+        inset 0 0 30px rgba(var(--page-accent-rgb), 0.02);
+}
+
+/* Neon card — explicit opt-in for stronger glow */
+.neon-card {
+    background: rgba(var(--page-accent-rgb), 0.04);
+    border: 1px solid rgba(var(--page-accent-rgb), 0.2);
+    border-radius: var(--brand-radius);
+    box-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.15),
+        0 0 24px rgba(var(--page-accent-rgb), 0.08);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.neon-card:hover {
+    border-color: rgba(var(--page-accent-rgb), 0.35);
+    box-shadow:
+        0 8px 24px rgba(0, 0, 0, 0.2),
+        0 0 40px rgba(var(--page-accent-rgb), 0.15);
+}
 
 /* ─── Serif Typography Utilities ─────────────────────────── */
 /* Use for content, descriptions, quotes — contrasts with Inter UI chrome */

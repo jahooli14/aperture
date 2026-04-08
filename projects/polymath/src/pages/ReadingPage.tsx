@@ -777,9 +777,9 @@ export function ReadingPage() {
               <div
                 className="flex items-center gap-2 flex-1 rounded-lg px-3 h-10 transition-all duration-200"
                 style={{
-                  backgroundColor: '#111113',
+                  backgroundColor: 'var(--brand-glass-bg)',
                   border: inlineUrlFocused ? '2px solid rgba(34,211,238,0.5)' : '2px solid var(--glass-surface-hover)',
-                  boxShadow: inlineUrlFocused ? '3px 3px 0 rgba(34,211,238,0.1)' : '3px 3px 0 rgba(0,0,0,0.6)',
+                  boxShadow: inlineUrlFocused ? '0 0 20px rgba(34,211,238,0.1)' : '0 4px 16px rgba(0,0,0,0.6)',
                 }}
               >
                 <LinkIcon className="h-4 w-4 flex-shrink-0" style={{ color: inlineUrlFocused ? 'rgba(34,211,238,0.8)' : 'rgba(255,255,255,0.25)' }} />
@@ -802,8 +802,8 @@ export function ReadingPage() {
                 style={{
                   backgroundColor: 'rgba(var(--brand-primary-rgb), 0.1)',
                   color: "var(--brand-text-secondary)",
-                  border: '2px solid rgba(var(--brand-primary-rgb), 0.4)',
-                  boxShadow: '3px 3px 0 rgba(0,0,0,0.6)',
+                  border: '1px solid rgba(var(--brand-primary-rgb), 0.4)',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
                 }}
               >
                 {inlineSaving ? (
@@ -830,7 +830,7 @@ export function ReadingPage() {
                   key={articleId}
                   className="rounded-lg p-4 mb-2 flex items-center gap-3"
                   style={{
-                    backgroundColor: '#111113',
+                    backgroundColor: 'var(--brand-glass-bg)',
                     border: `2px solid ${status === 'retrying' ? 'rgba(251,191,36,0.5)' : 'rgba(99,179,237,0.5)'}`,
                     boxShadow: `3px 3px 0 ${status === 'retrying' ? 'rgba(251,191,36,0.15)' : 'rgba(0,0,0,0.7)'}`,
                   }}
@@ -897,10 +897,10 @@ export function ReadingPage() {
               <div
                 className="rounded-lg p-4"
                 style={{
-                  background: '#111113',
+                  background: 'var(--brand-glass-bg)',
                   border: '1.5px solid rgba(34,211,238,0.2)',
                   borderLeft: '4px solid rgba(34,211,238,0.7)',
-                  boxShadow: '3px 3px 0 rgba(0,0,0,0.7)',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.7)',
                 }}
               >
                 <div className="flex items-center gap-2 mb-3">
@@ -951,7 +951,7 @@ export function ReadingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 pt-2" style={{ marginTop: continueReadingArticles.length > 0 && activeTab !== 'reading' ? '0' : (processingArticles.size > 0 ? `${processingArticles.size * 72}px` : '0') }}>
           <div className="p-6 rounded-2xl mb-6 relative overflow-hidden premium-glass shadow-2xl" style={{
             background: 'var(--brand-glass-bg)',
-            border: '2px solid var(--glass-surface-hover)',
+            border: '1px solid var(--glass-surface-hover)',
           }}>
             {/* Title Section */}
             <div className="mb-6 flex items-center justify-between">
@@ -974,8 +974,8 @@ export function ReadingPage() {
                   className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide transition-all flex items-center gap-1.5"
                   style={{
                     color: "var(--brand-text-secondary)",
-                    border: '2px solid rgba(255,255,255,0.15)',
-                    boxShadow: '2px 2px 0 rgba(0,0,0,0.5)',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
                   }}
                 >
                   <Rss className="h-3.5 w-3.5" />
@@ -1070,7 +1070,7 @@ export function ReadingPage() {
                         activeTab === 'queue' ? (
                           <div className="flex flex-wrap justify-center gap-2">
                             {['essays', 'research', 'long reads', 'tutorials', 'news'].map(example => (
-                              <span key={example} className="px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide" style={{ background: '#111113', border: '1.5px solid var(--glass-surface-hover)', boxShadow: '2px 2px 0 rgba(0,0,0,0.5)', color: "var(--brand-text-secondary)" }}>
+                              <span key={example} className="px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide" style={{ background: 'var(--brand-glass-bg)', border: '1.5px solid var(--glass-surface-hover)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)', color: "var(--brand-text-secondary)" }}>
                                 {example}
                               </span>
                             ))}
@@ -1106,9 +1106,9 @@ export function ReadingPage() {
                                     <div
                                       className="absolute top-4 left-4 z-10 w-6 h-6 rounded-lg flex items-center justify-center transition-all"
                                       style={{
-                                        backgroundColor: isSelected ? 'rgba(var(--brand-primary-rgb),0.9)' : '#111113',
-                                        border: isSelected ? '2px solid rgb(96,165,250)' : '2px solid rgba(255,255,255,0.2)',
-                                        boxShadow: '2px 2px 0 rgba(0,0,0,0.6)',
+                                        backgroundColor: isSelected ? 'rgba(var(--brand-primary-rgb),0.9)' : 'var(--brand-glass-bg)',
+                                        border: isSelected ? '1px solid rgb(96,165,250)' : '1px solid rgba(255,255,255,0.2)',
+                                        boxShadow: '0 2px 8px rgba(0,0,0,0.6)',
                                         pointerEvents: 'auto'
                                       }}
                                     >

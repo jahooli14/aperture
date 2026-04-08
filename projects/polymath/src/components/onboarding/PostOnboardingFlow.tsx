@@ -582,7 +582,7 @@ export function PostOnboardingFlow({ analysis, sparkedSuggestion, transcripts = 
                     className="px-10 py-4 rounded-xl text-base font-bold inline-flex items-center gap-3 transition-all"
                     style={{
                       background: `linear-gradient(135deg, rgba(${projectColor}, 0.9), rgba(${projectColor}, 0.7))`,
-                      color: '#fff',
+                      color: 'var(--brand-text-primary)',
                       boxShadow: `0 4px 24px rgba(${projectColor}, 0.3)`,
                     }}
                     whileHover={{ scale: 1.03, boxShadow: `0 8px 32px rgba(${projectColor}, 0.4)` }}
