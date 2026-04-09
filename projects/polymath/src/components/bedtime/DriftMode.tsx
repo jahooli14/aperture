@@ -362,14 +362,30 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
               }
             }}
           >
-            <div className="w-3 h-3 rounded-full bg-brand-primary/50 animate-ping" />
+            {/* Drift topic — shown briefly as user enters darkness */}
+            {currentPrompt && (
+              <motion.div
+                initial={{ opacity: 1 }}
+                animate={{ opacity: 0 }}
+                transition={{ duration: 4, ease: 'easeOut' }}
+                className="text-center px-8 max-w-md"
+              >
+                <p className="text-xs uppercase tracking-widest text-brand-primary/60 font-bold mb-3">
+                  {mode === 'sleep' ? 'Hold this thought...' : 'Let this dissolve...'}
+                </p>
+                <p className="text-lg font-serif italic text-[var(--brand-text-secondary)] opacity-70 leading-relaxed">
+                  {currentPrompt.context || currentPrompt.metaphor || currentPrompt.prompt}
+                </p>
+              </motion.div>
+            )}
+            <div className="absolute w-3 h-3 rounded-full bg-brand-primary/50 animate-ping" />
             {/* Show hint if no motion detected after entering drift */}
             {!motionEventsReceived.current && (
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 0.75 }}
                 exit={{ opacity: 0 }}
-                transition={{ delay: 1.5, duration: 2, exit: { duration: 4 } }}
+                transition={{ delay: 5, duration: 2, exit: { duration: 4 } }}
                 className="absolute bottom-20 text-white/75 text-base text-center px-8 leading-relaxed"
               >
                 Tap anywhere when you're ready to capture your insight
@@ -400,10 +416,23 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
               <span className="inline-block px-3 py-1 rounded-full border border-[var(--glass-surface-hover)] text-xs font-medium tracking-widest uppercase text-[var(--brand-text-secondary)] mb-4">
                 {mode === 'sleep' ? 'Hypnagogic Insight' : 'Logic Breaker'}
               </span>
+
+              {/* Drift topic — resurface the seed thought */}
+              {(currentPrompt.context || currentPrompt.metaphor) && (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.3, duration: 0.8 }}
+                  className="text-sm italic text-brand-primary/70 font-serif mb-4"
+                >
+                  {currentPrompt.context || currentPrompt.metaphor}
+                </motion.p>
+              )}
+
               <h1 className="text-3xl md:text-4xl font-serif text-[var(--brand-text-secondary)] leading-tight">
                 {currentPrompt.prompt}
               </h1>
-              {currentPrompt.metaphor && (
+              {currentPrompt.metaphor && currentPrompt.context && (
                 <p className="mt-6 text-xl italic text-[var(--brand-text-muted)] font-serif">
                   "{currentPrompt.metaphor}"
                 </p>
@@ -469,6 +498,17 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
                 <span className="text-[var(--brand-text-secondary)]">Insights Captured</span>
                 <span className="text-2xl font-bold text-brand-primary">{capturedInsightsCount}</span>
               </div>
+
+              {currentPrompt && (currentPrompt.context || currentPrompt.metaphor) && (
+                <div className="p-4 rounded-xl bg-brand-primary/5 border border-brand-primary/10 text-left">
+                  <p className="text-xs uppercase tracking-widest text-brand-primary font-bold mb-2">
+                    {mode === 'sleep' ? 'Tonight\'s Seed' : 'Your Seed'}
+                  </p>
+                  <p className="text-sm italic text-[var(--brand-text-secondary)] leading-relaxed">
+                    "{currentPrompt.context || currentPrompt.metaphor}"
+                  </p>
+                </div>
+              )}
 
               <div className="p-4 rounded-xl bg-brand-primary/5 border border-brand-primary/10 text-left">
                 <p className="text-xs uppercase tracking-widest text-brand-primary font-bold mb-2">Closing Reflection</p>
