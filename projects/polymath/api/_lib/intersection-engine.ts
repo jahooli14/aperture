@@ -213,7 +213,7 @@ async function discoverPatterns(
 ): Promise<RawCandidate[]> {
 
   const numProjects = projects.length
-  const targetCount = Math.min(5, Math.max(2, Math.floor(numProjects * 0.7)))
+  const targetCount = Math.min(4, Math.max(2, Math.floor(numProjects * 0.7)))
 
   const prompt = `You are reading through everything one person has been working on and thinking about recently. Your job: spot patterns in their thinking that THEY haven't noticed yet.
 
@@ -261,30 +261,32 @@ YOUR RULES:
 
 6. Every crossover should suggest ONE clear thing to try. Not a business plan. Just: "Next time you're working on X, try approaching it the way you approach Y. See what happens."
 
-Return a JSON array of ${targetCount} crossovers (or fewer — never force a weak one). For each:
+Return a JSON array of UP TO ${targetCount} crossovers (fewer is fine — never force a weak one). KEEP EVERY FIELD TIGHT. No preamble, no markdown, just JSON.
+
+For each crossover:
 
 {
-  "project_ids": ["id1", "id2", "id3"],
-  "pattern_name": "3-6 words naming the underlying pattern (not a product name)",
-  "the_insight": "1-2 sentences. The aha moment. Plain English, conversational. This is what the person reads first — it should hook them.",
-  "why_its_not_obvious": "1 sentence. Why someone working on just ONE of these projects would never see this pattern.",
-  "what_it_unlocks": "1-2 sentences. What becomes possible or changes once you see this pattern. Not a product — a new way of thinking or approaching the work.",
-  "one_thing_to_try": "One specific, concrete action for this week. Not vague.",
-  "further_steps": ["one more step", "another step"],
+  "project_ids": ["id1", "id2"],
+  "pattern_name": "3-6 words",
+  "the_insight": "1-2 sentences max. The aha moment, plain English.",
+  "why_its_not_obvious": "1 sentence.",
+  "what_it_unlocks": "1 sentence. New way of thinking, not a product.",
+  "one_thing_to_try": "1 sentence. Concrete action.",
+  "further_steps": ["short step", "short step"],
   "non_obvious_score": 1-10
 }
 
 Only return crossovers scoring 7+. Sort by non_obvious_score descending.
-Use the EXACT project IDs from the list above.`
+Use the EXACT project IDs from the list above. Be terse — long fields will get truncated.`
 
   const raw = await generateText(prompt, {
     model: MODELS.FLASH_CHAT,
     responseFormat: 'json',
     temperature: 1.0,
-    maxTokens: 4096,
+    maxTokens: 8192,
   })
 
-  const parsed = JSON.parse(raw)
+  const parsed = parseCandidatesJSON(raw)
   if (!Array.isArray(parsed)) return []
 
   return parsed.filter((c: any) =>
@@ -293,6 +295,49 @@ Use the EXACT project IDs from the list above.`
     typeof c.the_insight === 'string' &&
     typeof c.pattern_name === 'string'
   ) as RawCandidate[]
+}
+
+/**
+ * Parse Gemini JSON output, repairing truncation if needed.
+ * If the response was cut off mid-string (token limit hit), trim back to the
+ * last complete object and close the array. Better to keep N-1 valid candidates
+ * than throw and lose them all.
+ */
+function parseCandidatesJSON(raw: string): any[] {
+  try {
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    // Truncated — try to recover whatever complete objects we got
+    const startIdx = raw.indexOf('[')
+    if (startIdx === -1) return []
+    // Find the last complete top-level object: scan for "}," at depth 1
+    let depth = 0
+    let inString = false
+    let escape = false
+    let lastCompleteEnd = -1
+    for (let i = startIdx; i < raw.length; i++) {
+      const ch = raw[i]
+      if (escape) { escape = false; continue }
+      if (ch === '\\') { escape = true; continue }
+      if (ch === '"') { inString = !inString; continue }
+      if (inString) continue
+      if (ch === '{' || ch === '[') depth++
+      else if (ch === '}' || ch === ']') {
+        depth--
+        if (depth === 1 && ch === '}') lastCompleteEnd = i
+      }
+    }
+    if (lastCompleteEnd === -1) return []
+    const repaired = raw.slice(startIdx, lastCompleteEnd + 1) + ']'
+    try {
+      const parsed = JSON.parse(repaired)
+      console.warn('[intersection-engine] Recovered truncated JSON:', Array.isArray(parsed) ? parsed.length : 0, 'candidates')
+      return Array.isArray(parsed) ? parsed : []
+    } catch {
+      return []
+    }
+  }
 }
 
 /**

@@ -326,13 +326,8 @@ export function WeeklyIntersection() {
 
   return (
     <section className="pb-6">
-      {/* Section heading: "inter" in white, "section" in primary */}
-      <h2 className="section-header">
-        <span>
-          <span className="text-[var(--brand-text-primary)]">inter</span>
-          <span className="text-brand-primary">section</span>
-        </span>
-      </h2>
+      {/* Section heading: "inter" in white (default), "section" in primary (via .section-header span rule) */}
+      <h2 className="section-header">inter<span>section</span></h2>
 
       {loading && !hasData ? (
         <div className="p-6 rounded-2xl border border-brand-primary/10 bg-brand-primary/5 flex items-center justify-center">
