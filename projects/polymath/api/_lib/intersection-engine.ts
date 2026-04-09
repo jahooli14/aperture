@@ -100,11 +100,11 @@ export async function discoverIntersections(
     candidates = await discoverPatterns(projects, richContext)
   } catch (err) {
     console.error('[intersection-engine] AI discovery failed, falling back to embedding-based:', err)
-    return fallbackEmbeddingIntersections(projects, memories, articles)
+    return embeddingBasedDiscovery(projects, memories, articles)
   }
 
   if (candidates.length === 0) {
-    return fallbackEmbeddingIntersections(projects, memories, articles)
+    return embeddingBasedDiscovery(projects, memories, articles)
   }
 
   // --- Phase 3: Find supporting fuel via embeddings ---
@@ -345,9 +345,55 @@ function findSupportingFuel(
 }
 
 /**
- * Fallback: embedding-based intersections when AI discovery fails.
+ * Classic approach: embedding-based discovery + AI enrichment.
+ * The original intersection algorithm — find topically similar projects via
+ * cosine similarity, identify shared fuel, then ask AI to narrate the top results.
+ * Exported for A/B comparison with the new insight-driven approach.
  */
-function fallbackEmbeddingIntersections(
+export async function classicIntersections(
+  projects: ProjectInput[],
+  memories: MemoryInput[],
+  articles: ArticleInput[]
+): Promise<IntersectionResult[]> {
+  const results = embeddingBasedDiscovery(projects, memories, articles)
+
+  // AI enrichment for top 3 — same prompts as the original implementation
+  for (let i = 0; i < Math.min(results.length, 3); i++) {
+    const intersection = results[i]
+    const projectNames = intersection.projects.map(p => p.title).join(' × ')
+    const fuelContext = intersection.sharedFuel.map(f => `${f.type}: "${f.title}"`).join(', ')
+
+    try {
+      intersection.reason = await generateText(
+        `These are projects one person is working on: ${projectNames}.${fuelContext ? ` Things that have come up in both: ${fuelContext}.` : ''}
+
+In 2-3 plain sentences, explain what genuinely surprising idea becomes possible when you combine these. Don't just say they overlap or use buzzwords. Be specific — what could someone build or do that they couldn't if they only worked on one of these? Write like a smart friend explaining it over coffee, not a pitch deck.`,
+        { model: MODELS.FLASH_CHAT, temperature: 0.95 }
+      )
+
+      const crossoverRaw = await generateText(
+        `Someone is working on these projects: ${projectNames}.${fuelContext ? ` Both have come up in relation to: ${fuelContext}.` : ''}
+
+What's a concrete project idea that could only exist because this person works on BOTH of these? Don't suggest something that fits neatly into just one of the projects. Be specific and practical. Write in plain English, no startup speak.
+
+Return JSON:
+{"crossover_title":"plain 3-6 word title","why_it_works":"2-3 sentences in plain English","concept":"what you'd actually build, 2-3 sentences","first_steps":["first practical step","second practical step","third practical step"]}`,
+        { model: MODELS.FLASH_CHAT, responseFormat: 'json', temperature: 0.95 }
+      )
+      intersection.crossover = JSON.parse(crossoverRaw)
+    } catch {
+      // Non-critical
+    }
+  }
+
+  return results
+}
+
+/**
+ * Embedding-based intersections (no AI enrichment).
+ * Used as fallback when AI discovery fails, and as the base for classicIntersections.
+ */
+function embeddingBasedDiscovery(
   projects: ProjectInput[],
   memories: MemoryInput[],
   articles: ArticleInput[]

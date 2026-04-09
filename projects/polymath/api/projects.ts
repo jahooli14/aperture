@@ -16,7 +16,7 @@ import { analyzeTaskEnergy } from './_lib/task-energy-analyzer.js'
 import { generatePowerHourPlan } from './_lib/power-hour-generator.js'
 import { identifyRottingProjects, generateZebraReport, buryProject, resurrectProject, pickSynthesisResurfaceCandidate } from './_lib/project-maintenance.js'
 import { updateItemConnections } from './_lib/connection-logic.js'
-import { discoverIntersections } from './_lib/intersection-engine.js'
+import { discoverIntersections, classicIntersections } from './_lib/intersection-engine.js'
 import { invalidateProjectCache } from './_lib/power-hour-cache.js'
 import { recomputeHeatForUser, DRAWER_STATUSES, MUTATION_MODES, MODES_THAT_RETIRE_PARENT, type MutationMode } from './_lib/metabolism.js'
 
@@ -1077,15 +1077,14 @@ Return JSON only:
           .order('created_at', { ascending: false })
           .limit(30)
 
-        // AI-primary structural intersection discovery
-        const intersections = await discoverIntersections(
-          projects,
-          recentMemories || [],
-          recentArticles || []
-        )
+        // Run both approaches in parallel for A/B comparison
+        const [insights, intersections] = await Promise.all([
+          discoverIntersections(projects, recentMemories || [], recentArticles || []),
+          classicIntersections(projects, recentMemories || [], recentArticles || [])
+        ])
 
-        // Store crossover ideas as project suggestions
-        for (const intersection of intersections.filter(i => i.crossover)) {
+        // Store crossover ideas as project suggestions (from insights only)
+        for (const intersection of insights.filter(i => i.crossover)) {
           try {
             const { data: existing } = await supabase
               .from('project_suggestions')
@@ -1118,7 +1117,7 @@ Return JSON only:
           }
         }
 
-        return res.status(200).json({ intersections })
+        return res.status(200).json({ intersections, insights })
       } catch (error) {
         console.error('[intersections] Error:', error)
         return res.status(500).json({ error: 'Failed to find intersections' })
