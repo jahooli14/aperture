@@ -1077,10 +1077,21 @@ Return JSON only:
           .order('created_at', { ascending: false })
           .limit(30)
 
+        // List items — things they've noted to read/try/consider. These can be
+        // first-class collision nodes alongside projects, not just fuel.
+        const { data: recentListItems } = await supabase
+          .from('list_items')
+          .select('id, content, metadata, embedding')
+          .eq('user_id', userId)
+          .gte('created_at', ninetyDaysAgo.toISOString())
+          .not('embedding', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(40)
+
         // Run both approaches in parallel for A/B comparison
         const [insights, intersections] = await Promise.all([
-          discoverIntersections(projects, recentMemories || [], recentArticles || []),
-          classicIntersections(projects, recentMemories || [], recentArticles || [])
+          discoverIntersections(projects, recentMemories || [], recentArticles || [], recentListItems || []),
+          classicIntersections(projects, recentMemories || [], recentArticles || [], recentListItems || [])
         ])
 
         // Store crossover ideas as project suggestions (from insights only)
