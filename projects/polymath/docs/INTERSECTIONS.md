@@ -52,27 +52,52 @@ Most knowledge tools force categorization at capture time — pick a folder, add
 
 ## How Intersections Work in Polymath
 
-### Current Implementation
+### Architecture: AI-Primary Structural Discovery
 
-1. **Embedding-based collision detection**: Every project, memory, and article gets a 768-dim vector embedding (Gemini). Intersections are found where projects are semantically close AND share "fuel" — memories/articles relevant to both.
+The intersection engine uses a two-phase approach:
 
-2. **Shared Fuel**: A memory or article is "shared fuel" if it has >0.6 cosine similarity to BOTH projects in a pair. This is the bridge — the idea that lives in two worlds at once.
+**Phase 1 — AI discovers structural connections (the brain)**
 
-3. **Multi-project clusters**: When a single piece of fuel bridges 3+ projects, that's the most exciting intersection — a concept that's resonating across multiple domains of your thinking simultaneously.
+All active projects, recent memories (90-day window), and articles are sent to a strong AI model. The AI finds multi-idea intersections at the **mechanism level**, not the topic level. It's looking for:
 
-4. **AI reasoning**: Gemini generates a narrative explaining what's non-obvious about the collision — not just that the projects overlap, but what becomes possible only at their intersection.
+- **Same mechanism, different domain**: The pattern that drives idea A is the same pattern that makes idea B work, but nobody in either field has named it
+- **Constraint inversion**: Idea A's biggest limitation is idea B's biggest strength — design something at the tension point
+- **Exaptation** (Steven Johnson): Idea A was designed for purpose X, but its mechanism would solve Y's biggest unsolved problem
+- **Hidden isomorphism**: Ideas A, B, and C are all describing the same deep pattern from different angles — someone who sees all three has a unique vantage point
+- **Emergent architecture**: A+B+C together create a system that no pair or individual could
 
-5. **Scoring**: `projectCount × relevance`, with bonuses for shared fuel. More domains colliding = higher score. More bridging fuel = richer intersection.
+The AI prioritises **3-5 idea intersections** over simple pairs. A 3-way intersection doesn't have 3x the ideas of a 2-way — it has 10x (Johansson's combinatorial explosion).
+
+Every candidate must pass the **"only at this intersection" test**: Would someone working on just ONE of these ideas think of this? If yes — too obvious, skip it.
+
+**Phase 2 — Embeddings find supporting fuel (the evidence)**
+
+For each AI-discovered intersection, 768-dim vector embeddings find memories and articles that **bridge** the intersection's projects. A memory or article is a "bridge" if it's semantically similar to 2+ of the projects involved. These fuel items provide concrete evidence for the structural connection.
+
+### Key Design Decisions
+
+- **AI discovers, embeddings support** (not the other way around). The old approach used embeddings to find topically similar projects, then asked AI to narrate. The new approach uses AI to find structurally connected ideas (which may be topically different), then uses embeddings to find supporting evidence.
+- **90-day memory window** (up from 14 days). Time-delayed connections — something from months ago suddenly becoming relevant — are the most powerful. That's the Adjacent Possible expanding in real time.
+- **Structural over topical.** "Both involve AI" is a category, not an intersection. "The feedback loop driving A is the same loop missing from B" is a structural insight.
+- **Plain English output.** Written like an excited friend connecting dots, not a consultant writing a report. No jargon, no buzzwords.
+- **Embedding fallback.** If AI discovery fails, a simplified embedding-based algorithm ensures intersections still appear.
 
 ### The Intersection Score
 
 Every intersection has a score based on:
-- How many projects collide (more domains = rarer & more valuable)
-- The strength of semantic similarity between projects
-- The number of shared fuel items bridging them
-- Whether it forms a multi-project cluster (3+)
+- Non-obvious score (AI-assessed, 1-10): how surprising is this structural connection?
+- Project count multiplier: more domains colliding = rarer and more valuable
+- Shared fuel: concrete bridging evidence adds credibility
 
-High intersection scores identify the most generative points in your knowledge graph — the places where new thinking is most likely to emerge.
+### The Non-Obvious Filter
+
+Based on Packy McCormick's "non-consensus and right" principle and Johansson's associative barrier breaking:
+
+- **Topic-level connections are rejected**: "Both involve data" = boring
+- **Mechanism-level connections are accepted**: "The constraint-breaking pattern in A maps to the missing piece in B" = gold
+- **The "only at this intersection" test**: If a single-domain expert would see this, it's not an intersection
+- **Actionability required**: Every intersection must suggest something concrete to build or try
+- **Surprising then obvious**: The best intersections feel wild at first, then inevitable once explained
 
 ## Design Principles
 
@@ -80,11 +105,17 @@ High intersection scores identify the most generative points in your knowledge g
 
 2. **The best intersections feel like revelations, not summaries.** "These two things relate to X" is a summary. "This concept from your parenting experience is structurally identical to this software architecture problem, and here's what that means" is a revelation.
 
-3. **Value compounds super-linearly.** Each new voice note doesn't just add one node — it potentially creates connections to every existing node. The value of the graph grows as n², not n. This is the retention flywheel.
+3. **Structural depth over surface similarity.** Connect at the level of mechanisms, constraints, and principles — not categories and topics. Low-level (specific, mechanistic) connections are gold. High-level (abstract, categorical) connections are noise.
 
-4. **Time-delayed connections are the most powerful.** Something you said 6 months ago suddenly becoming relevant to today's thinking — that's the Adjacent Possible expanding in real time.
+4. **3+ ideas is where magic happens.** Two ideas crossing is "X meets Y" — interesting but common. Three ideas crossing is "there's a pattern here that none of these fields have named yet." Four or more is "this person's unique combination of interests constitutes a perspective that literally no one else has."
 
-5. **The intersection is the moat.** A knowledge graph with rich intersections is deeply personal and non-replicable. No one else has your specific combination of domains.
+5. **Value compounds super-linearly.** Each new voice note doesn't just add one node — it potentially creates connections to every existing node. The value of the graph grows as n², not n. This is the retention flywheel.
+
+6. **Time-delayed connections are the most powerful.** Something you said 6 months ago suddenly becoming relevant to today's thinking — that's the Adjacent Possible expanding in real time.
+
+7. **The intersection is the moat.** A knowledge graph with rich intersections is deeply personal and non-replicable. No one else has your specific combination of domains. The "Monopoly of You" (Perell/McCormick) — your unique constellation of interests IS the value.
+
+8. **Write like a friend, not a consultant.** Plain English. The excitement comes from the insight, not the vocabulary. If you can't explain the intersection simply, the connection probably isn't real.
 
 ## Intellectual Lineage
 

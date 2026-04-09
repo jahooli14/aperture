@@ -16,6 +16,7 @@ import { analyzeTaskEnergy } from './_lib/task-energy-analyzer.js'
 import { generatePowerHourPlan } from './_lib/power-hour-generator.js'
 import { identifyRottingProjects, generateZebraReport, buryProject, resurrectProject, pickSynthesisResurfaceCandidate } from './_lib/project-maintenance.js'
 import { updateItemConnections } from './_lib/connection-logic.js'
+import { discoverIntersections } from './_lib/intersection-engine.js'
 import { invalidateProjectCache } from './_lib/power-hour-cache.js'
 import { recomputeHeatForUser, DRAWER_STATUSES, MUTATION_MODES, MODES_THAT_RETIRE_PARENT, type MutationMode } from './_lib/metabolism.js'
 
@@ -1032,14 +1033,14 @@ Return JSON only:
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  // INTERSECTIONS — The Medici Effect in your knowledge graph.
-  // Finds where separate domains collide: shared fuel (memories/articles) bridging multiple
-  // projects reveals non-obvious cross-pollination. Scored by projectCount × relevance.
+  // INTERSECTIONS — AI-Primary Structural Discovery (The Medici Effect).
+  // AI discovers where ideas collide at the mechanism level, not just the topic level.
+  // Prioritises 3-5 idea intersections over simple pairs. Embeddings provide supporting fuel.
   // See docs/INTERSECTIONS.md for the full intellectual framework.
   if (resource === 'intersections') {
     if (req.method === 'GET') {
       try {
-        // Fetch active projects with embeddings
+        // Fetch active projects with embeddings + descriptions for AI analysis
         const { data: projects, error: projError } = await supabase
           .from('projects')
           .select('id, title, description, embedding, metadata, status')
@@ -1052,256 +1053,39 @@ Return JSON only:
           return res.status(200).json({ intersections: [] })
         }
 
-        // Also fetch recent memories/articles to find shared themes
-        const twoWeeksAgo = new Date()
-        twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
+        // Extended time window: 90 days (not 14) — time-delayed connections
+        // are the most powerful. Something from months ago suddenly becoming
+        // relevant is the Adjacent Possible expanding in real time.
+        const ninetyDaysAgo = new Date()
+        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
 
         const { data: recentMemories } = await supabase
           .from('memories')
           .select('id, title, body, themes, embedding')
           .eq('user_id', userId)
-          .gte('created_at', twoWeeksAgo.toISOString())
+          .gte('created_at', ninetyDaysAgo.toISOString())
           .not('embedding', 'is', null)
-          .limit(30)
+          .order('created_at', { ascending: false })
+          .limit(50)
 
         const { data: recentArticles } = await supabase
           .from('reading_queue')
           .select('id, title, summary, embedding')
           .eq('user_id', userId)
-          .gte('created_at', twoWeeksAgo.toISOString())
+          .gte('created_at', ninetyDaysAgo.toISOString())
           .not('embedding', 'is', null)
-          .limit(20)
+          .order('created_at', { ascending: false })
+          .limit(30)
 
-        // Find all project pairs and their similarity
-        const pairs: Array<{
-          projects: typeof projects
-          similarity: number
-          sharedFuel: Array<{ type: 'memory' | 'article'; title: string; id: string }>
-        }> = []
+        // AI-primary structural intersection discovery
+        const intersections = await discoverIntersections(
+          projects,
+          recentMemories || [],
+          recentArticles || []
+        )
 
-        for (let i = 0; i < projects.length; i++) {
-          for (let j = i + 1; j < projects.length; j++) {
-            const a = projects[i]
-            const b = projects[j]
-            if (!a.embedding || !b.embedding) continue
-
-            const sim = cosineSimilarity(a.embedding, b.embedding)
-
-            // Find fuel (memories/articles) that are relevant to BOTH projects
-            const sharedFuel: Array<{ type: 'memory' | 'article'; title: string; id: string }> = []
-            const FUEL_THRESHOLD = 0.6
-
-            for (const mem of (recentMemories || [])) {
-              if (!mem.embedding) continue
-              const simA = cosineSimilarity(mem.embedding, a.embedding)
-              const simB = cosineSimilarity(mem.embedding, b.embedding)
-              if (simA > FUEL_THRESHOLD && simB > FUEL_THRESHOLD) {
-                sharedFuel.push({ type: 'memory', title: mem.title || mem.body?.substring(0, 60) || 'Thought', id: mem.id })
-              }
-            }
-
-            for (const art of (recentArticles || [])) {
-              if (!art.embedding) continue
-              const simA = cosineSimilarity(art.embedding, a.embedding)
-              const simB = cosineSimilarity(art.embedding, b.embedding)
-              if (simA > FUEL_THRESHOLD && simB > FUEL_THRESHOLD) {
-                sharedFuel.push({ type: 'article', title: art.title || 'Article', id: art.id })
-              }
-            }
-
-            pairs.push({ projects: [a, b], similarity: sim, sharedFuel })
-          }
-        }
-
-        // Build all fuel items with embeddings for multi-project matching
-        const allFuel = [
-          ...(recentMemories || []).filter(m => m.embedding).map(m => ({
-            type: 'memory' as const, title: m.title || m.body?.substring(0, 60) || 'Thought', id: m.id, embedding: m.embedding
-          })),
-          ...(recentArticles || []).filter(a => a.embedding).map(a => ({
-            type: 'article' as const, title: a.title || 'Article', id: a.id, embedding: a.embedding
-          })),
-        ]
-
-        // Now check for multi-project clusters (3+ projects sharing fuel)
-        const fuelToProjects: Record<string, Set<string>> = {}
-        for (const pair of pairs) {
-          for (const fuel of pair.sharedFuel) {
-            if (!fuelToProjects[fuel.id]) fuelToProjects[fuel.id] = new Set()
-            fuelToProjects[fuel.id].add(pair.projects[0].id)
-            fuelToProjects[fuel.id].add(pair.projects[1].id)
-          }
-        }
-
-        // Build intersection results
-        const intersections: Array<{
-          id: string
-          projectIds: string[]
-          projects: Array<{ id: string; title: string }>
-          score: number
-          sharedFuel: Array<{ type: string; title: string; id: string }>
-          reason?: string
-          crossover?: { crossover_title: string; why_it_works: string; concept: string; first_steps: string[] }
-        }> = []
-
-        // Multi-project clusters from shared fuel
-        const seenClusters = new Set<string>()
-        for (const [fuelId, projectIds] of Object.entries(fuelToProjects)) {
-          if (projectIds.size < 2) continue
-          const clusterKey = [...projectIds].sort().join(',')
-          if (seenClusters.has(clusterKey)) {
-            const existing = intersections.find(i => i.id === clusterKey)
-            if (existing) {
-              const fuelItem = pairs.flatMap(p => p.sharedFuel).find(f => f.id === fuelId)
-              if (fuelItem && !existing.sharedFuel.some(f => f.id === fuelId)) {
-                existing.sharedFuel.push(fuelItem)
-                existing.score = projectIds.size * (1 + existing.sharedFuel.length * 0.2)
-              }
-            }
-            continue
-          }
-          seenClusters.add(clusterKey)
-
-          const clusterProjects = projects.filter(p => projectIds.has(p.id))
-          const fuelItem = pairs.flatMap(p => p.sharedFuel).find(f => f.id === fuelId)
-
-          intersections.push({
-            id: clusterKey,
-            projectIds: [...projectIds],
-            projects: clusterProjects.map(p => ({ id: p.id, title: p.title })),
-            score: projectIds.size * 1.2,
-            sharedFuel: fuelItem ? [fuelItem] : [],
-          })
-        }
-
-        // Explicit 3-project combinations (if 3+ projects available)
-        if (projects.length >= 3) {
-          const TRIPLE_FUEL_THRESHOLD = 0.5
-          for (let i = 0; i < projects.length; i++) {
-            for (let j = i + 1; j < projects.length; j++) {
-              for (let k = j + 1; k < projects.length; k++) {
-                const triple = [projects[i], projects[j], projects[k]]
-                const tripleKey = triple.map(p => p.id).sort().join(',')
-                if (seenClusters.has(tripleKey)) continue
-
-                // Find fuel relevant to ALL three
-                const tripleFuel = allFuel.filter(f =>
-                  triple.every(p => p.embedding && cosineSimilarity(f.embedding, p.embedding) > TRIPLE_FUEL_THRESHOLD)
-                ).map(f => ({ type: f.type, title: f.title, id: f.id }))
-
-                // Calculate avg pairwise similarity
-                let totalSim = 0, pairCount = 0
-                for (let a = 0; a < triple.length; a++) {
-                  for (let b = a + 1; b < triple.length; b++) {
-                    if (triple[a].embedding && triple[b].embedding) {
-                      totalSim += cosineSimilarity(triple[a].embedding, triple[b].embedding)
-                      pairCount++
-                    }
-                  }
-                }
-                const avgSim = pairCount > 0 ? totalSim / pairCount : 0
-
-                if (tripleFuel.length > 0 || avgSim > 0.35) {
-                  seenClusters.add(tripleKey)
-                  intersections.push({
-                    id: tripleKey,
-                    projectIds: triple.map(p => p.id),
-                    projects: triple.map(p => ({ id: p.id, title: p.title })),
-                    score: 3 * avgSim + tripleFuel.length * 0.4,
-                    sharedFuel: tripleFuel,
-                  })
-                }
-              }
-            }
-          }
-        }
-
-        // 4-project combinations (if 5+ projects)
-        if (projects.length >= 5) {
-          const QUAD_FUEL_THRESHOLD = 0.45
-          for (let i = 0; i < projects.length && i < 6; i++) {
-            for (let j = i + 1; j < projects.length && j < 7; j++) {
-              for (let k = j + 1; k < projects.length && k < 8; k++) {
-                for (let l = k + 1; l < projects.length && l < 9; l++) {
-                  const quad = [projects[i], projects[j], projects[k], projects[l]]
-                  const quadKey = quad.map(p => p.id).sort().join(',')
-                  if (seenClusters.has(quadKey)) continue
-
-                  const quadFuel = allFuel.filter(f =>
-                    quad.every(p => p.embedding && cosineSimilarity(f.embedding, p.embedding) > QUAD_FUEL_THRESHOLD)
-                  ).map(f => ({ type: f.type, title: f.title, id: f.id }))
-
-                  if (quadFuel.length > 0) {
-                    seenClusters.add(quadKey)
-                    intersections.push({
-                      id: quadKey,
-                      projectIds: quad.map(p => p.id),
-                      projects: quad.map(p => ({ id: p.id, title: p.title })),
-                      score: 4 * 1.5 + quadFuel.length * 0.5,
-                      sharedFuel: quadFuel,
-                    })
-                  }
-                }
-              }
-            }
-          }
-        }
-
-        // Add high-similarity pairs that might not have shared fuel.
-        // Cap at 0.72: above that the projects are essentially the same domain
-        // (e.g. two book ideas, two writing projects) — not a real intersection.
-        for (const pair of pairs) {
-          if (pair.similarity < 0.4 || pair.similarity > 0.72) continue
-          const key = pair.projects.map(p => p.id).sort().join(',')
-          if (seenClusters.has(key)) continue
-
-          intersections.push({
-            id: key,
-            projectIds: pair.projects.map(p => p.id),
-            projects: pair.projects.map(p => ({ id: p.id, title: p.title })),
-            score: 2 * pair.similarity + pair.sharedFuel.length * 0.3,
-            sharedFuel: pair.sharedFuel,
-          })
-        }
-
-        // Sort by score descending
-        intersections.sort((a, b) => b.score - a.score)
-
-        // Generate AI reasoning + crossover ideas for top 3
-        const top3 = intersections.slice(0, 5)
-        for (let idx = 0; idx < Math.min(top3.length, 3); idx++) {
-          const intersection = top3[idx]
-          const projectNames = intersection.projects.map(p => p.title).join(' × ')
-          const fuelContext = intersection.sharedFuel.map(f => `${f.type}: "${f.title}"`).join(', ')
-
-          try {
-            // Generate reasoning — full Flash, plain English, no jargon
-            const reasoning = await generateText(
-              `These are two (or more) projects that one person is working on: ${projectNames}.${fuelContext ? ` Things that have come up in both: ${fuelContext}.` : ''}
-
-In 2-3 plain sentences, explain what genuinely surprising idea becomes possible when you combine these. Don't just say they overlap or use buzzwords. Be specific — what could someone build or do that they couldn't if they only worked on one of these? If these projects are obviously similar (same genre, same field), skip the obvious angle and find the genuinely unexpected one. Write like a smart friend explaining it over coffee, not a pitch deck.`,
-              { model: MODELS.FLASH_CHAT, temperature: 0.95 }
-            )
-            intersection.reason = reasoning
-
-            // Generate crossover idea — native JSON mode for reliable parsing
-            const crossoverRaw = await generateText(
-              `Someone is working on these projects: ${projectNames}.${fuelContext ? ` Both have come up in relation to: ${fuelContext}.` : ''}
-
-What's a concrete project idea that could only exist because this person works on BOTH of these? Don't suggest something that fits neatly into just one of the projects. Don't group similar things together — if the projects are in the same domain, find a crossover into a third area entirely. Be specific and practical. Write in plain English, no startup speak.
-
-Return JSON:
-{"crossover_title":"plain 3-6 word title","why_it_works":"2-3 sentences in plain English — what becomes possible only at this specific crossover","concept":"what you'd actually build, 2-3 sentences, concrete not abstract","first_steps":["first practical step","second practical step","third practical step"]}`,
-              { model: MODELS.FLASH_CHAT, responseFormat: 'json', temperature: 0.95 }
-            )
-            intersection.crossover = JSON.parse(crossoverRaw)
-          } catch {
-            // Non-critical — reasoning/crossover generation can fail gracefully
-          }
-        }
-
-        // Store all AI-reasoned crossover ideas as project suggestions (up to top3)
-        for (const intersection of top3.filter(i => i.crossover)) {
+        // Store crossover ideas as project suggestions
+        for (const intersection of intersections.filter(i => i.crossover)) {
           try {
             const { data: existing } = await supabase
               .from('project_suggestions')
@@ -1334,7 +1118,7 @@ Return JSON:
           }
         }
 
-        return res.status(200).json({ intersections: top3.slice(0, 5) })
+        return res.status(200).json({ intersections })
       } catch (error) {
         console.error('[intersections] Error:', error)
         return res.status(500).json({ error: 'Failed to find intersections' })
