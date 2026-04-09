@@ -1050,7 +1050,7 @@ Return JSON only:
 
         if (projError) throw projError
         if (!projects || projects.length < 2) {
-          return res.status(200).json({ intersections: [] })
+          return res.status(200).json({ intersections: [], insights: [] })
         }
 
         // Extended time window: 90 days (not 14) — time-delayed connections
@@ -1093,6 +1093,15 @@ Return JSON only:
           discoverIntersections(projects, recentMemories || [], recentArticles || [], recentListItems || []),
           classicIntersections(projects, recentMemories || [], recentArticles || [], recentListItems || [])
         ])
+
+        console.log('[intersections] generated', {
+          projects: projects.length,
+          memories: (recentMemories || []).length,
+          articles: (recentArticles || []).length,
+          listItems: (recentListItems || []).length,
+          insights: insights.length,
+          intersections: intersections.length,
+        })
 
         // Store crossover ideas as project suggestions (from insights only)
         for (const intersection of insights.filter(i => i.crossover)) {

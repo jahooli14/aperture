@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence, type PanInfo } from 'framer-motion'
-import { ArrowRight, RefreshCw, FileText, MessageCircle, ChevronLeft, ChevronRight, Lightbulb, ListChecks, Folder } from 'lucide-react'
+import { ArrowRight, FileText, MessageCircle, ChevronLeft, ChevronRight, Lightbulb, ListChecks, Folder } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 type NodeType = 'project' | 'memory' | 'list_item'
@@ -51,6 +51,10 @@ interface Intersection {
 
 const STORAGE_KEY = 'polymath-weekly-intersections-v3'
 const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000 // A/B test: regenerate twice a day
+// When results are empty we still cache so we don't re-hammer the API on every
+// page load — but with a shorter window so the UI recovers quickly once the
+// backend has something to return.
+const EMPTY_CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
 const SWIPE_THRESHOLD = 50
 
 /** Derive the unified node list, falling back to legacy `projects` field. */
@@ -347,14 +351,18 @@ function CardSet({ items, label }: { items: Intersection[]; label: string }) {
 export function WeeklyIntersection() {
   const [intersections, setIntersections] = useState<Intersection[]>([])
   const [insights, setInsights] = useState<Intersection[]>([])
-  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     const stored = getStoredData()
-    if (stored && Date.now() - stored.fetchedAt < TWELVE_HOURS_MS) {
-      setIntersections(stored.intersections || [])
-      setInsights(stored.insights || [])
-      return
+    if (stored) {
+      const age = Date.now() - stored.fetchedAt
+      const isEmpty = (stored.intersections?.length ?? 0) === 0 && (stored.insights?.length ?? 0) === 0
+      const ttl = isEmpty ? EMPTY_CACHE_TTL_MS : TWELVE_HOURS_MS
+      if (age < ttl) {
+        setIntersections(stored.intersections || [])
+        setInsights(stored.insights || [])
+        return
+      }
     }
     // Clear old cache keys
     localStorage.removeItem('polymath-weekly-intersections')
@@ -363,48 +371,48 @@ export function WeeklyIntersection() {
   }, [])
 
   const fetchData = async () => {
-    setLoading(true)
     try {
       const res = await fetch('/api/projects?resource=intersections')
-      if (!res.ok) return
+      if (!res.ok) {
+        console.warn('[WeeklyIntersection] fetch failed', res.status, res.statusText)
+        // Cache the failure briefly so we don't retry on every page load.
+        storeData([], [])
+        return
+      }
       const data = await res.json()
       const newIntersections = data.intersections || []
       const newInsights = data.insights || []
       setIntersections(newIntersections)
       setInsights(newInsights)
-      if (newIntersections.length > 0 || newInsights.length > 0) {
-        storeData(newIntersections, newInsights)
-      }
-    } catch {
-      // Silent fail
-    } finally {
-      setLoading(false)
+      // Always cache — empty results get a shorter TTL (see EMPTY_CACHE_TTL_MS).
+      storeData(newIntersections, newInsights)
+    } catch (err) {
+      console.warn('[WeeklyIntersection] fetch error', err)
+      storeData([], [])
     }
   }
 
   const hasData = intersections.length > 0 || insights.length > 0
 
-  if (!hasData && !loading) return null
+  // No data means the section just doesn't render. We never show a loading
+  // spinner here — the fetch happens silently in the background, and either
+  // the section appears with content or it doesn't appear at all. This avoids
+  // the old "spinner flashes then disappears" pattern users saw.
+  if (!hasData) return null
 
   return (
     <section className="pb-6">
       {/* Section heading: "inter" in white (default), "section" in primary (via .section-header span rule) */}
       <h2 className="section-header">inter<span>section</span></h2>
 
-      {loading && !hasData ? (
-        <div className="p-6 rounded-2xl border border-brand-primary/10 bg-brand-primary/5 flex items-center justify-center">
-          <RefreshCw className="h-5 w-5 text-brand-primary animate-spin" />
-        </div>
-      ) : (
-        <div className="space-y-5">
-          {intersections.length > 0 && (
-            <CardSet items={intersections} label="mashups" />
-          )}
-          {insights.length > 0 && (
-            <CardSet items={insights} label="insights" />
-          )}
-        </div>
-      )}
+      <div className="space-y-5">
+        {intersections.length > 0 && (
+          <CardSet items={intersections} label="mashups" />
+        )}
+        {insights.length > 0 && (
+          <CardSet items={insights} label="insights" />
+        )}
+      </div>
     </section>
   )
 }

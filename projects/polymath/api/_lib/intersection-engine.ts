@@ -52,7 +52,10 @@ export interface IntersectionResult {
 }
 
 interface RawCandidate {
-  project_ids: string[]
+  /** Preferred field — mixed node IDs (projects, memories, list items). */
+  node_ids?: string[]
+  /** Legacy field name — still accepted for backwards compat. */
+  project_ids?: string[]
   pattern_name: string
   the_insight: string
   why_its_not_obvious: string
@@ -128,25 +131,59 @@ export async function discoverIntersections(
   }
 
   // --- Phase 3: Find supporting fuel via embeddings ---
+  // Build lookup tables across ALL candidate pools. The AI prompt tells the
+  // model that collisions can mix projects, thoughts, and list items, so the
+  // IDs it returns may come from any of those pools — not just projects.
+  const projectById = new Map(projects.map(p => [p.id, p]))
+  const memoryById = new Map(memories.map(m => [m.id, m]))
+  const listItemById = new Map(listItems.map(li => [li.id, li]))
+
   const results: IntersectionResult[] = []
+  let droppedMissingId = 0
+  let droppedTooSmall = 0
+  let droppedNoProject = 0
 
   for (const candidate of candidates) {
-    const matched = candidate.project_ids
-      .map(id => projects.find(p => p.id === id))
-      .filter((p): p is ProjectInput => !!p)
+    const rawIds = candidate.node_ids ?? candidate.project_ids ?? []
+    const matchedNodes: IntersectionNode[] = []
+    const matchedProjects: ProjectInput[] = []
 
-    if (matched.length < 2) continue
+    for (const id of rawIds) {
+      const p = projectById.get(id)
+      if (p) {
+        matchedNodes.push({ id: p.id, title: p.title, type: 'project' })
+        matchedProjects.push(p)
+        continue
+      }
+      const m = memoryById.get(id)
+      if (m) {
+        const title = (m.title && m.title.trim()) || m.body?.slice(0, 50).trim() || 'Thought'
+        matchedNodes.push({ id: m.id, title, type: 'memory' })
+        continue
+      }
+      const li = listItemById.get(id)
+      if (li) {
+        const title = li.content?.slice(0, 60).trim() || 'List item'
+        matchedNodes.push({ id: li.id, title, type: 'list_item' })
+        continue
+      }
+      droppedMissingId++
+    }
 
-    const fuel = findSupportingFuel(matched, memories, articles)
-    const projectIds = matched.map(p => p.id)
-    const nodes: IntersectionNode[] = matched.map(p => ({ id: p.id, title: p.title, type: 'project' }))
+    // Need at least 2 total nodes AND at least one project (keeps results
+    // grounded — a collision with no project anchor is noise).
+    if (matchedNodes.length < 2) { droppedTooSmall++; continue }
+    if (matchedProjects.length === 0) { droppedNoProject++; continue }
+
+    const fuel = findSupportingFuel(matchedProjects, memories, articles)
+    const projectIds = matchedProjects.map(p => p.id)
 
     results.push({
-      id: [...projectIds].sort().join(','),
+      id: matchedNodes.map(n => n.id).sort().join(','),
       projectIds,
-      projects: matched.map(p => ({ id: p.id, title: p.title })),
-      nodes,
-      score: (candidate.non_obvious_score || 7) * (matched.length * 0.8),
+      projects: matchedProjects.map(p => ({ id: p.id, title: p.title })),
+      nodes: matchedNodes,
+      score: (candidate.non_obvious_score || 7) * (matchedNodes.length * 0.8),
       sharedFuel: fuel.slice(0, 8),
       reason: candidate.the_insight,
       crossover: {
@@ -159,6 +196,17 @@ export async function discoverIntersections(
         ].filter(Boolean).slice(0, 3)
       }
     })
+  }
+
+  if (results.length === 0) {
+    console.warn('[intersection-engine] discoverIntersections dropped all candidates', {
+      rawCandidates: candidates.length,
+      droppedMissingId,
+      droppedTooSmall,
+      droppedNoProject,
+    })
+    // Fall back rather than return nothing — the UI just shows an empty section otherwise.
+    return embeddingBasedDiscovery(projects, memories, articles, listItems)
   }
 
   results.sort((a, b) => b.score - a.score)
@@ -335,7 +383,7 @@ Return a JSON array of UP TO ${targetCount} crossovers (fewer is fine — never 
 For each crossover:
 
 {
-  "project_ids": ["id1", "id2"],
+  "node_ids": ["id1", "id2", "id3"],
   "pattern_name": "3-6 words",
   "the_insight": "1-2 sentences max. The aha moment, plain English.",
   "why_its_not_obvious": "1 sentence.",
@@ -345,8 +393,10 @@ For each crossover:
   "non_obvious_score": 1-10
 }
 
+node_ids: use the EXACT bracketed IDs from the list above. You may mix projects, standalone thoughts, and list items — anything with an ID in brackets is fair game. At least ONE of the IDs MUST be a project (the blocks at the top, before the STANDALONE THOUGHTS and LIST ITEMS sections). No crossover with zero projects.
+
 Only return crossovers scoring 7+. Sort by non_obvious_score descending.
-Use the EXACT project IDs from the list above. Be terse — long fields will get truncated.`
+Be terse — long fields will get truncated.`
 
   const raw = await generateText(prompt, {
     model: MODELS.FLASH_CHAT,
@@ -358,12 +408,15 @@ Use the EXACT project IDs from the list above. Be terse — long fields will get
   const parsed = parseCandidatesJSON(raw)
   if (!Array.isArray(parsed)) return []
 
-  return parsed.filter((c: any) =>
-    Array.isArray(c.project_ids) &&
-    c.project_ids.length >= 2 &&
-    typeof c.the_insight === 'string' &&
-    typeof c.pattern_name === 'string'
-  ) as RawCandidate[]
+  return parsed.filter((c: any) => {
+    const ids = Array.isArray(c.node_ids) ? c.node_ids : Array.isArray(c.project_ids) ? c.project_ids : null
+    return (
+      ids !== null &&
+      ids.length >= 2 &&
+      typeof c.the_insight === 'string' &&
+      typeof c.pattern_name === 'string'
+    )
+  }) as RawCandidate[]
 }
 
 /**
@@ -471,6 +524,13 @@ export async function classicIntersections(
   listItems: ListItemInput[] = []
 ): Promise<IntersectionResult[]> {
   const results = embeddingBasedDiscovery(projects, memories, articles, listItems)
+  if (results.length === 0) {
+    console.warn('[intersection-engine] classicIntersections produced zero clusters', {
+      projects: projects.length,
+      memoriesWithEmbeddings: memories.filter(m => m.embedding).length,
+      listItemsWithEmbeddings: listItems.filter(li => li.embedding).length,
+    })
+  }
 
   // AI narration for top 3
   for (let i = 0; i < Math.min(results.length, 3); i++) {
