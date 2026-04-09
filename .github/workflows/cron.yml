@@ -1,14 +1,27 @@
 name: Cron
 
-# Single consolidated scheduler.
-# Fires every 30 min; dispatches to Vercel endpoints based on current time.
-# All curls run in parallel so each invocation bills ~1 minute on GitHub Actions.
+# Multi-schedule dispatcher.
 #
-# Budget: 48 runs/day * 1 min ≈ 1,440 min/month (well within 2,000 free tier).
+# Previously used a single `*/30 * * * *` trigger with wall-clock time checks
+# (date -u +%H / +%M) to decide which jobs to run. That was broken: GitHub
+# Actions scheduled workflows are routinely delayed at the top of the hour
+# (docs: "High load times include the start of every hour"), so the 09:00 UTC
+# run would actually fire at 09:05–09:20, MIN was no longer "00", and the
+# daily digest / review blocks were silently skipped. Result: no email for days.
+#
+# This version registers each cron as its own schedule entry and branches on
+# `github.event.schedule` — the cron string that *triggered* the run, which is
+# stable regardless of how much GitHub delayed execution.
+#
+# Budget unchanged: ~1,500–1,700 min/month, well within the 2,000 free tier.
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '*/30 * * * *'   # every 30 min: generator + fix-queue runner
+    - cron: '0 */6 * * *'    # every 6h: fix-queue drafter + polymath heat recompute
+    - cron: '0 8 * * *'      # 08:00 UTC daily: idea-engine review + polymath evolve
+    - cron: '0 9 * * *'      # 09:00 UTC daily: idea-engine email digest
+    - cron: '0 8 * * 0'      # Sunday 08:00 UTC: polymath drawer digest
   workflow_dispatch:
     inputs:
       force:
@@ -31,14 +44,12 @@ jobs:
           # Previously used ${{ secrets.VERCEL_DOMAIN }} but that secret was
           # the cause of repeated "curl DNS failure" incidents (see commit
           # a00c314). Hardcoding removes an invisible failure mode.
-          BASE:  https://aper-ture.vercel.app
-          TOKEN: ${{ secrets.IDEA_ENGINE_SECRET }}
-          FORCE: ${{ github.event.inputs.force }}
+          BASE:     https://aper-ture.vercel.app
+          TOKEN:    ${{ secrets.IDEA_ENGINE_SECRET }}
+          SCHEDULE: ${{ github.event.schedule }}
+          FORCE:    ${{ github.event.inputs.force }}
         run: |
           set -u
-          HOUR=$(date -u +%H)
-          MIN=$(date -u +%M)
-          DOW=$(date -u +%u)   # 1=Mon .. 7=Sun
 
           FAILED_FILE=$(mktemp)
 
@@ -51,37 +62,36 @@ jobs:
             fi
           }
 
+          echo "Triggered by: ${SCHEDULE:-workflow_dispatch}"
+
           # ── Every 30 min ──────────────────────────────────────────────
           # Idea Engine generator fires twice an hour.
           # Fix Queue runner catches approved fixes on 30-min granularity.
-          hit "/api/idea-engine?action=generate" &
-          hit "/api/fix-queue?action=run-fixes" &
+          if [ "$SCHEDULE" = "*/30 * * * *" ] || [ "$FORCE" = "true" ]; then
+            hit "/api/idea-engine?action=generate" &
+            hit "/api/fix-queue?action=run-fixes" &
+          fi
 
-          # ── Top of the hour only ──────────────────────────────────────
-          if [ "$MIN" = "00" ] || [ "$FORCE" = "true" ]; then
+          # ── Every 6h: Fix Queue drafter + Polymath heat recompute ─────
+          if [ "$SCHEDULE" = "0 */6 * * *" ] || [ "$FORCE" = "true" ]; then
+            hit "/api/fix-queue?action=draft-pending" &
+            hit "/api/projects?resource=recompute-heat" &
+          fi
 
-            # Every 6h: Fix Queue drafter + Polymath heat recompute
-            if [ $((10#$HOUR % 6)) -eq 0 ] || [ "$FORCE" = "true" ]; then
-              hit "/api/fix-queue?action=draft-pending" &
-              hit "/api/projects?resource=recompute-heat" &
-            fi
+          # ── 08:00 UTC daily: Idea Engine review + Polymath evolve ─────
+          if [ "$SCHEDULE" = "0 8 * * *" ] || [ "$FORCE" = "true" ]; then
+            hit "/api/idea-engine?action=review" &
+            hit "/api/projects?resource=evolve" &
+          fi
 
-            # 08:00 UTC daily: Idea Engine Opus review + Polymath project evolution
-            if [ "$HOUR" = "08" ] || [ "$FORCE" = "true" ]; then
-              hit "/api/idea-engine?action=review" &
-              hit "/api/projects?resource=evolve" &
-            fi
+          # ── 09:00 UTC daily: Idea Engine email digest ─────────────────
+          if [ "$SCHEDULE" = "0 9 * * *" ] || [ "$FORCE" = "true" ]; then
+            hit "/api/idea-engine?action=send-digest" &
+          fi
 
-            # 09:00 UTC daily: Idea Engine email digest
-            if [ "$HOUR" = "09" ] || [ "$FORCE" = "true" ]; then
-              hit "/api/idea-engine?action=send-digest" &
-            fi
-
-            # Sunday 08:00 UTC: Polymath drawer digest
-            if { [ "$DOW" = "7" ] && [ "$HOUR" = "08" ]; } || [ "$FORCE" = "true" ]; then
-              hit "/api/projects?resource=generate-digest" &
-            fi
-
+          # ── Sunday 08:00 UTC: Polymath drawer digest ──────────────────
+          if [ "$SCHEDULE" = "0 8 * * 0" ] || [ "$FORCE" = "true" ]; then
+            hit "/api/projects?resource=generate-digest" &
           fi
 
           wait
