@@ -24,10 +24,22 @@ import { MODELS } from './models.js'
 
 // --- Types matching the frontend contract (WeeklyIntersection.tsx) ---
 
+export type IntersectionNodeType = 'project' | 'memory' | 'list_item'
+
+export interface IntersectionNode {
+  id: string
+  title: string
+  type: IntersectionNodeType
+}
+
 export interface IntersectionResult {
   id: string
+  /** @deprecated kept for backwards compat — prefer nodes */
   projectIds: string[]
+  /** @deprecated kept for backwards compat — prefer nodes */
   projects: Array<{ id: string; title: string }>
+  /** All collision participants (projects + thoughts + list items) */
+  nodes: IntersectionNode[]
   score: number
   sharedFuel: Array<{ type: string; title: string; id: string }>
   reason?: string
@@ -74,6 +86,13 @@ export interface ArticleInput {
   embedding: number[] | null
 }
 
+export interface ListItemInput {
+  id: string
+  content: string | null
+  metadata: any
+  embedding: number[] | null
+}
+
 const FUEL_BRIDGE_THRESHOLD = 0.52
 
 /**
@@ -84,7 +103,8 @@ const FUEL_BRIDGE_THRESHOLD = 0.52
 export async function discoverIntersections(
   projects: ProjectInput[],
   memories: MemoryInput[],
-  articles: ArticleInput[]
+  articles: ArticleInput[],
+  listItems: ListItemInput[] = []
 ): Promise<IntersectionResult[]> {
   if (projects.length < 2) return []
 
@@ -92,7 +112,7 @@ export async function discoverIntersections(
   // For each project, find the user's actual thinking about it (voice notes,
   // articles they've connected to it). This gives the AI substance to work
   // with — not just "Baby photo app" but the WHY and HOW behind it.
-  const richContext = buildRichProjectContext(projects, memories, articles)
+  const richContext = buildRichProjectContext(projects, memories, articles, listItems)
 
   // --- Phase 2: AI spots latent patterns ---
   let candidates: RawCandidate[]
@@ -100,11 +120,11 @@ export async function discoverIntersections(
     candidates = await discoverPatterns(projects, richContext)
   } catch (err) {
     console.error('[intersection-engine] AI discovery failed, falling back to embedding-based:', err)
-    return embeddingBasedDiscovery(projects, memories, articles)
+    return embeddingBasedDiscovery(projects, memories, articles, listItems)
   }
 
   if (candidates.length === 0) {
-    return embeddingBasedDiscovery(projects, memories, articles)
+    return embeddingBasedDiscovery(projects, memories, articles, listItems)
   }
 
   // --- Phase 3: Find supporting fuel via embeddings ---
@@ -119,11 +139,13 @@ export async function discoverIntersections(
 
     const fuel = findSupportingFuel(matched, memories, articles)
     const projectIds = matched.map(p => p.id)
+    const nodes: IntersectionNode[] = matched.map(p => ({ id: p.id, title: p.title, type: 'project' }))
 
     results.push({
       id: [...projectIds].sort().join(','),
       projectIds,
       projects: matched.map(p => ({ id: p.id, title: p.title })),
+      nodes,
       score: (candidate.non_obvious_score || 7) * (matched.length * 0.8),
       sharedFuel: fuel.slice(0, 8),
       reason: candidate.the_insight,
@@ -148,16 +170,22 @@ export async function discoverIntersections(
  * and articles. This gives the AI the user's actual THINKING — their voice
  * notes, the things they've read, the problems they're mulling over — not
  * just a title and a blurb.
+ *
+ * Also lists standalone thoughts and list items (things the user wrote down
+ * that don't belong to any project) so the AI can find patterns that cross
+ * project boundaries OR connect a stray thought to a project.
  */
 function buildRichProjectContext(
   projects: ProjectInput[],
   memories: MemoryInput[],
-  articles: ArticleInput[]
+  articles: ArticleInput[],
+  listItems: ListItemInput[] = []
 ): string {
   const memoriesWithEmbeddings = memories.filter(m => m.embedding)
   const articlesWithEmbeddings = articles.filter(a => a.embedding)
+  const projectEmbeddings = projects.filter(p => p.embedding).map(p => p.embedding!)
 
-  return projects.slice(0, 12).map(p => {
+  const projectBlocks = projects.slice(0, 12).map(p => {
     let context = `[${p.id}] "${p.title}"`
     if (p.description) context += `\n${p.description.slice(0, 500)}`
 
@@ -197,6 +225,43 @@ function buildRichProjectContext(
 
     return context
   }).join('\n\n---\n\n')
+
+  // Orphan thoughts: memories NOT strongly attached to any project. These are
+  // standalone ideas the user had that don't fit neatly in one bucket — exactly
+  // the kind of thing that can collide with a project from a different angle.
+  const orphanMemories = memoriesWithEmbeddings
+    .filter(m => {
+      if (!projectEmbeddings.length) return true
+      const maxSim = Math.max(...projectEmbeddings.map(e => cosineSimilarity(m.embedding!, e)))
+      return maxSim < 0.55
+    })
+    .filter(m => (m.body?.length ?? 0) > 40)
+    .slice(0, 8)
+
+  let orphanBlock = ''
+  if (orphanMemories.length > 0) {
+    orphanBlock = '\n\n---\n\nSTANDALONE THOUGHTS (not tied to any specific project — these can still be collision points):\n'
+    for (const m of orphanMemories) {
+      const text = m.body?.slice(0, 250) || m.title || ''
+      if (text) orphanBlock += `\n[${m.id}] (thought) > "${text}"`
+    }
+  }
+
+  // List items with substance. Things the user has jotted to read/try/build.
+  const richListItems = listItems
+    .filter(li => (li.content?.length ?? 0) > 20)
+    .slice(0, 12)
+
+  let listBlock = ''
+  if (richListItems.length > 0) {
+    listBlock = '\n\n---\n\nLIST ITEMS (things they\'ve noted to read/try/consider — also valid collision points):\n'
+    for (const li of richListItems) {
+      const text = li.content?.slice(0, 200) || ''
+      if (text) listBlock += `\n[${li.id}] (list item) > "${text}"`
+    }
+  }
+
+  return projectBlocks + orphanBlock + listBlock
 }
 
 /**
@@ -249,17 +314,21 @@ GOOD (insight): "There's a tension in your work you might not have noticed. Your
 
 YOUR RULES:
 
-1. Find patterns that span 3-5 projects when possible. A pattern that shows up in 3 different domains is far more interesting than one in 2 — it suggests something fundamental about how this person thinks.${numProjects >= 4 ? ' You have enough ideas here. Go for it.' : ''}
+1. Find patterns that span 3-5 items when possible. A pattern that shows up in 3 different items is far more interesting than one in 2 — it suggests something fundamental about how this person thinks.${numProjects >= 4 ? ' You have enough ideas here. Go for it.' : ''}
 
-2. Name the MECHANISM. Every good crossover has a specific, nameable thing at its core. "Signal detection in noisy sequences." "The tension between structure and freedom." "Feedback loops that compound." If you can't name the mechanism in one phrase, the crossover isn't real.
+2. Items can be projects, standalone thoughts, OR list items. A collision between a project and a stray thought the person had last month is just as valid as a collision between two projects. If a thought about "how birds navigate" connects with a software project, say so. Don't limit yourself to project-vs-project.
 
-3. No mashups. If your crossover is "combine A and B into AB" — delete it and think harder. The crossover should be an insight that changes how the person THINKS about their projects, not a product spec.
+3. Name the MECHANISM. Every good crossover has a specific, nameable thing at its core. Name it in plain words the person would actually use out loud.
 
-4. Keep it simple. If the crossover needs three paragraphs to explain, it's not elegant enough. The best ones land in two sentences.
+4. No mashups. If your crossover is "combine A and B into AB" — delete it and think harder. The crossover should be an insight that changes how the person THINKS about their work, not a product spec.
 
-5. Be specific to THIS person. Reference their actual projects, their actual thinking, the actual words they've used. Generic insights ("creativity benefits from cross-pollination") are worthless. This should feel like it could only be said to THIS person about THESE ideas.
+5. Keep it simple. If the crossover needs three paragraphs to explain, it's not elegant enough. The best ones land in two sentences.
 
-6. Every crossover should suggest ONE clear thing to try. Not a business plan. Just: "Next time you're working on X, try approaching it the way you approach Y. See what happens."
+6. Be specific to THIS person. Reference their actual projects, their actual thinking, the actual words they've used. Generic insights ("creativity benefits from cross-pollination") are worthless. This should feel like it could only be said to THIS person about THESE ideas.
+
+7. Every crossover should suggest ONE clear thing to try. Not a business plan. Just: "Next time you're working on X, try approaching it the way you approach Y. See what happens."
+
+8. PLAIN ENGLISH. NO JARGON. Write like you're explaining it to a friend in a pub, not to an academic or a VC. Specifically BANNED words: stochastic, ontological, epistemological, heuristic, emergent, bifurcation, recursion, isomorphism, bisociation, exaptation, orthogonal, teleological, dialectical, paradigm, meta-, -ness, -icity, actualize, paradigmatic, topology. If you find yourself reaching for one of those words, you're being a show-off — rewrite with normal words. A 14-year-old should be able to read your crossover and understand every single word. If a word has more than 4 syllables, double-check whether it's really the best word.
 
 Return a JSON array of UP TO ${targetCount} crossovers (fewer is fine — never force a weak one). KEEP EVERY FIELD TIGHT. No preamble, no markdown, just JSON.
 
@@ -390,40 +459,43 @@ function findSupportingFuel(
 }
 
 /**
- * Classic approach: embedding-based discovery + AI enrichment.
- * The original intersection algorithm — find topically similar projects via
- * cosine similarity, identify shared fuel, then ask AI to narrate the top results.
- * Exported for A/B comparison with the new insight-driven approach.
+ * Classic approach: embedding-based cluster discovery + AI narration.
+ * Finds multi-node clusters (projects + substantial memories + list items)
+ * using greedy cosine-similarity clustering. Each cluster gets an AI-generated
+ * "what if you combined these" story.
  */
 export async function classicIntersections(
   projects: ProjectInput[],
   memories: MemoryInput[],
-  articles: ArticleInput[]
+  articles: ArticleInput[],
+  listItems: ListItemInput[] = []
 ): Promise<IntersectionResult[]> {
-  const results = embeddingBasedDiscovery(projects, memories, articles)
+  const results = embeddingBasedDiscovery(projects, memories, articles, listItems)
 
-  // AI enrichment for top 3 — same prompts as the original implementation
+  // AI narration for top 3
   for (let i = 0; i < Math.min(results.length, 3); i++) {
     const intersection = results[i]
-    const projectNames = intersection.projects.map(p => p.title).join(' × ')
-    const fuelContext = intersection.sharedFuel.map(f => `${f.type}: "${f.title}"`).join(', ')
+    const nodeLabel = intersection.nodes
+      .map(n => n.type === 'project' ? `the project "${n.title}"` : n.type === 'memory' ? `a thought: "${n.title}"` : `a list item: "${n.title}"`)
+      .join(' + ')
+    const fuelContext = intersection.sharedFuel.slice(0, 5).map(f => `${f.type}: "${f.title}"`).join(', ')
 
     try {
       intersection.reason = await generateText(
-        `These are projects one person is working on: ${projectNames}.${fuelContext ? ` Things that have come up in both: ${fuelContext}.` : ''}
+        `One person has these things on their mind: ${nodeLabel}.${fuelContext ? ` Things that keep showing up across them: ${fuelContext}.` : ''}
 
-In 2-3 plain sentences, explain what genuinely surprising idea becomes possible when you combine these. Don't just say they overlap or use buzzwords. Be specific — what could someone build or do that they couldn't if they only worked on one of these? Write like a smart friend explaining it over coffee, not a pitch deck.`,
+In 2-3 plain-English sentences, say what surprising thing becomes possible when you line these up next to each other. Be specific. Write like a friend who just noticed something clever. No buzzwords, no jargon. BANNED words: stochastic, ontological, emergent, heuristic, isomorphism, paradigm, teleological. If a 14-year-old wouldn't understand a word, don't use it.`,
         { model: MODELS.FLASH_CHAT, temperature: 0.95 }
       )
 
       const crossoverRaw = await generateText(
-        `Someone is working on these projects: ${projectNames}.${fuelContext ? ` Both have come up in relation to: ${fuelContext}.` : ''}
+        `Someone has these things on their mind: ${nodeLabel}.${fuelContext ? ` Things that keep showing up across them: ${fuelContext}.` : ''}
 
-What's a concrete project idea that could only exist because this person works on BOTH of these? Don't suggest something that fits neatly into just one of the projects. Be specific and practical. Write in plain English, no startup speak.
+What's one concrete thing they could try that only makes sense because they have ALL of these on their mind at once? Not a feature. Not a business plan. A small, specific experiment. Write in plain English only. BANNED words: stochastic, ontological, emergent, heuristic, isomorphism, paradigm, teleological. A 14-year-old should understand every word.
 
 Return JSON:
-{"crossover_title":"plain 3-6 word title","why_it_works":"2-3 sentences in plain English","concept":"what you'd actually build, 2-3 sentences","first_steps":["first practical step","second practical step","third practical step"]}`,
-        { model: MODELS.FLASH_CHAT, responseFormat: 'json', temperature: 0.95 }
+{"crossover_title":"plain 3-6 word title","why_it_works":"2-3 short sentences in plain English","concept":"what you'd actually try, 2-3 sentences","first_steps":["first simple step","second simple step","third simple step"]}`,
+        { model: MODELS.FLASH_CHAT, responseFormat: 'json', temperature: 0.95, maxTokens: 1024 }
       )
       intersection.crossover = JSON.parse(crossoverRaw)
     } catch {
@@ -435,61 +507,143 @@ Return JSON:
 }
 
 /**
- * Embedding-based intersections (no AI enrichment).
+ * Embedding-based cluster discovery (no AI enrichment).
+ *
+ * Unlike the old pair-only version, this finds clusters of 2-5 nodes of
+ * MIXED types: projects, substantial memories, and list items. A 3-way
+ * cluster (e.g. "baby app + memory about pattern recognition + list item
+ * about bird migration") is more interesting than a bare pair, so we
+ * extend pairs greedily by adding any node that's similar to ALL current
+ * members within the useful range.
+ *
  * Used as fallback when AI discovery fails, and as the base for classicIntersections.
  */
 function embeddingBasedDiscovery(
   projects: ProjectInput[],
   memories: MemoryInput[],
-  articles: ArticleInput[]
+  articles: ArticleInput[],
+  listItems: ListItemInput[] = []
 ): IntersectionResult[] {
-  const pairs: Array<{
-    projects: ProjectInput[]
-    similarity: number
-    sharedFuel: Array<{ type: string; title: string; id: string }>
-  }> = []
+  // Build a unified candidate pool with mixed node types.
+  // A candidate is any item with an embedding that has enough substance to
+  // "collide" — for projects that's always true; for memories/list items we
+  // filter by text length to exclude one-liners.
+  type Candidate = { id: string; title: string; type: IntersectionNodeType; embedding: number[] }
+  const candidates: Candidate[] = []
 
-  for (let i = 0; i < projects.length; i++) {
-    for (let j = i + 1; j < projects.length; j++) {
-      const a = projects[i]
-      const b = projects[j]
-      if (!a.embedding || !b.embedding) continue
+  for (const p of projects) {
+    if (p.embedding) candidates.push({ id: p.id, title: p.title, type: 'project', embedding: p.embedding })
+  }
+  for (const m of memories) {
+    if (!m.embedding) continue
+    if ((m.body?.length ?? 0) < 60) continue // substance filter
+    const title = (m.title && m.title.trim()) || m.body?.slice(0, 50).trim() || 'Thought'
+    candidates.push({ id: m.id, title, type: 'memory', embedding: m.embedding })
+  }
+  for (const li of listItems) {
+    if (!li.embedding) continue
+    if ((li.content?.length ?? 0) < 30) continue
+    const title = li.content?.slice(0, 60).trim() || 'List item'
+    candidates.push({ id: li.id, title, type: 'list_item', embedding: li.embedding })
+  }
 
-      const sim = cosineSimilarity(a.embedding, b.embedding)
-      const sharedFuel: Array<{ type: string; title: string; id: string }> = []
+  if (candidates.length < 2) return []
 
-      for (const mem of memories) {
-        if (!mem.embedding) continue
-        const simA = cosineSimilarity(mem.embedding, a.embedding)
-        const simB = cosineSimilarity(mem.embedding, b.embedding)
-        if (simA > 0.6 && simB > 0.6) {
-          sharedFuel.push({ type: 'memory', title: mem.title || mem.body?.substring(0, 60) || 'Thought', id: mem.id })
-        }
-      }
-      for (const art of articles) {
-        if (!art.embedding) continue
-        const simA = cosineSimilarity(art.embedding, a.embedding)
-        const simB = cosineSimilarity(art.embedding, b.embedding)
-        if (simA > 0.6 && simB > 0.6) {
-          sharedFuel.push({ type: 'article', title: art.title || 'Article', id: art.id })
-        }
-      }
-
-      if (sim >= 0.4 && sim <= 0.72) {
-        pairs.push({ projects: [a, b], similarity: sim, sharedFuel })
-      }
+  // Pairwise similarity matrix (only computed once)
+  const n = candidates.length
+  const sims: number[][] = Array.from({ length: n }, () => new Array(n).fill(0))
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      sims[i][j] = sims[j][i] = cosineSimilarity(candidates[i].embedding, candidates[j].embedding)
     }
   }
 
-  pairs.sort((a, b) =>
-    (b.similarity + b.sharedFuel.length * 0.1) - (a.similarity + a.sharedFuel.length * 0.1)
-  )
+  // Sweet-spot similarity range: close enough to be connected, far enough to
+  // not be redundant. Memories often land closer to their parent project, so
+  // we allow a wider upper bound.
+  const LOWER = 0.38
+  const UPPER = 0.82
 
-  return pairs.slice(0, 5).map(pair => ({
-    id: pair.projects.map(p => p.id).sort().join(','),
-    projectIds: pair.projects.map(p => p.id),
-    projects: pair.projects.map(p => ({ id: p.id, title: p.title })),
-    score: 2 * pair.similarity + pair.sharedFuel.length * 0.3,
-    sharedFuel: pair.sharedFuel,
-  }))
+  // Generate clusters by extending every useful pair greedily.
+  const clusters: Array<{ indices: number[]; avgSim: number }> = []
+
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (sims[i][j] < LOWER || sims[i][j] > UPPER) continue
+      const members = [i, j]
+      // Try to extend with nodes that are similar to ALL current members
+      // (sorted by their average similarity to the seed pair to prefer strong adds)
+      const extCandidates = Array.from({ length: n }, (_, k) => k)
+        .filter(k => k !== i && k !== j)
+        .map(k => ({ k, avg: (sims[i][k] + sims[j][k]) / 2 }))
+        .sort((a, b) => b.avg - a.avg)
+      for (const { k } of extCandidates) {
+        const simsToAll = members.map(m => sims[m][k])
+        if (simsToAll.every(s => s >= LOWER && s <= UPPER)) {
+          members.push(k)
+          if (members.length >= 5) break
+        }
+      }
+      // Average pairwise sim
+      let total = 0
+      let count = 0
+      for (let a = 0; a < members.length; a++) {
+        for (let b = a + 1; b < members.length; b++) {
+          total += sims[members[a]][members[b]]
+          count++
+        }
+      }
+      clusters.push({ indices: [...members].sort((a, b) => a - b), avgSim: count > 0 ? total / count : 0 })
+    }
+  }
+
+  // Dedupe by member set; keep the strongest scoring version
+  const seen = new Map<string, { indices: number[]; avgSim: number }>()
+  for (const c of clusters) {
+    const key = c.indices.join(',')
+    const existing = seen.get(key)
+    if (!existing || c.avgSim > existing.avgSim) seen.set(key, c)
+  }
+
+  // Filter: every cluster should contain AT LEAST ONE project (keeps results
+  // grounded — pure thought/list clusters are noise without a project anchor).
+  // Prefer larger clusters and higher similarity.
+  const clusterList = Array.from(seen.values())
+    .filter(c => c.indices.some(idx => candidates[idx].type === 'project'))
+    .sort((a, b) => {
+      const sizeBonusA = (a.indices.length - 2) * 0.15
+      const sizeBonusB = (b.indices.length - 2) * 0.15
+      return (b.avgSim + sizeBonusB) - (a.avgSim + sizeBonusA)
+    })
+
+  // Aggressive suppression of overlap: skip clusters that share >1 members
+  // with an earlier, better-scoring cluster. This keeps the final list diverse.
+  const picked: Array<{ indices: number[]; avgSim: number }> = []
+  for (const c of clusterList) {
+    const overlapsTooMuch = picked.some(p => {
+      const shared = p.indices.filter(i => c.indices.includes(i)).length
+      return shared > 1
+    })
+    if (!overlapsTooMuch) picked.push(c)
+    if (picked.length >= 5) break
+  }
+
+  // Build final results with supporting fuel
+  return picked.map(cluster => {
+    const nodes = cluster.indices.map(idx => candidates[idx])
+    const projectNodes = nodes.filter(n => n.type === 'project')
+    const projectInputs = projectNodes
+      .map(n => projects.find(p => p.id === n.id))
+      .filter((p): p is ProjectInput => !!p)
+    const fuel = findSupportingFuel(projectInputs, memories, articles)
+
+    return {
+      id: cluster.indices.map(i => candidates[i].id).sort().join(','),
+      projectIds: projectNodes.map(n => n.id),
+      projects: projectNodes.map(n => ({ id: n.id, title: n.title })),
+      nodes: nodes.map(n => ({ id: n.id, title: n.title, type: n.type })),
+      score: 2 * cluster.avgSim + nodes.length * 0.3 + fuel.length * 0.1,
+      sharedFuel: fuel.slice(0, 8),
+    }
+  })
 }

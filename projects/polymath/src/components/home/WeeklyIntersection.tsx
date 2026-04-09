@@ -9,8 +9,16 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence, type PanInfo } from 'framer-motion'
-import { ArrowRight, RefreshCw, FileText, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowRight, RefreshCw, FileText, MessageCircle, ChevronLeft, ChevronRight, Lightbulb, ListChecks, Folder } from 'lucide-react'
 import { Link } from 'react-router-dom'
+
+type NodeType = 'project' | 'memory' | 'list_item'
+
+interface IntersectionNode {
+  id: string
+  title: string
+  type: NodeType
+}
 
 interface IntersectionProject {
   id: string
@@ -34,15 +42,22 @@ interface Intersection {
   id: string
   projectIds: string[]
   projects: IntersectionProject[]
+  nodes?: IntersectionNode[] // Preferred — supports mixed types
   score: number
   sharedFuel: IntersectionFuel[]
   reason?: string
   crossover?: CrossoverIdea
 }
 
-const STORAGE_KEY = 'polymath-weekly-intersections-v2'
-const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000
+const STORAGE_KEY = 'polymath-weekly-intersections-v3'
+const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000 // A/B test: regenerate twice a day
 const SWIPE_THRESHOLD = 50
+
+/** Derive the unified node list, falling back to legacy `projects` field. */
+function getNodes(i: Intersection): IntersectionNode[] {
+  if (i.nodes && i.nodes.length > 0) return i.nodes
+  return i.projects.map(p => ({ id: p.id, title: p.title, type: 'project' as const }))
+}
 
 interface CachedData {
   intersections: Intersection[]
@@ -121,14 +136,26 @@ function CardSet({ items, label }: { items: Intersection[]; label: string }) {
       <motion.div
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-2xl border border-brand-primary/15 bg-gradient-to-br from-brand-primary/5 to-brand-primary/5 relative overflow-hidden"
+        className="rounded-2xl border border-brand-primary/25 bg-gradient-to-br from-brand-primary/8 to-brand-primary/[0.02] relative overflow-hidden"
+        style={{
+          boxShadow: '0 0 0 1px rgba(var(--brand-primary-rgb),0.08), 0 8px 40px -12px rgba(var(--brand-primary-rgb),0.25)'
+        }}
       >
-        {/* Shimmer */}
+        {/* Shimmer layer 1 — wide sweep, brand color */}
         <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
           <div className="absolute inset-0" style={{
-            background: 'linear-gradient(90deg, transparent 0%, rgba(var(--brand-primary-rgb),0.06) 50%, transparent 100%)',
-            backgroundSize: '200% 100%',
-            animation: 'premiumShimmer 4s linear infinite',
+            background: 'linear-gradient(100deg, transparent 20%, rgba(var(--brand-primary-rgb),0.18) 50%, transparent 80%)',
+            backgroundSize: '250% 100%',
+            animation: 'premiumShimmer 5s linear infinite',
+          }} />
+        </div>
+        {/* Shimmer layer 2 — tighter bright streak, offset timing */}
+        <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
+          <div className="absolute inset-0" style={{
+            background: 'linear-gradient(100deg, transparent 42%, rgba(255,255,255,0.08) 50%, transparent 58%)',
+            backgroundSize: '250% 100%',
+            animation: 'premiumShimmer 5s linear infinite',
+            animationDelay: '1.2s',
           }} />
         </div>
 
@@ -146,21 +173,40 @@ function CardSet({ items, label }: { items: Intersection[]; label: string }) {
               onDragEnd={onDragEnd}
               className="touch-pan-y"
             >
-              {/* Project names */}
-              <div className="flex items-center gap-2 mb-3 flex-wrap">
-                {current.projects.map((p, i) => (
-                  <span key={p.id} className="flex items-center gap-2">
-                    {i > 0 && <span className="text-brand-primary font-bold">&times;</span>}
-                    <Link
-                      to={`/projects/${p.id}`}
-                      className="text-sm font-semibold text-[var(--brand-text-primary)] hover:text-brand-primary transition-colors"
-                    >
-                      {p.title}
-                    </Link>
-                  </span>
-                ))}
-                <span className="ml-auto text-xs text-brand-primary/60 font-mono">
-                  {current.projects.length} domains
+              {/* Collision header — mixed node types with a clearer separator */}
+              <div className="flex items-center gap-x-1.5 gap-y-2 mb-3 flex-wrap">
+                {getNodes(current).map((node, i) => {
+                  const Icon = node.type === 'project' ? Folder : node.type === 'memory' ? Lightbulb : ListChecks
+                  const inner = (
+                    <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand-text-primary)]">
+                      <Icon className={`h-3.5 w-3.5 flex-shrink-0 ${node.type === 'project' ? 'text-brand-primary/80' : 'text-brand-primary/60'}`} />
+                      <span className="truncate max-w-[180px]">{node.title}</span>
+                    </span>
+                  )
+                  return (
+                    <span key={`${node.type}-${node.id}`} className="inline-flex items-center gap-1.5">
+                      {i > 0 && (
+                        <span
+                          aria-hidden
+                          className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-brand-primary/15 border border-brand-primary/30 text-brand-primary text-[13px] font-bold leading-none"
+                          style={{ fontFamily: 'var(--brand-font-body)' }}
+                        >
+                          +
+                        </span>
+                      )}
+                      {node.type === 'project' ? (
+                        <Link
+                          to={`/projects/${node.id}`}
+                          className="hover:text-brand-primary transition-colors"
+                        >
+                          {inner}
+                        </Link>
+                      ) : inner}
+                    </span>
+                  )
+                })}
+                <span className="ml-auto text-[10px] text-brand-primary/60 font-mono tracking-wide uppercase">
+                  {getNodes(current).length} {getNodes(current).length === 1 ? 'node' : 'nodes'}
                 </span>
               </div>
 
@@ -225,20 +271,35 @@ function CardSet({ items, label }: { items: Intersection[]; label: string }) {
 
                       <div>
                         <p className="text-[10px] font-medium tracking-wide lowercase text-[var(--brand-text-muted)] mb-2">
-                          explore each domain
+                          what's colliding here
                         </p>
-                        {current.projects.map((p) => (
-                          <Link
-                            key={p.id}
-                            to={`/projects/${p.id}`}
-                            className="flex items-center justify-between p-2 rounded-lg hover:bg-[var(--glass-surface)] transition-colors group"
-                          >
-                            <span className="text-sm text-[var(--brand-text-secondary)] group-hover:text-[var(--brand-text-primary)] transition-colors">
-                              {p.title}
-                            </span>
-                            <ArrowRight className="h-3 w-3 text-[var(--brand-text-muted)] group-hover:text-brand-primary transition-colors" />
-                          </Link>
-                        ))}
+                        {getNodes(current).map((node) => {
+                          const Icon = node.type === 'project' ? Folder : node.type === 'memory' ? Lightbulb : ListChecks
+                          const typeLabel = node.type === 'project' ? 'project' : node.type === 'memory' ? 'thought' : 'list item'
+                          const row = (
+                            <div className="flex items-center justify-between p-2 rounded-lg hover:bg-[var(--glass-surface)] transition-colors group">
+                              <span className="flex items-center gap-2 min-w-0">
+                                <Icon className="h-3.5 w-3.5 text-brand-primary/60 flex-shrink-0" />
+                                <span className="text-sm text-[var(--brand-text-secondary)] group-hover:text-[var(--brand-text-primary)] transition-colors truncate">
+                                  {node.title}
+                                </span>
+                                <span className="text-[9px] uppercase tracking-wide text-[var(--brand-text-muted)] opacity-60 flex-shrink-0">
+                                  {typeLabel}
+                                </span>
+                              </span>
+                              {node.type === 'project' && (
+                                <ArrowRight className="h-3 w-3 text-[var(--brand-text-muted)] group-hover:text-brand-primary transition-colors flex-shrink-0" />
+                              )}
+                            </div>
+                          )
+                          return node.type === 'project' ? (
+                            <Link key={`${node.type}-${node.id}`} to={`/projects/${node.id}`}>
+                              {row}
+                            </Link>
+                          ) : (
+                            <div key={`${node.type}-${node.id}`}>{row}</div>
+                          )
+                        })}
                       </div>
 
                       {current.sharedFuel.length > 4 && (
@@ -290,13 +351,14 @@ export function WeeklyIntersection() {
 
   useEffect(() => {
     const stored = getStoredData()
-    if (stored && Date.now() - stored.fetchedAt < ONE_WEEK_MS) {
+    if (stored && Date.now() - stored.fetchedAt < TWELVE_HOURS_MS) {
       setIntersections(stored.intersections || [])
       setInsights(stored.insights || [])
       return
     }
-    // Clear old v1 cache key
+    // Clear old cache keys
     localStorage.removeItem('polymath-weekly-intersections')
+    localStorage.removeItem('polymath-weekly-intersections-v2')
     fetchData()
   }, [])
 

@@ -362,12 +362,12 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
               }
             }}
           >
-            {/* Drift topic — shown briefly as user enters darkness */}
+            {/* Drift topic — hold readable for ~7s, then slowly fade out over ~5s */}
             {currentPrompt && (
               <motion.div
-                initial={{ opacity: 1 }}
-                animate={{ opacity: 0 }}
-                transition={{ duration: 4, ease: 'easeOut' }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: [0, 1, 1, 0] }}
+                transition={{ duration: 13, times: [0, 0.1, 0.55, 1], ease: 'easeOut' }}
                 className="text-center px-8 max-w-md"
               >
                 <p className="text-xs uppercase tracking-widest text-brand-primary/60 font-bold mb-3">
