@@ -532,23 +532,25 @@ export async function classicIntersections(
     })
   }
 
-  // AI narration for top 3
-  for (let i = 0; i < Math.min(results.length, 3); i++) {
-    const intersection = results[i]
+  // AI narration for top 3 — run in parallel so we stay well under Vercel's
+  // function timeout. Sequentially this was 6 Gemini calls × ~3s = ~18s,
+  // which combined with discoverIntersections was blowing the 15s default.
+  const narrationTargets = results.slice(0, 3)
+  await Promise.all(narrationTargets.map(async (intersection) => {
     const nodeLabel = intersection.nodes
       .map(n => n.type === 'project' ? `the project "${n.title}"` : n.type === 'memory' ? `a thought: "${n.title}"` : `a list item: "${n.title}"`)
       .join(' + ')
     const fuelContext = intersection.sharedFuel.slice(0, 5).map(f => `${f.type}: "${f.title}"`).join(', ')
 
-    try {
-      intersection.reason = await generateText(
+    // Both calls for one intersection can also run in parallel.
+    const [reasonResult, crossoverResult] = await Promise.allSettled([
+      generateText(
         `One person has these things on their mind: ${nodeLabel}.${fuelContext ? ` Things that keep showing up across them: ${fuelContext}.` : ''}
 
 In 2-3 plain-English sentences, say what surprising thing becomes possible when you line these up next to each other. Be specific. Write like a friend who just noticed something clever. No buzzwords, no jargon. BANNED words: stochastic, ontological, emergent, heuristic, isomorphism, paradigm, teleological. If a 14-year-old wouldn't understand a word, don't use it.`,
         { model: MODELS.FLASH_CHAT, temperature: 0.95 }
-      )
-
-      const crossoverRaw = await generateText(
+      ),
+      generateText(
         `Someone has these things on their mind: ${nodeLabel}.${fuelContext ? ` Things that keep showing up across them: ${fuelContext}.` : ''}
 
 What's one concrete thing they could try that only makes sense because they have ALL of these on their mind at once? Not a feature. Not a business plan. A small, specific experiment. Write in plain English only. BANNED words: stochastic, ontological, emergent, heuristic, isomorphism, paradigm, teleological. A 14-year-old should understand every word.
@@ -557,11 +559,19 @@ Return JSON:
 {"crossover_title":"plain 3-6 word title","why_it_works":"2-3 short sentences in plain English","concept":"what you'd actually try, 2-3 sentences","first_steps":["first simple step","second simple step","third simple step"]}`,
         { model: MODELS.FLASH_CHAT, responseFormat: 'json', temperature: 0.95, maxTokens: 1024 }
       )
-      intersection.crossover = JSON.parse(crossoverRaw)
-    } catch {
-      // Non-critical
+    ])
+
+    if (reasonResult.status === 'fulfilled') {
+      intersection.reason = reasonResult.value
     }
-  }
+    if (crossoverResult.status === 'fulfilled') {
+      try {
+        intersection.crossover = JSON.parse(crossoverResult.value)
+      } catch {
+        // Non-critical — cluster still renders without crossover detail
+      }
+    }
+  }))
 
   return results
 }

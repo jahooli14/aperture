@@ -49,7 +49,7 @@ interface Intersection {
   crossover?: CrossoverIdea
 }
 
-const STORAGE_KEY = 'polymath-weekly-intersections-v3'
+const STORAGE_KEY = 'polymath-weekly-intersections-v4'
 const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000 // A/B test: regenerate twice a day
 // When results are empty we still cache so we don't re-hammer the API on every
 // page load — but with a shorter window so the UI recovers quickly once the
@@ -364,9 +364,11 @@ export function WeeklyIntersection() {
         return
       }
     }
-    // Clear old cache keys
+    // Clear old cache keys (including v3 which could be poisoned with an empty
+    // error response cached for 1h — see the error-handling fix below).
     localStorage.removeItem('polymath-weekly-intersections')
     localStorage.removeItem('polymath-weekly-intersections-v2')
+    localStorage.removeItem('polymath-weekly-intersections-v3')
     fetchData()
   }, [])
 
@@ -375,8 +377,8 @@ export function WeeklyIntersection() {
       const res = await fetch('/api/projects?resource=intersections')
       if (!res.ok) {
         console.warn('[WeeklyIntersection] fetch failed', res.status, res.statusText)
-        // Cache the failure briefly so we don't retry on every page load.
-        storeData([], [])
+        // Do NOT cache HTTP errors as empty — that pins the user to "no data"
+        // for an hour every time the API has a blip. Next page load will retry.
         return
       }
       const data = await res.json()
@@ -384,11 +386,13 @@ export function WeeklyIntersection() {
       const newInsights = data.insights || []
       setIntersections(newIntersections)
       setInsights(newInsights)
-      // Always cache — empty results get a shorter TTL (see EMPTY_CACHE_TTL_MS).
+      // Only cache successful responses. Empty is still cached (with the shorter
+      // EMPTY_CACHE_TTL_MS) so we don't re-hammer the API when the user genuinely
+      // has no intersections yet.
       storeData(newIntersections, newInsights)
     } catch (err) {
+      // Network / parse error — same as HTTP error, don't cache, let next load retry.
       console.warn('[WeeklyIntersection] fetch error', err)
-      storeData([], [])
     }
   }
 
