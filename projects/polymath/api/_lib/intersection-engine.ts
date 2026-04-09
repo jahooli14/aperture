@@ -1,22 +1,19 @@
 /**
- * Intersection Engine — AI-Primary Structural Discovery
+ * Intersection Engine — Pattern Discovery in the User's Thinking
  *
- * Fundamental shift from the old approach:
- *   OLD: Embeddings find topically similar things → AI narrates why they're similar
- *   NEW: AI discovers structural connections between dissimilar things → Embeddings find supporting fuel
+ * The core insight: the best crossovers aren't combinations ("A + B = AB").
+ * They're latent patterns the user is already creating without knowing it.
+ * The AI's job is to notice what the human hasn't — a mechanism, constraint,
+ * or principle that keeps showing up across their different projects.
  *
- * Based on:
- * - The Medici Effect (Johansson): breakthroughs at intersections of fields, not within them
- * - Packy McCormick (Not Boring): non-obvious structural connections create complexity moats
- * - Koestler's Bisociation: connecting previously unrelated matrices of thought
- * - Steven Johnson's Exaptation: ideas designed for one purpose solving problems in another
+ * The output should feel like a brilliant friend who knows all your work
+ * saying: "Have you noticed you keep doing the same thing in three
+ * completely different contexts? Here's what that means."
  *
- * Key design principles:
- * 1. Find STRUCTURAL patterns (mechanisms, constraints, principles) — not topic overlap
- * 2. Prioritise 3-5 idea combinations over simple pairs
- * 3. Apply the "only at this intersection" test for non-obviousness
- * 4. Every intersection must suggest something concrete and actionable
- * 5. Write like an excited friend who just connected the dots, not a consultant
+ * Two-phase approach:
+ *   1. AI reads the user's projects + their actual thinking (voice notes,
+ *      articles) and spots latent structural patterns across domains
+ *   2. Embeddings find concrete memories/articles that bridge the pattern
  *
  * See docs/INTERSECTIONS.md for the full intellectual framework.
  */
@@ -44,12 +41,12 @@ export interface IntersectionResult {
 
 interface RawCandidate {
   project_ids: string[]
-  crossover_title: string
-  why_this_is_wild: string
-  the_mechanism: string
-  what_you_could_build: string
-  first_move: string
-  next_steps: string[]
+  pattern_name: string
+  the_insight: string
+  why_its_not_obvious: string
+  what_it_unlocks: string
+  one_thing_to_try: string
+  further_steps: string[]
   non_obvious_score: number
 }
 
@@ -77,12 +74,12 @@ export interface ArticleInput {
   embedding: number[] | null
 }
 
-// A fuel item must be this similar to a project to count as a bridge
 const FUEL_BRIDGE_THRESHOLD = 0.52
 
 /**
- * Main entry point. Discovers intersections using AI-primary structural analysis,
- * with embedding-based fuel finding as supporting evidence.
+ * Main entry point.
+ * Builds rich per-project context from associated memories, then asks the AI
+ * to spot latent patterns across the user's thinking.
  */
 export async function discoverIntersections(
   projects: ProjectInput[],
@@ -91,10 +88,16 @@ export async function discoverIntersections(
 ): Promise<IntersectionResult[]> {
   if (projects.length < 2) return []
 
-  // --- Phase 1: AI discovers structural intersections ---
+  // --- Phase 1: Build rich context ---
+  // For each project, find the user's actual thinking about it (voice notes,
+  // articles they've connected to it). This gives the AI substance to work
+  // with — not just "Baby photo app" but the WHY and HOW behind it.
+  const richContext = buildRichProjectContext(projects, memories, articles)
+
+  // --- Phase 2: AI spots latent patterns ---
   let candidates: RawCandidate[]
   try {
-    candidates = await aiDiscoverIntersections(projects, memories, articles)
+    candidates = await discoverPatterns(projects, richContext)
   } catch (err) {
     console.error('[intersection-engine] AI discovery failed, falling back to embedding-based:', err)
     return fallbackEmbeddingIntersections(projects, memories, articles)
@@ -104,9 +107,7 @@ export async function discoverIntersections(
     return fallbackEmbeddingIntersections(projects, memories, articles)
   }
 
-  // --- Phase 2: Find supporting fuel via embeddings ---
-  // Embeddings add concrete evidence (specific memories/articles that bridge the intersection)
-  // to the AI's structural insights.
+  // --- Phase 3: Find supporting fuel via embeddings ---
   const results: IntersectionResult[] = []
 
   for (const candidate of candidates) {
@@ -125,14 +126,14 @@ export async function discoverIntersections(
       projects: matched.map(p => ({ id: p.id, title: p.title })),
       score: (candidate.non_obvious_score || 7) * (matched.length * 0.8),
       sharedFuel: fuel.slice(0, 8),
-      reason: candidate.why_this_is_wild,
+      reason: candidate.the_insight,
       crossover: {
-        crossover_title: candidate.crossover_title,
-        why_it_works: candidate.the_mechanism,
-        concept: candidate.what_you_could_build,
+        crossover_title: candidate.pattern_name,
+        why_it_works: candidate.why_its_not_obvious,
+        concept: candidate.what_it_unlocks,
         first_steps: [
-          candidate.first_move,
-          ...(candidate.next_steps || [])
+          candidate.one_thing_to_try,
+          ...(candidate.further_steps || [])
         ].filter(Boolean).slice(0, 3)
       }
     })
@@ -143,141 +144,160 @@ export async function discoverIntersections(
 }
 
 /**
- * AI-primary intersection discovery.
- *
- * Sends all projects + fuel context to a strong model and asks it to find
- * structural connections. Prioritises 3-5 idea intersections over simple pairs.
- *
- * The prompt encodes the principles from Medici Effect, Packy McCormick, Koestler,
- * and Steven Johnson — structural isomorphism, constraint inversion, exaptation,
- * hidden feedback loops, and the "only at this intersection" test.
+ * Build rich context for each project by finding the most relevant memories
+ * and articles. This gives the AI the user's actual THINKING — their voice
+ * notes, the things they've read, the problems they're mulling over — not
+ * just a title and a blurb.
  */
-async function aiDiscoverIntersections(
+function buildRichProjectContext(
   projects: ProjectInput[],
   memories: MemoryInput[],
   articles: ArticleInput[]
+): string {
+  const memoriesWithEmbeddings = memories.filter(m => m.embedding)
+  const articlesWithEmbeddings = articles.filter(a => a.embedding)
+
+  return projects.slice(0, 12).map(p => {
+    let context = `[${p.id}] "${p.title}"`
+    if (p.description) context += `\n${p.description.slice(0, 500)}`
+
+    // Find the user's recent thinking about this project (top 3 most relevant memories)
+    if (p.embedding && memoriesWithEmbeddings.length > 0) {
+      const related = memoriesWithEmbeddings
+        .map(m => ({ m, sim: cosineSimilarity(m.embedding!, p.embedding!) }))
+        .sort((a, b) => b.sim - a.sim)
+        .slice(0, 3)
+        .filter(x => x.sim > 0.45)
+
+      if (related.length > 0) {
+        context += `\nWhat they've been thinking about this:`
+        for (const { m } of related) {
+          const text = m.body?.slice(0, 300) || m.title || ''
+          if (text) context += `\n  > "${text}"`
+        }
+      }
+    }
+
+    // Find related reading (top 2 most relevant articles)
+    if (p.embedding && articlesWithEmbeddings.length > 0) {
+      const related = articlesWithEmbeddings
+        .map(a => ({ a, sim: cosineSimilarity(a.embedding!, p.embedding!) }))
+        .sort((a, b) => b.sim - a.sim)
+        .slice(0, 2)
+        .filter(x => x.sim > 0.45)
+
+      if (related.length > 0) {
+        context += `\nWhat they've been reading:`
+        for (const { a } of related) {
+          const label = a.title || 'Article'
+          context += `\n  > "${label}"${a.summary ? ` — ${a.summary.slice(0, 150)}` : ''}`
+        }
+      }
+    }
+
+    return context
+  }).join('\n\n---\n\n')
+}
+
+/**
+ * The core discovery step. Asks the AI to read through everything the user
+ * has been working on and thinking about, then spot patterns they haven't
+ * noticed in their own thinking.
+ *
+ * Critical framing: "What patterns has this person not noticed?" —
+ * NOT "How can these projects be combined?"
+ */
+async function discoverPatterns(
+  projects: ProjectInput[],
+  richContext: string
 ): Promise<RawCandidate[]> {
 
-  // Build project context (cap at 15 to keep prompt reasonable)
-  const projectContext = projects.slice(0, 15).map(p =>
-    `[${p.id}] "${p.title}"${p.description ? ` — ${p.description.slice(0, 600)}` : ''}`
-  ).join('\n\n')
-
-  // Build fuel context (recent thoughts + articles as potential bridges)
-  const fuelItems: string[] = []
-  for (const m of memories.slice(0, 25)) {
-    const label = m.title || m.body?.substring(0, 80) || 'Thought'
-    const themes = m.themes?.length ? ` (themes: ${m.themes.slice(0, 4).join(', ')})` : ''
-    fuelItems.push(`- [thought] "${label}"${themes}${m.body ? `: ${m.body.slice(0, 150)}` : ''}`)
-  }
-  for (const a of articles.slice(0, 15)) {
-    fuelItems.push(`- [article] "${a.title || 'Article'}"${a.summary ? `: ${a.summary.slice(0, 150)}` : ''}`)
-  }
-
   const numProjects = projects.length
-  const targetCount = Math.min(5, Math.max(2, Math.floor(numProjects * 0.8)))
+  const targetCount = Math.min(5, Math.max(2, Math.floor(numProjects * 0.7)))
 
-  const prompt = buildDiscoveryPrompt(projectContext, fuelItems, numProjects, targetCount)
+  const prompt = `You are reading through everything one person has been working on and thinking about recently. Your job: spot patterns in their thinking that THEY haven't noticed yet.
+
+This is not about combining projects into one product. That's boring. This is about finding a hidden thread — a mechanism, a constraint, a principle — that keeps showing up across their work in different disguises. Something that, once pointed out, makes them go: "Oh. I've been circling the same idea from three different directions and I didn't even see it."
+
+HERE IS EVERYTHING THIS PERSON IS WORKING ON AND THINKING ABOUT:
+
+${richContext}
+
+---
+
+Now. Read all of that carefully. What patterns do you see that this person probably hasn't noticed?
+
+WHAT MAKES A GREAT CROSSOVER vs A FORGETTABLE ONE:
+
+A great crossover is an INSIGHT — it reveals something that was already there but invisible. It's clever but simple. Once you hear it, you can't unhear it.
+
+A bad crossover is a MASHUP — it just staples ideas together. "Your photo app + your book editor = a photo book tool!" That's not clever. That's a feature request. Nobody's mind is blown by concatenation.
+
+THE DIFFERENCE, BY EXAMPLE:
+
+BAD (mashup): "Your baby tracking app and your knowledge graph both handle data, so you could build a baby data dashboard."
+— This is just noticing they both involve data. That's a category, not an insight. Anyone could see this.
+
+BAD (artificial): "Combine your photo app, knowledge graph, and book editor into one mega-app."
+— This is just putting three things in a bag. There's no underlying connection. It's forced.
+
+GOOD (insight): "You keep solving the same problem without realising it. In your baby app, you're figuring out how to spot meaningful change in a stream of nearly-identical photos. In your knowledge graph, you're figuring out how to spot meaningful connections in a stream of scattered thoughts. Both are the same challenge: signal detection in noisy sequences. And that article you read about bird migration patterns? Same thing — how do individual data points become a visible pattern? You've accidentally become an expert in this one specific problem from three completely different angles."
+— This names a specific mechanism. It connects things that LOOK different but ARE the same. It changes how you think about each project. And it's simple to explain.
+
+GOOD (insight): "There's a tension in your work you might not have noticed. Your book editor is all about imposing structure on messy material — taking raw creativity and shaping it. Your voice capture tool does the opposite — it deliberately avoids structure to capture raw thought. You're building tools for both sides of the same creative process. What if the connection between them isn't a feature — it's a workflow? The thing missing from both is the BRIDGE between unstructured capture and structured output."
+— This finds a genuine tension. It doesn't combine the projects. It reveals what they share at a deeper level.
+
+YOUR RULES:
+
+1. Find patterns that span 3-5 projects when possible. A pattern that shows up in 3 different domains is far more interesting than one in 2 — it suggests something fundamental about how this person thinks.${numProjects >= 4 ? ' You have enough ideas here. Go for it.' : ''}
+
+2. Name the MECHANISM. Every good crossover has a specific, nameable thing at its core. "Signal detection in noisy sequences." "The tension between structure and freedom." "Feedback loops that compound." If you can't name the mechanism in one phrase, the crossover isn't real.
+
+3. No mashups. If your crossover is "combine A and B into AB" — delete it and think harder. The crossover should be an insight that changes how the person THINKS about their projects, not a product spec.
+
+4. Keep it simple. If the crossover needs three paragraphs to explain, it's not elegant enough. The best ones land in two sentences.
+
+5. Be specific to THIS person. Reference their actual projects, their actual thinking, the actual words they've used. Generic insights ("creativity benefits from cross-pollination") are worthless. This should feel like it could only be said to THIS person about THESE ideas.
+
+6. Every crossover should suggest ONE clear thing to try. Not a business plan. Just: "Next time you're working on X, try approaching it the way you approach Y. See what happens."
+
+Return a JSON array of ${targetCount} crossovers (or fewer — never force a weak one). For each:
+
+{
+  "project_ids": ["id1", "id2", "id3"],
+  "pattern_name": "3-6 words naming the underlying pattern (not a product name)",
+  "the_insight": "1-2 sentences. The aha moment. Plain English, conversational. This is what the person reads first — it should hook them.",
+  "why_its_not_obvious": "1 sentence. Why someone working on just ONE of these projects would never see this pattern.",
+  "what_it_unlocks": "1-2 sentences. What becomes possible or changes once you see this pattern. Not a product — a new way of thinking or approaching the work.",
+  "one_thing_to_try": "One specific, concrete action for this week. Not vague.",
+  "further_steps": ["one more step", "another step"],
+  "non_obvious_score": 1-10
+}
+
+Only return crossovers scoring 7+. Sort by non_obvious_score descending.
+Use the EXACT project IDs from the list above.`
 
   const raw = await generateText(prompt, {
     model: MODELS.FLASH_CHAT,
     responseFormat: 'json',
-    temperature: 1.0,  // High creativity — we want non-obvious connections
+    temperature: 1.0,
     maxTokens: 4096,
   })
 
   const parsed = JSON.parse(raw)
   if (!Array.isArray(parsed)) return []
 
-  // Validate candidates have required fields
   return parsed.filter((c: any) =>
     Array.isArray(c.project_ids) &&
     c.project_ids.length >= 2 &&
-    typeof c.why_this_is_wild === 'string' &&
-    typeof c.crossover_title === 'string'
+    typeof c.the_insight === 'string' &&
+    typeof c.pattern_name === 'string'
   ) as RawCandidate[]
 }
 
 /**
- * Build the discovery prompt. This is the heart of the engine.
- *
- * The prompt is designed to produce intersections that are:
- * - Structural (mechanism-level, not topic-level)
- * - Multi-way (3-5 ideas, not just pairs)
- * - Non-obvious (fails the "would one domain see this?" test)
- * - Actionable (suggests something concrete to build/try)
- * - Plain English (excited friend, not consultant)
- */
-function buildDiscoveryPrompt(
-  projectContext: string,
-  fuelItems: string[],
-  numProjects: number,
-  targetCount: number
-): string {
-  return `You are a structural pattern recognition engine. Your job is finding where ideas COLLIDE in non-obvious ways — not where they overlap on the surface, but where their underlying mechanisms, constraints, or principles create something genuinely new when combined.
-
-Think like this: if someone is working on a baby photo app AND a knowledge graph AND a book editor, don't say "they all involve content." Instead, find the structural collision: what mechanism in one could transform another? What constraint in one is secretly solved by another? What hidden pattern do 3+ of them share that nobody working on just one would ever notice?
-
-HERE ARE THE IDEAS THIS PERSON IS ACTIVELY WORKING ON:
-
-${projectContext}
-
-${fuelItems.length > 0 ? `RECENT THOUGHTS AND READING (potential bridges between domains):
-
-${fuelItems.join('\n')}
-
-These thoughts and articles might reveal connections the person is already making subconsciously. Look for patterns across them.
-` : ''}
-FIND ${targetCount} GENUINELY SURPRISING INTERSECTIONS.
-
-RULES — these determine whether the output is incredible or forgettable:
-
-1. AIM FOR 3-5 IDEA INTERSECTIONS. Two-idea pairs are a last resort. The real magic happens when 3+ ideas share a hidden structural pattern that nobody working on just one of them would ever see. A 3-way intersection isn't just "more ideas" — it's a triangulation that reveals a pattern none of the pairs could.${numProjects >= 4 ? ' You have enough ideas here for rich multi-way intersections. Use them.' : ''}
-
-2. Find STRUCTURAL connections, not topic overlap:
-   - REJECT: "Both involve technology" / "Both are creative projects" / "Both use AI" — these are categories, not intersections
-   - REJECT: "These could be combined into one project" — merging isn't intersecting
-   - REJECT: Surface-level shared attributes ("both involve users", "both deal with data")
-   - ACCEPT: "The mechanism that makes A work is the exact same pattern that's missing from B — and C has already solved this from a completely different angle"
-   - ACCEPT: "A's biggest constraint is B's biggest strength. What if you built something that exploits this tension, using the approach from C?"
-   - ACCEPT: "There's a hidden feedback loop connecting A, B, and C that changes how you'd approach all three"
-
-3. THE "ONLY AT THIS INTERSECTION" TEST: If someone working on just ONE of these ideas would think of this connection, it's too obvious. Skip it. The insight must REQUIRE seeing multiple ideas together. That's what makes it genuinely valuable and unreplicable.
-
-4. EVERY intersection must suggest something CONCRETE. Not "explore the synergies" — what would you actually build, create, or try? Something specific enough to start this week.
-
-5. WRITE LIKE AN EXCITED FRIEND who just connected dots nobody else could see. No jargon, no buzzwords, no consultant-speak. No "leveraging" or "synergies" or "holistic approach." Plain English. The excitement comes from the insight itself, not fancy vocabulary. Think: "Wait — you know how [specific thing from idea A]? That's EXACTLY the same pattern as [thing from idea B], and if you add [thing from idea C], you could actually [concrete action]."
-
-6. SURPRISING THEN OBVIOUS: The best intersections feel surprising at first but obvious once explained. "I never would have thought of that, but now that you say it — of course." That's the sweet spot.
-
-TYPES OF STRUCTURAL CONNECTIONS TO HUNT FOR:
-- Same mechanism, different domain: the pattern driving A is the same one that makes B work, but nobody in either field has named it
-- Constraint inversion: A's limitation is B's superpower — design something at the tension point
-- Exaptation: A was designed for purpose X, but its mechanism would solve Y's biggest unsolved problem
-- Hidden isomorphism: A, B, and C are all describing the same deep pattern from different angles — someone who sees all three has a unique vantage point
-- Emergent architecture: A+B+C together create a system that no pair or individual could. Adding the third idea transforms what the first two mean
-
-Return a JSON array. For each intersection:
-{
-  "project_ids": ["id1", "id2", "id3"],
-  "crossover_title": "plain 3-8 word title",
-  "why_this_is_wild": "2-3 sentences, plain English. The aha moment. What structural pattern connects these? Write like you're excitedly telling a friend who knows all these projects.",
-  "the_mechanism": "1 sentence: the specific structural connection (e.g. 'The feedback loop that drives X is the same loop that's missing from Y')",
-  "what_you_could_build": "2-3 sentences: what you'd actually create. Concrete and specific, not abstract.",
-  "first_move": "One specific thing to do this week to start exploring this",
-  "next_steps": ["second practical step", "third practical step"],
-  "non_obvious_score": 1-10
-}
-
-ONLY return intersections scoring 6 or higher on non_obvious_score. If you can't find ${targetCount} that meet this bar, return fewer — quality over quantity. Sort by non_obvious_score descending.
-
-IMPORTANT: Use the EXACT project IDs from the list above in project_ids. Do not invent IDs.`
-}
-
-/**
  * Find memories and articles that semantically bridge the intersection's projects.
- * A fuel item is a "bridge" if it's similar enough to at least 2 of the projects —
- * meaning it lives in multiple domains simultaneously.
+ * A fuel item is a "bridge" if it relates to 2+ of the projects in the crossover.
  */
 function findSupportingFuel(
   projects: ProjectInput[],
@@ -320,14 +340,12 @@ function findSupportingFuel(
     }
   }
 
-  // Most relevant bridges first
   fuel.sort((a, b) => b.avgSim - a.avgSim)
   return fuel.map(({ avgSim, ...rest }) => rest)
 }
 
 /**
- * Fallback: embedding-based intersections (simplified original algorithm).
- * Used when AI discovery fails or returns no results.
+ * Fallback: embedding-based intersections when AI discovery fails.
  */
 function fallbackEmbeddingIntersections(
   projects: ProjectInput[],
@@ -366,7 +384,6 @@ function fallbackEmbeddingIntersections(
         }
       }
 
-      // Sweet spot: similar enough to connect, different enough to be interesting
       if (sim >= 0.4 && sim <= 0.72) {
         pairs.push({ projects: [a, b], similarity: sim, sharedFuel })
       }
