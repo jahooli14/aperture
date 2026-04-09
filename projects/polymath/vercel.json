@@ -40,6 +40,9 @@
     },
     "api/idea-engine.ts": {
       "maxDuration": 60
+    },
+    "api/projects.ts": {
+      "maxDuration": 60
     }
   },
   "crons": [

@@ -532,35 +532,54 @@ export async function classicIntersections(
     })
   }
 
-  // AI narration for top 3
-  for (let i = 0; i < Math.min(results.length, 3); i++) {
-    const intersection = results[i]
+  // AI narration for the top 3 clusters.
+  // CRITICAL: run all AI calls in parallel and combine reason+crossover into
+  // a single call per cluster. Previously this was 6 sequential calls (2 per
+  // cluster × 3 clusters) which at ~3s each hit Vercel's 10s default function
+  // timeout and the whole intersections endpoint 500'd. With Promise.all and
+  // one combined call per cluster, the worst case is a single AI round-trip.
+  const top = results.slice(0, Math.min(results.length, 3))
+  const narrated = await Promise.all(top.map(async (intersection) => {
     const nodeLabel = intersection.nodes
       .map(n => n.type === 'project' ? `the project "${n.title}"` : n.type === 'memory' ? `a thought: "${n.title}"` : `a list item: "${n.title}"`)
       .join(' + ')
     const fuelContext = intersection.sharedFuel.slice(0, 5).map(f => `${f.type}: "${f.title}"`).join(', ')
 
     try {
-      intersection.reason = await generateText(
+      const combinedRaw = await generateText(
         `One person has these things on their mind: ${nodeLabel}.${fuelContext ? ` Things that keep showing up across them: ${fuelContext}.` : ''}
 
-In 2-3 plain-English sentences, say what surprising thing becomes possible when you line these up next to each other. Be specific. Write like a friend who just noticed something clever. No buzzwords, no jargon. BANNED words: stochastic, ontological, emergent, heuristic, isomorphism, paradigm, teleological. If a 14-year-old wouldn't understand a word, don't use it.`,
-        { model: MODELS.FLASH_CHAT, temperature: 0.95 }
-      )
+Two tasks:
+1. REASON: In 2-3 plain-English sentences, say what surprising thing becomes possible when you line these up next to each other. Be specific. Write like a friend who just noticed something clever.
+2. CROSSOVER: One concrete thing they could try that only makes sense because they have ALL of these on their mind at once. Not a feature. Not a business plan. A small, specific experiment.
 
-      const crossoverRaw = await generateText(
-        `Someone has these things on their mind: ${nodeLabel}.${fuelContext ? ` Things that keep showing up across them: ${fuelContext}.` : ''}
+No buzzwords, no jargon. BANNED words: stochastic, ontological, emergent, heuristic, isomorphism, paradigm, teleological. A 14-year-old should understand every word.
 
-What's one concrete thing they could try that only makes sense because they have ALL of these on their mind at once? Not a feature. Not a business plan. A small, specific experiment. Write in plain English only. BANNED words: stochastic, ontological, emergent, heuristic, isomorphism, paradigm, teleological. A 14-year-old should understand every word.
-
-Return JSON:
-{"crossover_title":"plain 3-6 word title","why_it_works":"2-3 short sentences in plain English","concept":"what you'd actually try, 2-3 sentences","first_steps":["first simple step","second simple step","third simple step"]}`,
+Return JSON only (no markdown, no preamble):
+{"reason":"2-3 plain sentences","crossover_title":"3-6 word title","why_it_works":"2-3 short sentences","concept":"what you'd actually try, 2-3 sentences","first_steps":["first simple step","second simple step","third simple step"]}`,
         { model: MODELS.FLASH_CHAT, responseFormat: 'json', temperature: 0.95, maxTokens: 1024 }
       )
-      intersection.crossover = JSON.parse(crossoverRaw)
-    } catch {
-      // Non-critical
+      const parsed = JSON.parse(combinedRaw)
+      if (typeof parsed.reason === 'string') intersection.reason = parsed.reason
+      if (parsed.crossover_title) {
+        intersection.crossover = {
+          crossover_title: parsed.crossover_title,
+          why_it_works: parsed.why_it_works || '',
+          concept: parsed.concept || '',
+          first_steps: Array.isArray(parsed.first_steps) ? parsed.first_steps.slice(0, 3) : [],
+        }
+      }
+    } catch (err) {
+      // Non-critical — leave intersection without reason/crossover. The UI
+      // falls back to just showing the collision nodes + fuel.
+      console.warn('[intersection-engine] classic narration failed for cluster', intersection.id, err)
     }
+    return intersection
+  }))
+
+  // Replace the narrated entries in the results array (preserving order).
+  for (let i = 0; i < narrated.length; i++) {
+    results[i] = narrated[i]
   }
 
   return results
