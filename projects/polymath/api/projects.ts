@@ -1247,9 +1247,11 @@ Return JSON only:
           }
         }
 
-        // Also add high-similarity pairs that might not have shared fuel
+        // Add high-similarity pairs that might not have shared fuel.
+        // Cap at 0.72: above that the projects are essentially the same domain
+        // (e.g. two book ideas, two writing projects) — not a real intersection.
         for (const pair of pairs) {
-          if (pair.similarity < 0.4) continue
+          if (pair.similarity < 0.4 || pair.similarity > 0.72) continue
           const key = pair.projects.map(p => p.id).sort().join(',')
           if (seenClusters.has(key)) continue
 
@@ -1273,25 +1275,24 @@ Return JSON only:
           const fuelContext = intersection.sharedFuel.map(f => `${f.type}: "${f.title}"`).join(', ')
 
           try {
-            // Generate reasoning — full Flash for quality creative synthesis
+            // Generate reasoning — full Flash, plain English, no jargon
             const reasoning = await generateText(
-              `You are identifying Medici Effect intersections — the most valuable ideas emerge where unrelated domains collide (Packy McCormick, Frans Johansson). These projects live in one person's mind: ${projectNames}.${fuelContext ? ` Shared fuel bridging them: ${fuelContext}.` : ''}
+              `These are two (or more) projects that one person is working on: ${projectNames}.${fuelContext ? ` Things that have come up in both: ${fuelContext}.` : ''}
 
-In 2-3 punchy sentences: What is the NON-OBVIOUS collision here? Don't just say they overlap — name what becomes possible ONLY when these specific domains cross-pollinate. What would someone working in just one of these fields never see? Be concrete about what could emerge at this intersection.`,
-              { model: MODELS.FLASH_CHAT, temperature: 0.8 }
+In 2-3 plain sentences, explain what genuinely surprising idea becomes possible when you combine these. Don't just say they overlap or use buzzwords. Be specific — what could someone build or do that they couldn't if they only worked on one of these? If these projects are obviously similar (same genre, same field), skip the obvious angle and find the genuinely unexpected one. Write like a smart friend explaining it over coffee, not a pitch deck.`,
+              { model: MODELS.FLASH_CHAT, temperature: 0.95 }
             )
             intersection.reason = reasoning
 
             // Generate crossover idea — native JSON mode for reliable parsing
             const crossoverRaw = await generateText(
-              `You are the APERTURE VENN ENGINE. Find the non-obvious concept at the intersection of: ${projectNames}.
-${fuelContext ? `Shared fuel bridging them: ${fuelContext}.` : 'These domains have thematic proximity.'}
+              `Someone is working on these projects: ${projectNames}.${fuelContext ? ` Both have come up in relation to: ${fuelContext}.` : ''}
 
-Generate a CONCRETE crossover project idea — something that could only exist at THIS intersection. Be specific and actionable.
+What's a concrete project idea that could only exist because this person works on BOTH of these? Don't suggest something that fits neatly into just one of the projects. Don't group similar things together — if the projects are in the same domain, find a crossover into a third area entirely. Be specific and practical. Write in plain English, no startup speak.
 
-Return JSON with exactly these fields:
-{"crossover_title":"punchy 3-6 word title","why_it_works":"2-3 sentences — what becomes possible only at this intersection","concept":"concrete MVP description, 2-3 sentences","first_steps":["step 1","step 2","step 3"]}`,
-              { model: MODELS.FLASH_CHAT, responseFormat: 'json', temperature: 0.8 }
+Return JSON:
+{"crossover_title":"plain 3-6 word title","why_it_works":"2-3 sentences in plain English — what becomes possible only at this specific crossover","concept":"what you'd actually build, 2-3 sentences, concrete not abstract","first_steps":["first practical step","second practical step","third practical step"]}`,
+              { model: MODELS.FLASH_CHAT, responseFormat: 'json', temperature: 0.95 }
             )
             intersection.crossover = JSON.parse(crossoverRaw)
           } catch {
@@ -2413,27 +2414,15 @@ async function handleGetBedtimePrompts(req: VercelRequest, res: VercelResponse, 
       })
     }
 
-    // If no prompts today, check if it's past 9:30pm
+    // If no prompts today, generate them — time-gating is handled client-side
+    // (the floating moon icon only appears after 9:30pm local time). The server
+    // runs UTC which differs from the user's timezone, so we don't gate here.
     if (!data || data.length === 0) {
-      const now = new Date()
-      const hour = now.getHours()
-      const minute = now.getMinutes()
-
-      // If it's past 9:30pm, generate new prompts
-      if (hour >= 21 && minute >= 30) {
-        const prompts = await generateBedtimePrompts(userId)
-        return res.status(200).json({
-          prompts,
-          generated: true,
-          message: "Tonight's prompts are ready"
-        })
-      }
-
-      // Otherwise return empty (too early)
+      const prompts = await generateBedtimePrompts(userId)
       return res.status(200).json({
-        prompts: [],
-        generated: false,
-        message: `Prompts available at 9:30pm (in ${21 - hour} hours)`
+        prompts,
+        generated: true,
+        message: "Tonight's prompts are ready"
       })
     }
 
