@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence, type PanInfo } from 'framer-motion'
-import { ArrowRight, FileText, MessageCircle, ChevronLeft, ChevronRight, Lightbulb, ListChecks, Folder } from 'lucide-react'
+import { ArrowRight, FileText, MessageCircle, ChevronLeft, ChevronRight, ChevronDown, Lightbulb, ListChecks, Folder, Layers } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 type NodeType = 'project' | 'memory' | 'list_item'
@@ -89,6 +89,7 @@ function CardSet({ items, label }: { items: Intersection[]; label: string }) {
   const [activeIdx, setActiveIdx] = useState(0)
   const [direction, setDirection] = useState(1)
   const [expanded, setExpanded] = useState(false)
+  const [nodesExpanded, setNodesExpanded] = useState(false)
 
   const total = items.length
   const current = items[activeIdx] || null
@@ -99,10 +100,12 @@ function CardSet({ items, label }: { items: Intersection[]; label: string }) {
       setDirection(1)
       setActiveIdx(i => (i + 1) % total)
       setExpanded(false)
+      setNodesExpanded(false)
     } else {
       setDirection(-1)
       setActiveIdx(i => (i - 1 + total) % total)
       setExpanded(false)
+      setNodesExpanded(false)
     }
   }, [total])
 
@@ -118,7 +121,7 @@ function CardSet({ items, label }: { items: Intersection[]; label: string }) {
         {total > 1 && (
           <div className="flex items-center gap-1">
             <button
-              onClick={() => { setDirection(-1); setActiveIdx(i => (i - 1 + total) % total); setExpanded(false) }}
+              onClick={() => { setDirection(-1); setActiveIdx(i => (i - 1 + total) % total); setExpanded(false); setNodesExpanded(false) }}
               className="h-5 w-5 rounded flex items-center justify-center hover:bg-[var(--glass-surface)] transition-colors"
             >
               <ChevronLeft className="h-3 w-3 text-[var(--brand-text-secondary)] opacity-50" />
@@ -127,7 +130,7 @@ function CardSet({ items, label }: { items: Intersection[]; label: string }) {
               {activeIdx + 1}/{total}
             </span>
             <button
-              onClick={() => { setDirection(1); setActiveIdx(i => (i + 1) % total); setExpanded(false) }}
+              onClick={() => { setDirection(1); setActiveIdx(i => (i + 1) % total); setExpanded(false); setNodesExpanded(false) }}
               className="h-5 w-5 rounded flex items-center justify-center hover:bg-[var(--glass-surface)] transition-colors"
             >
               <ChevronRight className="h-3 w-3 text-[var(--brand-text-secondary)] opacity-50" />
@@ -177,66 +180,70 @@ function CardSet({ items, label }: { items: Intersection[]; label: string }) {
               onDragEnd={onDragEnd}
               className="touch-pan-y"
             >
-              {/* Collision header — mixed node types with a clearer separator */}
-              <div className="flex items-center gap-x-1.5 gap-y-2 mb-3 flex-wrap">
-                {getNodes(current).map((node, i) => {
-                  const Icon = node.type === 'project' ? Folder : node.type === 'memory' ? Lightbulb : ListChecks
-                  const inner = (
-                    <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand-text-primary)]">
-                      <Icon className={`h-3.5 w-3.5 flex-shrink-0 ${node.type === 'project' ? 'text-brand-primary/80' : 'text-brand-primary/60'}`} />
-                      <span className="truncate max-w-[180px]">{node.title}</span>
-                    </span>
-                  )
-                  return (
-                    <span key={`${node.type}-${node.id}`} className="inline-flex items-center gap-1.5">
-                      {i > 0 && (
-                        <span
-                          aria-hidden
-                          className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-brand-primary/15 border border-brand-primary/30 text-brand-primary text-[13px] font-bold leading-none"
-                          style={{ fontFamily: 'var(--brand-font-body)' }}
-                        >
-                          +
-                        </span>
-                      )}
-                      {node.type === 'project' ? (
-                        <Link
-                          to={`/projects/${node.id}`}
-                          className="hover:text-brand-primary transition-colors"
-                        >
-                          {inner}
-                        </Link>
-                      ) : inner}
-                    </span>
-                  )
-                })}
-                <span className="ml-auto text-[10px] text-brand-primary/60 font-mono tracking-wide uppercase">
-                  {getNodes(current).length} {getNodes(current).length === 1 ? 'node' : 'nodes'}
-                </span>
+              {/* Compact stack pill — tap to reveal the full item list */}
+              <div className="mb-3">
+                <button
+                  type="button"
+                  onClick={() => setNodesExpanded(v => !v)}
+                  className="inline-flex items-center gap-2 pl-2 pr-2.5 py-1 rounded-full bg-brand-primary/10 border border-brand-primary/25 hover:bg-brand-primary/15 transition-colors"
+                  aria-expanded={nodesExpanded}
+                >
+                  <Layers className="h-3.5 w-3.5 text-brand-primary/80" />
+                  <span className="text-[11px] font-mono tracking-wide uppercase text-brand-primary/90">
+                    {getNodes(current).length} {getNodes(current).length === 1 ? 'item' : 'items'}
+                  </span>
+                  <ChevronDown
+                    className={`h-3 w-3 text-brand-primary/60 transition-transform ${nodesExpanded ? 'rotate-180' : ''}`}
+                  />
+                </button>
               </div>
 
-              {/* AI reasoning */}
+              {/* Stack reveal — full item list */}
+              <AnimatePresence initial={false}>
+                {nodesExpanded && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="space-y-0.5 mb-3">
+                      {getNodes(current).map((node) => {
+                        const Icon = node.type === 'project' ? Folder : node.type === 'memory' ? Lightbulb : ListChecks
+                        const row = (
+                          <div className="flex items-center justify-between p-2 rounded-lg hover:bg-[var(--glass-surface)] transition-colors group">
+                            <span className="flex items-center gap-2 min-w-0">
+                              <Icon className="h-3.5 w-3.5 text-brand-primary/70 flex-shrink-0" />
+                              <span className="text-sm font-medium text-[var(--brand-text-primary)] truncate">
+                                {node.title}
+                              </span>
+                            </span>
+                            {node.type === 'project' && (
+                              <ArrowRight className="h-3 w-3 text-[var(--brand-text-muted)] group-hover:text-brand-primary transition-colors flex-shrink-0" />
+                            )}
+                          </div>
+                        )
+                        return node.type === 'project' ? (
+                          <Link key={`${node.type}-${node.id}`} to={`/projects/${node.id}`}>
+                            {row}
+                          </Link>
+                        ) : (
+                          <div key={`${node.type}-${node.id}`}>{row}</div>
+                        )
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Main content — description is now the primary focus */}
               {current.reason && (
-                <p className="text-sm text-[var(--brand-text-secondary)] leading-relaxed mb-3">
+                <p className="text-[15px] text-[var(--brand-text-primary)] leading-relaxed mb-3">
                   {current.reason}
                 </p>
               )}
 
-              {/* Shared fuel pills */}
-              {current.sharedFuel.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mb-3">
-                  {current.sharedFuel.slice(0, 4).map((fuel) => (
-                    <span
-                      key={fuel.id}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] text-[var(--brand-text-secondary)]"
-                    >
-                      {fuel.type === 'article' ? <FileText className="h-3 w-3 flex-shrink-0" /> : <MessageCircle className="h-3 w-3 flex-shrink-0" />}
-                      <span className="truncate max-w-[120px]">{fuel.title}</span>
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {/* Expanded — Crossover detail */}
+              {/* Expanded — Crossover concept + bridging ideas */}
               <AnimatePresence>
                 {expanded && (
                   <motion.div
@@ -273,46 +280,13 @@ function CardSet({ items, label }: { items: Intersection[]; label: string }) {
                         </div>
                       )}
 
-                      <div>
-                        <p className="text-[10px] font-medium tracking-wide lowercase text-[var(--brand-text-muted)] mb-2">
-                          what's colliding here
-                        </p>
-                        {getNodes(current).map((node) => {
-                          const Icon = node.type === 'project' ? Folder : node.type === 'memory' ? Lightbulb : ListChecks
-                          const typeLabel = node.type === 'project' ? 'project' : node.type === 'memory' ? 'thought' : 'list item'
-                          const row = (
-                            <div className="flex items-center justify-between p-2 rounded-lg hover:bg-[var(--glass-surface)] transition-colors group">
-                              <span className="flex items-center gap-2 min-w-0">
-                                <Icon className="h-3.5 w-3.5 text-brand-primary/60 flex-shrink-0" />
-                                <span className="text-sm text-[var(--brand-text-secondary)] group-hover:text-[var(--brand-text-primary)] transition-colors truncate">
-                                  {node.title}
-                                </span>
-                                <span className="text-[9px] uppercase tracking-wide text-[var(--brand-text-muted)] opacity-60 flex-shrink-0">
-                                  {typeLabel}
-                                </span>
-                              </span>
-                              {node.type === 'project' && (
-                                <ArrowRight className="h-3 w-3 text-[var(--brand-text-muted)] group-hover:text-brand-primary transition-colors flex-shrink-0" />
-                              )}
-                            </div>
-                          )
-                          return node.type === 'project' ? (
-                            <Link key={`${node.type}-${node.id}`} to={`/projects/${node.id}`}>
-                              {row}
-                            </Link>
-                          ) : (
-                            <div key={`${node.type}-${node.id}`}>{row}</div>
-                          )
-                        })}
-                      </div>
-
-                      {current.sharedFuel.length > 4 && (
+                      {current.sharedFuel.length > 0 && (
                         <div>
                           <p className="text-[10px] font-medium tracking-wide lowercase text-[var(--brand-text-muted)] mb-2">
-                            all bridging ideas ({current.sharedFuel.length})
+                            bridging ideas ({current.sharedFuel.length})
                           </p>
                           <div className="flex flex-wrap gap-1.5">
-                            {current.sharedFuel.slice(4).map((fuel) => (
+                            {current.sharedFuel.map((fuel) => (
                               <span
                                 key={fuel.id}
                                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] text-[var(--brand-text-secondary)]"
