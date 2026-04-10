@@ -28,23 +28,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Restore session from local storage — no network call, resolves instantly.
-    // Token validation happens in the background; authFetch handles 401s as a safety net.
+    //
+    // We deliberately do NOT run a background getUser() validation here. That
+    // used to live in this effect, and it raced with the OAuth callback flow:
+    // getSession() would resolve with the fresh session (signed in), then the
+    // background getUser() would error for a fresh-token propagation / 5xx /
+    // rate-limit reason and clobber the state back to { user: null }, bouncing
+    // the user straight back to the sign-in screen. Symptom: "I sign in with
+    // Google, the home page flashes for a second, then I'm signed out again."
+    //
+    // We don't need this extra call:
+    //   - Supabase autoRefreshToken (default true) keeps the token fresh and
+    //     fires SIGNED_OUT via onAuthStateChange if refresh ever fails — the
+    //     subscription below picks that up and clears the state correctly.
+    //   - authFetch handles 401s on individual API calls by refreshing +
+    //     retrying once. A genuinely dead session surfaces there.
     supabase.auth.getSession().then(({ data: { session } }) => {
       currentUserId.current = session?.user?.id ?? null
       setState({ user: session?.user ?? null, session, loading: false })
-
-      // Background: validate token freshness without blocking the UI
-      if (session) {
-        supabase.auth.getUser().then(({ error }) => {
-          if (error) {
-            console.warn('[Auth] Session expired and refresh failed:', error.message)
-            currentUserId.current = null
-            setState({ user: null, session: null, loading: false })
-          }
-        }).catch(() => {
-          // Network error — keep using cached session, authFetch will handle 401s
-        })
-      }
     }).catch(error => {
       console.error('[Auth] Failed to get session:', error)
       currentUserId.current = null
