@@ -5,7 +5,7 @@ import { selectFrontierMode, recordModeUsage } from './_lib/idea-engine-v2/mode-
 import { generateIdeaEmbedding, storeIdeaWithDedupe } from './_lib/idea-engine-v2/deduplication.js';
 import { getLatestFeedbackSummary } from './_lib/idea-engine-v2/feedback-summarizer.js';
 import { supabase, isSupabaseConfigured } from './_lib/idea-engine-v2/supabase.js';
-import { reviewIdea } from './_lib/idea-engine-v2/reviewer.js';
+import { reviewIdea, flashGateIdea } from './_lib/idea-engine-v2/reviewer.js';
 import { sendDailyDigest } from './_lib/idea-engine-v2/digest-email.js';
 import type { Idea } from './_lib/idea-engine-v2/types.js';
 
@@ -212,47 +212,87 @@ async function handleReview(res: VercelResponse) {
     return res.status(200).json({ success: true, message: 'No pending ideas to review', reviewed: 0 });
   }
 
-  const results = [];
+  // Stage-gated review pipeline, all ideas in parallel:
+  //   Stage 1 — Flash gate (mid-tier, cheap, fast): filters obvious junk.
+  //   Stage 2 — Pro review (slow, expensive): final verdict on survivors.
+  // Each idea runs its own Flash→Pro pipeline; all 10 pipelines run
+  // concurrently so wall-clock ≈ single pipeline and we stay under the 60s
+  // Vercel budget. Flash-rejected ideas skip Pro entirely, saving cost. If
+  // Flash errors, we fall through to Pro rather than silently lose the idea.
+  const results = await Promise.all(
+    pendingIdeas.map(async (idea) => {
+      const typedIdea = idea as Idea;
 
-  for (const idea of pendingIdeas) {
-    try {
-      const verdict = await reviewIdea(idea as Idea);
+      // Stage 1: Flash gate
+      try {
+        const gate = await flashGateIdea(typedIdea);
+        if (!gate.pass) {
+          const { error: updateError } = await supabase
+            .from('ie_ideas')
+            .update({
+              status: 'rejected',
+              opus_verdict: gate.reasoning,
+              rejection_reason: gate.reasoning,
+              rejection_category: gate.rejection_category || 'too_vague',
+              reviewed_at: new Date().toISOString(),
+            })
+            .eq('id', typedIdea.id);
 
-      const updateData: any = {
-        status: verdict.verdict === 'BUILD' ? 'approved' : verdict.verdict === 'SPARK' ? 'spark' : 'rejected',
-        opus_verdict: verdict.reasoning,
-        reviewed_at: new Date().toISOString(),
-      };
-
-      if (verdict.rejection_category) {
-        updateData.rejection_reason = verdict.reasoning;
-        updateData.rejection_category = verdict.rejection_category;
+          if (updateError) {
+            console.error(`Failed to update flash-rejected idea ${typedIdea.id}:`, updateError);
+            return { id: typedIdea.id, success: false, stage: 'flash' as const, error: updateError.message };
+          }
+          return { id: typedIdea.id, success: true, stage: 'flash' as const, verdict: 'REJECT' as const, title: typedIdea.title };
+        }
+      } catch (error) {
+        console.error(`Flash gate failed for ${typedIdea.id}, falling through to Pro:`, error);
+        // Deliberate fall-through: don't lose an idea due to a transient Flash error.
       }
 
-      const { error: updateError } = await supabase
-        .from('ie_ideas')
-        .update(updateData)
-        .eq('id', idea.id);
+      // Stage 2: Pro review (Flash passed or errored)
+      try {
+        const verdict = await reviewIdea(typedIdea);
 
-      if (updateError) {
-        console.error(`Failed to update idea ${idea.id}:`, updateError);
-        results.push({ id: idea.id, success: false, error: updateError.message });
-      } else {
-        results.push({ id: idea.id, success: true, verdict: verdict.verdict, title: idea.title });
+        const updateData: any = {
+          status: verdict.verdict === 'BUILD' ? 'approved' : verdict.verdict === 'SPARK' ? 'spark' : 'rejected',
+          opus_verdict: verdict.reasoning,
+          reviewed_at: new Date().toISOString(),
+        };
+
+        if (verdict.rejection_category) {
+          updateData.rejection_reason = verdict.reasoning;
+          updateData.rejection_category = verdict.rejection_category;
+        }
+
+        const { error: updateError } = await supabase
+          .from('ie_ideas')
+          .update(updateData)
+          .eq('id', typedIdea.id);
+
+        if (updateError) {
+          console.error(`Failed to update idea ${typedIdea.id}:`, updateError);
+          return { id: typedIdea.id, success: false, stage: 'pro' as const, error: updateError.message };
+        }
+
+        return { id: typedIdea.id, success: true, stage: 'pro' as const, verdict: verdict.verdict, title: typedIdea.title };
+      } catch (error) {
+        console.error(`Failed to review idea ${typedIdea.id}:`, error);
+        return { id: typedIdea.id, success: false, stage: 'pro' as const, error: error instanceof Error ? error.message : 'Unknown error' };
       }
-    } catch (error) {
-      console.error(`Failed to review idea ${idea.id}:`, error);
-      results.push({ id: idea.id, success: false, error: error instanceof Error ? error.message : 'Unknown error' });
-    }
-  }
+    })
+  );
 
   const elapsed = Date.now() - startTime;
   const successCount = results.filter((r) => r.success).length;
+  const flashRejected = results.filter((r) => r.stage === 'flash' && r.success).length;
+  const proReviewed = results.filter((r) => r.stage === 'pro').length;
 
   return res.status(200).json({
     success: true,
     reviewed: successCount,
     total: results.length,
+    flash_rejected: flashRejected,
+    pro_reviewed: proReviewed,
     results,
     elapsed_ms: elapsed,
   });
