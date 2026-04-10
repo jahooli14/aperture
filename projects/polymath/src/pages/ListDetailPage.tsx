@@ -1029,7 +1029,12 @@ function ArticleListMode({ list, navigate }: ArticleListModeProps) {
 export default function ListDetailPage() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
-    const { lists, currentListItems, currentListId, loading, fetchListItems, addListItem, fetchLists, deleteListItem, reorderItems, updateListItemStatus, updateListItemMetadata, updateListSettings, updateList } = useListStore()
+    const { lists, loading, fetchListItems, addListItem, fetchLists, deleteListItem, reorderItems, updateListItemStatus, updateListItemMetadata, updateListSettings, updateList } = useListStore()
+    // Pull items for this specific list directly from the persistent cache
+    // map. This makes switching lists instantaneous and survives page reloads
+    // (Google-Keep-style): if we've ever seen this list before, its items
+    // render on the first paint with zero loading flicker.
+    const cachedItems = useListStore(state => (id ? state.itemsByListId[id] : undefined))
     const { memories } = useMemoryStore()
     const { addToast } = useToast()
 
@@ -1046,8 +1051,8 @@ export default function ListDetailPage() {
         return ids
     }, [memories])
 
-    const isCorrectList = currentListId === id
-    const displayItems = isCorrectList ? currentListItems : []
+    const displayItems = cachedItems ?? []
+    const hasCachedItems = displayItems.length > 0
 
     const [inputText, setInputText] = useState('')
     const [searchQuery, setSearchQuery] = useState('')
@@ -1549,7 +1554,7 @@ export default function ListDetailPage() {
                                     hasStatus={hasStatus}
                                     coverOverrides={coverOverrides}
                                 />
-                            ) : loading ? (
+                            ) : loading && !hasCachedItems ? (
                                 <div className="flex flex-wrap gap-3">
                                     {[1, 2, 3, 4].map((i) => (
                                         <div key={i} className="shimmer h-48 rounded-2xl" style={{ width: 'calc(50% - 6px)' }} />
