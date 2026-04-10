@@ -7,6 +7,10 @@ import { useOfflineStore } from './useOfflineStore'
 
 interface ListStore {
     lists: List[]
+    // Per-list cache of items. Acts as a Google-Keep-style always-ready cache
+    // so switching to a previously-visited list shows its items instantly and
+    // page reloads rehydrate from localStorage without a loading flash.
+    itemsByListId: Record<string, ListItem[]>
     currentListItems: ListItem[]
     currentListId: string | null
     loading: boolean
@@ -31,6 +35,7 @@ export const useListStore = create<ListStore>()(
     persist(
         (set, get) => ({
             lists: [],
+            itemsByListId: {},
             currentListItems: [],
             currentListId: null,
             loading: false,
@@ -197,15 +202,33 @@ export const useListStore = create<ListStore>()(
                 const currentFetchId = listId
                 const state = get()
 
-                if (state.currentListId === currentFetchId) {
-                    // Same list  keep showing current items while refreshing
-                    set({ loading: true })
+                // --- Step 1: Serve instantly from the in-memory cache map ---
+                // This is what makes list switching and page reloads feel like
+                // Google Keep: if we've ever seen this list, its items are
+                // already persisted in localStorage and show with zero flash.
+                const cachedInMap = state.itemsByListId[listId]
+                if (cachedInMap && cachedInMap.length > 0) {
+                    set({
+                        currentListId: currentFetchId,
+                        currentListItems: cachedInMap,
+                        loading: false,
+                    })
+                } else if (state.currentListId !== currentFetchId) {
+                    // First time visiting this list in this session and no
+                    // persisted cache -- update id but keep items empty while
+                    // we try Dexie / network. We intentionally do NOT blank
+                    // out currentListItems if the id hasn't changed.
+                    set({
+                        currentListId: currentFetchId,
+                        currentListItems: [],
+                        loading: true,
+                    })
                 } else {
-                    // Different list  clear items, update ID
-                    set({ currentListId: currentFetchId, currentListItems: [], loading: true })
+                    // Same list, no persisted cache -- silent refresh
+                    set({ loading: true })
                 }
 
-                // Helper to load from Dexie
+                // Helper to load from Dexie (secondary cache layer)
                 const loadFromDexie = async () => {
                     try {
                         const { readingDb } = await import('../lib/db')
@@ -213,9 +236,18 @@ export const useListStore = create<ListStore>()(
                         if (cachedItems.length > 0) {
                             console.log(`[ListStore] Loaded ${cachedItems.length} items from Dexie cache`)
                             // Only update if this is still the current list
-                            const state = get()
-                            if (state.currentListId === currentFetchId) {
-                                set({ currentListItems: cachedItems as any, loading: false })
+                            const s = get()
+                            if (s.currentListId === currentFetchId) {
+                                set({
+                                    currentListItems: cachedItems as any,
+                                    itemsByListId: { ...s.itemsByListId, [listId]: cachedItems as any },
+                                    loading: false,
+                                })
+                            } else {
+                                // Still populate the map for instant future switch
+                                set({
+                                    itemsByListId: { ...s.itemsByListId, [listId]: cachedItems as any },
+                                })
                             }
                             return true
                         }
@@ -225,9 +257,19 @@ export const useListStore = create<ListStore>()(
                     return false
                 }
 
-                // If offline, load from cache
-                if (!isOnline) {
+                // If no in-memory cache yet, try Dexie before the network so
+                // we never paint an empty grid when data exists locally.
+                if (!cachedInMap || cachedInMap.length === 0) {
                     await loadFromDexie()
+                }
+
+                // If offline, we're done after the cache load.
+                if (!isOnline) {
+                    // Ensure loading spinner clears even if Dexie was empty
+                    const s = get()
+                    if (s.currentListId === currentFetchId && s.loading) {
+                        set({ loading: false })
+                    }
                     return
                 }
 
@@ -236,56 +278,63 @@ export const useListStore = create<ListStore>()(
                     if (!response.ok) throw new Error('Failed to fetch items')
                     const data = await response.json()
 
-                    // Only update if this is still the current list
-                    const state = get()
-                    if (state.currentListId === currentFetchId) {
-                        // Smart update: Skip if data hasn't changed to prevent flickering
-                        const currentItems = state.currentListItems
-                        if (currentItems.length === data.length && data.length > 0) {
-                            const hasChanged = data.some((newItem: any, idx: number) => {
-                                const oldItem = currentItems[idx]
-                                return !oldItem ||
-                                       newItem.id !== oldItem.id ||
-                                       newItem.status !== oldItem.status ||
-                                       newItem.enrichment_status !== oldItem.enrichment_status
-                            })
+                    const s = get()
+                    // Smart update: Skip if data hasn't changed to prevent
+                    // flickering during background refresh.
+                    const previous = s.itemsByListId[listId] ?? []
+                    let unchanged = false
+                    if (previous.length === data.length && data.length > 0) {
+                        unchanged = !data.some((newItem: any, idx: number) => {
+                            const oldItem = previous[idx]
+                            return !oldItem ||
+                                   newItem.id !== oldItem.id ||
+                                   newItem.status !== oldItem.status ||
+                                   newItem.enrichment_status !== oldItem.enrichment_status ||
+                                   newItem.updated_at !== oldItem.updated_at
+                        })
+                    }
 
-                            if (!hasChanged) {
-                                console.log('[ListStore] Skipping items state update - data unchanged')
-                                set({ loading: false })
-                                // Still cache the data even if unchanged
-                                try {
-                                    const { readingDb } = await import('../lib/db')
-                                    await readingDb.cacheListItems(data)
-                                } catch (cacheError) {
-                                    console.warn('[ListStore] Failed to cache items:', cacheError)
-                                }
-                                return
-                            }
-                        }
-
-                        set({ currentListItems: data, loading: false })
-
-                        // Cache to Dexie for offline viewing
-                        try {
-                            const { readingDb } = await import('../lib/db')
-                            await readingDb.cacheListItems(data)
-                            console.log(`[ListStore] Cached ${data.length} items to Dexie`)
-                        } catch (cacheError) {
-                            console.warn('[ListStore] Failed to cache items:', cacheError)
+                    if (unchanged) {
+                        console.log('[ListStore] Skipping items state update - data unchanged')
+                        if (s.currentListId === currentFetchId && s.loading) {
+                            set({ loading: false })
                         }
                     } else {
-                        console.log(`[ListStore] Discarding stale response for list ${listId}`)
+                        // Always keep the cache map fresh, even if the user
+                        // has navigated to a different list in the meantime.
+                        const nextMap = { ...s.itemsByListId, [listId]: data }
+                        if (s.currentListId === currentFetchId) {
+                            set({
+                                currentListItems: data,
+                                itemsByListId: nextMap,
+                                loading: false,
+                            })
+                        } else {
+                            console.log(`[ListStore] Caching background fetch for list ${listId}`)
+                            set({ itemsByListId: nextMap })
+                        }
+                    }
+
+                    // Mirror to Dexie for offline viewing
+                    try {
+                        const { readingDb } = await import('../lib/db')
+                        await readingDb.cacheListItems(data)
+                    } catch (cacheError) {
+                        console.warn('[ListStore] Failed to cache items:', cacheError)
                     }
                 } catch (error: any) {
                     console.error('[ListStore] Fetch failed, loading from cache:', error)
-                    const loaded = await loadFromDexie()
-                    if (!loaded) {
-                        // Only update error if this is still the current list
-                        const state = get()
-                        if (state.currentListId === currentFetchId) {
+                    const s = get()
+                    // If we already had cached items showing, keep them -- do
+                    // not surface an error banner that causes a visible flash.
+                    const haveCachedItems = (s.itemsByListId[listId]?.length ?? 0) > 0
+                    if (!haveCachedItems) {
+                        const loaded = await loadFromDexie()
+                        if (!loaded && get().currentListId === currentFetchId) {
                             set({ error: error.message, loading: false })
                         }
+                    } else if (s.currentListId === currentFetchId && s.loading) {
+                        set({ loading: false })
                     }
                 }
             },
@@ -307,15 +356,21 @@ export const useListStore = create<ListStore>()(
                     updated_at: new Date().toISOString()
                 }
 
-                set(state => ({
-                    currentListItems: [optimisticItem, ...state.currentListItems],
-                    // Also update the list count in the main lists array
-                    lists: state.lists.map(l =>
-                        l.id === input.list_id
-                            ? { ...l, item_count: (l.item_count || 0) + 1 }
-                            : l
-                    )
-                }))
+                set(state => {
+                    const existing = state.itemsByListId[input.list_id] ?? state.currentListItems
+                    const nextItems = [optimisticItem, ...existing]
+                    const isCurrent = state.currentListId === input.list_id
+                    return {
+                        currentListItems: isCurrent ? nextItems : state.currentListItems,
+                        itemsByListId: { ...state.itemsByListId, [input.list_id]: nextItems },
+                        // Also update the list count in the main lists array
+                        lists: state.lists.map(l =>
+                            l.id === input.list_id
+                                ? { ...l, item_count: (l.item_count || 0) + 1 }
+                                : l
+                        )
+                    }
+                })
 
                 // Also cache to Dexie for offline viewing
                 try {
@@ -352,9 +407,17 @@ export const useListStore = create<ListStore>()(
                     const realItem = await response.json()
 
                     // Replace optimistic item with real one
-                    set(state => ({
-                        currentListItems: state.currentListItems.map(i => i.id === tempId ? realItem : i)
-                    }))
+                    set(state => {
+                        const replace = (items: ListItem[]) =>
+                            items.map(i => i.id === tempId ? realItem : i)
+                        const listItems = state.itemsByListId[input.list_id]
+                        return {
+                            currentListItems: replace(state.currentListItems),
+                            itemsByListId: listItems
+                                ? { ...state.itemsByListId, [input.list_id]: replace(listItems) }
+                                : state.itemsByListId,
+                        }
+                    })
                 } catch (error: any) {
                     // If network error, queue for later
                     if (!navigator.onLine) {
@@ -371,16 +434,23 @@ export const useListStore = create<ListStore>()(
                         return
                     }
                     // Revert
-                    set(state => ({
-                        currentListItems: state.currentListItems.filter(i => i.id !== tempId),
-                        error: error.message,
-                        // Revert count
-                        lists: state.lists.map(l =>
-                            l.id === input.list_id
-                                ? { ...l, item_count: Math.max(0, (l.item_count || 1) - 1) }
-                                : l
-                        )
-                    }))
+                    set(state => {
+                        const remove = (items: ListItem[]) => items.filter(i => i.id !== tempId)
+                        const listItems = state.itemsByListId[input.list_id]
+                        return {
+                            currentListItems: remove(state.currentListItems),
+                            itemsByListId: listItems
+                                ? { ...state.itemsByListId, [input.list_id]: remove(listItems) }
+                                : state.itemsByListId,
+                            error: error.message,
+                            // Revert count
+                            lists: state.lists.map(l =>
+                                l.id === input.list_id
+                                    ? { ...l, item_count: Math.max(0, (l.item_count || 1) - 1) }
+                                    : l
+                            )
+                        }
+                    })
                 }
             },
 
@@ -388,11 +458,20 @@ export const useListStore = create<ListStore>()(
                 const { isOnline } = useOfflineStore.getState()
 
                 // Optimistic
-                set(state => ({
-                    currentListItems: state.currentListItems.map(i =>
-                        i.id === itemId ? { ...i, status } : i
-                    )
-                }))
+                set(state => {
+                    const patch = (items: ListItem[]) =>
+                        items.map(i => i.id === itemId ? { ...i, status } : i)
+                    const nextMap: Record<string, ListItem[]> = { ...state.itemsByListId }
+                    for (const listId of Object.keys(nextMap)) {
+                        if (nextMap[listId].some(i => i.id === itemId)) {
+                            nextMap[listId] = patch(nextMap[listId])
+                        }
+                    }
+                    return {
+                        currentListItems: patch(state.currentListItems),
+                        itemsByListId: nextMap,
+                    }
+                })
 
                 // If offline, queue operation
                 if (!isOnline) {
@@ -416,11 +495,20 @@ export const useListStore = create<ListStore>()(
 
                     const updatedItem = await response.json()
 
-                    set(state => ({
-                        currentListItems: state.currentListItems.map(i =>
-                            i.id === itemId ? updatedItem : i
-                        )
-                    }))
+                    set(state => {
+                        const replace = (items: ListItem[]) =>
+                            items.map(i => i.id === itemId ? updatedItem : i)
+                        const nextMap: Record<string, ListItem[]> = { ...state.itemsByListId }
+                        for (const listId of Object.keys(nextMap)) {
+                            if (nextMap[listId].some(i => i.id === itemId)) {
+                                nextMap[listId] = replace(nextMap[listId])
+                            }
+                        }
+                        return {
+                            currentListItems: replace(state.currentListItems),
+                            itemsByListId: nextMap,
+                        }
+                    })
                 } catch (error) {
                     console.error('[ListStore] Failed to update status:', error)
                     throw error
@@ -431,11 +519,20 @@ export const useListStore = create<ListStore>()(
                 const { isOnline } = useOfflineStore.getState()
 
                 // Optimistic update
-                set(state => ({
-                    currentListItems: state.currentListItems.map(i =>
-                        i.id === itemId ? { ...i, metadata } : i
-                    )
-                }))
+                set(state => {
+                    const patch = (items: ListItem[]) =>
+                        items.map(i => i.id === itemId ? { ...i, metadata } : i)
+                    const nextMap: Record<string, ListItem[]> = { ...state.itemsByListId }
+                    for (const listId of Object.keys(nextMap)) {
+                        if (nextMap[listId].some(i => i.id === itemId)) {
+                            nextMap[listId] = patch(nextMap[listId])
+                        }
+                    }
+                    return {
+                        currentListItems: patch(state.currentListItems),
+                        itemsByListId: nextMap,
+                    }
+                })
 
                 // If offline, queue operation
                 if (!isOnline) {
@@ -460,11 +557,20 @@ export const useListStore = create<ListStore>()(
                     const updatedItem = await response.json()
 
                     // Update with server response
-                    set(state => ({
-                        currentListItems: state.currentListItems.map(i =>
-                            i.id === itemId ? updatedItem : i
-                        )
-                    }))
+                    set(state => {
+                        const replace = (items: ListItem[]) =>
+                            items.map(i => i.id === itemId ? updatedItem : i)
+                        const nextMap: Record<string, ListItem[]> = { ...state.itemsByListId }
+                        for (const listId of Object.keys(nextMap)) {
+                            if (nextMap[listId].some(i => i.id === itemId)) {
+                                nextMap[listId] = replace(nextMap[listId])
+                            }
+                        }
+                        return {
+                            currentListItems: replace(state.currentListItems),
+                            itemsByListId: nextMap,
+                        }
+                    })
                 } catch (error) {
                     console.error('[ListStore] Failed to update metadata:', error)
                     throw error
@@ -475,16 +581,24 @@ export const useListStore = create<ListStore>()(
                 const { isOnline } = useOfflineStore.getState()
                 const previousItems = get().currentListItems
                 const previousLists = get().lists
+                const previousMap = get().itemsByListId
 
                 // Optimistic Delete
-                set(state => ({
-                    currentListItems: state.currentListItems.filter(i => i.id !== itemId),
-                    lists: state.lists.map(l =>
-                        l.id === listId
-                            ? { ...l, item_count: Math.max(0, (l.item_count || 0) - 1) }
-                            : l
-                    )
-                }))
+                set(state => {
+                    const remove = (items: ListItem[]) => items.filter(i => i.id !== itemId)
+                    const listItems = state.itemsByListId[listId]
+                    return {
+                        currentListItems: remove(state.currentListItems),
+                        itemsByListId: listItems
+                            ? { ...state.itemsByListId, [listId]: remove(listItems) }
+                            : state.itemsByListId,
+                        lists: state.lists.map(l =>
+                            l.id === listId
+                                ? { ...l, item_count: Math.max(0, (l.item_count || 0) - 1) }
+                                : l
+                        )
+                    }
+                })
 
                 // Also remove from Dexie cache
                 try {
@@ -519,6 +633,7 @@ export const useListStore = create<ListStore>()(
                     // Revert
                     set({
                         currentListItems: previousItems,
+                        itemsByListId: previousMap,
                         lists: previousLists,
                         error: error.message
                     })
@@ -578,9 +693,19 @@ export const useListStore = create<ListStore>()(
             deleteList: async (listId) => {
                 const { isOnline } = useOfflineStore.getState()
                 const previousLists = get().lists
-                set(state => ({
-                    lists: state.lists.filter(l => l.id !== listId)
-                }))
+                const previousMap = get().itemsByListId
+                set(state => {
+                    const nextMap = { ...state.itemsByListId }
+                    delete nextMap[listId]
+                    return {
+                        lists: state.lists.filter(l => l.id !== listId),
+                        itemsByListId: nextMap,
+                        // Clear current view if it's the deleted list
+                        ...(state.currentListId === listId
+                            ? { currentListId: null, currentListItems: [] }
+                            : {}),
+                    }
+                })
 
                 // If offline, queue operation
                 if (!isOnline) {
@@ -603,7 +728,11 @@ export const useListStore = create<ListStore>()(
                         console.log('[ListStore] Queued delete_list after failed attempt')
                         return
                     }
-                    set({ lists: previousLists, error: error.message })
+                    set({
+                        lists: previousLists,
+                        itemsByListId: previousMap,
+                        error: error.message,
+                    })
                 }
             },
 
@@ -612,12 +741,16 @@ export const useListStore = create<ListStore>()(
 
                 // Optimistic
                 const currentItems = get().currentListItems
+                const previousMap = get().itemsByListId
                 const newItems = [...currentItems].sort((a, b) => {
                     const indexA = itemIds.indexOf(a.id)
                     const indexB = itemIds.indexOf(b.id)
                     return indexA - indexB
                 })
-                set({ currentListItems: newItems })
+                set(state => ({
+                    currentListItems: newItems,
+                    itemsByListId: { ...state.itemsByListId, [listId]: newItems },
+                }))
 
                 // If offline, queue operation
                 if (!isOnline) {
@@ -642,7 +775,11 @@ export const useListStore = create<ListStore>()(
                         console.log('[ListStore] Queued reorder_list_items after failed attempt')
                         return
                     }
-                    set({ currentListItems: currentItems, error: error.message })
+                    set({
+                        currentListItems: currentItems,
+                        itemsByListId: previousMap,
+                        error: error.message,
+                    })
                 }
             },
 
@@ -692,7 +829,13 @@ export const useListStore = create<ListStore>()(
         }),
         {
             name: 'aperture-lists-store',
-            partialize: (state) => ({ lists: state.lists })
+            // Persist both the lists and the per-list items cache so a full
+            // page reload rehydrates instantly with zero loading flicker.
+            // Dexie is still used as a secondary / offline cache layer.
+            partialize: (state) => ({
+                lists: state.lists,
+                itemsByListId: state.itemsByListId,
+            }),
         }
     )
 )

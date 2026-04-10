@@ -152,20 +152,26 @@ class DataSynchronizer {
       const lists = useListStore.getState().lists
       const activeListId = useListStore.getState().currentListId
 
-      // 2. Cache items for each list to Dexie WITHOUT touching store state.
-      //    Going through fetchListItems() would clobber currentListId/currentListItems
-      //    and cause the active list view to flicker empty.
+      // 2. Warm every list's cache so the UI feels seamless (Google-Keep
+      //    style). For non-active lists we populate itemsByListId in the
+      //    store (persisted to localStorage) AND Dexie so the next time the
+      //    user opens that list it renders instantly with zero flicker.
+      //    For the active list we go through fetchListItems() which handles
+      //    the smart-diff update on the currently visible items.
       for (const list of lists) {
         if (list.id === activeListId) {
-          // For the list the user is currently viewing, update store normally
           await useListStore.getState().fetchListItems(list.id)
         } else {
-          // For other lists, fetch and cache silently (no store state changes)
           try {
             const response = await fetch(`/api/list-items?listId=${list.id}`)
             if (response.ok) {
               const items = await response.json()
               await readingDb.cacheListItems(items)
+              // Mirror to the in-memory + persisted map so switching to
+              // this list later is instant.
+              useListStore.setState(state => ({
+                itemsByListId: { ...state.itemsByListId, [list.id]: items },
+              }))
             }
           } catch (e) {
             // Silently fail  background cache, not critical
