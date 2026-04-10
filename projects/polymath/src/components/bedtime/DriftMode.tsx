@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Mic, X, Wind, Zap, Square, Loader2 } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
@@ -20,6 +20,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
   const [progress, setProgress] = useState(0) // Stability progress (0-100)
   const [capturedInsightsCount, setCapturedInsightsCount] = useState(0)
   const [showFlash, setShowFlash] = useState(false)
+  const [driftTextIndex, setDriftTextIndex] = useState(0)
 
   const { createMemory } = useMemoryStore()
   const { addToast } = useToast()
@@ -255,6 +256,43 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
 
   const currentPrompt = prompts[currentPromptIndex]
 
+  // Build the sequence of texts to show during drifting — context, then metaphor,
+  // then the prompt itself. De-duplicated so we never show the same line twice.
+  const driftTexts = useMemo(() => {
+    if (!currentPrompt) return [] as Array<{ label: string; text: string }>
+    const seq: Array<{ label: string; text: string }> = []
+    const seen = new Set<string>()
+    const push = (label: string, text: string | undefined) => {
+      if (!text) return
+      const trimmed = text.trim()
+      if (!trimmed || seen.has(trimmed)) return
+      seen.add(trimmed)
+      seq.push({ label, text: trimmed })
+    }
+    const holdLabel = mode === 'sleep' ? 'Hold this thought...' : 'Let this dissolve...'
+    push(holdLabel, currentPrompt.context)
+    push('Feel this image...', currentPrompt.metaphor)
+    push('Sit with this question...', currentPrompt.prompt)
+    return seq
+  }, [currentPrompt, mode])
+
+  // Reset the drift text cursor each time we (re-)enter the drifting stage
+  useEffect(() => {
+    if (stage === 'drifting') setDriftTextIndex(0)
+  }, [stage])
+
+  // Advance through drift texts while in the drifting stage. Each text is held
+  // visible for ~5s so there's comfortable time to read it; the last text stays
+  // visible until motion (or tap) wakes the user.
+  useEffect(() => {
+    if (stage !== 'drifting') return
+    if (driftTextIndex >= driftTexts.length - 1) return
+    const timer = setTimeout(() => {
+      setDriftTextIndex(i => i + 1)
+    }, 5500)
+    return () => clearTimeout(timer)
+  }, [stage, driftTextIndex, driftTexts.length])
+
   return (
     <div className="fixed inset-0 z-50 bg-[#0F1829] text-[var(--brand-text-primary)] flex flex-col items-center justify-center overflow-hidden">
       {/* Wake-up Flash Overlay */}
@@ -362,30 +400,35 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
               }
             }}
           >
-            {/* Drift topic — hold readable for ~7s, then slowly fade out over ~5s */}
-            {currentPrompt && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: [0, 1, 1, 0] }}
-                transition={{ duration: 13, times: [0, 0.1, 0.55, 1], ease: 'easeOut' }}
-                className="text-center px-8 max-w-md"
-              >
-                <p className="text-xs uppercase tracking-widest text-brand-primary/60 font-bold mb-3">
-                  {mode === 'sleep' ? 'Hold this thought...' : 'Let this dissolve...'}
-                </p>
-                <p className="text-lg font-serif italic text-[var(--brand-text-secondary)] opacity-70 leading-relaxed">
-                  {currentPrompt.context || currentPrompt.metaphor || currentPrompt.prompt}
-                </p>
-              </motion.div>
-            )}
+            {/* Drift topics — cycle through context → metaphor → prompt, each held
+                fully visible long enough to read before the next fades in. */}
+            <AnimatePresence mode="wait">
+              {driftTexts[driftTextIndex] && (
+                <motion.div
+                  key={`drift-text-${driftTextIndex}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 1.2, ease: 'easeInOut' }}
+                  className="text-center px-8 max-w-md relative z-10"
+                >
+                  <p className="text-xs uppercase tracking-widest text-brand-primary/70 font-bold mb-3">
+                    {driftTexts[driftTextIndex].label}
+                  </p>
+                  <p className="text-lg font-serif italic text-white/85 leading-relaxed">
+                    {driftTexts[driftTextIndex].text}
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
             <div className="absolute w-3 h-3 rounded-full bg-brand-primary/50 animate-ping" />
             {/* Show hint if no motion detected after entering drift */}
             {!motionEventsReceived.current && (
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 0.75 }}
-                exit={{ opacity: 0 }}
-                transition={{ delay: 5, duration: 2, exit: { duration: 4 } }}
+                exit={{ opacity: 0, transition: { duration: 4 } }}
+                transition={{ delay: 5, duration: 2 }}
                 className="absolute bottom-20 text-white/75 text-base text-center px-8 leading-relaxed"
               >
                 Tap anywhere when you're ready to capture your insight
