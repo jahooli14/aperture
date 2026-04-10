@@ -19,10 +19,9 @@ on:
   schedule:
     - cron: '*/30 * * * *'   # every 30 min: generator + fix-queue runner
     - cron: '0 */6 * * *'    # every 6h: fix-queue drafter + polymath heat recompute
-    - cron: '0 8 * * *'      # 08:00 UTC daily: idea-engine review + polymath evolve
-    - cron: '0 9 * * *'      # 09:00 UTC daily: idea-engine email digest
+    - cron: '0 8 * * *'      # 08:00 UTC daily: polymath evolve
+    - cron: '0 9 * * *'      # 09:00 UTC daily: idea-engine review + email digest
     - cron: '0 8 * * 0'      # Sunday 08:00 UTC: polymath drawer digest
-    - cron: '0 */2 * * *'    # TEMP: every 2h idea-engine review+digest smoke test. REMOVE after verifying fix from commit 6ee8faa.
   workflow_dispatch:
     inputs:
       force:
@@ -79,31 +78,22 @@ jobs:
             hit "/api/projects?resource=recompute-heat" &
           fi
 
-          # ── 08:00 UTC daily: Idea Engine review + Polymath evolve ─────
+          # ── 08:00 UTC daily: Polymath evolve ──────────────────────────
           if [ "$SCHEDULE" = "0 8 * * *" ] || [ "$FORCE" = "true" ]; then
-            hit "/api/idea-engine?action=review" &
             hit "/api/projects?resource=evolve" &
           fi
 
-          # ── 09:00 UTC daily: Idea Engine email digest ─────────────────
+          # ── 09:00 UTC daily: Idea Engine review + email digest ────────
+          # Run sequentially (no &) so the digest sees ideas the review just
+          # approved.
           if [ "$SCHEDULE" = "0 9 * * *" ] || [ "$FORCE" = "true" ]; then
-            hit "/api/idea-engine?action=send-digest" &
+            hit "/api/idea-engine?action=review"
+            hit "/api/idea-engine?action=send-digest"
           fi
 
           # ── Sunday 08:00 UTC: Polymath drawer digest ──────────────────
           if [ "$SCHEDULE" = "0 8 * * 0" ] || [ "$FORCE" = "true" ]; then
             hit "/api/projects?resource=generate-digest" &
-          fi
-
-          # ── TEMP: every 2h idea-engine smoke test ─────────────────────
-          # Added to verify the review parallelisation fix (6ee8faa) without
-          # waiting a full day per iteration. Runs review then digest
-          # sequentially so the digest sees ideas the review just approved.
-          # REMOVE this block AND the matching schedule entry above once the
-          # fix is confirmed working.
-          if [ "$SCHEDULE" = "0 */2 * * *" ]; then
-            hit "/api/idea-engine?action=review"
-            hit "/api/idea-engine?action=send-digest"
           fi
 
           wait
