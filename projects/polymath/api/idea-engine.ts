@@ -212,39 +212,42 @@ async function handleReview(res: VercelResponse) {
     return res.status(200).json({ success: true, message: 'No pending ideas to review', reviewed: 0 });
   }
 
-  const results = [];
+  // Review ideas in parallel. Sequential awaits previously blew the 60s Vercel
+  // function limit because each Gemini 3.1 Pro call takes several seconds, and
+  // 10 × ~6-10s > 60s → cron saw "timed out after 60000ms, 0 bytes received".
+  const results = await Promise.all(
+    pendingIdeas.map(async (idea) => {
+      try {
+        const verdict = await reviewIdea(idea as Idea);
 
-  for (const idea of pendingIdeas) {
-    try {
-      const verdict = await reviewIdea(idea as Idea);
+        const updateData: any = {
+          status: verdict.verdict === 'BUILD' ? 'approved' : verdict.verdict === 'SPARK' ? 'spark' : 'rejected',
+          opus_verdict: verdict.reasoning,
+          reviewed_at: new Date().toISOString(),
+        };
 
-      const updateData: any = {
-        status: verdict.verdict === 'BUILD' ? 'approved' : verdict.verdict === 'SPARK' ? 'spark' : 'rejected',
-        opus_verdict: verdict.reasoning,
-        reviewed_at: new Date().toISOString(),
-      };
+        if (verdict.rejection_category) {
+          updateData.rejection_reason = verdict.reasoning;
+          updateData.rejection_category = verdict.rejection_category;
+        }
 
-      if (verdict.rejection_category) {
-        updateData.rejection_reason = verdict.reasoning;
-        updateData.rejection_category = verdict.rejection_category;
+        const { error: updateError } = await supabase
+          .from('ie_ideas')
+          .update(updateData)
+          .eq('id', idea.id);
+
+        if (updateError) {
+          console.error(`Failed to update idea ${idea.id}:`, updateError);
+          return { id: idea.id, success: false, error: updateError.message };
+        }
+
+        return { id: idea.id, success: true, verdict: verdict.verdict, title: idea.title };
+      } catch (error) {
+        console.error(`Failed to review idea ${idea.id}:`, error);
+        return { id: idea.id, success: false, error: error instanceof Error ? error.message : 'Unknown error' };
       }
-
-      const { error: updateError } = await supabase
-        .from('ie_ideas')
-        .update(updateData)
-        .eq('id', idea.id);
-
-      if (updateError) {
-        console.error(`Failed to update idea ${idea.id}:`, updateError);
-        results.push({ id: idea.id, success: false, error: updateError.message });
-      } else {
-        results.push({ id: idea.id, success: true, verdict: verdict.verdict, title: idea.title });
-      }
-    } catch (error) {
-      console.error(`Failed to review idea ${idea.id}:`, error);
-      results.push({ id: idea.id, success: false, error: error instanceof Error ? error.message : 'Unknown error' });
-    }
-  }
+    })
+  );
 
   const elapsed = Date.now() - startTime;
   const successCount = results.filter((r) => r.success).length;
