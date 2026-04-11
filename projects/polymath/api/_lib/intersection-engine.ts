@@ -102,10 +102,30 @@ const FUEL_BRIDGE_THRESHOLD = 0.52
  * Past feedback the user has given on previous weeks of cards. Passed into
  * generation so the AI can avoid disliked themes and lean into liked ones.
  * Sourced by intersection-weekly.ts from weekly_intersections_history.
+ *
+ * `alreadySeen` is the full history of crossover titles ever shown to this
+ * user (regardless of feedback). The prompt uses it as a "do not repeat"
+ * list, and intersection-weekly.ts also runs a post-generation filter so the
+ * same idea cannot resurface even if the model ignores the instruction.
  */
 export interface PriorFeedback {
-  liked: string[]    // crossover_titles the user said "Shape this idea" on
-  disliked: string[] // crossover_titles the user said "Not for me" on
+  liked: string[]        // crossover_titles the user said "Shape this idea" on
+  disliked: string[]     // crossover_titles the user said "Not for me" on
+  alreadySeen?: string[] // every crossover_title ever generated for this user
+}
+
+/**
+ * Normalise a crossover title for duplicate comparison: lowercase, strip
+ * punctuation, collapse whitespace. Two titles that normalise to the same
+ * string are treated as the same idea.
+ */
+export function normalizeTitle(title: string | null | undefined): string {
+  if (!title) return ''
+  return title
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 /** Cap each deck (mashups + insights) at this many cards. */
@@ -639,13 +659,27 @@ Return JSON:
  * said "Shape this idea" on. Mirrors insights-generator.ts:155-163.
  */
 function buildFeedbackPromptBlock(feedback: PriorFeedback): string {
-  if (feedback.liked.length === 0 && feedback.disliked.length === 0) return ''
+  const alreadySeen = feedback.alreadySeen ?? []
+  if (
+    feedback.liked.length === 0 &&
+    feedback.disliked.length === 0 &&
+    alreadySeen.length === 0
+  ) {
+    return ''
+  }
   const lines: string[] = ['', 'WHAT THIS PERSON HAS PREVIOUSLY TOLD YOU:']
   if (feedback.liked.length > 0) {
     lines.push(`They got excited about and started exploring: ${feedback.liked.slice(0, 6).map(t => `"${t}"`).join(', ')}. Lean into themes like these — pattern, mechanism, the kind of thinking that lights them up.`)
   }
   if (feedback.disliked.length > 0) {
     lines.push(`They explicitly rejected (don't repeat or echo these): ${feedback.disliked.slice(0, 8).map(t => `"${t}"`).join(', ')}. Avoid resurfacing the same idea with different words.`)
+  }
+  if (alreadySeen.length > 0) {
+    // Cap the list so the prompt doesn't blow up after months of weekly runs.
+    // The post-generation filter in intersection-weekly.ts is the safety net
+    // for anything beyond this window.
+    const recent = alreadySeen.slice(0, 40)
+    lines.push(`They have ALREADY been shown these crossovers in past weeks — do NOT generate any of them again, and do not just rephrase them with new wording: ${recent.map(t => `"${t}"`).join(', ')}. Each new crossover must be a fundamentally different idea, not a restatement.`)
   }
   lines.push('')
   return lines.join('\n')
