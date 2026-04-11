@@ -16,7 +16,20 @@ import { analyzeTaskEnergy } from './_lib/task-energy-analyzer.js'
 import { generatePowerHourPlan } from './_lib/power-hour-generator.js'
 import { identifyRottingProjects, generateZebraReport, buryProject, resurrectProject, pickSynthesisResurfaceCandidate } from './_lib/project-maintenance.js'
 import { updateItemConnections } from './_lib/connection-logic.js'
-import { discoverIntersections, classicIntersections } from './_lib/intersection-engine.js'
+// intersection-engine is no longer called from this file — generation moved
+// to api/_lib/intersection-weekly.ts and runs once a week via the cron. We
+// keep the IntersectionPayload type local to the promote handler.
+interface IntersectionPayload {
+  id: string
+  reason?: string
+  nodes?: Array<{ id: string; title: string; type: string }>
+  crossover?: {
+    crossover_title?: string
+    why_it_works?: string
+    concept?: string
+    first_steps?: string[]
+  }
+}
 import { invalidateProjectCache } from './_lib/power-hour-cache.js'
 import { recomputeHeatForUser, DRAWER_STATUSES, MUTATION_MODES, MODES_THAT_RETIRE_PARENT, type MutationMode } from './_lib/metabolism.js'
 
@@ -1033,116 +1046,167 @@ Return JSON only:
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  // INTERSECTIONS — AI-Primary Structural Discovery (The Medici Effect).
-  // AI discovers where ideas collide at the mechanism level, not just the topic level.
-  // Prioritises 3-5 idea intersections over simple pairs. Embeddings provide supporting fuel.
-  // See docs/INTERSECTIONS.md for the full intellectual framework.
+  // INTERSECTIONS — Weekly cached deck of AI-discovered crossover cards.
+  //
+  // Cards are now generated once a week by the daily cron's Monday branch
+  // (see api/_lib/intersection-weekly.ts) and persisted in the
+  // `weekly_intersections` table. The GET handler is a thin row read so the
+  // home page renders instantly. POST handles per-card feedback ('good' /
+  // 'bad') and the "Shape this idea" promote flow that creates a real
+  // upcoming project from a card so the user can chat-shape it via the
+  // existing project chat (InlineGuide).
+  //
+  // See docs/INTERSECTIONS.md for the intellectual framework.
   if (resource === 'intersections') {
+    const action = req.query.action as string | undefined
+
+    // GET — read current week's cards instantly from the cache row.
     if (req.method === 'GET') {
       try {
-        // Fetch active projects with embeddings + descriptions for AI analysis
-        const { data: projects, error: projError } = await supabase
-          .from('projects')
-          .select('id, title, description, embedding, metadata, status')
+        const { data } = await supabase
+          .from('weekly_intersections')
+          .select('intersections, insights, feedback, generated_at, expires_at')
           .eq('user_id', userId)
-          .in('status', ['active', 'upcoming'])
-          .not('embedding', 'is', null)
+          .maybeSingle()
 
-        if (projError) throw projError
-        if (!projects || projects.length < 2) {
-          return res.status(200).json({ intersections: [], insights: [] })
-        }
-
-        // Extended time window: 90 days (not 14) — time-delayed connections
-        // are the most powerful. Something from months ago suddenly becoming
-        // relevant is the Adjacent Possible expanding in real time.
-        const ninetyDaysAgo = new Date()
-        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
-
-        const { data: recentMemories } = await supabase
-          .from('memories')
-          .select('id, title, body, themes, embedding')
-          .eq('user_id', userId)
-          .gte('created_at', ninetyDaysAgo.toISOString())
-          .not('embedding', 'is', null)
-          .order('created_at', { ascending: false })
-          .limit(50)
-
-        const { data: recentArticles } = await supabase
-          .from('reading_queue')
-          .select('id, title, summary, embedding')
-          .eq('user_id', userId)
-          .gte('created_at', ninetyDaysAgo.toISOString())
-          .not('embedding', 'is', null)
-          .order('created_at', { ascending: false })
-          .limit(30)
-
-        // List items — things they've noted to read/try/consider. These can be
-        // first-class collision nodes alongside projects, not just fuel.
-        const { data: recentListItems } = await supabase
-          .from('list_items')
-          .select('id, content, metadata, embedding')
-          .eq('user_id', userId)
-          .gte('created_at', ninetyDaysAgo.toISOString())
-          .not('embedding', 'is', null)
-          .order('created_at', { ascending: false })
-          .limit(40)
-
-        // Run both approaches in parallel for A/B comparison
-        const [insights, intersections] = await Promise.all([
-          discoverIntersections(projects, recentMemories || [], recentArticles || [], recentListItems || []),
-          classicIntersections(projects, recentMemories || [], recentArticles || [], recentListItems || [])
-        ])
-
-        console.log('[intersections] generated', {
-          projects: projects.length,
-          memories: (recentMemories || []).length,
-          articles: (recentArticles || []).length,
-          listItems: (recentListItems || []).length,
-          insights: insights.length,
-          intersections: intersections.length,
+        return res.status(200).json({
+          intersections: data?.intersections ?? [],
+          insights: data?.insights ?? [],
+          feedback: data?.feedback ?? {},
+          generated_at: data?.generated_at ?? null,
+          expires_at: data?.expires_at ?? null,
+          next_refresh_at: data?.expires_at ?? null,
         })
-
-        // Store crossover ideas as project suggestions (from insights only)
-        for (const intersection of insights.filter(i => i.crossover)) {
-          try {
-            const { data: existing } = await supabase
-              .from('project_suggestions')
-              .select('id')
-              .eq('user_id', userId)
-              .eq('title', intersection.crossover!.crossover_title)
-              .limit(1)
-
-            if (!existing?.length) {
-              await supabase.from('project_suggestions').insert({
-                user_id: userId,
-                title: intersection.crossover!.crossover_title,
-                description: intersection.crossover!.concept,
-                synthesis_reasoning: intersection.crossover!.why_it_works,
-                novelty_score: Math.round(intersection.score * 10),
-                feasibility_score: 70,
-                interest_score: 80,
-                total_points: Math.round(intersection.score * 10 + 150),
-                is_wildcard: false,
-                status: 'pending',
-                metadata: {
-                  observation_basis: 'intersection',
-                  source_project_ids: intersection.projectIds,
-                  first_steps: intersection.crossover!.first_steps,
-                }
-              })
-            }
-          } catch {
-            // Non-critical
-          }
-        }
-
-        return res.status(200).json({ intersections, insights })
       } catch (error) {
-        console.error('[intersections] Error:', error)
-        return res.status(500).json({ error: 'Failed to find intersections' })
+        console.error('[intersections] GET error:', error)
+        return res.status(500).json({ error: 'Failed to load intersections' })
       }
     }
+
+    // POST ?action=feedback — record a 'good' or 'bad' rating on a card.
+    if (req.method === 'POST' && action === 'feedback') {
+      try {
+        const { card_id, rating } = (req.body || {}) as { card_id?: string; rating?: 'good' | 'bad' }
+        if (!card_id || (rating !== 'good' && rating !== 'bad')) {
+          return res.status(400).json({ error: 'card_id and rating ("good" | "bad") required' })
+        }
+
+        const { data: row } = await supabase
+          .from('weekly_intersections')
+          .select('feedback')
+          .eq('user_id', userId)
+          .maybeSingle()
+
+        const existing = (row?.feedback ?? {}) as Record<string, 'good' | 'bad'>
+        const merged = { ...existing, [card_id]: rating }
+
+        const { error: upsertErr } = await supabase
+          .from('weekly_intersections')
+          .update({ feedback: merged, updated_at: new Date().toISOString() })
+          .eq('user_id', userId)
+
+        if (upsertErr) {
+          console.error('[intersections] feedback update failed:', upsertErr)
+          return res.status(500).json({ error: 'Failed to record feedback' })
+        }
+
+        return res.status(200).json({ success: true, feedback: merged })
+      } catch (error) {
+        console.error('[intersections] feedback error:', error)
+        return res.status(500).json({ error: 'Failed to record feedback' })
+      }
+    }
+
+    // POST ?action=promote — turn a card into a real upcoming project so the
+    // user can develop it via the existing project chat. Also marks the card
+    // as 'good' in feedback.
+    if (req.method === 'POST' && action === 'promote') {
+      try {
+        const { card_id } = (req.body || {}) as { card_id?: string }
+        if (!card_id) {
+          return res.status(400).json({ error: 'card_id required' })
+        }
+
+        const { data: row } = await supabase
+          .from('weekly_intersections')
+          .select('intersections, insights, feedback')
+          .eq('user_id', userId)
+          .maybeSingle()
+
+        if (!row) {
+          return res.status(404).json({ error: 'No weekly intersections to promote from' })
+        }
+
+        const all = [
+          ...((row.intersections ?? []) as IntersectionPayload[]),
+          ...((row.insights ?? []) as IntersectionPayload[]),
+        ]
+        const card = all.find(c => c.id === card_id)
+        if (!card) {
+          return res.status(404).json({ error: 'Card not found' })
+        }
+
+        // Build the project record. Falls back gracefully if the card lacks
+        // a crossover (older cards may only have a `reason`).
+        const title = card.crossover?.crossover_title?.trim() || 'Untitled crossover'
+        const description = card.crossover?.concept || card.reason || ''
+        const motivation = card.crossover?.why_it_works || ''
+        const firstSteps = card.crossover?.first_steps ?? []
+
+        const nowIso = new Date().toISOString()
+        const tasks = firstSteps.map((text, idx) => ({
+          id: `task-${Date.now()}-${idx}`,
+          text,
+          done: false,
+          order: idx,
+        }))
+
+        const sourceNodeIds = (card.nodes ?? []).map(n => n.id)
+
+        const { data: project, error: insertErr } = await supabase
+          .from('projects')
+          .insert([{
+            user_id: userId,
+            title,
+            description,
+            type: 'creative',
+            status: 'upcoming',
+            metadata: {
+              tasks,
+              motivation,
+              shaped_from_intersection: {
+                card_id: card.id,
+                source_node_ids: sourceNodeIds,
+                shaped_at: nowIso,
+              },
+            },
+          }])
+          .select('id')
+          .single()
+
+        if (insertErr || !project) {
+          console.error('[intersections] promote: project insert failed:', insertErr)
+          return res.status(500).json({ error: 'Failed to create project from card' })
+        }
+
+        // Mark the card as 'good' in feedback so the UI greys/saved-state
+        // persists across reloads.
+        const existingFeedback = (row.feedback ?? {}) as Record<string, 'good' | 'bad'>
+        await supabase
+          .from('weekly_intersections')
+          .update({
+            feedback: { ...existingFeedback, [card_id]: 'good' },
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', userId)
+
+        return res.status(200).json({ success: true, project_id: project.id })
+      } catch (error) {
+        console.error('[intersections] promote error:', error)
+        return res.status(500).json({ error: 'Failed to promote intersection' })
+      }
+    }
+
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
