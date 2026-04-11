@@ -28,7 +28,6 @@ import {
   Folder,
   Layers,
   ThumbsDown,
-  Sparkles,
 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 
@@ -128,9 +127,10 @@ interface CardSetProps {
   onFeedback: (cardId: string, rating: FeedbackRating) => void
   onShape: (cardId: string) => void
   shapingId: string | null
+  refreshKey: number
 }
 
-function CardSet({ items, label, feedback, onFeedback, onShape, shapingId }: CardSetProps) {
+function CardSet({ items, label, feedback, onFeedback, onShape, shapingId, refreshKey }: CardSetProps) {
   const [activeIdx, setActiveIdx] = useState(0)
   const [direction, setDirection] = useState(1)
   const [nodesExpanded, setNodesExpanded] = useState(false)
@@ -204,15 +204,30 @@ function CardSet({ items, label, feedback, onFeedback, onShape, shapingId }: Car
       </div>
 
       <motion.div
-        initial={{ opacity: 0, y: 6 }}
-        animate={{ opacity: isDisliked ? 0.55 : 1, y: 0 }}
-        className="rounded-2xl border border-brand-primary/25 bg-gradient-to-br from-brand-primary/8 to-brand-primary/[0.02] relative overflow-hidden"
+        key={`unwrap-${refreshKey}`}
+        initial={{
+          opacity: 0,
+          scaleY: 0.05,
+          clipPath: 'inset(50% 0% 50% 0%)',
+        }}
+        animate={{
+          opacity: isDisliked ? 0.55 : 1,
+          scaleY: 1,
+          clipPath: 'inset(0% 0% 0% 0%)',
+        }}
+        transition={{
+          opacity: { duration: 0.45, ease: [0.22, 1, 0.36, 1] },
+          scaleY: { duration: 0.7, ease: [0.22, 1, 0.36, 1] },
+          clipPath: { duration: 0.7, ease: [0.22, 1, 0.36, 1] },
+        }}
         style={{
           boxShadow: isDisliked
             ? 'none'
             : '0 0 0 1px rgba(var(--brand-primary-rgb),0.08), 0 8px 40px -12px rgba(var(--brand-primary-rgb),0.25)',
           filter: isDisliked ? 'grayscale(0.8)' : undefined,
+          transformOrigin: 'center top',
         }}
+        className="rounded-2xl border border-brand-primary/25 bg-gradient-to-br from-brand-primary/8 to-brand-primary/[0.02] relative overflow-hidden"
       >
         {!isDisliked && (
           <>
@@ -258,7 +273,6 @@ function CardSet({ items, label, feedback, onFeedback, onShape, shapingId }: Car
               )}
               {isLiked && !isDisliked && (
                 <div className="mb-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-brand-primary/15 border border-brand-primary/30">
-                  <Sparkles className="h-3 w-3 text-brand-primary" />
                   <span className="text-[10px] font-medium uppercase tracking-wide text-brand-primary">
                     shaping in projects
                   </span>
@@ -395,7 +409,6 @@ function CardSet({ items, label, feedback, onFeedback, onShape, shapingId }: Car
                     disabled={isShaping}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-white bg-brand-primary hover:bg-brand-primary/90 disabled:opacity-60 transition-colors"
                   >
-                    <Sparkles className="h-3.5 w-3.5" />
                     {isShaping ? 'Opening…' : 'Shape this idea'}
                   </button>
                   <button
@@ -428,6 +441,9 @@ export function WeeklyIntersection() {
   const [shapingId, setShapingId] = useState<string | null>(null)
   const [seeding, setSeeding] = useState(false)
   const [seedError, setSeedError] = useState<string | null>(null)
+  // Incremented each time loadIntersections completes so children can
+  // replay the "unwrap" entrance animation on refresh.
+  const [refreshKey, setRefreshKey] = useState(0)
   const inflightFeedback = useRef(new Set<string>())
 
   const loadIntersections = useCallback(async (): Promise<void> => {
@@ -442,6 +458,7 @@ export function WeeklyIntersection() {
       setInsights(data.insights || [])
       setFeedback(data.feedback || {})
       setNextRefreshAt(data.next_refresh_at)
+      setRefreshKey(k => k + 1)
     } catch (err) {
       console.warn('[WeeklyIntersection] fetch error', err)
     }
@@ -588,6 +605,7 @@ export function WeeklyIntersection() {
               onFeedback={handleFeedback}
               onShape={handleShape}
               shapingId={shapingId}
+              refreshKey={refreshKey}
             />
           )}
           {insights.length > 0 && (
@@ -598,6 +616,7 @@ export function WeeklyIntersection() {
               onFeedback={handleFeedback}
               onShape={handleShape}
               shapingId={shapingId}
+              refreshKey={refreshKey}
             />
           )}
         </div>
@@ -614,7 +633,6 @@ export function WeeklyIntersection() {
               onClick={handleSeed}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-white bg-brand-primary hover:bg-brand-primary/90 transition-colors"
             >
-              <Sparkles className="h-3.5 w-3.5" />
               Generate now
             </button>
           )}

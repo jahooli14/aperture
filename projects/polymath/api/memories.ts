@@ -237,7 +237,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // GET: Resurfacing queue
     if (req.method === 'GET' && resurfacing === 'true') {
-      return await handleResurfacing(res, supabase)
+      const parsedLimit = Number(req.query.limit)
+      const limitNum = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 100) : 5
+      return await handleResurfacing(res, supabase, limitNum)
     }
 
     // GET: Insight (merged from insight.ts)
@@ -1058,7 +1060,7 @@ async function handleBridges(memoryId: string | undefined, res: VercelResponse, 
 /**
  * Resurfacing algorithm: Spaced repetition
  */
-async function handleResurfacing(res: VercelResponse, supabase: any) {
+async function handleResurfacing(res: VercelResponse, supabase: any, limit = 5) {
   try {
     // Get all memories with metadata
     const { data: memories, error } = await supabase
@@ -1108,7 +1110,7 @@ async function handleResurfacing(res: VercelResponse, supabase: any) {
       })
       .filter((m: Memory) => m.shouldReview)
       .sort((a: Memory, b: Memory) => (b.priority || 0) - (a.priority || 0))
-      .slice(0, 5) // Return top 5
+      .slice(0, limit)
 
     return res.status(200).json({
       memories: resurfacingCandidates,
