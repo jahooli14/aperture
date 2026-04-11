@@ -7,9 +7,11 @@
  *
  * Steps:
  *   1. Pull source data (projects, memories, articles, list items).
- *   2. Pull recent feedback history to steer the prompts.
+ *   2. Pull recent feedback history (to steer the prompts) and the full
+ *      title history (to enforce strict no-repeat dedup).
  *   3. Run discoverIntersections + classicIntersections in parallel.
- *   4. Filter out cards whose titles match disliked themes (defence in depth).
+ *   4. Filter out cards whose titles match disliked themes OR any crossover
+ *      we have already shown this user in a previous week (defence in depth).
  *   5. Archive the previous week's row to weekly_intersections_history.
  *   6. Upsert the new row with expires_at = now + 7 days.
  */
@@ -18,6 +20,7 @@ import { getSupabaseClient } from './supabase.js'
 import {
   discoverIntersections,
   classicIntersections,
+  normalizeTitle,
   type IntersectionResult,
   type PriorFeedback,
 } from './intersection-engine.js'
@@ -104,11 +107,16 @@ export async function generateWeeklyIntersections(
   const articles = articlesRes.data || []
   const listItems = listItemsRes.data || []
 
-  // --- 2. Pull feedback history ---
-  const priorFeedback = await loadPriorFeedback(userId)
+  // --- 2. Pull feedback history (recent ratings + full title history) ---
+  const [priorFeedback, allPriorTitles] = await Promise.all([
+    loadPriorFeedback(userId),
+    loadAllPriorTitles(userId),
+  ])
+  priorFeedback.alreadySeen = allPriorTitles
   console.log('[intersection-weekly] prior feedback:', {
     liked: priorFeedback.liked.length,
     disliked: priorFeedback.disliked.length,
+    alreadySeen: allPriorTitles.length,
   })
 
   // --- 3. Generate both decks in parallel ---
@@ -117,12 +125,25 @@ export async function generateWeeklyIntersections(
     classicIntersections(projects, memories, articles, listItems, priorFeedback),
   ])
 
-  // --- 4. Defence-in-depth filter: drop anything whose title we already know
-  //         the user dislikes, even if the prompt failed to suppress it. ---
-  const dislikedSet = new Set(priorFeedback.disliked.map(t => t.toLowerCase().trim()))
+  // --- 4. Defence-in-depth filters ---
+  //   (a) drop anything whose title matches a previously-disliked theme
+  //   (b) drop anything whose title matches a card we have ever shown before
+  //       (the prompt asks the model to avoid this, but we enforce it here so
+  //       the same idea genuinely cannot be repeated twice)
+  const dislikedSet = new Set(priorFeedback.disliked.map(normalizeTitle).filter(Boolean))
+  const seenSet = new Set(allPriorTitles.map(normalizeTitle).filter(Boolean))
+
+  // Also dedupe within this generation pass: if both decks happen to surface
+  // the same title in the same week, only the first one is kept.
+  const thisRunSeen = new Set<string>()
   const isAllowed = (card: IntersectionResult) => {
-    const title = card.crossover?.crossover_title?.toLowerCase().trim()
-    return !title || !dislikedSet.has(title)
+    const norm = normalizeTitle(card.crossover?.crossover_title)
+    if (!norm) return true
+    if (dislikedSet.has(norm)) return false
+    if (seenSet.has(norm)) return false
+    if (thisRunSeen.has(norm)) return false
+    thisRunSeen.add(norm)
+    return true
   }
   const insights = insightsRaw.filter(isAllowed)
   const intersections = intersectionsRaw.filter(isAllowed)
@@ -203,6 +224,59 @@ async function loadPriorFeedback(userId: string): Promise<PriorFeedback> {
   }
 
   return { liked, disliked }
+}
+
+/**
+ * Pull every crossover title this user has ever been shown — current row plus
+ * the full history archive. Used to enforce strict no-repeat dedup so the same
+ * intersection idea is not generated twice (the 6-week feedback lookback is
+ * not enough; users notice repeats from much further back).
+ *
+ * Returned in most-recent-first order so the prompt's truncated "do not
+ * repeat" snippet biases toward suppressing recent ideas.
+ */
+async function loadAllPriorTitles(userId: string): Promise<string[]> {
+  const supabase = getSupabaseClient()
+
+  const [currentRes, historyRes] = await Promise.all([
+    supabase
+      .from('weekly_intersections')
+      .select('intersections, insights, generated_at')
+      .eq('user_id', userId)
+      .maybeSingle(),
+    supabase
+      .from('weekly_intersections_history')
+      .select('intersections, insights, generated_at')
+      .eq('user_id', userId)
+      .order('generated_at', { ascending: false }),
+  ])
+
+  const titles: string[] = []
+  const seen = new Set<string>()
+
+  const collect = (intersections: unknown, insights: unknown) => {
+    const all: IntersectionResult[] = [
+      ...((intersections ?? []) as IntersectionResult[]),
+      ...((insights ?? []) as IntersectionResult[]),
+    ]
+    for (const card of all) {
+      const title = card?.crossover?.crossover_title
+      if (!title) continue
+      const key = normalizeTitle(title)
+      if (!key || seen.has(key)) continue
+      seen.add(key)
+      titles.push(title)
+    }
+  }
+
+  if (currentRes.data) {
+    collect(currentRes.data.intersections, currentRes.data.insights)
+  }
+  for (const row of historyRes.data || []) {
+    collect(row.intersections, row.insights)
+  }
+
+  return titles
 }
 
 /**
