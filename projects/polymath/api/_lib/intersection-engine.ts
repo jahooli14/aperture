@@ -99,6 +99,19 @@ export interface ListItemInput {
 const FUEL_BRIDGE_THRESHOLD = 0.52
 
 /**
+ * Past feedback the user has given on previous weeks of cards. Passed into
+ * generation so the AI can avoid disliked themes and lean into liked ones.
+ * Sourced by intersection-weekly.ts from weekly_intersections_history.
+ */
+export interface PriorFeedback {
+  liked: string[]    // crossover_titles the user said "Shape this idea" on
+  disliked: string[] // crossover_titles the user said "Not for me" on
+}
+
+/** Cap each deck (mashups + insights) at this many cards. */
+const MAX_CARDS_PER_DECK = 3
+
+/**
  * Main entry point.
  * Builds rich per-project context from associated memories, then asks the AI
  * to spot latent patterns across the user's thinking.
@@ -107,7 +120,8 @@ export async function discoverIntersections(
   projects: ProjectInput[],
   memories: MemoryInput[],
   articles: ArticleInput[],
-  listItems: ListItemInput[] = []
+  listItems: ListItemInput[] = [],
+  priorFeedback: PriorFeedback = { liked: [], disliked: [] }
 ): Promise<IntersectionResult[]> {
   if (projects.length < 2) return []
 
@@ -118,16 +132,22 @@ export async function discoverIntersections(
   const richContext = buildRichProjectContext(projects, memories, articles, listItems)
 
   // --- Phase 2: AI spots latent patterns ---
+  // If the AI path fails or returns nothing, fall back to embedding-based
+  // discovery — but ALWAYS narrate the result so cards never render empty.
   let candidates: RawCandidate[]
   try {
-    candidates = await discoverPatterns(projects, richContext)
+    candidates = await discoverPatterns(projects, richContext, priorFeedback)
   } catch (err) {
     console.error('[intersection-engine] AI discovery failed, falling back to embedding-based:', err)
-    return embeddingBasedDiscovery(projects, memories, articles, listItems)
+    const fallback = embeddingBasedDiscovery(projects, memories, articles, listItems)
+    await narrateClusters(fallback)
+    return fallback
   }
 
   if (candidates.length === 0) {
-    return embeddingBasedDiscovery(projects, memories, articles, listItems)
+    const fallback = embeddingBasedDiscovery(projects, memories, articles, listItems)
+    await narrateClusters(fallback)
+    return fallback
   }
 
   // --- Phase 3: Find supporting fuel via embeddings ---
@@ -206,11 +226,13 @@ export async function discoverIntersections(
       droppedNoProject,
     })
     // Fall back rather than return nothing — the UI just shows an empty section otherwise.
-    return embeddingBasedDiscovery(projects, memories, articles, listItems)
+    const fallback = embeddingBasedDiscovery(projects, memories, articles, listItems)
+    await narrateClusters(fallback)
+    return fallback
   }
 
   results.sort((a, b) => b.score - a.score)
-  return results.slice(0, 5)
+  return results.slice(0, MAX_CARDS_PER_DECK)
 }
 
 /**
@@ -322,11 +344,14 @@ function buildRichProjectContext(
  */
 async function discoverPatterns(
   projects: ProjectInput[],
-  richContext: string
+  richContext: string,
+  priorFeedback: PriorFeedback = { liked: [], disliked: [] }
 ): Promise<RawCandidate[]> {
 
   const numProjects = projects.length
   const targetCount = Math.min(4, Math.max(2, Math.floor(numProjects * 0.7)))
+
+  const feedbackBlock = buildFeedbackPromptBlock(priorFeedback)
 
   const prompt = `You are reading through everything one person has been working on and thinking about recently. Your job: spot patterns in their thinking that THEY haven't noticed yet.
 
@@ -359,7 +384,7 @@ GOOD (insight): "You keep solving the same problem without realising it. In your
 
 GOOD (insight): "There's a tension in your work you might not have noticed. Your book editor is all about imposing structure on messy material — taking raw creativity and shaping it. Your voice capture tool does the opposite — it deliberately avoids structure to capture raw thought. You're building tools for both sides of the same creative process. What if the connection between them isn't a feature — it's a workflow? The thing missing from both is the BRIDGE between unstructured capture and structured output."
 — This finds a genuine tension. It doesn't combine the projects. It reveals what they share at a deeper level.
-
+${feedbackBlock}
 YOUR RULES:
 
 1. Find patterns that span 3-5 items when possible. A pattern that shows up in 3 different items is far more interesting than one in 2 — it suggests something fundamental about how this person thinks.${numProjects >= 4 ? ' You have enough ideas here. Go for it.' : ''}
@@ -521,8 +546,14 @@ export async function classicIntersections(
   projects: ProjectInput[],
   memories: MemoryInput[],
   articles: ArticleInput[],
-  listItems: ListItemInput[] = []
+  listItems: ListItemInput[] = [],
+  _priorFeedback: PriorFeedback = { liked: [], disliked: [] }
 ): Promise<IntersectionResult[]> {
+  // Note: priorFeedback isn't used inside the embedding clustering itself
+  // (the geometry doesn't know about user preference), but the post-filter in
+  // intersection-weekly.ts drops any classic card whose title matches a
+  // disliked theme. The argument is accepted to keep the call site symmetric
+  // with discoverIntersections.
   const results = embeddingBasedDiscovery(projects, memories, articles, listItems)
   if (results.length === 0) {
     console.warn('[intersection-engine] classicIntersections produced zero clusters', {
@@ -532,25 +563,46 @@ export async function classicIntersections(
     })
   }
 
-  // AI narration for top 3 — run in parallel so we stay well under Vercel's
-  // function timeout. Sequentially this was 6 Gemini calls × ~3s = ~18s,
-  // which combined with discoverIntersections was blowing the 15s default.
-  const narrationTargets = results.slice(0, 3)
-  await Promise.all(narrationTargets.map(async (intersection) => {
+  // Narrate ALL clusters (was previously slice(0, 3) which left cards 4-5
+  // empty in the UI). We now generate weekly via cron with no Vercel timeout
+  // pressure, so the parallelism is safe.
+  await narrateClusters(results)
+
+  return results
+}
+
+/**
+ * Generate `reason` and `crossover` for every cluster in-place. Used by both
+ * the classic embedding pipeline and (as a safety net) the AI fallback so
+ * cards never render with empty bodies. Each cluster runs its two Gemini
+ * calls in parallel; clusters themselves also fan out in parallel.
+ */
+export async function narrateClusters(clusters: IntersectionResult[]): Promise<void> {
+  if (clusters.length === 0) return
+  await Promise.all(clusters.map(async (intersection) => {
+    // Skip if both fields are already populated (e.g. discoverIntersections
+    // path) — only fill in what's missing.
+    if (intersection.reason && intersection.crossover) return
+
     const nodeLabel = intersection.nodes
       .map(n => n.type === 'project' ? `the project "${n.title}"` : n.type === 'memory' ? `a thought: "${n.title}"` : `a list item: "${n.title}"`)
       .join(' + ')
     const fuelContext = intersection.sharedFuel.slice(0, 5).map(f => `${f.type}: "${f.title}"`).join(', ')
 
-    // Both calls for one intersection can also run in parallel.
-    const [reasonResult, crossoverResult] = await Promise.allSettled([
-      generateText(
+    const needReason = !intersection.reason
+    const needCrossover = !intersection.crossover
+
+    const calls: Array<Promise<string>> = []
+    if (needReason) {
+      calls.push(generateText(
         `One person has these things on their mind: ${nodeLabel}.${fuelContext ? ` Things that keep showing up across them: ${fuelContext}.` : ''}
 
 In 2-3 plain-English sentences, say what surprising thing becomes possible when you line these up next to each other. Be specific. Write like a friend who just noticed something clever. No buzzwords, no jargon. BANNED words: stochastic, ontological, emergent, heuristic, isomorphism, paradigm, teleological. If a 14-year-old wouldn't understand a word, don't use it.`,
         { model: MODELS.FLASH_CHAT, temperature: 0.95 }
-      ),
-      generateText(
+      ))
+    }
+    if (needCrossover) {
+      calls.push(generateText(
         `Someone has these things on their mind: ${nodeLabel}.${fuelContext ? ` Things that keep showing up across them: ${fuelContext}.` : ''}
 
 What's one concrete thing they could try that only makes sense because they have ALL of these on their mind at once? Not a feature. Not a business plan. A small, specific experiment. Write in plain English only. BANNED words: stochastic, ontological, emergent, heuristic, isomorphism, paradigm, teleological. A 14-year-old should understand every word.
@@ -558,22 +610,45 @@ What's one concrete thing they could try that only makes sense because they have
 Return JSON:
 {"crossover_title":"plain 3-6 word title","why_it_works":"2-3 short sentences in plain English","concept":"what you'd actually try, 2-3 sentences","first_steps":["first simple step","second simple step","third simple step"]}`,
         { model: MODELS.FLASH_CHAT, responseFormat: 'json', temperature: 0.95, maxTokens: 1024 }
-      )
-    ])
-
-    if (reasonResult.status === 'fulfilled') {
-      intersection.reason = reasonResult.value
+      ))
     }
-    if (crossoverResult.status === 'fulfilled') {
-      try {
-        intersection.crossover = JSON.parse(crossoverResult.value)
-      } catch {
-        // Non-critical — cluster still renders without crossover detail
+
+    const settled = await Promise.allSettled(calls)
+    let cursor = 0
+    if (needReason) {
+      const r = settled[cursor++]
+      if (r && r.status === 'fulfilled') intersection.reason = r.value
+    }
+    if (needCrossover) {
+      const r = settled[cursor++]
+      if (r && r.status === 'fulfilled') {
+        try {
+          intersection.crossover = JSON.parse(r.value)
+        } catch {
+          // Non-critical — cluster still renders with reason only
+        }
       }
     }
   }))
+}
 
-  return results
+/**
+ * Build a small "lessons from past weeks" block to prepend to the discovery
+ * prompt. We don't dump the whole history — just enough signal to bias the
+ * model away from disliked themes and toward themes the user has previously
+ * said "Shape this idea" on. Mirrors insights-generator.ts:155-163.
+ */
+function buildFeedbackPromptBlock(feedback: PriorFeedback): string {
+  if (feedback.liked.length === 0 && feedback.disliked.length === 0) return ''
+  const lines: string[] = ['', 'WHAT THIS PERSON HAS PREVIOUSLY TOLD YOU:']
+  if (feedback.liked.length > 0) {
+    lines.push(`They got excited about and started exploring: ${feedback.liked.slice(0, 6).map(t => `"${t}"`).join(', ')}. Lean into themes like these — pattern, mechanism, the kind of thinking that lights them up.`)
+  }
+  if (feedback.disliked.length > 0) {
+    lines.push(`They explicitly rejected (don't repeat or echo these): ${feedback.disliked.slice(0, 8).map(t => `"${t}"`).join(', ')}. Avoid resurfacing the same idea with different words.`)
+  }
+  lines.push('')
+  return lines.join('\n')
 }
 
 /**
@@ -695,7 +770,7 @@ function embeddingBasedDiscovery(
       return shared > 1
     })
     if (!overlapsTooMuch) picked.push(c)
-    if (picked.length >= 5) break
+    if (picked.length >= MAX_CARDS_PER_DECK) break
   }
 
   // Build final results with supporting fuel

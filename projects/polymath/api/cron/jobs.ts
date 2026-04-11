@@ -28,6 +28,7 @@ import { maintainEmbeddings } from '../_lib/embeddings-maintenance.js'
 import { extractCapabilities } from '../_lib/capabilities-extraction.js'
 import { identifyRottingProjects } from '../_lib/project-maintenance.js'
 import { recomputeHeatForUser } from '../_lib/metabolism.js'
+import { generateWeeklyIntersections } from '../_lib/intersection-weekly.js'
 import webpush from 'web-push'
 import { Resend } from 'resend'
 import { createClient } from '@supabase/supabase-js'
@@ -157,6 +158,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             error: error instanceof Error ? error.message : 'Unknown error'
           }
           console.error('[cron/jobs/daily] Synthesis failed:', error)
+        }
+      }
+
+      // 3b. Generate weekly intersection cards on Mondays. Cards are persisted
+      // to weekly_intersections so the home page renders them instantly all
+      // week. Previous week is archived to weekly_intersections_history so
+      // future generations can learn from feedback.
+      if (isMonday && userId) {
+        try {
+          const result = await generateWeeklyIntersections(userId)
+          results.tasks.intersections = {
+            success: true,
+            intersections_count: result.intersections.length,
+            insights_count: result.insights.length,
+          }
+          console.log(`[cron/jobs/daily] Generated weekly intersections: ${result.intersections.length} mashups, ${result.insights.length} insights`)
+        } catch (error) {
+          results.tasks.intersections = {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          }
+          console.error('[cron/jobs/daily] Weekly intersections failed:', error)
         }
       }
 
@@ -416,6 +439,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         job: 'synthesis',
         suggestions_generated: suggestions?.length || 0,
         timestamp: new Date().toISOString()
+      })
+
+    } else if (job === 'intersections') {
+      // Manual trigger for weekly intersection regeneration. Use this after
+      // a deploy to seed the cache before Monday rolls around, or to refresh
+      // mid-week during testing.
+      if (!userId) {
+        return res.status(400).json({ error: 'No active user found' })
+      }
+      const result = await generateWeeklyIntersections(userId)
+      return res.status(200).json({
+        success: true,
+        job: 'intersections',
+        intersections_count: result.intersections.length,
+        insights_count: result.insights.length,
+        generated_at: result.generated_at,
+        expires_at: result.expires_at,
+        timestamp: new Date().toISOString(),
       })
 
     } else if (job === 'strengthen') {
