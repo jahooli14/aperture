@@ -515,9 +515,10 @@ export function WeeklyIntersection() {
 
   if (!loaded) return null
 
-  // No row at all → hide the section. Empty row with a refresh date → render
-  // the heading + countdown placeholder so the user knows something's coming.
-  if (!hasData && !nextRefreshAt) return null
+  // We always render the section as long as the fetch succeeded. If there's
+  // no data yet (fresh install, cron hasn't seeded, or migration pending)
+  // the GET handler returns a `next_refresh_at` fallback pointing at the
+  // next Monday cron run, so the placeholder card + countdown still show.
 
   return (
     <section className="pb-6">

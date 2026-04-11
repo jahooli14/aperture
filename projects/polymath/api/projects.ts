@@ -1062,12 +1062,54 @@ Return JSON only:
 
     // GET — read current week's cards instantly from the cache row.
     if (req.method === 'GET') {
+      // Compute the next Monday 21:30 UTC (when the daily cron's Monday
+      // branch next runs). Used as a fallback `next_refresh_at` so the UI
+      // can render the countdown placeholder even before the first seed.
+      const computeNextMondayRun = (): string => {
+        const now = new Date()
+        const day = now.getUTCDay() // 0=Sun, 1=Mon, ..., 6=Sat
+        const next = new Date(now)
+        next.setUTCHours(21, 30, 0, 0)
+        if (day === 1) {
+          // Already Monday — if we're past 21:30 UTC, skip to next Monday.
+          if (now.getTime() >= next.getTime()) {
+            next.setUTCDate(next.getUTCDate() + 7)
+          }
+        } else {
+          const daysUntilMonday = (1 - day + 7) % 7 || 7
+          next.setUTCDate(now.getUTCDate() + daysUntilMonday)
+        }
+        return next.toISOString()
+      }
+
       try {
-        const { data } = await supabase
+        const { data, error: selectErr } = await supabase
           .from('weekly_intersections')
           .select('intersections, insights, feedback, generated_at, expires_at')
           .eq('user_id', userId)
           .maybeSingle()
+
+        // Tolerate the case where the migration hasn't been applied yet
+        // (relation does not exist — Postgres error code 42P01). Return an
+        // empty placeholder with the next-Monday countdown so the UI still
+        // renders the "ideas cooking" state instead of silently hiding.
+        if (selectErr) {
+          const isMissingTable =
+            selectErr.code === '42P01' ||
+            /does not exist/i.test(selectErr.message || '')
+          if (isMissingTable) {
+            console.warn('[intersections] weekly_intersections table missing — returning placeholder. Apply migration 20260411_weekly_intersections.sql.')
+            return res.status(200).json({
+              intersections: [],
+              insights: [],
+              feedback: {},
+              generated_at: null,
+              expires_at: null,
+              next_refresh_at: computeNextMondayRun(),
+            })
+          }
+          throw selectErr
+        }
 
         return res.status(200).json({
           intersections: data?.intersections ?? [],
@@ -1075,7 +1117,10 @@ Return JSON only:
           feedback: data?.feedback ?? {},
           generated_at: data?.generated_at ?? null,
           expires_at: data?.expires_at ?? null,
-          next_refresh_at: data?.expires_at ?? null,
+          // Always return a refresh target: real expires_at if we have a
+          // seeded row, otherwise the next Monday so the countdown is live
+          // even on a fresh install.
+          next_refresh_at: data?.expires_at ?? computeNextMondayRun(),
         })
       } catch (error) {
         console.error('[intersections] GET error:', error)
