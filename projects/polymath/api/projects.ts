@@ -1813,17 +1813,29 @@ Return JSON only:
     const { project_id } = req.body || {}
     try {
       // Fetch projects to evolve
-      let projectsQuery = supabase.from('projects').select('*').eq('user_id', userId)
+      let projectsQuery = supabase.from('projects').select('id, title, description, metadata').eq('user_id', userId)
       if (project_id) projectsQuery = projectsQuery.eq('id', project_id)
       else projectsQuery = projectsQuery.in('status', ['active', 'upcoming'])
 
       const { data: projects, error: projectsError } = await projectsQuery
-      if (projectsError) return res.status(500).json({ error: projectsError.message })
+      if (projectsError) {
+        console.error('[evolve] projects query failed:', projectsError)
+        return res.status(500).json({ error: projectsError.message, stage: 'fetch_projects' })
+      }
 
-      const evolved: string[] = []
-      for (const project of (projects || []).slice(0, 10)) {
+      const candidates = (projects || []).slice(0, 5)
+      console.log(`[evolve] starting: user=${userId} candidates=${candidates.length} (project_id=${project_id || 'auto'})`)
+
+      if (candidates.length === 0) {
+        return res.status(200).json({ evolved: 0, project_ids: [], reason: 'no candidate projects' })
+      }
+
+      // Generate insights in parallel — sequential calls were taking ~5-6s
+      // each, so 5-10 projects pushed total wall-clock past the 60s function
+      // timeout. Parallelism brings it down to ~the slowest single call.
+      type Outcome = { project_id: string; ok: boolean; error?: string }
+      const outcomes = await Promise.all(candidates.map(async (project): Promise<Outcome> => {
         try {
-          // Generate a reshaping insight
           const prompt = `You are a creative catalyst AI. Given this project, generate a fresh evolution insight — a new angle, intersection, or breakthrough idea that could reshape it.
 
 Project: ${project.title}
@@ -1833,25 +1845,69 @@ Current notes: ${JSON.stringify(project.metadata?.tasks?.slice(0, 3) || [])}
 Respond with JSON: { "event_type": "intersection"|"reshape"|"reflection", "description": "one specific, surprising insight in plain language (max 2 sentences)" }`
 
           const response = await generateText(prompt, { responseFormat: 'json', temperature: 0.8 })
-          const insight = JSON.parse(response)
-
-          if (insight.description) {
-            await supabase.from('evolution_events').insert({
-              user_id: userId,
-              project_id: project.id,
-              event_type: insight.event_type || 'reshape',
-              highlight: evolved.length === 0, // first one is highlight
-              description: insight.description,
-              created_at: new Date().toISOString(),
-            })
-            evolved.push(project.id)
+          let insight: { event_type?: string; description?: string }
+          try {
+            insight = JSON.parse(response)
+          } catch (parseErr) {
+            console.warn(`[evolve] JSON parse failed for project ${project.id}:`, parseErr instanceof Error ? parseErr.message : parseErr)
+            return { project_id: project.id, ok: false, error: 'parse_failed' }
           }
-        } catch { /* skip failed projects */ }
+
+          if (!insight?.description) {
+            return { project_id: project.id, ok: false, error: 'no_description' }
+          }
+
+          // event_type must satisfy the CHECK constraint on evolution_events
+          const validTypes = new Set(['intersection', 'reshape', 'reflection'])
+          const eventType = validTypes.has(insight.event_type ?? '') ? insight.event_type! : 'reshape'
+
+          const { error: insertErr } = await supabase.from('evolution_events').insert({
+            user_id: userId,
+            project_id: project.id,
+            event_type: eventType,
+            highlight: false, // we'll mark one as highlight after the parallel pass
+            description: insight.description,
+            created_at: new Date().toISOString(),
+          })
+          if (insertErr) {
+            console.warn(`[evolve] insert failed for project ${project.id}:`, insertErr.message)
+            return { project_id: project.id, ok: false, error: insertErr.message }
+          }
+          return { project_id: project.id, ok: true }
+        } catch (err) {
+          console.warn(`[evolve] project ${project.id} failed:`, err instanceof Error ? err.message : err)
+          return { project_id: project.id, ok: false, error: err instanceof Error ? err.message : 'unknown' }
+        }
+      }))
+
+      const evolved = outcomes.filter(o => o.ok).map(o => o.project_id)
+      const failed = outcomes.filter(o => !o.ok)
+
+      // Mark the first successful insight as the highlight (post-hoc, since
+      // the parallel pass doesn't know the order).
+      if (evolved.length > 0) {
+        const firstEvolvedId = evolved[0]
+        await supabase
+          .from('evolution_events')
+          .update({ highlight: true })
+          .eq('user_id', userId)
+          .eq('project_id', firstEvolvedId)
+          .order('created_at', { ascending: false })
+          .limit(1)
       }
 
-      return res.status(200).json({ evolved: evolved.length, project_ids: evolved })
+      console.log(`[evolve] done: ${evolved.length}/${candidates.length} succeeded${failed.length ? `, ${failed.length} failed` : ''}`)
+      return res.status(200).json({
+        evolved: evolved.length,
+        project_ids: evolved,
+        failures: failed.length,
+      })
     } catch (error) {
-      return res.status(500).json({ error: error instanceof Error ? error.message : 'Evolution failed' })
+      console.error('[evolve] handler crash:', error)
+      return res.status(500).json({
+        error: error instanceof Error ? error.message : 'Evolution failed',
+        stack: error instanceof Error ? error.stack?.split('\n').slice(0, 4).join('\n') : undefined,
+      })
     }
   }
 
