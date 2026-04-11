@@ -161,19 +161,51 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      // 3b. Generate weekly intersection cards on Mondays. Cards are persisted
-      // to weekly_intersections so the home page renders them instantly all
-      // week. Previous week is archived to weekly_intersections_history so
-      // future generations can learn from feedback.
-      if (isMonday && userId) {
+      // 3b. Generate weekly intersection cards. Primary schedule is Mondays,
+      // but we also seed on any day when the row is missing or expired so
+      // a fresh install doesn't have to wait until Monday for the section
+      // to come alive. Results go to weekly_intersections; previous rows are
+      // archived to weekly_intersections_history by the generator.
+      if (userId) {
         try {
-          const result = await generateWeeklyIntersections(userId)
-          results.tasks.intersections = {
-            success: true,
-            intersections_count: result.intersections.length,
-            insights_count: result.insights.length,
+          const { data: existing, error: existingErr } = await supabase
+            .from('weekly_intersections')
+            .select('expires_at')
+            .eq('user_id', userId)
+            .maybeSingle()
+
+          const isMissingTable =
+            existingErr && (
+              (existingErr as { code?: string }).code === '42P01' ||
+              /does not exist/i.test(existingErr.message || '')
+            )
+
+          if (isMissingTable) {
+            results.tasks.intersections = {
+              success: false,
+              error: 'weekly_intersections table not found — apply migration 20260411_weekly_intersections.sql',
+            }
+            console.warn('[cron/jobs/daily] weekly_intersections table missing; skipping intersection generation.')
+          } else {
+            const nowMs = Date.now()
+            const hasRow = !!existing
+            const isExpired = existing?.expires_at && new Date(existing.expires_at).getTime() < nowMs
+            const shouldGenerate = isMonday || !hasRow || !!isExpired
+
+            if (shouldGenerate) {
+              const reason = isMonday ? 'weekly' : !hasRow ? 'first_seed' : 'expired'
+              const result = await generateWeeklyIntersections(userId)
+              results.tasks.intersections = {
+                success: true,
+                reason,
+                intersections_count: result.intersections.length,
+                insights_count: result.insights.length,
+              }
+              console.log(`[cron/jobs/daily] Generated weekly intersections (${reason}): ${result.intersections.length} mashups, ${result.insights.length} insights`)
+            } else {
+              results.tasks.intersections = { success: true, skipped: true, reason: 'still_fresh' }
+            }
           }
-          console.log(`[cron/jobs/daily] Generated weekly intersections: ${result.intersections.length} mashups, ${result.insights.length} insights`)
         } catch (error) {
           results.tasks.intersections = {
             success: false,

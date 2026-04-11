@@ -19,6 +19,7 @@ import { updateItemConnections } from './_lib/connection-logic.js'
 // intersection-engine is no longer called from this file — generation moved
 // to api/_lib/intersection-weekly.ts and runs once a week via the cron. We
 // keep the IntersectionPayload type local to the promote handler.
+import { generateWeeklyIntersections } from './_lib/intersection-weekly.js'
 interface IntersectionPayload {
   id: string
   reason?: string
@@ -1249,6 +1250,62 @@ Return JSON only:
       } catch (error) {
         console.error('[intersections] promote error:', error)
         return res.status(500).json({ error: 'Failed to promote intersection' })
+      }
+    }
+
+    // POST ?action=seed — user-triggered first-run generation. Normally the
+    // daily cron's Monday branch seeds this, but on first install (or if you
+    // just can't wait) this lets the signed-in user kick off generation from
+    // the UI without needing CRON_SECRET. Rate-limited by the expires_at
+    // check: refuses to run if there's already a non-expired row.
+    if (req.method === 'POST' && action === 'seed') {
+      try {
+        const { data: existing, error: checkErr } = await supabase
+          .from('weekly_intersections')
+          .select('expires_at')
+          .eq('user_id', userId)
+          .maybeSingle()
+
+        // If the table is missing (migration not applied), bubble up a
+        // clear error so the UI can surface it instead of retrying forever.
+        if (checkErr) {
+          const isMissingTable =
+            checkErr.code === '42P01' ||
+            /does not exist/i.test(checkErr.message || '')
+          if (isMissingTable) {
+            return res.status(503).json({
+              error: 'weekly_intersections table not found. Apply migration 20260411_weekly_intersections.sql.',
+              code: 'migration_pending',
+            })
+          }
+          throw checkErr
+        }
+
+        if (existing?.expires_at) {
+          const expiresMs = new Date(existing.expires_at).getTime()
+          if (expiresMs > Date.now()) {
+            return res.status(409).json({
+              error: 'Already have a fresh deck this week',
+              code: 'already_seeded',
+              expires_at: existing.expires_at,
+            })
+          }
+        }
+
+        console.log(`[intersections] user-triggered seed for ${userId}`)
+        const result = await generateWeeklyIntersections(userId)
+        return res.status(200).json({
+          success: true,
+          intersections_count: result.intersections.length,
+          insights_count: result.insights.length,
+          generated_at: result.generated_at,
+          expires_at: result.expires_at,
+        })
+      } catch (error) {
+        console.error('[intersections] seed error:', error)
+        return res.status(500).json({
+          error: error instanceof Error ? error.message : 'Seed failed',
+        })
       }
     }
 
