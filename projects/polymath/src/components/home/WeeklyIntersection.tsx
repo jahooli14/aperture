@@ -426,7 +426,26 @@ export function WeeklyIntersection() {
   const [nextRefreshAt, setNextRefreshAt] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
   const [shapingId, setShapingId] = useState<string | null>(null)
+  const [seeding, setSeeding] = useState(false)
+  const [seedError, setSeedError] = useState<string | null>(null)
   const inflightFeedback = useRef(new Set<string>())
+
+  const loadIntersections = useCallback(async (): Promise<void> => {
+    try {
+      const res = await fetch('/api/projects?resource=intersections')
+      if (!res.ok) {
+        console.warn('[WeeklyIntersection] fetch failed', res.status)
+        return
+      }
+      const data = (await res.json()) as ApiResponse
+      setIntersections(data.intersections || [])
+      setInsights(data.insights || [])
+      setFeedback(data.feedback || {})
+      setNextRefreshAt(data.next_refresh_at)
+    } catch (err) {
+      console.warn('[WeeklyIntersection] fetch error', err)
+    }
+  }, [])
 
   useEffect(() => {
     // Clean up old client-side caches from the previous on-demand era.
@@ -441,29 +460,46 @@ export function WeeklyIntersection() {
 
     let cancelled = false
     ;(async () => {
-      try {
-        const res = await fetch('/api/projects?resource=intersections')
-        if (!res.ok) {
-          console.warn('[WeeklyIntersection] fetch failed', res.status)
-          if (!cancelled) setLoaded(true)
-          return
-        }
-        const data = (await res.json()) as ApiResponse
-        if (cancelled) return
-        setIntersections(data.intersections || [])
-        setInsights(data.insights || [])
-        setFeedback(data.feedback || {})
-        setNextRefreshAt(data.next_refresh_at)
-        setLoaded(true)
-      } catch (err) {
-        console.warn('[WeeklyIntersection] fetch error', err)
-        if (!cancelled) setLoaded(true)
-      }
+      await loadIntersections()
+      if (!cancelled) setLoaded(true)
     })()
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [loadIntersections])
+
+  const handleSeed = useCallback(async () => {
+    if (seeding) return
+    setSeedError(null)
+    setSeeding(true)
+    try {
+      const res = await fetch('/api/projects?resource=intersections&action=seed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      })
+      if (!res.ok) {
+        let msg = `Seed failed (${res.status})`
+        try {
+          const body = (await res.json()) as { error?: string; code?: string }
+          if (body?.error) msg = body.error
+          if (body?.code === 'migration_pending') {
+            msg = 'Database migration not applied yet — apply 20260411_weekly_intersections.sql in Supabase.'
+          }
+        } catch {
+          // response wasn't JSON
+        }
+        setSeedError(msg)
+        return
+      }
+      await loadIntersections()
+    } catch (err) {
+      console.warn('[WeeklyIntersection] seed error', err)
+      setSeedError(err instanceof Error ? err.message : 'Seed failed')
+    } finally {
+      setSeeding(false)
+    }
+  }, [seeding, loadIntersections])
 
   const handleFeedback = useCallback(async (cardId: string, rating: FeedbackRating) => {
     setFeedback(prev => ({ ...prev, [cardId]: rating }))
@@ -515,9 +551,10 @@ export function WeeklyIntersection() {
 
   if (!loaded) return null
 
-  // No row at all → hide the section. Empty row with a refresh date → render
-  // the heading + countdown placeholder so the user knows something's coming.
-  if (!hasData && !nextRefreshAt) return null
+  // We always render the section as long as the fetch succeeded. If there's
+  // no data yet (fresh install, cron hasn't seeded, or migration pending)
+  // the GET handler returns a `next_refresh_at` fallback pointing at the
+  // next Monday cron run, so the placeholder card + countdown still show.
 
   return (
     <section className="pb-6">
@@ -565,11 +602,25 @@ export function WeeklyIntersection() {
           )}
         </div>
       ) : (
-        <div className="rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-surface)] p-5 text-center">
+        <div className="rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-surface)] p-5 text-center space-y-3">
           <p className="text-sm text-[var(--brand-text-secondary)]">
-            Ideas are cooking. New crossovers
-            {countdown ? ` in ${countdown.label}` : ' soon'}.
+            {seeding
+              ? 'Generating your first set of crossovers… this takes ~30 seconds.'
+              : `Ideas are cooking. New crossovers${countdown ? ` in ${countdown.label}` : ' soon'}.`}
           </p>
+          {!seeding && (
+            <button
+              type="button"
+              onClick={handleSeed}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-white bg-brand-primary hover:bg-brand-primary/90 transition-colors"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Generate now
+            </button>
+          )}
+          {seedError && (
+            <p className="text-xs text-red-400">{seedError}</p>
+          )}
         </div>
       )}
     </section>

@@ -19,6 +19,7 @@ import { updateItemConnections } from './_lib/connection-logic.js'
 // intersection-engine is no longer called from this file — generation moved
 // to api/_lib/intersection-weekly.ts and runs once a week via the cron. We
 // keep the IntersectionPayload type local to the promote handler.
+import { generateWeeklyIntersections } from './_lib/intersection-weekly.js'
 interface IntersectionPayload {
   id: string
   reason?: string
@@ -1062,12 +1063,54 @@ Return JSON only:
 
     // GET — read current week's cards instantly from the cache row.
     if (req.method === 'GET') {
+      // Compute the next Monday 21:30 UTC (when the daily cron's Monday
+      // branch next runs). Used as a fallback `next_refresh_at` so the UI
+      // can render the countdown placeholder even before the first seed.
+      const computeNextMondayRun = (): string => {
+        const now = new Date()
+        const day = now.getUTCDay() // 0=Sun, 1=Mon, ..., 6=Sat
+        const next = new Date(now)
+        next.setUTCHours(21, 30, 0, 0)
+        if (day === 1) {
+          // Already Monday — if we're past 21:30 UTC, skip to next Monday.
+          if (now.getTime() >= next.getTime()) {
+            next.setUTCDate(next.getUTCDate() + 7)
+          }
+        } else {
+          const daysUntilMonday = (1 - day + 7) % 7 || 7
+          next.setUTCDate(now.getUTCDate() + daysUntilMonday)
+        }
+        return next.toISOString()
+      }
+
       try {
-        const { data } = await supabase
+        const { data, error: selectErr } = await supabase
           .from('weekly_intersections')
           .select('intersections, insights, feedback, generated_at, expires_at')
           .eq('user_id', userId)
           .maybeSingle()
+
+        // Tolerate the case where the migration hasn't been applied yet
+        // (relation does not exist — Postgres error code 42P01). Return an
+        // empty placeholder with the next-Monday countdown so the UI still
+        // renders the "ideas cooking" state instead of silently hiding.
+        if (selectErr) {
+          const isMissingTable =
+            selectErr.code === '42P01' ||
+            /does not exist/i.test(selectErr.message || '')
+          if (isMissingTable) {
+            console.warn('[intersections] weekly_intersections table missing — returning placeholder. Apply migration 20260411_weekly_intersections.sql.')
+            return res.status(200).json({
+              intersections: [],
+              insights: [],
+              feedback: {},
+              generated_at: null,
+              expires_at: null,
+              next_refresh_at: computeNextMondayRun(),
+            })
+          }
+          throw selectErr
+        }
 
         return res.status(200).json({
           intersections: data?.intersections ?? [],
@@ -1075,7 +1118,10 @@ Return JSON only:
           feedback: data?.feedback ?? {},
           generated_at: data?.generated_at ?? null,
           expires_at: data?.expires_at ?? null,
-          next_refresh_at: data?.expires_at ?? null,
+          // Always return a refresh target: real expires_at if we have a
+          // seeded row, otherwise the next Monday so the countdown is live
+          // even on a fresh install.
+          next_refresh_at: data?.expires_at ?? computeNextMondayRun(),
         })
       } catch (error) {
         console.error('[intersections] GET error:', error)
@@ -1204,6 +1250,62 @@ Return JSON only:
       } catch (error) {
         console.error('[intersections] promote error:', error)
         return res.status(500).json({ error: 'Failed to promote intersection' })
+      }
+    }
+
+    // POST ?action=seed — user-triggered first-run generation. Normally the
+    // daily cron's Monday branch seeds this, but on first install (or if you
+    // just can't wait) this lets the signed-in user kick off generation from
+    // the UI without needing CRON_SECRET. Rate-limited by the expires_at
+    // check: refuses to run if there's already a non-expired row.
+    if (req.method === 'POST' && action === 'seed') {
+      try {
+        const { data: existing, error: checkErr } = await supabase
+          .from('weekly_intersections')
+          .select('expires_at')
+          .eq('user_id', userId)
+          .maybeSingle()
+
+        // If the table is missing (migration not applied), bubble up a
+        // clear error so the UI can surface it instead of retrying forever.
+        if (checkErr) {
+          const isMissingTable =
+            checkErr.code === '42P01' ||
+            /does not exist/i.test(checkErr.message || '')
+          if (isMissingTable) {
+            return res.status(503).json({
+              error: 'weekly_intersections table not found. Apply migration 20260411_weekly_intersections.sql.',
+              code: 'migration_pending',
+            })
+          }
+          throw checkErr
+        }
+
+        if (existing?.expires_at) {
+          const expiresMs = new Date(existing.expires_at).getTime()
+          if (expiresMs > Date.now()) {
+            return res.status(409).json({
+              error: 'Already have a fresh deck this week',
+              code: 'already_seeded',
+              expires_at: existing.expires_at,
+            })
+          }
+        }
+
+        console.log(`[intersections] user-triggered seed for ${userId}`)
+        const result = await generateWeeklyIntersections(userId)
+        return res.status(200).json({
+          success: true,
+          intersections_count: result.intersections.length,
+          insights_count: result.insights.length,
+          generated_at: result.generated_at,
+          expires_at: result.expires_at,
+        })
+      } catch (error) {
+        console.error('[intersections] seed error:', error)
+        return res.status(500).json({
+          error: error instanceof Error ? error.message : 'Seed failed',
+        })
       }
     }
 
@@ -1813,17 +1915,29 @@ Return JSON only:
     const { project_id } = req.body || {}
     try {
       // Fetch projects to evolve
-      let projectsQuery = supabase.from('projects').select('*').eq('user_id', userId)
+      let projectsQuery = supabase.from('projects').select('id, title, description, metadata').eq('user_id', userId)
       if (project_id) projectsQuery = projectsQuery.eq('id', project_id)
       else projectsQuery = projectsQuery.in('status', ['active', 'upcoming'])
 
       const { data: projects, error: projectsError } = await projectsQuery
-      if (projectsError) return res.status(500).json({ error: projectsError.message })
+      if (projectsError) {
+        console.error('[evolve] projects query failed:', projectsError)
+        return res.status(500).json({ error: projectsError.message, stage: 'fetch_projects' })
+      }
 
-      const evolved: string[] = []
-      for (const project of (projects || []).slice(0, 10)) {
+      const candidates = (projects || []).slice(0, 5)
+      console.log(`[evolve] starting: user=${userId} candidates=${candidates.length} (project_id=${project_id || 'auto'})`)
+
+      if (candidates.length === 0) {
+        return res.status(200).json({ evolved: 0, project_ids: [], reason: 'no candidate projects' })
+      }
+
+      // Generate insights in parallel — sequential calls were taking ~5-6s
+      // each, so 5-10 projects pushed total wall-clock past the 60s function
+      // timeout. Parallelism brings it down to ~the slowest single call.
+      type Outcome = { project_id: string; ok: boolean; error?: string }
+      const outcomes = await Promise.all(candidates.map(async (project): Promise<Outcome> => {
         try {
-          // Generate a reshaping insight
           const prompt = `You are a creative catalyst AI. Given this project, generate a fresh evolution insight — a new angle, intersection, or breakthrough idea that could reshape it.
 
 Project: ${project.title}
@@ -1833,25 +1947,69 @@ Current notes: ${JSON.stringify(project.metadata?.tasks?.slice(0, 3) || [])}
 Respond with JSON: { "event_type": "intersection"|"reshape"|"reflection", "description": "one specific, surprising insight in plain language (max 2 sentences)" }`
 
           const response = await generateText(prompt, { responseFormat: 'json', temperature: 0.8 })
-          const insight = JSON.parse(response)
-
-          if (insight.description) {
-            await supabase.from('evolution_events').insert({
-              user_id: userId,
-              project_id: project.id,
-              event_type: insight.event_type || 'reshape',
-              highlight: evolved.length === 0, // first one is highlight
-              description: insight.description,
-              created_at: new Date().toISOString(),
-            })
-            evolved.push(project.id)
+          let insight: { event_type?: string; description?: string }
+          try {
+            insight = JSON.parse(response)
+          } catch (parseErr) {
+            console.warn(`[evolve] JSON parse failed for project ${project.id}:`, parseErr instanceof Error ? parseErr.message : parseErr)
+            return { project_id: project.id, ok: false, error: 'parse_failed' }
           }
-        } catch { /* skip failed projects */ }
+
+          if (!insight?.description) {
+            return { project_id: project.id, ok: false, error: 'no_description' }
+          }
+
+          // event_type must satisfy the CHECK constraint on evolution_events
+          const validTypes = new Set(['intersection', 'reshape', 'reflection'])
+          const eventType = validTypes.has(insight.event_type ?? '') ? insight.event_type! : 'reshape'
+
+          const { error: insertErr } = await supabase.from('evolution_events').insert({
+            user_id: userId,
+            project_id: project.id,
+            event_type: eventType,
+            highlight: false, // we'll mark one as highlight after the parallel pass
+            description: insight.description,
+            created_at: new Date().toISOString(),
+          })
+          if (insertErr) {
+            console.warn(`[evolve] insert failed for project ${project.id}:`, insertErr.message)
+            return { project_id: project.id, ok: false, error: insertErr.message }
+          }
+          return { project_id: project.id, ok: true }
+        } catch (err) {
+          console.warn(`[evolve] project ${project.id} failed:`, err instanceof Error ? err.message : err)
+          return { project_id: project.id, ok: false, error: err instanceof Error ? err.message : 'unknown' }
+        }
+      }))
+
+      const evolved = outcomes.filter(o => o.ok).map(o => o.project_id)
+      const failed = outcomes.filter(o => !o.ok)
+
+      // Mark the first successful insight as the highlight (post-hoc, since
+      // the parallel pass doesn't know the order).
+      if (evolved.length > 0) {
+        const firstEvolvedId = evolved[0]
+        await supabase
+          .from('evolution_events')
+          .update({ highlight: true })
+          .eq('user_id', userId)
+          .eq('project_id', firstEvolvedId)
+          .order('created_at', { ascending: false })
+          .limit(1)
       }
 
-      return res.status(200).json({ evolved: evolved.length, project_ids: evolved })
+      console.log(`[evolve] done: ${evolved.length}/${candidates.length} succeeded${failed.length ? `, ${failed.length} failed` : ''}`)
+      return res.status(200).json({
+        evolved: evolved.length,
+        project_ids: evolved,
+        failures: failed.length,
+      })
     } catch (error) {
-      return res.status(500).json({ error: error instanceof Error ? error.message : 'Evolution failed' })
+      console.error('[evolve] handler crash:', error)
+      return res.status(500).json({
+        error: error instanceof Error ? error.message : 'Evolution failed',
+        stack: error instanceof Error ? error.stack?.split('\n').slice(0, 4).join('\n') : undefined,
+      })
     }
   }
 
