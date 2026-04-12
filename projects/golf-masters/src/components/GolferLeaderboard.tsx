@@ -7,19 +7,19 @@ interface Props {
 }
 
 const TEAM_COLORS: Record<string, string> = {
-  Kieran: 'bg-blue-100 text-blue-700 border-blue-200',
-  Ollie: 'bg-purple-100 text-purple-700 border-purple-200',
-  Tristan: 'bg-pink-100 text-pink-700 border-pink-200',
-  George: 'bg-orange-100 text-orange-700 border-orange-200',
-  Jamie: 'bg-teal-100 text-teal-700 border-teal-200',
-  'Adam S': 'bg-indigo-100 text-indigo-700 border-indigo-200',
-  Isabelle: 'bg-rose-100 text-rose-700 border-rose-200',
-  Martin: 'bg-cyan-100 text-cyan-700 border-cyan-200',
-  Dom: 'bg-amber-100 text-amber-700 border-amber-200',
-  Laurence: 'bg-lime-100 text-lime-700 border-lime-200',
-  'Adam B': 'bg-violet-100 text-violet-700 border-violet-200',
-  Katie: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-  'Team Tequila': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+  Kieran: 'bg-blue-50 text-blue-600 border-blue-100',
+  Ollie: 'bg-purple-50 text-purple-600 border-purple-100',
+  Tristan: 'bg-pink-50 text-pink-600 border-pink-100',
+  George: 'bg-orange-50 text-orange-600 border-orange-100',
+  Jamie: 'bg-teal-50 text-teal-600 border-teal-100',
+  'Adam S': 'bg-indigo-50 text-indigo-600 border-indigo-100',
+  Isabelle: 'bg-rose-50 text-rose-600 border-rose-100',
+  Martin: 'bg-cyan-50 text-cyan-600 border-cyan-100',
+  Dom: 'bg-amber-50 text-amber-700 border-amber-100',
+  Laurence: 'bg-lime-50 text-lime-700 border-lime-100',
+  'Adam B': 'bg-violet-50 text-violet-600 border-violet-100',
+  Katie: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+  'Team Tequila': 'bg-yellow-50 text-yellow-700 border-yellow-200',
 };
 
 function scoreBadgeClass(score: number, display: string): string {
@@ -55,12 +55,12 @@ export default function GolferLeaderboard({ golfers, loading }: Props) {
         {Array.from({ length: 10 }).map((_, i) => (
           <div key={i} className="paper-card p-4 animate-pulse">
             <div className="flex items-center gap-3">
-              <div className="w-7 h-7 bg-gray-200 rounded-full" />
+              <div className="w-8 h-8 bg-masters-green/10 rounded-full" />
               <div className="flex-1 space-y-2">
-                <div className="w-36 h-4 bg-gray-200 rounded" />
-                <div className="w-20 h-3 bg-gray-100 rounded" />
+                <div className="w-36 h-4 bg-masters-green/[0.06] rounded" />
+                <div className="w-20 h-3 bg-masters-green/[0.04] rounded" />
               </div>
-              <div className="w-10 h-10 bg-gray-200 rounded-full" />
+              <div className="w-11 h-11 bg-masters-green/[0.06] rounded-full" />
             </div>
           </div>
         ))}
@@ -71,10 +71,10 @@ export default function GolferLeaderboard({ golfers, loading }: Props) {
   return (
     <div className="space-y-2">
       {/* Column header */}
-      <div className="flex items-center px-4 py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-widest select-none">
+      <div className="flex items-center px-4 py-2 text-[10px] font-semibold text-masters-green/40 uppercase tracking-widest select-none">
         <span className="w-8" />
         <span className="flex-1 pl-3">Player</span>
-        <span className="w-[42px] text-center">Score</span>
+        <span className="w-[44px] text-center">Score</span>
         <span className="w-12 text-center hidden sm:block">R4</span>
         <span className="w-10 text-center hidden sm:block">Thru</span>
       </div>
@@ -82,9 +82,10 @@ export default function GolferLeaderboard({ golfers, loading }: Props) {
       {golfers.map((g, i) => (
         <motion.div
           key={g.id}
-          initial={{ opacity: 0, x: -12 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: i * 0.02, duration: 0.3 }}
+          initial={{ opacity: 0, y: 16, rotateX: -6 }}
+          animate={{ opacity: 1, y: 0, rotateX: 0 }}
+          transition={{ delay: i * 0.025, duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
+          style={{ perspective: 600, transformOrigin: 'top center' }}
           className={`paper-card ${leaderClass(i)}`}
         >
           <div className="flex items-center px-3 sm:px-4 py-3">
@@ -93,10 +94,19 @@ export default function GolferLeaderboard({ golfers, loading }: Props) {
               <PosBadge index={i} position={g.position} />
             </div>
 
+            {/* Golfer headshot */}
+            {g.imageUrl && (
+              <img
+                src={g.imageUrl}
+                alt=""
+                className="w-7 h-7 rounded-full object-cover shrink-0 mr-2.5 ring-2 ring-masters-green/10"
+              />
+            )}
+
             {/* Name + team chips */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="font-semibold text-[13px] text-gray-900 truncate">
+                <span className="font-semibold text-sm text-gray-900 truncate">
                   {g.displayName}
                 </span>
                 {g.status === 'cut' && g.scoreDisplay !== 'N/A' && (

@@ -17,6 +17,7 @@ export default {
           paper: '#fffef7',
           'paper-dark': '#f7f1e3',
           pine: '#1a3c2a',
+          azalea: '#d63384',
         },
       },
       fontFamily: {
@@ -28,9 +29,15 @@ export default {
           '0%': { opacity: '0', transform: 'translateY(8px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
+        'paper-unfold': {
+          '0%': { opacity: '0', transform: 'translateY(12px) rotateX(-6deg)' },
+          '60%': { opacity: '1', transform: 'translateY(2px) rotateX(-1deg)' },
+          '100%': { opacity: '1', transform: 'translateY(0) rotateX(0deg)' },
+        },
       },
       animation: {
         'fade-up': 'fade-up 0.4s ease-out',
+        'paper-unfold': 'paper-unfold 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
       },
     },
   },
