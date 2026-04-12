@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Base ── */
+@layer base {
+  body {
+    @apply bg-masters-cream font-sans text-gray-900 antialiased;
+    min-height: 100vh;
+  }
+}
+
+/* ── Component classes ── */
+@layer components {
+  /* Paper card with folded-corner effect */
+  .paper-card {
+    @apply relative bg-white rounded-lg;
+    box-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.06),
+      0 4px 8px rgba(0, 0, 0, 0.03);
+    transition:
+      box-shadow 0.3s ease,
+      transform 0.3s ease;
+  }
+  .paper-card:hover {
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.08),
+      0 8px 20px rgba(0, 0, 0, 0.05);
+    transform: translateY(-1px);
+  }
+
+  /* Corner fold – cream triangle masks the card corner */
+  .paper-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 18px 18px 0;
+    border-color: transparent #faf6ed transparent transparent;
+    z-index: 10;
+    pointer-events: none;
+  }
+  /* Shadow beneath the fold */
+  .paper-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 18px;
+    height: 18px;
+    background: linear-gradient(225deg, transparent 50%, rgba(0, 0, 0, 0.04) 50%);
+    z-index: 9;
+    pointer-events: none;
+  }
+
+  /* Score colours */
+  .score-under {
+    @apply font-bold;
+    color: #006747;
+  }
+  .score-over {
+    @apply text-red-600 font-bold;
+  }
+  .score-even {
+    @apply text-gray-700 font-bold;
+  }
+
+  /* Tiny chip / badge */
+  .chip {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+}
+
+/* ── Header golf-ball dimple pattern ── */
+.header-pattern {
+  background-image: radial-gradient(
+      circle at 20px 20px,
+      rgba(255, 255, 255, 0.05) 2px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 50px 44px,
+      rgba(255, 255, 255, 0.03) 1.5px,
+      transparent 1.5px
+    );
+  background-size: 60px 60px;
+}
+
+/* ── Custom scrollbar ── */
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #2d8b5e;
+  border-radius: 3px;
+}

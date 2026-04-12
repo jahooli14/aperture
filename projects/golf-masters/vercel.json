@@ -1,0 +1,13 @@
+{
+  "framework": "vite",
+  "installCommand": "npm install",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/api/espn/:path*",
+      "destination": "https://site.api.espn.com/:path*"
+    },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

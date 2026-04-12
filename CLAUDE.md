@@ -10,6 +10,7 @@ Personal projects monorepo. React, TypeScript, Vite, Vercel, Supabase.
 | **Polymath** | `projects/polymath/` | Production | Voice-to-memory knowledge graph |
 | **Analogue** | `projects/analogue/` | Active | Book publishing / manuscript editing IDE |
 | **Idea Engine** | `projects/idea-engine/` | Active | Autonomous evolutionary ideation system |
+| **Golf Masters** | `projects/golf-masters/` | Active | Masters Tournament pool tracker with live ESPN scores |
 | **Fix Queue** | `projects/polymath/` (feature) | Active | Voice-capture annoyances → AI-drafted automated fixes |
 
 > **Sonically Sound** also exists as a deployed app but lives outside this repo.
@@ -53,6 +54,7 @@ cd projects/wizard-of-oz && npm run dev   # Pupils
 cd projects/polymath && npm run dev       # Polymath
 cd projects/analogue && npm run dev       # Analogue
 cd projects/idea-engine && npm run dev    # Idea Engine
+cd projects/golf-masters && npm run dev   # Golf Masters
 ```
 
 ## Skills
