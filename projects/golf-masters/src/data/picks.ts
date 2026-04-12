@@ -10,7 +10,7 @@ export const TEAM_PICKS: TeamPickData[] = [
   { team: 'George', picks: ['McIlroy', 'Spaun', 'Bradley', 'Sergio'] },
   { team: 'Jamie', picks: ['Young', 'Spieth', 'Scott', 'DJ'] },
   { team: 'Adam S', picks: ['Aberg', 'Lowry', 'Sungjae Im', 'Woodland'] },
-  { team: 'Isabelle', picks: ['Fleetwood', 'Finau', 'Conners', 'Penge'] },
+  { team: 'Isabelle', picks: ['Fleetwood', 'Wyndham Clark', 'Conners', 'Penge'] },
   { team: 'Martin', picks: ['MacIntyre', 'Si Woo Kim', 'Bhatia', 'Knapp'] },
   { team: 'Dom', picks: ['DeChambeau', 'Koepka', 'Thomas', 'Straka'] },
   { team: 'Laurence', picks: ['Morikawa', 'Hovland', 'Cantlay', 'English'] },
