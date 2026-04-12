@@ -179,9 +179,22 @@ export default function TeamLeaderboard({ teams, loading }: Props) {
                                 </span>
                               )}
                               {pick.golfer && pick.golfer.thru !== '-' && (
-                                <span className="text-[11px] text-gray-300 ml-1">
-                                  &middot; Thru {pick.golfer.thru}
+                                <span className={`text-[11px] ml-1 ${
+                                  pick.golfer.thru === 'F' ? 'text-gray-300' : 'text-masters-green/50'
+                                }`}>
+                                  &middot; {pick.golfer.thru === 'F' ? 'F' : `Thru ${pick.golfer.thru}`}
                                 </span>
+                              )}
+                              {/* Mini hole progress bar */}
+                              {pick.golfer && pick.golfer.thru !== '-' && pick.golfer.thru !== 'F' && (
+                                <div className="flex items-center gap-1 mt-0.5">
+                                  <div className="h-[2px] rounded-full overflow-hidden bg-masters-green/[0.06]" style={{ width: 48 }}>
+                                    <div
+                                      className="h-full rounded-full bg-masters-green/50 transition-all duration-700 ease-out"
+                                      style={{ width: `${((parseInt(pick.golfer.thru) || 0) / 18) * 100}%` }}
+                                    />
+                                  </div>
+                                </div>
                               )}
                             </div>
                             {/* Mini score badge */}

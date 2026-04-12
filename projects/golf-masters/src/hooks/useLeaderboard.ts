@@ -117,8 +117,24 @@ export function useLeaderboard(): LeaderboardData {
             comp.sortOrder ||
             comp.order ||
             '?';
-          const thru = status?.displayValue || status?.thru || '';
           const linescores = (comp.linescores as Array<Record<string, string>>) || [];
+
+          // Compute thru (hole progress) and today from nested hole-level data
+          const rawRounds = comp.linescores as Array<Record<string, unknown>> | undefined;
+          let thruDisplay = '-';
+          let todayScore = '-';
+          if (rawRounds) {
+            for (let r = rawRounds.length - 1; r >= 0; r--) {
+              const holeData = Array.isArray(rawRounds[r]?.linescores)
+                ? (rawRounds[r].linescores as unknown[])
+                : [];
+              if (holeData.length > 0) {
+                thruDisplay = holeData.length >= 18 ? 'F' : String(holeData.length);
+                todayScore = linescores[r]?.displayValue || '-';
+                break;
+              }
+            }
+          }
 
           let golferStatus: GolferScore['status'] = 'active';
           const statusType = ((status?.type as Record<string, unknown>)?.name as string) || '';
@@ -136,11 +152,8 @@ export function useLeaderboard(): LeaderboardData {
             position: String(position),
             score: scoreVal,
             scoreDisplay: scoreDisp === '0' ? 'E' : scoreDisp,
-            today:
-              linescores.length > 0
-                ? linescores[linescores.length - 1]?.displayValue || '-'
-                : '-',
-            thru: String(thru || '-'),
+            today: todayScore,
+            thru: thruDisplay,
             round1: linescores[0]?.displayValue || '-',
             round2: linescores[1]?.displayValue || '-',
             round3: linescores[2]?.displayValue || '-',
