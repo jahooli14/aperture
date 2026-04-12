@@ -22,23 +22,28 @@
 /* ── Component classes ── */
 @layer components {
 
-  /* ─── Paper card ─── */
+  /* ─── Paper card – 5-layer depth system ─── */
   .paper-card {
-    @apply relative bg-white rounded-lg;
+    @apply relative rounded-lg;
+    background-color: #fdfcf9;
     border: 1px solid rgba(0, 103, 71, 0.06);
     box-shadow:
-      0 1px 3px rgba(0, 103, 71, 0.05),
-      0 4px 16px rgba(0, 0, 0, 0.03),
-      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      0 0.5px 1px rgba(0, 0, 0, 0.04),       /* contact shadow */
+      0 2px 4px rgba(0, 0, 0, 0.03),          /* near shadow */
+      0 8px 20px rgba(0, 103, 71, 0.04),      /* ambient green tint */
+      inset 0 1px 0 rgba(255, 255, 255, 0.8), /* top edge highlight */
+      inset 0 -1px 0 rgba(0, 0, 0, 0.02);    /* bottom edge crease */
     transition:
       box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
       transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
   .paper-card:hover {
     box-shadow:
-      0 4px 12px rgba(0, 103, 71, 0.07),
-      0 16px 32px rgba(0, 0, 0, 0.05),
-      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      0 1px 2px rgba(0, 0, 0, 0.04),
+      0 4px 8px rgba(0, 0, 0, 0.04),
+      0 16px 32px rgba(0, 103, 71, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.02);
     transform: translateY(-2px);
   }
   .paper-card:active {
@@ -199,6 +204,14 @@
   .leader-3 {
     border-left: 4px solid #b45309;
     background: linear-gradient(90deg, rgba(254, 243, 199, 0.12) 0%, white 35%);
+  }
+
+  /* ─── Letterpress – debossed into paper ─── */
+  .letterpress {
+    color: rgba(0, 103, 71, 0.45);
+    text-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.7),
+      0 -1px 0 rgba(0, 0, 0, 0.04);
   }
 
   /* ─── Inner scorecard (expanded section) ─── */

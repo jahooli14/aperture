@@ -4,6 +4,7 @@ import { RefreshCw, Flag, Trophy } from 'lucide-react';
 import { useLeaderboard } from './hooks/useLeaderboard';
 import GolferLeaderboard from './components/GolferLeaderboard';
 import TeamLeaderboard from './components/TeamLeaderboard';
+import MoversShakers from './components/MoversShakers';
 
 type Tab = 'golfers' | 'teams';
 
@@ -64,7 +65,7 @@ function App() {
           viewBox="0 0 1200 40"
           fill="none"
           preserveAspectRatio="none"
-          style={{ height: '20px' }}
+          style={{ height: '20px', filter: 'drop-shadow(0 -2px 3px rgba(0,0,0,0.06))' }}
         >
           <path
             d="M0,40 L0,18 Q30,22 60,16 Q90,10 120,14 Q150,18 180,12 Q210,6 240,10 Q270,14 300,8 Q330,2 360,6 Q390,10 420,4 Q450,0 480,4 Q510,8 540,2 Q570,0 600,6 Q630,12 660,8 Q690,4 720,10 Q750,16 780,10 Q810,4 840,8 Q870,12 900,6 Q930,0 960,4 Q990,8 1020,2 Q1050,0 1080,6 Q1110,12 1140,8 Q1170,4 1200,10 L1200,40 Z"
@@ -117,6 +118,11 @@ function App() {
             <p className="text-sm font-medium text-red-700">Could not load scores</p>
             <p className="text-xs text-red-500 mt-1">{data.error}</p>
           </div>
+        )}
+
+        {/* Movers & Shakers */}
+        {!data.loading && data.golfers.length > 0 && (
+          <MoversShakers golfers={data.golfers} />
         )}
 
         <AnimatePresence mode="wait">
