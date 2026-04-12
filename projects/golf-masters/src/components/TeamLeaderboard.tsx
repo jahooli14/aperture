@@ -76,7 +76,7 @@ export default function TeamLeaderboard({ teams, loading }: Props) {
             key={team.name}
             initial={{ opacity: 0, y: 16, rotateX: -6 }}
             animate={{ opacity: 1, y: 0, rotateX: 0 }}
-            transition={{ delay: index * 0.04, duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
+            transition={{ delay: index * 0.04, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
             style={{ perspective: 600, transformOrigin: 'top center' }}
             className={`paper-card paper-card-lg overflow-hidden ${leaderCls}`}
           >
@@ -131,7 +131,7 @@ export default function TeamLeaderboard({ teams, loading }: Props) {
                   initial={{ height: 0, opacity: 0, scaleY: 0.95 }}
                   animate={{ height: 'auto', opacity: 1, scaleY: 1 }}
                   exit={{ height: 0, opacity: 0, scaleY: 0.95 }}
-                  transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+                  transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
                   className="overflow-hidden"
                   style={{ transformOrigin: 'top center' }}
                 >
@@ -164,7 +164,8 @@ export default function TeamLeaderboard({ teams, loading }: Props) {
                               <img
                                 src={pick.golfer.imageUrl}
                                 alt=""
-                                className="w-6 h-6 rounded-full object-cover shrink-0 mr-2 ring-1 ring-masters-green/10"
+                                className="w-6 h-6 rounded-full object-cover shrink-0 mr-2 ring-1 ring-masters-green/10 bg-gray-100"
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                               />
                             )}
 

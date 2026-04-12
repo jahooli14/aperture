@@ -71,11 +71,11 @@ export default function GolferLeaderboard({ golfers, loading }: Props) {
   return (
     <div className="space-y-2">
       {/* Column header */}
-      <div className="flex items-center px-4 py-2 text-[10px] font-semibold text-masters-green/40 uppercase tracking-widest select-none">
+      <div className="flex items-center px-4 py-2 text-[10px] font-semibold uppercase tracking-widest select-none letterpress">
         <span className="w-8" />
         <span className="flex-1 pl-3">Player</span>
         <span className="w-[44px] text-center">Score</span>
-        <span className="w-12 text-center hidden sm:block">R4</span>
+        <span className="w-12 text-center hidden sm:block">Today</span>
         <span className="w-10 text-center hidden sm:block">Thru</span>
       </div>
 
@@ -84,7 +84,7 @@ export default function GolferLeaderboard({ golfers, loading }: Props) {
           key={g.id}
           initial={{ opacity: 0, y: 16, rotateX: -6 }}
           animate={{ opacity: 1, y: 0, rotateX: 0 }}
-          transition={{ delay: i * 0.025, duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
+          transition={{ delay: i * 0.025, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
           style={{ perspective: 600, transformOrigin: 'top center' }}
           className={`paper-card ${leaderClass(i)}`}
         >
@@ -99,7 +99,8 @@ export default function GolferLeaderboard({ golfers, loading }: Props) {
               <img
                 src={g.imageUrl}
                 alt=""
-                className="w-7 h-7 rounded-full object-cover shrink-0 mr-2.5 ring-2 ring-masters-green/10"
+                className="w-7 h-7 rounded-full object-cover shrink-0 mr-2.5 ring-2 ring-masters-green/10 bg-gray-100"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />
             )}
 

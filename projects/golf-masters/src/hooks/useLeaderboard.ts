@@ -113,7 +113,10 @@ export function useLeaderboard(): LeaderboardData {
           const { value: scoreVal, display: scoreDisp } = parseScore(comp.score);
           const status = comp.status as Record<string, unknown> | undefined;
           const position =
-            (status?.position as Record<string, unknown>)?.displayName || comp.sortOrder || '?';
+            (status?.position as Record<string, unknown>)?.displayName ||
+            comp.sortOrder ||
+            comp.order ||
+            '?';
           const thru = status?.displayValue || status?.thru || '';
           const linescores = (comp.linescores as Array<Record<string, string>>) || [];
 
@@ -124,10 +127,10 @@ export function useLeaderboard(): LeaderboardData {
           else if (statusType.includes('FINAL') || statusType.includes('COMPLETE'))
             golferStatus = 'finished';
 
-          const headshot = athlete?.headshot as Record<string, string> | undefined;
+          const athleteId = (comp.id as string) || '';
 
           matched.set(pickName, {
-            id: (comp.id as string) || displayName,
+            id: athleteId || displayName,
             name: pickName,
             displayName,
             position: String(position),
@@ -144,7 +147,9 @@ export function useLeaderboard(): LeaderboardData {
             round4: linescores[3]?.displayValue || '-',
             status: golferStatus,
             pickedBy: golferToTeams[pickName] || [],
-            imageUrl: headshot?.href,
+            imageUrl: athleteId
+              ? `https://a.espncdn.com/i/headshots/golf/players/full/${athleteId}.png`
+              : undefined,
           });
         }
       }
@@ -171,6 +176,23 @@ export function useLeaderboard(): LeaderboardData {
       );
 
       golfers.sort((a, b) => a.score - b.score);
+
+      // Compute positions with tie handling
+      for (let i = 0; i < golfers.length; ) {
+        if (golfers[i].score >= 900) {
+          golfers[i].position = '-';
+          i++;
+          continue;
+        }
+        let j = i;
+        while (j < golfers.length && golfers[j].score === golfers[i].score) j++;
+        const tied = j - i > 1;
+        const posStr = tied ? `T${i + 1}` : String(i + 1);
+        for (let k = i; k < j; k++) {
+          golfers[k].position = posStr;
+        }
+        i = j;
+      }
 
       // Calculate team scores
       const teams: TeamScore[] = TEAM_PICKS.map((team) => {
