@@ -1,0 +1,14 @@
+{
+  "outputDirectory": "dist",
+  "ignoreCommand": "bash ../../scripts/vercel-ignore.sh projects/golf-masters",
+  "rewrites": [
+    {
+      "source": "/api/espn/:path*",
+      "destination": "https://site.api.espn.com/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
