@@ -20,7 +20,7 @@ function App() {
       <div className="green-stripe" />
 
       {/* ─── Header ─── */}
-      <header className="relative overflow-hidden bg-gradient-to-b from-[#0a2e1c] via-masters-green-dark to-masters-green header-pattern">
+      <header className="relative overflow-hidden header-bg">
         {/* Radial light bloom from top center */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(255,255,255,0.08),transparent_60%)] pointer-events-none" />
         <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/15 pointer-events-none" />
