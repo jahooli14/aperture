@@ -20,32 +20,39 @@ function App() {
       <div className="green-stripe" />
 
       {/* ─── Header ─── */}
-      <header className="relative overflow-hidden bg-gradient-to-br from-masters-pine via-masters-green-dark to-masters-green header-pattern">
-        <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/20 pointer-events-none" />
+      <header className="relative overflow-hidden bg-gradient-to-b from-[#0a2e1c] via-masters-green-dark to-masters-green header-pattern">
+        {/* Radial light bloom from top center */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(255,255,255,0.08),transparent_60%)] pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/15 pointer-events-none" />
 
-        <div className="relative max-w-2xl mx-auto px-4 pt-10 pb-14 text-center">
-          {/* Masters crest area */}
-          <div className="inline-flex items-center gap-3 mb-3 px-6 py-2 rounded-full bg-white/[0.07] backdrop-blur-sm border border-white/10">
-            <Flag className="w-4 h-4 text-masters-yellow" />
-            <span className="text-masters-yellow/80 font-display text-sm tracking-widest uppercase">
+        <div className="relative max-w-2xl mx-auto px-4 pt-12 pb-16 text-center">
+          {/* Augusta National crest line */}
+          <div className="inline-flex items-center gap-4 mb-5">
+            <div className="h-px w-10 bg-gradient-to-r from-transparent to-masters-yellow/40" />
+            <Flag className="w-3.5 h-3.5 text-masters-yellow/50" />
+            <span className="text-masters-yellow/60 text-[10px] tracking-[0.3em] uppercase font-sans font-medium">
               Augusta National
             </span>
-            <Flag className="w-4 h-4 text-masters-yellow" />
+            <Flag className="w-3.5 h-3.5 text-masters-yellow/50" />
+            <div className="h-px w-10 bg-gradient-to-l from-transparent to-masters-yellow/40" />
           </div>
 
-          <h1 className="font-display text-4xl sm:text-5xl font-bold text-white tracking-tight leading-tight">
+          <h1 className="font-display text-5xl sm:text-6xl font-bold text-white tracking-tight leading-none">
             Masters Pool
           </h1>
 
-          <p className="text-masters-yellow font-display text-xl font-semibold mt-1 tracking-wide">
+          <p className="text-masters-yellow font-display text-2xl font-semibold mt-2 tracking-wider">
             2026
           </p>
 
           {data.roundInfo && (
-            <p className="text-white/50 text-sm mt-3 font-sans">{data.roundInfo}</p>
+            <div className="mt-5 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.06] backdrop-blur-sm border border-white/[0.08]">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-white/60 text-xs font-sans">{data.roundInfo}</span>
+            </div>
           )}
 
-          <p className="text-white/30 text-xs mt-2 flex items-center justify-center gap-1.5 font-sans">
+          <p className="text-white/25 text-[11px] mt-3 flex items-center justify-center gap-1.5 font-sans">
             Updated {formatTime(data.lastUpdated)}
             {data.loading && <RefreshCw className="w-3 h-3 animate-spin" />}
           </p>
@@ -68,8 +75,7 @@ function App() {
 
       {/* ─── Paper tab navigation ─── */}
       <div className="sticky top-0 z-30">
-        {/* Tab shelf background */}
-        <div className="bg-masters-cream border-b border-black/[0.06]">
+        <div className="bg-masters-cream border-b border-masters-green/[0.06]">
           <div className="max-w-2xl mx-auto px-4">
             <div className="flex gap-1 pt-1">
               {(['golfers', 'teams'] as Tab[]).map((tab) => {
@@ -88,11 +94,11 @@ function App() {
                       )}
                       {tab === 'golfers' ? 'Leaderboard' : 'Teams'}
                     </span>
-                    {/* Active tab gold accent line */}
+                    {/* Active tab Masters green accent line */}
                     {isActive && (
                       <motion.div
                         layoutId="tab-accent"
-                        className="absolute top-0 left-2 right-2 h-[3px] bg-masters-yellow rounded-b-full"
+                        className="absolute top-0 left-2 right-2 h-[3px] bg-masters-green rounded-b-full"
                         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                       />
                     )}
@@ -131,9 +137,20 @@ function App() {
       </main>
 
       {/* ─── Footer ─── */}
-      <footer className="text-center py-8 text-[11px] text-gray-400 font-sans border-t border-black/[0.04]">
-        <p>Scores via ESPN &middot; Refreshes every 60s</p>
-        <p className="mt-1 text-gray-300">A tradition unlike any other</p>
+      <footer className="border-t border-masters-green/[0.06]">
+        <div className="max-w-2xl mx-auto px-4 py-8 text-center">
+          <div className="inline-flex items-center gap-3 mb-3">
+            <div className="h-px w-6 bg-gradient-to-r from-transparent to-masters-green/20" />
+            <Flag className="w-3 h-3 text-masters-green/20" />
+            <div className="h-px w-6 bg-gradient-to-l from-transparent to-masters-green/20" />
+          </div>
+          <p className="text-[11px] text-gray-400 font-sans">
+            Scores via ESPN &middot; Refreshes every 60s
+          </p>
+          <p className="text-[11px] text-masters-green/30 font-display italic mt-2">
+            A tradition unlike any other
+          </p>
+        </div>
       </footer>
     </div>
   );

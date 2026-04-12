@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Trophy } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { TeamScore } from '../types';
 
 interface Props {
@@ -29,16 +29,14 @@ function golferScoreBadge(score: number | undefined, display: string | undefined
 
 function PosBadge({ index }: { index: number }) {
   if (index < 3) {
-    const trophyColor =
-      index === 0 ? 'text-yellow-500' : index === 1 ? 'text-gray-400' : 'text-amber-600';
     return (
       <div className={`pos-badge pos-badge-${index + 1}`}>
-        <Trophy className={`w-3.5 h-3.5 ${trophyColor}`} />
+        {index + 1}
       </div>
     );
   }
   return (
-    <div className="pos-badge bg-gray-100 text-gray-400">
+    <div className="pos-badge bg-gray-100 text-gray-500">
       {index + 1}
     </div>
   );
@@ -53,12 +51,12 @@ export default function TeamLeaderboard({ teams, loading }: Props) {
         {Array.from({ length: 8 }).map((_, i) => (
           <div key={i} className="paper-card p-4 animate-pulse">
             <div className="flex items-center gap-3">
-              <div className="w-7 h-7 bg-gray-200 rounded-full" />
+              <div className="w-8 h-8 bg-masters-green/10 rounded-full" />
               <div className="flex-1 space-y-2">
-                <div className="w-28 h-4 bg-gray-200 rounded" />
-                <div className="w-16 h-3 bg-gray-100 rounded" />
+                <div className="w-28 h-4 bg-masters-green/[0.06] rounded" />
+                <div className="w-16 h-3 bg-masters-green/[0.04] rounded" />
               </div>
-              <div className="w-10 h-10 bg-gray-200 rounded-full" />
+              <div className="w-11 h-11 bg-masters-green/[0.06] rounded-full" />
             </div>
           </div>
         ))}
@@ -76,15 +74,16 @@ export default function TeamLeaderboard({ teams, loading }: Props) {
         return (
           <motion.div
             key={team.name}
-            initial={{ opacity: 0, x: -12 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: index * 0.035, duration: 0.3 }}
+            initial={{ opacity: 0, y: 16, rotateX: -6 }}
+            animate={{ opacity: 1, y: 0, rotateX: 0 }}
+            transition={{ delay: index * 0.04, duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
+            style={{ perspective: 600, transformOrigin: 'top center' }}
             className={`paper-card paper-card-lg overflow-hidden ${leaderCls}`}
           >
             {/* Team header row */}
             <button
               onClick={() => setExpanded(isOpen ? null : team.name)}
-              className="w-full flex items-center px-3 sm:px-4 py-3.5 text-left hover:bg-black/[0.01] transition-colors"
+              className="w-full flex items-center px-3 sm:px-4 py-3.5 text-left hover:bg-masters-green/[0.01] transition-colors"
             >
               {/* Position */}
               <div className="shrink-0 mr-3">
@@ -93,7 +92,7 @@ export default function TeamLeaderboard({ teams, loading }: Props) {
 
               {/* Team info */}
               <div className="flex-1 min-w-0">
-                <span className="font-semibold text-[14px] text-gray-900">{team.name}</span>
+                <span className="font-semibold text-sm text-gray-900">{team.name}</span>
                 <p className="text-[11px] text-gray-400 mt-0.5">
                   {team.picks.filter((p) => p.golfer && p.golfer.score < 900).length}/
                   {team.picks.length} golfers active
@@ -118,22 +117,23 @@ export default function TeamLeaderboard({ teams, loading }: Props) {
               {/* Expand chevron */}
               <motion.div
                 animate={{ rotate: isOpen ? 180 : 0 }}
-                transition={{ duration: 0.2 }}
+                transition={{ duration: 0.25 }}
                 className="shrink-0"
               >
                 <ChevronDown className="w-5 h-5 text-gray-300" />
               </motion.div>
             </button>
 
-            {/* Expanded golfer scorecard */}
+            {/* Expanded golfer scorecard – paper-unfold animation */}
             <AnimatePresence>
               {isOpen && (
                 <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.25, ease: 'easeInOut' }}
+                  initial={{ height: 0, opacity: 0, scaleY: 0.95 }}
+                  animate={{ height: 'auto', opacity: 1, scaleY: 1 }}
+                  exit={{ height: 0, opacity: 0, scaleY: 0.95 }}
+                  transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
                   className="overflow-hidden"
+                  style={{ transformOrigin: 'top center' }}
                 >
                   <div className="scorecard-inner px-4 pb-3 pt-2">
                     {team.picks
@@ -150,11 +150,24 @@ export default function TeamLeaderboard({ teams, loading }: Props) {
                         );
 
                         return (
-                          <div
+                          <motion.div
                             key={pick.pickName}
+                            initial={{ opacity: 0, x: -8 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.06, duration: 0.3 }}
                             className="flex items-center py-2.5 border-b border-masters-green/[0.06] last:border-0"
                           >
-                            <span className="w-6 text-xs text-gray-300 font-mono">{i + 1}</span>
+                            <span className="w-6 text-xs text-masters-green/25 font-mono">{i + 1}</span>
+
+                            {/* Golfer headshot */}
+                            {pick.golfer?.imageUrl && (
+                              <img
+                                src={pick.golfer.imageUrl}
+                                alt=""
+                                className="w-6 h-6 rounded-full object-cover shrink-0 mr-2 ring-1 ring-masters-green/10"
+                              />
+                            )}
+
                             <div className="flex-1 min-w-0">
                               <span className="text-sm text-gray-700 font-medium">
                                 {pick.golfer?.displayName || pick.pickName}
@@ -176,7 +189,7 @@ export default function TeamLeaderboard({ teams, loading }: Props) {
                             >
                               {disp}
                             </div>
-                          </div>
+                          </motion.div>
                         );
                       })}
                   </div>

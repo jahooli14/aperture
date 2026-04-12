@@ -24,21 +24,21 @@
 
   /* ─── Paper card ─── */
   .paper-card {
-    @apply relative bg-white rounded-md;
-    border: 1px solid rgba(0, 0, 0, 0.04);
+    @apply relative bg-white rounded-lg;
+    border: 1px solid rgba(0, 103, 71, 0.06);
     box-shadow:
-      0 1px 2px rgba(0, 0, 0, 0.04),
-      0 4px 12px rgba(0, 0, 0, 0.03),
-      inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      0 1px 3px rgba(0, 103, 71, 0.05),
+      0 4px 16px rgba(0, 0, 0, 0.03),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
     transition:
-      box-shadow 0.3s ease,
-      transform 0.25s ease;
+      box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
   .paper-card:hover {
     box-shadow:
-      0 2px 6px rgba(0, 0, 0, 0.06),
-      0 12px 28px rgba(0, 0, 0, 0.06),
-      inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      0 4px 12px rgba(0, 103, 71, 0.07),
+      0 16px 32px rgba(0, 0, 0, 0.05),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
     transform: translateY(-2px);
   }
   .paper-card:active {
@@ -54,8 +54,8 @@
     width: 0;
     height: 0;
     border-style: solid;
-    border-width: 0 22px 22px 0;
-    border-color: transparent #f5f0e5 transparent transparent;
+    border-width: 0 18px 18px 0;
+    border-color: transparent #ede8dc transparent transparent;
     z-index: 10;
     pointer-events: none;
     border-radius: 0 0 0 2px;
@@ -65,14 +65,14 @@
     position: absolute;
     top: 0;
     right: 0;
-    width: 22px;
-    height: 22px;
+    width: 18px;
+    height: 18px;
     background: linear-gradient(
       225deg,
       transparent 50%,
-      rgba(0, 0, 0, 0.02) 50%,
-      rgba(0, 0, 0, 0.06) 85%,
-      rgba(0, 0, 0, 0.03) 100%
+      rgba(0, 103, 71, 0.02) 50%,
+      rgba(0, 103, 71, 0.07) 80%,
+      rgba(0, 103, 71, 0.03) 100%
     );
     z-index: 9;
     pointer-events: none;
@@ -80,14 +80,14 @@
 
   /* Large card variant – bigger fold */
   .paper-card-lg::before {
-    border-width: 0 28px 28px 0;
+    border-width: 0 22px 22px 0;
   }
   .paper-card-lg::after {
-    width: 28px;
-    height: 28px;
+    width: 22px;
+    height: 22px;
   }
 
-  /* ─── Score colours ─── */
+  /* ─── Score text colours ─── */
   .score-under {
     @apply font-bold;
     color: #006747;
@@ -102,54 +102,67 @@
   /* ─── Score badge (circular) ─── */
   .score-badge {
     @apply flex items-center justify-center rounded-full text-xs font-bold shrink-0;
-    width: 42px;
-    height: 42px;
+    width: 44px;
+    height: 44px;
   }
   .score-badge-under {
-    @apply bg-masters-green/10;
+    background: linear-gradient(145deg, #dcfce7, #bbf7d0);
     color: #006747;
-    border: 2px solid rgba(0, 103, 71, 0.25);
+    border: 2px solid rgba(0, 103, 71, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 103, 71, 0.18);
   }
   .score-badge-over {
-    @apply bg-red-50;
-    color: #dc2626;
-    border: 2px solid rgba(220, 38, 38, 0.2);
+    background: linear-gradient(145deg, #fef2f2, #fecaca);
+    color: #b91c1c;
+    border: 2px solid rgba(220, 38, 38, 0.25);
+    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.12);
   }
   .score-badge-even {
-    @apply bg-gray-50 text-gray-600;
-    border: 2px solid rgba(0, 0, 0, 0.08);
+    background: linear-gradient(145deg, #f9fafb, #e5e7eb);
+    color: #4b5563;
+    border: 2px solid rgba(0, 0, 0, 0.1);
   }
   .score-badge-na {
-    @apply bg-gray-50 text-gray-400;
+    background: #faf8f4;
+    color: #9ca3af;
     border: 2px dashed rgba(0, 0, 0, 0.08);
   }
 
   /* ─── Chip / badge ─── */
   .chip {
-    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium leading-tight;
     border: 1px solid rgba(0, 0, 0, 0.04);
   }
 
   /* ─── Position badge ─── */
   .pos-badge {
     @apply flex items-center justify-center rounded-full text-xs font-bold shrink-0;
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
   }
   .pos-badge-1 {
-    background: linear-gradient(135deg, #fde68a, #f59e0b);
-    color: #78350f;
-    box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
+    background: linear-gradient(145deg, #fef3c7, #f59e0b, #d97706);
+    color: #451a03;
+    box-shadow:
+      0 2px 8px rgba(245, 158, 11, 0.45),
+      inset 0 1px 2px rgba(255, 255, 255, 0.4);
+    font-size: 11px;
   }
   .pos-badge-2 {
-    background: linear-gradient(135deg, #e5e7eb, #9ca3af);
-    color: #374151;
-    box-shadow: 0 2px 6px rgba(156, 163, 175, 0.3);
+    background: linear-gradient(145deg, #f3f4f6, #9ca3af, #6b7280);
+    color: #111827;
+    box-shadow:
+      0 2px 8px rgba(107, 114, 128, 0.35),
+      inset 0 1px 2px rgba(255, 255, 255, 0.5);
+    font-size: 11px;
   }
   .pos-badge-3 {
-    background: linear-gradient(135deg, #fde68a, #d97706);
-    color: #78350f;
-    box-shadow: 0 2px 6px rgba(217, 119, 6, 0.25);
+    background: linear-gradient(145deg, #fde68a, #b45309, #92400e);
+    color: #fef3c7;
+    box-shadow:
+      0 2px 8px rgba(180, 83, 9, 0.35),
+      inset 0 1px 2px rgba(255, 255, 255, 0.2);
+    font-size: 11px;
   }
 
   /* ─── Paper tab navigation ─── */
@@ -162,35 +175,35 @@
   .paper-tab-active {
     @apply text-masters-green;
     background: #faf6ed;
-    border-color: rgba(0, 0, 0, 0.06);
-    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.03);
+    border-color: rgba(0, 103, 71, 0.08);
+    box-shadow: 0 -2px 8px rgba(0, 103, 71, 0.04);
   }
   .paper-tab-inactive {
     @apply text-gray-400;
-    background: rgba(0, 0, 0, 0.02);
+    background: rgba(0, 103, 71, 0.02);
   }
   .paper-tab-inactive:hover {
-    @apply text-gray-500;
-    background: rgba(0, 0, 0, 0.03);
+    @apply text-masters-green/70;
+    background: rgba(0, 103, 71, 0.04);
   }
 
   /* ─── Leader card accents ─── */
   .leader-1 {
     border-left: 4px solid #f59e0b;
-    background: linear-gradient(90deg, rgba(253, 230, 138, 0.15) 0%, white 40%);
+    background: linear-gradient(90deg, rgba(254, 243, 199, 0.2) 0%, white 35%);
   }
   .leader-2 {
     border-left: 4px solid #9ca3af;
-    background: linear-gradient(90deg, rgba(229, 231, 235, 0.2) 0%, white 40%);
+    background: linear-gradient(90deg, rgba(229, 231, 235, 0.25) 0%, white 35%);
   }
   .leader-3 {
-    border-left: 4px solid #d97706;
-    background: linear-gradient(90deg, rgba(253, 230, 138, 0.1) 0%, white 40%);
+    border-left: 4px solid #b45309;
+    background: linear-gradient(90deg, rgba(254, 243, 199, 0.12) 0%, white 35%);
   }
 
   /* ─── Inner scorecard (expanded section) ─── */
   .scorecard-inner {
-    background-color: #fefcf7;
+    background-color: #fdfcf8;
     background-image:
       repeating-linear-gradient(
         transparent,
@@ -198,7 +211,7 @@
         rgba(0, 103, 71, 0.03) 31px,
         rgba(0, 103, 71, 0.03) 32px
       );
-    border-top: 1px dashed rgba(0, 103, 71, 0.12);
+    border-top: 2px solid rgba(0, 103, 71, 0.08);
   }
 }
 
@@ -207,7 +220,7 @@
   background-image:
     radial-gradient(
       circle at 20px 20px,
-      rgba(255, 255, 255, 0.06) 2px,
+      rgba(255, 255, 255, 0.05) 2px,
       transparent 2px
     ),
     radial-gradient(
@@ -225,7 +238,7 @@
 
 /* ── Decorative green stripe (top of page) ── */
 .green-stripe {
-  height: 4px;
+  height: 5px;
   background: linear-gradient(90deg, #004d35, #006747, #2d8b5e, #006747, #004d35);
 }
 
