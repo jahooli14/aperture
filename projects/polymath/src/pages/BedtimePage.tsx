@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Link } from 'react-router-dom'
 import { Moon, Eye, EyeOff, RefreshCw, Loader2, Star, Maximize2, Link2, Search, Zap, StarIcon, Wind, WifiOff } from 'lucide-react'
 import { useToast } from '../components/ui/toast'
 import { SubtleBackground } from '../components/SubtleBackground'
@@ -352,6 +353,18 @@ export function BedtimePage() {
                 )}
               </button>
             </div>
+          </div>
+
+          {/* Cross-link to daytime drift mode — small & unobtrusive */}
+          <div className="mt-2 flex justify-end">
+            <Link
+              to="/memories"
+              className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.15em] transition-opacity hover:opacity-100"
+              style={{ color: 'rgba(var(--brand-primary-rgb),0.55)', opacity: 0.75 }}
+            >
+              <Wind className="h-3 w-3" />
+              drift mode
+            </Link>
           </div>
         </motion.div>
 

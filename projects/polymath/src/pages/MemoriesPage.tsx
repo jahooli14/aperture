@@ -5,7 +5,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
+import { useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom'
 // import { Virtuoso } from 'react-virtuoso' // Removed Virtuoso
 import { useAuthContext } from '../contexts/AuthContext'
 import { SignInNudge } from '../components/SignInNudge'
@@ -571,23 +571,34 @@ export function MemoriesPage() {
           )}
 
           {/* Drift Mode button — after 9pm becomes Bedtime Mode (sleep variant) */}
-          <button
-            onClick={handleOpenDrift}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all hover:scale-[1.02] mb-3"
-            style={{ background: 'rgba(var(--brand-primary-rgb),0.06)', border: '1px solid rgba(var(--brand-primary-rgb),0.12)', color: 'rgba(var(--brand-primary-rgb),0.8)' }}
-          >
-            {isAfterBedtime ? (
-              <>
-                <Moon className="h-3.5 w-3.5" />
-                Bedtime Mode — wind down
-              </>
-            ) : (
-              <>
-                <Wind className="h-3.5 w-3.5" />
-                Drift Mode — mental reset
-              </>
-            )}
-          </button>
+          <div className="flex items-center gap-3 mb-3">
+            <button
+              onClick={handleOpenDrift}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all hover:scale-[1.02]"
+              style={{ background: 'rgba(var(--brand-primary-rgb),0.06)', border: '1px solid rgba(var(--brand-primary-rgb),0.12)', color: 'rgba(var(--brand-primary-rgb),0.8)' }}
+            >
+              {isAfterBedtime ? (
+                <>
+                  <Moon className="h-3.5 w-3.5" />
+                  Bedtime Mode — wind down
+                </>
+              ) : (
+                <>
+                  <Wind className="h-3.5 w-3.5" />
+                  Drift Mode — mental reset
+                </>
+              )}
+            </button>
+            {/* Cross-link to bedtime — small & unobtrusive */}
+            <Link
+              to="/bedtime"
+              className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.15em] transition-opacity hover:opacity-100"
+              style={{ color: 'rgba(var(--brand-primary-rgb),0.55)', opacity: 0.75 }}
+            >
+              <Moon className="h-3 w-3" />
+              bedtime
+            </Link>
+          </div>
 
           <div className="flex items-center gap-3">
             {/* View Toggle */}
