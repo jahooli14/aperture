@@ -5,6 +5,7 @@ import { useLeaderboard } from './hooks/useLeaderboard';
 import GolferLeaderboard from './components/GolferLeaderboard';
 import TeamLeaderboard from './components/TeamLeaderboard';
 import MoversShakers from './components/MoversShakers';
+import WinnerCelebration from './components/WinnerCelebration';
 
 type Tab = 'golfers' | 'teams';
 
@@ -118,6 +119,14 @@ function App() {
             <p className="text-sm font-medium text-red-700">Could not load scores</p>
             <p className="text-xs text-red-500 mt-1">{data.error}</p>
           </div>
+        )}
+
+        {/* Winner celebration */}
+        {data.tournamentComplete && data.teams.length > 0 && (
+          <WinnerCelebration
+            winner={data.teams[0]}
+            tournamentComplete={data.tournamentComplete}
+          />
         )}
 
         {/* Movers & Shakers */}

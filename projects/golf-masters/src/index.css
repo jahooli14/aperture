@@ -226,6 +226,83 @@
       );
     border-top: 2px solid rgba(0, 103, 71, 0.08);
   }
+
+  /* ─── Winner celebration card ─── */
+  .celebration-card {
+    background: linear-gradient(145deg, #fdfcf9 0%, #faf6ed 100%);
+    border: 2px solid rgba(200, 169, 81, 0.5);
+    box-shadow:
+      0 0 0 1px rgba(200, 169, 81, 0.08),
+      0 8px 32px rgba(0, 0, 0, 0.12),
+      0 20px 60px rgba(0, 77, 53, 0.15),
+      inset 0 0 80px rgba(200, 169, 81, 0.04);
+  }
+
+  .shimmer-text {
+    background: linear-gradient(
+      90deg,
+      #92400e 0%,
+      #c8a951 25%,
+      #f5e6b8 50%,
+      #c8a951 75%,
+      #92400e 100%
+    );
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    color: transparent;
+    animation: shimmer 3s ease-in-out infinite;
+  }
+
+  .trophy-glow {
+    background: radial-gradient(circle, rgba(200, 169, 81, 0.12) 0%, transparent 70%);
+    animation: glow-pulse 2.5s ease-in-out infinite;
+  }
+
+  .celebration-score-badge {
+    display: inline-block;
+    background: linear-gradient(145deg, #fef3c7, #f5e6b8);
+    color: #92400e;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 6px 18px;
+    border-radius: 9999px;
+    border: 2px solid rgba(200, 169, 81, 0.4);
+    box-shadow: 0 2px 10px rgba(200, 169, 81, 0.25);
+  }
+
+  .celebration-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 28px;
+    background: linear-gradient(145deg, #006747, #004d35);
+    color: #faf6ed;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    border-radius: 8px;
+    border: 1px solid rgba(200, 169, 81, 0.25);
+    cursor: pointer;
+    transition: all 0.25s ease;
+  }
+  .celebration-btn:hover {
+    background: linear-gradient(145deg, #007d55, #005d42);
+    box-shadow: 0 4px 16px rgba(0, 103, 71, 0.3);
+    border-color: rgba(200, 169, 81, 0.4);
+  }
+
+  .winner-banner {
+    background: linear-gradient(135deg, #fdfcf9, #faf6ed);
+    border: 1px solid rgba(200, 169, 81, 0.3);
+    border-radius: 12px;
+    box-shadow:
+      0 2px 12px rgba(200, 169, 81, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8),
+      inset 0 0 30px rgba(200, 169, 81, 0.03);
+  }
 }
 
 /* ── Header: combined gradient + golf-ball dimple pattern ── */
@@ -272,4 +349,15 @@
 /* ── Selection colour ── */
 ::selection {
   background: rgba(0, 103, 71, 0.15);
+}
+
+/* ── Winner celebration keyframes ── */
+@keyframes shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: -100% 50%; }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }

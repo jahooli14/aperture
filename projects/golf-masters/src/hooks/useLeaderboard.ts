@@ -71,6 +71,7 @@ export function useLeaderboard(): LeaderboardData {
     teams: [],
     loading: true,
     error: null,
+    tournamentComplete: false,
   });
 
   const fetchLeaderboard = useCallback(async () => {
@@ -239,6 +240,20 @@ export function useLeaderboard(): LeaderboardData {
 
       teams.sort((a, b) => a.totalScore - b.totalScore);
 
+      // Determine if tournament is complete
+      const statusObj = event.status?.type as Record<string, unknown> | undefined;
+      const isEventComplete = statusObj?.completed === true || statusObj?.state === 'post';
+
+      // Fallback: all active (non-cut, non-withdrawn, scored) golfers have finished
+      const activeGolfers = golfers.filter(
+        (g) => g.score < 900 && g.status !== 'cut' && g.status !== 'withdrawn',
+      );
+      const allActiveFinished =
+        activeGolfers.length > 0 && activeGolfers.every((g) => g.status === 'finished');
+      const hasRound4Data = golfers.some((g) => g.round4 !== '-');
+
+      const tournamentComplete = isEventComplete || (allActiveFinished && hasRound4Data);
+
       setData({
         eventName,
         roundInfo,
@@ -247,6 +262,7 @@ export function useLeaderboard(): LeaderboardData {
         teams,
         loading: false,
         error: null,
+        tournamentComplete,
       });
     } catch (err) {
       console.error('Leaderboard fetch error:', err);
