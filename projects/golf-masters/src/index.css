@@ -5,31 +5,47 @@
 /* ── Base ── */
 @layer base {
   body {
-    @apply bg-masters-cream font-sans text-gray-900 antialiased;
+    @apply font-sans text-gray-900 antialiased;
     min-height: 100vh;
+    background-color: #faf6ed;
+    /* Subtle ruled-line scorecard texture */
+    background-image:
+      repeating-linear-gradient(
+        transparent,
+        transparent 39px,
+        rgba(0, 103, 71, 0.025) 39px,
+        rgba(0, 103, 71, 0.025) 40px
+      );
   }
 }
 
 /* ── Component classes ── */
 @layer components {
-  /* Paper card with folded-corner effect */
+
+  /* ─── Paper card ─── */
   .paper-card {
-    @apply relative bg-white rounded-lg;
+    @apply relative bg-white rounded-md;
+    border: 1px solid rgba(0, 0, 0, 0.04);
     box-shadow:
-      0 1px 3px rgba(0, 0, 0, 0.06),
-      0 4px 8px rgba(0, 0, 0, 0.03);
+      0 1px 2px rgba(0, 0, 0, 0.04),
+      0 4px 12px rgba(0, 0, 0, 0.03),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8);
     transition:
       box-shadow 0.3s ease,
-      transform 0.3s ease;
+      transform 0.25s ease;
   }
   .paper-card:hover {
     box-shadow:
-      0 2px 8px rgba(0, 0, 0, 0.08),
-      0 8px 20px rgba(0, 0, 0, 0.05);
-    transform: translateY(-1px);
+      0 2px 6px rgba(0, 0, 0, 0.06),
+      0 12px 28px rgba(0, 0, 0, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    transform: translateY(-2px);
+  }
+  .paper-card:active {
+    transform: translateY(0);
   }
 
-  /* Corner fold – cream triangle masks the card corner */
+  /* Corner fold – realistic dog-ear */
   .paper-card::before {
     content: '';
     position: absolute;
@@ -38,25 +54,40 @@
     width: 0;
     height: 0;
     border-style: solid;
-    border-width: 0 18px 18px 0;
-    border-color: transparent #faf6ed transparent transparent;
+    border-width: 0 22px 22px 0;
+    border-color: transparent #f5f0e5 transparent transparent;
     z-index: 10;
     pointer-events: none;
+    border-radius: 0 0 0 2px;
   }
-  /* Shadow beneath the fold */
   .paper-card::after {
     content: '';
     position: absolute;
     top: 0;
     right: 0;
-    width: 18px;
-    height: 18px;
-    background: linear-gradient(225deg, transparent 50%, rgba(0, 0, 0, 0.04) 50%);
+    width: 22px;
+    height: 22px;
+    background: linear-gradient(
+      225deg,
+      transparent 50%,
+      rgba(0, 0, 0, 0.02) 50%,
+      rgba(0, 0, 0, 0.06) 85%,
+      rgba(0, 0, 0, 0.03) 100%
+    );
     z-index: 9;
     pointer-events: none;
   }
 
-  /* Score colours */
+  /* Large card variant – bigger fold */
+  .paper-card-lg::before {
+    border-width: 0 28px 28px 0;
+  }
+  .paper-card-lg::after {
+    width: 28px;
+    height: 28px;
+  }
+
+  /* ─── Score colours ─── */
   .score-under {
     @apply font-bold;
     color: #006747;
@@ -68,25 +99,134 @@
     @apply text-gray-700 font-bold;
   }
 
-  /* Tiny chip / badge */
+  /* ─── Score badge (circular) ─── */
+  .score-badge {
+    @apply flex items-center justify-center rounded-full text-xs font-bold shrink-0;
+    width: 42px;
+    height: 42px;
+  }
+  .score-badge-under {
+    @apply bg-masters-green/10;
+    color: #006747;
+    border: 2px solid rgba(0, 103, 71, 0.25);
+  }
+  .score-badge-over {
+    @apply bg-red-50;
+    color: #dc2626;
+    border: 2px solid rgba(220, 38, 38, 0.2);
+  }
+  .score-badge-even {
+    @apply bg-gray-50 text-gray-600;
+    border: 2px solid rgba(0, 0, 0, 0.08);
+  }
+  .score-badge-na {
+    @apply bg-gray-50 text-gray-400;
+    border: 2px dashed rgba(0, 0, 0, 0.08);
+  }
+
+  /* ─── Chip / badge ─── */
   .chip {
     @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+    border: 1px solid rgba(0, 0, 0, 0.04);
+  }
+
+  /* ─── Position badge ─── */
+  .pos-badge {
+    @apply flex items-center justify-center rounded-full text-xs font-bold shrink-0;
+    width: 28px;
+    height: 28px;
+  }
+  .pos-badge-1 {
+    background: linear-gradient(135deg, #fde68a, #f59e0b);
+    color: #78350f;
+    box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
+  }
+  .pos-badge-2 {
+    background: linear-gradient(135deg, #e5e7eb, #9ca3af);
+    color: #374151;
+    box-shadow: 0 2px 6px rgba(156, 163, 175, 0.3);
+  }
+  .pos-badge-3 {
+    background: linear-gradient(135deg, #fde68a, #d97706);
+    color: #78350f;
+    box-shadow: 0 2px 6px rgba(217, 119, 6, 0.25);
+  }
+
+  /* ─── Paper tab navigation ─── */
+  .paper-tab {
+    @apply relative px-6 py-3 text-xs font-semibold tracking-widest uppercase transition-all duration-200 rounded-t-lg;
+    border: 1px solid transparent;
+    border-bottom: none;
+    margin-bottom: -1px;
+  }
+  .paper-tab-active {
+    @apply text-masters-green;
+    background: #faf6ed;
+    border-color: rgba(0, 0, 0, 0.06);
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.03);
+  }
+  .paper-tab-inactive {
+    @apply text-gray-400;
+    background: rgba(0, 0, 0, 0.02);
+  }
+  .paper-tab-inactive:hover {
+    @apply text-gray-500;
+    background: rgba(0, 0, 0, 0.03);
+  }
+
+  /* ─── Leader card accents ─── */
+  .leader-1 {
+    border-left: 4px solid #f59e0b;
+    background: linear-gradient(90deg, rgba(253, 230, 138, 0.15) 0%, white 40%);
+  }
+  .leader-2 {
+    border-left: 4px solid #9ca3af;
+    background: linear-gradient(90deg, rgba(229, 231, 235, 0.2) 0%, white 40%);
+  }
+  .leader-3 {
+    border-left: 4px solid #d97706;
+    background: linear-gradient(90deg, rgba(253, 230, 138, 0.1) 0%, white 40%);
+  }
+
+  /* ─── Inner scorecard (expanded section) ─── */
+  .scorecard-inner {
+    background-color: #fefcf7;
+    background-image:
+      repeating-linear-gradient(
+        transparent,
+        transparent 31px,
+        rgba(0, 103, 71, 0.03) 31px,
+        rgba(0, 103, 71, 0.03) 32px
+      );
+    border-top: 1px dashed rgba(0, 103, 71, 0.12);
   }
 }
 
 /* ── Header golf-ball dimple pattern ── */
 .header-pattern {
-  background-image: radial-gradient(
+  background-image:
+    radial-gradient(
       circle at 20px 20px,
-      rgba(255, 255, 255, 0.05) 2px,
+      rgba(255, 255, 255, 0.06) 2px,
       transparent 2px
     ),
     radial-gradient(
       circle at 50px 44px,
-      rgba(255, 255, 255, 0.03) 1.5px,
+      rgba(255, 255, 255, 0.04) 1.5px,
       transparent 1.5px
+    ),
+    radial-gradient(
+      circle at 35px 55px,
+      rgba(255, 255, 255, 0.02) 1px,
+      transparent 1px
     );
   background-size: 60px 60px;
+}
+
+/* ── Decorative green stripe (top of page) ── */
+.green-stripe {
+  height: 4px;
+  background: linear-gradient(90deg, #004d35, #006747, #2d8b5e, #006747, #004d35);
 }
 
 /* ── Custom scrollbar ── */
@@ -99,4 +239,9 @@
 ::-webkit-scrollbar-thumb {
   background: #2d8b5e;
   border-radius: 3px;
+}
+
+/* ── Selection colour ── */
+::selection {
+  background: rgba(0, 103, 71, 0.15);
 }
