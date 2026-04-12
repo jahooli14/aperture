@@ -5,7 +5,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
+import { useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom'
 // import { Virtuoso } from 'react-virtuoso' // Removed Virtuoso
 import { useAuthContext } from '../contexts/AuthContext'
 import { SignInNudge } from '../components/SignInNudge'
@@ -24,7 +24,7 @@ import { useToast } from '../components/ui/toast'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { PremiumTabs } from '../components/ui/premium-tabs'
 import { SkeletonCard } from '../components/ui/skeleton-card'
-import { Brain, Zap, ArrowLeft, CloudOff, Search, X, Tag, Pin, Wind } from 'lucide-react'
+import { Brain, Zap, ArrowLeft, CloudOff, Search, X, Tag, Pin, Wind, Moon } from 'lucide-react'
 import { BrandName } from '../components/BrandName'
 import { SubtleBackground } from '../components/SubtleBackground'
 // import { FocusableList, FocusableItem } from '../components/FocusableList' // Removed for masonry
@@ -136,20 +136,37 @@ export function MemoriesPage() {
   const [activeTags, setActiveTags] = useState<string[]>([])
   const [dismissedResurface, setDismissedResurface] = useState(false)
 
-  // Drift Mode state
+  // Drift Mode state — after 9pm, Drift Mode flips into Bedtime (sleep) mode
+  // and pulls bedtime prompts; otherwise it stays as the daytime mental reset.
   const [driftModeOpen, setDriftModeOpen] = useState(false)
-  const [breakPrompts, setBreakPrompts] = useState<any[]>([])
+  const [driftPrompts, setDriftPrompts] = useState<any[]>([])
+  const [driftVariant, setDriftVariant] = useState<'sleep' | 'break'>('break')
   const [showMorningFollowUp, setShowMorningFollowUp] = useState(true)
   const { createMemory } = useMemoryStore()
 
+  // Re-evaluate whether bedtime mode should be the main option every minute
+  // so it kicks in at 9pm without needing a page reload.
+  const [isAfterBedtime, setIsAfterBedtime] = useState(() => new Date().getHours() >= 21)
+  useEffect(() => {
+    const check = () => setIsAfterBedtime(new Date().getHours() >= 21)
+    check()
+    const id = window.setInterval(check, 60_000)
+    return () => window.clearInterval(id)
+  }, [])
+
   const handleOpenDrift = async () => {
+    const variant: 'sleep' | 'break' = isAfterBedtime ? 'sleep' : 'break'
+    setDriftVariant(variant)
     setDriftModeOpen(true)
+    const endpoint = variant === 'sleep'
+      ? '/api/projects?resource=bedtime'
+      : '/api/projects?resource=break'
     try {
-      const response = await fetch('/api/projects?resource=break')
+      const response = await fetch(endpoint)
       const data = await response.json()
-      if (data.prompts) setBreakPrompts(data.prompts)
+      if (data.prompts) setDriftPrompts(data.prompts)
     } catch (e) {
-      console.error('Failed to fetch break prompts', e)
+      console.error(`Failed to fetch ${variant} prompts`, e)
     }
   }
 
@@ -553,15 +570,35 @@ export function MemoriesPage() {
             />
           )}
 
-          {/* Drift Mode button */}
-          <button
-            onClick={handleOpenDrift}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all hover:scale-[1.02] mb-3"
-            style={{ background: 'rgba(var(--brand-primary-rgb),0.06)', border: '1px solid rgba(var(--brand-primary-rgb),0.12)', color: 'rgba(var(--brand-primary-rgb),0.8)' }}
-          >
-            <Wind className="h-3.5 w-3.5" />
-            Drift Mode — mental reset
-          </button>
+          {/* Drift Mode button — after 9pm becomes Bedtime Mode (sleep variant) */}
+          <div className="flex items-center gap-3 mb-3">
+            <button
+              onClick={handleOpenDrift}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all hover:scale-[1.02]"
+              style={{ background: 'rgba(var(--brand-primary-rgb),0.06)', border: '1px solid rgba(var(--brand-primary-rgb),0.12)', color: 'rgba(var(--brand-primary-rgb),0.8)' }}
+            >
+              {isAfterBedtime ? (
+                <>
+                  <Moon className="h-3.5 w-3.5" />
+                  Bedtime Mode — wind down
+                </>
+              ) : (
+                <>
+                  <Wind className="h-3.5 w-3.5" />
+                  Drift Mode — mental reset
+                </>
+              )}
+            </button>
+            {/* Cross-link to bedtime — small & unobtrusive */}
+            <Link
+              to="/bedtime"
+              className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.15em] transition-opacity hover:opacity-100"
+              style={{ color: 'rgba(var(--brand-primary-rgb),0.55)', opacity: 0.75 }}
+            >
+              <Moon className="h-3 w-3" />
+              bedtime
+            </Link>
+          </div>
 
           <div className="flex items-center gap-3">
             {/* View Toggle */}
@@ -1085,7 +1122,7 @@ export function MemoriesPage() {
 
       {/* Drift Mode Overlay */}
       {driftModeOpen && (
-        <DriftMode mode="break" prompts={breakPrompts} onClose={() => setDriftModeOpen(false)} />
+        <DriftMode mode={driftVariant} prompts={driftPrompts} onClose={() => setDriftModeOpen(false)} />
       )}
     </>
   )
