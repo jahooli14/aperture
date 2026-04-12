@@ -8,7 +8,7 @@ export const TEAM_PICKS: TeamPickData[] = [
   { team: 'Ollie', picks: ['Rahm', 'Min Woo Lee', 'Gotterup', 'Berger'] },
   { team: 'Tristan', picks: ['Rose', 'Bridgeman', 'Potgieter', 'Laopakdee'] },
   { team: 'George', picks: ['McIlroy', 'Spaun', 'Bradley', 'Sergio'] },
-  { team: 'Jamie', picks: ['Young', 'Spieth', 'Scott', 'DJ'] },
+  { team: 'Jamie', picks: ['Young', 'Spieth', 'Scheffler', 'DJ'] },
   { team: 'Adam S', picks: ['Aberg', 'Lowry', 'Sungjae Im', 'Woodland'] },
   { team: 'Isabelle', picks: ['Fleetwood', 'Wyndham Clark', 'Conners', 'Penge'] },
   { team: 'Martin', picks: ['MacIntyre', 'Si Woo Kim', 'Bhatia', 'Knapp'] },
