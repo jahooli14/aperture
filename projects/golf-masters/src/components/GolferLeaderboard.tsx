@@ -120,7 +120,7 @@ export default function GolferLeaderboard({ golfers, loading }: Props) {
                   <span className="chip bg-gray-50 text-gray-400 text-[10px]">Not in field</span>
                 )}
               </div>
-              <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+              <div className="flex items-center gap-1 mt-1 flex-wrap">
                 {g.pickedBy.map((team) => (
                   <span
                     key={team}
@@ -130,6 +130,24 @@ export default function GolferLeaderboard({ golfers, loading }: Props) {
                   </span>
                 ))}
               </div>
+              {/* Hole progress tracker */}
+              {g.thru !== '-' && (
+                <div className="flex items-center gap-1.5 mt-1.5">
+                  <div className="h-[3px] rounded-full overflow-hidden bg-masters-green/[0.06]" style={{ width: 72 }}>
+                    <div
+                      className={`h-full rounded-full transition-all duration-700 ease-out ${
+                        g.thru === 'F' ? 'bg-masters-green/20' : 'bg-masters-green/60'
+                      }`}
+                      style={{ width: `${((g.thru === 'F' ? 18 : parseInt(g.thru) || 0) / 18) * 100}%` }}
+                    />
+                  </div>
+                  <span className={`text-[10px] font-mono ${
+                    g.thru === 'F' ? 'text-gray-300' : 'text-masters-green/60'
+                  }`}>
+                    {g.thru === 'F' ? 'F' : `Thru ${g.thru}`}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Score badge */}
