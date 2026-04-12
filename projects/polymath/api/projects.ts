@@ -203,8 +203,20 @@ const CRON_RESOURCES = ['recompute-heat', 'evolve', 'generate-digest']
 function getCronUserId(req: VercelRequest): string | null {
   const authHeader = req.headers.authorization
   const expectedToken = process.env.IDEA_ENGINE_SECRET
-  if (!expectedToken || authHeader !== `Bearer ${expectedToken}`) return null
-  return process.env.IDEA_ENGINE_USER_ID || null
+  if (!expectedToken) {
+    console.error('[cron-auth] IDEA_ENGINE_SECRET env var is not set')
+    return null
+  }
+  if (authHeader !== `Bearer ${expectedToken}`) {
+    console.error('[cron-auth] token mismatch')
+    return null
+  }
+  const uid = process.env.IDEA_ENGINE_USER_ID
+  if (!uid) {
+    console.error('[cron-auth] IDEA_ENGINE_USER_ID env var is not set')
+    return null
+  }
+  return uid
 }
 
 async function internalHandler(req: VercelRequest, res: VercelResponse) {
@@ -1932,9 +1944,9 @@ Return JSON only:
         return res.status(200).json({ evolved: 0, project_ids: [], reason: 'no candidate projects' })
       }
 
-      // Generate insights in parallel — sequential calls were taking ~5-6s
-      // each, so 5-10 projects pushed total wall-clock past the 60s function
-      // timeout. Parallelism brings it down to ~the slowest single call.
+      // Generate insights in parallel with a per-call timeout so one slow
+      // Gemini call can't hang the whole function until Vercel kills it (504).
+      const CALL_TIMEOUT_MS = 20_000
       type Outcome = { project_id: string; ok: boolean; error?: string }
       const outcomes = await Promise.all(candidates.map(async (project): Promise<Outcome> => {
         try {
@@ -1946,7 +1958,12 @@ Current notes: ${JSON.stringify(project.metadata?.tasks?.slice(0, 3) || [])}
 
 Respond with JSON: { "event_type": "intersection"|"reshape"|"reflection", "description": "one specific, surprising insight in plain language (max 2 sentences)" }`
 
-          const response = await generateText(prompt, { responseFormat: 'json', temperature: 0.8 })
+          const response = await Promise.race([
+            generateText(prompt, { responseFormat: 'json', temperature: 0.8 }),
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error('gemini_timeout')), CALL_TIMEOUT_MS)
+            ),
+          ])
           let insight: { event_type?: string; description?: string }
           try {
             insight = JSON.parse(response)
@@ -1988,17 +2005,21 @@ Respond with JSON: { "event_type": "intersection"|"reshape"|"reflection", "descr
       // Mark the first successful insight as the highlight (post-hoc, since
       // the parallel pass doesn't know the order).
       if (evolved.length > 0) {
-        const firstEvolvedId = evolved[0]
-        await supabase
-          .from('evolution_events')
-          .update({ highlight: true })
-          .eq('user_id', userId)
-          .eq('project_id', firstEvolvedId)
-          .order('created_at', { ascending: false })
-          .limit(1)
+        try {
+          const firstEvolvedId = evolved[0]
+          await supabase
+            .from('evolution_events')
+            .update({ highlight: true })
+            .eq('user_id', userId)
+            .eq('project_id', firstEvolvedId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+        } catch (highlightErr) {
+          console.warn('[evolve] highlight update failed (non-fatal):', highlightErr instanceof Error ? highlightErr.message : highlightErr)
+        }
       }
 
-      console.log(`[evolve] done: ${evolved.length}/${candidates.length} succeeded${failed.length ? `, ${failed.length} failed` : ''}`)
+      console.log(`[evolve] done: ${evolved.length}/${candidates.length} succeeded${failed.length ? `, ${failed.length} failed: ${JSON.stringify(failed)}` : ''}`)
       return res.status(200).json({
         evolved: evolved.length,
         project_ids: evolved,
