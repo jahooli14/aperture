@@ -36,4 +36,5 @@ export interface LeaderboardData {
   teams: TeamScore[];
   loading: boolean;
   error: string | null;
+  tournamentComplete: boolean;
 }
