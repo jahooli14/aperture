@@ -55,7 +55,9 @@ jobs:
 
           hit() {
             echo "→ $1"
-            if ! curl -fsS -m 60 -X POST "$BASE$1" \
+            # Timeout must exceed the Vercel maxDuration (60s) to avoid
+            # racing cold-start + network overhead against function execution.
+            if ! curl -fsS -m 90 -X POST "$BASE$1" \
                  -H "Authorization: Bearer $TOKEN" \
                  -H "Content-Type: application/json"; then
               echo "!! failed: $1" | tee -a "$FAILED_FILE"
