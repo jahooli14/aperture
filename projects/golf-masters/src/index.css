@@ -215,8 +215,9 @@
   }
 }
 
-/* ── Header golf-ball dimple pattern ── */
-.header-pattern {
+/* ── Header: combined gradient + golf-ball dimple pattern ── */
+.header-bg {
+  background-color: #004d35;
   background-image:
     radial-gradient(
       circle at 20px 20px,
@@ -232,8 +233,9 @@
       circle at 35px 55px,
       rgba(255, 255, 255, 0.02) 1px,
       transparent 1px
-    );
-  background-size: 60px 60px;
+    ),
+    linear-gradient(to bottom, #0a2e1c 0%, #004d35 40%, #006747 100%);
+  background-size: 60px 60px, 60px 60px, 60px 60px, 100% 100%;
 }
 
 /* ── Decorative green stripe (top of page) ── */
