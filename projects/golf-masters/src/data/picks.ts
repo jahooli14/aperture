@@ -28,7 +28,7 @@ export const NAME_ALIASES: Record<string, string[]> = {
   'Si Woo Kim': ['Si Woo Kim'],
   'Sungjae Im': ['Sungjae Im'],
   'Aberg': ['Ludvig Aberg', 'Ludvig Åberg'],
-  'Hojgaard': ['Rasmus Hojgaard', 'Rasmus Højgaard'],
+  'Hojgaard': ['Rasmus Hojgaard', 'Rasmus Højgaard', 'Nicolai Hojgaard', 'Nicolai Højgaard'],
   'McIlroy': ['Rory McIlroy'],
   'Scott': ['Adam Scott'],
   'DeChambeau': ['Bryson DeChambeau'],
