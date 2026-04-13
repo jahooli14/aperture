@@ -210,10 +210,17 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
               },
               onerror: (e: any) => {
                 console.error('[LiveVoice] socket error', e)
-                handleError(e?.message || 'Live session error')
+                const detail = e?.message || e?.reason || e?.code || (typeof e === 'string' ? e : '')
+                handleError(detail ? `Live error: ${detail}` : 'Live session error (check console)')
               },
               onclose: (e: any) => {
-                console.warn('[LiveVoice] socket closed', e?.reason)
+                const reason = e?.reason || e?.code || ''
+                console.warn('[LiveVoice] socket closed', reason, e)
+                // If the socket closes before we ever became "ready", surface it
+                // so the user sees a real error instead of a perpetual spinner.
+                if (status === 'connecting') {
+                  handleError(reason ? `Connection closed: ${reason}` : 'Voice connection closed unexpectedly')
+                }
               },
             },
           })
