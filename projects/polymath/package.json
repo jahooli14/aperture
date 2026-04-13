@@ -39,6 +39,7 @@
     "@capacitor/status-bar": "^7.0.3",
     "@fontsource/inter": "^5.2.8",
     "@fontsource/playfair-display": "^5.2.8",
+    "@google/genai": "^1.49.0",
     "@google/generative-ai": "^0.24.1",
     "@mozilla/readability": "^0.6.0",
     "@react-three/drei": "^9.114.3",

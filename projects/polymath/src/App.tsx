@@ -38,7 +38,7 @@ const ReaderPage = lazy(lazyRetry(() => import('./pages/ReaderPage').then(m => (
 const ProjectsPage = lazy(lazyRetry(() => import('./pages/ProjectsPage').then(m => ({ default: m.ProjectsPage }))))
 const DrawerPage = lazy(lazyRetry(() => import('./pages/DrawerPage')))
 const ProjectDetailPage = lazy(lazyRetry(() => import('./pages/ProjectDetailPage')))
-const OnboardingPage = lazy(lazyRetry(() => import('./pages/OnboardingPage').then(m => ({ default: m.OnboardingPage }))))
+const OnboardingChatPage = lazy(lazyRetry(() => import('./pages/OnboardingChatPage').then(m => ({ default: m.OnboardingChatPage }))))
 const TimelinePage = lazy(lazyRetry(() => import('./pages/TimelinePage').then(m => ({ default: m.TimelinePage }))))
 const SettingsPage = lazy(lazyRetry(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage }))))
 const SearchPage = lazy(lazyRetry(() => import('./pages/SearchPage').then(m => ({ default: m.SearchPage }))))
@@ -311,7 +311,7 @@ export default function App() {
                   <Suspense fallback={<PageLoader />}>
                     <Routes>
                       <Route path="/" element={<AnimatedPage page="home"><HomePage /></AnimatedPage>} />
-                      <Route path="/onboarding" element={<OnboardingPage />} />
+                      <Route path="/onboarding" element={<OnboardingChatPage />} />
                       <Route path="/memories" element={<AnimatedPage page="thoughts"><MemoriesPage /></AnimatedPage>} />
                       <Route path="/reading" element={<AnimatedPage page="reading"><ReadingPage /></AnimatedPage>} />
                       <Route path="/reading/:id" element={<AnimatedPage page="reading"><ReaderPage /></AnimatedPage>} />
