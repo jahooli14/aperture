@@ -135,7 +135,7 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
       ;(async () => {
         try {
           // 1. Mint ephemeral token
-          const tokRes = await fetch('/api/onboarding-token', { method: 'POST' })
+          const tokRes = await fetch('/api/utilities?resource=onboarding-token', { method: 'POST' })
           if (!tokRes.ok) throw new Error('Token mint failed')
           const { token, model } = await tokRes.json()
 

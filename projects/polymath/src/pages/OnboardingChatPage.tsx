@@ -70,7 +70,7 @@ export function OnboardingChatPage() {
   // ── Bootstrap: fetch initial grid + speak anchor question ───────────────
   const bootstrapGrid = useCallback(async () => {
     try {
-      const res = await fetch('/api/onboarding-chat?action=start', { method: 'POST' })
+      const res = await fetch('/api/utilities?resource=onboarding-start', { method: 'POST' })
       if (!res.ok) throw new Error('Start failed')
       const data = await res.json()
       setGrid(data.grid as CoverageGrid)
@@ -126,7 +126,7 @@ export function OnboardingChatPage() {
           }
         }
 
-        const res = await fetch('/api/onboarding-chat?action=turn', {
+        const res = await fetch('/api/utilities?resource=onboarding-turn', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

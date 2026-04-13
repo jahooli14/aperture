@@ -21,9 +21,11 @@ V1 (the MediaRecorder + transcribe + browser SpeechSynthesis stack) was shipped 
 | TTS | Live model speaks any text we `sendRealtimeInput({ text })` to it; system prompt enforces verbatim playback, no commentary |
 | VAD | Native (`automaticActivityDetection` enabled, low sensitivity, 800 ms silence) |
 | Transcription | Native `inputAudioTranscription`; turn boundary detected via `serverContent.turnComplete` |
-| Auth | Server endpoint `POST /api/onboarding-token` mints ephemeral token (single-use, 30 min, scoped to FLASH_LIVE) — `GEMINI_API_KEY` never reaches the browser |
-| Brain | Server `POST /api/onboarding-chat?action=turn` runs the flash-lite planner and returns reframe + next-question text |
+| Auth | `POST /api/utilities?resource=onboarding-token` mints ephemeral token (single-use, 30 min, scoped to FLASH_LIVE) — `GEMINI_API_KEY` never reaches the browser |
+| Brain | `POST /api/utilities?resource=onboarding-turn` runs the flash-lite planner and returns reframe + next-question text |
 | Final analysis | `POST /api/utilities?resource=analyze` with the full `coverage_grid` payload → `OnboardingAnalysis` consumed by `RevealSequence` |
+
+All onboarding endpoints live under `api/utilities.ts` to respect the Vercel 12-function cap.
 
 ## Model stack
 
@@ -225,8 +227,7 @@ Small, low-emphasis "type instead" text link below the mic (not a toggle, not a 
 
 ## Infra (V2 final)
 
-- `api/onboarding-chat.ts` — planner endpoint (`?action=start` / `?action=turn`)
-- `api/onboarding-token.ts` — ephemeral token minter for the browser → Live API connection
+- `api/utilities.ts` — hosts all onboarding endpoints (`?resource=onboarding-start` / `?resource=onboarding-turn` / `?resource=onboarding-token` / `?resource=analyze`) to respect Vercel's 12-function cap.
 - `api/_lib/onboarding/coverage.ts` — slot catalogue, planner prompt, JSON validation, grid mutation helpers, stopping heuristic
 - `api/utilities.ts` — `handleAnalyze` accepts the `coverage_grid` payload (legacy `responses` shape kept as fallback)
 - `api/_lib/models.ts` — `MODELS.FLASH_LIVE` (Live API), plus `MODELS.PRO` reserved escape hatch
