@@ -9,11 +9,9 @@
  *   GET  ?resource=session-brief&projectId= — AI project briefing on open
  *   POST ?resource=onboarding-start         — Bootstrap a coverage grid for the contextual onboarding chat
  *   POST ?resource=onboarding-turn          — Run the planner for one onboarding turn
- *   POST ?resource=onboarding-token         — Mint an ephemeral Live API token for the browser
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { GoogleGenAI } from '@google/genai'
 import { getSupabaseClient } from './_lib/supabase.js'
 import { getUserId } from './_lib/auth.js'
 import { generateText } from './_lib/gemini-chat.js'
@@ -26,7 +24,6 @@ import {
   computeStoppingHint,
   ANCHOR_QUESTION,
 } from './_lib/onboarding/coverage.js'
-import { MODELS } from './_lib/models.js'
 import type { CoverageGrid, CoverageSlotId } from '../src/types'
 
 export const config = {
@@ -62,10 +59,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'POST' && resource === 'onboarding-turn') {
     return handleOnboardingTurn(req, res)
-  }
-
-  if (req.method === 'POST' && resource === 'onboarding-token') {
-    return handleOnboardingToken(req, res)
   }
 
   if (req.method === 'GET' && resource === 'session-brief') {
@@ -477,46 +470,6 @@ async function handleOnboardingTurn(req: VercelRequest, res: VercelResponse) {
   } catch (err: any) {
     console.error('[utilities/onboarding-turn]', err?.message, err?.stack)
     return res.status(500).json({ error: 'Onboarding turn failed' })
-  }
-}
-
-async function handleOnboardingToken(_req: VercelRequest, res: VercelResponse) {
-  try {
-    if (!process.env.GEMINI_API_KEY) {
-      console.error('[utilities/onboarding-token] GEMINI_API_KEY missing')
-      return res.status(500).json({ error: 'Server misconfigured' })
-    }
-
-    const client = new GoogleGenAI({
-      apiKey: process.env.GEMINI_API_KEY,
-      httpOptions: { apiVersion: 'v1alpha' },
-    })
-
-    // 30-min total lifetime, 5-min window to start a new session. Single use.
-    // No liveConnectConstraints — they enforce an EXACT match on the client's
-    // connect config, and our client adds voice/system-prompt/transcription
-    // settings the constraints can't anticipate, which produces a 401 on
-    // handshake. The token is still tightly scoped via uses:1 + expireTime.
-    const expireTime = new Date(Date.now() + 30 * 60 * 1000).toISOString()
-    const newSessionExpireTime = new Date(Date.now() + 5 * 60 * 1000).toISOString()
-
-    const token = await client.authTokens.create({
-      config: {
-        uses: 1,
-        expireTime,
-        newSessionExpireTime,
-        httpOptions: { apiVersion: 'v1alpha' },
-      },
-    })
-
-    return res.status(200).json({
-      token: token.name,
-      model: MODELS.FLASH_LIVE,
-      expiresAt: expireTime,
-    })
-  } catch (err: any) {
-    console.error('[utilities/onboarding-token]', err?.message)
-    return res.status(500).json({ error: 'Token mint failed' })
   }
 }
 
