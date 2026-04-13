@@ -8,21 +8,28 @@ Replace the static 5-voice-question onboarding with an adaptive, two-way voice c
 
 ## Implementation status
 
-**V2 (current — shipped):** Full adaptive planner + coverage grid + dots + skip handling + typing fallback + per-turn foundational memory saves, with the voice layer running on `gemini-3.1-flash-live-preview` direct from the browser via ephemeral tokens. Native VAD, native input transcription, native TTS — sub-second stop-to-speak latency. The Live model is locked into a "voice channel" role by its system instruction and never reasons on its own; the Aperture coverage planner remains the brain and feeds reframe/next-question text into the Live session via `sendRealtimeInput({ text })`.
+**Current — shipped (Option C hybrid).** The Gemini Live API (`gemini-3.1-flash-live-preview`) runs the conversation directly in the browser. Kore voice, native VAD, native input+output transcription, sub-second latency. All the onboarding intelligence — anchor question, 6 coverage slots, reframe style, stopping criteria, tone rules — lives in the Live model's **system instruction**. The model decides what to ask and speaks it naturally.
 
-V1 (the MediaRecorder + transcribe + browser SpeechSynthesis stack) was shipped first as a working baseline and has been replaced.
+Aperture's coverage planner remains, but in **observe mode**. After each turn completes, we send both transcripts (user + model) to `POST /api/utilities?resource=onboarding-observe`; it updates slot confidences so the dots animate and the final reveal analysis has rich coverage data. The observer never talks back to the model — it's a passive listener that the client uses to decide when to close the session.
+
+### Why this shape
+
+Earlier attempts had the planner try to *dictate* what the Live model said (feeding it text to speak via `sendRealtimeInput({ text })`). That failed hard: native audio models are trained to be conversational — they treat any text input as a user message and *respond* to it rather than speaking it. The system instruction couldn't reliably override that prior. Option C sidesteps the fight entirely: Live generates its own utterances; the planner just watches.
+
+Trade-off accepted: we lose deterministic "this exact reframe, this exact question" control. The model might paraphrase, reorder slots, or riff. In exchange we get actual audio-to-audio magic. If the model drifts badly in dogfood, the system instruction is a one-file edit.
 
 ### Architecture summary
 
 | Layer | Implementation |
 |---|---|
-| Voice transport | `@google/genai` v1alpha → `ai.live.connect()` with WebSocket; PCM 16 kHz mono in, PCM 24 kHz mono out |
+| Voice transport | `@google/genai` v1alpha → `ai.live.connect()` WebSocket; PCM 16 kHz mono in, 24 kHz mono out |
 | Mic capture | AudioWorklet (`/public/onboarding-mic-worklet.js`) resampling device sample rate → 16 kHz s16le, ~100 ms chunks |
-| TTS | Live model speaks any text we `sendRealtimeInput({ text })` to it; system prompt enforces verbatim playback, no commentary |
-| VAD | Native (`automaticActivityDetection` enabled, low sensitivity, 800 ms silence) |
-| Transcription | Native `inputAudioTranscription`; turn boundary detected via `serverContent.turnComplete` |
-| Auth | `POST /api/utilities?resource=onboarding-token` mints ephemeral token (single-use, 30 min, scoped to FLASH_LIVE) — `GEMINI_API_KEY` never reaches the browser |
-| Brain | `POST /api/utilities?resource=onboarding-turn` runs the flash-lite planner and returns reframe + next-question text |
+| TTS | Native audio output from the Live model (Kore voice) |
+| VAD | Native (`automaticActivityDetection`, low sensitivity, 800 ms silence) |
+| Transcription | Native `inputAudioTranscription` + `outputAudioTranscription` |
+| Brain | **The Live model itself**, guided by a system instruction containing the anchor question, coverage slot list, reframe rules, tone, and stopping criteria |
+| Observer | `POST /api/utilities?resource=onboarding-observe` — flash-lite runs after each turn to update slot confidences from the user's transcript (observer only — doesn't feed anything back to Live) |
+| Auth | `POST /api/utilities?resource=onboarding-token` mints single-use 30-min ephemeral tokens; `GEMINI_API_KEY` never reaches the browser |
 | Final analysis | `POST /api/utilities?resource=analyze` with the full `coverage_grid` payload → `OnboardingAnalysis` consumed by `RevealSequence` |
 
 All onboarding endpoints live under `api/utilities.ts` to respect the Vercel 12-function cap.
@@ -227,14 +234,13 @@ Small, low-emphasis "type instead" text link below the mic (not a toggle, not a 
 
 ## Infra (V2 final)
 
-- `api/utilities.ts` — hosts all onboarding endpoints (`?resource=onboarding-start` / `?resource=onboarding-turn` / `?resource=onboarding-token` / `?resource=analyze`) to respect Vercel's 12-function cap.
+- `api/utilities.ts` — hosts all onboarding endpoints (`?resource=onboarding-start` / `?resource=onboarding-turn` / `?resource=analyze`) to respect Vercel's 12-function cap.
 - `api/_lib/onboarding/coverage.ts` — slot catalogue, planner prompt, JSON validation, grid mutation helpers, stopping heuristic
 - `api/utilities.ts` — `handleAnalyze` accepts the `coverage_grid` payload (legacy `responses` shape kept as fallback)
 - `api/_lib/models.ts` — `MODELS.FLASH_LIVE` (Live API), plus `MODELS.PRO` reserved escape hatch
-- `src/components/onboarding/LiveVoiceCapture.tsx` — Live API client (`@google/genai`); imperative `say(text)` for TTS, `onUserTurn(transcript)` callback
+- `src/components/onboarding/LiveVoiceCapture.tsx` — voice transport component. Imperative `say(text)` for TTS, `onUserTurn(transcript)` callback. Internally wraps `useMediaRecorderVoice` + `SpeechSynthesis`; name retained for interface stability in case a streaming-TTS replacement lands later.
 - `src/components/onboarding/CoverageDots.tsx` — random-permutation dot constellation
 - `src/pages/OnboardingChatPage.tsx` — orchestrates Live + planner + dots; replaces deleted `OnboardingPage.tsx`
-- `public/onboarding-mic-worklet.js` — AudioWorklet that resamples mic to 16 kHz mono s16le PCM in 100 ms chunks
 - `src/types.ts` — `CoverageSlot`, `CoverageGrid`, `OnboardingTurn`, `PlannerDecision`
 
 ## Rollout

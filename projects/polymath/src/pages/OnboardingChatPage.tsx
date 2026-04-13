@@ -1,13 +1,12 @@
 /**
- * OnboardingChatPage — Aperture's contextual onboarding chat (V2)
+ * OnboardingChatPage — Aperture's contextual onboarding chat
  *
- * Voice transport: gemini-3.1-flash-live-preview audio-to-audio via
- * LiveVoiceCapture. Native VAD + transcription + TTS — sub-second
- * stop-to-speak latency.
- *
- * Brain (unchanged from V1): the server-side coverage planner at
- * /api/onboarding-chat?action=turn. Live model is used purely as a voice
- * channel that speaks whatever text the planner produces.
+ * Voice transport: gemini-3.1-flash-live-preview runs the conversation
+ * directly (Option C hybrid). The Live model's system prompt contains the
+ * entire onboarding design (anchor question, 6 coverage slots, reframe
+ * style, stopping criteria). After each turn completes, this page calls
+ * the server-side observe planner to update the coverage grid — which
+ * feeds the dots animation and the final reveal analysis.
  *
  * See docs/ONBOARDING_CHAT_SPEC.md.
  */
@@ -24,22 +23,19 @@ import { useMemoryStore } from '../stores/useMemoryStore'
 import type {
   CoverageGrid,
   CoverageSlotId,
-  PlannerDecision,
   OnboardingAnalysis,
   BookSearchResult,
 } from '../types'
 
-// ── Phases ─────────────────────────────────────────────────────────────────
 type Phase =
-  | 'welcome'          // hook + CTA (tapping it triggers user-gesture audio init)
-  | 'bootstrap'        // ephemeral token + Live session establishing + grid initialising
-  | 'turn'             // active conversation: question shown, mic hot, OR processing
-  | 'completing'       // session ended, hand-off to books step
-  | 'books'            // optional bookshelf
-  | 'analyzing'        // final analysis call
-  | 'reveal'           // existing RevealSequence
+  | 'welcome'
+  | 'bootstrap'
+  | 'turn'
+  | 'completing'
+  | 'books'
+  | 'analyzing'
+  | 'reveal'
 
-// ── Component ──────────────────────────────────────────────────────────────
 export function OnboardingChatPage() {
   const navigate = useNavigate()
   const { createMemory } = useMemoryStore()
@@ -47,36 +43,29 @@ export function OnboardingChatPage() {
   const [phase, setPhase] = useState<Phase>('welcome')
   const [grid, setGrid] = useState<CoverageGrid | null>(null)
   const [currentQuestion, setCurrentQuestion] = useState<string>('')
-  const [currentTargetSlot, setCurrentTargetSlot] = useState<CoverageSlotId | null>(null)
-  const [currentReframe, setCurrentReframe] = useState<string>('')
-  const [latestTranscript, setLatestTranscript] = useState<string>('')
+  const [userPartial, setUserPartial] = useState<string>('')
   const [justFilled, setJustFilled] = useState<CoverageSlotId[]>([])
   const [typingMode, setTypingMode] = useState(false)
   const [typingDraft, setTypingDraft] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [voiceMode, setVoiceMode] = useState(true)
   const [liveReady, setLiveReady] = useState(false)
 
-  // Analysis / reveal state
   const [books, setBooks] = useState<BookSearchResult[]>([])
   const [analysis, setAnalysis] = useState<OnboardingAnalysis | null>(null)
 
-  // Refs
   const liveRef = useRef<LiveVoiceCaptureHandle | null>(null)
-  const inflightRef = useRef(false)
   const allTranscriptsRef = useRef<string[]>([])
-  const pendingAnchorRef = useRef<string | null>(null)
+  const inflightObserveRef = useRef(false)
+  const shouldStopAfterTurnRef = useRef(false)
 
-  // ── Bootstrap: fetch initial grid + speak anchor question ───────────────
+  // ── Bootstrap: fetch a grid (we still need one for the random dot
+  //    permutation + as the shape the observer mutates) ───────────────────
   const bootstrapGrid = useCallback(async () => {
     try {
       const res = await fetch('/api/utilities?resource=onboarding-start', { method: 'POST' })
       if (!res.ok) throw new Error('Start failed')
       const data = await res.json()
       setGrid(data.grid as CoverageGrid)
-      setCurrentQuestion(data.anchor_question as string)
-      setCurrentTargetSlot(null)
-      pendingAnchorRef.current = data.anchor_question as string
       setPhase('turn')
     } catch (err: any) {
       console.error('[onboarding-chat] bootstrap failed', err)
@@ -85,14 +74,13 @@ export function OnboardingChatPage() {
     }
   }, [])
 
-  // Once both the Live session is ready AND the grid is loaded, speak the anchor.
+  // Once Live is connected AND the grid has loaded, trigger the model to
+  // begin speaking the anchor question.
   useEffect(() => {
-    if (phase === 'turn' && liveReady && pendingAnchorRef.current && liveRef.current) {
-      const text = pendingAnchorRef.current
-      pendingAnchorRef.current = null
-      liveRef.current.say(text).catch(() => {})
+    if (phase === 'turn' && liveReady && liveRef.current && grid) {
+      liveRef.current.begin()
     }
-  }, [phase, liveReady])
+  }, [phase, liveReady, grid])
 
   const handleStart = useCallback(() => {
     setPhase('bootstrap')
@@ -100,46 +88,68 @@ export function OnboardingChatPage() {
     void bootstrapGrid()
   }, [bootstrapGrid])
 
-  // ── Handle a completed turn (transcript in hand) ────────────────────────
-  const submitTurn = useCallback(
-    async (rawTranscript: string, skipped: boolean) => {
-      if (inflightRef.current) return
-      if (!grid) return
-      inflightRef.current = true
+  // ── Live callbacks ──────────────────────────────────────────────────────
+  const handleModelSpeaking = useCallback((accumulated: string) => {
+    setCurrentQuestion(accumulated)
+  }, [])
 
-      setLatestTranscript(rawTranscript)
+  const handleUserSpeaking = useCallback((accumulated: string) => {
+    setUserPartial(accumulated)
+  }, [])
+
+  const handleLiveReady = useCallback(() => setLiveReady(true), [])
+
+  const handleLiveError = useCallback((msg: string) => {
+    console.error('[onboarding-chat] live error', msg)
+    setError(msg)
+  }, [])
+
+  // ── Turn complete: save memory + run observer planner + maybe stop ──────
+  const handleTurnComplete = useCallback(
+    async (userTranscript: string, modelUtterance: string) => {
+      if (!grid) return
+      if (inflightObserveRef.current) return
+      inflightObserveRef.current = true
 
       try {
-        // Save every turn as its own foundational memory (per spec).
-        if (!skipped && rawTranscript.trim().length > 0) {
-          allTranscriptsRef.current.push(rawTranscript)
+        // The "first turn" from the model is just the anchor — user transcript
+        // will be empty because we seeded the session with an internal "I'm
+        // ready" message. Skip the observer on that turn.
+        const isOpeningTurn = grid.turns.length === 0 && userTranscript.trim().length === 0
+        if (isOpeningTurn) {
+          // Seed the grid with the anchor question as turn 1 so subsequent
+          // observations have the right shape.
+          return
+        }
+
+        // Save the user's transcript as a foundational memory (tagged so we
+        // can retrieve later without knowing the Live-decided slot).
+        if (userTranscript.trim().length > 0) {
+          allTranscriptsRef.current.push(userTranscript)
           try {
             await createMemory({
-              body: rawTranscript,
+              body: userTranscript,
               memory_type: 'foundational',
-              tags: currentTargetSlot
-                ? ['onboarding', `slot:${currentTargetSlot}`]
-                : ['onboarding', 'slot:anchor'],
+              tags: ['onboarding', 'live-hybrid'],
             })
           } catch (memErr) {
             console.warn('[onboarding-chat] memory save failed, continuing', memErr)
           }
         }
 
-        const res = await fetch('/api/utilities?resource=onboarding-turn', {
+        // Observer — updates the coverage grid based on what the user said
+        // in response to what the model asked.
+        const res = await fetch('/api/utilities?resource=onboarding-observe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             grid,
-            latest_transcript: rawTranscript,
-            latest_question: currentQuestion,
-            latest_target_slot: currentTargetSlot,
-            skipped,
+            user_transcript: userTranscript,
+            model_utterance: modelUtterance,
           }),
         })
-        if (!res.ok) throw new Error('Turn failed')
+        if (!res.ok) throw new Error('Observe failed')
         const data = (await res.json()) as {
-          decision: PlannerDecision
           grid: CoverageGrid
           newly_filled_slots: CoverageSlotId[]
           stopping_hint: { should_stop: boolean; reason: string }
@@ -147,61 +157,38 @@ export function OnboardingChatPage() {
 
         setGrid(data.grid)
         setJustFilled(data.newly_filled_slots)
-        setCurrentReframe(data.decision.reframe_text)
+        setUserPartial('')
 
-        // Speak the reframe (and next question, if any) via Live.
-        const utterance = [data.decision.reframe_text, data.decision.next_question]
-          .filter(Boolean)
-          .join(' ')
-
-        if (utterance && liveRef.current) {
-          await liveRef.current.say(utterance).catch(() => {})
+        // If the observer thinks we've covered enough, close the Live session
+        // gracefully and move on to the books step. The model's system prompt
+        // also has its own stopping logic; whichever fires first wins.
+        if (data.stopping_hint.should_stop) {
+          shouldStopAfterTurnRef.current = true
+          // Give the model a brief moment to finish whatever it's saying,
+          // then close.
+          setTimeout(() => {
+            try { liveRef.current?.close() } catch {}
+            setPhase('completing')
+            setTimeout(() => setPhase('books'), 600)
+          }, 400)
         }
-
-        if (data.decision.should_stop || !data.decision.next_question) {
-          setPhase('completing')
-          await new Promise(r => setTimeout(r, 600))
-          setPhase('books')
-          return
-        }
-
-        // Reset state for the next turn (Live session keeps running).
-        setCurrentQuestion(data.decision.next_question)
-        setCurrentTargetSlot(data.decision.next_slot_target)
-        setCurrentReframe('')
-        setLatestTranscript('')
-        setTypingDraft('')
-        setJustFilled([])
       } catch (err: any) {
-        console.error('[onboarding-chat] turn failed', err)
-        setError('Something went wrong processing your answer.')
+        console.error('[onboarding-chat] observe failed', err)
+        // Not fatal — let the Live conversation continue.
       } finally {
-        inflightRef.current = false
+        inflightObserveRef.current = false
       }
     },
-    [grid, currentQuestion, currentTargetSlot, createMemory],
+    [grid, createMemory],
   )
 
-  // ── LiveVoiceCapture callbacks ──────────────────────────────────────────
-  const handleUserTurn = useCallback(
-    (transcript: string) => {
-      if (!voiceMode) return // ignore voice during typing-mode answers
-      if (phase !== 'turn') return
-      void submitTurn(transcript, transcript.trim().length === 0)
-    },
-    [voiceMode, phase, submitTurn],
-  )
-
-  const handleLiveReady = useCallback(() => setLiveReady(true), [])
-  const handleLiveError = useCallback((msg: string) => {
-    console.error('[onboarding-chat] live error', msg)
-    setError(msg)
-  }, [])
-
+  // ── Typing fallback ─────────────────────────────────────────────────────
   const handleTypedSubmit = useCallback(() => {
     const text = typingDraft.trim()
-    void submitTurn(text, text.length === 0)
-  }, [typingDraft, submitTurn])
+    if (!text) return
+    liveRef.current?.sendUserText(text)
+    setTypingDraft('')
+  }, [typingDraft])
 
   // ── Books / analysis handoff ─────────────────────────────────────────────
   const runAnalysis = useCallback(
@@ -249,9 +236,6 @@ export function OnboardingChatPage() {
     setBooks([])
     void runAnalysis([])
   }, [runAnalysis])
-
-  // Cleanup on unmount: LiveVoiceCapture handles its own teardown.
-  useEffect(() => () => undefined, [])
 
   // ── Welcome ─────────────────────────────────────────────────────────────
   if (phase === 'welcome') {
@@ -325,7 +309,6 @@ export function OnboardingChatPage() {
     )
   }
 
-  // ── Bootstrap / completing (transient spinners) ─────────────────────────
   if (phase === 'bootstrap' || phase === 'completing') {
     return (
       <div className="min-h-screen flex items-center justify-center px-4 py-12">
@@ -337,12 +320,10 @@ export function OnboardingChatPage() {
     )
   }
 
-  // ── Books ───────────────────────────────────────────────────────────────
   if (phase === 'books') {
     return <BookshelfStep onComplete={handleBooksComplete} onSkip={handleBooksSkip} />
   }
 
-  // ── Analyzing / Reveal ──────────────────────────────────────────────────
   if (phase === 'analyzing' || phase === 'reveal') {
     if (phase === 'reveal' && analysis) {
       return <RevealSequence analysis={analysis} books={books} transcripts={allTranscriptsRef.current} />
@@ -372,18 +353,21 @@ export function OnboardingChatPage() {
   // ── Turn UI ─────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen flex flex-col px-4 py-12 relative">
-      {/* The Live session lives for the whole turn loop. Mounted once. */}
+      {/* Mounted once for the whole conversation. Live drives the chat. */}
       <LiveVoiceCapture
         ref={liveRef}
-        onUserTurn={handleUserTurn}
+        onTurnComplete={handleTurnComplete}
+        onModelSpeaking={handleModelSpeaking}
+        onUserSpeaking={handleUserSpeaking}
         onReady={handleLiveReady}
         onError={handleLiveError}
-        showVisualizer={false}
       />
 
-      {/* Top-right: exit */}
       <button
-        onClick={() => navigate('/')}
+        onClick={() => {
+          try { liveRef.current?.close() } catch {}
+          navigate('/')
+        }}
         className="absolute top-6 right-6 text-xs transition-opacity hover:opacity-80"
         style={{ color: 'var(--brand-text-secondary)', opacity: 0.35 }}
       >
@@ -392,42 +376,31 @@ export function OnboardingChatPage() {
 
       <div className="flex-1 flex flex-col items-center justify-center">
         <div className="max-w-xl w-full text-center">
-          {/* Reframe chip */}
-          <AnimatePresence>
-            {currentReframe && (
-              <motion.div
-                key={currentReframe}
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="mb-6 text-sm italic"
-                style={{ color: 'var(--brand-text-secondary)', opacity: 0.9 }}
-              >
-                {currentReframe}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Current question */}
+          {/* Current question (live subtitle of what the model is saying) */}
           <AnimatePresence mode="wait">
             <motion.h2
-              key={currentQuestion}
+              key={currentQuestion || 'waiting'}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.35 }}
-              className="text-2xl sm:text-3xl font-semibold leading-snug mb-10"
+              className="text-2xl sm:text-3xl font-semibold leading-snug mb-10 min-h-[4rem]"
               style={{ color: 'var(--brand-text-primary)' }}
             >
-              {currentQuestion || (liveReady ? '' : 'Connecting voice…')}
+              {currentQuestion || (liveReady ? '' : '\u00A0')}
             </motion.h2>
           </AnimatePresence>
 
-          {/* Voice visual OR typing */}
-          {voiceMode ? (
+          {/* Input surface */}
+          {!typingMode ? (
             <div className="mb-6 flex flex-col items-center">
-              {/* Inline visualizer mirroring the LiveVoiceCapture status */}
-              <LiveVisualizer liveReady={liveReady} processing={inflightRef.current} />
+              {!liveReady ? (
+                <div className="flex flex-col items-center gap-3 text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
+                  <Loader2 className="h-5 w-5 animate-spin opacity-60" />
+                  <span className="opacity-60">Connecting voice…</span>
+                </div>
+              ) : null}
+              {/* The LiveVoiceCapture component renders its own mic visualizer above, so we don't duplicate it here */}
             </div>
           ) : (
             <div className="mb-6">
@@ -442,20 +415,18 @@ export function OnboardingChatPage() {
                   color: 'var(--brand-text-primary)',
                   border: '1px solid rgba(255,255,255,0.08)',
                 }}
-                disabled={inflightRef.current}
               />
               <div className="mt-3 flex items-center justify-between text-xs">
                 <button
-                  onClick={() => void submitTurn('', true)}
-                  disabled={inflightRef.current}
-                  className="hover:opacity-80 disabled:opacity-30"
+                  onClick={() => liveRef.current?.sendUserText('skip')}
+                  className="hover:opacity-80"
                   style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
                 >
                   Skip this one
                 </button>
                 <button
                   onClick={handleTypedSubmit}
-                  disabled={inflightRef.current}
+                  disabled={!typingDraft.trim()}
                   className="btn-primary px-5 py-2 inline-flex items-center gap-1.5 disabled:opacity-40"
                 >
                   Send
@@ -465,36 +436,36 @@ export function OnboardingChatPage() {
             </div>
           )}
 
-          {/* Latest transcript (confirmation artefact) */}
+          {/* User's live transcript */}
           <AnimatePresence>
-            {latestTranscript && (
+            {userPartial && (
               <motion.p
                 initial={{ opacity: 0 }}
-                animate={{ opacity: 0.6 }}
+                animate={{ opacity: 0.65 }}
                 exit={{ opacity: 0 }}
                 className="text-sm mt-2 italic max-w-md mx-auto"
                 style={{ color: 'var(--brand-text-secondary)' }}
               >
-                "{latestTranscript}"
+                "{userPartial}"
               </motion.p>
             )}
           </AnimatePresence>
 
-          {/* Mode toggle (low prominence) */}
+          {/* Mode toggle */}
           <button
-            onClick={() => setVoiceMode(v => !v)}
+            onClick={() => setTypingMode(v => !v)}
             className="mt-4 inline-flex items-center gap-1.5 text-xs transition-opacity hover:opacity-80"
             style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}
           >
-            {voiceMode ? (
-              <>
-                <Type className="h-3 w-3" />
-                type instead
-              </>
-            ) : (
+            {typingMode ? (
               <>
                 <Mic className="h-3 w-3" />
                 back to voice
+              </>
+            ) : (
+              <>
+                <Type className="h-3 w-3" />
+                type instead
               </>
             )}
           </button>
@@ -507,45 +478,15 @@ export function OnboardingChatPage() {
         </div>
       </div>
 
-      {/* Dots at the base */}
       <div className="pb-8 pt-4">
         {grid && <CoverageDots grid={grid} justFilled={justFilled} />}
       </div>
 
-      {voiceMode && liveReady && (
+      {!typingMode && liveReady && (
         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.25 }}>
           Say "skip" to move on
         </div>
       )}
     </div>
-  )
-}
-
-// ── Inline visualizer (just a pulsing mic — Live does the audio work) ─────
-function LiveVisualizer({ liveReady, processing }: { liveReady: boolean; processing: boolean }) {
-  if (!liveReady) {
-    return (
-      <div className="flex flex-col items-center gap-3 text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
-        <Loader2 className="h-5 w-5 animate-spin opacity-60" />
-        <span className="opacity-60">Connecting voice…</span>
-      </div>
-    )
-  }
-  return (
-    <motion.div
-      animate={{ scale: processing ? 1 : [1, 1.08, 1] }}
-      transition={{
-        duration: processing ? 0.3 : 1.6,
-        repeat: processing ? 0 : Infinity,
-        ease: 'easeInOut',
-      }}
-      className="w-20 h-20 rounded-full flex items-center justify-center"
-      style={{
-        background: 'rgba(var(--brand-primary-rgb),0.12)',
-        border: '1px solid rgba(var(--brand-primary-rgb),0.3)',
-      }}
-    >
-      <Mic className="h-8 w-8" style={{ color: 'var(--brand-primary)' }} />
-    </motion.div>
   )
 }

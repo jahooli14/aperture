@@ -9,6 +9,7 @@
  *   GET  ?resource=session-brief&projectId= — AI project briefing on open
  *   POST ?resource=onboarding-start         — Bootstrap a coverage grid for the contextual onboarding chat
  *   POST ?resource=onboarding-turn          — Run the planner for one onboarding turn
+ *   POST ?resource=onboarding-observe       — Observe-only planner call (no next-question gen) for the Live API hybrid
  *   POST ?resource=onboarding-token         — Mint an ephemeral Live API token for the browser
  */
 
@@ -25,6 +26,7 @@ import {
   newlyFilledSlots,
   computeStoppingHint,
   ANCHOR_QUESTION,
+  SLOT_CATALOGUE,
 } from './_lib/onboarding/coverage.js'
 import { MODELS } from './_lib/models.js'
 import type { CoverageGrid, CoverageSlotId } from '../src/types'
@@ -62,6 +64,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'POST' && resource === 'onboarding-turn') {
     return handleOnboardingTurn(req, res)
+  }
+
+  if (req.method === 'POST' && resource === 'onboarding-observe') {
+    return handleOnboardingObserve(req, res)
   }
 
   if (req.method === 'POST' && resource === 'onboarding-token') {
@@ -480,6 +486,139 @@ async function handleOnboardingTurn(req: VercelRequest, res: VercelResponse) {
   }
 }
 
+function isOnboardingSkipTranscript(t: string | undefined | null): boolean {
+  if (!t) return true
+  const cleaned = t.trim().toLowerCase()
+  if (cleaned.length === 0) return true
+  if (/^(skip|pass|dunno|i don'?t know|no idea|nothing|idk)\.?$/.test(cleaned)) return true
+  const words = cleaned.split(/\s+/).filter(w => w.length > 2)
+  if (words.length < 3) return true
+  return false
+}
+
+// ── Observe (Live API hybrid mode) ─────────────────────────────────────────
+// The Live model runs the conversation; our planner runs in parallel after
+// each turn just to update slot confidences so the coverage dots fill
+// accurately and the reveal analysis has dense signal. We pass both the
+// user's transcript AND the model's utterance, so the planner can see what
+// was actually asked (since the model decides its own questions).
+
+async function handleOnboardingObserve(req: VercelRequest, res: VercelResponse) {
+  try {
+    const { grid, user_transcript, model_utterance } = (req.body || {}) as {
+      grid: CoverageGrid
+      user_transcript: string
+      model_utterance: string
+    }
+
+    if (!grid || !grid.slots || !Array.isArray(grid.turns)) {
+      return res.status(400).json({ error: 'Invalid grid' })
+    }
+
+    const isSkipped = isOnboardingSkipTranscript(user_transcript)
+    const transcript = isSkipped ? '' : (user_transcript || '').trim()
+    const question = (model_utterance || '').trim() || '(question)'
+
+    const slotCatalogue = Object.values(SLOT_CATALOGUE)
+      .map(s => `- ${s.id}: ${s.what_we_want}`)
+      .join('\n')
+
+    const filledSummary = Object.values(grid.slots)
+      .filter(s => s.confidence >= 0.6)
+      .map(s => `- ${s.id}: ${s.grounding_phrases.slice(0, 3).join(' / ')}`)
+      .join('\n') || '(none yet)'
+
+    // Cheap observe prompt — only slot updates, no next-question generation.
+    const prompt = `You are observing an onboarding voice chat. Your ONLY job is to update a coverage grid based on the latest turn — no questions, no chat.
+
+COVERAGE SLOTS:
+${slotCatalogue}
+
+CURRENTLY FILLED (confidence >= 0.6):
+${filledSummary}
+
+LATEST TURN:
+Assistant asked: "${question}"
+User replied: "${transcript || '(empty / skipped)'}"
+
+Identify which slots the user's reply filled or strengthened. Return ONLY JSON:
+
+{
+  "slot_updates": {
+    "<slot_id>": { "confidence": 0.0-1.0, "grounding_phrases": ["exact phrase from user"] }
+  },
+  "depth_signal": "high" | "medium" | "low"
+}
+
+Rules:
+- Only include slots whose confidence actually changed.
+- grounding_phrases MUST be exact substrings of the user's reply (anti-hallucination).
+- If the user's reply is empty / skipped, return slot_updates: {} and depth_signal: "low".
+- depth_signal = "high" if the user said something rich and worth probing deeper; "low" if thin.`
+
+    let raw: string
+    try {
+      raw = await generateText(prompt, {
+        maxTokens: 400,
+        temperature: 0.3,
+        responseFormat: 'json',
+        model: MODELS.DEFAULT_CHAT,
+      })
+    } catch (err: any) {
+      console.error('[utilities/onboarding-observe] planner call failed:', err?.message)
+      return res.status(200).json({
+        grid,
+        newly_filled_slots: [],
+        stopping_hint: computeStoppingHint(grid, null),
+      })
+    }
+
+    let parsed: any
+    try {
+      parsed = JSON.parse(raw)
+    } catch {
+      parsed = { slot_updates: {}, depth_signal: 'medium' }
+    }
+
+    // Build a fake decision object and run through applyDecisionToGrid for
+    // consistency with the non-hybrid path.
+    const decision = {
+      slot_updates: parsed.slot_updates || {},
+      depth_signal: parsed.depth_signal || 'medium',
+      next_move: 'deepen' as const,
+      next_slot_target: null,
+      next_question: null,
+      reframe_mode: 'deepen' as const,
+      reframe_text: '',
+      should_stop: false,
+    }
+
+    const nextGrid = applyDecisionToGrid(grid, {
+      question,
+      transcript,
+      target_slot: null, // Live decides its own targets
+      skipped: isSkipped,
+      decision,
+    })
+
+    const filled = newlyFilledSlots(grid, nextGrid)
+    const stopping_hint = computeStoppingHint(nextGrid, decision.depth_signal)
+
+    return res.status(200).json({
+      grid: stopping_hint.should_stop
+        ? { ...nextGrid, completed_at: new Date().toISOString() }
+        : nextGrid,
+      newly_filled_slots: filled,
+      stopping_hint,
+    })
+  } catch (err: any) {
+    console.error('[utilities/onboarding-observe]', err?.message, err?.stack)
+    return res.status(500).json({ error: 'Observe failed' })
+  }
+}
+
+// ── Ephemeral Live API token ───────────────────────────────────────────────
+
 async function handleOnboardingToken(_req: VercelRequest, res: VercelResponse) {
   try {
     if (!process.env.GEMINI_API_KEY) {
@@ -492,11 +631,11 @@ async function handleOnboardingToken(_req: VercelRequest, res: VercelResponse) {
       httpOptions: { apiVersion: 'v1alpha' },
     })
 
-    // 30-min total lifetime, 5-min window to start a new session. Single use.
-    // No liveConnectConstraints — they enforce an EXACT match on the client's
-    // connect config, and our client adds voice/system-prompt/transcription
-    // settings the constraints can't anticipate, which produces a 401 on
-    // handshake. The token is still tightly scoped via uses:1 + expireTime.
+    // 30-min total lifetime, 5-min handshake window. Single use.
+    // No liveConnectConstraints — they enforce an exact match on the client's
+    // connect config, which breaks when the client adds speechConfig, system
+    // instructions, transcription configs, etc. (→ 401 on handshake). Token
+    // is still tightly scoped via uses:1 + expireTime.
     const expireTime = new Date(Date.now() + 30 * 60 * 1000).toISOString()
     const newSessionExpireTime = new Date(Date.now() + 5 * 60 * 1000).toISOString()
 
@@ -518,16 +657,6 @@ async function handleOnboardingToken(_req: VercelRequest, res: VercelResponse) {
     console.error('[utilities/onboarding-token]', err?.message)
     return res.status(500).json({ error: 'Token mint failed' })
   }
-}
-
-function isOnboardingSkipTranscript(t: string | undefined | null): boolean {
-  if (!t) return true
-  const cleaned = t.trim().toLowerCase()
-  if (cleaned.length === 0) return true
-  if (/^(skip|pass|dunno|i don'?t know|no idea|nothing|idk)\.?$/.test(cleaned)) return true
-  const words = cleaned.split(/\s+/).filter(w => w.length > 2)
-  if (words.length < 3) return true
-  return false
 }
 
 // ── Session Brief ──────────────────────────────────────────────────────────
