@@ -10,6 +10,8 @@ Replace the static 5-voice-question onboarding with an adaptive, two-way voice c
 
 All IDs verified against https://ai.google.dev/gemini-api/docs/models on 2026-04-13.
 
+**Hard rule: never hardcode model IDs.** All references resolve through `api/_lib/models.ts` (central `MODELS` export). The Live model is added there as `MODELS.FLASH_LIVE`. `MODELS.PRO` is added as a reserved escape hatch but unused in v1.
+
 | Role | Model | Why |
 |---|---|---|
 | Conversational loop (audio-in / audio-out, VAD, reframe + segue) | `gemini-3.1-flash-live-preview` | Native audio, low latency, built-in turn detection |
@@ -175,6 +177,25 @@ Strength: "map" is visually evocative and matches the intersections UI. "Where y
 Strength: punchier, more emotional. Risk: slightly more casual than the rest of the app's tone.
 
 **My pick: A.** Keeps "a few minutes" vague (no countdown pressure), names the outcome (connections, patterns), and "already care about" is low-friction — user doesn't feel they need to prepare.
+
+### Curiosity-forward alternative (owner's instinct)
+
+User floated **"What's your hidden depth?"** as a headline — pure curiosity hook, low word-count, very tap-worthy. Worth taking seriously. The risk: "hidden depth" is abstract and slightly BuzzFeed-quiz-adjacent; it also lightly implies Aperture will *tell them* what their hidden depth is, which is a promise we don't strictly deliver (we surface connections, not a personality verdict).
+
+Hybrid I'd suggest, which keeps the pull of "hidden" + curiosity while grounding the outcome:
+
+**D. "The hidden shape of what you care about."**
+> *The hidden shape of what you care about.*
+> *Talk for a few minutes. Aperture finds the threads you've been missing.*
+> CTA: **Start talking**
+
+"Hidden shape" retains the intrigue of "hidden depth" but pre-commits to a concrete deliverable (shape / threads / connections) that the reveal actually renders via the intersection cards. Keeps the tap-worthy first line.
+
+**Final recommendation:** ship D as the primary hook, with A as a fallback to A/B test against later. C stays in the back pocket.
+
+### Chosen voice
+
+Default to **Kore** on the Live API — warm, grounded, gender-neutral-ish, fits the reflective tone. Not final; easy to swap once we dogfood. Voice is a single string constant in the Live session config so changing it is a one-line edit.
 
 ### No visible timer
 
