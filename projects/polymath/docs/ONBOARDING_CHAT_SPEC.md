@@ -8,29 +8,28 @@ Replace the static 5-voice-question onboarding with an adaptive, two-way voice c
 
 ## Implementation status
 
-**Current — shipped.** Full adaptive planner + coverage grid + dots + skip handling + typing fallback + per-turn foundational memory saves. Voice layer uses:
+**Current — shipped (Option C hybrid).** The Gemini Live API (`gemini-3.1-flash-live-preview`) runs the conversation directly in the browser. Kore voice, native VAD, native input+output transcription, sub-second latency. All the onboarding intelligence — anchor question, 6 coverage slots, reframe style, stopping criteria, tone rules — lives in the Live model's **system instruction**. The model decides what to ask and speaks it naturally.
 
-- **Input:** `MediaRecorder` capture + existing `/api/memories?action=transcribe` (Gemini STT)
-- **Output:** browser `SpeechSynthesis` with a female-voice preference (Google UK English Female / Samantha / Karen / Moira / Tessa, falling back to any en-GB or en-US voice)
+Aperture's coverage planner remains, but in **observe mode**. After each turn completes, we send both transcripts (user + model) to `POST /api/utilities?resource=onboarding-observe`; it updates slot confidences so the dots animate and the final reveal analysis has rich coverage data. The observer never talks back to the model — it's a passive listener that the client uses to decide when to close the session.
 
-### Why not Gemini Live API (attempted, reverted)
+### Why this shape
 
-Live API (`gemini-3.1-flash-live-preview`) was tried for audio-to-audio magic but proved architecturally incompatible with the design:
+Earlier attempts had the planner try to *dictate* what the Live model said (feeding it text to speak via `sendRealtimeInput({ text })`). That failed hard: native audio models are trained to be conversational — they treat any text input as a user message and *respond* to it rather than speaking it. The system instruction couldn't reliably override that prior. Option C sidesteps the fight entirely: Live generates its own utterances; the planner just watches.
 
-1. The native audio model is trained to be conversational. Sending text via `sendRealtimeInput({ text })` makes the model treat it as a user message and **respond** to it (often with "as an AI I don't experience time…" style riffs) rather than reading it aloud verbatim. The system instruction couldn't reliably override this — we'd routinely see the model paraphrase or answer the planner's questions itself.
-2. Sessions hit intermittent `1006` abnormal WebSocket closures.
-3. `liveConnectConstraints` on ephemeral tokens enforce an exact match with the client's connect config — any additional fields (speechConfig, systemInstruction, transcription configs, realtimeInputConfig) caused 401s.
-
-We care more about the planner staying authoritative — the user hears exactly what the coverage planner wrote — than about 800ms voice-to-voice latency. Swapping the voice layer is localised to `LiveVoiceCapture.tsx`; the planner, coverage grid, dots, skip handling and analysis are unchanged. If a clean server→browser streaming TTS path opens up (`gemini-2.5-flash-preview-tts` with a chunked endpoint, or a future Live API "read-aloud" mode), it can be swapped back in behind the same component interface.
+Trade-off accepted: we lose deterministic "this exact reframe, this exact question" control. The model might paraphrase, reorder slots, or riff. In exchange we get actual audio-to-audio magic. If the model drifts badly in dogfood, the system instruction is a one-file edit.
 
 ### Architecture summary
 
 | Layer | Implementation |
 |---|---|
-| Mic capture | `MediaRecorder` via `useMediaRecorderVoice` hook (webm/opus → mp4 fallback) |
-| Transcription | `POST /api/memories?action=transcribe` (Gemini STT) |
-| TTS | `window.speechSynthesis` with female-voice preference |
-| Brain | `POST /api/utilities?resource=onboarding-turn` runs the flash-lite planner and returns reframe + next-question text |
+| Voice transport | `@google/genai` v1alpha → `ai.live.connect()` WebSocket; PCM 16 kHz mono in, 24 kHz mono out |
+| Mic capture | AudioWorklet (`/public/onboarding-mic-worklet.js`) resampling device sample rate → 16 kHz s16le, ~100 ms chunks |
+| TTS | Native audio output from the Live model (Kore voice) |
+| VAD | Native (`automaticActivityDetection`, low sensitivity, 800 ms silence) |
+| Transcription | Native `inputAudioTranscription` + `outputAudioTranscription` |
+| Brain | **The Live model itself**, guided by a system instruction containing the anchor question, coverage slot list, reframe rules, tone, and stopping criteria |
+| Observer | `POST /api/utilities?resource=onboarding-observe` — flash-lite runs after each turn to update slot confidences from the user's transcript (observer only — doesn't feed anything back to Live) |
+| Auth | `POST /api/utilities?resource=onboarding-token` mints single-use 30-min ephemeral tokens; `GEMINI_API_KEY` never reaches the browser |
 | Final analysis | `POST /api/utilities?resource=analyze` with the full `coverage_grid` payload → `OnboardingAnalysis` consumed by `RevealSequence` |
 
 All onboarding endpoints live under `api/utilities.ts` to respect the Vercel 12-function cap.
