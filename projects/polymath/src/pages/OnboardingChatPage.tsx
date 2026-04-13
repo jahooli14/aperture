@@ -15,7 +15,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, Type, Mic, Loader2 } from 'lucide-react'
-import { LiveVoiceCapture, type LiveVoiceCaptureHandle } from '../components/onboarding/LiveVoiceCapture'
+import { LiveVoiceCapture, type LiveVoiceCaptureHandle, type LiveVoiceStatus } from '../components/onboarding/LiveVoiceCapture'
 import { CoverageDots } from '../components/onboarding/CoverageDots'
 import { BookshelfStep } from '../components/onboarding/BookshelfStep'
 import { RevealSequence } from '../components/onboarding/RevealSequence'
@@ -49,6 +49,7 @@ export function OnboardingChatPage() {
   const [typingDraft, setTypingDraft] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [liveReady, setLiveReady] = useState(false)
+  const [liveStatus, setLiveStatus] = useState<LiveVoiceStatus>('connecting')
 
   const [books, setBooks] = useState<BookSearchResult[]>([])
   const [analysis, setAnalysis] = useState<OnboardingAnalysis | null>(null)
@@ -356,10 +357,12 @@ export function OnboardingChatPage() {
       {/* Mounted once for the whole conversation. Live drives the chat. */}
       <LiveVoiceCapture
         ref={liveRef}
+        hideVisualizer
         onTurnComplete={handleTurnComplete}
         onModelSpeaking={handleModelSpeaking}
         onUserSpeaking={handleUserSpeaking}
         onReady={handleLiveReady}
+        onStatusChange={setLiveStatus}
         onError={handleLiveError}
       />
 
@@ -399,8 +402,9 @@ export function OnboardingChatPage() {
                   <Loader2 className="h-5 w-5 animate-spin opacity-60" />
                   <span className="opacity-60">Connecting voice…</span>
                 </div>
-              ) : null}
-              {/* The LiveVoiceCapture component renders its own mic visualizer above, so we don't duplicate it here */}
+              ) : (
+                <TurnIndicator status={liveStatus} />
+              )}
             </div>
           ) : (
             <div className="mb-6">
@@ -487,6 +491,60 @@ export function OnboardingChatPage() {
           Say "skip" to move on
         </div>
       )}
+    </div>
+  )
+}
+
+// ── TurnIndicator ──────────────────────────────────────────────────────────
+// A clear, prominent visual cue for whose turn it is. Three states:
+//   - speaking  → Aperture is talking (don't speak over it, but you can)
+//   - listening → your turn (mic is hot, take your time)
+//   - thinking  → bridging silence after you finished, before Aperture replies
+function TurnIndicator({ status }: { status: LiveVoiceStatus }) {
+  const speaking = status === 'speaking'
+  const listening = status === 'listening' || status === 'ready'
+
+  // The visual: a soft ring that pulses when listening, glows steady when
+  // Aperture is speaking. Mic icon in the middle.
+  return (
+    <div className="flex flex-col items-center gap-3 select-none">
+      <motion.div
+        animate={{
+          scale: listening ? [1, 1.06, 1] : 1,
+          boxShadow: speaking
+            ? '0 0 36px 4px rgba(var(--brand-primary-rgb), 0.32)'
+            : listening
+              ? '0 0 18px 0 rgba(var(--brand-primary-rgb), 0.18)'
+              : '0 0 0 0 rgba(0,0,0,0)',
+        }}
+        transition={{
+          duration: listening ? 1.8 : 0.4,
+          repeat: listening ? Infinity : 0,
+          ease: 'easeInOut',
+        }}
+        className="w-20 h-20 rounded-full flex items-center justify-center"
+        style={{
+          background: 'rgba(var(--brand-primary-rgb), 0.10)',
+          border: `1px solid rgba(var(--brand-primary-rgb), ${speaking ? 0.6 : 0.3})`,
+        }}
+      >
+        <Mic
+          className="h-8 w-8"
+          style={{
+            color: 'var(--brand-primary)',
+            opacity: speaking ? 0.55 : 1,
+          }}
+        />
+      </motion.div>
+      <span
+        className="text-[11px] uppercase tracking-[0.18em] font-medium"
+        style={{
+          color: 'var(--brand-text-secondary)',
+          opacity: speaking ? 0.45 : listening ? 0.7 : 0.3,
+        }}
+      >
+        {speaking ? 'Aperture' : listening ? 'your turn' : '\u00A0'}
+      </span>
     </div>
   )
 }

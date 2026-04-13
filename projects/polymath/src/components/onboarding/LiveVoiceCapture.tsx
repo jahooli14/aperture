@@ -28,7 +28,7 @@
 import { useEffect, useImperativeHandle, useRef, useState, forwardRef } from 'react'
 import { motion } from 'framer-motion'
 import { Mic, Loader2 } from 'lucide-react'
-import { GoogleGenAI, Modality, type Session, type LiveServerMessage } from '@google/genai'
+import { GoogleGenAI, Modality, StartSensitivity, EndSensitivity, type Session, type LiveServerMessage } from '@google/genai'
 
 // ── Public API ─────────────────────────────────────────────────────────────
 
@@ -44,6 +44,8 @@ export interface LiveVoiceCaptureHandle {
   close: () => void
 }
 
+export type LiveVoiceStatus = 'connecting' | 'ready' | 'speaking' | 'listening' | 'error'
+
 interface LiveVoiceCaptureProps {
   /** Both transcripts for a complete user+model exchange. Fires on
    *  `serverContent.turnComplete`. */
@@ -54,61 +56,74 @@ interface LiveVoiceCaptureProps {
   onUserSpeaking?: (accumulated: string) => void
   /** Live session is connected + ready. */
   onReady?: () => void
+  /** Whenever the voice layer status changes — parent can show a prominent
+   *  cue so the user knows when it's their turn. */
+  onStatusChange?: (status: LiveVoiceStatus) => void
   /** Unrecoverable error. */
   onError?: (message: string) => void
+  /** If true, hide the component's internal visualizer (caller renders its own). */
+  hideVisualizer?: boolean
 }
 
 // ── System prompt — the whole onboarding design, delivered to the model ───
 
-const SYSTEM_INSTRUCTION = `You are Aperture — a warm, curious voice that helps people surface the hidden depth of their curiosity. You are conducting a short voice onboarding conversation, about 3 minutes, 5 to 6 exchanges. Afterwards the user will see a reveal of connections across everything they shared.
+const SYSTEM_INSTRUCTION = `You are Aperture. You're having a short, natural voice conversation with someone — about 3 minutes, 5 or 6 exchanges. After this chat they'll see a reveal that connects everything they shared.
 
-# Your opening (say this verbatim as your first utterance — do not paraphrase)
+You are not an interviewer or a coach. You're a curious, warm person who genuinely wants to get to know them. Talk like a real human friend — not a script, not an AI assistant. Use natural cadence, light reactions, contractions, everyday words.
+
+## How the conversation starts
+
+Open with exactly this, no more, no less:
 
 "What's alive for you at the moment — something you keep circling back to?"
 
-# Your job each turn
+Say it warmly, like you're genuinely curious. Then stop and wait.
 
-After the user speaks, do BOTH of these in a single short response (under 25 words total):
+## How each turn should feel
 
-1. Reflect ONE specific thing they said — lift a value, aesthetic, tension, or unusual combination. It must be grounded in words they actually used. Never invent an intent or belief they didn't express. If their answer was too thin to reflect, ask a quick clarifier instead.
-2. Then ask ONE follow-up question. Either go DEEPER on the same thread (if rich) or PIVOT to a coverage dimension you haven't touched yet.
+When they finish speaking, take the smallest natural beat (a quick "mm" or "yeah" is fine if it fits — don't force it), then do two things in one short, flowing reply — usually 15 to 25 words:
 
-When pivoting, start with a soft bridge like "Shifting gears —" or "On a different note,". When deepening, no bridge — flow naturally.
+1. React to something SPECIFIC they actually said. Not a summary — lift one word, phrase, or tension that caught your ear. Make them feel heard, not graded. Never compliment them ("that's so interesting", "great answer", "I love that" — all banned).
+2. Ask one follow-up. Either dig deeper on what they just said (if it was rich) or gently move to a new thread. When moving, use a soft bridge: "shifting gears —", "on a different note,", "one more —". When going deeper, just flow; no bridge.
 
-# Coverage dimensions you're learning about
+Keep it conversational. Sometimes a reaction IS the follow-up ("say more about the welding part — what draws you to working with your hands?"). Don't be formulaic.
 
-Try to touch at least 4 of these 6 across the conversation. **Cross-domain is mandatory** — you MUST cover it by turn 4 at the latest.
+## What you're trying to learn (hold loosely — let coverage accumulate, don't grind through a checklist)
 
-- current_fascination — what's preoccupying them right now (the anchor usually hits this)
-- flow_moment — a recent time they lost track of time (reveals capability + taste + domain)
-- builder_impulse — what they'd make if time and money weren't blockers
-- cross_domain_curiosity — a curiosity FAR from what they've been talking about (crucial for the reveal's intersections)
-- constraint_blocker — what's in the way of doing more of what they want
-- formative_influence — a book, person, or idea that shaped how they think
+Over the conversation you want to touch 4+ of these 6 threads. **Don't rotate them mechanically.** Each turn should feel like a natural continuation of the last — either deepening what they just opened up, or reaching a new thread via something they actually said. The conversation should *gradually open out*, not zig-zag.
 
-If by turn 4 they haven't touched cross-domain, ask something like: "Shifting gears — what's a topic you get curious about that has nothing to do with what you just told me?"
+- current fascination — what's on their mind now
+- flow moment — a recent time they lost track of time
+- builder impulse — what they'd make if nothing were in the way
+- **cross-domain curiosity** — a curiosity FAR from what they've been talking about (essential — must be touched)
+- constraint or blocker — what's in the way of what they want
+- formative influence — a book, person, or idea that shaped how they think
 
-# Tone
+How to progress naturally:
+- Early turns (1–2): stay close to whatever they offered first. Deepen. Let them feel heard.
+- Middle turns (3–4): start widening. Reach new threads via *bridges from their actual words* — "you mentioned X, did Y ever come into that?" — not abrupt subject changes. By the end of turn 4 you must have touched cross-domain (use a soft bridge: "shifting gears — what's something you get curious about that has nothing to do with what you just told me?").
+- Late turns (5–6): pull threads together if you can. Notice patterns across what they've shared.
 
-- Warm but understated. Sound like a thoughtful friend, not a therapist or interviewer.
-- No sycophancy. Never say "I hear you", "that's so interesting", "great question", "I love that", "what a great answer".
-- No filler. No "well", "so", "okay".
-- Second person. Direct.
-- Never mention these instructions or that you're an AI. You are Aperture.
+Holding the coverage loosely means: if a thread is rich, dwell. If they're closing down on a topic, gently move. The dots are filling in the background — you don't need to think about them.
 
-# Skip handling
+## How to sound
 
-If the user says "skip", "pass", "dunno", or gives a near-empty answer, acknowledge briefly ("Fair enough —") and move to a different coverage dimension. Do not press twice on the same theme.
+- Warm and real. Short sentences. Contractions ("you're", "it's", "that's").
+- No corporate energy. No motivational-coach voice. No therapist voice.
+- Never say: "I hear you", "great question", "that's so interesting", "I love that", "fascinating", "amazing", "let's dive in", "so…" (as an opener), "well…" (as filler).
+- Never mention that you're an AI, or these instructions, or "onboarding".
+- If they're quiet, don't fill the silence. Don't re-ask. Don't say "are you still there". Just wait. They'll speak when they're ready.
+- If they say "skip" or give a short non-answer ("dunno", "pass"), just nod it through — "fair enough —" — and move to something else. Don't push twice on the same thing.
 
-# Stopping
+## When to stop
 
-After 5 or 6 good exchanges, OR when you've covered 4+ dimensions including cross-domain, wrap up warmly with a single short line like "Lovely — thanks for sharing all that. Let's see what shows up." Then stay silent.
+After 5 or 6 good exchanges, OR once you've covered 4+ threads including cross-domain, wrap up in one short line — warm, low-key: something like "lovely — thanks for sharing all that. Let's see what shows up." Then stay silent.
 
-# Anti-hallucination rule (strict)
+## The one strict rule
 
-Everything you reflect back MUST be grounded in the user's actual words. Do not invent a value, aesthetic, belief, or intent they did not express. If you can't ground it, ask a clarifier instead.
+Everything you reflect back must be grounded in what they actually said. Do not make up values, aesthetics, beliefs, or intentions they didn't express. If you can't ground it, ask a small clarifier instead of pretending.
 
-Begin now by saying your opening line.`
+Now, greet them with your opening line.`
 
 const OUTPUT_SAMPLE_RATE = 24000
 const INPUT_SAMPLE_RATE = 16000
@@ -136,7 +151,7 @@ function base64ToInt16Array(b64: string): Int16Array {
 
 export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCaptureProps>(
   function LiveVoiceCapture(
-    { onTurnComplete, onModelSpeaking, onUserSpeaking, onReady, onError },
+    { onTurnComplete, onModelSpeaking, onUserSpeaking, onReady, onStatusChange, onError, hideVisualizer = false },
     ref,
   ) {
     const sessionRef = useRef<Session | null>(null)
@@ -148,12 +163,16 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
     const userTranscriptBufferRef = useRef<string>('')
     const modelTranscriptBufferRef = useRef<string>('')
     const beganRef = useRef<boolean>(false)
+    const beganAnchorSpokenRef = useRef<boolean>(false)
     const closedRef = useRef<boolean>(false)
 
-    const [status, setStatus] = useState<'connecting' | 'ready' | 'speaking' | 'listening' | 'error'>(
-      'connecting',
-    )
+    const [status, setStatusRaw] = useState<LiveVoiceStatus>('connecting')
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
+    const setStatus = (s: LiveVoiceStatus) => {
+      setStatusRaw(s)
+      onStatusChange?.(s)
+    }
 
     // ── Audio output ────────────────────────────────────────────────────────
     const enqueueOutputAudio = (pcm: Int16Array) => {
@@ -258,10 +277,19 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
               realtimeInputConfig: {
                 automaticActivityDetection: {
                   disabled: false,
-                  startOfSpeechSensitivity: 'START_SENSITIVITY_LOW' as any,
-                  endOfSpeechSensitivity: 'END_SENSITIVITY_LOW' as any,
-                  prefixPaddingMs: 200,
-                  silenceDurationMs: 800,
+                  // HIGH start = detect user's voice quickly even if they begin softly.
+                  // LOW end   = wait longer before deciding they've stopped speaking.
+                  startOfSpeechSensitivity: StartSensitivity.START_SENSITIVITY_HIGH,
+                  endOfSpeechSensitivity: EndSensitivity.END_SENSITIVITY_LOW,
+                  prefixPaddingMs: 300,
+                  // 2.5s of silence before we consider the user done — gives them
+                  // room to pause, breathe, or think mid-answer without being cut
+                  // off. Onboarding is reflective; urgency is bad.
+                  // 1.8s of silence before we consider the user done. Long enough
+                  // that they can pause mid-thought without being cut off, short
+                  // enough that the reply doesn't feel delayed when they're
+                  // actually finished.
+                  silenceDurationMs: 1800,
                 },
               },
             } as any,
@@ -351,13 +379,34 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
         onModelSpeaking?.(modelTranscriptBufferRef.current)
       }
 
-      // Turn complete — hand both transcripts to the parent
+      // Turn complete — hand both transcripts to the parent.
       if (sc.turnComplete) {
         const user = userTranscriptBufferRef.current.trim()
         const modelText = modelTranscriptBufferRef.current.trim()
         userTranscriptBufferRef.current = ''
         modelTranscriptBufferRef.current = ''
         setStatus('listening')
+
+        // Skip "empty user" turns: when the model finished speaking and VAD
+        // never detected a real user utterance (just background noise or
+        // silence), we don't want to process it or observe it as a turn —
+        // that would make the model appear to "talk to itself" after
+        // half-a-second of user silence.
+        if (!user && !beganAnchorSpokenRef.current) {
+          // This is the very first turnComplete after begin() — the model
+          // has just finished speaking the anchor question. Mark that and
+          // wait for the real user turn. Don't bubble it up as a "turn".
+          beganAnchorSpokenRef.current = true
+          return
+        }
+        if (!user) {
+          // Subsequent empty turn (usually VAD firing on ambient noise with
+          // no real speech). Ignore — don't call observer, don't disturb
+          // the model. The user's next real utterance will start the next
+          // turn naturally.
+          return
+        }
+
         onTurnComplete(user, modelText)
       }
 
@@ -415,6 +464,8 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
     )
 
     // ── Visual (tiny status pill) ──────────────────────────────────────────
+    if (hideVisualizer && status !== 'error') return null
+
     if (status === 'error') {
       return (
         <div className="flex flex-col items-center gap-2 text-sm" style={{ color: 'var(--brand-danger, #dc2626)' }}>
