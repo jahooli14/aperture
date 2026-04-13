@@ -345,6 +345,62 @@ export interface OnboardingResponse {
   question_number: number
 }
 
+// ── Contextual onboarding chat (v2 onboarding) ─────────────────────────────
+
+export type CoverageSlotId =
+  | 'current_fascination'
+  | 'flow_moment'
+  | 'builder_impulse'
+  | 'cross_domain_curiosity'
+  | 'constraint_blocker'
+  | 'formative_influence'
+
+export type CoverageSlotStatus = 'unfilled' | 'attempted_1' | 'filled' | 'abandoned'
+
+export interface CoverageSlot {
+  id: CoverageSlotId
+  status: CoverageSlotStatus
+  confidence: number // 0–1
+  /** Phrases from user transcripts that justify this slot being filled. Anti-hallucination grounding. */
+  grounding_phrases: string[]
+  /** Turn indices where the planner targeted this slot (so we can avoid repeating exactly the same angle). */
+  attempts: number
+}
+
+export interface OnboardingTurn {
+  /** 1-indexed. Turn 1 is always the anchor question. */
+  index: number
+  question: string
+  transcript: string
+  /** Slot the planner was targeting when it asked this question. null for anchor (turn 1). */
+  target_slot: CoverageSlotId | null
+  /** Reframe mode used by the response to this turn. */
+  reframe_mode: 'orientation' | 'tension' | 'micro_clarify' | 'deepen' | null
+  reframe_text: string | null
+  skipped: boolean
+}
+
+export interface CoverageGrid {
+  slots: Record<CoverageSlotId, CoverageSlot>
+  turns: OnboardingTurn[]
+  /** Random permutation of dot indices 0..5 mapped to slot ids. Generated at session start. */
+  dot_order: CoverageSlotId[]
+  started_at: string
+  completed_at: string | null
+}
+
+export interface PlannerDecision {
+  slot_updates: Partial<Record<CoverageSlotId, { confidence: number; grounding_phrases: string[] }>>
+  depth_signal: 'high' | 'medium' | 'low'
+  next_move: 'deepen' | 'pivot' | 'stop'
+  next_slot_target: CoverageSlotId | null
+  next_question: string | null
+  reframe_mode: 'orientation' | 'tension' | 'micro_clarify' | 'deepen'
+  reframe_text: string
+  /** True if we should stop immediately after delivering the reframe (no next question). */
+  should_stop: boolean
+}
+
 export interface OnboardingAnalysis {
   capabilities: string[]
   themes: string[]

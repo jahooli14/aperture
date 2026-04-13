@@ -6,6 +6,14 @@
 
 Replace the static 5-voice-question onboarding with an adaptive, two-way voice chat that gathers dense enough signal for the post-onboarding reveal (drawer projects + Weekly Intersections) to feel personal and specific. Target: ~3 minutes, but driven by coverage, not a visible timer.
 
+## Implementation status (phased)
+
+**V1 (shipped in this branch):** Full adaptive planner + coverage grid + dots + skip handling + typing fallback + per-turn foundational memory saves. Voice stack is the existing MediaRecorder → Gemini transcribe pipeline, and the reframe is spoken via browser SpeechSynthesis. All server-side logic is final.
+
+**V2 (follow-up):** Replace the voice layer only (record/transcribe/TTS) with a direct Gemini Live API client (`gemini-3.1-flash-live-preview`) for audio-to-audio with native VAD and sub-second turn latency. Swap target: `OnboardingChatPage` + (new) `LiveVoiceCapture` component. Planner, coverage, reframe prompts, dots, skip, typing, analysis are unchanged between V1 and V2.
+
+Why phased: Vercel serverless doesn't play nicely with persistent WebSockets, and the codebase had zero Live API / WS precedent. V1 is a solid working product (~2s stop-to-speak latency); V2 is a focused, isolated upgrade of the audio transport.
+
 ## Model stack
 
 All IDs verified against https://ai.google.dev/gemini-api/docs/models on 2026-04-13.
@@ -176,22 +184,13 @@ Strength: "map" is visually evocative and matches the intersections UI. "Where y
 
 Strength: punchier, more emotional. Risk: slightly more casual than the rest of the app's tone.
 
-**My pick: A.** Keeps "a few minutes" vague (no countdown pressure), names the outcome (connections, patterns), and "already care about" is low-friction — user doesn't feel they need to prepare.
+### Locked hook (v1)
 
-### Curiosity-forward alternative (owner's instinct)
-
-User floated **"What's your hidden depth?"** as a headline — pure curiosity hook, low word-count, very tap-worthy. Worth taking seriously. The risk: "hidden depth" is abstract and slightly BuzzFeed-quiz-adjacent; it also lightly implies Aperture will *tell them* what their hidden depth is, which is a promise we don't strictly deliver (we surface connections, not a personality verdict).
-
-Hybrid I'd suggest, which keeps the pull of "hidden" + curiosity while grounding the outcome:
-
-**D. "The hidden shape of what you care about."**
-> *The hidden shape of what you care about.*
-> *Talk for a few minutes. Aperture finds the threads you've been missing.*
+> **The hidden depth of your curiosity.**
+> *A few minutes of talking. Aperture maps the connections.*
 > CTA: **Start talking**
 
-"Hidden shape" retains the intrigue of "hidden depth" but pre-commits to a concrete deliverable (shape / threads / connections) that the reveal actually renders via the intersection cards. Keeps the tap-worthy first line.
-
-**Final recommendation:** ship D as the primary hook, with A as a fallback to A/B test against later. C stays in the back pocket.
+Rationale: "curiosity" is the single most accurate word for what Aperture actually indexes — intellectual territory, not life priorities (family, relationships) which the app doesn't model. Pairs "hidden depth" cleanly to carry the curiosity pull the owner was after, without over-promising a personality verdict.
 
 ### Chosen voice
 
@@ -213,14 +212,22 @@ Small, low-emphasis "type instead" text link below the mic (not a toggle, not a 
 - `OnboardingAnalysis` type — extend to carry `coverage_grid`, `grounding_phrases`, `slot_transcripts`
 - `memories` table — **every turn is saved as its own foundational memory** (not concatenated). `memory_type: 'foundational'`, tagged with the slot it filled (`slot:flow_moment` etc.), and embedded individually. Rationale: per-turn memories feed the knowledge-lake search used elsewhere in the app at higher resolution — the planner's reframe + the question that prompted the answer both go into `metadata.onboarding_context` so future retrieval has full context.
 
-## New infra to build
+## Infra built in V1
 
-- `api/onboarding-chat.ts` — Live API session broker + planner loop
-- `api/_lib/onboarding/coverage.ts` — planner prompt + grid state machine
-- `api/_lib/onboarding/reframe.ts` — reframe prompt + mode dispatcher
-- `src/pages/OnboardingChatPage.tsx` — replaces `OnboardingPage.tsx`
+- `api/onboarding-chat.ts` — planner endpoint (`?action=start` / `?action=turn`)
+- `api/_lib/onboarding/coverage.ts` — slot catalogue, planner prompt, JSON validation, grid mutation helpers, stopping heuristic
+- `api/utilities.ts` — `handleAnalyze` extended to accept `coverage_grid` alongside the legacy `responses` payload
+- `src/pages/OnboardingChatPage.tsx` — replaces `OnboardingPage.tsx` (deleted)
 - `src/components/onboarding/CoverageDots.tsx` — the random-permutation dot constellation
-- `src/components/onboarding/LiveVoiceCapture.tsx` — Live API websocket client with state machine
+- `src/types.ts` — `CoverageSlot`, `CoverageGrid`, `OnboardingTurn`, `PlannerDecision`
+- `api/_lib/models.ts` — adds `MODELS.FLASH_LIVE` (reserved for V2) + `MODELS.PRO` (reserved escape hatch)
+
+## Infra to build in V2
+
+- `src/components/onboarding/LiveVoiceCapture.tsx` — Live API websocket client (drop-in replacement for `VoiceInput` in the turn loop)
+- `api/onboarding-ephemeral-token.ts` — mints short-lived auth tokens so the client can connect to Gemini Live API directly without exposing `GEMINI_API_KEY`
+- Tear down browser SpeechSynthesis usage in `OnboardingChatPage` (Live model emits audio natively)
+- Merge reframe + next-question into a single Live-model system-prompt-driven utterance (the planner's text decision becomes a tool-call side channel)
 
 ## Rollout
 

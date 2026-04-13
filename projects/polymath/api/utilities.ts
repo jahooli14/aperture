@@ -164,16 +164,35 @@ async function handleBookSearch(req: VercelRequest, res: VercelResponse) {
 
 // ── Analyze ────────────────────────────────────────────────────────────────
 async function handleAnalyze(req: VercelRequest, res: VercelResponse) {
-  const { responses, books } = req.body as {
-    responses: Array<{ transcript: string; question_number: number }>
+  const { responses, books, coverage_grid } = req.body as {
+    responses?: Array<{ transcript: string; question_number: number }>
     books?: Array<{ title: string; author: string }>
+    /** New: adaptive onboarding chat feeds the full coverage grid. */
+    coverage_grid?: {
+      turns: Array<{
+        index: number
+        question: string
+        transcript: string
+        target_slot: string | null
+        skipped: boolean
+      }>
+      slots: Record<string, {
+        id: string
+        status: string
+        confidence: number
+        grounding_phrases: string[]
+      }>
+    }
   }
 
-  if (!responses || !Array.isArray(responses) || responses.length === 0) {
-    return res.status(400).json({ error: 'No responses provided' })
+  const hasGrid = !!coverage_grid && Array.isArray(coverage_grid.turns) && coverage_grid.turns.length > 0
+  const hasResponses = Array.isArray(responses) && responses.length > 0
+
+  if (!hasGrid && !hasResponses) {
+    return res.status(400).json({ error: 'No responses or coverage_grid provided' })
   }
 
-  const questions = [
+  const legacyQuestions = [
     "What's been on your mind lately — something you're in the middle of?",
     "What's something you made or figured out recently that felt good?",
     "Pick a topic you're genuinely curious about and just talk about it.",
@@ -182,9 +201,32 @@ async function handleAnalyze(req: VercelRequest, res: VercelResponse) {
   ]
 
   try {
-    const transcriptBlock = responses
-      .map((r) => `Q${r.question_number} ("${questions[r.question_number - 1] || ''}"): "${r.transcript}"`)
-      .join('\n\n')
+    let transcriptBlock: string
+    let coverageHint = ''
+
+    if (hasGrid) {
+      // Adaptive onboarding path — richer context (question + slot target + phrases)
+      transcriptBlock = coverage_grid!.turns
+        .filter(t => !t.skipped && t.transcript.trim().length > 0)
+        .map(t => {
+          const slotTag = t.target_slot ? ` [slot: ${t.target_slot}]` : ''
+          return `Turn ${t.index}${slotTag}\nQ: ${t.question}\nA: ${t.transcript}`
+        })
+        .join('\n\n')
+
+      const filledSlots = Object.values(coverage_grid!.slots)
+        .filter(s => s.confidence >= 0.6)
+        .map(s => `${s.id}: ${s.grounding_phrases.slice(0, 4).join(' / ')}`)
+
+      if (filledSlots.length > 0) {
+        coverageHint = `\n\nSignal the planner extracted, by dimension:\n${filledSlots.map(s => `- ${s}`).join('\n')}`
+      }
+    } else {
+      // Legacy 5-question path (kept for any unmigrated callers).
+      transcriptBlock = responses!
+        .map((r) => `Q${r.question_number} ("${legacyQuestions[r.question_number - 1] || ''}"): "${r.transcript}"`)
+        .join('\n\n')
+    }
 
     const bookBlock = books && books.length > 0
       ? `\n\nThey also shared 3 books they've enjoyed:\n${books.map((b, i) => `${i + 1}. "${b.title}" by ${b.author}`).join('\n')}`
@@ -192,9 +234,9 @@ async function handleAnalyze(req: VercelRequest, res: VercelResponse) {
 
     const prompt = `You've just listened to someone talk about their life, interests, and skills. Read between the lines — notice what connects across what they said. Be specific, not generic.
 
-Below are their responses to 5 onboarding questions, spoken out loud as voice notes — so the language is natural and conversational. ${books && books.length > 0 ? 'They also shared 3 books they\'ve enjoyed.' : ''}
+Below are their responses to an adaptive onboarding chat — spoken out loud as voice notes, so the language is natural and conversational. ${books && books.length > 0 ? 'They also shared a few books they\'ve enjoyed.' : ''}
 
-${transcriptBlock}${bookBlock}
+${transcriptBlock}${coverageHint}${bookBlock}
 
 Your job is to read deeply between the lines — not just summarise what they said, but notice what links up across the different things they talked about — stuff they probably haven't connected themselves yet.
 
