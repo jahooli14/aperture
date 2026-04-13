@@ -1,15 +1,30 @@
 /**
  * Utilities API - Consolidated endpoint for small utility functions
  *
- * Three resources in one file (respecting 12-API cap):
+ * Resources in one file (respecting 12-API cap):
  *   POST ?resource=upload-image             — Generate signed upload URL for images
  *   GET  ?resource=book-search&q=...        — Google Books auto-complete
- *   POST ?resource=analyze                  — Analyse 5 voice transcripts + books → themes, insight, project suggestions
+ *   POST ?resource=analyze                  — Analyse onboarding transcripts → themes, insight, project suggestions
+ *   POST ?resource=refine-idea              — Reshape an idea given voice feedback
+ *   POST ?resource=onboarding-start         — Bootstrap a coverage grid for the contextual onboarding chat
+ *   POST ?resource=onboarding-turn          — Run the planner for one onboarding turn
+ *   POST ?resource=onboarding-token         — Mint an ephemeral Live API token for the browser
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { GoogleGenAI } from '@google/genai'
 import { getSupabaseClient } from './_lib/supabase.js'
 import { generateText } from './_lib/gemini-chat.js'
+import {
+  newCoverageGrid,
+  runPlanner,
+  applyDecisionToGrid,
+  newlyFilledSlots,
+  computeStoppingHint,
+  ANCHOR_QUESTION,
+} from './_lib/onboarding/coverage.js'
+import { MODELS } from './_lib/models.js'
+import type { CoverageGrid, CoverageSlotId } from '../src/types'
 
 export const config = {
   api: {
@@ -36,6 +51,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'POST' && resource === 'refine-idea') {
     return handleRefineIdea(req, res)
+  }
+
+  if (req.method === 'POST' && resource === 'onboarding-start') {
+    return handleOnboardingStart(req, res)
+  }
+
+  if (req.method === 'POST' && resource === 'onboarding-turn') {
+    return handleOnboardingTurn(req, res)
+  }
+
+  if (req.method === 'POST' && resource === 'onboarding-token') {
+    return handleOnboardingToken(req, res)
   }
 
   return res.status(404).json({ error: 'Not found' })
@@ -370,4 +397,131 @@ Respond with JSON only:
     console.error('[utilities/refine-idea] Error:', error)
     return res.status(500).json({ error: 'Failed to refine idea' })
   }
+}
+
+// ── Onboarding chat — adaptive coverage planner ────────────────────────────
+
+function handleOnboardingStart(_req: VercelRequest, res: VercelResponse) {
+  try {
+    const grid = newCoverageGrid()
+    return res.status(200).json({ grid, anchor_question: ANCHOR_QUESTION })
+  } catch (err: any) {
+    console.error('[utilities/onboarding-start]', err?.message)
+    return res.status(500).json({ error: 'Onboarding start failed' })
+  }
+}
+
+async function handleOnboardingTurn(req: VercelRequest, res: VercelResponse) {
+  try {
+    const {
+      grid,
+      latest_transcript,
+      latest_question,
+      latest_target_slot,
+      skipped,
+    } = (req.body || {}) as {
+      grid: CoverageGrid
+      latest_transcript: string
+      latest_question: string
+      latest_target_slot: CoverageSlotId | null
+      skipped: boolean
+    }
+
+    if (!grid || !grid.slots || !Array.isArray(grid.turns)) {
+      return res.status(400).json({ error: 'Invalid grid' })
+    }
+    if (typeof latest_question !== 'string' || latest_question.length === 0) {
+      return res.status(400).json({ error: 'latest_question is required' })
+    }
+
+    const isSkipped = Boolean(skipped) || isOnboardingSkipTranscript(latest_transcript)
+    const transcript = isSkipped ? '' : (latest_transcript || '').trim()
+
+    const decision = await runPlanner({
+      grid,
+      latest_transcript: transcript,
+      latest_question,
+      latest_target_slot: latest_target_slot ?? null,
+      skipped: isSkipped,
+    })
+
+    const nextGrid = applyDecisionToGrid(grid, {
+      question: latest_question,
+      transcript,
+      target_slot: latest_target_slot ?? null,
+      skipped: isSkipped,
+      decision,
+    })
+
+    const filled = newlyFilledSlots(grid, nextGrid)
+    const stopping_hint = computeStoppingHint(nextGrid, decision.depth_signal)
+    const forcedStop = stopping_hint.should_stop
+
+    return res.status(200).json({
+      decision: forcedStop
+        ? { ...decision, should_stop: true, next_move: 'stop', next_question: null, next_slot_target: null }
+        : decision,
+      grid: forcedStop
+        ? { ...nextGrid, completed_at: new Date().toISOString() }
+        : nextGrid,
+      newly_filled_slots: filled,
+      stopping_hint,
+    })
+  } catch (err: any) {
+    console.error('[utilities/onboarding-turn]', err?.message, err?.stack)
+    return res.status(500).json({ error: 'Onboarding turn failed' })
+  }
+}
+
+async function handleOnboardingToken(_req: VercelRequest, res: VercelResponse) {
+  try {
+    if (!process.env.GEMINI_API_KEY) {
+      console.error('[utilities/onboarding-token] GEMINI_API_KEY missing')
+      return res.status(500).json({ error: 'Server misconfigured' })
+    }
+
+    const client = new GoogleGenAI({
+      apiKey: process.env.GEMINI_API_KEY,
+      httpOptions: { apiVersion: 'v1alpha' },
+    })
+
+    // 30-min total lifetime, 1-min window to start a new session. Single use.
+    const expireTime = new Date(Date.now() + 30 * 60 * 1000).toISOString()
+    const newSessionExpireTime = new Date(Date.now() + 60 * 1000).toISOString()
+
+    const token = await client.authTokens.create({
+      config: {
+        uses: 1,
+        expireTime,
+        newSessionExpireTime,
+        liveConnectConstraints: {
+          model: MODELS.FLASH_LIVE,
+          config: {
+            responseModalities: ['AUDIO'] as any,
+            temperature: 0.6,
+          },
+        },
+        httpOptions: { apiVersion: 'v1alpha' },
+      },
+    })
+
+    return res.status(200).json({
+      token: token.name,
+      model: MODELS.FLASH_LIVE,
+      expiresAt: expireTime,
+    })
+  } catch (err: any) {
+    console.error('[utilities/onboarding-token]', err?.message)
+    return res.status(500).json({ error: 'Token mint failed' })
+  }
+}
+
+function isOnboardingSkipTranscript(t: string | undefined | null): boolean {
+  if (!t) return true
+  const cleaned = t.trim().toLowerCase()
+  if (cleaned.length === 0) return true
+  if (/^(skip|pass|dunno|i don'?t know|no idea|nothing|idk)\.?$/.test(cleaned)) return true
+  const words = cleaned.split(/\s+/).filter(w => w.length > 2)
+  if (words.length < 3) return true
+  return false
 }
