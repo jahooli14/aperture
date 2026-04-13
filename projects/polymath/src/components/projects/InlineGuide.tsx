@@ -126,7 +126,7 @@ export function InlineGuide({
       try {
         const token = (await supabase.auth.getSession()).data.session?.access_token
         const res = await fetch(
-          `${import.meta.env.VITE_API_URL || ''}/api/session-brief?projectId=${project.id}`,
+          `${import.meta.env.VITE_API_URL || ''}/api/utilities?resource=session-brief&projectId=${project.id}`,
           { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } }
         )
         if (!res.ok) throw new Error(`${res.status}`)

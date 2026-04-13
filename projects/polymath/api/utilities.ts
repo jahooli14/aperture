@@ -6,6 +6,7 @@
  *   GET  ?resource=book-search&q=...        — Google Books auto-complete
  *   POST ?resource=analyze                  — Analyse onboarding transcripts → themes, insight, project suggestions
  *   POST ?resource=refine-idea              — Reshape an idea given voice feedback
+ *   GET  ?resource=session-brief&projectId= — AI project briefing on open
  *   POST ?resource=onboarding-start         — Bootstrap a coverage grid for the contextual onboarding chat
  *   POST ?resource=onboarding-turn          — Run the planner for one onboarding turn
  *   POST ?resource=onboarding-token         — Mint an ephemeral Live API token for the browser
@@ -14,7 +15,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { GoogleGenAI } from '@google/genai'
 import { getSupabaseClient } from './_lib/supabase.js'
+import { getUserId } from './_lib/auth.js'
 import { generateText } from './_lib/gemini-chat.js'
+import { generateEmbedding, cosineSimilarity } from './_lib/gemini-embeddings.js'
 import {
   newCoverageGrid,
   runPlanner,
@@ -63,6 +66,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'POST' && resource === 'onboarding-token') {
     return handleOnboardingToken(req, res)
+  }
+
+  if (req.method === 'GET' && resource === 'session-brief') {
+    return handleSessionBrief(req, res)
   }
 
   return res.status(404).json({ error: 'Not found' })
@@ -524,4 +531,262 @@ function isOnboardingSkipTranscript(t: string | undefined | null): boolean {
   const words = cleaned.split(/\s+/).filter(w => w.length > 2)
   if (words.length < 3) return true
   return false
+}
+
+// ── Session Brief ──────────────────────────────────────────────────────────
+// AI project briefing — replaces the static "Next Action" card.
+
+interface SessionBriefTask {
+  id: string
+  text: string
+  done: boolean
+  order: number
+  task_type?: 'ignition' | 'core' | 'shutdown'
+  completed_at?: string
+  estimated_minutes?: number
+}
+
+interface SessionBrief {
+  greeting: string
+  phase: 'shaping' | 'building' | 'closing' | 'stale' | 'fresh'
+  phaseLabel: string
+  focusSuggestion: string
+  proactiveQuestion: string
+  knowledgeNudge: string | null
+  momentum: 'rising' | 'steady' | 'fading' | 'cold'
+  completedSinceLastVisit: string[]
+  stats: {
+    totalTasks: number
+    completedTasks: number
+    daysSinceActive: number
+    progressPercent: number
+  }
+}
+
+const SESSION_BRIEF_PHASE_LABELS: Record<SessionBrief['phase'], string> = {
+  shaping: 'Shaping',
+  building: 'Building',
+  closing: 'Home Stretch',
+  stale: 'Picking Back Up',
+  fresh: 'Just Started',
+}
+
+function detectSessionBriefPhase(
+  tasks: SessionBriefTask[],
+  daysSinceActive: number,
+  projectAge: number,
+  hasGoal: boolean,
+  hasMotivation: boolean,
+): SessionBrief['phase'] {
+  const total = tasks.length
+  const done = tasks.filter(t => t.done).length
+  const progress = total > 0 ? done / total : 0
+  if (daysSinceActive >= 14) return 'stale'
+  if (projectAge <= 3 || total === 0) return 'shaping'
+  if (total <= 3 && !hasGoal && !hasMotivation) return 'shaping'
+  if (progress >= 0.75 && total >= 3) return 'closing'
+  return 'building'
+}
+
+function detectSessionBriefMomentum(
+  daysSinceActive: number,
+  recentCompletions: number,
+): SessionBrief['momentum'] {
+  if (daysSinceActive >= 14) return 'cold'
+  if (daysSinceActive >= 7) return 'fading'
+  if (recentCompletions >= 2 && daysSinceActive <= 2) return 'rising'
+  return 'steady'
+}
+
+async function findSessionBriefKnowledgeNudge(
+  projectTitle: string,
+  projectDescription: string,
+  userId: string,
+  supabase: ReturnType<typeof getSupabaseClient>,
+): Promise<string | null> {
+  const searchText = `${projectTitle} ${projectDescription || ''}`
+  let embedding: number[]
+  try {
+    embedding = await generateEmbedding(searchText)
+  } catch {
+    return null
+  }
+
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+  const { data: recentMemories } = await supabase
+    .from('memories')
+    .select('id, title, body, embedding, created_at')
+    .eq('user_id', userId)
+    .gte('created_at', sevenDaysAgo)
+    .not('embedding', 'is', null)
+
+  if (!recentMemories?.length) return null
+
+  const matches = recentMemories
+    .map(m => ({
+      title: m.title || (m.body || '').slice(0, 60),
+      score: cosineSimilarity(embedding, m.embedding as number[]),
+      created_at: m.created_at,
+    }))
+    .filter(m => m.score > 0.42)
+    .sort((a, b) => b.score - a.score)
+
+  if (matches.length === 0) return null
+
+  const best = matches[0]
+  const daysAgo = Math.floor((Date.now() - new Date(best.created_at).getTime()) / (1000 * 60 * 60 * 24))
+  const when = daysAgo === 0 ? 'today' : daysAgo === 1 ? 'yesterday' : `${daysAgo} days ago`
+  return `You captured "${best.title}" ${when} — it connects here.`
+}
+
+async function handleSessionBrief(req: VercelRequest, res: VercelResponse) {
+  const userId = await getUserId(req)
+  if (!userId) return res.status(401).json({ error: 'Sign in to access your data' })
+
+  const projectId = req.query.projectId as string
+  if (!projectId) return res.status(400).json({ error: 'projectId is required' })
+
+  const supabase = getSupabaseClient()
+  const { data: project, error } = await supabase
+    .from('projects')
+    .select('*')
+    .eq('id', projectId)
+    .eq('user_id', userId)
+    .single()
+
+  if (error || !project) {
+    return res.status(404).json({ error: 'Project not found' })
+  }
+
+  const tasks: SessionBriefTask[] = (project.metadata?.tasks as SessionBriefTask[]) || []
+  const totalTasks = tasks.length
+  const completedTasks = tasks.filter(t => t.done).length
+  const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
+
+  const now = Date.now()
+  const lastActive = project.last_active
+    ? new Date(project.last_active).getTime()
+    : new Date(project.created_at).getTime()
+  const daysSinceActive = Math.floor((now - lastActive) / (1000 * 60 * 60 * 24))
+  const projectAge = Math.floor((now - new Date(project.created_at).getTime()) / (1000 * 60 * 60 * 24))
+
+  const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000
+  const recentCompletions = tasks.filter(
+    t => t.done && t.completed_at && new Date(t.completed_at).getTime() > sevenDaysAgo,
+  )
+
+  const phase = detectSessionBriefPhase(
+    tasks,
+    daysSinceActive,
+    projectAge,
+    !!project.metadata?.end_goal,
+    !!project.metadata?.motivation,
+  )
+  const momentum = detectSessionBriefMomentum(daysSinceActive, recentCompletions.length)
+
+  const nudgePromise = findSessionBriefKnowledgeNudge(
+    project.title,
+    project.description || '',
+    userId,
+    supabase,
+  )
+
+  const incompleteTasks = tasks.filter(t => !t.done).sort((a, b) => a.order - b.order)
+  const recentCompletionTexts = recentCompletions.map(t => t.text)
+
+  const taskSummary = incompleteTasks.length > 0
+    ? `UPCOMING TASKS:\n${incompleteTasks.slice(0, 6).map((t, i) => `${i + 1}. ${t.text}${t.task_type ? ` [${t.task_type}]` : ''}`).join('\n')}`
+    : 'No tasks defined yet.'
+
+  const completionSummary = recentCompletionTexts.length > 0
+    ? `RECENTLY COMPLETED (last 7 days):\n${recentCompletionTexts.map(t => `✓ ${t}`).join('\n')}`
+    : ''
+
+  const prompt = `You are a project coach for "${project.title}". Write the opening message someone sees when they open this project. Your job is to move them closer to finishing.
+
+PROJECT: ${project.title}
+${project.description ? `DESCRIPTION: ${project.description}` : ''}
+${project.metadata?.motivation ? `WHY: ${project.metadata.motivation}` : ''}
+${project.metadata?.end_goal ? `FINISH LINE: ${project.metadata.end_goal}` : ''}
+
+PHASE: ${phase} (${SESSION_BRIEF_PHASE_LABELS[phase]})
+MOMENTUM: ${momentum}
+DAYS SINCE LAST VISIT: ${daysSinceActive}
+PROGRESS: ${completedTasks}/${totalTasks} tasks (${progressPercent}%)
+
+${taskSummary}
+${completionSummary}
+
+Write three things:
+
+1. "greeting" — 1-2 sentences in plain everyday English. Like a friend checking in, not a productivity robot. Reference something concrete: what they last did, what's next, or how long it's been. Keep it warm but direct.
+   - shaping: Point out what's missing (no goal? no tasks?) and nudge them to define it
+   - building: Name the next task and tell them to do it
+   - closing: Tell them how close they are and what's left
+   - stale: Be honest about the gap, suggest one tiny thing they could do right now
+
+2. "focusSuggestion" — One plain sentence. The ONE thing to do this session. Name the specific task. "Finish writing the outreach message" not "Continue working on communication tasks".
+
+3. "proactiveQuestion" — ONE practical question that drives toward the finish line. Not philosophical. Not abstract. Think "have you actually messaged those 10 people yet?" not "how will you frame the request to ensure alignment with your vision?"
+   - No end goal? → "What would the finished version of this actually look like?"
+   - No tasks? → "What's the first real thing you need to do?"
+   - Stuck? → "What's actually stopping you from doing [next task]?"
+   - Building? → "Is [next task] actually the right next move, or are you avoiding something harder?"
+   - Closing? → "What's the last thing standing between you and done?"
+   ALWAYS reference specific tasks/goals by name. Never be vague.
+
+Rules:
+- Plain English. Write like a real person, not a coach or an AI. No buzzwords.
+- No filler. No "Great to see you", "Welcome back", "Let's dive in".
+- Short sentences. Say it straight.
+- Always orient toward the finish line. Every message should make them think about getting this done.
+- Second person ("you").
+
+Return JSON only:
+{
+  "greeting": "your opening line",
+  "focusSuggestion": "your one-sentence focus suggestion",
+  "proactiveQuestion": "your one question"
+}`
+
+  const [aiRaw, knowledgeNudge] = await Promise.all([
+    generateText(prompt, { temperature: 0.75, maxTokens: 200, responseFormat: 'json' }),
+    nudgePromise,
+  ])
+
+  let greeting = ''
+  let focusSuggestion = ''
+  let proactiveQuestion = ''
+
+  try {
+    const parsed = JSON.parse(aiRaw)
+    greeting = (parsed.greeting || '').trim()
+    focusSuggestion = (parsed.focusSuggestion || '').trim()
+    proactiveQuestion = (parsed.proactiveQuestion || '').trim()
+  } catch {
+    greeting = 'Ready to pick up where you left off.'
+    focusSuggestion = incompleteTasks[0]?.text || 'Define what you want to build.'
+    proactiveQuestion = !project.metadata?.end_goal
+      ? 'What does done actually look like for this?'
+      : 'What would you work on if you had 30 minutes right now?'
+  }
+
+  const brief: SessionBrief = {
+    greeting,
+    phase,
+    phaseLabel: SESSION_BRIEF_PHASE_LABELS[phase],
+    focusSuggestion,
+    proactiveQuestion,
+    knowledgeNudge,
+    momentum,
+    completedSinceLastVisit: recentCompletionTexts,
+    stats: {
+      totalTasks,
+      completedTasks,
+      daysSinceActive,
+      progressPercent,
+    },
+  }
+
+  return res.json(brief)
 }
