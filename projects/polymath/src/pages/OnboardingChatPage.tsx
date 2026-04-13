@@ -1,24 +1,22 @@
 /**
- * OnboardingChatPage — Aperture's contextual onboarding chat
+ * OnboardingChatPage — Aperture's contextual onboarding chat (V2)
  *
- * Replaces the legacy 5-voice-question OnboardingPage with an adaptive,
- * planner-driven conversation. See docs/ONBOARDING_CHAT_SPEC.md.
+ * Voice transport: gemini-3.1-flash-live-preview audio-to-audio via
+ * LiveVoiceCapture. Native VAD + transcription + TTS — sub-second
+ * stop-to-speak latency.
  *
- * V1 voice stack (this file):
- *   - MediaRecorder (via VoiceInput) for capture
- *   - Existing Gemini transcribe endpoint for speech-to-text
- *   - Server-side planner (/api/onboarding-chat) for coverage + reframe
- *   - Browser SpeechSynthesis for TTS
+ * Brain (unchanged from V1): the server-side coverage planner at
+ * /api/onboarding-chat?action=turn. Live model is used purely as a voice
+ * channel that speaks whatever text the planner produces.
  *
- * V2 (follow-up): swap the three voice layers for gemini-3.1-flash-live-preview.
- * The planner / coverage / dots / skip / typing paths stay identical.
+ * See docs/ONBOARDING_CHAT_SPEC.md.
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, Type, Mic, Loader2 } from 'lucide-react'
-import { VoiceInput } from '../components/VoiceInput'
+import { LiveVoiceCapture, type LiveVoiceCaptureHandle } from '../components/onboarding/LiveVoiceCapture'
 import { CoverageDots } from '../components/onboarding/CoverageDots'
 import { BookshelfStep } from '../components/onboarding/BookshelfStep'
 import { RevealSequence } from '../components/onboarding/RevealSequence'
@@ -33,49 +31,13 @@ import type {
 
 // ── Phases ─────────────────────────────────────────────────────────────────
 type Phase =
-  | 'welcome'          // hook + CTA
-  | 'bootstrap'        // spinning up grid
-  | 'listening'        // question posed, mic open
-  | 'processing'       // transcribing + planner running
-  | 'reframing'        // reframe + next question being spoken
+  | 'welcome'          // hook + CTA (tapping it triggers user-gesture audio init)
+  | 'bootstrap'        // ephemeral token + Live session establishing + grid initialising
+  | 'turn'             // active conversation: question shown, mic hot, OR processing
   | 'completing'       // session ended, hand-off to books step
   | 'books'            // optional bookshelf
   | 'analyzing'        // final analysis call
   | 'reveal'           // existing RevealSequence
-
-// ── TTS ────────────────────────────────────────────────────────────────────
-/**
- * Speak a string via browser SpeechSynthesis. Resolves when playback ends.
- * Silent fallback if unavailable (headless browsers, strict iOS). The page
- * still shows the text visually, so users don't miss content.
- */
-function speak(text: string): Promise<void> {
-  return new Promise(resolve => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      resolve()
-      return
-    }
-    try {
-      window.speechSynthesis.cancel()
-      const utter = new SpeechSynthesisUtterance(text)
-      utter.rate = 1.02
-      utter.pitch = 1.0
-      utter.volume = 1.0
-      // Prefer a natural-sounding voice if any are installed
-      const voices = window.speechSynthesis.getVoices()
-      const preferred =
-        voices.find(v => /Google UK English Female/i.test(v.name)) ||
-        voices.find(v => /Samantha|Karen|Moira|Tessa/i.test(v.name)) ||
-        voices.find(v => /en-GB|en-US/i.test(v.lang))
-      if (preferred) utter.voice = preferred
-      utter.onend = () => resolve()
-      utter.onerror = () => resolve()
-      window.speechSynthesis.speak(utter)
-    } catch {
-      resolve()
-    }
-  })
-}
 
 // ── Component ──────────────────────────────────────────────────────────────
 export function OnboardingChatPage() {
@@ -89,39 +51,54 @@ export function OnboardingChatPage() {
   const [currentReframe, setCurrentReframe] = useState<string>('')
   const [latestTranscript, setLatestTranscript] = useState<string>('')
   const [justFilled, setJustFilled] = useState<CoverageSlotId[]>([])
-  const [voiceKey, setVoiceKey] = useState(0)
   const [typingMode, setTypingMode] = useState(false)
   const [typingDraft, setTypingDraft] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [voiceMode, setVoiceMode] = useState(true)
+  const [liveReady, setLiveReady] = useState(false)
 
   // Analysis / reveal state
   const [books, setBooks] = useState<BookSearchResult[]>([])
   const [analysis, setAnalysis] = useState<OnboardingAnalysis | null>(null)
 
-  // Turn-in-flight guard (double-submit protection)
+  // Refs
+  const liveRef = useRef<LiveVoiceCaptureHandle | null>(null)
   const inflightRef = useRef(false)
   const allTranscriptsRef = useRef<string[]>([])
+  const pendingAnchorRef = useRef<string | null>(null)
 
-  // ── Bootstrap: fetch initial grid + anchor question ─────────────────────
-  const startSession = useCallback(async () => {
-    setPhase('bootstrap')
-    setError(null)
+  // ── Bootstrap: fetch initial grid + speak anchor question ───────────────
+  const bootstrapGrid = useCallback(async () => {
     try {
       const res = await fetch('/api/onboarding-chat?action=start', { method: 'POST' })
       if (!res.ok) throw new Error('Start failed')
       const data = await res.json()
       setGrid(data.grid as CoverageGrid)
       setCurrentQuestion(data.anchor_question as string)
-      setCurrentTargetSlot(null) // anchor is untargeted
-      setPhase('listening')
-      // Speak the anchor question
-      speak(data.anchor_question).catch(() => {})
+      setCurrentTargetSlot(null)
+      pendingAnchorRef.current = data.anchor_question as string
+      setPhase('turn')
     } catch (err: any) {
       console.error('[onboarding-chat] bootstrap failed', err)
-      setError('Couldn\'t start the chat. Check your connection and try again.')
+      setError("Couldn't start the chat. Check your connection and try again.")
       setPhase('welcome')
     }
   }, [])
+
+  // Once both the Live session is ready AND the grid is loaded, speak the anchor.
+  useEffect(() => {
+    if (phase === 'turn' && liveReady && pendingAnchorRef.current && liveRef.current) {
+      const text = pendingAnchorRef.current
+      pendingAnchorRef.current = null
+      liveRef.current.say(text).catch(() => {})
+    }
+  }, [phase, liveReady])
+
+  const handleStart = useCallback(() => {
+    setPhase('bootstrap')
+    setError(null)
+    void bootstrapGrid()
+  }, [bootstrapGrid])
 
   // ── Handle a completed turn (transcript in hand) ────────────────────────
   const submitTurn = useCallback(
@@ -130,7 +107,6 @@ export function OnboardingChatPage() {
       if (!grid) return
       inflightRef.current = true
 
-      setPhase('processing')
       setLatestTranscript(rawTranscript)
 
       try {
@@ -142,15 +118,14 @@ export function OnboardingChatPage() {
               body: rawTranscript,
               memory_type: 'foundational',
               tags: currentTargetSlot
-                ? [`onboarding`, `slot:${currentTargetSlot}`]
-                : [`onboarding`, `slot:anchor`],
+                ? ['onboarding', `slot:${currentTargetSlot}`]
+                : ['onboarding', 'slot:anchor'],
             })
           } catch (memErr) {
             console.warn('[onboarding-chat] memory save failed, continuing', memErr)
           }
         }
 
-        // Run the planner.
         const res = await fetch('/api/onboarding-chat?action=turn', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -173,42 +148,33 @@ export function OnboardingChatPage() {
         setGrid(data.grid)
         setJustFilled(data.newly_filled_slots)
         setCurrentReframe(data.decision.reframe_text)
-        setPhase('reframing')
 
-        // Speak the reframe, then the next question (if any).
-        const utterances: string[] = []
-        if (data.decision.reframe_text) utterances.push(data.decision.reframe_text)
-        if (data.decision.next_question) utterances.push(data.decision.next_question)
+        // Speak the reframe (and next question, if any) via Live.
+        const utterance = [data.decision.reframe_text, data.decision.next_question]
+          .filter(Boolean)
+          .join(' ')
 
-        for (const line of utterances) {
-          // eslint-disable-next-line no-await-in-loop
-          await speak(line).catch(() => {})
+        if (utterance && liveRef.current) {
+          await liveRef.current.say(utterance).catch(() => {})
         }
-
-        // Short settle — lets dot bloom finish and user register the reframe.
-        await new Promise(r => setTimeout(r, 500))
 
         if (data.decision.should_stop || !data.decision.next_question) {
           setPhase('completing')
-          // Brief pause then hand off to books step.
           await new Promise(r => setTimeout(r, 600))
           setPhase('books')
           return
         }
 
-        // Otherwise: reset for the next turn.
+        // Reset state for the next turn (Live session keeps running).
         setCurrentQuestion(data.decision.next_question)
         setCurrentTargetSlot(data.decision.next_slot_target)
         setCurrentReframe('')
         setLatestTranscript('')
         setTypingDraft('')
         setJustFilled([])
-        setVoiceKey(k => k + 1)
-        setPhase('listening')
       } catch (err: any) {
         console.error('[onboarding-chat] turn failed', err)
-        setError('Something went wrong processing your answer. Tap to try again.')
-        setPhase('listening')
+        setError('Something went wrong processing your answer.')
       } finally {
         inflightRef.current = false
       }
@@ -216,25 +182,25 @@ export function OnboardingChatPage() {
     [grid, currentQuestion, currentTargetSlot, createMemory],
   )
 
-  // ── Voice callbacks ──────────────────────────────────────────────────────
-  const handleTranscript = useCallback(
-    (text: string) => {
-      void submitTurn(text, false)
+  // ── LiveVoiceCapture callbacks ──────────────────────────────────────────
+  const handleUserTurn = useCallback(
+    (transcript: string) => {
+      if (!voiceMode) return // ignore voice during typing-mode answers
+      if (phase !== 'turn') return
+      void submitTurn(transcript, transcript.trim().length === 0)
     },
-    [submitTurn],
+    [voiceMode, phase, submitTurn],
   )
 
-  const handleSkip = useCallback(() => {
-    void submitTurn('', true)
-  }, [submitTurn])
+  const handleLiveReady = useCallback(() => setLiveReady(true), [])
+  const handleLiveError = useCallback((msg: string) => {
+    console.error('[onboarding-chat] live error', msg)
+    setError(msg)
+  }, [])
 
   const handleTypedSubmit = useCallback(() => {
     const text = typingDraft.trim()
-    if (text.length === 0) {
-      void submitTurn('', true)
-    } else {
-      void submitTurn(text, false)
-    }
+    void submitTurn(text, text.length === 0)
   }, [typingDraft, submitTurn])
 
   // ── Books / analysis handoff ─────────────────────────────────────────────
@@ -284,14 +250,8 @@ export function OnboardingChatPage() {
     void runAnalysis([])
   }, [runAnalysis])
 
-  // Cancel any in-flight TTS when unmounting
-  useEffect(() => {
-    return () => {
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel()
-      }
-    }
-  }, [])
+  // Cleanup on unmount: LiveVoiceCapture handles its own teardown.
+  useEffect(() => () => undefined, [])
 
   // ── Welcome ─────────────────────────────────────────────────────────────
   if (phase === 'welcome') {
@@ -337,7 +297,7 @@ export function OnboardingChatPage() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.8 }}
-            onClick={() => startSession()}
+            onClick={handleStart}
             className="btn-primary px-10 py-4 text-base font-semibold inline-flex items-center gap-2"
           >
             Start talking
@@ -409,10 +369,19 @@ export function OnboardingChatPage() {
     )
   }
 
-  // ── Turn UI (listening / processing / reframing) ────────────────────────
+  // ── Turn UI ─────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen flex flex-col px-4 py-12 relative">
-      {/* Top-right: skip button (session-level skip kills the onboarding entirely) */}
+      {/* The Live session lives for the whole turn loop. Mounted once. */}
+      <LiveVoiceCapture
+        ref={liveRef}
+        onUserTurn={handleUserTurn}
+        onReady={handleLiveReady}
+        onError={handleLiveError}
+        showVisualizer={false}
+      />
+
+      {/* Top-right: exit */}
       <button
         onClick={() => navigate('/')}
         className="absolute top-6 right-6 text-xs transition-opacity hover:opacity-80"
@@ -421,12 +390,11 @@ export function OnboardingChatPage() {
         Exit
       </button>
 
-      {/* Centre stage */}
       <div className="flex-1 flex flex-col items-center justify-center">
         <div className="max-w-xl w-full text-center">
-          {/* Reframe chip (appears briefly when returned from planner) */}
+          {/* Reframe chip */}
           <AnimatePresence>
-            {phase === 'reframing' && currentReframe && (
+            {currentReframe && (
               <motion.div
                 key={currentReframe}
                 initial={{ opacity: 0, y: -6 }}
@@ -451,19 +419,15 @@ export function OnboardingChatPage() {
               className="text-2xl sm:text-3xl font-semibold leading-snug mb-10"
               style={{ color: 'var(--brand-text-primary)' }}
             >
-              {currentQuestion}
+              {currentQuestion || (liveReady ? '' : 'Connecting voice…')}
             </motion.h2>
           </AnimatePresence>
 
-          {/* Input surface: voice waveform OR typing textarea */}
-          {!typingMode ? (
-            <div className="mb-6">
-              <VoiceInput
-                key={voiceKey}
-                onTranscript={handleTranscript}
-                maxDuration={60}
-                autoSubmit
-              />
+          {/* Voice visual OR typing */}
+          {voiceMode ? (
+            <div className="mb-6 flex flex-col items-center">
+              {/* Inline visualizer mirroring the LiveVoiceCapture status */}
+              <LiveVisualizer liveReady={liveReady} processing={inflightRef.current} />
             </div>
           ) : (
             <div className="mb-6">
@@ -478,14 +442,12 @@ export function OnboardingChatPage() {
                   color: 'var(--brand-text-primary)',
                   border: '1px solid rgba(255,255,255,0.08)',
                 }}
-                disabled={phase !== 'listening'}
+                disabled={inflightRef.current}
               />
               <div className="mt-3 flex items-center justify-between text-xs">
                 <button
-                  onClick={() => {
-                    void submitTurn('', true)
-                  }}
-                  disabled={phase !== 'listening'}
+                  onClick={() => void submitTurn('', true)}
+                  disabled={inflightRef.current}
                   className="hover:opacity-80 disabled:opacity-30"
                   style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
                 >
@@ -493,7 +455,7 @@ export function OnboardingChatPage() {
                 </button>
                 <button
                   onClick={handleTypedSubmit}
-                  disabled={phase !== 'listening'}
+                  disabled={inflightRef.current}
                   className="btn-primary px-5 py-2 inline-flex items-center gap-1.5 disabled:opacity-40"
                 >
                   Send
@@ -503,9 +465,9 @@ export function OnboardingChatPage() {
             </div>
           )}
 
-          {/* Latest transcript (confirmation artefact after turn end) */}
+          {/* Latest transcript (confirmation artefact) */}
           <AnimatePresence>
-            {(phase === 'processing' || phase === 'reframing') && latestTranscript && (
+            {latestTranscript && (
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 0.6 }}
@@ -513,30 +475,29 @@ export function OnboardingChatPage() {
                 className="text-sm mt-2 italic max-w-md mx-auto"
                 style={{ color: 'var(--brand-text-secondary)' }}
               >
-                “{latestTranscript}”
+                "{latestTranscript}"
               </motion.p>
             )}
           </AnimatePresence>
 
-          {/* Typing fallback link (only in voice mode, idle state) */}
-          {!typingMode && phase === 'listening' && (
-            <button
-              onClick={() => setTypingMode(true)}
-              className="mt-4 inline-flex items-center gap-1.5 text-xs transition-opacity hover:opacity-80"
-              style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}
-            >
-              <Type className="h-3 w-3" />
-              type instead
-            </button>
-          )}
-
-          {/* Processing indicator */}
-          {phase === 'processing' && (
-            <div className="mt-4 flex items-center justify-center gap-2 text-xs" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>
-              <Loader2 className="h-3 w-3 animate-spin" />
-              <span>thinking…</span>
-            </div>
-          )}
+          {/* Mode toggle (low prominence) */}
+          <button
+            onClick={() => setVoiceMode(v => !v)}
+            className="mt-4 inline-flex items-center gap-1.5 text-xs transition-opacity hover:opacity-80"
+            style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}
+          >
+            {voiceMode ? (
+              <>
+                <Type className="h-3 w-3" />
+                type instead
+              </>
+            ) : (
+              <>
+                <Mic className="h-3 w-3" />
+                back to voice
+              </>
+            )}
+          </button>
 
           {error && (
             <p className="mt-4 text-sm" style={{ color: 'var(--brand-danger, #dc2626)' }}>
@@ -551,12 +512,40 @@ export function OnboardingChatPage() {
         {grid && <CoverageDots grid={grid} justFilled={justFilled} />}
       </div>
 
-      {/* Voice-command skip hint (subtle) */}
-      {!typingMode && phase === 'listening' && (
+      {voiceMode && liveReady && (
         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.25 }}>
           Say "skip" to move on
         </div>
       )}
     </div>
+  )
+}
+
+// ── Inline visualizer (just a pulsing mic — Live does the audio work) ─────
+function LiveVisualizer({ liveReady, processing }: { liveReady: boolean; processing: boolean }) {
+  if (!liveReady) {
+    return (
+      <div className="flex flex-col items-center gap-3 text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
+        <Loader2 className="h-5 w-5 animate-spin opacity-60" />
+        <span className="opacity-60">Connecting voice…</span>
+      </div>
+    )
+  }
+  return (
+    <motion.div
+      animate={{ scale: processing ? 1 : [1, 1.08, 1] }}
+      transition={{
+        duration: processing ? 0.3 : 1.6,
+        repeat: processing ? 0 : Infinity,
+        ease: 'easeInOut',
+      }}
+      className="w-20 h-20 rounded-full flex items-center justify-center"
+      style={{
+        background: 'rgba(var(--brand-primary-rgb),0.12)',
+        border: '1px solid rgba(var(--brand-primary-rgb),0.3)',
+      }}
+    >
+      <Mic className="h-8 w-8" style={{ color: 'var(--brand-primary)' }} />
+    </motion.div>
   )
 }

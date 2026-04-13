@@ -17,7 +17,7 @@ import type {
   CoverageSlot,
   CoverageSlotId,
   PlannerDecision,
-} from '../../src/types'
+} from '../../../src/types'
 
 // ── Slot catalogue ─────────────────────────────────────────────────────────
 
