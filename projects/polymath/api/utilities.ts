@@ -492,22 +492,19 @@ async function handleOnboardingToken(_req: VercelRequest, res: VercelResponse) {
       httpOptions: { apiVersion: 'v1alpha' },
     })
 
-    // 30-min total lifetime, 1-min window to start a new session. Single use.
+    // 30-min total lifetime, 5-min window to start a new session. Single use.
+    // No liveConnectConstraints — they enforce an EXACT match on the client's
+    // connect config, and our client adds voice/system-prompt/transcription
+    // settings the constraints can't anticipate, which produces a 401 on
+    // handshake. The token is still tightly scoped via uses:1 + expireTime.
     const expireTime = new Date(Date.now() + 30 * 60 * 1000).toISOString()
-    const newSessionExpireTime = new Date(Date.now() + 60 * 1000).toISOString()
+    const newSessionExpireTime = new Date(Date.now() + 5 * 60 * 1000).toISOString()
 
     const token = await client.authTokens.create({
       config: {
         uses: 1,
         expireTime,
         newSessionExpireTime,
-        liveConnectConstraints: {
-          model: MODELS.FLASH_LIVE,
-          config: {
-            responseModalities: ['AUDIO'] as any,
-            temperature: 0.6,
-          },
-        },
         httpOptions: { apiVersion: 'v1alpha' },
       },
     })
