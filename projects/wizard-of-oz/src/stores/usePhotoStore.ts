@@ -485,15 +485,9 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
       ownedByCurrentUser: photo.user_id === user.id,
     });
 
-    // RLS on photos limits UPDATE to rows where auth.uid() = user_id. If the
-    // user is viewing a SHARED photo (e.g. partner's upload), the update
-    // silently affects 0 rows and Supabase returns no error — the save
-    // appears to succeed but nothing actually changes. Fail loud instead.
-    if (photo.user_id !== user.id) {
-      throw new Error(
-        "You can only re-align your own photos. Ask the owner to adjust this one."
-      );
-    }
+    // Share partners can re-align each other's photos (see migration 021).
+    // We still keep the row-count check below as a backstop in case RLS ever
+    // rejects the update — that way we fail loud instead of phantom-saving.
 
     // Pick the best available URL to re-process. Signed URLs are preferred
     // because the bucket may be private.
