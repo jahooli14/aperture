@@ -63,6 +63,10 @@ interface LiveVoiceCaptureProps {
   onError?: (message: string) => void
   /** If true, hide the component's internal visualizer (caller renders its own). */
   hideVisualizer?: boolean
+  /** If true, the mic uplink is muted — no audio frames are sent to Live.
+   *  Used by the typing fallback so spurious ambient noise doesn't kick
+   *  off a VAD-driven user turn while the user is deliberately typing. */
+  muted?: boolean
 }
 
 // ── System prompt — the whole onboarding design, delivered to the model ───
@@ -169,9 +173,13 @@ function base64ToInt16Array(b64: string): Int16Array {
 
 export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCaptureProps>(
   function LiveVoiceCapture(
-    { onTurnComplete, onModelSpeaking, onUserSpeaking, onReady, onStatusChange, onError, hideVisualizer = false },
+    { onTurnComplete, onModelSpeaking, onUserSpeaking, onReady, onStatusChange, onError, hideVisualizer = false, muted = false },
     ref,
   ) {
+    // Mirror `muted` into a ref so the mic callback (set up once inside
+    // the connect effect) reads the latest value every frame.
+    const mutedRef = useRef(muted)
+    useEffect(() => { mutedRef.current = muted }, [muted])
     const sessionRef = useRef<Session | null>(null)
     const inputCtxRef = useRef<AudioContext | null>(null)
     const outputCtxRef = useRef<AudioContext | null>(null)
@@ -350,6 +358,15 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
             httpOptions: { apiVersion: 'v1alpha' },
           })
 
+          // Some versions of the @google/genai SDK fire `onopen` synchronously
+          // during the `await ai.live.connect(...)` promise — i.e. BEFORE we
+          // get a chance to store the session ref. If that happens and we
+          // immediately signal the parent via onReady, the parent's
+          // begin() ends up running against a null sessionRef and does
+          // nothing. Defer the ready signal until after the session is
+          // stored; if onopen arrived early, fire the signal manually.
+          let openedEarly = false
+
           const session = await ai.live.connect({
             model,
             config: {
@@ -384,8 +401,16 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
             callbacks: {
               onopen: () => {
                 if (cancelled) return
-                setStatus('ready')
-                onReadyRef.current?.()
+                console.info('[LiveVoice] session open')
+                if (sessionRef.current) {
+                  // Session already stored — safe to signal parent now.
+                  setStatus('ready')
+                  onReadyRef.current?.()
+                } else {
+                  // onopen fired DURING the connect await; defer the
+                  // ready signal until sessionRef.current is set below.
+                  openedEarly = true
+                }
               },
               onmessage: (message: LiveServerMessage) => {
                 handleServerMessage(message)
@@ -411,15 +436,32 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
           }
           sessionRef.current = session
 
-          // 5. Pump mic PCM into the Live session — but drop frames while the
-          //    model is speaking. Browser echo cancellation is imperfect, and
-          //    the model's own voice leaking back as "user input" makes it
-          //    interrupt itself mid-sentence or chase its own tail. Muting
-          //    the uplink during playback is the cleanest fix; the user can
-          //    still barge in — VAD re-opens as soon as playback ends.
+          // If onopen fired during the await, the ready-signal was
+          // deferred. Now that the session is stored, fire it.
+          if (openedEarly) {
+            console.info('[LiveVoice] firing deferred onReady (onopen arrived early)')
+            setStatus('ready')
+            onReadyRef.current?.()
+          }
+
+          // 5. Pump mic PCM into the Live session — but gate the uplink
+          //    whenever Aperture is audible. Browser echo cancellation is
+          //    imperfect, and the model's own voice leaking back as "user
+          //    input" makes it interrupt itself or loop on its own tail.
+          //
+          //    We gate on TWO signals: modelSpeakingRef (currently
+          //    generating) OR activePlaybackRef.length > 0 (queued audio
+          //    still playing out of the output context). The second check
+          //    is essential because turnComplete fires as soon as the
+          //    model FINISHES GENERATING — the scheduled AudioBufferSource
+          //    nodes are still playing for up to a few hundred ms after
+          //    that. Without this gate, the mic opens during that tail
+          //    and the Live model hears itself finishing its own sentence.
           workletNode.port.onmessage = (event: MessageEvent<ArrayBuffer>) => {
             if (!sessionRef.current || closedRef.current) return
+            if (mutedRef.current) return
             if (modelSpeakingRef.current) return
+            if (activePlaybackRef.current.length > 0) return
             try {
               sessionRef.current.sendRealtimeInput({
                 audio: {
@@ -486,6 +528,11 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
       if (sc.turnComplete) {
         const user = userTranscriptBufferRef.current.trim()
         const modelText = modelTranscriptBufferRef.current.trim()
+        console.info('[LiveVoice] turnComplete', {
+          user_len: user.length,
+          model_len: modelText.length,
+          anchor_spoken: beganAnchorSpokenRef.current,
+        })
         userTranscriptBufferRef.current = ''
         modelTranscriptBufferRef.current = ''
         modelSpeakingRef.current = false
@@ -522,27 +569,31 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
         begin: () => {
           if (beganRef.current) return
           const session = sessionRef.current
-          if (!session) return
+          if (!session) {
+            console.warn('[LiveVoice] begin() called before session ready — retry when onReady fires')
+            return
+          }
           beganRef.current = true
           try {
-            // Seed the conversation. We spell the opener out here AGAIN in
-            // quotes — belt and braces against the model paraphrasing the
-            // anchor question, which it otherwise sometimes does ("what's on
-            // your mind?", "what are you thinking about?", etc.). The system
-            // prompt already requires verbatim; this reinforces it.
+            // Seed an opening user turn. Keep it short and plausibly
+            // human — the Live API responds most reliably to natural
+            // speech-shaped seeds, not meta-instructions. The system
+            // prompt is what pins the verbatim opener; the seed just
+            // tips the model into its first reply.
             session.sendClientContent({
               turns: [
                 {
                   role: 'user',
-                  parts: [{
-                    text: 'Say hello now. Your first words — exactly, verbatim — must be: "Hey — what\'s something you\'ve been thinking about a lot lately?" Then stop and wait for my reply.',
-                  }],
+                  parts: [{ text: "Hi." }],
                 },
               ],
               turnComplete: true,
             } as any)
+            console.info('[LiveVoice] begin seed sent')
           } catch (err) {
             console.error('[LiveVoice] begin failed', err)
+            beganRef.current = false
+            handleError('Could not start the conversation. Refresh to try again.')
           }
         },
         sendUserText: (text: string) => {

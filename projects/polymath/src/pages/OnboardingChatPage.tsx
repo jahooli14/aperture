@@ -80,7 +80,15 @@ export function OnboardingChatPage() {
   const [typingMode, setTypingMode] = useState(false)
   const [typingDraft, setTypingDraft] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [liveReady, setLiveReady] = useState(false)
+  // A monotonically-increasing count of "live is ready right now" events.
+  // Using a counter instead of a boolean so the begin() effect re-fires
+  // cleanly on reconnection (StrictMode, dropped-socket recovery, token
+  // refresh). A boolean `liveReady` stays at `true` across reconnects and
+  // setState no-ops when the value doesn't change — which silently skips
+  // the second begin() call and leaves the model mute. The counter never
+  // no-ops.
+  const [readyCount, setReadyCount] = useState(0)
+  const liveReady = readyCount > 0
   const [liveStatus, setLiveStatus] = useState<LiveVoiceStatus>('connecting')
 
   const [books, setBooks] = useState<BookSearchResult[]>([])
@@ -88,7 +96,6 @@ export function OnboardingChatPage() {
 
   const liveRef = useRef<LiveVoiceCaptureHandle | null>(null)
   const allTranscriptsRef = useRef<string[]>([])
-  const inflightObserveRef = useRef(false)
   const shouldStopAfterTurnRef = useRef(false)
   // Named things the user mentioned during the chat — accumulated across
   // every observe call. Books are pre-populated into the BookshelfStep;
@@ -117,13 +124,81 @@ export function OnboardingChatPage() {
     }
   }, [])
 
-  // Once Live is connected AND the grid has loaded, trigger the model to
-  // begin speaking the anchor question.
+  // ── Already-onboarded guard ────────────────────────────────────────────
+  // Onboarding is a one-time experience. If this user has already done it
+  // (has at least one foundational memory tagged 'onboarding'), redirect
+  // home silently. Async + fire-and-forget; the welcome render stays
+  // snappy and just gets replaced if the probe comes back positive.
   useEffect(() => {
-    if (phase === 'turn' && liveReady && liveRef.current && grid) {
+    if (!isAuthenticated) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/memories')
+        if (!res.ok) return
+        const { memories = [] } = await res.json()
+        const alreadyOnboarded = Array.isArray(memories) && memories.some((m: any) =>
+          m?.memory_type === 'foundational' &&
+          Array.isArray(m?.tags) &&
+          (m.tags.includes('onboarding') || m.tags.includes('live-hybrid')),
+        )
+        if (!cancelled && alreadyOnboarded) navigate('/', { replace: true })
+      } catch {
+        // Probe failed — let them onboard. Worst case is a duplicate run.
+      }
+    })()
+    return () => { cancelled = true }
+  }, [isAuthenticated, navigate])
+
+  // Once Live is connected AND the grid has loaded, trigger the model to
+  // begin speaking the anchor question. Depends on readyCount (not a bool)
+  // so a reconnection bumps the count and re-triggers begin() against the
+  // fresh session — begin() is idempotent inside the child (guarded by a
+  // per-connection `beganRef`), so re-calling is safe in prod too.
+  useEffect(() => {
+    if (phase === 'turn' && readyCount > 0 && liveRef.current && grid) {
       liveRef.current.begin()
     }
-  }, [phase, liveReady, grid])
+  }, [phase, readyCount, grid])
+
+  // No-response fallback. If the model never speaks the anchor (empty
+  // transcript + never entered 'speaking' status within 8s of being
+  // ready), surface a clear retry instead of leaving the user staring
+  // at a silent mic. Happens occasionally when the Live API drops the
+  // first turn.
+  const [silentStart, setSilentStart] = useState(false)
+  useEffect(() => {
+    if (phase !== 'turn' || !liveReady) return
+    setSilentStart(false)
+    const timer = setTimeout(() => {
+      if (!currentQuestion && liveStatus !== 'speaking') {
+        console.warn('[onboarding-chat] model did not speak anchor within 8s — showing retry')
+        setSilentStart(true)
+      }
+    }, 8000)
+    return () => clearTimeout(timer)
+    // currentQuestion intentionally not in deps — we want a fixed 8s
+    // window from when we went ready, not a reset on every transcript chunk.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, liveReady])
+  // Once the model does start speaking, drop the retry UI if it was up.
+  useEffect(() => {
+    if (currentQuestion || liveStatus === 'speaking') setSilentStart(false)
+  }, [currentQuestion, liveStatus])
+
+  // Cut a tap for authed users. After sign-in from UnauthHome → /login the
+  // visitor already chose to do the chat twice (pitch + "start talking").
+  // A third "Start talking" welcome page is redundant noise. Auto-advance
+  // to bootstrap once auth is confirmed. (Unauth visitors still see the
+  // sign-in gate above; if somehow an authed user lands here without
+  // hitting the gate, they still get the smooth auto-advance.)
+  useEffect(() => {
+    if (isAuthenticated && phase === 'welcome') {
+      setPhase('bootstrap')
+      setError(null)
+      void bootstrapGrid()
+    }
+  }, [isAuthenticated, phase, bootstrapGrid])
 
   const handleStart = useCallback(() => {
     setPhase('bootstrap')
@@ -140,133 +215,12 @@ export function OnboardingChatPage() {
     setUserPartial(accumulated)
   }, [])
 
-  const handleLiveReady = useCallback(() => setLiveReady(true), [])
+  const handleLiveReady = useCallback(() => setReadyCount(c => c + 1), [])
 
   const handleLiveError = useCallback((msg: string) => {
     console.error('[onboarding-chat] live error', msg)
     setError(msg)
   }, [])
-
-  // ── Turn complete: save memory + run observer planner + maybe stop ──────
-  const handleTurnComplete = useCallback(
-    async (userTranscript: string, modelUtterance: string) => {
-      if (!grid) return
-      if (inflightObserveRef.current) return
-      inflightObserveRef.current = true
-
-      try {
-        // The "first turn" from the model is just the anchor — user transcript
-        // will be empty because we seeded the session with an internal "I'm
-        // ready" message. Skip the observer on that turn.
-        const isOpeningTurn = grid.turns.length === 0 && userTranscript.trim().length === 0
-        if (isOpeningTurn) {
-          // Seed the grid with the anchor question as turn 1 so subsequent
-          // observations have the right shape.
-          return
-        }
-
-        // Save the user's transcript as a foundational memory (tagged so we
-        // can retrieve later without knowing the Live-decided slot).
-        if (userTranscript.trim().length > 0) {
-          allTranscriptsRef.current.push(userTranscript)
-          try {
-            await createMemory({
-              body: userTranscript,
-              memory_type: 'foundational',
-              tags: ['onboarding', 'live-hybrid'],
-            })
-          } catch (memErr) {
-            console.warn('[onboarding-chat] memory save failed, continuing', memErr)
-          }
-        }
-
-        // Observer — updates the coverage grid based on what the user said
-        // in response to what the model asked.
-        const res = await fetch('/api/utilities?resource=onboarding-observe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            grid,
-            user_transcript: userTranscript,
-            model_utterance: modelUtterance,
-          }),
-        })
-        if (!res.ok) throw new Error('Observe failed')
-        const data = (await res.json()) as {
-          grid: CoverageGrid
-          newly_filled_slots: CoverageSlotId[]
-          stopping_hint: { should_stop: boolean; reason: string }
-          captured_items?: CapturedItem[]
-          captured_projects?: CapturedProject[]
-        }
-
-        setGrid(data.grid)
-        setJustFilled(data.newly_filled_slots)
-        setUserPartial('')
-
-        // Accumulate any named entities the observer pulled out. De-dupe by
-        // (type + lowercased name) so repeat mentions don't land in the user's
-        // lists twice.
-        if (data.captured_items && data.captured_items.length > 0) {
-          const seen = new Set(
-            capturedItemsRef.current.map(i => `${i.type}::${i.name.toLowerCase()}`),
-          )
-          for (const item of data.captured_items) {
-            const key = `${item.type}::${item.name.toLowerCase()}`
-            if (seen.has(key)) continue
-            seen.add(key)
-            capturedItemsRef.current.push(item)
-            // Books: try to enrich with cover art for the bookshelf UI. Fire
-            // and forget — if the search fails we still show the raw title.
-            if (item.type === 'book') {
-              void enrichBook(item)
-            }
-          }
-        }
-
-        // Accumulate any project intents the user raised. Same de-dupe by
-        // lowercased title — if they mention the same wooden stool twice
-        // we only save one suggestion.
-        if (data.captured_projects && data.captured_projects.length > 0) {
-          const seenProjects = new Set(
-            capturedProjectsRef.current.map(p => p.title.toLowerCase()),
-          )
-          for (const project of data.captured_projects) {
-            const key = project.title.toLowerCase()
-            if (seenProjects.has(key)) continue
-            seenProjects.add(key)
-            capturedProjectsRef.current.push(project)
-          }
-        }
-
-        // If the observer thinks we've covered enough, close the Live session
-        // gracefully and move on to the books step. The model's system prompt
-        // also has its own stopping logic; whichever fires first wins.
-        if (data.stopping_hint.should_stop) {
-          shouldStopAfterTurnRef.current = true
-          // Give the model a brief moment to finish whatever it's saying,
-          // then close. While the user sees the "completing" loader, write
-          // out any non-book items the chat captured to their lists — this
-          // is hidden from the UI because surfacing "we already made you a
-          // films list" mid-flow would feel presumptuous; the user will
-          // find them naturally when they visit /lists.
-          setTimeout(() => {
-            try { liveRef.current?.close() } catch {}
-            setPhase('completing')
-            void persistCapturedItems()
-            void persistCapturedProjects()
-            setTimeout(() => setPhase('books'), 600)
-          }, 400)
-        }
-      } catch (err: any) {
-        console.error('[onboarding-chat] observe failed', err)
-        // Not fatal — let the Live conversation continue.
-      } finally {
-        inflightObserveRef.current = false
-      }
-    },
-    [grid, createMemory],
-  )
 
   // ── Enrich a captured book title with cover art from Google Books. Adds
   //    to capturedBooks, deduped by title+author. Best-effort — no errors
@@ -290,17 +244,13 @@ export function OnboardingChatPage() {
   // Persist projects the observer caught mid-chat. Routing splits by
   // status: ideas land in the "Try Something New" carousel via the
   // existing save-idea endpoint; in-progress projects become real
-  // Projects in the Projects pillar from day one, so the user opens the
-  // app and sees their actual current work waiting for them.
+  // Projects in the Projects pillar from day one.
   const persistCapturedProjects = useCallback(async () => {
     const projects = capturedProjectsRef.current
     if (projects.length === 0) return
     for (const project of projects) {
       try {
         if (project.status === 'in_progress') {
-          // Real Project — defaults to 'active' in the store. Stamp the
-          // metadata with the captured raw phrase so the project's
-          // origin is visible later (e.g. on the project detail page).
           await createProject({
             title: project.title,
             description: project.description,
@@ -312,17 +262,12 @@ export function OnboardingChatPage() {
             } as any,
           })
         } else {
-          // Idea — saved as a project_suggestion (status pending),
-          // shown in TrySomethingNewCarousel on Home alongside the
-          // AI-derived intersection ideas.
           await fetch('/api/projects?resource=save-idea', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               title: project.title,
               description: project.description,
-              // Reasoning is the user's own words — gives the carousel
-              // card an honest "why this is for you" line.
               reasoning: `You mentioned this: "${project.raw_phrase}"`,
               source: 'onboarding-capture',
             }),
@@ -335,16 +280,12 @@ export function OnboardingChatPage() {
   }, [createProject])
 
   // Persist EVERY captured item (books included) to its matching list when
-  // the chat ends. This is the "quiet seeding" guarantee — when the user
-  // wanders into Lists later they find what they mentioned, regardless of
-  // whether they later skip or breeze through the bookshelf step.
-  // BookshelfStep itself only persists books the user actively *adds* on
-  // top of the pre-population, so we don't double-write captured books.
+  // the chat ends. The "quiet seeding" guarantee — when the user wanders
+  // into Lists later they find what they mentioned.
   const persistCapturedItems = useCallback(async () => {
     const items = capturedItemsRef.current
     if (items.length === 0) return
 
-    // Group by type so we only create/find each list once.
     const byType = new Map<ListType, CapturedItem[]>()
     for (const item of items) {
       const list = byType.get(item.type) ?? []
@@ -366,10 +307,6 @@ export function OnboardingChatPage() {
           : await createList({ title: listTitles[type] || type, type })
         for (const item of typeItems) {
           try {
-            // Books from the chat are persisted with the same
-            // "${title} — ${author}" content shape BookshelfStep uses for
-            // its own picks, so the list looks consistent. We don't have
-            // an author yet here, so just use the name.
             await addListItem({ list_id: listId, content: item.name })
           } catch (e) {
             console.warn('[onboarding-chat] failed to add item to list', type, item.name, e)
@@ -380,6 +317,140 @@ export function OnboardingChatPage() {
       }
     }
   }, [lists, createList, addListItem])
+
+  // Grid needs to be read fresh inside the serialised processor, otherwise
+  // the second turn in a burst would observe against stale grid state.
+  // Ref stays in sync via a useEffect below.
+  const gridRef = useRef<CoverageGrid | null>(grid)
+  useEffect(() => { gridRef.current = grid }, [grid])
+
+  // ── Turn complete: save memory + observe + maybe stop ──────────────────
+  // Turns are SERIALISED via a promise chain. Previously a second turn
+  // landing while the first was still observing would be silently dropped
+  // (via an `inflight` ref) — grid lost the update, dots didn't move,
+  // captured items vanished. Chaining guarantees every turn lands, in
+  // order, against fresh grid state.
+  const processTurn = useCallback(
+    async (userTranscript: string, modelUtterance: string) => {
+      const currentGrid = gridRef.current
+      if (!currentGrid) return
+
+      // The "first turn" from the model is just the anchor — user transcript
+      // will be empty because we seeded the session with an internal "Hi."
+      // Skip the observer on that turn.
+      const isOpeningTurn = currentGrid.turns.length === 0 && userTranscript.trim().length === 0
+      if (isOpeningTurn) return
+
+      // Save the user's transcript as a foundational memory (tagged so we
+      // can retrieve later without knowing the Live-decided slot).
+      if (userTranscript.trim().length > 0) {
+        allTranscriptsRef.current.push(userTranscript)
+        try {
+          await createMemory({
+            body: userTranscript,
+            memory_type: 'foundational',
+            tags: ['onboarding', 'live-hybrid'],
+          })
+        } catch (memErr) {
+          console.warn('[onboarding-chat] memory save failed, continuing', memErr)
+        }
+      }
+
+      // Observer — updates the coverage grid based on what the user said
+      // in response to what the model asked.
+      let data: {
+        grid: CoverageGrid
+        newly_filled_slots: CoverageSlotId[]
+        stopping_hint: { should_stop: boolean; reason: string }
+        captured_items?: CapturedItem[]
+        captured_projects?: CapturedProject[]
+      } | null = null
+      try {
+        const res = await fetch('/api/utilities?resource=onboarding-observe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            grid: currentGrid,
+            user_transcript: userTranscript,
+            model_utterance: modelUtterance,
+          }),
+        })
+        if (!res.ok) throw new Error('Observe failed')
+        data = await res.json()
+      } catch (err: any) {
+        console.error('[onboarding-chat] observe failed', err)
+        return
+      }
+      if (!data) return
+
+      setGrid(data.grid)
+      // Keep gridRef in sync immediately — don't wait for the useEffect —
+      // so the NEXT queued turn observes against this result, not the
+      // pre-turn grid.
+      gridRef.current = data.grid
+      setJustFilled(data.newly_filled_slots)
+      setUserPartial('')
+
+      // Accumulate any named entities the observer pulled out.
+      if (data.captured_items && data.captured_items.length > 0) {
+        const seen = new Set(
+          capturedItemsRef.current.map(i => `${i.type}::${i.name.toLowerCase()}`),
+        )
+        for (const item of data.captured_items) {
+          const key = `${item.type}::${item.name.toLowerCase()}`
+          if (seen.has(key)) continue
+          seen.add(key)
+          capturedItemsRef.current.push(item)
+          if (item.type === 'book') void enrichBook(item)
+        }
+      }
+
+      // Accumulate any project intents the user raised.
+      if (data.captured_projects && data.captured_projects.length > 0) {
+        const seenProjects = new Set(
+          capturedProjectsRef.current.map(p => p.title.toLowerCase()),
+        )
+        for (const project of data.captured_projects) {
+          const key = project.title.toLowerCase()
+          if (seenProjects.has(key)) continue
+          seenProjects.add(key)
+          capturedProjectsRef.current.push(project)
+        }
+      }
+
+      // If the observer thinks we've covered enough, close the Live session
+      // and move on. Both the model's prompt and the observer can trigger
+      // stop; whichever fires first wins.
+      if (data.stopping_hint.should_stop && !shouldStopAfterTurnRef.current) {
+        shouldStopAfterTurnRef.current = true
+        setTimeout(() => {
+          try { liveRef.current?.close() } catch {}
+          setPhase('completing')
+          void persistCapturedItems()
+          void persistCapturedProjects()
+          setTimeout(() => setPhase('books'), 600)
+        }, 400)
+      }
+    },
+    [createMemory, enrichBook, persistCapturedItems, persistCapturedProjects],
+  )
+
+  // Serialise per-turn processing via a promise chain so no turn is ever
+  // dropped, even when the observer is slow.
+  const turnChainRef = useRef<Promise<void>>(Promise.resolve())
+  const handleTurnComplete = useCallback(
+    (userTranscript: string, modelUtterance: string) => {
+      const next = turnChainRef.current.then(() =>
+        processTurn(userTranscript, modelUtterance),
+      )
+      // Swallow rejections so one failed turn doesn't break the chain for
+      // every subsequent turn.
+      turnChainRef.current = next.catch(err => {
+        console.warn('[onboarding-chat] turn processing errored', err)
+      })
+    },
+    [processTurn],
+  )
 
   // ── Typing fallback ─────────────────────────────────────────────────────
   const handleTypedSubmit = useCallback(() => {
@@ -587,6 +658,19 @@ export function OnboardingChatPage() {
   }
 
   // ── Welcome ─────────────────────────────────────────────────────────────
+  // Authed + welcome = in-flight auto-advance. Show the loader, not the
+  // pitch page — the auto-advance effect is about to flip us to bootstrap,
+  // and briefly flashing the welcome screen would be a jarring no-op tap.
+  if (phase === 'welcome' && isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 py-12">
+        <div className="flex items-center gap-3 text-sm" style={{ color: 'var(--brand-text-secondary)' }}>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Getting ready…
+        </div>
+      </div>
+    )
+  }
   if (phase === 'welcome') {
     return (
       <div className="min-h-screen flex items-center justify-center px-6 py-12">
@@ -712,6 +796,7 @@ export function OnboardingChatPage() {
       <LiveVoiceCapture
         ref={liveRef}
         hideVisualizer
+        muted={typingMode}
         onTurnComplete={handleTurnComplete}
         onModelSpeaking={handleModelSpeaking}
         onUserSpeaking={handleUserSpeaking}
@@ -755,6 +840,18 @@ export function OnboardingChatPage() {
                 <div className="flex flex-col items-center gap-3 text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
                   <Loader2 className="h-5 w-5 animate-spin opacity-60" />
                   <span className="opacity-60">Connecting voice…</span>
+                </div>
+              ) : silentStart ? (
+                <div className="flex flex-col items-center gap-4 text-sm max-w-xs" style={{ color: 'var(--brand-text-secondary)' }}>
+                  <p className="text-center leading-relaxed">
+                    Hmm — Aperture's taking a beat to warm up. Mind refreshing the page to give it another go?
+                  </p>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="btn-primary px-6 py-2.5 text-sm font-semibold"
+                  >
+                    Refresh
+                  </button>
                 </div>
               ) : (
                 <TurnIndicator status={liveStatus} />
@@ -850,16 +947,16 @@ export function OnboardingChatPage() {
 }
 
 // ── TurnIndicator ──────────────────────────────────────────────────────────
-// A clear, prominent visual cue for whose turn it is. Three states:
-//   - speaking  → Aperture is talking (don't speak over it, but you can)
-//   - listening → your turn (mic is hot, take your time)
-//   - thinking  → bridging silence after you finished, before Aperture replies
+// Who's talking, without the turn-based game-show feel. The visual is the
+// whole cue:
+//   - speaking  → ring glows steady, mic dims (Aperture is talking)
+//   - listening → ring breathes softly, mic bright (over to you)
+// No "YOUR TURN" text — that was reading robotic. A tiny lowercase
+// "listening…" / "…" sits underneath, quiet enough to be ignored.
 function TurnIndicator({ status }: { status: LiveVoiceStatus }) {
   const speaking = status === 'speaking'
   const listening = status === 'listening' || status === 'ready'
 
-  // The visual: a soft ring that pulses when listening, glows steady when
-  // Aperture is speaking. Mic icon in the middle.
   return (
     <div className="flex flex-col items-center gap-3 select-none">
       <motion.div
@@ -890,14 +987,16 @@ function TurnIndicator({ status }: { status: LiveVoiceStatus }) {
           }}
         />
       </motion.div>
+      {/* Quiet caption — a gentle "listening…" during the user's turn so
+          the state is legible to screen readers and nervous speakers. */}
       <span
-        className="text-[11px] uppercase tracking-[0.18em] font-medium"
+        className="text-[11px] italic"
         style={{
           color: 'var(--brand-text-secondary)',
-          opacity: speaking ? 0.45 : listening ? 0.7 : 0.3,
+          opacity: speaking ? 0 : listening ? 0.45 : 0,
         }}
       >
-        {speaking ? 'Aperture' : listening ? 'your turn' : '\u00A0'}
+        listening…
       </span>
     </div>
   )

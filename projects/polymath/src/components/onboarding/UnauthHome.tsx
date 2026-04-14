@@ -113,15 +113,27 @@ export function UnauthHome() {
         aperture
       </motion.h1>
 
-      {/* Hero line — the outcome, not the mechanism */}
+      {/* Hero hook — the outcome they're here for, in one breath. */}
       <motion.p
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.3, duration: 0.5 }}
-        className="text-base mb-10 text-center"
+        className="text-lg sm:text-xl mb-2 text-center font-medium leading-snug px-4"
+        style={{ color: 'var(--brand-text-primary)', letterSpacing: '-0.01em' }}
+      >
+        Three minutes of talking.<br />
+        <span style={{ color: 'var(--brand-primary)' }}>
+          A project you'd never have thought of.
+        </span>
+      </motion.p>
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5, duration: 0.5 }}
+        className="text-sm mb-10 text-center px-4"
         style={{ color: 'var(--brand-text-secondary)', letterSpacing: '-0.01em' }}
       >
-        think out loud. finish what matters.
+        Aperture listens. The thread between what you said reveals itself.
       </motion.p>
 
       {/* Animated story card — shows the transformation */}
@@ -248,8 +260,11 @@ export function UnauthHome() {
         transition={{ delay: 0.8, duration: 0.4 }}
         className="w-full max-w-sm flex flex-col items-center gap-3"
       >
+        {/* Primary CTA — skip the /onboarding gate for happy-path users
+            and go straight to sign-in. After sign-in they land on
+            /onboarding ready to begin, one fewer tap on the way in. */}
         <button
-          onClick={() => navigate('/onboarding')}
+          onClick={() => navigate('/login?next=/onboarding')}
           className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl font-bold text-sm transition-all hover:opacity-90 active:scale-[0.98] aperture-header"
           style={{
             background: 'linear-gradient(135deg, var(--brand-primary), rgb(var(--color-accent-light-rgb)))',
