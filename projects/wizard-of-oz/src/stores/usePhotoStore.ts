@@ -478,6 +478,23 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
+    console.log('[reAlignPhoto] start', {
+      photoId,
+      photoOwner: photo.user_id,
+      currentUser: user.id,
+      ownedByCurrentUser: photo.user_id === user.id,
+    });
+
+    // RLS on photos limits UPDATE to rows where auth.uid() = user_id. If the
+    // user is viewing a SHARED photo (e.g. partner's upload), the update
+    // silently affects 0 rows and Supabase returns no error — the save
+    // appears to succeed but nothing actually changes. Fail loud instead.
+    if (photo.user_id !== user.id) {
+      throw new Error(
+        "You can only re-align your own photos. Ask the owner to adjust this one."
+      );
+    }
+
     // Pick the best available URL to re-process. Signed URLs are preferred
     // because the bucket may be private.
     const sourceUrl =
@@ -529,6 +546,11 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
     }
 
     const result = await alignPhoto(sourceFile, coords, zoomLevel);
+    console.log('[reAlignPhoto] aligned', {
+      outputBytes: result.alignedImage.size,
+      outputType: result.alignedImage.type,
+      zoomLevel,
+    });
 
     // Upload to a new storage path so we don't trash the previous object.
     const fileName = `${user.id}/${Date.now()}-realigned.jpg`;
@@ -542,6 +564,7 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
       logger.error('Re-align storage upload failed', { error: uploadError.message }, 'PhotoStore');
       throw uploadError;
     }
+    console.log('[reAlignPhoto] uploaded', { path: uploadData.path });
 
     const { data: { publicUrl } } = supabase.storage
       .from('originals')
@@ -565,18 +588,30 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
       metadata: existingMetadata,
     };
 
-    const { error: updateError } = await supabase
+    // `.select()` returns the rows that were actually updated so we can verify
+    // at least one matched. Without this, a zero-row update (e.g. RLS blocks,
+    // id not found) looks like success to Supabase's error channel.
+    const { data: updatedRows, error: updateError } = await supabase
       .from('photos')
       .update(updatePayload as never)
       .eq('id', photoId)
-      .eq('user_id', user.id);
+      .eq('user_id', user.id)
+      .select();
 
     if (updateError) {
       logger.error('Re-align DB update failed', { error: updateError.message, photoId }, 'PhotoStore');
       throw updateError;
     }
+    if (!updatedRows || updatedRows.length === 0) {
+      logger.error('Re-align DB update affected 0 rows', { photoId }, 'PhotoStore');
+      throw new Error(
+        "Re-align didn't save — the database rejected the update. This usually means the photo belongs to someone else."
+      );
+    }
+    console.log('[reAlignPhoto] db updated', { rowsUpdated: updatedRows.length, newAlignedUrl: publicUrl });
 
     logger.info('Photo re-aligned', { photoId, zoomLevel }, 'PhotoStore');
     await get().fetchPhotos();
+    console.log('[reAlignPhoto] done');
   },
 }));
