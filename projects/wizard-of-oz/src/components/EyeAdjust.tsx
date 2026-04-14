@@ -65,6 +65,10 @@ export function EyeAdjust({
   }, [initial, imageWidth, imageHeight]);
 
   const draggingRef = useRef<Handle | null>(null);
+  // Keep the latest coords in a ref so the pointerdown handler can pick the
+  // nearest marker without being stale across re-renders.
+  const coordsRef = useRef(coords);
+  coordsRef.current = coords;
 
   /** Convert a client-space point into SVG (image-pixel) coordinates. */
   function clientToImage(clientX: number, clientY: number): { x: number; y: number } | null {
@@ -82,18 +86,37 @@ export function EyeAdjust({
     };
   }
 
-  function onPointerDown(handle: Handle) {
-    return (e: React.PointerEvent<SVGElement>) => {
-      e.preventDefault();
-      e.stopPropagation();
-      draggingRef.current = handle;
-      (e.target as Element).setPointerCapture?.(e.pointerId);
-    };
+  function nearestHandle(p: { x: number; y: number }): Handle {
+    const c = coordsRef.current;
+    const dl = (c.leftEye.x - p.x) ** 2 + (c.leftEye.y - p.y) ** 2;
+    const dr = (c.rightEye.x - p.x) ** 2 + (c.rightEye.y - p.y) ** 2;
+    return dl <= dr ? 'left' : 'right';
+  }
+
+  // Single pointerdown handler on the whole SVG: whichever marker is nearest
+  // the touch point becomes the active one, and the marker jumps to the
+  // touched point immediately. Much more forgiving than requiring a pixel-
+  // perfect hit on a small circle.
+  function onPointerDown(e: React.PointerEvent<SVGElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    const p = clientToImage(e.clientX, e.clientY);
+    if (!p) return;
+    const handle = nearestHandle(p);
+    draggingRef.current = handle;
+    // Capture on the SVG root so subsequent moves stay bound to this gesture
+    // even if the pointer wanders outside the element.
+    svgRef.current?.setPointerCapture?.(e.pointerId);
+    setCoords((prev) =>
+      handle === 'left' ? { ...prev, leftEye: p } : { ...prev, rightEye: p }
+    );
   }
 
   function onPointerMove(e: React.PointerEvent<SVGElement>) {
     const handle = draggingRef.current;
     if (!handle) return;
+    e.preventDefault();
+    e.stopPropagation();
     const p = clientToImage(e.clientX, e.clientY);
     if (!p) return;
     setCoords((prev) =>
@@ -104,8 +127,10 @@ export function EyeAdjust({
   }
 
   function onPointerUp(e: React.PointerEvent<SVGElement>) {
+    if (!draggingRef.current) return;
+    e.stopPropagation();
     draggingRef.current = null;
-    (e.target as Element).releasePointerCapture?.(e.pointerId);
+    svgRef.current?.releasePointerCapture?.(e.pointerId);
   }
 
   // Marker radius scales with image size so it's grabbable at any zoom.
@@ -122,23 +147,49 @@ export function EyeAdjust({
         </p>
       </div>
 
-      <div className="relative bg-gray-100 rounded-lg overflow-hidden aspect-[4/5] touch-none select-none">
+      <div
+        className="relative bg-gray-100 rounded-lg overflow-hidden aspect-[4/5] touch-none select-none"
+        style={{ touchAction: 'none' }}
+        // Absorb pointer events at the container so they never bubble up to a
+        // parent drag-to-dismiss / swipe handler (e.g. framer-motion on a
+        // bottom sheet). Touch/pointer capture on the SVG still receives moves.
+        onPointerDownCapture={(e) => e.stopPropagation()}
+        onPointerMoveCapture={(e) => {
+          if (draggingRef.current) e.stopPropagation();
+        }}
+        onPointerUpCapture={(e) => {
+          if (draggingRef.current) e.stopPropagation();
+        }}
+      >
         <img
           src={previewUrl}
           alt="Adjust eye positions"
-          className="w-full h-full object-contain"
+          className="w-full h-full object-contain pointer-events-none"
           draggable={false}
         />
 
         <svg
           ref={svgRef}
           className="absolute inset-0 w-full h-full"
+          style={{ touchAction: 'none', cursor: 'grab' }}
           viewBox={`0 0 ${imageWidth} ${imageHeight}`}
           preserveAspectRatio="xMidYMid meet"
+          onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
         >
+          {/* Full-surface transparent hit target. A pointerdown anywhere on
+              the image grabs the nearest marker — no need to land precisely
+              on a small dot. */}
+          <rect
+            x={0}
+            y={0}
+            width={imageWidth}
+            height={imageHeight}
+            fill="transparent"
+          />
+
           {/* Connector line — visual reference for alignment */}
           <line
             x1={coords.leftEye.x}
@@ -151,18 +202,8 @@ export function EyeAdjust({
             pointerEvents="none"
           />
 
-          {/* Left (image-left) marker */}
-          <g
-            style={{ cursor: 'grab', touchAction: 'none' }}
-            onPointerDown={onPointerDown('left')}
-          >
-            {/* Large transparent hit target */}
-            <circle
-              cx={coords.leftEye.x}
-              cy={coords.leftEye.y}
-              r={markerRadius * 2.5}
-              fill="transparent"
-            />
+          {/* Left (image-left) marker — purely visual; hit handled by SVG root */}
+          <g pointerEvents="none">
             <circle
               cx={coords.leftEye.x}
               cy={coords.leftEye.y}
@@ -171,7 +212,6 @@ export function EyeAdjust({
               stroke="white"
               strokeWidth={markerRadius * 0.3}
             />
-            {/* Crosshair */}
             <line
               x1={coords.leftEye.x - markerRadius * 0.6}
               y1={coords.leftEye.y}
@@ -179,7 +219,6 @@ export function EyeAdjust({
               y2={coords.leftEye.y}
               stroke="white"
               strokeWidth={markerRadius * 0.15}
-              pointerEvents="none"
             />
             <line
               x1={coords.leftEye.x}
@@ -188,21 +227,11 @@ export function EyeAdjust({
               y2={coords.leftEye.y + markerRadius * 0.6}
               stroke="white"
               strokeWidth={markerRadius * 0.15}
-              pointerEvents="none"
             />
           </g>
 
           {/* Right (image-right) marker */}
-          <g
-            style={{ cursor: 'grab', touchAction: 'none' }}
-            onPointerDown={onPointerDown('right')}
-          >
-            <circle
-              cx={coords.rightEye.x}
-              cy={coords.rightEye.y}
-              r={markerRadius * 2.5}
-              fill="transparent"
-            />
+          <g pointerEvents="none">
             <circle
               cx={coords.rightEye.x}
               cy={coords.rightEye.y}
@@ -218,7 +247,6 @@ export function EyeAdjust({
               y2={coords.rightEye.y}
               stroke="white"
               strokeWidth={markerRadius * 0.15}
-              pointerEvents="none"
             />
             <line
               x1={coords.rightEye.x}
@@ -227,7 +255,6 @@ export function EyeAdjust({
               y2={coords.rightEye.y + markerRadius * 0.6}
               stroke="white"
               strokeWidth={markerRadius * 0.15}
-              pointerEvents="none"
             />
           </g>
         </svg>
