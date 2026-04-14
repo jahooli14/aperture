@@ -21,6 +21,7 @@ import { BookshelfStep } from '../components/onboarding/BookshelfStep'
 import { RevealSequence } from '../components/onboarding/RevealSequence'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useListStore } from '../stores/useListStore'
+import { useProjectStore } from '../stores/useProjectStore'
 import { useAuthContext } from '../contexts/AuthContext'
 import type {
   CoverageGrid,
@@ -40,6 +41,21 @@ interface CapturedItem {
   raw_phrase: string
 }
 
+/** A project the observer caught the user mentioning mid-chat. Two
+ *  flavours, routed to different surfaces:
+ *   - status: 'idea' — they want to make this. Saved as a
+ *     project_suggestion (status pending) so it appears in Home's
+ *     "Try Something New" carousel alongside the AI-derived intersections.
+ *   - status: 'in_progress' — they're already doing this. Saved as a
+ *     real Project (status 'active') so it shows up in the Projects
+ *     pillar from day one. */
+interface CapturedProject {
+  title: string
+  description: string
+  status: 'idea' | 'in_progress'
+  raw_phrase: string
+}
+
 type Phase =
   | 'welcome'
   | 'bootstrap'
@@ -54,6 +70,7 @@ export function OnboardingChatPage() {
   const { isAuthenticated } = useAuthContext()
   const { createMemory } = useMemoryStore()
   const { createList, addListItem, lists } = useListStore()
+  const createProject = useProjectStore(s => s.createProject)
 
   const [phase, setPhase] = useState<Phase>('welcome')
   const [grid, setGrid] = useState<CoverageGrid | null>(null)
@@ -79,6 +96,10 @@ export function OnboardingChatPage() {
   // lists when onboarding completes.
   const capturedItemsRef = useRef<CapturedItem[]>([])
   const [capturedBooks, setCapturedBooks] = useState<BookSearchResult[]>([])
+  // Project ideas the user explicitly raised mid-chat. Persisted to
+  // project_suggestions on chat-end so they show up in Home's
+  // "Try Something New" carousel alongside the AI-derived suggestions.
+  const capturedProjectsRef = useRef<CapturedProject[]>([])
 
   // ── Bootstrap: fetch a grid (we still need one for the random dot
   //    permutation + as the shape the observer mutates) ───────────────────
@@ -176,6 +197,7 @@ export function OnboardingChatPage() {
           newly_filled_slots: CoverageSlotId[]
           stopping_hint: { should_stop: boolean; reason: string }
           captured_items?: CapturedItem[]
+          captured_projects?: CapturedProject[]
         }
 
         setGrid(data.grid)
@@ -202,6 +224,21 @@ export function OnboardingChatPage() {
           }
         }
 
+        // Accumulate any project intents the user raised. Same de-dupe by
+        // lowercased title — if they mention the same wooden stool twice
+        // we only save one suggestion.
+        if (data.captured_projects && data.captured_projects.length > 0) {
+          const seenProjects = new Set(
+            capturedProjectsRef.current.map(p => p.title.toLowerCase()),
+          )
+          for (const project of data.captured_projects) {
+            const key = project.title.toLowerCase()
+            if (seenProjects.has(key)) continue
+            seenProjects.add(key)
+            capturedProjectsRef.current.push(project)
+          }
+        }
+
         // If the observer thinks we've covered enough, close the Live session
         // gracefully and move on to the books step. The model's system prompt
         // also has its own stopping logic; whichever fires first wins.
@@ -217,6 +254,7 @@ export function OnboardingChatPage() {
             try { liveRef.current?.close() } catch {}
             setPhase('completing')
             void persistCapturedItems()
+            void persistCapturedProjects()
             setTimeout(() => setPhase('books'), 600)
           }, 400)
         }
@@ -248,6 +286,53 @@ export function OnboardingChatPage() {
       // Silent fallback — onboarding continues fine without the enrichment.
     }
   }, [])
+
+  // Persist projects the observer caught mid-chat. Routing splits by
+  // status: ideas land in the "Try Something New" carousel via the
+  // existing save-idea endpoint; in-progress projects become real
+  // Projects in the Projects pillar from day one, so the user opens the
+  // app and sees their actual current work waiting for them.
+  const persistCapturedProjects = useCallback(async () => {
+    const projects = capturedProjectsRef.current
+    if (projects.length === 0) return
+    for (const project of projects) {
+      try {
+        if (project.status === 'in_progress') {
+          // Real Project — defaults to 'active' in the store. Stamp the
+          // metadata with the captured raw phrase so the project's
+          // origin is visible later (e.g. on the project detail page).
+          await createProject({
+            title: project.title,
+            description: project.description,
+            status: 'active',
+            metadata: {
+              source: 'onboarding-capture',
+              captured_at: new Date().toISOString(),
+              grounding_phrase: project.raw_phrase,
+            } as any,
+          })
+        } else {
+          // Idea — saved as a project_suggestion (status pending),
+          // shown in TrySomethingNewCarousel on Home alongside the
+          // AI-derived intersection ideas.
+          await fetch('/api/projects?resource=save-idea', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: project.title,
+              description: project.description,
+              // Reasoning is the user's own words — gives the carousel
+              // card an honest "why this is for you" line.
+              reasoning: `You mentioned this: "${project.raw_phrase}"`,
+              source: 'onboarding-capture',
+            }),
+          })
+        }
+      } catch (e) {
+        console.warn('[onboarding-chat] failed to save captured project', project.title, e)
+      }
+    }
+  }, [createProject])
 
   // Persist EVERY captured item (books included) to its matching list when
   // the chat ends. This is the "quiet seeding" guarantee — when the user
@@ -365,55 +450,103 @@ export function OnboardingChatPage() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="text-center max-w-md w-full"
+          className="text-center max-w-lg w-full"
         >
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2, type: 'spring', stiffness: 180 }}
+            transition={{ delay: 0.15, type: 'spring', stiffness: 180 }}
             className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-8"
             style={{ background: 'rgba(var(--brand-primary-rgb),0.12)' }}
           >
-            <Lock className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
+            <Mic className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
           </motion.div>
 
+          {/* The promise — lead with the value, not the friction. */}
           <motion.h1
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35 }}
-            className="text-3xl sm:text-4xl font-semibold leading-tight mb-4"
+            transition={{ delay: 0.3 }}
+            className="text-[2.1rem] sm:text-[2.6rem] font-semibold leading-[1.08] tracking-tight mb-5"
             style={{ color: 'var(--brand-text-primary)' }}
           >
-            Sign in to begin.
+            A project you'd never have<br className="hidden sm:block" /> thought of yourself.
           </motion.h1>
 
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
-            className="text-base mb-10"
+            transition={{ delay: 0.55 }}
+            className="text-base sm:text-lg leading-relaxed mb-7 max-w-md mx-auto"
             style={{ color: 'var(--brand-text-secondary)' }}
           >
-            The chat takes about three minutes and saves what you share — your thoughts, the things you mention, your first project. We need an account to keep them for you.
+            Talk for three minutes. Aperture listens for the threads between the things you mention — and surfaces something to build that genuinely surprises you.
           </motion.p>
+
+          {/* Sample reveal teaser — hints at the format the user is signing
+              up to receive. Same two-quote-split aesthetic as the real
+              InsightBody, with an unmistakable "example" label so we're
+              not pretending it's theirs. */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.85 }}
+            className="p-5 sm:p-6 rounded-2xl mb-9"
+            style={{
+              background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.10), rgba(var(--brand-primary-rgb),0.04))',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid rgba(var(--brand-primary-rgb),0.16)',
+              boxShadow: '0 6px 28px -14px rgba(var(--brand-primary-rgb),0.30)',
+            }}
+          >
+            <p
+              className="text-[10px] uppercase tracking-[0.22em] font-medium mb-4"
+              style={{ color: 'var(--brand-text-secondary)', opacity: 0.55 }}
+            >
+              an example reveal
+            </p>
+            <div className="flex flex-col gap-3 text-center">
+              <p className="text-base sm:text-lg italic font-medium leading-snug" style={{ color: 'var(--brand-primary)' }}>
+                “the welding part caught my ear”
+              </p>
+              <p className="text-xs sm:text-sm leading-relaxed mx-auto max-w-prose" style={{ color: 'var(--brand-text-primary)', opacity: 0.85 }}>
+                Both of these are the same thought in different clothes — you're missing a kind of work that doesn't have a name in your day job.
+              </p>
+              <p className="text-base sm:text-lg italic font-medium leading-snug" style={{ color: 'var(--brand-primary)' }}>
+                “I miss making things with my hands”
+              </p>
+            </div>
+          </motion.div>
 
           <motion.button
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8 }}
+            transition={{ delay: 1.05 }}
             onClick={() => navigate('/login?next=/onboarding')}
             className="btn-primary px-10 py-4 text-base font-semibold inline-flex items-center gap-2"
           >
-            Sign in
+            Sign in to begin
             <ArrowRight className="h-4 w-4" />
           </motion.button>
+
+          {/* The ask — small, factual, in service of the promise above. */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.55 }}
+            transition={{ delay: 1.25 }}
+            className="mt-4 text-xs flex items-center justify-center gap-1.5"
+            style={{ color: 'var(--brand-text-secondary)' }}
+          >
+            <Lock className="h-3 w-3" />
+            We need an account so we can keep what you share.
+          </motion.p>
 
           <motion.button
             initial={{ opacity: 0 }}
             animate={{ opacity: 0.4 }}
-            transition={{ delay: 1.1 }}
+            transition={{ delay: 1.4 }}
             onClick={() => navigate('/')}
-            className="mt-8 block mx-auto text-xs hover:opacity-80"
+            className="mt-7 block mx-auto text-xs hover:opacity-80"
             style={{ color: 'var(--brand-text-secondary)' }}
           >
             Not now
