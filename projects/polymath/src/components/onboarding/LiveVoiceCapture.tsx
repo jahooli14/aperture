@@ -522,27 +522,31 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
         begin: () => {
           if (beganRef.current) return
           const session = sessionRef.current
-          if (!session) return
+          if (!session) {
+            console.warn('[LiveVoice] begin() called before session ready — retry when onReady fires')
+            return
+          }
           beganRef.current = true
           try {
-            // Seed the conversation. We spell the opener out here AGAIN in
-            // quotes — belt and braces against the model paraphrasing the
-            // anchor question, which it otherwise sometimes does ("what's on
-            // your mind?", "what are you thinking about?", etc.). The system
-            // prompt already requires verbatim; this reinforces it.
+            // Seed an opening user turn. Keep it short and plausibly
+            // human — the Live API responds most reliably to natural
+            // speech-shaped seeds, not meta-instructions. The system
+            // prompt is what pins the verbatim opener; the seed just
+            // tips the model into its first reply.
             session.sendClientContent({
               turns: [
                 {
                   role: 'user',
-                  parts: [{
-                    text: 'Say hello now. Your first words — exactly, verbatim — must be: "Hey — what\'s something you\'ve been thinking about a lot lately?" Then stop and wait for my reply.',
-                  }],
+                  parts: [{ text: "Hi." }],
                 },
               ],
               turnComplete: true,
             } as any)
+            console.info('[LiveVoice] begin seed sent')
           } catch (err) {
             console.error('[LiveVoice] begin failed', err)
+            beganRef.current = false
+            handleError('Could not start the conversation. Refresh to try again.')
           }
         },
         sendUserText: (text: string) => {

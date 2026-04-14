@@ -117,6 +117,32 @@ export function OnboardingChatPage() {
     }
   }, [])
 
+  // ── Already-onboarded guard ────────────────────────────────────────────
+  // Onboarding is a one-time experience. If this user has already done it
+  // (has at least one foundational memory tagged 'onboarding'), redirect
+  // home silently. Async + fire-and-forget; the welcome render stays
+  // snappy and just gets replaced if the probe comes back positive.
+  useEffect(() => {
+    if (!isAuthenticated) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/memories')
+        if (!res.ok) return
+        const { memories = [] } = await res.json()
+        const alreadyOnboarded = Array.isArray(memories) && memories.some((m: any) =>
+          m?.memory_type === 'foundational' &&
+          Array.isArray(m?.tags) &&
+          (m.tags.includes('onboarding') || m.tags.includes('live-hybrid')),
+        )
+        if (!cancelled && alreadyOnboarded) navigate('/', { replace: true })
+      } catch {
+        // Probe failed — let them onboard. Worst case is a duplicate run.
+      }
+    })()
+    return () => { cancelled = true }
+  }, [isAuthenticated, navigate])
+
   // Once Live is connected AND the grid has loaded, trigger the model to
   // begin speaking the anchor question.
   useEffect(() => {
@@ -124,6 +150,31 @@ export function OnboardingChatPage() {
       liveRef.current.begin()
     }
   }, [phase, liveReady, grid])
+
+  // No-response fallback. If the model never speaks the anchor (empty
+  // transcript + never entered 'speaking' status within 8s of being
+  // ready), surface a clear retry instead of leaving the user staring
+  // at a silent mic. Happens occasionally when the Live API drops the
+  // first turn.
+  const [silentStart, setSilentStart] = useState(false)
+  useEffect(() => {
+    if (phase !== 'turn' || !liveReady) return
+    setSilentStart(false)
+    const timer = setTimeout(() => {
+      if (!currentQuestion && liveStatus !== 'speaking') {
+        console.warn('[onboarding-chat] model did not speak anchor within 8s — showing retry')
+        setSilentStart(true)
+      }
+    }, 8000)
+    return () => clearTimeout(timer)
+    // currentQuestion intentionally not in deps — we want a fixed 8s
+    // window from when we went ready, not a reset on every transcript chunk.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, liveReady])
+  // Once the model does start speaking, drop the retry UI if it was up.
+  useEffect(() => {
+    if (currentQuestion || liveStatus === 'speaking') setSilentStart(false)
+  }, [currentQuestion, liveStatus])
 
   const handleStart = useCallback(() => {
     setPhase('bootstrap')
@@ -756,6 +807,18 @@ export function OnboardingChatPage() {
                   <Loader2 className="h-5 w-5 animate-spin opacity-60" />
                   <span className="opacity-60">Connecting voice…</span>
                 </div>
+              ) : silentStart ? (
+                <div className="flex flex-col items-center gap-4 text-sm max-w-xs" style={{ color: 'var(--brand-text-secondary)' }}>
+                  <p className="text-center leading-relaxed">
+                    Hmm — Aperture's taking a beat to warm up. Mind refreshing the page to give it another go?
+                  </p>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="btn-primary px-6 py-2.5 text-sm font-semibold"
+                  >
+                    Refresh
+                  </button>
+                </div>
               ) : (
                 <TurnIndicator status={liveStatus} />
               )}
@@ -850,16 +913,16 @@ export function OnboardingChatPage() {
 }
 
 // ── TurnIndicator ──────────────────────────────────────────────────────────
-// A clear, prominent visual cue for whose turn it is. Three states:
-//   - speaking  → Aperture is talking (don't speak over it, but you can)
-//   - listening → your turn (mic is hot, take your time)
-//   - thinking  → bridging silence after you finished, before Aperture replies
+// Who's talking, without the turn-based game-show feel. The visual is the
+// whole cue:
+//   - speaking  → ring glows steady, mic dims (Aperture is talking)
+//   - listening → ring breathes softly, mic bright (over to you)
+// No "YOUR TURN" text — that was reading robotic. A tiny lowercase
+// "listening…" / "…" sits underneath, quiet enough to be ignored.
 function TurnIndicator({ status }: { status: LiveVoiceStatus }) {
   const speaking = status === 'speaking'
   const listening = status === 'listening' || status === 'ready'
 
-  // The visual: a soft ring that pulses when listening, glows steady when
-  // Aperture is speaking. Mic icon in the middle.
   return (
     <div className="flex flex-col items-center gap-3 select-none">
       <motion.div
@@ -890,14 +953,16 @@ function TurnIndicator({ status }: { status: LiveVoiceStatus }) {
           }}
         />
       </motion.div>
+      {/* Quiet caption — a gentle "listening…" during the user's turn so
+          the state is legible to screen readers and nervous speakers. */}
       <span
-        className="text-[11px] uppercase tracking-[0.18em] font-medium"
+        className="text-[11px] italic"
         style={{
           color: 'var(--brand-text-secondary)',
-          opacity: speaking ? 0.45 : listening ? 0.7 : 0.3,
+          opacity: speaking ? 0 : listening ? 0.45 : 0,
         }}
       >
-        {speaking ? 'Aperture' : listening ? 'your turn' : '\u00A0'}
+        listening…
       </span>
     </div>
   )
