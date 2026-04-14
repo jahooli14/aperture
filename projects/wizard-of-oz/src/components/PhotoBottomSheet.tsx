@@ -19,12 +19,18 @@ interface PhotoBottomSheetProps {
   onDelete: () => void;
 }
 
-export function PhotoBottomSheet({ photo, isOpen, onClose, onDelete }: PhotoBottomSheetProps) {
-  if (!photo) return null;
+export function PhotoBottomSheet({ photo: photoProp, isOpen, onClose, onDelete }: PhotoBottomSheetProps) {
+  if (!photoProp) return null;
 
   const { settings } = useSettingsStore();
-  const { updatePhotoNote, reAlignPhoto } = usePhotoStore();
+  const { updatePhotoNote, reAlignPhoto, photos } = usePhotoStore();
   const { fetchPlaces, fetchPhotoPlaces } = usePlaceStore();
+
+  // Always read the freshest photo from the store by id. Parent components
+  // (e.g. PhotoGallery) pass `photo` as a captured reference, which stays
+  // stale after mutations like reAlignPhoto() replace the stored row. Reading
+  // from the store ensures the sheet re-renders with new URLs / coords.
+  const photo = photos.find((p) => p.id === photoProp.id) ?? photoProp;
 
   const [isAddPlaceModalOpen, setIsAddPlaceModalOpen] = useState(false);
   const [adjustState, setAdjustState] = useState<
