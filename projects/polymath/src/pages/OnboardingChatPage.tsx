@@ -14,13 +14,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowRight, Type, Mic, Loader2 } from 'lucide-react'
+import { ArrowRight, Type, Mic, Loader2, Lock } from 'lucide-react'
 import { LiveVoiceCapture, type LiveVoiceCaptureHandle, type LiveVoiceStatus } from '../components/onboarding/LiveVoiceCapture'
 import { CoverageDots } from '../components/onboarding/CoverageDots'
 import { BookshelfStep } from '../components/onboarding/BookshelfStep'
 import { RevealSequence } from '../components/onboarding/RevealSequence'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useListStore } from '../stores/useListStore'
+import { useAuthContext } from '../contexts/AuthContext'
 import type {
   CoverageGrid,
   CoverageSlotId,
@@ -50,6 +51,7 @@ type Phase =
 
 export function OnboardingChatPage() {
   const navigate = useNavigate()
+  const { isAuthenticated } = useAuthContext()
   const { createMemory } = useMemoryStore()
   const { createList, addListItem, lists } = useListStore()
 
@@ -348,6 +350,78 @@ export function OnboardingChatPage() {
     setBooks([])
     void runAnalysis([])
   }, [runAnalysis])
+
+  // ── Auth gate ───────────────────────────────────────────────────────────
+  // The chat is a 3-minute commitment that produces real artifacts —
+  // memories, list items, an analysis. All of those go through
+  // authenticated endpoints, so guests would silently lose everything they
+  // capture during the chat. Block here instead, with a short explanation
+  // and a sign-in CTA. (See docs/GUEST_ONBOARDING_SPEC.md for the proper
+  // try-before-you-buy pattern, scoped as follow-up work.)
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6 py-12">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="text-center max-w-md w-full"
+        >
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.2, type: 'spring', stiffness: 180 }}
+            className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-8"
+            style={{ background: 'rgba(var(--brand-primary-rgb),0.12)' }}
+          >
+            <Lock className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
+          </motion.div>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35 }}
+            className="text-3xl sm:text-4xl font-semibold leading-tight mb-4"
+            style={{ color: 'var(--brand-text-primary)' }}
+          >
+            Sign in to begin.
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className="text-base mb-10"
+            style={{ color: 'var(--brand-text-secondary)' }}
+          >
+            The chat takes about three minutes and saves what you share — your thoughts, the things you mention, your first project. We need an account to keep them for you.
+          </motion.p>
+
+          <motion.button
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8 }}
+            onClick={() => navigate('/login?next=/onboarding')}
+            className="btn-primary px-10 py-4 text-base font-semibold inline-flex items-center gap-2"
+          >
+            Sign in
+            <ArrowRight className="h-4 w-4" />
+          </motion.button>
+
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.4 }}
+            transition={{ delay: 1.1 }}
+            onClick={() => navigate('/')}
+            className="mt-8 block mx-auto text-xs hover:opacity-80"
+            style={{ color: 'var(--brand-text-secondary)' }}
+          >
+            Not now
+          </motion.button>
+        </motion.div>
+      </div>
+    )
+  }
 
   // ── Welcome ─────────────────────────────────────────────────────────────
   if (phase === 'welcome') {

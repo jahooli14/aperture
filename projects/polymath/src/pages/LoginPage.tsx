@@ -1,13 +1,28 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Mail, ArrowRight, Loader2, CheckCircle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 type Step = 'initial' | 'otp-sent' | 'success'
 
+// Whitelist of paths we'll honour in `?next=` to avoid open-redirect bugs.
+// Add to this list as more flows need a post-login bounce target.
+const SAFE_NEXT_PATHS = new Set<string>(['/onboarding'])
+
+function safeNextFrom(searchParams: URLSearchParams): string {
+  const raw = searchParams.get('next')
+  if (!raw) return '/'
+  // Same-origin only, no protocol/host. Strip query/hash too.
+  if (!raw.startsWith('/') || raw.startsWith('//')) return '/'
+  const path = raw.split(/[?#]/)[0]
+  return SAFE_NEXT_PATHS.has(path) ? path : '/'
+}
+
 export function LoginPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const next = safeNextFrom(searchParams)
   const [email, setEmail] = useState('')
   const [otp, setOtp] = useState('')
   const [step, setStep] = useState<Step>('initial')
@@ -20,7 +35,10 @@ export function LoginPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/`,
+        // Bounce back to wherever we were trying to go (whitelisted), not
+        // always /. Lets the onboarding gate hand the user back to the
+        // chat after sign-in.
+        redirectTo: `${window.location.origin}${next}`,
       },
     })
     if (error) {
@@ -61,7 +79,7 @@ export function LoginPage() {
       setLoading(false)
     } else {
       setStep('success')
-      setTimeout(() => navigate('/'), 1200)
+      setTimeout(() => navigate(next), 1200)
     }
   }
 
