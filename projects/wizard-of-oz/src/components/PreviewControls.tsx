@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { RotateCw, RotateCcw, Loader2, CheckCircle } from 'lucide-react';
+import { RotateCw, RotateCcw, Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
+import type { EyeCoordinates } from '../lib/imageUtils';
 
 interface PreviewControlsProps {
   preview: string | null;
@@ -7,11 +8,19 @@ interface PreviewControlsProps {
   aligning: boolean;
   uploading: boolean;
   hasEyeCoords: boolean;
+  eyeCoords?: EyeCoordinates | null;
   zoomLevel?: number;
+  qualityWarnings?: string[];
   onRotateLeft: () => void;
   onRotateRight: () => void;
   onUpload: () => void;
 }
+
+// Target output dimensions (kept in sync with imageUtils.ts). Used to project
+// the final crop rectangle back onto the preview so the user can see what will
+// actually be committed to the timeline before they tap Upload.
+const TARGET_WIDTH = 1080;
+const TARGET_HEIGHT = 1350;
 
 export function PreviewControls({
   preview,
@@ -19,7 +28,9 @@ export function PreviewControls({
   aligning,
   uploading,
   hasEyeCoords,
+  eyeCoords,
   zoomLevel,
+  qualityWarnings,
   onRotateLeft,
   onRotateRight,
   onUpload,
@@ -28,6 +39,56 @@ export function PreviewControls({
 
   const isProcessing = detectingEyes || aligning;
   const canUpload = !isProcessing && !uploading;
+
+  // Build the overlay geometry in source-image coordinates. The SVG uses a
+  // viewBox matching the source and preserveAspectRatio="xMidYMid meet" so it
+  // aligns exactly with the object-contain <img> in the same container.
+  let overlay: null | {
+    viewBox: string;
+    leftEye: { x: number; y: number };
+    rightEye: { x: number; y: number };
+    eyeRadius: number;
+    crop: { cx: number; cy: number; w: number; h: number; angleDeg: number };
+  } = null;
+
+  if (eyeCoords && zoomLevel !== undefined) {
+    const { leftEye, rightEye, imageWidth, imageHeight } = eyeCoords;
+    const dx = rightEye.x - leftEye.x;
+    const dy = rightEye.y - leftEye.y;
+    const eyeDist = Math.sqrt(dx * dx + dy * dy);
+    if (eyeDist > 0) {
+      const angleRad = Math.atan2(dy, dx);
+      // Matches alignPhoto: target eye distance is 34% of output width.
+      const targetEyeDist = TARGET_WIDTH * 0.34;
+      const scale = targetEyeDist / eyeDist;
+      const cropW = TARGET_WIDTH / scale;
+      const cropH = TARGET_HEIGHT / scale;
+      const sourceEyeCenterX = (leftEye.x + rightEye.x) / 2;
+      const sourceEyeCenterY = (leftEye.y + rightEye.y) / 2;
+      // The crop's vertical center is offset from the eye line by how far the
+      // eye line sits from the output's vertical midpoint. In target space this
+      // offset is (0, H*(0.5 - zoomLevel)); projecting back to source with
+      // R(angle)/scale gives the components below (y-down image coords).
+      const centerOffset = TARGET_HEIGHT * (0.5 - zoomLevel) / scale;
+      const cropCenter = {
+        x: sourceEyeCenterX - Math.sin(angleRad) * centerOffset,
+        y: sourceEyeCenterY + Math.cos(angleRad) * centerOffset,
+      };
+      overlay = {
+        viewBox: `0 0 ${imageWidth} ${imageHeight}`,
+        leftEye,
+        rightEye,
+        eyeRadius: Math.max(4, eyeDist * 0.025),
+        crop: {
+          cx: cropCenter.x,
+          cy: cropCenter.y,
+          w: cropW,
+          h: cropH,
+          angleDeg: (angleRad * 180) / Math.PI,
+        },
+      };
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -38,6 +99,64 @@ export function PreviewControls({
           alt="Preview"
           className="w-full h-full object-contain"
         />
+
+        {/* Detection overlay — eye dots + target crop rectangle. Rendered as an
+            SVG with the same viewBox/meet semantics as the img so the overlay
+            lines up regardless of container size. */}
+        {overlay && !isProcessing && (
+          <svg
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            viewBox={overlay.viewBox}
+            preserveAspectRatio="xMidYMid meet"
+            aria-hidden="true"
+          >
+            {/* Crop rectangle, rotated to match the face tilt */}
+            <g
+              transform={`rotate(${overlay.crop.angleDeg} ${overlay.crop.cx} ${overlay.crop.cy})`}
+            >
+              <rect
+                x={overlay.crop.cx - overlay.crop.w / 2}
+                y={overlay.crop.cy - overlay.crop.h / 2}
+                width={overlay.crop.w}
+                height={overlay.crop.h}
+                fill="none"
+                stroke="white"
+                strokeWidth={Math.max(2, overlay.eyeRadius * 0.4)}
+                strokeDasharray={`${overlay.eyeRadius * 1.5} ${overlay.eyeRadius}`}
+                opacity={0.85}
+              />
+            </g>
+
+            {/* Line between eyes */}
+            <line
+              x1={overlay.leftEye.x}
+              y1={overlay.leftEye.y}
+              x2={overlay.rightEye.x}
+              y2={overlay.rightEye.y}
+              stroke="#22c55e"
+              strokeWidth={Math.max(1.5, overlay.eyeRadius * 0.25)}
+              opacity={0.8}
+            />
+
+            {/* Eye dots */}
+            <circle
+              cx={overlay.leftEye.x}
+              cy={overlay.leftEye.y}
+              r={overlay.eyeRadius}
+              fill="#22c55e"
+              stroke="white"
+              strokeWidth={overlay.eyeRadius * 0.3}
+            />
+            <circle
+              cx={overlay.rightEye.x}
+              cy={overlay.rightEye.y}
+              r={overlay.eyeRadius}
+              fill="#22c55e"
+              stroke="white"
+              strokeWidth={overlay.eyeRadius * 0.3}
+            />
+          </svg>
+        )}
 
         {/* Processing Overlay */}
         <AnimatePresence>
@@ -87,7 +206,7 @@ export function PreviewControls({
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-green-600 text-sm">
             <CheckCircle className="w-4 h-4" />
-            <span>Eyes detected and aligned!</span>
+            <span>Eyes detected — preview shows final crop</span>
           </div>
           {zoomLevel !== undefined && (
             <div className="text-xs text-gray-500 pl-6">
@@ -98,6 +217,18 @@ export function PreviewControls({
               {zoomLevel < 0.22 && ' (Very wide: full context)'}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Quality warnings — non-blocking, advisory only */}
+      {qualityWarnings && qualityWarnings.length > 0 && (
+        <div className="space-y-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+          {qualityWarnings.map((msg, i) => (
+            <div key={i} className="flex items-start gap-2 text-amber-800 text-xs">
+              <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+              <span>{msg}</span>
+            </div>
+          ))}
         </div>
       )}
 

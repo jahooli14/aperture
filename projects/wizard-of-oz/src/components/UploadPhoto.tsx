@@ -33,10 +33,11 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
   const [emoji, setEmoji] = useState('💬');
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [zoomLevel, setZoomLevel] = useState<number>(0.40); // Track zoom level used for alignment
+  const [qualityWarnings, setQualityWarnings] = useState<string[]>([]);
   const hasAlignedRef = useRef(false); // Track if we've already aligned this file
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  const { uploadPhoto, uploading, hasUploadedToday, hasUploadedForDate } = usePhotoStore();
+  const { uploadPhoto, uploading, hasUploadedToday, hasUploadedForDate, getEyeHistoryStats } = usePhotoStore();
   const { settings } = useSettingsStore();
 
   // Get today's date in YYYY-MM-DD format
@@ -64,6 +65,7 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
       setAlignedFile(null); // Clear old alignment
       hasAlignedRef.current = false; // Reset alignment flag
       setDetectingEyes(true); // Re-run detection on rotated image
+      setQualityWarnings([]);
 
       // Safety timeout: If detection doesn't complete in 15 seconds, allow upload anyway
       setTimeout(() => {
@@ -96,6 +98,7 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
     hasAlignedRef.current = false;
     setDetectingEyes(false);
     setError('');
+    setQualityWarnings([]);
 
     try {
       logger.info('Processing new photo', {
@@ -140,6 +143,7 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
   const handleEyeDetection = async (coords: EyeCoordinates | null) => {
     setEyeCoords(coords);
     setDetectingEyes(false);
+    setQualityWarnings([]);
 
     if (!coords) {
       // No error message - just silently proceed without alignment
@@ -148,6 +152,39 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
       hasAlignedRef.current = false;
       return;
     }
+
+    // Build soft quality warnings. These don't block upload — they help the user
+    // decide whether to retake before committing the photo to the timeline.
+    const warnings: string[] = [];
+    if (coords.eyesOpen !== undefined && coords.eyesOpen < 0.35) {
+      warnings.push('Eyes look closed — consider retaking for tighter stacking.');
+    }
+    if (coords.confidence < 0.35) {
+      warnings.push('Low-confidence detection — alignment may drift in the timeline.');
+    }
+
+    // Compare against the user's own history for outlier detection.
+    const history = getEyeHistoryStats(20);
+    if (history) {
+      const dx = coords.rightEye.x - coords.leftEye.x;
+      const dy = coords.rightEye.y - coords.leftEye.y;
+      const eyeDist = Math.sqrt(dx * dx + dy * dy);
+      const normalizedDist = eyeDist / coords.imageWidth;
+      const ratio = normalizedDist / history.medianNormalizedEyeDistance;
+      // Accept wide framing variance (parents take close-ups and wide shots).
+      // Only warn at 2× drift, which typically indicates misdetection.
+      if (ratio < 0.45 || ratio > 2.2) {
+        warnings.push('This eye spacing looks unusual vs. your other photos — detection may be off.');
+      }
+      if (history.medianFaceEyeRatio > 0 && coords.faceWidth && eyeDist > 0) {
+        const faceEyeRatio = coords.faceWidth / eyeDist;
+        const faceRatio = faceEyeRatio / history.medianFaceEyeRatio;
+        if (faceRatio < 0.5 || faceRatio > 2.0) {
+          warnings.push('Face-to-eye proportion looks off — double-check the crop.');
+        }
+      }
+    }
+    setQualityWarnings(warnings);
 
     // Automatically align photo after eye detection (only if not already done)
     if (selectedFile && !hasAlignedRef.current) {
@@ -399,7 +436,9 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
             aligning={aligning}
             uploading={uploading}
             hasEyeCoords={!!eyeCoords}
+            eyeCoords={eyeCoords}
             zoomLevel={zoomLevel}
+            qualityWarnings={qualityWarnings}
             onRotateLeft={() => handleRotate('left')}
             onRotateRight={() => handleRotate('right')}
             onUpload={handleUpload}

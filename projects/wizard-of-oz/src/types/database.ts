@@ -9,12 +9,19 @@ export interface Database {
           original_url: string;
           aligned_url: string | null;
           eye_coordinates: {
+            // Convention: leftEye corresponds to the eye that appears on the LEFT
+            // side of the image when the face is upright (i.e. subject's RIGHT eye).
+            // rightEye is subject's LEFT eye (appears on the right side of an upright image).
+            // This convention lets alignPhoto use a single rotation for any orientation.
             leftEye: { x: number; y: number };
             rightEye: { x: number; y: number };
             confidence: number;
             imageWidth: number;
             imageHeight: number;
-            eyesOpen?: boolean;
+            // Optional quality signals (populated from MediaPipe blendshapes + sanity checks).
+            eyesOpen?: number;  // 0-1, where 1 = fully open. Derived from eyeBlink blendshapes.
+            faceWidth?: number; // Pixel width of face bounding box in source image. Used for outlier checks.
+            irisAgreement?: number; // 0-1, 1 = iris centers agree perfectly with corner-derived eye centers.
           } | null;
           alignment_transform: {
             translateX: number;

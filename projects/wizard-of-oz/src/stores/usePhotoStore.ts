@@ -11,6 +11,21 @@ export interface EyeCoordinates {
   confidence: number;
   imageWidth: number;
   imageHeight: number;
+  eyesOpen?: number;
+  faceWidth?: number;
+  irisAgreement?: number;
+}
+
+/**
+ * Rolling stats over the user's recent photo eye metrics. Used for outlier
+ * detection on upload — an interocular distance or face-to-eye ratio that sits
+ * wildly outside the user's own history usually indicates a bad detection or a
+ * photo of the wrong subject.
+ */
+export interface EyeHistoryStats {
+  sampleSize: number;
+  medianNormalizedEyeDistance: number; // eye_distance / image_width
+  medianFaceEyeRatio: number;          // face_width / eye_distance (stable across framing)
 }
 
 // In-memory cache for signed URLs (1 hour expiry)
@@ -51,6 +66,7 @@ interface PhotoState {
   restorePhoto: (photo: Photo) => void;
   hasUploadedToday: () => boolean;
   hasUploadedForDate: (date: string) => boolean;
+  getEyeHistoryStats: (limit?: number) => EyeHistoryStats | null;
 }
 
 export const usePhotoStore = create<PhotoState>((set, get) => ({
@@ -267,7 +283,10 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
           rightEye: eyeCoords.rightEye,
           confidence: eyeCoords.confidence,
           imageWidth: eyeCoords.imageWidth,
-          imageHeight: eyeCoords.imageHeight
+          imageHeight: eyeCoords.imageHeight,
+          ...(eyeCoords.eyesOpen !== undefined ? { eyesOpen: eyeCoords.eyesOpen } : {}),
+          ...(eyeCoords.faceWidth !== undefined ? { faceWidth: eyeCoords.faceWidth } : {}),
+          ...(eyeCoords.irisAgreement !== undefined ? { irisAgreement: eyeCoords.irisAgreement } : {}),
         } : null,
         metadata: {
           ...(note ? { note } : {}),
@@ -398,5 +417,42 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
   hasUploadedForDate: (date: string) => {
     const photos = get().photos;
     return photos.some(photo => photo.upload_date === date);
+  },
+
+  getEyeHistoryStats: (limit: number = 20) => {
+    const photos = get().photos;
+    const samples: Array<{ normalizedEyeDistance: number; faceEyeRatio: number | null }> = [];
+
+    for (const photo of photos) {
+      const ec = photo.eye_coordinates;
+      if (!ec || !ec.imageWidth) continue;
+      const dx = ec.rightEye.x - ec.leftEye.x;
+      const dy = ec.rightEye.y - ec.leftEye.y;
+      const eyeDist = Math.sqrt(dx * dx + dy * dy);
+      if (eyeDist <= 0) continue;
+      samples.push({
+        normalizedEyeDistance: eyeDist / ec.imageWidth,
+        faceEyeRatio: ec.faceWidth ? ec.faceWidth / eyeDist : null,
+      });
+      if (samples.length >= limit) break;
+    }
+
+    if (samples.length < 3) return null; // Not enough history to compare.
+
+    const median = (arr: number[]) => {
+      const sorted = [...arr].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+    };
+
+    const normalized = samples.map(s => s.normalizedEyeDistance);
+    const ratios = samples.map(s => s.faceEyeRatio).filter((v): v is number => v !== null);
+
+    return {
+      sampleSize: samples.length,
+      medianNormalizedEyeDistance: median(normalized),
+      // If we have zero historical face-width data, fall back to 0 (skip ratio check upstream).
+      medianFaceEyeRatio: ratios.length >= 3 ? median(ratios) : 0,
+    };
   },
 }));
