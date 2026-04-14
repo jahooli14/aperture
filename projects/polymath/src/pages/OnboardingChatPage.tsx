@@ -20,12 +20,24 @@ import { CoverageDots } from '../components/onboarding/CoverageDots'
 import { BookshelfStep } from '../components/onboarding/BookshelfStep'
 import { RevealSequence } from '../components/onboarding/RevealSequence'
 import { useMemoryStore } from '../stores/useMemoryStore'
+import { useListStore } from '../stores/useListStore'
 import type {
   CoverageGrid,
   CoverageSlotId,
   OnboardingAnalysis,
   BookSearchResult,
+  ListType,
 } from '../types'
+
+/** Named entity the observer surfaced during the voice chat — e.g. a film
+ *  they mentioned, a book, a place. We pre-populate the bookshelf with
+ *  books, and save the rest straight to the matching list when the
+ *  onboarding completes. */
+interface CapturedItem {
+  type: ListType
+  name: string
+  raw_phrase: string
+}
 
 type Phase =
   | 'welcome'
@@ -39,6 +51,7 @@ type Phase =
 export function OnboardingChatPage() {
   const navigate = useNavigate()
   const { createMemory } = useMemoryStore()
+  const { createList, addListItem, lists } = useListStore()
 
   const [phase, setPhase] = useState<Phase>('welcome')
   const [grid, setGrid] = useState<CoverageGrid | null>(null)
@@ -58,6 +71,12 @@ export function OnboardingChatPage() {
   const allTranscriptsRef = useRef<string[]>([])
   const inflightObserveRef = useRef(false)
   const shouldStopAfterTurnRef = useRef(false)
+  // Named things the user mentioned during the chat — accumulated across
+  // every observe call. Books are pre-populated into the BookshelfStep;
+  // other types (films, places, etc.) are persisted to their respective
+  // lists when onboarding completes.
+  const capturedItemsRef = useRef<CapturedItem[]>([])
+  const [capturedBooks, setCapturedBooks] = useState<BookSearchResult[]>([])
 
   // ── Bootstrap: fetch a grid (we still need one for the random dot
   //    permutation + as the shape the observer mutates) ───────────────────
@@ -154,11 +173,32 @@ export function OnboardingChatPage() {
           grid: CoverageGrid
           newly_filled_slots: CoverageSlotId[]
           stopping_hint: { should_stop: boolean; reason: string }
+          captured_items?: CapturedItem[]
         }
 
         setGrid(data.grid)
         setJustFilled(data.newly_filled_slots)
         setUserPartial('')
+
+        // Accumulate any named entities the observer pulled out. De-dupe by
+        // (type + lowercased name) so repeat mentions don't land in the user's
+        // lists twice.
+        if (data.captured_items && data.captured_items.length > 0) {
+          const seen = new Set(
+            capturedItemsRef.current.map(i => `${i.type}::${i.name.toLowerCase()}`),
+          )
+          for (const item of data.captured_items) {
+            const key = `${item.type}::${item.name.toLowerCase()}`
+            if (seen.has(key)) continue
+            seen.add(key)
+            capturedItemsRef.current.push(item)
+            // Books: try to enrich with cover art for the bookshelf UI. Fire
+            // and forget — if the search fails we still show the raw title.
+            if (item.type === 'book') {
+              void enrichBook(item)
+            }
+          }
+        }
 
         // If the observer thinks we've covered enough, close the Live session
         // gracefully and move on to the books step. The model's system prompt
@@ -166,10 +206,15 @@ export function OnboardingChatPage() {
         if (data.stopping_hint.should_stop) {
           shouldStopAfterTurnRef.current = true
           // Give the model a brief moment to finish whatever it's saying,
-          // then close.
+          // then close. While the user sees the "completing" loader, write
+          // out any non-book items the chat captured to their lists — this
+          // is hidden from the UI because surfacing "we already made you a
+          // films list" mid-flow would feel presumptuous; the user will
+          // find them naturally when they visit /lists.
           setTimeout(() => {
             try { liveRef.current?.close() } catch {}
             setPhase('completing')
+            void persistCapturedNonBooks()
             setTimeout(() => setPhase('books'), 600)
           }, 400)
         }
@@ -182,6 +227,64 @@ export function OnboardingChatPage() {
     },
     [grid, createMemory],
   )
+
+  // ── Enrich a captured book title with cover art from Google Books. Adds
+  //    to capturedBooks, deduped by title+author. Best-effort — no errors
+  //    surfaced; if search fails we just won't pre-populate the bookshelf.
+  const enrichBook = useCallback(async (item: CapturedItem) => {
+    try {
+      const res = await fetch(`/api/utilities?resource=book-search&q=${encodeURIComponent(item.name)}`)
+      if (!res.ok) return
+      const data = await res.json()
+      const top = (data.results as BookSearchResult[] | undefined)?.[0]
+      if (!top) return
+      setCapturedBooks(prev => {
+        if (prev.some(b => b.title === top.title && b.author === top.author)) return prev
+        return [...prev, top].slice(0, 3)
+      })
+    } catch {
+      // Silent fallback — onboarding continues fine without the enrichment.
+    }
+  }, [])
+
+  // Persist any non-book captured items to the user's lists. Creates a list
+  // per type on demand. Runs at onboarding handoff (after books step).
+  const persistCapturedNonBooks = useCallback(async () => {
+    const items = capturedItemsRef.current.filter(i => i.type !== 'book')
+    if (items.length === 0) return
+
+    // Group by type so we only create/find each list once.
+    const byType = new Map<ListType, CapturedItem[]>()
+    for (const item of items) {
+      const list = byType.get(item.type) ?? []
+      list.push(item)
+      byType.set(item.type, list)
+    }
+
+    const listTitles: Record<ListType, string> = {
+      film: 'Films', music: 'Music', tech: 'Tech', book: 'Books', place: 'Places',
+      game: 'Games', software: 'Software', event: 'Events', quote: 'Quotes',
+      article: 'Articles', generic: 'Things', fix: 'Fixes',
+    }
+
+    for (const [type, typeItems] of byType) {
+      try {
+        const existing = lists.find(l => l.type === type)
+        const listId = existing
+          ? existing.id
+          : await createList({ title: listTitles[type] || type, type })
+        for (const item of typeItems) {
+          try {
+            await addListItem({ list_id: listId, content: item.name })
+          } catch (e) {
+            console.warn('[onboarding-chat] failed to add item to list', type, item.name, e)
+          }
+        }
+      } catch (e) {
+        console.warn('[onboarding-chat] failed to create list for captured items', type, e)
+      }
+    }
+  }, [lists, createList, addListItem])
 
   // ── Typing fallback ─────────────────────────────────────────────────────
   const handleTypedSubmit = useCallback(() => {
@@ -322,7 +425,13 @@ export function OnboardingChatPage() {
   }
 
   if (phase === 'books') {
-    return <BookshelfStep onComplete={handleBooksComplete} onSkip={handleBooksSkip} />
+    return (
+      <BookshelfStep
+        onComplete={handleBooksComplete}
+        onSkip={handleBooksSkip}
+        prepopulated={capturedBooks}
+      />
+    )
   }
 
   if (phase === 'analyzing' || phase === 'reveal') {

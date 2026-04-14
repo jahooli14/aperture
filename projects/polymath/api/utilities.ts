@@ -540,8 +540,8 @@ async function handleOnboardingObserve(req: VercelRequest, res: VercelResponse) 
           .map(t => `Turn ${t.index} [${t.target_slot ?? '—'}]\n  Q: ${t.question}\n  A: ${t.transcript || '(skipped)'}`)
           .join('\n')
 
-    // Cheap observe prompt — only slot updates, no next-question generation.
-    const prompt = `You are observing an onboarding voice chat. Your ONLY job is to update a coverage grid based on the latest turn — no questions, no chat.
+    // Cheap observe prompt — slot updates + named-entity extraction.
+    const prompt = `You are observing an onboarding voice chat. Your job is to (1) update a coverage grid and (2) extract any concrete named things the user mentioned. No questions, no chat.
 
 COVERAGE SLOTS:
 ${slotCatalogue}
@@ -556,26 +556,35 @@ LATEST TURN:
 Assistant asked: "${question}"
 User replied: "${transcript || '(empty / skipped)'}"
 
-Identify which slots the user's reply filled or strengthened. Return ONLY JSON:
+Return ONLY JSON:
 
 {
   "slot_updates": {
     "<slot_id>": { "confidence": 0.0-1.0, "grounding_phrases": ["phrase from user"] }
   },
-  "depth_signal": "high" | "medium" | "low"
+  "depth_signal": "high" | "medium" | "low",
+  "captured_items": [
+    { "type": "book" | "film" | "music" | "game" | "place" | "software" | "article" | "tech" | "event" | "quote", "name": "...", "raw_phrase": "..." }
+  ]
 }
 
-Rules:
+Rules for slot_updates:
 - Only include slots whose confidence actually changed.
 - grounding_phrases MUST be verbatim from the user's reply, or very near-verbatim (punctuation and capitalisation differences are fine; do not paraphrase, invent, or summarise).
 - cross_domain_curiosity is ONLY filled if the user's reply is in a clearly different domain from RECENT CONTEXT above. Mere topic jumps within the same theme do not count.
 - If the user's reply is empty / skipped, return slot_updates: {} and depth_signal: "low".
-- depth_signal = "high" if the user said something rich and worth probing deeper; "low" if thin.`
+- depth_signal = "high" if the user said something rich and worth probing deeper; "low" if thin.
+
+Rules for captured_items:
+- ONLY include things the user named explicitly. Don't guess at titles/authors from vague allusions.
+- "name" is the clean title (e.g. "Dune", "Half Moon Bay", "Neil Gaiman"). "raw_phrase" is how they said it.
+- Skip generic mentions ("a book I read", "some film"). A specific proper noun must appear in the user's reply.
+- Empty array is fine. Do not invent entries to pad the list.`
 
     let raw: string
     try {
       raw = await generateText(prompt, {
-        maxTokens: 400,
+        maxTokens: 700,
         temperature: 0.3,
         responseFormat: 'json',
         model: MODELS.DEFAULT_CHAT,
@@ -653,12 +662,34 @@ Rules:
     const filled = newlyFilledSlots(grid, nextGrid)
     const stopping_hint = computeStoppingHint(nextGrid, decision.depth_signal)
 
+    // Captured named entities — validate against the transcript so we don't
+    // persist hallucinated items to the user's lists.
+    const allowedTypes = new Set(['book', 'film', 'music', 'game', 'place', 'software', 'article', 'tech', 'event', 'quote'])
+    const capturedItems: Array<{ type: string; name: string; raw_phrase: string }> = []
+    if (Array.isArray(parsed.captured_items)) {
+      for (const raw of parsed.captured_items as any[]) {
+        if (!raw || typeof raw !== 'object') continue
+        const type = typeof raw.type === 'string' ? raw.type.toLowerCase() : ''
+        const name = typeof raw.name === 'string' ? raw.name.trim() : ''
+        const rawPhrase = typeof raw.raw_phrase === 'string' ? raw.raw_phrase.trim() : ''
+        if (!allowedTypes.has(type) || !name || name.length > 120) continue
+        // At least one of the two strings must appear in the transcript
+        // (case-insensitive) — otherwise the observer invented it.
+        const haystackLc = haystack
+        const nameLc = name.toLowerCase()
+        const phraseLc = rawPhrase.toLowerCase()
+        if (!haystackLc.includes(nameLc) && (!phraseLc || !haystackLc.includes(phraseLc))) continue
+        capturedItems.push({ type, name, raw_phrase: rawPhrase || name })
+      }
+    }
+
     return res.status(200).json({
       grid: stopping_hint.should_stop
         ? { ...nextGrid, completed_at: new Date().toISOString() }
         : nextGrid,
       newly_filled_slots: filled,
       stopping_hint,
+      captured_items: capturedItems,
     })
   } catch (err: any) {
     console.error('[utilities/onboarding-observe]', err?.message, err?.stack)
