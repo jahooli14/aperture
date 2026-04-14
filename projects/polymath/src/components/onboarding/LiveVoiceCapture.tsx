@@ -308,11 +308,21 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
           const { token, model } = await tokRes.json()
           if (cancelled) return
 
-          // 2. Audio contexts (relies on preceding user gesture)
+          // 2. Audio contexts (relies on preceding user gesture).
+          //    Mobile browsers often return contexts in `suspended` state
+          //    even with a prior gesture; an explicit resume() is needed
+          //    or playback silently no-ops and the mic worklet never ticks.
           const inputCtx = new AudioContext({ sampleRate: 48000 })
           const outputCtx = new AudioContext({ sampleRate: OUTPUT_SAMPLE_RATE })
           inputCtxRef.current = inputCtx
           outputCtxRef.current = outputCtx
+          console.info('[LiveVoice] audio ctx state', { input: inputCtx.state, output: outputCtx.state })
+          try {
+            if (inputCtx.state === 'suspended') await inputCtx.resume()
+            if (outputCtx.state === 'suspended') await outputCtx.resume()
+          } catch (e) {
+            console.warn('[LiveVoice] audio ctx resume failed (continuing)', e)
+          }
           await inputCtx.audioWorklet.addModule('/onboarding-mic-worklet.js')
 
           // 3. Mic — translate the browser's terse errors into something
@@ -575,17 +585,20 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
           }
           beganRef.current = true
           try {
-            // Seed an opening user turn. Keep it short and plausibly
-            // human — the Live API responds most reliably to natural
-            // speech-shaped seeds, not meta-instructions. The system
-            // prompt is what pins the verbatim opener; the seed just
-            // tips the model into its first reply.
+            // Seed an opening user turn. This shape ({turns:[{role:'user',
+            // parts:[{text:"Hi."}]}], turnComplete:true}) is the proven
+            // pattern that worked in prior commits (V1 0e715be, 2648900).
+            //
+            // We previously tried the docs' short-form `{turnComplete: true}`
+            // in commit af30756 on the theory it was the idiomatic "begin
+            // generation" trigger. In practice the Live API stayed silent
+            // on that form — the fallback "taking a beat" card fired every
+            // time. Reverted. Don't re-introduce the short form without a
+            // live test confirming it actually produces model output
+            // against the current model ID.
             session.sendClientContent({
               turns: [
-                {
-                  role: 'user',
-                  parts: [{ text: "Hi." }],
-                },
+                { role: 'user', parts: [{ text: 'Hi.' }] },
               ],
               turnComplete: true,
             } as any)
