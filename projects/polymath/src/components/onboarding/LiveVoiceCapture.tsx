@@ -585,16 +585,24 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
           }
           beganRef.current = true
           try {
-            // Short-form begin per @google/genai docs: "sendClientContent(
-            // {turnComplete:true})" tells the server to start generating
-            // from the accumulated prompt (= our system instruction,
-            // which ends with 'greet them with your opening line now').
-            // No user seed is needed — and in fact, seeding with user
-            // text like "Hi." has produced empty turnComplete responses
-            // in the wild (model treats it as a meta-ack and says
-            // nothing). Trust the system prompt.
-            session.sendClientContent({ turnComplete: true } as any)
-            console.info('[LiveVoice] begin signal sent (turnComplete-only)')
+            // Seed an opening user turn. This shape ({turns:[{role:'user',
+            // parts:[{text:"Hi."}]}], turnComplete:true}) is the proven
+            // pattern that worked in prior commits (V1 0e715be, 2648900).
+            //
+            // We previously tried the docs' short-form `{turnComplete: true}`
+            // in commit af30756 on the theory it was the idiomatic "begin
+            // generation" trigger. In practice the Live API stayed silent
+            // on that form — the fallback "taking a beat" card fired every
+            // time. Reverted. Don't re-introduce the short form without a
+            // live test confirming it actually produces model output
+            // against the current model ID.
+            session.sendClientContent({
+              turns: [
+                { role: 'user', parts: [{ text: 'Hi.' }] },
+              ],
+              turnComplete: true,
+            } as any)
+            console.info('[LiveVoice] begin seed sent')
           } catch (err) {
             console.error('[LiveVoice] begin failed', err)
             beganRef.current = false
