@@ -307,6 +307,13 @@ export function FloatingNav() {
     }
   }
 
+  // Hide the whole nav (FAB + pill) for unauth visitors. They don't have
+  // anywhere to capture TO, and every action behind the FAB hits
+  // authenticated endpoints, so showing it as a pre-signup teaser would
+  // just be noise. The AuthProvider blocks rendering during `loading`, so
+  // by the time we run here `user` is either really there or really not.
+  if (!user) return null
+
   return (
     <>
       {/* Replaced inline FAB with Universal Action FAB */}
