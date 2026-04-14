@@ -365,55 +365,103 @@ export function OnboardingChatPage() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="text-center max-w-md w-full"
+          className="text-center max-w-lg w-full"
         >
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2, type: 'spring', stiffness: 180 }}
+            transition={{ delay: 0.15, type: 'spring', stiffness: 180 }}
             className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-8"
             style={{ background: 'rgba(var(--brand-primary-rgb),0.12)' }}
           >
-            <Lock className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
+            <Mic className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
           </motion.div>
 
+          {/* The promise — lead with the value, not the friction. */}
           <motion.h1
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35 }}
-            className="text-3xl sm:text-4xl font-semibold leading-tight mb-4"
+            transition={{ delay: 0.3 }}
+            className="text-[2.1rem] sm:text-[2.6rem] font-semibold leading-[1.08] tracking-tight mb-5"
             style={{ color: 'var(--brand-text-primary)' }}
           >
-            Sign in to begin.
+            A project you'd never have<br className="hidden sm:block" /> thought of yourself.
           </motion.h1>
 
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
-            className="text-base mb-10"
+            transition={{ delay: 0.55 }}
+            className="text-base sm:text-lg leading-relaxed mb-7 max-w-md mx-auto"
             style={{ color: 'var(--brand-text-secondary)' }}
           >
-            The chat takes about three minutes and saves what you share — your thoughts, the things you mention, your first project. We need an account to keep them for you.
+            Talk for three minutes. Aperture listens for the threads between the things you mention — and surfaces something to build that genuinely surprises you.
           </motion.p>
+
+          {/* Sample reveal teaser — hints at the format the user is signing
+              up to receive. Same two-quote-split aesthetic as the real
+              InsightBody, with an unmistakable "example" label so we're
+              not pretending it's theirs. */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.85 }}
+            className="p-5 sm:p-6 rounded-2xl mb-9"
+            style={{
+              background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.10), rgba(var(--brand-primary-rgb),0.04))',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid rgba(var(--brand-primary-rgb),0.16)',
+              boxShadow: '0 6px 28px -14px rgba(var(--brand-primary-rgb),0.30)',
+            }}
+          >
+            <p
+              className="text-[10px] uppercase tracking-[0.22em] font-medium mb-4"
+              style={{ color: 'var(--brand-text-secondary)', opacity: 0.55 }}
+            >
+              an example reveal
+            </p>
+            <div className="flex flex-col gap-3 text-center">
+              <p className="text-base sm:text-lg italic font-medium leading-snug" style={{ color: 'var(--brand-primary)' }}>
+                “the welding part caught my ear”
+              </p>
+              <p className="text-xs sm:text-sm leading-relaxed mx-auto max-w-prose" style={{ color: 'var(--brand-text-primary)', opacity: 0.85 }}>
+                Both of these are the same thought in different clothes — you're missing a kind of work that doesn't have a name in your day job.
+              </p>
+              <p className="text-base sm:text-lg italic font-medium leading-snug" style={{ color: 'var(--brand-primary)' }}>
+                “I miss making things with my hands”
+              </p>
+            </div>
+          </motion.div>
 
           <motion.button
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8 }}
+            transition={{ delay: 1.05 }}
             onClick={() => navigate('/login?next=/onboarding')}
             className="btn-primary px-10 py-4 text-base font-semibold inline-flex items-center gap-2"
           >
-            Sign in
+            Sign in to begin
             <ArrowRight className="h-4 w-4" />
           </motion.button>
+
+          {/* The ask — small, factual, in service of the promise above. */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.55 }}
+            transition={{ delay: 1.25 }}
+            className="mt-4 text-xs flex items-center justify-center gap-1.5"
+            style={{ color: 'var(--brand-text-secondary)' }}
+          >
+            <Lock className="h-3 w-3" />
+            We need an account so we can keep what you share.
+          </motion.p>
 
           <motion.button
             initial={{ opacity: 0 }}
             animate={{ opacity: 0.4 }}
-            transition={{ delay: 1.1 }}
+            transition={{ delay: 1.4 }}
             onClick={() => navigate('/')}
-            className="mt-8 block mx-auto text-xs hover:opacity-80"
+            className="mt-7 block mx-auto text-xs hover:opacity-80"
             style={{ color: 'var(--brand-text-secondary)' }}
           >
             Not now
