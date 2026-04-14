@@ -358,6 +358,15 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
             httpOptions: { apiVersion: 'v1alpha' },
           })
 
+          // Some versions of the @google/genai SDK fire `onopen` synchronously
+          // during the `await ai.live.connect(...)` promise — i.e. BEFORE we
+          // get a chance to store the session ref. If that happens and we
+          // immediately signal the parent via onReady, the parent's
+          // begin() ends up running against a null sessionRef and does
+          // nothing. Defer the ready signal until after the session is
+          // stored; if onopen arrived early, fire the signal manually.
+          let openedEarly = false
+
           const session = await ai.live.connect({
             model,
             config: {
@@ -393,8 +402,15 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
               onopen: () => {
                 if (cancelled) return
                 console.info('[LiveVoice] session open')
-                setStatus('ready')
-                onReadyRef.current?.()
+                if (sessionRef.current) {
+                  // Session already stored — safe to signal parent now.
+                  setStatus('ready')
+                  onReadyRef.current?.()
+                } else {
+                  // onopen fired DURING the connect await; defer the
+                  // ready signal until sessionRef.current is set below.
+                  openedEarly = true
+                }
               },
               onmessage: (message: LiveServerMessage) => {
                 handleServerMessage(message)
@@ -419,6 +435,14 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
             return
           }
           sessionRef.current = session
+
+          // If onopen fired during the await, the ready-signal was
+          // deferred. Now that the session is stored, fire it.
+          if (openedEarly) {
+            console.info('[LiveVoice] firing deferred onReady (onopen arrived early)')
+            setStatus('ready')
+            onReadyRef.current?.()
+          }
 
           // 5. Pump mic PCM into the Live session — but gate the uplink
           //    whenever Aperture is audible. Browser echo cancellation is

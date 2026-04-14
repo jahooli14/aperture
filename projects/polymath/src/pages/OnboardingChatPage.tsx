@@ -186,6 +186,20 @@ export function OnboardingChatPage() {
     if (currentQuestion || liveStatus === 'speaking') setSilentStart(false)
   }, [currentQuestion, liveStatus])
 
+  // Cut a tap for authed users. After sign-in from UnauthHome → /login the
+  // visitor already chose to do the chat twice (pitch + "start talking").
+  // A third "Start talking" welcome page is redundant noise. Auto-advance
+  // to bootstrap once auth is confirmed. (Unauth visitors still see the
+  // sign-in gate above; if somehow an authed user lands here without
+  // hitting the gate, they still get the smooth auto-advance.)
+  useEffect(() => {
+    if (isAuthenticated && phase === 'welcome') {
+      setPhase('bootstrap')
+      setError(null)
+      void bootstrapGrid()
+    }
+  }, [isAuthenticated, phase, bootstrapGrid])
+
   const handleStart = useCallback(() => {
     setPhase('bootstrap')
     setError(null)
@@ -644,6 +658,19 @@ export function OnboardingChatPage() {
   }
 
   // ── Welcome ─────────────────────────────────────────────────────────────
+  // Authed + welcome = in-flight auto-advance. Show the loader, not the
+  // pitch page — the auto-advance effect is about to flip us to bootstrap,
+  // and briefly flashing the welcome screen would be a jarring no-op tap.
+  if (phase === 'welcome' && isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 py-12">
+        <div className="flex items-center gap-3 text-sm" style={{ color: 'var(--brand-text-secondary)' }}>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Getting ready…
+        </div>
+      </div>
+    )
+  }
   if (phase === 'welcome') {
     return (
       <div className="min-h-screen flex items-center justify-center px-6 py-12">
