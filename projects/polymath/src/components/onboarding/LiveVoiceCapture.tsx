@@ -63,6 +63,10 @@ interface LiveVoiceCaptureProps {
   onError?: (message: string) => void
   /** If true, hide the component's internal visualizer (caller renders its own). */
   hideVisualizer?: boolean
+  /** If true, the mic uplink is muted — no audio frames are sent to Live.
+   *  Used by the typing fallback so spurious ambient noise doesn't kick
+   *  off a VAD-driven user turn while the user is deliberately typing. */
+  muted?: boolean
 }
 
 // ── System prompt — the whole onboarding design, delivered to the model ───
@@ -169,9 +173,13 @@ function base64ToInt16Array(b64: string): Int16Array {
 
 export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCaptureProps>(
   function LiveVoiceCapture(
-    { onTurnComplete, onModelSpeaking, onUserSpeaking, onReady, onStatusChange, onError, hideVisualizer = false },
+    { onTurnComplete, onModelSpeaking, onUserSpeaking, onReady, onStatusChange, onError, hideVisualizer = false, muted = false },
     ref,
   ) {
+    // Mirror `muted` into a ref so the mic callback (set up once inside
+    // the connect effect) reads the latest value every frame.
+    const mutedRef = useRef(muted)
+    useEffect(() => { mutedRef.current = muted }, [muted])
     const sessionRef = useRef<Session | null>(null)
     const inputCtxRef = useRef<AudioContext | null>(null)
     const outputCtxRef = useRef<AudioContext | null>(null)
@@ -384,6 +392,7 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
             callbacks: {
               onopen: () => {
                 if (cancelled) return
+                console.info('[LiveVoice] session open')
                 setStatus('ready')
                 onReadyRef.current?.()
               },
@@ -411,15 +420,24 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
           }
           sessionRef.current = session
 
-          // 5. Pump mic PCM into the Live session — but drop frames while the
-          //    model is speaking. Browser echo cancellation is imperfect, and
-          //    the model's own voice leaking back as "user input" makes it
-          //    interrupt itself mid-sentence or chase its own tail. Muting
-          //    the uplink during playback is the cleanest fix; the user can
-          //    still barge in — VAD re-opens as soon as playback ends.
+          // 5. Pump mic PCM into the Live session — but gate the uplink
+          //    whenever Aperture is audible. Browser echo cancellation is
+          //    imperfect, and the model's own voice leaking back as "user
+          //    input" makes it interrupt itself or loop on its own tail.
+          //
+          //    We gate on TWO signals: modelSpeakingRef (currently
+          //    generating) OR activePlaybackRef.length > 0 (queued audio
+          //    still playing out of the output context). The second check
+          //    is essential because turnComplete fires as soon as the
+          //    model FINISHES GENERATING — the scheduled AudioBufferSource
+          //    nodes are still playing for up to a few hundred ms after
+          //    that. Without this gate, the mic opens during that tail
+          //    and the Live model hears itself finishing its own sentence.
           workletNode.port.onmessage = (event: MessageEvent<ArrayBuffer>) => {
             if (!sessionRef.current || closedRef.current) return
+            if (mutedRef.current) return
             if (modelSpeakingRef.current) return
+            if (activePlaybackRef.current.length > 0) return
             try {
               sessionRef.current.sendRealtimeInput({
                 audio: {
@@ -486,6 +504,11 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
       if (sc.turnComplete) {
         const user = userTranscriptBufferRef.current.trim()
         const modelText = modelTranscriptBufferRef.current.trim()
+        console.info('[LiveVoice] turnComplete', {
+          user_len: user.length,
+          model_len: modelText.length,
+          anchor_spoken: beganAnchorSpokenRef.current,
+        })
         userTranscriptBufferRef.current = ''
         modelTranscriptBufferRef.current = ''
         modelSpeakingRef.current = false
