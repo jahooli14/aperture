@@ -540,8 +540,9 @@ async function handleOnboardingObserve(req: VercelRequest, res: VercelResponse) 
           .map(t => `Turn ${t.index} [${t.target_slot ?? '—'}]\n  Q: ${t.question}\n  A: ${t.transcript || '(skipped)'}`)
           .join('\n')
 
-    // Cheap observe prompt — slot updates + named-entity extraction.
-    const prompt = `You are observing an onboarding voice chat. Your job is to (1) update a coverage grid and (2) extract any concrete named things the user mentioned. No questions, no chat.
+    // Cheap observe prompt — slot updates + named-entity extraction +
+    // explicit project intents.
+    const prompt = `You are observing an onboarding voice chat. Your job is to (1) update a coverage grid, (2) extract any concrete named things the user mentioned, and (3) catch any project the user explicitly said they want to make. No questions, no chat.
 
 COVERAGE SLOTS:
 ${slotCatalogue}
@@ -565,6 +566,9 @@ Return ONLY JSON:
   "depth_signal": "high" | "medium" | "low",
   "captured_items": [
     { "type": "book" | "film" | "music" | "game" | "place" | "software" | "article" | "tech" | "event" | "quote", "name": "...", "raw_phrase": "..." }
+  ],
+  "captured_projects": [
+    { "title": "...", "description": "...", "raw_phrase": "..." }
   ]
 }
 
@@ -579,7 +583,15 @@ Rules for captured_items:
 - ONLY include things the user named explicitly. Don't guess at titles/authors from vague allusions.
 - "name" is the clean title (e.g. "Dune", "Half Moon Bay", "Neil Gaiman"). "raw_phrase" is how they said it.
 - Skip generic mentions ("a book I read", "some film"). A specific proper noun must appear in the user's reply.
-- Empty array is fine. Do not invent entries to pad the list.`
+- Empty array is fine. Do not invent entries to pad the list.
+
+Rules for captured_projects:
+- ONLY include projects the user EXPLICITLY said they want to make, build, write, start, or do. Phrases like "I'm thinking about making a wooden stool", "I want to write a memoir about my dad", "I've been wanting to start a podcast about urban foraging".
+- Do NOT include passive interests ("I love woodworking"), things they're already doing ("I'm working on my novel" — that's an existing project, not a new one), or generic ambitions ("I want to be more creative").
+- "title" should be a short noun-phrase project name in their voice (e.g. "Wooden stool", "Memoir about Dad", "Urban foraging podcast"). Not a sentence.
+- "description" is one sentence, ideally drawing on words they used. Concrete, not aspirational waffle.
+- "raw_phrase" is the part of their reply that triggered the capture (must appear verbatim or near-verbatim in the transcript above). This is our anti-hallucination check.
+- Empty array is fine — and is the default. Most turns won't contain an explicit project intent. Only flag the obvious ones.`
 
     let raw: string
     try {
@@ -683,6 +695,35 @@ Rules for captured_items:
       }
     }
 
+    // Captured project intents — anything the user explicitly said they
+    // want to make. Same anti-hallucination gate: the raw_phrase has to
+    // actually appear in their reply or we drop the capture. These get
+    // saved as project_suggestions on the client side so they show up in
+    // the existing "Try Something New" carousel alongside the AI-derived
+    // intersection ideas.
+    const capturedProjects: Array<{ title: string; description: string; raw_phrase: string }> = []
+    if (Array.isArray(parsed.captured_projects)) {
+      for (const raw of parsed.captured_projects as any[]) {
+        if (!raw || typeof raw !== 'object') continue
+        const title = typeof raw.title === 'string' ? raw.title.trim() : ''
+        const description = typeof raw.description === 'string' ? raw.description.trim() : ''
+        const rawPhrase = typeof raw.raw_phrase === 'string' ? raw.raw_phrase.trim() : ''
+        if (!title || title.length > 120) continue
+        // Same near-verbatim check we use for slot grounding phrases.
+        const needle = rawPhrase.toLowerCase()
+        const phraseGrounded =
+          needle.length > 0 &&
+          (haystack.includes(needle) ||
+            (needle.length >= 12 && haystack.includes(needle.slice(0, 12))))
+        if (!phraseGrounded) continue
+        capturedProjects.push({
+          title,
+          description: description.slice(0, 400),
+          raw_phrase: rawPhrase,
+        })
+      }
+    }
+
     return res.status(200).json({
       grid: stopping_hint.should_stop
         ? { ...nextGrid, completed_at: new Date().toISOString() }
@@ -690,6 +731,7 @@ Rules for captured_items:
       newly_filled_slots: filled,
       stopping_hint,
       captured_items: capturedItems,
+      captured_projects: capturedProjects,
     })
   } catch (err: any) {
     console.error('[utilities/onboarding-observe]', err?.message, err?.stack)

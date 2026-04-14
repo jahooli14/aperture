@@ -40,6 +40,16 @@ interface CapturedItem {
   raw_phrase: string
 }
 
+/** A project the user EXPLICITLY said they want to make, mid-chat (e.g.
+ *  "I'm thinking about making a wooden stool"). Saved alongside the
+ *  AI-derived intersection suggestions so both flow through the same
+ *  "Try Something New" carousel post-onboarding. */
+interface CapturedProject {
+  title: string
+  description: string
+  raw_phrase: string
+}
+
 type Phase =
   | 'welcome'
   | 'bootstrap'
@@ -79,6 +89,10 @@ export function OnboardingChatPage() {
   // lists when onboarding completes.
   const capturedItemsRef = useRef<CapturedItem[]>([])
   const [capturedBooks, setCapturedBooks] = useState<BookSearchResult[]>([])
+  // Project ideas the user explicitly raised mid-chat. Persisted to
+  // project_suggestions on chat-end so they show up in Home's
+  // "Try Something New" carousel alongside the AI-derived suggestions.
+  const capturedProjectsRef = useRef<CapturedProject[]>([])
 
   // ── Bootstrap: fetch a grid (we still need one for the random dot
   //    permutation + as the shape the observer mutates) ───────────────────
@@ -176,6 +190,7 @@ export function OnboardingChatPage() {
           newly_filled_slots: CoverageSlotId[]
           stopping_hint: { should_stop: boolean; reason: string }
           captured_items?: CapturedItem[]
+          captured_projects?: CapturedProject[]
         }
 
         setGrid(data.grid)
@@ -202,6 +217,21 @@ export function OnboardingChatPage() {
           }
         }
 
+        // Accumulate any project intents the user raised. Same de-dupe by
+        // lowercased title — if they mention the same wooden stool twice
+        // we only save one suggestion.
+        if (data.captured_projects && data.captured_projects.length > 0) {
+          const seenProjects = new Set(
+            capturedProjectsRef.current.map(p => p.title.toLowerCase()),
+          )
+          for (const project of data.captured_projects) {
+            const key = project.title.toLowerCase()
+            if (seenProjects.has(key)) continue
+            seenProjects.add(key)
+            capturedProjectsRef.current.push(project)
+          }
+        }
+
         // If the observer thinks we've covered enough, close the Live session
         // gracefully and move on to the books step. The model's system prompt
         // also has its own stopping logic; whichever fires first wins.
@@ -217,6 +247,7 @@ export function OnboardingChatPage() {
             try { liveRef.current?.close() } catch {}
             setPhase('completing')
             void persistCapturedItems()
+            void persistCapturedProjects()
             setTimeout(() => setPhase('books'), 600)
           }, 400)
         }
@@ -246,6 +277,35 @@ export function OnboardingChatPage() {
       })
     } catch {
       // Silent fallback — onboarding continues fine without the enrichment.
+    }
+  }, [])
+
+  // Persist project intents the user explicitly raised mid-chat as
+  // project_suggestions (status: pending) so they appear in the existing
+  // "Try Something New" carousel on Home alongside the AI-derived
+  // intersection ideas. Uses the same /api/projects?resource=save-idea
+  // endpoint the reveal uses for its own "spark this idea" flow, so the
+  // surface is consistent.
+  const persistCapturedProjects = useCallback(async () => {
+    const projects = capturedProjectsRef.current
+    if (projects.length === 0) return
+    for (const project of projects) {
+      try {
+        await fetch('/api/projects?resource=save-idea', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: project.title,
+            description: project.description,
+            // Reasoning is the user's own words — gives the carousel card
+            // something honest to show as the "why this is for you" line.
+            reasoning: `You mentioned this: "${project.raw_phrase}"`,
+            source: 'onboarding-capture',
+          }),
+        })
+      } catch (e) {
+        console.warn('[onboarding-chat] failed to save captured project', project.title, e)
+      }
     }
   }, [])
 
