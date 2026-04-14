@@ -222,22 +222,27 @@ export function RevealSequence({ analysis, books, transcripts = [] }: RevealSequ
             </div>
 
             <div className="space-y-4 mb-8">
-              {/* The Insight */}
+              {/* The Insight — the emotional centre of the reveal. The
+                  analyze prompt asks for two short verbatim quotes from the
+                  user joined by a connecting sentence, so when we can find
+                  them we lift them out as the visual hero (large, in their
+                  own voice) with the connecting prose between. Falls back
+                  to the raw paragraph if the model didn't follow the
+                  quote-and-link format. */}
               {analysis.first_insight && (
                 <motion.div
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.5 }}
-                  className="p-6 rounded-xl"
+                  className="p-7 sm:p-8 rounded-2xl"
                   style={{
-                    background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.08), rgba(var(--brand-primary-rgb),0.06))',
+                    background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.10), rgba(var(--brand-primary-rgb),0.05))',
                     backdropFilter: 'blur(12px)',
-                    border: '1px solid rgba(var(--brand-primary-rgb),0.15)',
+                    border: '1px solid rgba(var(--brand-primary-rgb),0.18)',
+                    boxShadow: '0 6px 32px -12px rgba(var(--brand-primary-rgb),0.35)',
                   }}
                 >
-                  <p className="text-base leading-relaxed" style={{ color: 'var(--brand-text-primary)' }}>
-                    {analysis.first_insight}
-                  </p>
+                  <InsightBody text={analysis.first_insight} />
                 </motion.div>
               )}
 
@@ -566,4 +571,96 @@ export function RevealSequence({ analysis, books, transcripts = [] }: RevealSequ
       )}
     </div>
   )
+}
+
+// ── InsightBody ────────────────────────────────────────────────────────────
+// Renders the first_insight string as a "two-quote split" when the analyze
+// prompt's quote-and-link format succeeds: the two short verbatim phrases
+// the user said are pulled out as visual heroes, with the connecting prose
+// sitting between them. Falls back gracefully to the raw paragraph when the
+// model didn't follow the format.
+function InsightBody({ text }: { text: string }) {
+  const parsed = parseQuoteSplit(text)
+
+  if (!parsed) {
+    // Fallback — render the whole insight as flowing prose.
+    return (
+      <p className="text-base leading-relaxed" style={{ color: 'var(--brand-text-primary)' }}>
+        {text}
+      </p>
+    )
+  }
+
+  const { quoteA, bridge, quoteB } = parsed
+
+  return (
+    <div className="flex flex-col gap-5 text-center">
+      <motion.p
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.55 }}
+        className="text-lg sm:text-xl italic leading-snug font-medium"
+        style={{ color: 'var(--brand-primary)' }}
+      >
+        “{quoteA}”
+      </motion.p>
+
+      {bridge && (
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.85 }}
+          className="text-sm sm:text-base leading-relaxed mx-auto max-w-prose"
+          style={{ color: 'var(--brand-text-primary)', opacity: 0.88 }}
+        >
+          {bridge}
+        </motion.p>
+      )}
+
+      <motion.p
+        initial={{ opacity: 0, y: -6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1.1 }}
+        className="text-lg sm:text-xl italic leading-snug font-medium"
+        style={{ color: 'var(--brand-primary)' }}
+      >
+        “{quoteB}”
+      </motion.p>
+    </div>
+  )
+}
+
+/**
+ * Parse a first_insight written in the quote-and-link format. Looks for two
+ * straight-quoted phrases (e.g. "the welding part") and treats whatever
+ * appears between/around them as the bridge sentence.
+ *
+ * Returns null if we can't find two distinct quoted phrases — the caller
+ * falls back to plain prose.
+ *
+ * Tolerant of curly quotes (the model occasionally produces those) and of
+ * extra punctuation around the bridge.
+ */
+function parseQuoteSplit(text: string): { quoteA: string; bridge: string; quoteB: string } | null {
+  if (!text) return null
+  // Normalise curly quotes to straight ones for matching (the rendered
+  // output uses curly quotes anyway).
+  const normalised = text.replace(/[\u201C\u201D]/g, '"').replace(/[\u2018\u2019]/g, "'")
+  const matches = [...normalised.matchAll(/"([^"]{2,200})"/g)]
+  if (matches.length < 2) return null
+
+  const quoteA = matches[0][1].trim()
+  const quoteB = matches[1][1].trim()
+  if (!quoteA || !quoteB || quoteA.toLowerCase() === quoteB.toLowerCase()) return null
+
+  // Bridge = whatever sits between the two quotes, with quote characters
+  // stripped and surrounding connectives like "and", "with", colons, dashes
+  // trimmed off the ends.
+  const between = normalised.slice(matches[0].index! + matches[0][0].length, matches[1].index!)
+  const bridge = between
+    .replace(/^[\s,;:.\-—–"]+/, '')
+    .replace(/[\s,;:\-—–"]+$/, '')
+    .trim()
+
+  return { quoteA, bridge, quoteB }
 }

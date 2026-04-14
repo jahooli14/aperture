@@ -14,10 +14,40 @@ import type { BookSearchResult } from '../../types'
 interface BookshelfStepProps {
   onComplete: (books: BookSearchResult[]) => void
   onSkip: () => void
+  /** Books the onboarding chat already surfaced. Pre-populated into the
+   *  three slots so the user can review/edit rather than re-search. */
+  prepopulated?: BookSearchResult[]
 }
 
-export function BookshelfStep({ onComplete, onSkip }: BookshelfStepProps) {
-  const [selectedBooks, setSelectedBooks] = useState<BookSearchResult[]>([])
+export function BookshelfStep({ onComplete, onSkip, prepopulated }: BookshelfStepProps) {
+  const [selectedBooks, setSelectedBooks] = useState<BookSearchResult[]>(
+    () => (prepopulated || []).slice(0, 3),
+  )
+
+  // Books that were pre-populated from the voice chat are already persisted
+  // by OnboardingChatPage at chat-end. Track their keys so we don't write
+  // them again when the user continues through this step.
+  const prepopulatedKeys = (prepopulated || []).map(
+    b => `${b.title.toLowerCase()}::${b.author.toLowerCase()}`,
+  )
+  // If prepopulated arrives after first render (async enrichment), fold
+  // any new entries in without stomping user edits.
+  useEffect(() => {
+    if (!prepopulated || prepopulated.length === 0) return
+    setSelectedBooks(prev => {
+      if (prev.length >= 3) return prev
+      const have = new Set(prev.map(b => `${b.title.toLowerCase()}::${b.author.toLowerCase()}`))
+      const merged = [...prev]
+      for (const book of prepopulated) {
+        const key = `${book.title.toLowerCase()}::${book.author.toLowerCase()}`
+        if (have.has(key)) continue
+        have.add(key)
+        merged.push(book)
+        if (merged.length >= 3) break
+      }
+      return merged
+    })
+  }, [prepopulated])
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<BookSearchResult[]>([])
   const [searching, setSearching] = useState(false)
@@ -60,40 +90,54 @@ export function BookshelfStep({ onComplete, onSkip }: BookshelfStepProps) {
     debounceRef.current = setTimeout(() => searchBooks(value), 300)
   }
 
-  const handleSelectBook = async (book: BookSearchResult) => {
+  const handleSelectBook = (book: BookSearchResult) => {
     if (selectedBooks.length >= 3) return
     if (selectedBooks.some(b => b.title === book.title && b.author === book.author)) return
 
-    const updated = [...selectedBooks, book]
-    setSelectedBooks(updated)
+    setSelectedBooks(prev => [...prev, book])
     setQuery('')
     setResults([])
     inputRef.current?.focus()
-
-    // Persist: create list if needed, then add item
-    try {
-      let currentListId = listId
-      if (!currentListId) {
-        currentListId = await createList({ title: 'Books', type: 'book' })
-        setListId(currentListId)
-      }
-
-      await addListItem({
-        list_id: currentListId,
-        content: `${book.title} — ${book.author}`,
-        status: 'completed',
-      })
-    } catch (e) {
-      console.warn('[BookshelfStep] Failed to persist book, continuing', e)
-    }
   }
 
   const handleRemoveBook = (index: number) => {
     setSelectedBooks(prev => prev.filter((_, i) => i !== index))
   }
 
+  // Persist the final selection on continue (not on each add) — so if the
+  // user picks and then removes a book, we don't leave a stray list item
+  // behind. Skips books that were pre-populated from the chat (those are
+  // already persisted by OnboardingChatPage when the chat ended).
+  const persistBooks = async (finalBooks: BookSearchResult[]) => {
+    const fresh = finalBooks.filter(
+      b => !prepopulatedKeys.includes(`${b.title.toLowerCase()}::${b.author.toLowerCase()}`),
+    )
+    if (fresh.length === 0) return
+    try {
+      let currentListId = listId
+      if (!currentListId) {
+        currentListId = await createList({ title: 'Books', type: 'book' })
+        setListId(currentListId)
+      }
+      for (const book of fresh) {
+        try {
+          await addListItem({
+            list_id: currentListId,
+            content: `${book.title} — ${book.author}`,
+            status: 'completed',
+          })
+        } catch (e) {
+          console.warn('[BookshelfStep] Failed to persist book, continuing', e)
+        }
+      }
+    } catch (e) {
+      console.warn('[BookshelfStep] Failed to create Books list, continuing', e)
+    }
+  }
+
   const handleContinue = async () => {
     setSaving(true)
+    await persistBooks(selectedBooks)
     // Small delay for the animation to feel intentional
     await new Promise(r => setTimeout(r, 300))
     onComplete(selectedBooks)
@@ -129,12 +173,17 @@ export function BookshelfStep({ onComplete, onSkip }: BookshelfStepProps) {
         )}
         {selectedBooks.length === 0 && <div className="mb-6" />}
 
-        {/* Heading */}
+        {/* Heading — nudges differently when the chat already captured a few
+            so the user doesn't have to start from scratch. */}
         <h2
           className="text-2xl sm:text-3xl font-semibold leading-snug mb-8 text-center"
           style={{ color: 'var(--brand-text-primary)' }}
         >
-          Three books that stuck with you.
+          {(prepopulated && prepopulated.length > 0)
+            ? (selectedBooks.length >= 3
+                ? 'Three books that stuck with you.'
+                : 'You mentioned a few — anything else?')
+            : 'Three books that stuck with you.'}
         </h2>
 
         {/* 3 Book Slots */}

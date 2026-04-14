@@ -15,17 +15,29 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, Type, Mic, Loader2 } from 'lucide-react'
-import { LiveVoiceCapture, type LiveVoiceCaptureHandle } from '../components/onboarding/LiveVoiceCapture'
+import { LiveVoiceCapture, type LiveVoiceCaptureHandle, type LiveVoiceStatus } from '../components/onboarding/LiveVoiceCapture'
 import { CoverageDots } from '../components/onboarding/CoverageDots'
 import { BookshelfStep } from '../components/onboarding/BookshelfStep'
 import { RevealSequence } from '../components/onboarding/RevealSequence'
 import { useMemoryStore } from '../stores/useMemoryStore'
+import { useListStore } from '../stores/useListStore'
 import type {
   CoverageGrid,
   CoverageSlotId,
   OnboardingAnalysis,
   BookSearchResult,
+  ListType,
 } from '../types'
+
+/** Named entity the observer surfaced during the voice chat — e.g. a film
+ *  they mentioned, a book, a place. We pre-populate the bookshelf with
+ *  books, and save the rest straight to the matching list when the
+ *  onboarding completes. */
+interface CapturedItem {
+  type: ListType
+  name: string
+  raw_phrase: string
+}
 
 type Phase =
   | 'welcome'
@@ -39,6 +51,7 @@ type Phase =
 export function OnboardingChatPage() {
   const navigate = useNavigate()
   const { createMemory } = useMemoryStore()
+  const { createList, addListItem, lists } = useListStore()
 
   const [phase, setPhase] = useState<Phase>('welcome')
   const [grid, setGrid] = useState<CoverageGrid | null>(null)
@@ -49,6 +62,7 @@ export function OnboardingChatPage() {
   const [typingDraft, setTypingDraft] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [liveReady, setLiveReady] = useState(false)
+  const [liveStatus, setLiveStatus] = useState<LiveVoiceStatus>('connecting')
 
   const [books, setBooks] = useState<BookSearchResult[]>([])
   const [analysis, setAnalysis] = useState<OnboardingAnalysis | null>(null)
@@ -57,6 +71,12 @@ export function OnboardingChatPage() {
   const allTranscriptsRef = useRef<string[]>([])
   const inflightObserveRef = useRef(false)
   const shouldStopAfterTurnRef = useRef(false)
+  // Named things the user mentioned during the chat — accumulated across
+  // every observe call. Books are pre-populated into the BookshelfStep;
+  // other types (films, places, etc.) are persisted to their respective
+  // lists when onboarding completes.
+  const capturedItemsRef = useRef<CapturedItem[]>([])
+  const [capturedBooks, setCapturedBooks] = useState<BookSearchResult[]>([])
 
   // ── Bootstrap: fetch a grid (we still need one for the random dot
   //    permutation + as the shape the observer mutates) ───────────────────
@@ -153,11 +173,32 @@ export function OnboardingChatPage() {
           grid: CoverageGrid
           newly_filled_slots: CoverageSlotId[]
           stopping_hint: { should_stop: boolean; reason: string }
+          captured_items?: CapturedItem[]
         }
 
         setGrid(data.grid)
         setJustFilled(data.newly_filled_slots)
         setUserPartial('')
+
+        // Accumulate any named entities the observer pulled out. De-dupe by
+        // (type + lowercased name) so repeat mentions don't land in the user's
+        // lists twice.
+        if (data.captured_items && data.captured_items.length > 0) {
+          const seen = new Set(
+            capturedItemsRef.current.map(i => `${i.type}::${i.name.toLowerCase()}`),
+          )
+          for (const item of data.captured_items) {
+            const key = `${item.type}::${item.name.toLowerCase()}`
+            if (seen.has(key)) continue
+            seen.add(key)
+            capturedItemsRef.current.push(item)
+            // Books: try to enrich with cover art for the bookshelf UI. Fire
+            // and forget — if the search fails we still show the raw title.
+            if (item.type === 'book') {
+              void enrichBook(item)
+            }
+          }
+        }
 
         // If the observer thinks we've covered enough, close the Live session
         // gracefully and move on to the books step. The model's system prompt
@@ -165,10 +206,15 @@ export function OnboardingChatPage() {
         if (data.stopping_hint.should_stop) {
           shouldStopAfterTurnRef.current = true
           // Give the model a brief moment to finish whatever it's saying,
-          // then close.
+          // then close. While the user sees the "completing" loader, write
+          // out any non-book items the chat captured to their lists — this
+          // is hidden from the UI because surfacing "we already made you a
+          // films list" mid-flow would feel presumptuous; the user will
+          // find them naturally when they visit /lists.
           setTimeout(() => {
             try { liveRef.current?.close() } catch {}
             setPhase('completing')
+            void persistCapturedItems()
             setTimeout(() => setPhase('books'), 600)
           }, 400)
         }
@@ -181,6 +227,72 @@ export function OnboardingChatPage() {
     },
     [grid, createMemory],
   )
+
+  // ── Enrich a captured book title with cover art from Google Books. Adds
+  //    to capturedBooks, deduped by title+author. Best-effort — no errors
+  //    surfaced; if search fails we just won't pre-populate the bookshelf.
+  const enrichBook = useCallback(async (item: CapturedItem) => {
+    try {
+      const res = await fetch(`/api/utilities?resource=book-search&q=${encodeURIComponent(item.name)}`)
+      if (!res.ok) return
+      const data = await res.json()
+      const top = (data.results as BookSearchResult[] | undefined)?.[0]
+      if (!top) return
+      setCapturedBooks(prev => {
+        if (prev.some(b => b.title === top.title && b.author === top.author)) return prev
+        return [...prev, top].slice(0, 3)
+      })
+    } catch {
+      // Silent fallback — onboarding continues fine without the enrichment.
+    }
+  }, [])
+
+  // Persist EVERY captured item (books included) to its matching list when
+  // the chat ends. This is the "quiet seeding" guarantee — when the user
+  // wanders into Lists later they find what they mentioned, regardless of
+  // whether they later skip or breeze through the bookshelf step.
+  // BookshelfStep itself only persists books the user actively *adds* on
+  // top of the pre-population, so we don't double-write captured books.
+  const persistCapturedItems = useCallback(async () => {
+    const items = capturedItemsRef.current
+    if (items.length === 0) return
+
+    // Group by type so we only create/find each list once.
+    const byType = new Map<ListType, CapturedItem[]>()
+    for (const item of items) {
+      const list = byType.get(item.type) ?? []
+      list.push(item)
+      byType.set(item.type, list)
+    }
+
+    const listTitles: Record<ListType, string> = {
+      film: 'Films', music: 'Music', tech: 'Tech', book: 'Books', place: 'Places',
+      game: 'Games', software: 'Software', event: 'Events', quote: 'Quotes',
+      article: 'Articles', generic: 'Things', fix: 'Fixes',
+    }
+
+    for (const [type, typeItems] of byType) {
+      try {
+        const existing = lists.find(l => l.type === type)
+        const listId = existing
+          ? existing.id
+          : await createList({ title: listTitles[type] || type, type })
+        for (const item of typeItems) {
+          try {
+            // Books from the chat are persisted with the same
+            // "${title} — ${author}" content shape BookshelfStep uses for
+            // its own picks, so the list looks consistent. We don't have
+            // an author yet here, so just use the name.
+            await addListItem({ list_id: listId, content: item.name })
+          } catch (e) {
+            console.warn('[onboarding-chat] failed to add item to list', type, item.name, e)
+          }
+        }
+      } catch (e) {
+        console.warn('[onboarding-chat] failed to create list for captured items', type, e)
+      }
+    }
+  }, [lists, createList, addListItem])
 
   // ── Typing fallback ─────────────────────────────────────────────────────
   const handleTypedSubmit = useCallback(() => {
@@ -321,7 +433,13 @@ export function OnboardingChatPage() {
   }
 
   if (phase === 'books') {
-    return <BookshelfStep onComplete={handleBooksComplete} onSkip={handleBooksSkip} />
+    return (
+      <BookshelfStep
+        onComplete={handleBooksComplete}
+        onSkip={handleBooksSkip}
+        prepopulated={capturedBooks}
+      />
+    )
   }
 
   if (phase === 'analyzing' || phase === 'reveal') {
@@ -356,10 +474,12 @@ export function OnboardingChatPage() {
       {/* Mounted once for the whole conversation. Live drives the chat. */}
       <LiveVoiceCapture
         ref={liveRef}
+        hideVisualizer
         onTurnComplete={handleTurnComplete}
         onModelSpeaking={handleModelSpeaking}
         onUserSpeaking={handleUserSpeaking}
         onReady={handleLiveReady}
+        onStatusChange={setLiveStatus}
         onError={handleLiveError}
       />
 
@@ -399,8 +519,9 @@ export function OnboardingChatPage() {
                   <Loader2 className="h-5 w-5 animate-spin opacity-60" />
                   <span className="opacity-60">Connecting voice…</span>
                 </div>
-              ) : null}
-              {/* The LiveVoiceCapture component renders its own mic visualizer above, so we don't duplicate it here */}
+              ) : (
+                <TurnIndicator status={liveStatus} />
+              )}
             </div>
           ) : (
             <div className="mb-6">
@@ -487,6 +608,60 @@ export function OnboardingChatPage() {
           Say "skip" to move on
         </div>
       )}
+    </div>
+  )
+}
+
+// ── TurnIndicator ──────────────────────────────────────────────────────────
+// A clear, prominent visual cue for whose turn it is. Three states:
+//   - speaking  → Aperture is talking (don't speak over it, but you can)
+//   - listening → your turn (mic is hot, take your time)
+//   - thinking  → bridging silence after you finished, before Aperture replies
+function TurnIndicator({ status }: { status: LiveVoiceStatus }) {
+  const speaking = status === 'speaking'
+  const listening = status === 'listening' || status === 'ready'
+
+  // The visual: a soft ring that pulses when listening, glows steady when
+  // Aperture is speaking. Mic icon in the middle.
+  return (
+    <div className="flex flex-col items-center gap-3 select-none">
+      <motion.div
+        animate={{
+          scale: listening ? [1, 1.06, 1] : 1,
+          boxShadow: speaking
+            ? '0 0 36px 4px rgba(var(--brand-primary-rgb), 0.32)'
+            : listening
+              ? '0 0 18px 0 rgba(var(--brand-primary-rgb), 0.18)'
+              : '0 0 0 0 rgba(0,0,0,0)',
+        }}
+        transition={{
+          duration: listening ? 1.8 : 0.4,
+          repeat: listening ? Infinity : 0,
+          ease: 'easeInOut',
+        }}
+        className="w-20 h-20 rounded-full flex items-center justify-center"
+        style={{
+          background: 'rgba(var(--brand-primary-rgb), 0.10)',
+          border: `1px solid rgba(var(--brand-primary-rgb), ${speaking ? 0.6 : 0.3})`,
+        }}
+      >
+        <Mic
+          className="h-8 w-8"
+          style={{
+            color: 'var(--brand-primary)',
+            opacity: speaking ? 0.55 : 1,
+          }}
+        />
+      </motion.div>
+      <span
+        className="text-[11px] uppercase tracking-[0.18em] font-medium"
+        style={{
+          color: 'var(--brand-text-secondary)',
+          opacity: speaking ? 0.45 : listening ? 0.7 : 0.3,
+        }}
+      >
+        {speaking ? 'Aperture' : listening ? 'your turn' : '\u00A0'}
+      </span>
     </div>
   )
 }

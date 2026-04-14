@@ -305,11 +305,11 @@ Return a JSON object with these fields:
 
   "first_insight": "...",
   // THIS IS THE MOST IMPORTANT FIELD. 2-3 sentences.
-  // Connect at least 2 of their responses${books && books.length > 0 ? ' AND reference one of their books' : ''} in a way they probably haven't noticed themselves.
-  // Be SPECIFIC — quote or reference actual things they said. No generic platitudes.
+  // Connect two DIFFERENT things they actually said${books && books.length > 0 ? ' (or one thing they said + one of their books)' : ''} in a way they probably haven't noticed themselves.
+  // REQUIRED FORMAT: quote one short exact phrase they used (in double quotes), quote a second short exact phrase they used, and link them — "There's a thread between your [phrase 1] and your [phrase 2]: …".
+  // Both quoted phrases MUST be verbatim from their transcript (use grounding_phrases above as your source). Do not paraphrase or invent.
   // The reader should feel "wow, I never connected those two things before."
-  // Write in second person ("You mentioned..." / "There's an interesting thread between your...")
-  // Start with the most surprising connection. Don't warm up — go straight to the insight. The reader should feel the connection before they understand it.
+  // Start with the most surprising connection. Don't warm up — go straight to the insight.
 
   "project_suggestions": [
     {
@@ -326,6 +326,7 @@ Return a JSON object with these fields:
     }
   ]
   // Generate exactly 3 project suggestions.
+  // At least ONE of the three MUST combine their cross_domain_curiosity slot with a different slot — that's the whole point of asking for the rabbit hole. If cross_domain was skipped, combine two other distant slots instead.
   // Each should combine at least 2 different capabilities or interests from their responses.
   // Make them diverse: one practical/buildable, one creative/expressive, one ambitious/stretch.
   // They should feel personal and surprising — not obvious.
@@ -528,8 +529,19 @@ async function handleOnboardingObserve(req: VercelRequest, res: VercelResponse) 
       .map(s => `- ${s.id}: ${s.grounding_phrases.slice(0, 3).join(' / ')}`)
       .join('\n') || '(none yet)'
 
-    // Cheap observe prompt — only slot updates, no next-question generation.
-    const prompt = `You are observing an onboarding voice chat. Your ONLY job is to update a coverage grid based on the latest turn — no questions, no chat.
+    // Show the observer the last two turns of context. Without this, the
+    // cross_domain_curiosity slot was chronically under-filled: the observer
+    // couldn't judge whether the current turn was "far from" previous topics,
+    // because it only saw the current turn in isolation.
+    const recentTurnsBlock = grid.turns.slice(-2).length === 0
+      ? '(this is the first real turn)'
+      : grid.turns
+          .slice(-2)
+          .map(t => `Turn ${t.index} [${t.target_slot ?? '—'}]\n  Q: ${t.question}\n  A: ${t.transcript || '(skipped)'}`)
+          .join('\n')
+
+    // Cheap observe prompt — slot updates + named-entity extraction.
+    const prompt = `You are observing an onboarding voice chat. Your job is to (1) update a coverage grid and (2) extract any concrete named things the user mentioned. No questions, no chat.
 
 COVERAGE SLOTS:
 ${slotCatalogue}
@@ -537,29 +549,42 @@ ${slotCatalogue}
 CURRENTLY FILLED (confidence >= 0.6):
 ${filledSummary}
 
+RECENT CONTEXT (so you can tell when the user has genuinely moved to a different domain):
+${recentTurnsBlock}
+
 LATEST TURN:
 Assistant asked: "${question}"
 User replied: "${transcript || '(empty / skipped)'}"
 
-Identify which slots the user's reply filled or strengthened. Return ONLY JSON:
+Return ONLY JSON:
 
 {
   "slot_updates": {
-    "<slot_id>": { "confidence": 0.0-1.0, "grounding_phrases": ["exact phrase from user"] }
+    "<slot_id>": { "confidence": 0.0-1.0, "grounding_phrases": ["phrase from user"] }
   },
-  "depth_signal": "high" | "medium" | "low"
+  "depth_signal": "high" | "medium" | "low",
+  "captured_items": [
+    { "type": "book" | "film" | "music" | "game" | "place" | "software" | "article" | "tech" | "event" | "quote", "name": "...", "raw_phrase": "..." }
+  ]
 }
 
-Rules:
+Rules for slot_updates:
 - Only include slots whose confidence actually changed.
-- grounding_phrases MUST be exact substrings of the user's reply (anti-hallucination).
+- grounding_phrases MUST be verbatim from the user's reply, or very near-verbatim (punctuation and capitalisation differences are fine; do not paraphrase, invent, or summarise).
+- cross_domain_curiosity is ONLY filled if the user's reply is in a clearly different domain from RECENT CONTEXT above. Mere topic jumps within the same theme do not count.
 - If the user's reply is empty / skipped, return slot_updates: {} and depth_signal: "low".
-- depth_signal = "high" if the user said something rich and worth probing deeper; "low" if thin.`
+- depth_signal = "high" if the user said something rich and worth probing deeper; "low" if thin.
+
+Rules for captured_items:
+- ONLY include things the user named explicitly. Don't guess at titles/authors from vague allusions.
+- "name" is the clean title (e.g. "Dune", "Half Moon Bay", "Neil Gaiman"). "raw_phrase" is how they said it.
+- Skip generic mentions ("a book I read", "some film"). A specific proper noun must appear in the user's reply.
+- Empty array is fine. Do not invent entries to pad the list.`
 
     let raw: string
     try {
       raw = await generateText(prompt, {
-        maxTokens: 400,
+        maxTokens: 700,
         temperature: 0.3,
         responseFormat: 'json',
         model: MODELS.DEFAULT_CHAT,
@@ -580,10 +605,43 @@ Rules:
       parsed = { slot_updates: {}, depth_signal: 'medium' }
     }
 
+    // Validate the observer's output before trusting it. The model
+    // occasionally hallucinates a grounding_phrase that isn't in the user's
+    // reply — drop any update whose phrases we can't verify, so the
+    // coverage dots don't light up on fiction.
+    const validatedUpdates: Record<string, { confidence: number; grounding_phrases: string[] }> = {}
+    const haystack = transcript.toLowerCase()
+    if (parsed.slot_updates && typeof parsed.slot_updates === 'object') {
+      for (const [slotId, update] of Object.entries(parsed.slot_updates as Record<string, any>)) {
+        if (!Object.prototype.hasOwnProperty.call(SLOT_CATALOGUE, slotId)) continue
+        const confidence = typeof update?.confidence === 'number' ? Math.max(0, Math.min(1, update.confidence)) : 0
+        const rawPhrases: string[] = Array.isArray(update?.grounding_phrases)
+          ? update.grounding_phrases.filter((p: any) => typeof p === 'string')
+          : []
+        const phrases = rawPhrases
+          .map(p => p.trim())
+          .filter(p => p.length > 0)
+          .filter(p => {
+            // Accept if the phrase (or a 12-char substring of it) appears in
+            // the transcript. This softens "exact substring" to verbatim-
+            // or-near while still catching blatant paraphrases.
+            const needle = p.toLowerCase()
+            if (haystack.includes(needle)) return true
+            if (needle.length >= 12 && haystack.includes(needle.slice(0, 12))) return true
+            return false
+          })
+          .slice(0, 5)
+        // Drop the whole update if the model claimed a confidence bump but
+        // gave us no grounded phrases (the main anti-hallucination gate).
+        if (confidence > 0 && phrases.length === 0 && transcript.length > 0) continue
+        validatedUpdates[slotId] = { confidence, grounding_phrases: phrases }
+      }
+    }
+
     // Build a fake decision object and run through applyDecisionToGrid for
     // consistency with the non-hybrid path.
     const decision = {
-      slot_updates: parsed.slot_updates || {},
+      slot_updates: validatedUpdates,
       depth_signal: parsed.depth_signal || 'medium',
       next_move: 'deepen' as const,
       next_slot_target: null,
@@ -604,12 +662,34 @@ Rules:
     const filled = newlyFilledSlots(grid, nextGrid)
     const stopping_hint = computeStoppingHint(nextGrid, decision.depth_signal)
 
+    // Captured named entities — validate against the transcript so we don't
+    // persist hallucinated items to the user's lists.
+    const allowedTypes = new Set(['book', 'film', 'music', 'game', 'place', 'software', 'article', 'tech', 'event', 'quote'])
+    const capturedItems: Array<{ type: string; name: string; raw_phrase: string }> = []
+    if (Array.isArray(parsed.captured_items)) {
+      for (const raw of parsed.captured_items as any[]) {
+        if (!raw || typeof raw !== 'object') continue
+        const type = typeof raw.type === 'string' ? raw.type.toLowerCase() : ''
+        const name = typeof raw.name === 'string' ? raw.name.trim() : ''
+        const rawPhrase = typeof raw.raw_phrase === 'string' ? raw.raw_phrase.trim() : ''
+        if (!allowedTypes.has(type) || !name || name.length > 120) continue
+        // At least one of the two strings must appear in the transcript
+        // (case-insensitive) — otherwise the observer invented it.
+        const haystackLc = haystack
+        const nameLc = name.toLowerCase()
+        const phraseLc = rawPhrase.toLowerCase()
+        if (!haystackLc.includes(nameLc) && (!phraseLc || !haystackLc.includes(phraseLc))) continue
+        capturedItems.push({ type, name, raw_phrase: rawPhrase || name })
+      }
+    }
+
     return res.status(200).json({
       grid: stopping_hint.should_stop
         ? { ...nextGrid, completed_at: new Date().toISOString() }
         : nextGrid,
       newly_filled_slots: filled,
       stopping_hint,
+      captured_items: capturedItems,
     })
   } catch (err: any) {
     console.error('[utilities/onboarding-observe]', err?.message, err?.stack)
