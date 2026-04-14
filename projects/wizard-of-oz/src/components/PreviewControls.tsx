@@ -182,10 +182,31 @@ export function PreviewControls({
       {/* Eye Detection Status */}
       {hasEyeCoords && (
         <div className="space-y-1">
-          <div className="flex items-center gap-2 text-green-600 text-sm">
-            <CheckCircle className="w-4 h-4" />
-            <span>Eyes detected — preview shows final crop</span>
-          </div>
+          {(() => {
+            // Confidence gating: below 0.7 we nudge the user to review before
+            // committing. The detection might still be correct — we just
+            // don't want silent failures landing in the timeline.
+            const conf = eyeCoords?.confidence ?? 1;
+            const lowConfidence = conf < 0.7;
+            return lowConfidence ? (
+              <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900 text-sm">
+                <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-medium">Detection quality is low</p>
+                  <p className="text-xs mt-0.5">
+                    Review the green crop preview above. If the eyes aren't
+                    right, tap "Place eyes manually" below to fix it before
+                    uploading.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-green-600 text-sm">
+                <CheckCircle className="w-4 h-4" />
+                <span>Eyes detected — preview shows final crop</span>
+              </div>
+            );
+          })()}
           {zoomLevel !== undefined && (
             <div className="text-xs text-gray-500 pl-6">
               Crop level: {(zoomLevel * 100).toFixed(0)}%
