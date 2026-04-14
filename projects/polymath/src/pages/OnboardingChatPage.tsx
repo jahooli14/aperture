@@ -486,17 +486,29 @@ export function OnboardingChatPage() {
           {/* Sample reveal teaser — hints at the format the user is signing
               up to receive. Same two-quote-split aesthetic as the real
               InsightBody, with an unmistakable "example" label so we're
-              not pretending it's theirs. */}
+              not pretending it's theirs. Glow breathes slowly so the card
+              feels alive without being distracting. */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.85 }}
+            animate={{
+              opacity: 1,
+              y: 0,
+              boxShadow: [
+                '0 6px 28px -14px rgba(var(--brand-primary-rgb),0.22)',
+                '0 6px 34px -10px rgba(var(--brand-primary-rgb),0.38)',
+                '0 6px 28px -14px rgba(var(--brand-primary-rgb),0.22)',
+              ],
+            }}
+            transition={{
+              opacity: { delay: 0.85, duration: 0.5 },
+              y: { delay: 0.85, duration: 0.5 },
+              boxShadow: { duration: 3.6, repeat: Infinity, ease: 'easeInOut', delay: 1.2 },
+            }}
             className="p-5 sm:p-6 rounded-2xl mb-9"
             style={{
               background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.10), rgba(var(--brand-primary-rgb),0.04))',
               backdropFilter: 'blur(12px)',
               border: '1px solid rgba(var(--brand-primary-rgb),0.16)',
-              boxShadow: '0 6px 28px -14px rgba(var(--brand-primary-rgb),0.30)',
             }}
           >
             <p
@@ -506,15 +518,33 @@ export function OnboardingChatPage() {
               an example reveal
             </p>
             <div className="flex flex-col gap-3 text-center">
-              <p className="text-base sm:text-lg italic font-medium leading-snug" style={{ color: 'var(--brand-primary)' }}>
+              <motion.p
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.0, duration: 0.5 }}
+                className="text-base sm:text-lg italic font-medium leading-snug"
+                style={{ color: 'var(--brand-primary)' }}
+              >
                 “the welding part caught my ear”
-              </p>
-              <p className="text-xs sm:text-sm leading-relaxed mx-auto max-w-prose" style={{ color: 'var(--brand-text-primary)', opacity: 0.85 }}>
+              </motion.p>
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.85 }}
+                transition={{ delay: 1.35, duration: 0.6 }}
+                className="text-xs sm:text-sm leading-relaxed mx-auto max-w-prose"
+                style={{ color: 'var(--brand-text-primary)' }}
+              >
                 Both of these are the same thought in different clothes — you're missing a kind of work that doesn't have a name in your day job.
-              </p>
-              <p className="text-base sm:text-lg italic font-medium leading-snug" style={{ color: 'var(--brand-primary)' }}>
+              </motion.p>
+              <motion.p
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.7, duration: 0.5 }}
+                className="text-base sm:text-lg italic font-medium leading-snug"
+                style={{ color: 'var(--brand-primary)' }}
+              >
                 “I miss making things with my hands”
-              </p>
+              </motion.p>
             </div>
           </motion.div>
 
