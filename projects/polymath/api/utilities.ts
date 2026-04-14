@@ -568,7 +568,7 @@ Return ONLY JSON:
     { "type": "book" | "film" | "music" | "game" | "place" | "software" | "article" | "tech" | "event" | "quote", "name": "...", "raw_phrase": "..." }
   ],
   "captured_projects": [
-    { "title": "...", "description": "...", "raw_phrase": "..." }
+    { "title": "...", "description": "...", "status": "idea" | "in_progress", "raw_phrase": "..." }
   ]
 }
 
@@ -586,12 +586,14 @@ Rules for captured_items:
 - Empty array is fine. Do not invent entries to pad the list.
 
 Rules for captured_projects:
-- ONLY include projects the user EXPLICITLY said they want to make, build, write, start, or do. Phrases like "I'm thinking about making a wooden stool", "I want to write a memoir about my dad", "I've been wanting to start a podcast about urban foraging".
-- Do NOT include passive interests ("I love woodworking"), things they're already doing ("I'm working on my novel" — that's an existing project, not a new one), or generic ambitions ("I want to be more creative").
-- "title" should be a short noun-phrase project name in their voice (e.g. "Wooden stool", "Memoir about Dad", "Urban foraging podcast"). Not a sentence.
+- Capture two kinds of project, distinguished by the "status" field:
+  - status: "idea" — projects the user EXPLICITLY said they WANT to make, build, write, or start but haven't begun yet. Phrases like "I'm thinking about making a wooden stool", "I want to write a memoir about my dad", "I've been wanting to start a podcast about urban foraging".
+  - status: "in_progress" — projects the user EXPLICITLY said they're CURRENTLY working on, building, writing, making, or running. Phrases like "I'm working on my novel", "I've been building a treehouse with my kids", "I'm writing a newsletter about climate", "I run a small Etsy shop selling pottery".
+- Do NOT include passive interests ("I love woodworking"), generic ambitions ("I want to be more creative"), or things they merely consume ("I read a lot of sci-fi").
+- "title" should be a short noun-phrase project name in their voice (e.g. "Wooden stool", "Memoir about Dad", "Urban foraging podcast", "The novel"). Not a sentence.
 - "description" is one sentence, ideally drawing on words they used. Concrete, not aspirational waffle.
 - "raw_phrase" is the part of their reply that triggered the capture (must appear verbatim or near-verbatim in the transcript above). This is our anti-hallucination check.
-- Empty array is fine — and is the default. Most turns won't contain an explicit project intent. Only flag the obvious ones.`
+- Empty array is fine — and is the default. Most turns won't contain a project. Only flag the obvious ones.`
 
     let raw: string
     try {
@@ -695,19 +697,25 @@ Rules for captured_projects:
       }
     }
 
-    // Captured project intents — anything the user explicitly said they
-    // want to make. Same anti-hallucination gate: the raw_phrase has to
-    // actually appear in their reply or we drop the capture. These get
-    // saved as project_suggestions on the client side so they show up in
-    // the existing "Try Something New" carousel alongside the AI-derived
-    // intersection ideas.
-    const capturedProjects: Array<{ title: string; description: string; raw_phrase: string }> = []
+    // Captured projects — both new ideas and in-progress work the user
+    // mentioned. Same anti-hallucination gate: the raw_phrase must appear
+    // in their reply or we drop the capture. Status splits the routing
+    // downstream — "idea" lands in project_suggestions (carousel),
+    // "in_progress" becomes a real Project (Projects pillar).
+    const capturedProjects: Array<{
+      title: string
+      description: string
+      status: 'idea' | 'in_progress'
+      raw_phrase: string
+    }> = []
     if (Array.isArray(parsed.captured_projects)) {
       for (const raw of parsed.captured_projects as any[]) {
         if (!raw || typeof raw !== 'object') continue
         const title = typeof raw.title === 'string' ? raw.title.trim() : ''
         const description = typeof raw.description === 'string' ? raw.description.trim() : ''
         const rawPhrase = typeof raw.raw_phrase === 'string' ? raw.raw_phrase.trim() : ''
+        const status: 'idea' | 'in_progress' =
+          raw.status === 'in_progress' ? 'in_progress' : 'idea'
         if (!title || title.length > 120) continue
         // Same near-verbatim check we use for slot grounding phrases.
         const needle = rawPhrase.toLowerCase()
@@ -719,6 +727,7 @@ Rules for captured_projects:
         capturedProjects.push({
           title,
           description: description.slice(0, 400),
+          status,
           raw_phrase: rawPhrase,
         })
       }

@@ -21,6 +21,7 @@ import { BookshelfStep } from '../components/onboarding/BookshelfStep'
 import { RevealSequence } from '../components/onboarding/RevealSequence'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useListStore } from '../stores/useListStore'
+import { useProjectStore } from '../stores/useProjectStore'
 import { useAuthContext } from '../contexts/AuthContext'
 import type {
   CoverageGrid,
@@ -40,13 +41,18 @@ interface CapturedItem {
   raw_phrase: string
 }
 
-/** A project the user EXPLICITLY said they want to make, mid-chat (e.g.
- *  "I'm thinking about making a wooden stool"). Saved alongside the
- *  AI-derived intersection suggestions so both flow through the same
- *  "Try Something New" carousel post-onboarding. */
+/** A project the observer caught the user mentioning mid-chat. Two
+ *  flavours, routed to different surfaces:
+ *   - status: 'idea' — they want to make this. Saved as a
+ *     project_suggestion (status pending) so it appears in Home's
+ *     "Try Something New" carousel alongside the AI-derived intersections.
+ *   - status: 'in_progress' — they're already doing this. Saved as a
+ *     real Project (status 'active') so it shows up in the Projects
+ *     pillar from day one. */
 interface CapturedProject {
   title: string
   description: string
+  status: 'idea' | 'in_progress'
   raw_phrase: string
 }
 
@@ -64,6 +70,7 @@ export function OnboardingChatPage() {
   const { isAuthenticated } = useAuthContext()
   const { createMemory } = useMemoryStore()
   const { createList, addListItem, lists } = useListStore()
+  const createProject = useProjectStore(s => s.createProject)
 
   const [phase, setPhase] = useState<Phase>('welcome')
   const [grid, setGrid] = useState<CoverageGrid | null>(null)
@@ -280,34 +287,52 @@ export function OnboardingChatPage() {
     }
   }, [])
 
-  // Persist project intents the user explicitly raised mid-chat as
-  // project_suggestions (status: pending) so they appear in the existing
-  // "Try Something New" carousel on Home alongside the AI-derived
-  // intersection ideas. Uses the same /api/projects?resource=save-idea
-  // endpoint the reveal uses for its own "spark this idea" flow, so the
-  // surface is consistent.
+  // Persist projects the observer caught mid-chat. Routing splits by
+  // status: ideas land in the "Try Something New" carousel via the
+  // existing save-idea endpoint; in-progress projects become real
+  // Projects in the Projects pillar from day one, so the user opens the
+  // app and sees their actual current work waiting for them.
   const persistCapturedProjects = useCallback(async () => {
     const projects = capturedProjectsRef.current
     if (projects.length === 0) return
     for (const project of projects) {
       try {
-        await fetch('/api/projects?resource=save-idea', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        if (project.status === 'in_progress') {
+          // Real Project — defaults to 'active' in the store. Stamp the
+          // metadata with the captured raw phrase so the project's
+          // origin is visible later (e.g. on the project detail page).
+          await createProject({
             title: project.title,
             description: project.description,
-            // Reasoning is the user's own words — gives the carousel card
-            // something honest to show as the "why this is for you" line.
-            reasoning: `You mentioned this: "${project.raw_phrase}"`,
-            source: 'onboarding-capture',
-          }),
-        })
+            status: 'active',
+            metadata: {
+              source: 'onboarding-capture',
+              captured_at: new Date().toISOString(),
+              grounding_phrase: project.raw_phrase,
+            } as any,
+          })
+        } else {
+          // Idea — saved as a project_suggestion (status pending),
+          // shown in TrySomethingNewCarousel on Home alongside the
+          // AI-derived intersection ideas.
+          await fetch('/api/projects?resource=save-idea', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: project.title,
+              description: project.description,
+              // Reasoning is the user's own words — gives the carousel
+              // card an honest "why this is for you" line.
+              reasoning: `You mentioned this: "${project.raw_phrase}"`,
+              source: 'onboarding-capture',
+            }),
+          })
+        }
       } catch (e) {
         console.warn('[onboarding-chat] failed to save captured project', project.title, e)
       }
     }
-  }, [])
+  }, [createProject])
 
   // Persist EVERY captured item (books included) to its matching list when
   // the chat ends. This is the "quiet seeding" guarantee — when the user
