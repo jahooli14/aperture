@@ -3,6 +3,7 @@ import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { X, Calendar, Image, Trash2, Eye, EyeOff, Baby, MessageSquare, Edit2, Check, MapPin, Target } from 'lucide-react';
 import type { Database } from '../types/database';
 import { calculateAge, formatAge } from '../lib/ageUtils';
+import { calculateZoomLevel } from '../lib/imageUtils';
 import { getPhotoDisplayUrl, isPhotoAligned } from '../lib/photoUtils';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { usePhotoStore } from '../stores/usePhotoStore';
@@ -187,7 +188,10 @@ export function PhotoBottomSheet({ photo: photoProp, isOpen, onClose, onDelete }
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
-              onClick={onClose}
+              // Backdrop click dismisses — but NOT while the adjust UI is
+              // open, since a drag that ends on the backdrop (finger past the
+              // image edge) would otherwise close mid-adjustment.
+              onClick={sheetDragEnabled ? onClose : undefined}
             />
 
             {/* Bottom Sheet */}
@@ -479,6 +483,24 @@ export function PhotoBottomSheet({ photo: photoProp, isOpen, onClose, onDelete }
                     imageWidth={adjustState.width}
                     imageHeight={adjustState.height}
                     initial={adjustState.initial}
+                    zoomLevel={(() => {
+                      // Mirror the zoom-level logic used by reAlignPhoto so
+                      // the preview rectangle matches the committed crop.
+                      if (settings?.baby_birthdate) {
+                        const photoDate = new Date(photo.upload_date);
+                        const birth = new Date(settings.baby_birthdate);
+                        const ageInMonths = Math.floor(
+                          (photoDate.getTime() - birth.getTime()) /
+                            (1000 * 60 * 60 * 24 * 30.44)
+                        );
+                        return calculateZoomLevel(ageInMonths);
+                      }
+                      const prev = photo.metadata as Record<string, unknown> | null;
+                      if (prev && typeof prev.zoom_level === 'number') {
+                        return prev.zoom_level;
+                      }
+                      return 0.4;
+                    })()}
                     onConfirm={handleAdjustConfirm}
                     onCancel={closeAdjust}
                     title="Fix eye alignment"

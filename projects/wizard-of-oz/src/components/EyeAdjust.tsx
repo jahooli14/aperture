@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, X } from 'lucide-react';
+import { computeCropRect } from '../lib/imageUtils';
 
 export interface EyeAdjustCoords {
   leftEye: { x: number; y: number };
@@ -15,6 +16,12 @@ interface EyeAdjustProps {
   imageHeight: number;
   /** Starting positions for the two markers, in image-pixel coords. Optional. */
   initial?: EyeAdjustCoords | null;
+  /**
+   * Zoom level (0-1) that the final align step will use. Passed through to
+   * the live crop preview so the user can see the framing before committing.
+   * Defaults to 0.4 (newborn tight crop) when omitted.
+   */
+  zoomLevel?: number;
   onConfirm: (coords: EyeAdjustCoords) => void;
   onCancel: () => void;
   /** Optional override for the button labels / title. */
@@ -42,6 +49,7 @@ export function EyeAdjust({
   imageWidth,
   imageHeight,
   initial,
+  zoomLevel = 0.4,
   onConfirm,
   onCancel,
   title = 'Place the markers on each eye',
@@ -64,11 +72,22 @@ export function EyeAdjust({
     });
   }, [initial, imageWidth, imageHeight]);
 
-  const draggingRef = useRef<Handle | null>(null);
+  // Active drag state: which handle, and the sub-pixel offset between the
+  // initial touch point and the marker center so the marker tracks the finger
+  // WITHOUT snapping on down. Precise nudges preserve existing placement.
+  const dragRef = useRef<{ handle: Handle; dx: number; dy: number } | null>(null);
   // Keep the latest coords in a ref so the pointerdown handler can pick the
   // nearest marker without being stale across re-renders.
   const coordsRef = useRef(coords);
   coordsRef.current = coords;
+
+  // Marker radius scales with image size so it's grabbable at any zoom.
+  const markerRadius = Math.max(imageWidth, imageHeight) * 0.025;
+  const connectorWidth = markerRadius * 0.3;
+  // Generous grab radius: taps within this distance of either marker grab it.
+  // Beyond this, taps are ignored so users don't accidentally teleport markers
+  // by glancing the image.
+  const grabRadius = markerRadius * 6;
 
   /** Convert a client-space point into SVG (image-pixel) coordinates. */
   function clientToImage(clientX: number, clientY: number): { x: number; y: number } | null {
@@ -80,62 +99,83 @@ export function EyeAdjust({
     pt.x = clientX;
     pt.y = clientY;
     const transformed = pt.matrixTransform(ctm.inverse());
+    // NOTE: we deliberately do NOT clamp here — callers clamp as needed. The
+    // pointer may wander outside the image during a drag (capture keeps events
+    // coming) and we want the marker to follow right up to the edge.
+    return { x: transformed.x, y: transformed.y };
+  }
+
+  function clampToImage(p: { x: number; y: number }): { x: number; y: number } {
     return {
-      x: Math.max(0, Math.min(imageWidth, transformed.x)),
-      y: Math.max(0, Math.min(imageHeight, transformed.y)),
+      x: Math.max(0, Math.min(imageWidth, p.x)),
+      y: Math.max(0, Math.min(imageHeight, p.y)),
     };
   }
 
-  function nearestHandle(p: { x: number; y: number }): Handle {
+  function nearestHandle(p: { x: number; y: number }): { handle: Handle; dist: number } {
     const c = coordsRef.current;
-    const dl = (c.leftEye.x - p.x) ** 2 + (c.leftEye.y - p.y) ** 2;
-    const dr = (c.rightEye.x - p.x) ** 2 + (c.rightEye.y - p.y) ** 2;
-    return dl <= dr ? 'left' : 'right';
+    const dl = Math.hypot(c.leftEye.x - p.x, c.leftEye.y - p.y);
+    const dr = Math.hypot(c.rightEye.x - p.x, c.rightEye.y - p.y);
+    return dl <= dr ? { handle: 'left', dist: dl } : { handle: 'right', dist: dr };
   }
 
-  // Single pointerdown handler on the whole SVG: whichever marker is nearest
-  // the touch point becomes the active one, and the marker jumps to the
-  // touched point immediately. Much more forgiving than requiring a pixel-
-  // perfect hit on a small circle.
   function onPointerDown(e: React.PointerEvent<SVGElement>) {
-    e.preventDefault();
-    e.stopPropagation();
     const p = clientToImage(e.clientX, e.clientY);
     if (!p) return;
-    const handle = nearestHandle(p);
-    draggingRef.current = handle;
-    // Capture on the SVG root so subsequent moves stay bound to this gesture
-    // even if the pointer wanders outside the element.
-    svgRef.current?.setPointerCapture?.(e.pointerId);
-    setCoords((prev) =>
-      handle === 'left' ? { ...prev, leftEye: p } : { ...prev, rightEye: p }
-    );
+    const { handle, dist } = nearestHandle(p);
+    // Only grab if the tap is within the generous grab radius of a marker.
+    // Taps outside that do nothing — they don't snap or close anything.
+    if (dist > grabRadius) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const c = coordsRef.current;
+    const marker = handle === 'left' ? c.leftEye : c.rightEye;
+    dragRef.current = {
+      handle,
+      dx: marker.x - p.x,
+      dy: marker.y - p.y,
+    };
+    // Pointer capture on the SVG root keeps subsequent move/up events coming
+    // here even if the finger wanders off the image, off the sheet, or onto
+    // the backdrop. Without this, a drag past the image edge would leak.
+    try {
+      svgRef.current?.setPointerCapture?.(e.pointerId);
+    } catch {
+      // Some browsers throw if capture is already set; ignore.
+    }
   }
 
   function onPointerMove(e: React.PointerEvent<SVGElement>) {
-    const handle = draggingRef.current;
-    if (!handle) return;
+    const drag = dragRef.current;
+    if (!drag) return;
     e.preventDefault();
     e.stopPropagation();
     const p = clientToImage(e.clientX, e.clientY);
     if (!p) return;
+    const next = clampToImage({ x: p.x + drag.dx, y: p.y + drag.dy });
     setCoords((prev) =>
-      handle === 'left'
-        ? { ...prev, leftEye: p }
-        : { ...prev, rightEye: p }
+      drag.handle === 'left'
+        ? { ...prev, leftEye: next }
+        : { ...prev, rightEye: next }
     );
   }
 
   function onPointerUp(e: React.PointerEvent<SVGElement>) {
-    if (!draggingRef.current) return;
+    if (!dragRef.current) return;
+    e.preventDefault();
     e.stopPropagation();
-    draggingRef.current = null;
-    svgRef.current?.releasePointerCapture?.(e.pointerId);
+    dragRef.current = null;
+    try {
+      svgRef.current?.releasePointerCapture?.(e.pointerId);
+    } catch {
+      // Ignore — capture may already be released.
+    }
   }
 
-  // Marker radius scales with image size so it's grabbable at any zoom.
-  const markerRadius = Math.max(imageWidth, imageHeight) * 0.025;
-  const connectorWidth = markerRadius * 0.3;
+  // Live preview of the crop that will result from the user's current marker
+  // placement. Updates in real time as they drag so they can see the framing
+  // (and any unintended rotation) before committing.
+  const cropRect = computeCropRect(coords, zoomLevel);
 
   return (
     <div className="space-y-4">
@@ -155,10 +195,10 @@ export function EyeAdjust({
         // bottom sheet). Touch/pointer capture on the SVG still receives moves.
         onPointerDownCapture={(e) => e.stopPropagation()}
         onPointerMoveCapture={(e) => {
-          if (draggingRef.current) e.stopPropagation();
+          if (dragRef.current) e.stopPropagation();
         }}
         onPointerUpCapture={(e) => {
-          if (draggingRef.current) e.stopPropagation();
+          if (dragRef.current) e.stopPropagation();
         }}
       >
         <img
@@ -180,8 +220,8 @@ export function EyeAdjust({
           onPointerCancel={onPointerUp}
         >
           {/* Full-surface transparent hit target. A pointerdown anywhere on
-              the image grabs the nearest marker — no need to land precisely
-              on a small dot. */}
+              the image is routed to the nearest-marker check; only taps near
+              a marker grab it, everything else is harmlessly absorbed. */}
           <rect
             x={0}
             y={0}
@@ -189,6 +229,28 @@ export function EyeAdjust({
             height={imageHeight}
             fill="transparent"
           />
+
+          {/* Live preview of the final crop rectangle. Shows the user exactly
+              what rotation/framing their current marker placement will produce
+              before they hit Confirm — so tiny placement errors are visible. */}
+          {cropRect && (
+            <g
+              transform={`rotate(${cropRect.angleDeg} ${cropRect.cx} ${cropRect.cy})`}
+              pointerEvents="none"
+            >
+              <rect
+                x={cropRect.cx - cropRect.width / 2}
+                y={cropRect.cy - cropRect.height / 2}
+                width={cropRect.width}
+                height={cropRect.height}
+                fill="none"
+                stroke="#ffffff"
+                strokeWidth={Math.max(2, markerRadius * 0.35)}
+                strokeDasharray={`${markerRadius * 1.5} ${markerRadius}`}
+                opacity={0.9}
+              />
+            </g>
+          )}
 
           {/* Connector line — visual reference for alignment */}
           <line
