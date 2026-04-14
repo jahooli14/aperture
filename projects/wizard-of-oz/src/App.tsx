@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings } from 'lucide-react';
+import { Settings, LogOut, Smartphone, Lock } from 'lucide-react';
 import { useAuthStore } from './stores/useAuthStore';
 import { useSettingsStore } from './stores/useSettingsStore';
 import { usePhotoStore } from './stores/usePhotoStore';
@@ -27,7 +27,10 @@ const ComparisonView = lazy(lazyRetry(() => import('./components/ComparisonView'
 const MilestonesView = lazy(lazyRetry(() => import('./components/MilestonesView').then(m => ({ default: m.MilestonesView }))));
 const PlacesView = lazy(lazyRetry(() => import('./components/PlacesView').then(m => ({ default: m.default }))));
 
-type ViewType = 'gallery' | 'calendar' | 'compare' | 'milestones' | 'places';
+// Top-level navigation. Watch = capture + timelapse + recent photos.
+// Browse = deeper exploration views with a sub-nav. More = account/app chrome.
+type TopTab = 'watch' | 'browse' | 'more';
+type BrowseSub = 'calendar' | 'compare' | 'milestones' | 'places';
 
 const PASSCODE_KEY = 'wizard-passcode';
 
@@ -35,7 +38,8 @@ function App() {
   const { user, loading, initialize, signOut } = useAuthStore();
   const { settings, fetchSettings, updateSettings } = useSettingsStore();
   const { fetchPhotos } = usePhotoStore();
-  const [view, setView] = useState<ViewType>('calendar');
+  const [topTab, setTopTab] = useState<TopTab>('watch');
+  const [browseSub, setBrowseSub] = useState<BrowseSub>('calendar');
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showJoinCodePrompt, setShowJoinCodePrompt] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -46,7 +50,6 @@ function App() {
   const [loadingTooLong, setLoadingTooLong] = useState(false);
   const loadingRef = useRef(loading);
   const unlockedThisSession = useRef(false); // Track if user unlocked passcode this session
-  const tabScrollRef = useRef<HTMLDivElement>(null); // Ref to scroll active tab into view
   const { toast, showToast, hideToast } = useToast();
 
   // Show configuration error if Supabase is not configured (but only as a warning, don't block the app)
@@ -60,16 +63,6 @@ function App() {
   useEffect(() => {
     loadingRef.current = loading;
   }, [loading]);
-
-  // Scroll active tab into view when view changes
-  useEffect(() => {
-    if (tabScrollRef.current) {
-      const activeButton = tabScrollRef.current.querySelector('[data-active="true"]');
-      if (activeButton) {
-        activeButton.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-      }
-    }
-  }, [view]);
 
   // Check for passcode on mount - but only lock if not already unlocked this session
   useEffect(() => {
@@ -300,6 +293,19 @@ function App() {
     return <Onboarding onComplete={handleOnboardingComplete} />;
   }
 
+  const topTabs: { id: TopTab; label: string; emoji: string }[] = [
+    { id: 'watch', label: 'Watch', emoji: '🎬' },
+    { id: 'browse', label: 'Browse', emoji: '🗂️' },
+    { id: 'more', label: 'More', emoji: '⋯' },
+  ];
+
+  const browseTabs: { id: BrowseSub; label: string; emoji: string }[] = [
+    { id: 'calendar', label: 'Calendar', emoji: '📅' },
+    { id: 'compare', label: 'Compare', emoji: '↔️' },
+    { id: 'milestones', label: 'Milestones', emoji: '🌱' },
+    { id: 'places', label: 'Places', emoji: '📍' },
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -310,153 +316,163 @@ function App() {
               <img src="/pupils-logo.svg" alt="Pupils" className="h-8 w-8 md:h-10 md:w-10" />
               <h1 className="text-2xl font-bold text-gray-900">Pupils</h1>
             </div>
-            <div className="flex items-center gap-1 md:gap-3">
-              <motion.button
-                type="button"
-                onClick={() => setShowSettings(true)}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="p-2 text-gray-600 hover:text-gray-900 transition-colors rounded-lg hover:bg-gray-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                aria-label="Settings"
-                title="Settings"
-              >
-                <Settings className="w-5 h-5" />
-              </motion.button>
-              <button
-                type="button"
-                onClick={signOut}
-                className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors min-h-[44px] px-3 touch-manipulation rounded-lg hover:bg-gray-100"
-              >
-                Sign out
-              </button>
-            </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Milestone Banner - hide on milestones and places views */}
-        {view !== 'milestones' && view !== 'places' && <MilestoneBanner />}
+        {/* Milestone Banner — only on Watch (where the photo-a-day flow lives) */}
+        {topTab === 'watch' && <MilestoneBanner />}
 
-        {/* View Toggle */}
-        <div className="flex justify-center mb-6 md:mb-8">
-          <div ref={tabScrollRef} className="overflow-x-auto">
-            <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 shadow-sm gap-1">
+        {/* Top-level tabs */}
+        <div className="flex justify-center mb-4 md:mb-6">
+          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 shadow-sm gap-1">
+            {topTabs.map((tab) => (
               <motion.button
-              type="button"
-              onClick={() => setView('gallery')}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-              data-active={view === 'gallery'}
-              className={`
-                px-4 py-2 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center
-                ${view === 'gallery'
-                  ? 'bg-primary-600 text-white shadow-md'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }
-              `}
-            >
-              📸 Gallery
-            </motion.button>
-            <motion.button
-              type="button"
-              onClick={() => setView('places')}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-              data-active={view === 'places'}
-              className={`
-                px-4 py-2 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center
-                ${view === 'places'
-                  ? 'bg-primary-600 text-white shadow-md'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }
-              `}
-            >
-              📍 Places
-            </motion.button>
-            <motion.button
-              type="button"
-              onClick={() => setView('milestones')}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-              data-active={view === 'milestones'}
-              className={`
-                px-4 py-2 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center
-                ${view === 'milestones'
-                  ? 'bg-primary-600 text-white shadow-md'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }
-              `}
-            >
-              🌱 Milestones
-            </motion.button>
-            <motion.button
-              type="button"
-              onClick={() => setView('calendar')}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-              data-active={view === 'calendar'}
-              className={`
-                px-4 py-2 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center
-                ${view === 'calendar'
-                  ? 'bg-primary-600 text-white shadow-md'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }
-              `}
-            >
-              📅 Calendar
-            </motion.button>
-            <motion.button
-              type="button"
-              onClick={() => setView('compare')}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-              data-active={view === 'compare'}
-              className={`
-                px-4 py-2 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center
-                ${view === 'compare'
-                  ? 'bg-primary-600 text-white shadow-md'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }
-              `}
-            >
-              ↔️ Compare
-            </motion.button>
-            </div>
+                key={tab.id}
+                type="button"
+                onClick={() => setTopTab(tab.id)}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+                className={`
+                  px-5 py-2 rounded-md text-sm font-semibold transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center gap-1.5
+                  ${topTab === tab.id
+                    ? 'bg-primary-600 text-white shadow-md'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }
+                `}
+              >
+                <span>{tab.emoji}</span>
+                <span>{tab.label}</span>
+              </motion.button>
+            ))}
           </div>
         </div>
 
+        {/* Browse sub-nav */}
+        {topTab === 'browse' && (
+          <div className="flex justify-center mb-6 md:mb-8">
+            <div className="inline-flex flex-wrap justify-center rounded-lg border border-gray-200 bg-white p-1 shadow-sm gap-1">
+              {browseTabs.map((tab) => (
+                <motion.button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setBrowseSub(tab.id)}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+                  className={`
+                    px-4 py-2 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center gap-1.5
+                    ${browseSub === tab.id
+                      ? 'bg-primary-600 text-white shadow-md'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                    }
+                  `}
+                >
+                  <span>{tab.emoji}</span>
+                  <span>{tab.label}</span>
+                </motion.button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <AnimatePresence mode="wait">
           <motion.div
-            key={view}
+            key={`${topTab}:${topTab === 'browse' ? browseSub : ''}`}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.2 }}
             className="space-y-8"
           >
-            {/* Upload Section - only visible on gallery view */}
-            {view === 'gallery' && <UploadPhoto showToast={showToast} />}
+            {topTab === 'watch' && (
+              <>
+                <UploadPhoto showToast={showToast} />
+                <Suspense fallback={
+                  <div className="text-center py-12">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary-600 border-t-transparent"></div>
+                    <p className="mt-4 text-gray-600">Loading...</p>
+                  </div>
+                }>
+                  <PhotoGallery showToast={showToast} />
+                </Suspense>
+              </>
+            )}
 
-            {/* View-specific content with loading fallback */}
-            <Suspense fallback={
-              <div className="text-center py-12">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary-600 border-t-transparent"></div>
-                <p className="mt-4 text-gray-600">Loading...</p>
+            {topTab === 'browse' && (
+              <Suspense fallback={
+                <div className="text-center py-12">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary-600 border-t-transparent"></div>
+                  <p className="mt-4 text-gray-600">Loading...</p>
+                </div>
+              }>
+                {browseSub === 'calendar' && <CalendarView onUploadClick={() => setTopTab('watch')} />}
+                {browseSub === 'compare' && <ComparisonView />}
+                {browseSub === 'milestones' && <MilestonesView />}
+                {browseSub === 'places' && <PlacesView />}
+              </Suspense>
+            )}
+
+            {topTab === 'more' && (
+              <div className="max-w-lg mx-auto bg-white rounded-xl shadow-sm border border-gray-200 divide-y divide-gray-100 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setShowSettings(true)}
+                  className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-gray-50 active:bg-gray-100 transition-colors min-h-[56px]"
+                >
+                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                    <Settings className="w-5 h-5 text-gray-700" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900">Privacy &amp; Settings</p>
+                    <p className="text-sm text-gray-500">Passcode, sharing, baby details</p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowPWAGuide(true)}
+                  className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-gray-50 active:bg-gray-100 transition-colors min-h-[56px]"
+                >
+                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                    <Smartphone className="w-5 h-5 text-gray-700" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900">Install as app</p>
+                    <p className="text-sm text-gray-500">Add Pupils to your home screen</p>
+                  </div>
+                </button>
+
+                {passcode && (
+                  <div className="flex items-center gap-4 px-5 py-4 min-h-[56px]">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                      <Lock className="w-5 h-5 text-gray-700" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">Passcode active</p>
+                      <p className="text-sm text-gray-500">Change in Privacy &amp; Settings</p>
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={signOut}
+                  className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-red-50 active:bg-red-100 transition-colors min-h-[56px] text-red-600"
+                >
+                  <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
+                    <LogOut className="w-5 h-5 text-red-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">Sign out</p>
+                    <p className="text-sm text-red-500/80">{user.email}</p>
+                  </div>
+                </button>
               </div>
-            }>
-              {view === 'gallery' && <PhotoGallery showToast={showToast} />}
-              {view === 'calendar' && <CalendarView onUploadClick={() => setView('gallery')} />}
-              {view === 'compare' && <ComparisonView />}
-              {view === 'milestones' && <MilestonesView />}
-              {view === 'places' && <PlacesView />}
-            </Suspense>
+            )}
           </motion.div>
         </AnimatePresence>
       </main>
@@ -532,9 +548,9 @@ function App() {
 
       {/* Quick Add FAB */}
       <QuickAddFAB
-        onAddPhoto={() => setView('gallery')}
+        onAddPhoto={() => setTopTab('watch')}
         onAddPlace={() => setShowAddPlace(true)}
-        onAddMilestone={() => setView('milestones')}
+        onAddMilestone={() => { setTopTab('browse'); setBrowseSub('milestones'); }}
       />
 
       {/* Add Place Modal */}

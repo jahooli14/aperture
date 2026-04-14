@@ -3,11 +3,16 @@
  */
 
 export interface EyeCoordinates {
+  // Convention: leftEye appears on the LEFT side of the image when the face is
+  // upright (i.e. subject's RIGHT eye). rightEye is subject's LEFT eye.
   leftEye: { x: number; y: number };
   rightEye: { x: number; y: number };
   confidence: number;
   imageWidth: number;
   imageHeight: number;
+  eyesOpen?: number;
+  faceWidth?: number;
+  irisAgreement?: number;
 }
 
 export interface AlignmentResult {
@@ -76,49 +81,50 @@ export async function compressImage(
 }
 
 /**
- * Rotates an image file by the specified degrees
+ * Rotates an image file by the specified degrees.
+ * Uses createImageBitmap with { imageOrientation: 'from-image' } to mirror the
+ * EXIF handling used by compressImage and the eye detector. Keeps the whole
+ * upload pipeline on one consistent orientation path.
  * @param file - The image file to rotate
  * @param degrees - Degrees to rotate (0, 90, 180, or 270)
  * @returns Promise resolving to rotated image file
  */
 export async function rotateImage(file: File, degrees: number): Promise<File> {
-  return new Promise((resolve) => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d')!;
-    const img = new Image();
+  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
 
-    img.onload = () => {
-      // Set canvas dimensions based on rotation
-      if (degrees === 90 || degrees === 270) {
-        canvas.width = img.height;
-        canvas.height = img.width;
-      } else {
-        canvas.width = img.width;
-        canvas.height = img.height;
-      }
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d')!;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
 
-      // Clear canvas and apply rotation
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.save();
+  if (degrees === 90 || degrees === 270) {
+    canvas.width = bitmap.height;
+    canvas.height = bitmap.width;
+  } else {
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+  }
 
-      // Move to center of canvas
-      ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.save();
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate((degrees * Math.PI) / 180);
+  ctx.drawImage(bitmap, -bitmap.width / 2, -bitmap.height / 2);
+  ctx.restore();
+  bitmap.close();
 
-      // Rotate
-      ctx.rotate((degrees * Math.PI) / 180);
-
-      // Draw image centered
-      ctx.drawImage(img, -img.width / 2, -img.height / 2);
-      ctx.restore();
-
-      // Convert canvas to blob then to file
-      canvas.toBlob((blob) => {
-        const rotatedFile = new File([blob!], file.name, { type: file.type });
-        resolve(rotatedFile);
-      }, file.type, 0.85);
-    };
-
-    img.src = URL.createObjectURL(file);
+  const outputType = file.type && file.type.startsWith('image/') ? file.type : 'image/jpeg';
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error('Failed to rotate image'));
+          return;
+        }
+        resolve(new File([blob], file.name, { type: outputType }));
+      },
+      outputType,
+      0.92
+    );
   });
 }
 
@@ -209,6 +215,57 @@ function getTargetEyePositions(zoomLevel: number) {
 }
 
 /**
+ * Project the final crop rectangle back into source-image coordinates. Used by
+ * PreviewControls to show the user exactly what will be committed to the
+ * timeline before they upload. Pure function — no DOM dependencies — so it's
+ * easy to unit-test the sign conventions that otherwise silently drift.
+ *
+ * Mirrors the maths in `alignPhoto`: we pick a scale such that the eye line
+ * spans 34% of TARGET_WIDTH, then the crop's vertical center sits offset from
+ * the eye midpoint along the face's local up-axis by `H*(0.5 - zoomLevel)/scale`.
+ */
+export function computeCropRect(
+  eyes: { leftEye: { x: number; y: number }; rightEye: { x: number; y: number } },
+  zoomLevel: number
+): {
+  cx: number;
+  cy: number;
+  width: number;
+  height: number;
+  angleDeg: number;
+  scale: number;
+} | null {
+  const dx = eyes.rightEye.x - eyes.leftEye.x;
+  const dy = eyes.rightEye.y - eyes.leftEye.y;
+  const eyeDist = Math.sqrt(dx * dx + dy * dy);
+  if (!(eyeDist > 0)) return null;
+
+  const angleRad = Math.atan2(dy, dx);
+  const targetEyeDist = TARGET_WIDTH * 0.34;
+  const scale = targetEyeDist / eyeDist;
+  const cropW = TARGET_WIDTH / scale;
+  const cropH = TARGET_HEIGHT / scale;
+
+  const sourceEyeCenterX = (eyes.leftEye.x + eyes.rightEye.x) / 2;
+  const sourceEyeCenterY = (eyes.leftEye.y + eyes.rightEye.y) / 2;
+
+  // Target-space offset from eye midpoint to crop center is (0, H*(0.5 - zoom)).
+  // Apply R(angle)/scale to project into source space (y-down image coords).
+  const centerOffset = (TARGET_HEIGHT * (0.5 - zoomLevel)) / scale;
+  const cx = sourceEyeCenterX - Math.sin(angleRad) * centerOffset;
+  const cy = sourceEyeCenterY + Math.cos(angleRad) * centerOffset;
+
+  return {
+    cx,
+    cy,
+    width: cropW,
+    height: cropH,
+    angleDeg: (angleRad * 180) / Math.PI,
+    scale,
+  };
+}
+
+/**
  * Aligns a photo based on detected eye coordinates
  * Uses affine transformation to rotate, scale, and translate the image
  * so that eyes match target positions
@@ -224,74 +281,51 @@ export async function alignPhoto(
   zoomLevel: number = 0.40
 ): Promise<AlignmentResult> {
   try {
-    // Use createImageBitmap to ensure consistent EXIF orientation handling
-    // This matches how the EyeDetector processes images, ensuring coordinates match
-    const bitmap = await createImageBitmap(file);
+    // Matches compressImage + EyeDetector: EXIF rotation is applied before we touch
+    // the pixels so eye coordinates stay valid regardless of camera orientation.
+    const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
 
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d')!;
+    // Use high-quality resampling — the affine transform can include up-scaling on
+    // wide shots and the default nearest/bilinear produces visible softness.
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
 
-    // Set output dimensions
     canvas.width = TARGET_WIDTH;
     canvas.height = TARGET_HEIGHT;
 
-    // Get target eye positions for the specified zoom level
     const targetPositions = getTargetEyePositions(zoomLevel);
-
-    // Calculate transformation parameters
     const { leftEye, rightEye } = eyeCoords;
 
-    // Calculate angle between eyes
+    // With the canonical convention (leftEye = subject's right eye = image-left for
+    // upright faces), atan2(dy, dx) alone produces the correct rotation for upright,
+    // tilted, 90°-rotated, and upside-down faces. No needsFlip second rotation.
     const dx = rightEye.x - leftEye.x;
     const dy = rightEye.y - leftEye.y;
     const angle = Math.atan2(dy, dx);
 
-    // Calculate scale to match target eye distance
     const currentEyeDistance = Math.sqrt(dx * dx + dy * dy);
     const targetEyeDistance = targetPositions.rightEye.x - targetPositions.leftEye.x;
     const scale = targetEyeDistance / currentEyeDistance;
 
-    // Calculate center point between eyes (source)
     const sourceCenterX = (leftEye.x + rightEye.x) / 2;
     const sourceCenterY = (leftEye.y + rightEye.y) / 2;
-
-    // Calculate center point between eyes (target)
     const targetCenterX = (targetPositions.leftEye.x + targetPositions.rightEye.x) / 2;
     const targetCenterY = (targetPositions.leftEye.y + targetPositions.rightEye.y) / 2;
 
-    // Determine if image needs 180° rotation based on eye left-right order
-    // If leftEye.x > rightEye.x, eyes are swapped (upside-down) and need flipping
-    const eyesSwapped = leftEye.x > rightEye.x;
-    const needsFlip = eyesSwapped;
-
-    // Fill with white background first
+    // White background fills any uncovered regions after the affine transform.
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Apply transformation
     ctx.save();
-
-    // Move origin to target eye center
     ctx.translate(targetCenterX, targetCenterY);
-
-    // Rotate to align eyes
     ctx.rotate(-angle);
-
-    // Scale to match target eye distance
     ctx.scale(scale, scale);
-
-    // Rotate 180 degrees to flip image right-side up (only if needed)
-    if (needsFlip) {
-      ctx.rotate(Math.PI);
-    }
-
-    // Draw bitmap centered at origin (use bitmap dimensions for proper alignment)
     ctx.drawImage(bitmap, -sourceCenterX, -sourceCenterY);
-
     ctx.restore();
     bitmap.close();
 
-    // Convert canvas to blob then to file
     return new Promise((resolve, reject) => {
       canvas.toBlob((blob) => {
         if (!blob) {
@@ -308,7 +342,7 @@ export async function alignPhoto(
         resolve({
           alignedImage: alignedFile,
           transform: {
-            rotation: -angle * (180 / Math.PI), // Convert to degrees
+            rotation: -angle * (180 / Math.PI),
             scale,
             translateX: targetCenterX - sourceCenterX * scale,
             translateY: targetCenterY - sourceCenterY * scale,

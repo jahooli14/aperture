@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
-import { X, Calendar, Image, Trash2, Eye, EyeOff, Baby, MessageSquare, Edit2, Check, MapPin } from 'lucide-react';
+import { X, Calendar, Image, Trash2, Eye, EyeOff, Baby, MessageSquare, Edit2, Check, MapPin, Target } from 'lucide-react';
 import type { Database } from '../types/database';
 import { calculateAge, formatAge } from '../lib/ageUtils';
 import { getPhotoDisplayUrl, isPhotoAligned } from '../lib/photoUtils';
@@ -8,6 +8,7 @@ import { useSettingsStore } from '../stores/useSettingsStore';
 import { usePhotoStore } from '../stores/usePhotoStore';
 import { usePlaceStore } from '../stores/usePlaceStore';
 import { AddPlaceModal } from './AddPlaceModal';
+import { EyeAdjust, type EyeAdjustCoords } from './EyeAdjust';
 
 type Photo = Database['public']['Tables']['photos']['Row'];
 
@@ -22,10 +23,85 @@ export function PhotoBottomSheet({ photo, isOpen, onClose, onDelete }: PhotoBott
   if (!photo) return null;
 
   const { settings } = useSettingsStore();
-  const { updatePhotoNote } = usePhotoStore();
+  const { updatePhotoNote, reAlignPhoto } = usePhotoStore();
   const { fetchPlaces, fetchPhotoPlaces } = usePlaceStore();
 
   const [isAddPlaceModalOpen, setIsAddPlaceModalOpen] = useState(false);
+  const [adjustState, setAdjustState] = useState<
+    | { phase: 'idle' }
+    | { phase: 'loading' }
+    | { phase: 'editing'; previewUrl: string; width: number; height: number; initial: EyeAdjustCoords | null }
+    | { phase: 'saving' }
+  >({ phase: 'idle' });
+  const [adjustError, setAdjustError] = useState('');
+
+  const openAdjust = async () => {
+    try {
+      setAdjustError('');
+      setAdjustState({ phase: 'loading' });
+      const sourceUrl = getPhotoDisplayUrl(photo);
+      const response = await fetch(sourceUrl);
+      if (!response.ok) throw new Error(`Couldn't load photo (${response.status})`);
+      const blob = await response.blob();
+      const bitmap = await createImageBitmap(blob, { imageOrientation: 'from-image' });
+      const width = bitmap.width;
+      const height = bitmap.height;
+      bitmap.close();
+
+      // Seed markers with existing eye coords if we have them AND they're in
+      // the same image-space as what we're about to edit. Otherwise let
+      // EyeAdjust default to 1/3-2/3 horizontally, mid-vertically.
+      let initial: EyeAdjustCoords | null = null;
+      const ec = photo.eye_coordinates;
+      if (ec && ec.imageWidth && ec.imageHeight) {
+        // Scale coords if the fetched image dims differ (signed URL may serve
+        // the same pixels, but be robust to any resizing).
+        const sx = width / ec.imageWidth;
+        const sy = height / ec.imageHeight;
+        initial = {
+          leftEye: { x: ec.leftEye.x * sx, y: ec.leftEye.y * sy },
+          rightEye: { x: ec.rightEye.x * sx, y: ec.rightEye.y * sy },
+        };
+      }
+
+      // Use an object URL of the fetched blob so the EyeAdjust <img> can load
+      // without any CORS/redirect surprises.
+      const objectUrl = URL.createObjectURL(blob);
+      setAdjustState({ phase: 'editing', previewUrl: objectUrl, width, height, initial });
+    } catch (err) {
+      setAdjustError(err instanceof Error ? err.message : 'Failed to open adjust');
+      setAdjustState({ phase: 'idle' });
+    }
+  };
+
+  const closeAdjust = () => {
+    if (adjustState.phase === 'editing') {
+      URL.revokeObjectURL(adjustState.previewUrl);
+    }
+    setAdjustState({ phase: 'idle' });
+    setAdjustError('');
+  };
+
+  const handleAdjustConfirm = async (placed: EyeAdjustCoords) => {
+    if (adjustState.phase !== 'editing') return;
+    const { previewUrl: previewUrlToRevoke, width, height } = adjustState;
+    try {
+      setAdjustState({ phase: 'saving' });
+      await reAlignPhoto(photo.id, placed, settings?.baby_birthdate ?? null);
+      URL.revokeObjectURL(previewUrlToRevoke);
+      setAdjustState({ phase: 'idle' });
+    } catch (err) {
+      setAdjustError(err instanceof Error ? err.message : 'Failed to re-align');
+      // Return to edit state so the user can retry without re-loading.
+      setAdjustState({
+        phase: 'editing',
+        previewUrl: previewUrlToRevoke,
+        width,
+        height,
+        initial: placed,
+      });
+    }
+  };
 
   // Get existing note and emoji from metadata
   const existingNote = (() => {
@@ -384,27 +460,72 @@ export function PhotoBottomSheet({ photo, isOpen, onClose, onDelete }: PhotoBott
                 </div>
               </div>
 
-              {/* Actions */}
-              <div className="space-y-3">
-                <button
-                  onClick={() => setIsAddPlaceModalOpen(true)}
-                  className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-blue-50 hover:bg-blue-100 active:bg-blue-100 text-blue-600 font-semibold rounded-xl transition-colors min-h-[56px]"
-                >
-                  <MapPin className="w-5 h-5" />
-                  <span>Tag Location</span>
-                </button>
+              {/* Manual adjust UI — inline, replaces other actions while open */}
+              {adjustState.phase === 'editing' && (
+                <div className="mb-4 p-4 bg-gray-50 rounded-xl">
+                  <EyeAdjust
+                    previewUrl={adjustState.previewUrl}
+                    imageWidth={adjustState.width}
+                    imageHeight={adjustState.height}
+                    initial={adjustState.initial}
+                    onConfirm={handleAdjustConfirm}
+                    onCancel={closeAdjust}
+                    title="Fix eye alignment"
+                    confirmLabel="Re-align photo"
+                  />
+                  {adjustError && (
+                    <p className="mt-2 text-xs text-red-600">{adjustError}</p>
+                  )}
+                </div>
+              )}
 
-                <button
-                  onClick={() => {
-                    onDelete();
-                    onClose();
-                  }}
-                  className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-red-50 hover:bg-red-100 active:bg-red-100 text-red-600 font-semibold rounded-xl transition-colors min-h-[56px]"
-                >
-                  <Trash2 className="w-5 h-5" />
-                  <span>Delete Photo</span>
-                </button>
-              </div>
+              {adjustState.phase === 'saving' && (
+                <div className="mb-4 p-4 bg-gray-50 rounded-xl text-center text-sm text-gray-700">
+                  Re-aligning photo…
+                </div>
+              )}
+
+              {/* Actions */}
+              {adjustState.phase === 'idle' && (
+                <div className="space-y-3">
+                  <button
+                    onClick={openAdjust}
+                    className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-green-50 hover:bg-green-100 active:bg-green-100 text-green-700 font-semibold rounded-xl transition-colors min-h-[56px]"
+                  >
+                    <Target className="w-5 h-5" />
+                    <span>{hasEyeDetection ? 'Adjust alignment' : 'Set eye positions'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => setIsAddPlaceModalOpen(true)}
+                    className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-blue-50 hover:bg-blue-100 active:bg-blue-100 text-blue-600 font-semibold rounded-xl transition-colors min-h-[56px]"
+                  >
+                    <MapPin className="w-5 h-5" />
+                    <span>Tag Location</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      onDelete();
+                      onClose();
+                    }}
+                    className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-red-50 hover:bg-red-100 active:bg-red-100 text-red-600 font-semibold rounded-xl transition-colors min-h-[56px]"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                    <span>Delete Photo</span>
+                  </button>
+
+                  {adjustError && (
+                    <p className="text-xs text-red-600">{adjustError}</p>
+                  )}
+                </div>
+              )}
+
+              {adjustState.phase === 'loading' && (
+                <div className="text-center py-4 text-sm text-gray-600">
+                  Loading photo…
+                </div>
+              )}
 
               {/* Bottom Safe Area */}
               <div className="h-8" />
