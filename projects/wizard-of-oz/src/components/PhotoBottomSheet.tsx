@@ -155,6 +155,11 @@ export function PhotoBottomSheet({ photo: photoProp, isOpen, onClose, onDelete }
     }
   };
 
+  // Disable the drag-to-dismiss gesture whenever the eye-adjust UI is active.
+  // Otherwise framer-motion hijacks vertical pointer drags on the markers and
+  // can close the sheet mid-adjustment.
+  const sheetDragEnabled = adjustState.phase === 'idle';
+
   const photoDate = new Date(photo.upload_date + 'T00:00:00').toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -190,7 +195,7 @@ export function PhotoBottomSheet({ photo: photoProp, isOpen, onClose, onDelete }
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
-            drag="y"
+            drag={sheetDragEnabled ? 'y' : false}
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0, bottom: 0.5 }}
             onDragEnd={handleDragEnd}
