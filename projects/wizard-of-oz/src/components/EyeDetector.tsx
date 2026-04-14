@@ -282,7 +282,7 @@ export function EyeDetector({ imageFile, onDetection, onError }: EyeDetectorProp
   return <canvas ref={canvasRef} style={{ display: 'none' }} />;
 }
 
-function validateEyeDetection(detection: EyeCoordinates): boolean {
+export function validateEyeDetection(detection: EyeCoordinates): boolean {
   const { leftEye, rightEye, imageWidth, imageHeight } = detection;
 
   // In-bounds check

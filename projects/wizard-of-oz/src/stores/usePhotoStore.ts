@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import { logger } from '../lib/logger';
+import { alignPhoto, calculateZoomLevel } from '../lib/imageUtils';
 import type { Database } from '../types/database';
 
 type Photo = Database['public']['Tables']['photos']['Row'];
@@ -67,6 +68,7 @@ interface PhotoState {
   hasUploadedToday: () => boolean;
   hasUploadedForDate: (date: string) => boolean;
   getEyeHistoryStats: (limit?: number) => EyeHistoryStats | null;
+  reAlignPhoto: (photoId: string, newEyeCoords: Pick<EyeCoordinates, 'leftEye' | 'rightEye'>, birthdate?: string | null) => Promise<void>;
 }
 
 export const usePhotoStore = create<PhotoState>((set, get) => ({
@@ -454,5 +456,127 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
       // If we have zero historical face-width data, fall back to 0 (skip ratio check upstream).
       medianFaceEyeRatio: ratios.length >= 3 ? median(ratios) : 0,
     };
+  },
+
+  /**
+   * Re-align an existing photo using user-corrected eye coordinates.
+   *
+   * Fetches the current displayed image, runs alignPhoto() with the supplied
+   * coords, uploads the re-aligned bytes to a new storage path, and updates the
+   * photo row's `aligned_url`, `eye_coordinates`, and metadata.zoom_level.
+   *
+   * Note: because we currently store `original_url === aligned_url` at upload
+   * time, re-alignment starts from an already-aligned image. The supplied
+   * coords are in that image's space, so the final eye positions are still
+   * correct — there's just one extra resample step compared to aligning from a
+   * true untouched original.
+   */
+  reAlignPhoto: async (photoId, newEyeCoords, birthdate) => {
+    const photo = get().photos.find((p) => p.id === photoId);
+    if (!photo) throw new Error('Photo not found');
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    // Pick the best available URL to re-process. Signed URLs are preferred
+    // because the bucket may be private.
+    const sourceUrl =
+      photo.signed_aligned_url ||
+      photo.aligned_url ||
+      photo.signed_original_url ||
+      photo.original_url;
+    if (!sourceUrl) throw new Error('No source image available');
+
+    // Fetch the image and wrap it as a File so alignPhoto can consume it.
+    const response = await fetch(sourceUrl);
+    if (!response.ok) throw new Error(`Failed to fetch source image (${response.status})`);
+    const blob = await response.blob();
+    const sourceFile = new File([blob], `${photoId}-source.jpg`, {
+      type: blob.type || 'image/jpeg',
+    });
+
+    // Need imageWidth/imageHeight for the full EyeCoordinates shape. We compute
+    // them from the fetched image so the caller can pass just left/right coords
+    // in that same image's pixel space.
+    const bitmap = await createImageBitmap(sourceFile, { imageOrientation: 'from-image' });
+    const sourceWidth = bitmap.width;
+    const sourceHeight = bitmap.height;
+    bitmap.close();
+
+    const coords: EyeCoordinates = {
+      leftEye: newEyeCoords.leftEye,
+      rightEye: newEyeCoords.rightEye,
+      confidence: 1.0, // manual placement
+      imageWidth: sourceWidth,
+      imageHeight: sourceHeight,
+    };
+
+    // Compute zoom level from photo date + optional birthdate. Fall back to
+    // the previously stored zoom if we can't derive a fresh one.
+    let zoomLevel = 0.40;
+    if (birthdate) {
+      const photoDate = new Date(photo.upload_date);
+      const birth = new Date(birthdate);
+      const ageInMonths = Math.floor(
+        (photoDate.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24 * 30.44)
+      );
+      zoomLevel = calculateZoomLevel(ageInMonths);
+    } else {
+      const prev = photo.metadata as Record<string, unknown> | null;
+      if (prev && typeof prev.zoom_level === 'number') {
+        zoomLevel = prev.zoom_level;
+      }
+    }
+
+    const result = await alignPhoto(sourceFile, coords, zoomLevel);
+
+    // Upload to a new storage path so we don't trash the previous object.
+    const fileName = `${user.id}/${Date.now()}-realigned.jpg`;
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('originals')
+      .upload(fileName, result.alignedImage, {
+        contentType: result.alignedImage.type || 'image/jpeg',
+        upsert: false,
+      });
+    if (uploadError) {
+      logger.error('Re-align storage upload failed', { error: uploadError.message }, 'PhotoStore');
+      throw uploadError;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('originals')
+      .getPublicUrl(uploadData.path);
+
+    // Merge metadata, preserving existing note/emoji.
+    const existingMetadata = (photo.metadata && typeof photo.metadata === 'object')
+      ? { ...(photo.metadata as Record<string, unknown>) }
+      : {};
+    existingMetadata.zoom_level = zoomLevel;
+
+    const updatePayload = {
+      aligned_url: publicUrl,
+      eye_coordinates: {
+        leftEye: coords.leftEye,
+        rightEye: coords.rightEye,
+        confidence: coords.confidence,
+        imageWidth: coords.imageWidth,
+        imageHeight: coords.imageHeight,
+      },
+      metadata: existingMetadata,
+    };
+
+    const { error: updateError } = await supabase
+      .from('photos')
+      .update(updatePayload as never)
+      .eq('id', photoId)
+      .eq('user_id', user.id);
+
+    if (updateError) {
+      logger.error('Re-align DB update failed', { error: updateError.message, photoId }, 'PhotoStore');
+      throw updateError;
+    }
+
+    logger.info('Photo re-aligned', { photoId, zoomLevel }, 'PhotoStore');
+    await get().fetchPhotos();
   },
 }));

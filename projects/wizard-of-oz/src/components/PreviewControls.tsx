@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { RotateCw, RotateCcw, Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
-import type { EyeCoordinates } from '../lib/imageUtils';
+import { computeCropRect, type EyeCoordinates } from '../lib/imageUtils';
 
 interface PreviewControlsProps {
   preview: string | null;
@@ -15,12 +15,6 @@ interface PreviewControlsProps {
   onRotateRight: () => void;
   onUpload: () => void;
 }
-
-// Target output dimensions (kept in sync with imageUtils.ts). Used to project
-// the final crop rectangle back onto the preview so the user can see what will
-// actually be committed to the timeline before they tap Upload.
-const TARGET_WIDTH = 1080;
-const TARGET_HEIGHT = 1350;
 
 export function PreviewControls({
   preview,
@@ -53,38 +47,22 @@ export function PreviewControls({
 
   if (eyeCoords && zoomLevel !== undefined) {
     const { leftEye, rightEye, imageWidth, imageHeight } = eyeCoords;
-    const dx = rightEye.x - leftEye.x;
-    const dy = rightEye.y - leftEye.y;
-    const eyeDist = Math.sqrt(dx * dx + dy * dy);
-    if (eyeDist > 0) {
-      const angleRad = Math.atan2(dy, dx);
-      // Matches alignPhoto: target eye distance is 34% of output width.
-      const targetEyeDist = TARGET_WIDTH * 0.34;
-      const scale = targetEyeDist / eyeDist;
-      const cropW = TARGET_WIDTH / scale;
-      const cropH = TARGET_HEIGHT / scale;
-      const sourceEyeCenterX = (leftEye.x + rightEye.x) / 2;
-      const sourceEyeCenterY = (leftEye.y + rightEye.y) / 2;
-      // The crop's vertical center is offset from the eye line by how far the
-      // eye line sits from the output's vertical midpoint. In target space this
-      // offset is (0, H*(0.5 - zoomLevel)); projecting back to source with
-      // R(angle)/scale gives the components below (y-down image coords).
-      const centerOffset = TARGET_HEIGHT * (0.5 - zoomLevel) / scale;
-      const cropCenter = {
-        x: sourceEyeCenterX - Math.sin(angleRad) * centerOffset,
-        y: sourceEyeCenterY + Math.cos(angleRad) * centerOffset,
-      };
+    const rect = computeCropRect({ leftEye, rightEye }, zoomLevel);
+    if (rect) {
+      const dx = rightEye.x - leftEye.x;
+      const dy = rightEye.y - leftEye.y;
+      const eyeDist = Math.sqrt(dx * dx + dy * dy);
       overlay = {
         viewBox: `0 0 ${imageWidth} ${imageHeight}`,
         leftEye,
         rightEye,
         eyeRadius: Math.max(4, eyeDist * 0.025),
         crop: {
-          cx: cropCenter.x,
-          cy: cropCenter.y,
-          w: cropW,
-          h: cropH,
-          angleDeg: (angleRad * 180) / Math.PI,
+          cx: rect.cx,
+          cy: rect.cy,
+          w: rect.width,
+          h: rect.height,
+          angleDeg: rect.angleDeg,
         },
       };
     }

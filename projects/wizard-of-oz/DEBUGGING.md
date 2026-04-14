@@ -1,184 +1,113 @@
-# Debugging Guide - Wizard of Oz Project
+# Debugging Guide — Pupils (wizard-of-oz)
 
-## 🚨 BEFORE DEBUGGING ANYTHING IN THIS PROJECT
-
-**MANDATORY: Follow this exact sequence when something doesn't work**
-
----
-
-## The Debugging Sequence
-
-### 1. Read the Meta Protocol (5 minutes)
-
-**File**: `/META_DEBUGGING_PROTOCOL.md` (in repo root)
-
-**Why**: 80% of bugs are input issues, not algorithm issues. This protocol prevents wasting hours debugging the wrong thing.
-
-**Key principle**: Verify inputs match your assumptions BEFORE debugging transformation logic.
+A short, current guide for debugging the photo pipeline. Eye detection and
+alignment run **entirely in the browser** using MediaPipe Face Landmarker; there
+is no `detect-eyes` serverless function and no Gemini API involvement in
+alignment. Earlier versions of this doc referenced those — ignore any surviving
+links.
 
 ---
 
-### 2. Check Infrastructure (2 minutes)
+## The pipeline in one diagram
 
-Run the infrastructure check:
-```bash
-/verify-infra wizard-of-oz
+```
+File input
+  └─ compressImage()          [src/lib/imageUtils.ts]  EXIF-baked JPEG
+       └─ EyeDetector          [src/components/EyeDetector.tsx]  MediaPipe, browser-only
+            └─ validateEyeDetection()  quick-reject obviously-bad detections
+                 └─ alignPhoto()       [src/lib/imageUtils.ts]  affine to 1080×1350
+                      └─ usePhotoStore.uploadPhoto()  [src/stores/usePhotoStore.ts]
+                           └─ Supabase Storage + Postgres row
 ```
 
-**Common issues caught**:
-- Storage buckets don't exist
-- Database tables missing
-- Environment variables not set
-- Vercel Deployment Protection blocking API calls
-
-**If infrastructure check fails**: Fix infrastructure before debugging code.
+All three `createImageBitmap` call sites pass `{ imageOrientation: 'from-image' }`
+so EXIF rotation is applied before any pixel math. If you ever see coordinates
+that "look rotated" compared to the displayed image, this flag is the first
+thing to check.
 
 ---
 
-### 3. Check Production Logs (3 minutes)
+## Where to look when something is wrong
 
-Fetch recent logs to see actual errors:
-```bash
-# Get logs for specific function
-/vercel-logs detect-eyes 20
+### Alignment looks off (eyes not stacked across photos)
 
-# Get logs for align-photo function
-/vercel-logs align-photo 20
+1. Inspect the overlay. `PreviewControls.tsx` draws eye dots + the target crop
+   rectangle using an SVG with the **same `viewBox` and `xMidYMid meet`** as the
+   `object-contain` preview `<img>`. If the overlay is misaligned with the
+   image on-screen, the preview math is wrong — not the alignment itself.
+2. Check the landmark convention. We store `leftEye = image-left eye = subject's
+   RIGHT eye` (landmarks 33/133/468). `alignPhoto()` rotates by `-atan2(dy, dx)`
+   which only works under this convention. If you see the image flipping or
+   rotating 180° unexpectedly, a code change has likely re-introduced a
+   subject-relative label somewhere.
+3. Compare `eye_coordinates` across photos for the same subject. Pull from
+   Supabase and eyeball whether `faceWidth` / `eyeDistance` are roughly
+   consistent. The `getEyeHistoryStats()` helper in `usePhotoStore` exposes the
+   rolling median used by quality warnings on upload.
 
-# Get all recent logs
-/vercel-logs
-```
+### Eye detection returns null
 
-**Look for**:
-- Error messages with stack traces
-- Input validation failures
-- Processing timeouts
-- API call failures
+All reasons are logged via `logger` with the `EyeDetector` scope. Common causes:
 
----
+- **"No face landmarks detected"** — MediaPipe couldn't find a face at all.
+  Usually too small / too blurry / extreme angle.
+- **"Required eye landmarks missing"** — extremely rare; would indicate a model
+  load mismatch.
+- **"Eye coordinates out of bounds"** / **"Eyes too close to edges"** — face is
+  right at the frame edge; reshoot with more headroom.
+- **"Eye distance out of range"** — interocular distance < 8% or > 50% of image
+  width. Typical cause is detection on the wrong face.
+- **"Eyes not horizontal enough"** — head tilted more than 45°. The validator
+  bails; a manual adjust (Adjust button) is the escape hatch.
 
-### 4. Verify Database State (2 minutes)
+### Upload fails
 
-Use the query script:
-```bash
-cd projects/wizard-of-oz
-bash ../../.scripts/query-logs.sh [function-name] [limit]
-```
+1. Network tab — did the `originals` bucket PUT succeed?
+2. Supabase auth — is there a user? `supabase.auth.getUser()` returns null
+   if the session expired mid-upload.
+3. Duplicate-day: Postgres code `23505` is surfaced with a friendly message;
+   user needs to delete the existing photo for that date first.
 
-**Check**:
-- Are photos being created?
-- Do photos have eye_coordinates populated?
-- Are aligned_url fields being set?
-- What do the log messages say?
+### Preview doesn't show the detected eyes overlay
 
----
-
-### 5. ONLY NOW: Debug Code Logic
-
-**If all above checks pass**, then debug the algorithm/code logic.
-
-**Apply the input verification protocol** from META_DEBUGGING_PROTOCOL.md:
-
-```javascript
-// ✅ ALWAYS START DEBUGGING WITH THIS
-console.log('═══ INPUT VERIFICATION ═══');
-console.log('Input:', JSON.stringify(input, null, 2));
-console.log('Expected:', expectedFormat);
-console.log('Match:', verify(input, expectedFormat));
-```
+The overlay only renders when both `eyeCoords` and `zoomLevel` are truthy and
+`isProcessing` is false. If eye detection returned null, the overlay correctly
+hides. The quality-warnings panel renders independently and is the signal that
+detection succeeded but something is off.
 
 ---
 
-## Project-Specific Debugging Tips
+## Key files
 
-### Photo Alignment Issues
-
-**Common root causes** (in order of likelihood):
-
-1. **Coordinate scaling mismatch** (90-minute waste if missed!)
-   - Database stores coordinates for downscaled images (e.g., 768x1024)
-   - Must scale coordinates to match actual image dimensions
-   - See `DEBUGGING_CHECKLIST.md` for detailed case study
-
-2. **Eye detection confidence too low**
-   - Check `eye_coordinates.confidence` in database
-   - Threshold: 0.75 for open eyes, 0.65 for closed eyes
-   - Adjust lighting or wait for better photo
-
-3. **Inter-eye distance validation failing**
-   - Expected: 10-50% of image width
-   - Check actual distance vs. image dimensions
-   - May indicate wrong face or multiple faces
-
-4. **Image processing timeout**
-   - Sharp processing should complete in < 10 seconds
-   - Check Vercel function timeout settings
-   - Check image dimensions (very large images?)
-
-### Upload Issues
-
-**Check in order**:
-
-1. Storage bucket exists and is public
-2. User is authenticated (check auth token)
-3. File size is reasonable (< 10MB recommended)
-4. Image format is supported (JPEG, PNG)
-
-### Eye Detection Issues
-
-**Check in order**:
-
-1. Gemini API key is set (`GEMINI_API_KEY`)
-2. Image is accessible (URL returns 200)
-3. Image shows a clear face (not rotated 90°)
-4. Eyes are visible (open or closed)
+| File | Purpose |
+|------|---------|
+| `src/components/EyeDetector.tsx` | MediaPipe init + landmark extraction + validation |
+| `src/lib/imageUtils.ts` | `compressImage`, `rotateImage`, `alignPhoto`, `calculateZoomLevel` |
+| `src/components/UploadPhoto.tsx` | Upload flow state machine + quality warning composition |
+| `src/components/PreviewControls.tsx` | Preview + overlay + rotation/upload UI |
+| `src/stores/usePhotoStore.ts` | Storage/DB persistence + `getEyeHistoryStats` outlier signal |
 
 ---
 
-## Red Flags That Mean "Check Inputs First"
+## Logging
 
-🚩 **"It worked before"** → Something about the input changed
-🚩 **"The math is perfect"** → Probably applying perfect math to wrong input
-🚩 **"The algorithm is simple"** → Simple algorithms don't fail mysteriously
-🚩 **"I tested the function in isolation"** → Real input differs from test input
-🚩 **"The logs show it should work"** → Logs might be showing wrong data
-🚩 **"It's only off by a constant factor"** → Scaling/unit conversion issue
-🚩 **"It's off by exactly 2x/4x/etc"** → Almost always a scaling mismatch
+All client-side logs go through `src/lib/logger.ts`. Scopes used in the
+pipeline: `EyeDetector`, `EyeDetector.validate`, `PhotoStore`. In the browser
+console, filter by `[EyeDetector]` or `[PhotoStore]` to isolate the pipeline.
 
-When you see these red flags: **STOP. Go verify inputs. Read META_DEBUGGING_PROTOCOL.md.**
+Serverless functions under `api/` still log to Vercel; the only pipeline-related
+endpoint is `api/pupils` (photo CRUD). Tail with `vercel logs` if deletes or
+inserts are failing.
 
 ---
 
-## Quick Reference
+## Historical gotchas
 
-| Issue | First Check |
-|-------|-------------|
-| Upload fails | Storage bucket exists? User authenticated? |
-| Eye detection fails | Gemini API key set? Image accessible? |
-| Alignment wrong | **COORDINATES SCALED?** (Read META_DEBUGGING_PROTOCOL.md) |
-| Processing hangs | Vercel logs (/vercel-logs) |
-| No database record | Database tables exist? (/verify-infra) |
-
----
-
-## Success Metrics
-
-**Good debugging session** (< 30 min to fix):
-- ✅ Followed the sequence above
-- ✅ Read META_DEBUGGING_PROTOCOL.md first
-- ✅ Checked infrastructure before code
-- ✅ Verified inputs before debugging algorithm
-
-**Bad debugging session** (> 90 min wasted):
-- ❌ Started debugging algorithm immediately
-- ❌ Assumed inputs were correct
-- ❌ Didn't check logs or infrastructure
-- ❌ Ignored red flags
-
----
-
-**Last Updated**: 2025-01-12
-**See Also**:
-- `/META_DEBUGGING_PROTOCOL.md` - Universal debugging principles
-- `/DEBUGGING_CHECKLIST.md` - Coordinate scaling case study
-- `.process/OBSERVABILITY.md` - Logging best practices
+- **Double EXIF application**: before the orientation flag was unified across
+  all three bitmap creators, Chrome 81+ applied `image-orientation: from-image`
+  via CSS in `drawImage`, which combined with a manual EXIF transform produced
+  a double rotation. The fix is the single flag — don't manually read EXIF.
+- **Coordinate scaling mismatch**: older code downscaled in one place and ran
+  detection in another; coords were in the wrong space. No longer applicable —
+  `EyeDetector` now runs detection on the same bitmap whose dimensions it
+  reports back. Keep it that way.

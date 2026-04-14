@@ -215,6 +215,57 @@ function getTargetEyePositions(zoomLevel: number) {
 }
 
 /**
+ * Project the final crop rectangle back into source-image coordinates. Used by
+ * PreviewControls to show the user exactly what will be committed to the
+ * timeline before they upload. Pure function — no DOM dependencies — so it's
+ * easy to unit-test the sign conventions that otherwise silently drift.
+ *
+ * Mirrors the maths in `alignPhoto`: we pick a scale such that the eye line
+ * spans 34% of TARGET_WIDTH, then the crop's vertical center sits offset from
+ * the eye midpoint along the face's local up-axis by `H*(0.5 - zoomLevel)/scale`.
+ */
+export function computeCropRect(
+  eyes: { leftEye: { x: number; y: number }; rightEye: { x: number; y: number } },
+  zoomLevel: number
+): {
+  cx: number;
+  cy: number;
+  width: number;
+  height: number;
+  angleDeg: number;
+  scale: number;
+} | null {
+  const dx = eyes.rightEye.x - eyes.leftEye.x;
+  const dy = eyes.rightEye.y - eyes.leftEye.y;
+  const eyeDist = Math.sqrt(dx * dx + dy * dy);
+  if (!(eyeDist > 0)) return null;
+
+  const angleRad = Math.atan2(dy, dx);
+  const targetEyeDist = TARGET_WIDTH * 0.34;
+  const scale = targetEyeDist / eyeDist;
+  const cropW = TARGET_WIDTH / scale;
+  const cropH = TARGET_HEIGHT / scale;
+
+  const sourceEyeCenterX = (eyes.leftEye.x + eyes.rightEye.x) / 2;
+  const sourceEyeCenterY = (eyes.leftEye.y + eyes.rightEye.y) / 2;
+
+  // Target-space offset from eye midpoint to crop center is (0, H*(0.5 - zoom)).
+  // Apply R(angle)/scale to project into source space (y-down image coords).
+  const centerOffset = (TARGET_HEIGHT * (0.5 - zoomLevel)) / scale;
+  const cx = sourceEyeCenterX - Math.sin(angleRad) * centerOffset;
+  const cy = sourceEyeCenterY + Math.cos(angleRad) * centerOffset;
+
+  return {
+    cx,
+    cy,
+    width: cropW,
+    height: cropH,
+    angleDeg: (angleRad * 180) / Math.PI,
+    scale,
+  };
+}
+
+/**
  * Aligns a photo based on detected eye coordinates
  * Uses affine transformation to rotate, scale, and translate the image
  * so that eyes match target positions

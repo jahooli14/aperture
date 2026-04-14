@@ -1,12 +1,13 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, MessageSquare } from 'lucide-react';
+import { CheckCircle, MessageSquare, Target } from 'lucide-react';
 import { usePhotoStore, type EyeCoordinates } from '../stores/usePhotoStore';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { EyeDetector } from './EyeDetector';
 import { DateSelector } from './DateSelector';
 import { UploadButtons } from './UploadButtons';
 import { PreviewControls } from './PreviewControls';
+import { EyeAdjust, type EyeAdjustCoords } from './EyeAdjust';
 import { rotateImage, fileToDataURL, validateImageFile, alignPhoto, compressImage, calculateZoomLevel } from '../lib/imageUtils';
 import { triggerHaptic } from '../lib/haptics';
 import { logger } from '../lib/logger';
@@ -34,6 +35,8 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [zoomLevel, setZoomLevel] = useState<number>(0.40); // Track zoom level used for alignment
   const [qualityWarnings, setQualityWarnings] = useState<string[]>([]);
+  const [imageDims, setImageDims] = useState<{ width: number; height: number } | null>(null);
+  const [showAdjust, setShowAdjust] = useState(false);
   const hasAlignedRef = useRef(false); // Track if we've already aligned this file
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -75,6 +78,15 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
       // Update preview
       const dataURL = await fileToDataURL(rotatedFile);
       setPreview(dataURL);
+
+      // Refresh image dimensions after rotation.
+      try {
+        const bitmap = await createImageBitmap(rotatedFile, { imageOrientation: 'from-image' });
+        setImageDims({ width: bitmap.width, height: bitmap.height });
+        bitmap.close();
+      } catch {
+        // Non-fatal — manual adjust just won't be available for this rotation.
+      }
     } catch (err) {
       logger.error('Error rotating image', { error: err instanceof Error ? err.message : String(err) }, 'UploadPhoto');
       setError('Failed to rotate image');
@@ -120,6 +132,17 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
       const dataURL = await fileToDataURL(compressedFile);
       setPreview(dataURL);
       setRotation(0);
+
+      // Capture natural dimensions up-front so the manual-adjust fallback can
+      // render even if detection fails. Uses the same orientation flag as the
+      // rest of the pipeline to keep coords consistent.
+      try {
+        const bitmap = await createImageBitmap(compressedFile, { imageOrientation: 'from-image' });
+        setImageDims({ width: bitmap.width, height: bitmap.height });
+        bitmap.close();
+      } catch {
+        setImageDims(null);
+      }
 
       // Set files in state - this will trigger eye detection via useEffect in EyeDetector
       setOriginalFile(compressedFile);
@@ -237,6 +260,30 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
     // Silently handle detection errors - photo will just upload without alignment
   };
 
+  /**
+   * Fallback / override: user drags markers manually. We treat the placement as
+   * a high-confidence detection and re-run the same align+warnings path so the
+   * preview updates immediately.
+   */
+  const handleManualAdjust = async (placed: EyeAdjustCoords) => {
+    if (!imageDims) {
+      setShowAdjust(false);
+      return;
+    }
+    const coords: EyeCoordinates = {
+      leftEye: placed.leftEye,
+      rightEye: placed.rightEye,
+      confidence: 1.0,
+      imageWidth: imageDims.width,
+      imageHeight: imageDims.height,
+    };
+    setShowAdjust(false);
+    // Reset alignment guard so handleEyeDetection actually re-aligns.
+    setAlignedFile(null);
+    hasAlignedRef.current = false;
+    await handleEyeDetection(coords);
+  };
+
   const handleUpload = async () => {
     if (!selectedFile) {
       setError('No file selected');
@@ -280,6 +327,8 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
         setNote('');
         setEmoji('💬');
         setShowNoteInput(false);
+        setImageDims(null);
+        setShowAdjust(false);
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
@@ -422,7 +471,7 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
       ) : (
         <div>
           {/* Run eye detection on selected file */}
-          {selectedFile && (
+          {selectedFile && !showAdjust && (
             <EyeDetector
               imageFile={selectedFile}
               onDetection={handleEyeDetection}
@@ -430,19 +479,48 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
             />
           )}
 
-          <PreviewControls
-            preview={preview}
-            detectingEyes={detectingEyes}
-            aligning={aligning}
-            uploading={uploading}
-            hasEyeCoords={!!eyeCoords}
-            eyeCoords={eyeCoords}
-            zoomLevel={zoomLevel}
-            qualityWarnings={qualityWarnings}
-            onRotateLeft={() => handleRotate('left')}
-            onRotateRight={() => handleRotate('right')}
-            onUpload={handleUpload}
-          />
+          {showAdjust && preview && imageDims ? (
+            <EyeAdjust
+              previewUrl={preview}
+              imageWidth={imageDims.width}
+              imageHeight={imageDims.height}
+              initial={eyeCoords ? { leftEye: eyeCoords.leftEye, rightEye: eyeCoords.rightEye } : null}
+              onConfirm={handleManualAdjust}
+              onCancel={() => setShowAdjust(false)}
+              confirmLabel="Use these positions"
+            />
+          ) : (
+            <>
+              <PreviewControls
+                preview={preview}
+                detectingEyes={detectingEyes}
+                aligning={aligning}
+                uploading={uploading}
+                hasEyeCoords={!!eyeCoords}
+                eyeCoords={eyeCoords}
+                zoomLevel={zoomLevel}
+                qualityWarnings={qualityWarnings}
+                onRotateLeft={() => handleRotate('left')}
+                onRotateRight={() => handleRotate('right')}
+                onUpload={handleUpload}
+              />
+
+              {/* Manual adjust: always available when detection finished, so the
+                  user can both rescue a failed detection and override a bad one. */}
+              {imageDims && !detectingEyes && !aligning && !uploading && (
+                <button
+                  type="button"
+                  onClick={() => setShowAdjust(true)}
+                  className="mt-3 w-full py-2 px-4 bg-white hover:bg-gray-50 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 transition-colors flex items-center justify-center gap-2 min-h-[44px]"
+                >
+                  <Target className="w-4 h-4" />
+                  <span>
+                    {eyeCoords ? 'Adjust eye positions manually' : 'Place eyes manually'}
+                  </span>
+                </button>
+              )}
+            </>
+          )}
 
           {/* Emoji Picker */}
           <div className="mt-4 mb-2">
@@ -566,6 +644,8 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
                 setNote('');
                 setEmoji('💬');
                 setShowNoteInput(false);
+                setImageDims(null);
+                setShowAdjust(false);
                 if (fileInputRef.current) {
                   fileInputRef.current.value = '';
                 }
