@@ -308,11 +308,21 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
           const { token, model } = await tokRes.json()
           if (cancelled) return
 
-          // 2. Audio contexts (relies on preceding user gesture)
+          // 2. Audio contexts (relies on preceding user gesture).
+          //    Mobile browsers often return contexts in `suspended` state
+          //    even with a prior gesture; an explicit resume() is needed
+          //    or playback silently no-ops and the mic worklet never ticks.
           const inputCtx = new AudioContext({ sampleRate: 48000 })
           const outputCtx = new AudioContext({ sampleRate: OUTPUT_SAMPLE_RATE })
           inputCtxRef.current = inputCtx
           outputCtxRef.current = outputCtx
+          console.info('[LiveVoice] audio ctx state', { input: inputCtx.state, output: outputCtx.state })
+          try {
+            if (inputCtx.state === 'suspended') await inputCtx.resume()
+            if (outputCtx.state === 'suspended') await outputCtx.resume()
+          } catch (e) {
+            console.warn('[LiveVoice] audio ctx resume failed (continuing)', e)
+          }
           await inputCtx.audioWorklet.addModule('/onboarding-mic-worklet.js')
 
           // 3. Mic — translate the browser's terse errors into something
@@ -575,21 +585,16 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
           }
           beganRef.current = true
           try {
-            // Seed an opening user turn. Keep it short and plausibly
-            // human — the Live API responds most reliably to natural
-            // speech-shaped seeds, not meta-instructions. The system
-            // prompt is what pins the verbatim opener; the seed just
-            // tips the model into its first reply.
-            session.sendClientContent({
-              turns: [
-                {
-                  role: 'user',
-                  parts: [{ text: "Hi." }],
-                },
-              ],
-              turnComplete: true,
-            } as any)
-            console.info('[LiveVoice] begin seed sent')
+            // Short-form begin per @google/genai docs: "sendClientContent(
+            // {turnComplete:true})" tells the server to start generating
+            // from the accumulated prompt (= our system instruction,
+            // which ends with 'greet them with your opening line now').
+            // No user seed is needed — and in fact, seeding with user
+            // text like "Hi." has produced empty turnComplete responses
+            // in the wild (model treats it as a meta-ack and says
+            // nothing). Trust the system prompt.
+            session.sendClientContent({ turnComplete: true } as any)
+            console.info('[LiveVoice] begin signal sent (turnComplete-only)')
           } catch (err) {
             console.error('[LiveVoice] begin failed', err)
             beganRef.current = false
