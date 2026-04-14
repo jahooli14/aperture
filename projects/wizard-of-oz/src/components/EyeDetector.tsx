@@ -53,11 +53,191 @@ function clamp(v: number, lo: number, hi: number): number {
  * Find a named blendshape category score. MediaPipe returns these as an array of
  * { categoryName, score } entries. Not all models include every ARKit shape.
  */
-function getBlendshape(result: FaceLandmarkerResult, name: string): number | undefined {
-  const shapes = result.faceBlendshapes?.[0]?.categories;
+function getBlendshape(result: FaceLandmarkerResult, faceIndex: number, name: string): number | undefined {
+  const shapes = result.faceBlendshapes?.[faceIndex]?.categories;
   if (!shapes) return undefined;
   const entry = shapes.find((c) => c.categoryName === name);
   return entry?.score;
+}
+
+/**
+ * Build an EyeCoordinates object for one detected face (given an index into
+ * the multi-face result arrays). Returns null if required landmarks are
+ * missing. All pixel coords are in the canvas's image space.
+ */
+function buildCoordsFromFace(
+  result: FaceLandmarkerResult,
+  faceIndex: number,
+  canvasWidth: number,
+  canvasHeight: number
+): EyeCoordinates | null {
+  const landmarks = result.faceLandmarks?.[faceIndex];
+  if (!landmarks) return null;
+  if (
+    landmarks.length <= IDX_LEFT_IRIS ||
+    !landmarks[IDX_RIGHT_EYE_OUTER] ||
+    !landmarks[IDX_RIGHT_EYE_INNER] ||
+    !landmarks[IDX_LEFT_EYE_OUTER] ||
+    !landmarks[IDX_LEFT_EYE_INNER]
+  ) {
+    return null;
+  }
+
+  const leftEyeNorm = midpoint(landmarks[IDX_RIGHT_EYE_OUTER], landmarks[IDX_RIGHT_EYE_INNER]);
+  const rightEyeNorm = midpoint(landmarks[IDX_LEFT_EYE_OUTER], landmarks[IDX_LEFT_EYE_INNER]);
+  const leftEye = { x: leftEyeNorm.x * canvasWidth, y: leftEyeNorm.y * canvasHeight };
+  const rightEye = { x: rightEyeNorm.x * canvasWidth, y: rightEyeNorm.y * canvasHeight };
+
+  const leftIris = landmarks[IDX_RIGHT_IRIS]
+    ? { x: landmarks[IDX_RIGHT_IRIS].x * canvasWidth, y: landmarks[IDX_RIGHT_IRIS].y * canvasHeight }
+    : null;
+  const rightIris = landmarks[IDX_LEFT_IRIS]
+    ? { x: landmarks[IDX_LEFT_IRIS].x * canvasWidth, y: landmarks[IDX_LEFT_IRIS].y * canvasHeight }
+    : null;
+
+  const eyeDistance = distance(leftEye, rightEye);
+  let irisAgreement = 1.0;
+  if (leftIris && rightIris && eyeDistance > 0) {
+    const leftDelta = distance(leftEye, leftIris) / eyeDistance;
+    const rightDelta = distance(rightEye, rightIris) / eyeDistance;
+    irisAgreement = clamp(1.0 - Math.max(leftDelta, rightDelta) / 0.15, 0, 1);
+  }
+
+  // Face bounding box for this face index.
+  let minX = Infinity, maxX = -Infinity;
+  for (const lm of landmarks) {
+    if (lm.x < minX) minX = lm.x;
+    if (lm.x > maxX) maxX = lm.x;
+  }
+  const faceWidth = (maxX - minX) * canvasWidth;
+
+  const blinkLeft = getBlendshape(result, faceIndex, 'eyeBlinkLeft') ?? 0;
+  const blinkRight = getBlendshape(result, faceIndex, 'eyeBlinkRight') ?? 0;
+  const eyesOpen = clamp(1 - Math.max(blinkLeft, blinkRight), 0, 1);
+
+  const verticalRatio = Math.abs(leftEye.y - rightEye.y) / Math.max(eyeDistance, 1);
+  const horizontalQuality = clamp(1 - verticalRatio / 0.5, 0, 1);
+  const openGate = clamp(eyesOpen, 0.4, 1);
+  const confidence = clamp(openGate * (0.5 + 0.5 * irisAgreement) * horizontalQuality, 0, 1);
+
+  return {
+    leftEye,
+    rightEye,
+    confidence,
+    imageWidth: canvasWidth,
+    imageHeight: canvasHeight,
+    eyesOpen,
+    faceWidth,
+    irisAgreement,
+  };
+}
+
+/**
+ * Draw a bitmap to a canvas, optionally rotated by 90/180/270°. Used for the
+ * orientation-retry path — if MediaPipe can't find a face in the source
+ * orientation, we try all three other cardinal rotations before giving up.
+ */
+function drawRotated(
+  bitmap: ImageBitmap,
+  degrees: 0 | 90 | 180 | 270
+): HTMLCanvasElement {
+  const canvas = document.createElement('canvas');
+  const w = bitmap.width;
+  const h = bitmap.height;
+  if (degrees === 90 || degrees === 270) {
+    canvas.width = h;
+    canvas.height = w;
+  } else {
+    canvas.width = w;
+    canvas.height = h;
+  }
+  const ctx = canvas.getContext('2d')!;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.save();
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate((degrees * Math.PI) / 180);
+  ctx.drawImage(bitmap, -w / 2, -h / 2);
+  ctx.restore();
+  return canvas;
+}
+
+/**
+ * Un-rotate a point from a rotated canvas back into the original image's
+ * coordinate space. Inverse of drawRotated.
+ */
+function unrotatePoint(
+  p: { x: number; y: number },
+  degrees: 0 | 90 | 180 | 270,
+  originalWidth: number,
+  originalHeight: number,
+  rotatedWidth: number,
+  rotatedHeight: number
+): { x: number; y: number } {
+  switch (degrees) {
+    case 0:
+      return p;
+    case 90:
+      // 90° CW: (x', y') = (h - y, x). Invert: (x, y) = (y', w - x').
+      return { x: p.y, y: rotatedWidth - p.x };
+    case 180:
+      return { x: originalWidth - p.x, y: originalHeight - p.y };
+    case 270:
+      return { x: rotatedHeight - p.y, y: p.x };
+  }
+}
+
+/**
+ * Pick the best face from a multi-face detection. Baby photos commonly
+ * include a parent — we prefer the SMALLEST face (babies have smaller heads
+ * than adults), tie-broken by proximity to frame center. If only one face
+ * is detected, we return that one.
+ */
+function pickBabyFace(
+  result: FaceLandmarkerResult,
+  canvasWidth: number,
+  canvasHeight: number
+): number {
+  const faces = result.faceLandmarks ?? [];
+  if (faces.length === 0) return -1;
+  if (faces.length === 1) return 0;
+
+  const cx = canvasWidth / 2;
+  const cy = canvasHeight / 2;
+  const diagonal = Math.hypot(canvasWidth, canvasHeight);
+
+  let bestIndex = 0;
+  let bestScore = -Infinity;
+  for (let i = 0; i < faces.length; i++) {
+    const lm = faces[i];
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    let sumX = 0, sumY = 0;
+    for (const p of lm) {
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
+      sumX += p.x;
+      sumY += p.y;
+    }
+    const faceW = (maxX - minX) * canvasWidth;
+    const faceH = (maxY - minY) * canvasHeight;
+    const faceSize = Math.max(faceW, faceH);
+    const faceCx = (sumX / lm.length) * canvasWidth;
+    const faceCy = (sumY / lm.length) * canvasHeight;
+    const centerDist = Math.hypot(faceCx - cx, faceCy - cy);
+
+    // Lower size = better; lower center distance = better. Weight size more.
+    // Normalize both to [0,1] and combine.
+    const sizeScore = 1 - Math.min(1, faceSize / Math.min(canvasWidth, canvasHeight));
+    const centerScore = 1 - Math.min(1, centerDist / (diagonal / 2));
+    const score = sizeScore * 0.7 + centerScore * 0.3;
+    if (score > bestScore) {
+      bestScore = score;
+      bestIndex = i;
+    }
+  }
+  return bestIndex;
 }
 
 export function EyeDetector({ imageFile, onDetection, onError }: EyeDetectorProps) {
@@ -82,7 +262,9 @@ export function EyeDetector({ imageFile, onDetection, onError }: EyeDetectorProp
             modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
             delegate: 'GPU'
           },
-          numFaces: 1,
+          // Detect up to 3 faces so we can pick the baby (smallest / most
+          // central) when parents or siblings are in frame.
+          numFaces: 3,
           minFaceDetectionConfidence: 0.3, // kept permissive for challenging baby photos; confidence is recomputed below
           minFacePresenceConfidence: 0.3,
           minTrackingConfidence: 0.3,
@@ -128,9 +310,6 @@ export function EyeDetector({ imageFile, onDetection, onError }: EyeDetectorProp
         // Use the SAME createImageBitmap options as compressImage() and alignPhoto().
         // imageOrientation: 'from-image' applies EXIF rotation before pixel access so
         // landmark coords are consistent with the bytes we later ship to alignPhoto.
-        // The compressed file passed in already has orientation baked in and no EXIF
-        // tag, but specifying this option makes the pipeline robust if a raw file is
-        // ever passed directly.
         const bitmap = await createImageBitmap(currentFile, { imageOrientation: 'from-image' });
 
         if (!mounted) {
@@ -143,127 +322,101 @@ export function EyeDetector({ imageFile, onDetection, onError }: EyeDetectorProp
           height: bitmap.height
         }, 'EyeDetector');
 
-        const canvas = document.createElement('canvas');
-        canvas.width = bitmap.width;
-        canvas.height = bitmap.height;
-        const ctx = canvas.getContext('2d')!;
-        ctx.drawImage(bitmap, 0, 0);
+        if (!detector) {
+          logger.warn('Detector not available', {}, 'EyeDetector');
+          bitmap.close();
+          onDetection(null);
+          return;
+        }
+
+        // Retry pipeline: try each of the four cardinal orientations and pick
+        // the one that produces the best (validated, highest-confidence)
+        // detection. Covers photos that were saved without correct EXIF
+        // orientation or deliberately rotated.
+        const orientations: Array<0 | 90 | 180 | 270> = [0, 90, 180, 270];
+        let best: { coords: EyeCoordinates; orientation: 0 | 90 | 180 | 270 } | null = null;
+
+        for (const orientation of orientations) {
+          if (!mounted) break;
+
+          const canvas = drawRotated(bitmap, orientation);
+          const result = detector.detect(canvas);
+          if (!result.faceLandmarks || result.faceLandmarks.length === 0) {
+            logger.info('No faces at orientation', { orientation }, 'EyeDetector');
+            continue;
+          }
+
+          const faceIndex = pickBabyFace(result, canvas.width, canvas.height);
+          if (faceIndex < 0) continue;
+
+          const coords = buildCoordsFromFace(result, faceIndex, canvas.width, canvas.height);
+          if (!coords) continue;
+
+          if (!validateEyeDetection(coords)) {
+            logger.info('Candidate failed validation', { orientation, confidence: coords.confidence }, 'EyeDetector');
+            continue;
+          }
+
+          logger.info('Candidate accepted', {
+            orientation,
+            confidence: coords.confidence,
+            facesFound: result.faceLandmarks.length,
+            pickedFace: faceIndex,
+          }, 'EyeDetector');
+
+          // Shortcut: if we have a high-confidence match at the native
+          // orientation, don't bother rotating. Saves ~3× detection cost on
+          // the happy path.
+          if (orientation === 0 && coords.confidence >= 0.6) {
+            best = { coords, orientation };
+            break;
+          }
+
+          if (!best || coords.confidence > best.coords.confidence) {
+            best = { coords, orientation };
+          }
+        }
+
         bitmap.close();
 
         if (!mounted) return;
 
-        if (!detector) {
-          logger.warn('Detector not available', {}, 'EyeDetector');
+        if (!best) {
+          logger.warn('No valid face detected in any orientation', {}, 'EyeDetector');
           onDetection(null);
           return;
         }
 
-        const results: FaceLandmarkerResult = detector.detect(canvas);
-
-        if (!mounted) return;
-
-        if (!results.faceLandmarks || results.faceLandmarks.length === 0) {
-          logger.warn('No face landmarks detected', {}, 'EyeDetector');
-          onDetection(null);
-          return;
+        // If we picked a rotated orientation, un-rotate the eye coordinates
+        // back into the original image's pixel space so downstream code
+        // (alignPhoto) sees coords consistent with the bytes it receives.
+        let finalCoords = best.coords;
+        if (best.orientation !== 0) {
+          const rotatedW = best.coords.imageWidth;
+          const rotatedH = best.coords.imageHeight;
+          const originalW = (best.orientation === 90 || best.orientation === 270) ? rotatedH : rotatedW;
+          const originalH = (best.orientation === 90 || best.orientation === 270) ? rotatedW : rotatedH;
+          finalCoords = {
+            ...best.coords,
+            leftEye: unrotatePoint(best.coords.leftEye, best.orientation, originalW, originalH, rotatedW, rotatedH),
+            rightEye: unrotatePoint(best.coords.rightEye, best.orientation, originalW, originalH, rotatedW, rotatedH),
+            imageWidth: originalW,
+            imageHeight: originalH,
+          };
+          logger.info('Un-rotated coords back to source space', {
+            orientation: best.orientation,
+            source: { w: originalW, h: originalH },
+          }, 'EyeDetector');
         }
 
-        const landmarks = results.faceLandmarks[0];
-
-        // Canonical anchor: eye center = midpoint of inner and outer corner.
-        // This is landmark-index-stable and less noisy than iris for closed eyes.
-        // Convention: leftEye = subject's RIGHT eye (landmarks 33/133) → appears
-        // on LEFT side of upright image. rightEye = subject's LEFT eye.
-        if (
-          landmarks.length <= IDX_LEFT_IRIS ||
-          !landmarks[IDX_RIGHT_EYE_OUTER] ||
-          !landmarks[IDX_RIGHT_EYE_INNER] ||
-          !landmarks[IDX_LEFT_EYE_OUTER] ||
-          !landmarks[IDX_LEFT_EYE_INNER]
-        ) {
-          logger.warn('Required eye landmarks missing', { landmarkCount: landmarks.length }, 'EyeDetector');
-          onDetection(null);
-          return;
-        }
-
-        const leftEyeNorm = midpoint(landmarks[IDX_RIGHT_EYE_OUTER], landmarks[IDX_RIGHT_EYE_INNER]);
-        const rightEyeNorm = midpoint(landmarks[IDX_LEFT_EYE_OUTER], landmarks[IDX_LEFT_EYE_INNER]);
-
-        // Convert normalized [0,1] landmarks to pixel coords.
-        const leftEye = { x: leftEyeNorm.x * canvas.width, y: leftEyeNorm.y * canvas.height };
-        const rightEye = { x: rightEyeNorm.x * canvas.width, y: rightEyeNorm.y * canvas.height };
-
-        // Iris sanity check: iris centers should nearly coincide with corner-derived
-        // eye centers. If they disagree significantly, MediaPipe likely has a poor
-        // read on this face — lower confidence rather than rejecting outright.
-        const leftIris = landmarks[IDX_RIGHT_IRIS]
-          ? { x: landmarks[IDX_RIGHT_IRIS].x * canvas.width, y: landmarks[IDX_RIGHT_IRIS].y * canvas.height }
-          : null;
-        const rightIris = landmarks[IDX_LEFT_IRIS]
-          ? { x: landmarks[IDX_LEFT_IRIS].x * canvas.width, y: landmarks[IDX_LEFT_IRIS].y * canvas.height }
-          : null;
-
-        const eyeDistance = distance(leftEye, rightEye);
-        let irisAgreement = 1.0;
-        if (leftIris && rightIris && eyeDistance > 0) {
-          const leftDelta = distance(leftEye, leftIris) / eyeDistance;
-          const rightDelta = distance(rightEye, rightIris) / eyeDistance;
-          // Perfect agreement → 0 delta. >15% of eye distance → treat as full disagreement.
-          irisAgreement = clamp(1.0 - Math.max(leftDelta, rightDelta) / 0.15, 0, 1);
-        }
-
-        // Face bounding box (for outlier checks across a user's photo history).
-        let minX = Infinity, maxX = -Infinity;
-        for (const lm of landmarks) {
-          if (lm.x < minX) minX = lm.x;
-          if (lm.x > maxX) maxX = lm.x;
-        }
-        const faceWidth = (maxX - minX) * canvas.width;
-
-        // Eye openness from blendshapes. ARKit convention: blink=1 means closed.
-        // Note blendshape names are subject-relative (eyeBlinkLeft = subject's left eye).
-        const blinkLeft = getBlendshape(results, 'eyeBlinkLeft') ?? 0;
-        const blinkRight = getBlendshape(results, 'eyeBlinkRight') ?? 0;
-        const eyesOpen = clamp(1 - Math.max(blinkLeft, blinkRight), 0, 1);
-
-        // Composite confidence score — replaces the old hardcoded 0.8.
-        // Factors:
-        //  - eye openness (clamped to [0.4, 1] so fully-closed eyes don't get zero)
-        //  - iris agreement
-        //  - horizontal alignment (penalise heavily-tilted detections)
-        const verticalRatio = Math.abs(leftEye.y - rightEye.y) / Math.max(eyeDistance, 1);
-        const horizontalQuality = clamp(1 - verticalRatio / 0.5, 0, 1);
-        const openGate = clamp(eyesOpen, 0.4, 1);
-        const confidence = clamp(openGate * (0.5 + 0.5 * irisAgreement) * horizontalQuality, 0, 1);
-
-        const coords: EyeCoordinates = {
-          leftEye,
-          rightEye,
-          confidence,
-          imageWidth: canvas.width,
-          imageHeight: canvas.height,
-          eyesOpen,
-          faceWidth,
-          irisAgreement,
-        };
-
-        logger.info('Eye detection candidate', {
-          leftEye, rightEye,
-          imageSize: { width: canvas.width, height: canvas.height },
-          eyeDistance,
-          normalizedDistance: eyeDistance / canvas.width,
-          eyesOpen,
-          irisAgreement,
-          confidence,
+        logger.info('Eye detection final', {
+          leftEye: finalCoords.leftEye,
+          rightEye: finalCoords.rightEye,
+          confidence: finalCoords.confidence,
+          orientation: best.orientation,
         }, 'EyeDetector');
 
-        if (!validateEyeDetection(coords)) {
-          logger.warn('Eye detection failed validation', {}, 'EyeDetector');
-          onDetection(null);
-          return;
-        }
-
-        onDetection(coords);
+        onDetection(finalCoords);
       } catch (error) {
         logger.error('Eye detection failed', { error: error instanceof Error ? error.message : String(error) }, 'EyeDetector');
         onError?.(error instanceof Error ? error : new Error('Eye detection failed'));
