@@ -91,7 +91,40 @@ export function PhotoBottomSheet({ photo: photoProp, isOpen, onClose, onDelete }
 
   const handleAdjustConfirm = async (placed: EyeAdjustCoords) => {
     if (adjustState.phase !== 'editing') return;
-    const { previewUrl: previewUrlToRevoke, width, height } = adjustState;
+    const { previewUrl: previewUrlToRevoke, width, height, initial } = adjustState;
+
+    // No-op detection: if the user confirmed without moving the image, the
+    // inverse transform will reproduce the exact starting coords (or within
+    // floating-point drift). Running alignPhoto on identical coords just
+    // re-uploads a byte-identical image and makes it look like "nothing
+    // changed" from the user's POV. Bail early with a helpful message.
+    if (initial) {
+      const dLeftX = placed.leftEye.x - initial.leftEye.x;
+      const dLeftY = placed.leftEye.y - initial.leftEye.y;
+      const dRightX = placed.rightEye.x - initial.rightEye.x;
+      const dRightY = placed.rightEye.y - initial.rightEye.y;
+      const maxDelta = Math.max(
+        Math.abs(dLeftX), Math.abs(dLeftY),
+        Math.abs(dRightX), Math.abs(dRightY)
+      );
+      // ~0.25% of a 1080-wide frame. Below this, the crop would shift by
+      // less than one output pixel and no visible change would occur.
+      const EPS = Math.max(width, height) * 0.0025;
+      console.log('[Re-align] confirm', {
+        photoId: photo.id,
+        initial,
+        placed,
+        maxDelta,
+        eps: EPS,
+      });
+      if (maxDelta < EPS) {
+        setAdjustError(
+          "No change detected — drag, pinch or rotate the photo first, then tap Re-align."
+        );
+        return;
+      }
+    }
+
     try {
       setAdjustState({ phase: 'saving' });
       await reAlignPhoto(photo.id, placed, settings?.baby_birthdate ?? null);
