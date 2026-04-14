@@ -214,7 +214,7 @@ export function OnboardingChatPage() {
           setTimeout(() => {
             try { liveRef.current?.close() } catch {}
             setPhase('completing')
-            void persistCapturedNonBooks()
+            void persistCapturedItems()
             setTimeout(() => setPhase('books'), 600)
           }, 400)
         }
@@ -247,10 +247,14 @@ export function OnboardingChatPage() {
     }
   }, [])
 
-  // Persist any non-book captured items to the user's lists. Creates a list
-  // per type on demand. Runs at onboarding handoff (after books step).
-  const persistCapturedNonBooks = useCallback(async () => {
-    const items = capturedItemsRef.current.filter(i => i.type !== 'book')
+  // Persist EVERY captured item (books included) to its matching list when
+  // the chat ends. This is the "quiet seeding" guarantee — when the user
+  // wanders into Lists later they find what they mentioned, regardless of
+  // whether they later skip or breeze through the bookshelf step.
+  // BookshelfStep itself only persists books the user actively *adds* on
+  // top of the pre-population, so we don't double-write captured books.
+  const persistCapturedItems = useCallback(async () => {
+    const items = capturedItemsRef.current
     if (items.length === 0) return
 
     // Group by type so we only create/find each list once.
@@ -275,6 +279,10 @@ export function OnboardingChatPage() {
           : await createList({ title: listTitles[type] || type, type })
         for (const item of typeItems) {
           try {
+            // Books from the chat are persisted with the same
+            // "${title} — ${author}" content shape BookshelfStep uses for
+            // its own picks, so the list looks consistent. We don't have
+            // an author yet here, so just use the name.
             await addListItem({ list_id: listId, content: item.name })
           } catch (e) {
             console.warn('[onboarding-chat] failed to add item to list', type, item.name, e)

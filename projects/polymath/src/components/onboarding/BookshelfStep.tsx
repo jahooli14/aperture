@@ -23,6 +23,13 @@ export function BookshelfStep({ onComplete, onSkip, prepopulated }: BookshelfSte
   const [selectedBooks, setSelectedBooks] = useState<BookSearchResult[]>(
     () => (prepopulated || []).slice(0, 3),
   )
+
+  // Books that were pre-populated from the voice chat are already persisted
+  // by OnboardingChatPage at chat-end. Track their keys so we don't write
+  // them again when the user continues through this step.
+  const prepopulatedKeys = (prepopulated || []).map(
+    b => `${b.title.toLowerCase()}::${b.author.toLowerCase()}`,
+  )
   // If prepopulated arrives after first render (async enrichment), fold
   // any new entries in without stomping user edits.
   useEffect(() => {
@@ -99,17 +106,20 @@ export function BookshelfStep({ onComplete, onSkip, prepopulated }: BookshelfSte
 
   // Persist the final selection on continue (not on each add) — so if the
   // user picks and then removes a book, we don't leave a stray list item
-  // behind. Also covers the pre-populated path where books arrive already
-  // in selectedBooks without ever passing through handleSelectBook.
+  // behind. Skips books that were pre-populated from the chat (those are
+  // already persisted by OnboardingChatPage when the chat ended).
   const persistBooks = async (finalBooks: BookSearchResult[]) => {
-    if (finalBooks.length === 0) return
+    const fresh = finalBooks.filter(
+      b => !prepopulatedKeys.includes(`${b.title.toLowerCase()}::${b.author.toLowerCase()}`),
+    )
+    if (fresh.length === 0) return
     try {
       let currentListId = listId
       if (!currentListId) {
         currentListId = await createList({ title: 'Books', type: 'book' })
         setListId(currentListId)
       }
-      for (const book of finalBooks) {
+      for (const book of fresh) {
         try {
           await addListItem({
             list_id: currentListId,
