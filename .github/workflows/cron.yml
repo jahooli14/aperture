@@ -57,11 +57,28 @@ jobs:
             echo "→ $1"
             # Timeout must exceed the Vercel maxDuration (60s) to avoid
             # racing cold-start + network overhead against function execution.
-            if ! curl -fsS -m 90 -X POST "$BASE$1" \
+            #
+            # Capture body + status separately so HTTP failures surface the
+            # response body in the workflow log (plain -f / -fsS swallows it,
+            # making 500s undiagnosable without Vercel log access).
+            local body_file
+            body_file=$(mktemp)
+            local code
+            code=$(curl -sS -m 90 -X POST "$BASE$1" \
                  -H "Authorization: Bearer $TOKEN" \
-                 -H "Content-Type: application/json"; then
-              echo "!! failed: $1" | tee -a "$FAILED_FILE"
+                 -H "Content-Type: application/json" \
+                 -d '{}' \
+                 -o "$body_file" -w "%{http_code}") || code="000"
+            if [ "$code" -ge 200 ] 2>/dev/null && [ "$code" -lt 300 ] 2>/dev/null; then
+              cat "$body_file"
+              echo ""
+            else
+              {
+                echo "!! failed: $1 (HTTP $code)"
+                echo "   body: $(cat "$body_file")"
+              } | tee -a "$FAILED_FILE"
             fi
+            rm -f "$body_file"
           }
 
           echo "Triggered by: ${SCHEDULE:-workflow_dispatch}"
