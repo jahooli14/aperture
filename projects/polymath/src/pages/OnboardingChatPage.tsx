@@ -80,15 +80,10 @@ export function OnboardingChatPage() {
   const [typingMode, setTypingMode] = useState(false)
   const [typingDraft, setTypingDraft] = useState('')
   const [error, setError] = useState<string | null>(null)
-  // A monotonically-increasing count of "live is ready right now" events.
-  // Using a counter instead of a boolean so the begin() effect re-fires
-  // cleanly on reconnection (StrictMode, dropped-socket recovery, token
-  // refresh). A boolean `liveReady` stays at `true` across reconnects and
-  // setState no-ops when the value doesn't change — which silently skips
-  // the second begin() call and leaves the model mute. The counter never
-  // no-ops.
-  const [readyCount, setReadyCount] = useState(0)
-  const liveReady = readyCount > 0
+  // The voice component auto-starts the conversation on connection — no
+  // begin() trigger needed from the parent. We track `liveReady` purely
+  // for visual state (show the mic, hide the "connecting" spinner).
+  const [liveReady, setLiveReady] = useState(false)
   const [liveStatus, setLiveStatus] = useState<LiveVoiceStatus>('connecting')
 
   const [books, setBooks] = useState<BookSearchResult[]>([])
@@ -150,38 +145,22 @@ export function OnboardingChatPage() {
     return () => { cancelled = true }
   }, [isAuthenticated, navigate])
 
-  // Once Live is connected AND the grid has loaded, trigger the model to
-  // begin speaking the anchor question. Depends on readyCount (not a bool)
-  // so a reconnection bumps the count and re-triggers begin() against the
-  // fresh session — begin() is idempotent inside the child (guarded by a
-  // per-connection `beganRef`), so re-calling is safe in prod too.
-  useEffect(() => {
-    if (phase === 'turn' && readyCount > 0 && liveRef.current && grid) {
-      liveRef.current.begin()
-    }
-  }, [phase, readyCount, grid])
-
-  // No-response fallback. If the model never speaks the anchor (empty
-  // transcript + never entered 'speaking' status within 8s of being
-  // ready), surface a clear retry instead of leaving the user staring
-  // at a silent mic. Happens occasionally when the Live API drops the
-  // first turn.
+  // No-response fallback. The voice component auto-triggers the opening
+  // turn on connection, so if 10s after "ready" we haven't heard the model
+  // speak and don't have any transcript, surface a clear retry.
   const [silentStart, setSilentStart] = useState(false)
   useEffect(() => {
     if (phase !== 'turn' || !liveReady) return
     setSilentStart(false)
     const timer = setTimeout(() => {
       if (!currentQuestion && liveStatus !== 'speaking') {
-        console.warn('[onboarding-chat] model did not speak anchor within 8s — showing retry')
+        console.warn('[onboarding-chat] model did not speak anchor within 10s — showing retry')
         setSilentStart(true)
       }
-    }, 8000)
+    }, 10000)
     return () => clearTimeout(timer)
-    // currentQuestion intentionally not in deps — we want a fixed 8s
-    // window from when we went ready, not a reset on every transcript chunk.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, liveReady])
-  // Once the model does start speaking, drop the retry UI if it was up.
   useEffect(() => {
     if (currentQuestion || liveStatus === 'speaking') setSilentStart(false)
   }, [currentQuestion, liveStatus])
@@ -215,7 +194,7 @@ export function OnboardingChatPage() {
     setUserPartial(accumulated)
   }, [])
 
-  const handleLiveReady = useCallback(() => setReadyCount(c => c + 1), [])
+  const handleLiveReady = useCallback(() => setLiveReady(true), [])
 
   const handleLiveError = useCallback((msg: string) => {
     console.error('[onboarding-chat] live error', msg)
