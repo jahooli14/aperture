@@ -57,6 +57,11 @@ interface LiveVoiceCaptureProps {
   onReady?: () => void
   onStatusChange?: (status: LiveVoiceStatus) => void
   onError?: (message: string) => void
+  /** Fires on every significant lifecycle event — token mint, socket open,
+   *  seed sent, audio received, turn complete, errors. Used to surface an
+   *  on-screen diagnostic log when voice fails silently (mobile browsers
+   *  without a console). Events are short human-readable tags. */
+  onDiagnostic?: (event: string) => void
   hideVisualizer?: boolean
   /** If true, suppress mic uplink (e.g. user is typing instead of speaking). */
   muted?: boolean
@@ -170,7 +175,7 @@ function base64ToInt16Array(b64: string): Int16Array {
 
 export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCaptureProps>(
   function LiveVoiceCapture(
-    { onTurnComplete, onModelSpeaking, onUserSpeaking, onReady, onStatusChange, onError, hideVisualizer = false, muted = false, outputAudioContext = null },
+    { onTurnComplete, onModelSpeaking, onUserSpeaking, onReady, onStatusChange, onError, onDiagnostic, hideVisualizer = false, muted = false, outputAudioContext = null },
     ref,
   ) {
     // Mirror prop callbacks into refs — the SDK captures the callbacks passed
@@ -182,12 +187,19 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
     const onReadyRef = useRef(onReady)
     const onStatusChangeRef = useRef(onStatusChange)
     const onErrorRef = useRef(onError)
+    const onDiagnosticRef = useRef(onDiagnostic)
     useEffect(() => { onTurnCompleteRef.current = onTurnComplete }, [onTurnComplete])
     useEffect(() => { onModelSpeakingRef.current = onModelSpeaking }, [onModelSpeaking])
     useEffect(() => { onUserSpeakingRef.current = onUserSpeaking }, [onUserSpeaking])
     useEffect(() => { onReadyRef.current = onReady }, [onReady])
     useEffect(() => { onStatusChangeRef.current = onStatusChange }, [onStatusChange])
     useEffect(() => { onErrorRef.current = onError }, [onError])
+    useEffect(() => { onDiagnosticRef.current = onDiagnostic }, [onDiagnostic])
+
+    const diag = (event: string) => {
+      console.info('[LiveVoice]', event)
+      onDiagnosticRef.current?.(event)
+    }
 
     const mutedRef = useRef(muted)
     useEffect(() => { mutedRef.current = muted }, [muted])
@@ -291,12 +303,33 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
 
     // ── Server message handler ─────────────────────────────────────────────
     const handleServerMessage = (message: LiveServerMessage) => {
-      const sc: any = (message as any).serverContent
+      const m: any = message as any
+
+      // Diagnostic fanout — the SDK occasionally delivers non-serverContent
+      // frames (setupComplete, errors, tool calls, usage metadata) that
+      // the old code silently dropped. If setup failed or the model
+      // rejected our config, we need to SEE it, not swallow it.
+      if (m.setupComplete) {
+        diag('setup-complete')
+      }
+      if (m.error) {
+        const detail = m.error?.message || JSON.stringify(m.error).slice(0, 120)
+        diag(`server-error: ${detail}`)
+        handleError(`Voice service error: ${detail}`)
+        return
+      }
+      if (m.goAway) {
+        diag(`go-away: ${m.goAway?.timeLeft || 'now'}`)
+      }
+
+      const sc: any = m.serverContent
       if (!sc) return
 
       // 1. Model audio chunks → schedule for playback.
       const parts = sc.modelTurn?.parts as Array<any> | undefined
       if (parts) {
+        let audioCount = 0
+        let textCount = 0
         for (const p of parts) {
           const inline = p.inlineData
           if (inline?.data && inline.mimeType?.startsWith('audio/pcm')) {
@@ -304,8 +337,23 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
             enqueueOutputAudio(pcm)
             modelSpeakingRef.current = true
             modelProducedOutputRef.current = true
+            audioCount++
             if (statusRef.current !== 'speaking') setStatus('speaking')
+          } else if (p.text) {
+            // If the model falls back to text (e.g. responseModalities
+            // wasn't honored, or model/config mismatch), flag it loudly —
+            // we will NEVER get audio for that turn.
+            textCount++
+            modelProducedOutputRef.current = true
+            modelTranscriptBufferRef.current += p.text
+            onModelSpeakingRef.current?.(modelTranscriptBufferRef.current)
           }
+        }
+        if (audioCount === 0 && textCount > 0) {
+          diag(`WARN text-only response (no audio) text=${textCount}`)
+        } else if (audioCount > 0 && !anchorSpokenRef.current) {
+          // First time we've heard actual audio from the model.
+          diag(`audio-chunk #1 bytes=${parts.length}`)
         }
       }
 
@@ -379,11 +427,16 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
       ;(async () => {
         try {
           // 1. Mint ephemeral token.
+          diag('token-mint-start')
           const tokRes = await fetch('/api/utilities?resource=onboarding-token', {
             method: 'POST',
           })
-          if (!tokRes.ok) throw new Error('Token mint failed')
+          if (!tokRes.ok) {
+            const body = await tokRes.text().catch(() => '')
+            throw new Error(`Token mint ${tokRes.status}: ${body.slice(0, 80)}`)
+          }
           const { token, model } = await tokRes.json()
+          diag(`token-minted model=${model}`)
           if (cancelled) return
 
           // 2. Set up audio contexts. If the parent supplied a pre-unlocked
@@ -395,9 +448,11 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
           if (outputAudioContext) {
             outputCtxRef.current = outputAudioContext
             outputCtxOwnedRef.current = false
+            diag(`output-ctx reused state=${outputAudioContext.state}`)
           } else {
             outputCtxRef.current = new AudioContext({ sampleRate: OUTPUT_SAMPLE_RATE })
             outputCtxOwnedRef.current = true
+            diag(`output-ctx created state=${outputCtxRef.current.state}`)
           }
           const outputCtx = outputCtxRef.current
           if (inputCtx.state === 'suspended') {
@@ -406,6 +461,7 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
           if (outputCtx.state === 'suspended') {
             try { await outputCtx.resume() } catch {}
           }
+          diag(`ctx-resumed in=${inputCtx.state} out=${outputCtx.state}`)
           // Reset playback scheduler — the previous mount's playbackTime may
           // be in the past relative to a reused context's currentTime.
           playbackTimeRef.current = outputCtx.currentTime
@@ -440,6 +496,7 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
             return
           }
           micStreamRef.current = stream
+          diag('mic-acquired')
 
           const sourceNode = inputCtx.createMediaStreamSource(stream)
           const workletNode = new AudioWorkletNode(inputCtx, 'onboarding-mic-processor')
@@ -485,19 +542,19 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
             },
             callbacks: {
               onopen: () => {
-                console.info('[LiveVoice] socket open')
+                diag('socket-open')
               },
               onmessage: (message: LiveServerMessage) => {
                 handleServerMessage(message)
               },
               onerror: (e: any) => {
-                console.error('[LiveVoice] socket error', e)
                 const detail = e?.message || e?.reason || e?.code || (typeof e === 'string' ? e : '')
+                diag(`socket-error: ${detail || 'unknown'}`)
                 handleError(detail ? `Live error: ${detail}` : 'Live session error (check console)')
               },
               onclose: (e: any) => {
                 const reason = e?.reason || e?.code || ''
-                console.warn('[LiveVoice] socket closed', reason)
+                diag(`socket-close: ${reason || 'no-reason'}`)
                 if (statusRef.current === 'connecting') {
                   handleError(reason ? `Connection closed: ${reason}` : 'Voice connection closed unexpectedly')
                 }
@@ -525,12 +582,30 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
               turns: [{ role: 'user', parts: [{ text: 'Hello.' }] }],
               turnComplete: true,
             })
-            console.info('[LiveVoice] opening seed sent')
-          } catch (err) {
-            console.error('[LiveVoice] opening seed failed', err)
+            diag('seed-sent (sendClientContent)')
+          } catch (err: any) {
+            diag(`seed-failed: ${err?.message || 'unknown'}`)
             handleError('Could not start the conversation. Refresh to try again.')
             return
           }
+
+          // Retry fallback: if the first seed didn't provoke any model
+          // output within 5s, try again via sendRealtimeInput. Different
+          // transport path in the SDK — different code path in the server.
+          // If one was silently misconfigured, the other may still work.
+          setTimeout(() => {
+            if (cancelled || closedRef.current) return
+            if (anchorSpokenRef.current) return
+            if (modelProducedOutputRef.current) return
+            const s = sessionRef.current
+            if (!s) return
+            try {
+              s.sendRealtimeInput({ text: 'Hi, please greet me.' })
+              diag('seed-retry (sendRealtimeInput)')
+            } catch (err: any) {
+              diag(`seed-retry-failed: ${err?.message || 'unknown'}`)
+            }
+          }, 5000)
 
           // 6. Pump mic PCM frames into the Live session. Gate the uplink
           //    whenever Aperture is audible. Browser echo cancellation is
@@ -564,7 +639,7 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
           }
         } catch (err: any) {
           if (cancelled) return
-          console.error('[LiveVoice] init failed', err)
+          diag(`init-failed: ${err?.message || 'unknown'}`)
           // Ensure any partial resources we allocated before the failure
           // (AudioContexts, mic tracks, worklet node) are released. Without
           // this, a token-mint or getUserMedia failure leaves the page with

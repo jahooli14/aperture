@@ -85,6 +85,17 @@ export function OnboardingChatPage() {
   // for visual state (show the mic, hide the "connecting" spinner).
   const [liveReady, setLiveReady] = useState(false)
   const [liveStatus, setLiveStatus] = useState<LiveVoiceStatus>('connecting')
+  // Rolling diagnostic log surfaced in the silent-start fallback so users
+  // who hit the "model never spoke" timeout on mobile can screenshot the
+  // actual lifecycle events instead of staring at a generic retry card.
+  const [diagnostics, setDiagnostics] = useState<string[]>([])
+  const handleDiagnostic = useCallback((event: string) => {
+    setDiagnostics(prev => {
+      const stamped = `${new Date().toISOString().slice(11, 19)} ${event}`
+      const next = [...prev, stamped]
+      return next.length > 20 ? next.slice(-20) : next
+    })
+  }, [])
 
   const [books, setBooks] = useState<BookSearchResult[]>([])
   const [analysis, setAnalysis] = useState<OnboardingAnalysis | null>(null)
@@ -801,6 +812,7 @@ export function OnboardingChatPage() {
         onReady={handleLiveReady}
         onStatusChange={setLiveStatus}
         onError={handleLiveError}
+        onDiagnostic={handleDiagnostic}
       />
 
       <button
@@ -840,7 +852,7 @@ export function OnboardingChatPage() {
                   <span className="opacity-60">Connecting voice…</span>
                 </div>
               ) : silentStart ? (
-                <div className="flex flex-col items-center gap-4 text-sm max-w-xs" style={{ color: 'var(--brand-text-secondary)' }}>
+                <div className="flex flex-col items-center gap-4 text-sm max-w-sm" style={{ color: 'var(--brand-text-secondary)' }}>
                   <p className="text-center leading-relaxed">
                     Hmm — Aperture's taking a beat to warm up. Mind refreshing the page to give it another go?
                   </p>
@@ -850,6 +862,30 @@ export function OnboardingChatPage() {
                   >
                     Refresh
                   </button>
+                  {/* Diagnostic log — invaluable for diagnosing "mic says
+                      listening but nothing happens" on mobile devices
+                      without a console. The user can screenshot this when
+                      reporting an issue. */}
+                  {diagnostics.length > 0 && (
+                    <details className="w-full mt-2 text-left">
+                      <summary className="text-[10px] uppercase tracking-wide opacity-50 cursor-pointer">
+                        Diagnostic log (tap to expand)
+                      </summary>
+                      <pre
+                        className="text-[10px] leading-snug mt-2 p-2 rounded overflow-x-auto"
+                        style={{
+                          background: 'rgba(255,255,255,0.04)',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          color: 'var(--brand-text-secondary)',
+                          opacity: 0.7,
+                          maxHeight: '180px',
+                          overflowY: 'auto',
+                        }}
+                      >
+                        {diagnostics.join('\n')}
+                      </pre>
+                    </details>
+                  )}
                 </div>
               ) : (
                 <TurnIndicator status={liveStatus} />
