@@ -69,6 +69,43 @@ Use `/skill` for complex workflows:
 - **Style**: TypeScript strict, functional React, no `any` types
 - **AI model names**: ALWAYS verify model IDs against the latest online documentation (e.g. [Google Gemini models](https://ai.google.dev/gemini-api/docs/models)) before changing them. Never guess or rely on memory — models get deprecated and renamed frequently.
 
+## How I Like To Work
+
+- Plain English. No jargon, no filler.
+- Concise. Short sentences. Bullets over paragraphs.
+- Say what you did and why — skip the "I will now..." preamble.
+- If something is uncertain, say so in one line and ask.
+
+## Commits & PRs
+
+Use conventional commits and keep PR metadata short.
+
+**Commit subject**
+- Format: `type(scope): short summary`
+- Single line, ≤ 70 characters, imperative mood.
+- Types: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `perf`.
+
+**Commit body (optional)**
+- Blank line after subject, then why + notable decisions.
+- Wrap at ~72 chars. Bullets fine.
+
+**PR title**
+- **Must be a single line, ≤ 70 chars** — the commit subject, nothing more.
+- NEVER paste the commit body into the title. NEVER include newlines.
+- If there is one commit, the PR title = that commit's subject.
+- If there are multiple commits, write one new subject that covers them.
+
+**PR body**
+- 1–3 bullets on what changed and why.
+- Test plan: 1–3 bullets of what to verify.
+- Skip the boilerplate checklist unless a box genuinely applies.
+- Link related issue with `Fixes #N` if relevant.
+
+**Workflow**
+- Develop on the branch specified in the session brief.
+- Only open a PR when explicitly asked.
+- Before opening a PR: run the project's `npm run build` in the project folder.
+
 ## Session Start
 
 Check `NEXT_SESSION.md` for current status and tasks (if present).
