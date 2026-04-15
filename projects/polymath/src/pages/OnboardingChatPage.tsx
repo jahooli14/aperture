@@ -165,25 +165,52 @@ export function OnboardingChatPage() {
     if (currentQuestion || liveStatus === 'speaking') setSilentStart(false)
   }, [currentQuestion, liveStatus])
 
-  // Cut a tap for authed users. After sign-in from UnauthHome → /login the
-  // visitor already chose to do the chat twice (pitch + "start talking").
-  // A third "Start talking" welcome page is redundant noise. Auto-advance
-  // to bootstrap once auth is confirmed. (Unauth visitors still see the
-  // sign-in gate above; if somehow an authed user lands here without
-  // hitting the gate, they still get the smooth auto-advance.)
-  useEffect(() => {
-    if (isAuthenticated && phase === 'welcome') {
-      setPhase('bootstrap')
-      setError(null)
-      void bootstrapGrid()
+  // NOTE: we deliberately do NOT auto-advance authed users past the welcome
+  // page. iOS Safari requires the output AudioContext to be created inside
+  // a user-gesture tick, and auto-advance breaks that — voice would silently
+  // fail to produce audio on iPhones. The "Start talking" tap is the gesture
+  // that does the unlock (see handleStart below). If you ever reintroduce
+  // auto-advance, you MUST attach a one-shot document-level gesture listener
+  // to perform the unlock on the user's next touch.
+
+  // iOS Safari requires the output AudioContext to be created AND resumed
+  // synchronously inside a user-gesture tick, or subsequent playback
+  // silently no-ops. By the time <LiveVoiceCapture> mounts (after the
+  // bootstrap fetch + phase transition), we're far outside that tick —
+  // so we unlock here in the "Start talking" handler and hand the primed
+  // context down. The silent-buffer playback is the canonical iOS trick
+  // that actually convinces WebKit the context is live.
+  const unlockedOutputCtxRef = useRef<AudioContext | null>(null)
+  const unlockAudioOutput = useCallback(() => {
+    if (unlockedOutputCtxRef.current) return
+    try {
+      const AudioCtx: typeof AudioContext = (window as any).AudioContext || (window as any).webkitAudioContext
+      if (!AudioCtx) return
+      const ctx = new AudioCtx({ sampleRate: 24000 })
+      // Fire-and-forget — on iOS resume() returns a promise that resolves
+      // once WebKit actually flips the state. We can't await it without
+      // breaking the gesture tick, and it's not required: the silent
+      // buffer below is what unlocks playback.
+      if (ctx.state === 'suspended') void ctx.resume()
+      const buf = ctx.createBuffer(1, 1, 24000)
+      const src = ctx.createBufferSource()
+      src.buffer = buf
+      src.connect(ctx.destination)
+      src.start(0)
+      unlockedOutputCtxRef.current = ctx
+    } catch (e) {
+      console.warn('[onboarding-chat] audio unlock failed (non-iOS browsers are fine)', e)
     }
-  }, [isAuthenticated, phase, bootstrapGrid])
+  }, [])
 
   const handleStart = useCallback(() => {
+    // MUST run synchronously in the click handler, before any awaits, or
+    // iOS audio unlock fails.
+    unlockAudioOutput()
     setPhase('bootstrap')
     setError(null)
     void bootstrapGrid()
-  }, [bootstrapGrid])
+  }, [bootstrapGrid, unlockAudioOutput])
 
   // ── Live callbacks ──────────────────────────────────────────────────────
   const handleModelSpeaking = useCallback((accumulated: string) => {
@@ -637,19 +664,10 @@ export function OnboardingChatPage() {
   }
 
   // ── Welcome ─────────────────────────────────────────────────────────────
-  // Authed + welcome = in-flight auto-advance. Show the loader, not the
-  // pitch page — the auto-advance effect is about to flip us to bootstrap,
-  // and briefly flashing the welcome screen would be a jarring no-op tap.
-  if (phase === 'welcome' && isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-4 py-12">
-        <div className="flex items-center gap-3 text-sm" style={{ color: 'var(--brand-text-secondary)' }}>
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Getting ready…
-        </div>
-      </div>
-    )
-  }
+  // Authed users see the same welcome page as everyone else. The button tap
+  // is load-bearing: it's the user-gesture tick that unlocks the output
+  // AudioContext for iOS Safari (see unlockAudioOutput). Do not short-
+  // circuit this — auto-advance would silently break voice on iPhones.
   if (phase === 'welcome') {
     return (
       <div className="min-h-screen flex items-center justify-center px-6 py-12">
@@ -776,6 +794,7 @@ export function OnboardingChatPage() {
         ref={liveRef}
         hideVisualizer
         muted={typingMode}
+        outputAudioContext={unlockedOutputCtxRef.current}
         onTurnComplete={handleTurnComplete}
         onModelSpeaking={handleModelSpeaking}
         onUserSpeaking={handleUserSpeaking}

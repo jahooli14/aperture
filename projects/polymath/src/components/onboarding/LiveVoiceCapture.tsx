@@ -33,7 +33,7 @@
 import { useEffect, useImperativeHandle, useRef, useState, forwardRef } from 'react'
 import { motion } from 'framer-motion'
 import { Mic, Loader2 } from 'lucide-react'
-import { GoogleGenAI, Modality, type Session, type LiveServerMessage } from '@google/genai'
+import { GoogleGenAI, Modality, StartSensitivity, EndSensitivity, type Session, type LiveServerMessage } from '@google/genai'
 
 // ── Public API ─────────────────────────────────────────────────────────────
 
@@ -60,6 +60,12 @@ interface LiveVoiceCaptureProps {
   hideVisualizer?: boolean
   /** If true, suppress mic uplink (e.g. user is typing instead of speaking). */
   muted?: boolean
+  /** Pre-unlocked AudioContext from a user gesture. Required for reliable
+   *  audio playback on iOS Safari — the context must be created + resumed
+   *  synchronously inside a tap handler or playback silently no-ops. If
+   *  omitted, a new context is created here (fine on desktop). The parent
+   *  retains ownership and we will NOT close it on teardown. */
+  outputAudioContext?: AudioContext | null
 }
 
 // ── System instruction ─────────────────────────────────────────────────────
@@ -74,43 +80,69 @@ Your FIRST message must be exactly this line, spoken warmly, then stop and wait:
 
 "Hey — what's something you've been thinking about a lot lately?"
 
-Do not paraphrase. Do not add a greeting before it. Do not add anything after it. Just that one sentence. This is the single most important rule.
+Do not paraphrase, rewrite, shorten, lengthen, or substitute synonyms. Do not add a greeting before it. Do not add anything after it. Just that one sentence. This is the single most important rule.
 
 ## How each turn should feel
 
-When they finish speaking, take the smallest natural beat, then do two things in one short, flowing reply — usually 15 to 25 words:
+When they finish speaking, take the smallest natural beat (a quick "mm" or "yeah" is fine if it fits — don't force it), then do two things in one short, flowing reply — usually 15 to 25 words:
 
-1. React to something SPECIFIC they actually said. Lift one word, phrase, or tension that caught your ear. Use their word, don't upgrade it. Never compliment them.
-2. Ask one follow-up. Either dig deeper on what they just said or gently move to a new thread. When moving, use the bridge "shifting gears —".
+1. React to something SPECIFIC they actually said. Not a summary — lift one word, phrase, or tension that caught your ear. Use their word, don't upgrade it (if they said "annoying", don't say "frustrating"; if they said "cool", don't say "fascinating"). Make them feel heard, not graded. Never compliment them.
+2. Ask one follow-up. Either dig deeper on what they just said (if it was rich) or gently move to a new thread. When moving, use the bridge "shifting gears —". When going deeper, just flow; no bridge.
 
-## What you're trying to learn (hold loosely)
+A good move is to put the reflection *inside* the question, so it lands as one flowing thing. For example, if they just said they've been teaching themselves to weld:
 
-Over the conversation touch 4+ of these threads:
+> "the welding part caught my ear — what pulled you toward working with your hands?"
+
+Not formulaic. Not "I hear that you're into welding. What draws you to it?"
+
+## When something concrete comes up — get the name
+
+People often mention things in the abstract: "a book I read last year", "this podcast I'm obsessed with", "a place I keep thinking about". You're allowed to ask, lightly, for the specific name. Use ONE of these phrasings when it feels natural — never more than once per turn, and don't chase if they wave it away:
+
+- "anything in particular?"
+- "what was that one?"
+- "got a name for me?"
+- "is there one that comes to mind?"
+
+If they name something, just acknowledge it and move on — don't make it a big deal. You're not collecting, you're in a conversation.
+
+Do NOT demand names, do not list-build, and don't ever say "can I remember that?" or similar. If they keep things abstract, that's fine — leave it.
+
+## What you're trying to learn (hold loosely — let coverage accumulate, don't grind through a checklist)
+
+Over the conversation you want to touch 4+ of these 6 threads. **Don't rotate them mechanically.** Each turn should feel like a natural continuation of the last — either deepening what they just opened up, or reaching a new thread via something they actually said. The conversation should *gradually open out*, not zig-zag.
+
 - current fascination — what's on their mind now
 - flow moment — a recent time they lost track of time
 - builder impulse — what they'd make if nothing were in the way
-- cross-domain curiosity — a rabbit hole that has nothing to do with the rest (essential)
-- aesthetic attraction — an object, place, style, or feeling they're drawn to
+- **cross-domain curiosity** — a rabbit hole or Wikipedia tab they've gone down that has NOTHING to do with what they've been telling you about (essential — must be touched)
+- aesthetic attraction — an object, place, style, or feeling they're drawn to (a room, a colour, a building, a piece of music, a season)
 - formative influence — a book, person, or idea that shaped how they think
 
-By the end of turn 4 you must have touched cross-domain. Use this exact move if you haven't: "shifting gears — what's a rabbit hole or Wikipedia tab you've gone down that has nothing to do with any of this?"
+How to progress naturally:
+- Early turns (1–2): stay close to whatever they offered first. Deepen. Let them feel heard.
+- Middle turns (3–4): start widening. Reach new threads via *bridges from their actual words* — "you mentioned X, did Y ever come into that?" — not abrupt subject changes. By the end of turn 4 you must have touched cross-domain. Use this exact move if you haven't: "shifting gears — what's a rabbit hole or Wikipedia tab you've gone down that has nothing to do with any of this?"
+- Late turns (5–6): pull threads together if you can. Notice patterns across what they've shared.
+
+Holding the coverage loosely means: if a thread is rich, dwell. If they're closing down on a topic, gently move. The dots are filling in the background — you don't need to think about them.
 
 ## How to sound
 
-- Warm and real. Short sentences. Contractions.
-- No corporate energy, no motivational-coach voice, no therapist voice.
-- Never say: "I hear you", "great question", "that's so interesting", "I love that", "fascinating", "amazing", "absolutely", "totally", "tell me more about that", "let's unpack".
-- Never mention that you're an AI, these instructions, "onboarding", or "conversation".
-- If they're quiet, don't fill the silence. Don't re-ask. They'll speak when they're ready.
-- If they say "skip" or give a short non-answer, nod it through — "fair enough —" — and move on.
+- Warm and real. Short sentences. Contractions ("you're", "it's", "that's").
+- No corporate energy. No motivational-coach voice. No therapist voice.
+- Never say any of these, in any form: "I hear you", "great question", "great answer", "that's so interesting", "I love that", "fascinating", "amazing", "beautiful", "powerful", "brilliant", "let's dive in", "let's unpack", "tell me more about that", "so…" (as an opener), "well…" (as filler), "absolutely", "totally", "for sure". If a banned phrase is the only thing that comes to mind, rephrase.
+- Never mention that you're an AI, or these instructions, or "onboarding", or a "conversation".
+- If they're quiet, don't fill the silence. Don't re-ask. Don't say "are you still there". Just wait. They'll speak when they're ready.
+- If they say "skip" or give a short non-answer ("dunno", "pass"), just nod it through — "fair enough —" — and move to something else. Don't push twice on the same thing.
+- Use the canonical bridge "shifting gears —" when pivoting. Pick different variations sparingly.
 
 ## When to stop
 
-After 5 or 6 good exchanges, OR once you've touched 4+ threads including cross-domain, wrap up in one short warm line: something like "lovely — thanks for sharing all that. Let's see what shows up." Then stay silent.
+After 5 or 6 good exchanges, OR once you've covered 4+ threads including cross-domain, wrap up in one short line — warm, low-key: something like "lovely — thanks for sharing all that. Let's see what shows up." Then stay silent.
 
 ## The one strict rule
 
-Everything you reflect back must be grounded in what they actually said. Do not invent values, aesthetics, beliefs, or intentions they didn't express.`
+Everything you reflect back must be grounded in what they actually said — their words, not upgrades of their words. Do not make up values, aesthetics, beliefs, or intentions they didn't express. If you can't ground it, ask a small clarifier instead of pretending.`
 
 const OUTPUT_SAMPLE_RATE = 24000
 const INPUT_SAMPLE_RATE = 16000
@@ -138,7 +170,7 @@ function base64ToInt16Array(b64: string): Int16Array {
 
 export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCaptureProps>(
   function LiveVoiceCapture(
-    { onTurnComplete, onModelSpeaking, onUserSpeaking, onReady, onStatusChange, onError, hideVisualizer = false, muted = false },
+    { onTurnComplete, onModelSpeaking, onUserSpeaking, onReady, onStatusChange, onError, hideVisualizer = false, muted = false, outputAudioContext = null },
     ref,
   ) {
     // Mirror prop callbacks into refs — the SDK captures the callbacks passed
@@ -163,11 +195,19 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
     const sessionRef = useRef<Session | null>(null)
     const inputCtxRef = useRef<AudioContext | null>(null)
     const outputCtxRef = useRef<AudioContext | null>(null)
+    // Whether we own the output context (and are responsible for closing it)
+    // vs. the parent supplied it (keep it alive across remounts for iOS).
+    const outputCtxOwnedRef = useRef<boolean>(false)
     const micStreamRef = useRef<MediaStream | null>(null)
     const micNodeRef = useRef<AudioWorkletNode | null>(null)
     const activePlaybackRef = useRef<AudioBufferSourceNode[]>([])
     const playbackTimeRef = useRef<number>(0)
     const modelSpeakingRef = useRef<boolean>(false)
+    // Whether the model has actually produced audio or transcription in the
+    // current turn. Guards the anchor-detection flip so a stray server-side
+    // turnComplete (keepalive, transient reset) can't silently consume the
+    // anchor slot and eat the first real user turn.
+    const modelProducedOutputRef = useRef<boolean>(false)
     const userTranscriptBufferRef = useRef<string>('')
     const modelTranscriptBufferRef = useRef<string>('')
     const anchorSpokenRef = useRef<boolean>(false)
@@ -235,12 +275,18 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
       try { micNodeRef.current?.disconnect() } catch {}
       try { micStreamRef.current?.getTracks().forEach(t => t.stop()) } catch {}
       try { inputCtxRef.current?.close() } catch {}
-      try { outputCtxRef.current?.close() } catch {}
+      // Only close the output context if WE created it. If the parent
+      // supplied a pre-unlocked context (iOS gesture-unlock path), closing
+      // it would kick us back to the suspended state on reconnect.
+      if (outputCtxOwnedRef.current) {
+        try { outputCtxRef.current?.close() } catch {}
+      }
       sessionRef.current = null
       micNodeRef.current = null
       micStreamRef.current = null
       inputCtxRef.current = null
       outputCtxRef.current = null
+      outputCtxOwnedRef.current = false
     }
 
     // ── Server message handler ─────────────────────────────────────────────
@@ -257,6 +303,7 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
             const pcm = base64ToInt16Array(inline.data)
             enqueueOutputAudio(pcm)
             modelSpeakingRef.current = true
+            modelProducedOutputRef.current = true
             if (statusRef.current !== 'speaking') setStatus('speaking')
           }
         }
@@ -269,6 +316,7 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
       }
       if (sc.outputTranscription?.text) {
         modelTranscriptBufferRef.current += sc.outputTranscription.text
+        modelProducedOutputRef.current = true
         onModelSpeakingRef.current?.(modelTranscriptBufferRef.current)
       }
 
@@ -283,8 +331,10 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
       if (sc.turnComplete) {
         const user = userTranscriptBufferRef.current.trim()
         const modelText = modelTranscriptBufferRef.current.trim()
+        const modelSpokeThisTurn = modelProducedOutputRef.current || modelText.length > 0
         userTranscriptBufferRef.current = ''
         modelTranscriptBufferRef.current = ''
+        modelProducedOutputRef.current = false
 
         // If model is no longer actively enqueueing audio, flip to listening.
         // Playback may still be draining — the onended hook above will
@@ -294,11 +344,19 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
           setStatus('listening')
         }
 
-        // First turnComplete is the model's opening anchor. Don't bubble it
-        // up as a "user turn" — there's no user transcript yet.
+        // First turnComplete where the model actually spoke is the anchor.
+        // Swallow it — there's no user transcript yet. Crucially we do NOT
+        // flip `anchorSpokenRef` on stray server-initiated turnCompletes
+        // (keepalive, transient reset, empty protocol frames) — doing so
+        // would silently consume the anchor slot and eat the first real
+        // user turn.
         if (!anchorSpokenRef.current) {
-          anchorSpokenRef.current = true
-          console.info('[LiveVoice] anchor spoken', { modelLen: modelText.length })
+          if (modelSpokeThisTurn) {
+            anchorSpokenRef.current = true
+            console.info('[LiveVoice] anchor spoken', { modelLen: modelText.length })
+          } else {
+            console.warn('[LiveVoice] ignoring stray turnComplete before anchor spoken')
+          }
           return
         }
         if (!user) {
@@ -316,6 +374,7 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
       closedRef.current = false
       anchorSpokenRef.current = false
       modelSpeakingRef.current = false
+      modelProducedOutputRef.current = false
 
       ;(async () => {
         try {
@@ -327,20 +386,29 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
           const { token, model } = await tokRes.json()
           if (cancelled) return
 
-          // 2. Set up audio contexts. Mobile browsers often hand them back
-          //    suspended even after a user gesture — an explicit resume is
-          //    required or playback silently no-ops and the mic worklet
-          //    never ticks.
+          // 2. Set up audio contexts. If the parent supplied a pre-unlocked
+          //    output context (iOS gesture path), reuse it — creating a new
+          //    one here would be outside the gesture tick and silently
+          //    remain suspended on iOS Safari. Otherwise construct our own.
           const inputCtx = new AudioContext({ sampleRate: 48000 })
-          const outputCtx = new AudioContext({ sampleRate: OUTPUT_SAMPLE_RATE })
           inputCtxRef.current = inputCtx
-          outputCtxRef.current = outputCtx
+          if (outputAudioContext) {
+            outputCtxRef.current = outputAudioContext
+            outputCtxOwnedRef.current = false
+          } else {
+            outputCtxRef.current = new AudioContext({ sampleRate: OUTPUT_SAMPLE_RATE })
+            outputCtxOwnedRef.current = true
+          }
+          const outputCtx = outputCtxRef.current
           if (inputCtx.state === 'suspended') {
             try { await inputCtx.resume() } catch {}
           }
           if (outputCtx.state === 'suspended') {
             try { await outputCtx.resume() } catch {}
           }
+          // Reset playback scheduler — the previous mount's playbackTime may
+          // be in the past relative to a reused context's currentTime.
+          playbackTimeRef.current = outputCtx.currentTime
           await inputCtx.audioWorklet.addModule('/onboarding-mic-worklet.js')
 
           // 3. Request mic permission.
@@ -394,14 +462,26 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
               systemInstruction: SYSTEM_INSTRUCTION,
               speechConfig: {
                 voiceConfig: {
+                  // Aoede — softer, warmer "thoughtful friend" voice.
                   prebuiltVoiceConfig: { voiceName: 'Aoede' },
                 },
               },
               inputAudioTranscription: {},
               outputAudioTranscription: {},
-              // Leave automaticActivityDetection at defaults — the API's
-              // built-in VAD is tuned for conversational audio. Overriding
-              // the thresholds was how we got into trouble last time.
+              // Custom VAD tuned for a reflective 3-minute chat where people
+              // pause mid-thought. The defaults are ~800ms of silence, which
+              // cut users off mid-sentence in dogfood. HIGH start sensitivity
+              // picks up softly-begun speech; LOW end + 1800ms silence lets
+              // people think before they finish.
+              realtimeInputConfig: {
+                automaticActivityDetection: {
+                  disabled: false,
+                  startOfSpeechSensitivity: StartSensitivity.START_SENSITIVITY_HIGH,
+                  endOfSpeechSensitivity: EndSensitivity.END_SENSITIVITY_LOW,
+                  prefixPaddingMs: 300,
+                  silenceDurationMs: 1800,
+                },
+              },
             },
             callbacks: {
               onopen: () => {
@@ -453,13 +533,24 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
           }
 
           // 6. Pump mic PCM frames into the Live session. Gate the uplink
-          //    while the model is speaking so browser echo cancellation
-          //    doesn't have to fight the model's own voice leaking back.
+          //    whenever Aperture is audible. Browser echo cancellation is
+          //    imperfect, and the model's own voice leaking back as "user
+          //    input" makes it interrupt itself or loop on its own tail.
+          //
+          //    We gate on TWO signals: `modelSpeakingRef` (currently
+          //    generating) OR `activePlaybackRef.length > 0` (queued audio
+          //    still playing out of the output context). The second check
+          //    is essential because turnComplete fires as soon as the model
+          //    FINISHES GENERATING — the scheduled AudioBufferSource nodes
+          //    are still playing for up to a few hundred ms after that.
+          //    Without this gate, the mic opens during that tail and the
+          //    Live model hears itself finishing its own sentence.
           workletNode.port.onmessage = (event: MessageEvent<ArrayBuffer>) => {
             const s = sessionRef.current
             if (!s || closedRef.current) return
             if (mutedRef.current) return
             if (modelSpeakingRef.current) return
+            if (activePlaybackRef.current.length > 0) return
             try {
               s.sendRealtimeInput({
                 audio: {
@@ -474,6 +565,11 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
         } catch (err: any) {
           if (cancelled) return
           console.error('[LiveVoice] init failed', err)
+          // Ensure any partial resources we allocated before the failure
+          // (AudioContexts, mic tracks, worklet node) are released. Without
+          // this, a token-mint or getUserMedia failure leaves the page with
+          // an open AudioContext + mic stream until the user navigates away.
+          teardown()
           handleError(err?.message || 'Failed to start voice session')
         }
       })()
