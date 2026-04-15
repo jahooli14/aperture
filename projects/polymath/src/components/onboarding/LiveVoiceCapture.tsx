@@ -15,10 +15,12 @@
  *     → mint ephemeral token from /api/utilities?resource=onboarding-token
  *     → open AudioContext (input 48k, output 24k) + mic worklet @ 16kHz PCM
  *     → ai.live.connect with AUDIO response modality + transcription enabled
- *     → on session open: auto-send a seed user turn so the model speaks the
- *       anchor question. No begin() race — the seed is sent INSIDE the same
- *       async scope that stores the session ref, so there is no window in
- *       which the parent could call begin() before the session exists.
+ *     → on session open: auto-send a seed user turn via sendRealtimeInput
+ *       so the model speaks the anchor question. sendClientContent is NOT
+ *       used — per the Live API docs, sendClientContent is reserved for
+ *       seeding initial CONTEXT HISTORY and rejects new-turn content with
+ *       "Request contains an invalid argument". Use sendRealtimeInput for
+ *       all text/audio/video input during a live session.
  *     → pump mic PCM into sendRealtimeInput (gated while the model is
  *       generating audio so we don't feed the model its own voice).
  *     → receive model audio chunks → schedule on the output AudioContext.
@@ -577,35 +579,23 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
           setStatus('ready')
           onReadyRef.current?.()
 
+          // Seed via sendRealtimeInput — this is the documented API for
+          // new user messages on an audio session. `sendClientContent` is
+          // reserved for seeding initial CONTEXT history (requires the
+          // `initial_history_in_client_content` flag in history_config)
+          // and WILL be rejected with "Request contains an invalid
+          // argument" if used for new turns. The diagnostic log from a
+          // previous iteration of this file showed exactly that failure
+          // mode — setup-complete arrived, then the socket immediately
+          // closed on our sendClientContent call.
           try {
-            session.sendClientContent({
-              turns: [{ role: 'user', parts: [{ text: 'Hello.' }] }],
-              turnComplete: true,
-            })
-            diag('seed-sent (sendClientContent)')
+            session.sendRealtimeInput({ text: 'Hello.' })
+            diag('seed-sent (sendRealtimeInput)')
           } catch (err: any) {
             diag(`seed-failed: ${err?.message || 'unknown'}`)
             handleError('Could not start the conversation. Refresh to try again.')
             return
           }
-
-          // Retry fallback: if the first seed didn't provoke any model
-          // output within 5s, try again via sendRealtimeInput. Different
-          // transport path in the SDK — different code path in the server.
-          // If one was silently misconfigured, the other may still work.
-          setTimeout(() => {
-            if (cancelled || closedRef.current) return
-            if (anchorSpokenRef.current) return
-            if (modelProducedOutputRef.current) return
-            const s = sessionRef.current
-            if (!s) return
-            try {
-              s.sendRealtimeInput({ text: 'Hi, please greet me.' })
-              diag('seed-retry (sendRealtimeInput)')
-            } catch (err: any) {
-              diag(`seed-retry-failed: ${err?.message || 'unknown'}`)
-            }
-          }, 5000)
 
           // 6. Pump mic PCM frames into the Live session. Gate the uplink
           //    whenever Aperture is audible. Browser echo cancellation is
@@ -667,10 +657,10 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
           const session = sessionRef.current
           if (!session || !text) return
           try {
-            session.sendClientContent({
-              turns: [{ role: 'user', parts: [{ text }] }],
-              turnComplete: true,
-            })
+            // Use sendRealtimeInput for user text during the conversation —
+            // sendClientContent is only for seeding initial history and
+            // will close the socket with "invalid argument" otherwise.
+            session.sendRealtimeInput({ text })
             userTranscriptBufferRef.current += text
             onUserSpeakingRef.current?.(userTranscriptBufferRef.current)
           } catch (err) {
