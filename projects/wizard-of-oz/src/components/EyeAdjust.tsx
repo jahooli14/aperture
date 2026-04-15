@@ -177,8 +177,19 @@ export function EyeAdjust({
    * Anchor-preserving pinch: keep the point (in frame coords) that was under
    * the pinch origin at gesture start STILL under the origin as scale/rotation
    * change. Without this, the image jumps whenever you start pinching.
+   *
+   * We record the gesture's *initial* offset (not [1, 0]) because @use-gesture
+   * v10 returns `offset` as a value that persists across gestures — it's NOT
+   * guaranteed to start at 1 on each pinch. Computing ratios relative to the
+   * captured start avoids the classic "image suddenly collapses to 5% scale"
+   * bug caused by treating `movement[0]` as a ratio (it's a delta starting at
+   * 0, not 1, so `scale * movement = scale * 0 = 0`).
    */
-  const pinchMemoRef = useRef<{ initial: Transform; anchorFrame: { x: number; y: number } } | null>(null);
+  const pinchMemoRef = useRef<{
+    initial: Transform;
+    initialOffset: { scale: number; angle: number };
+    anchorFrame: { x: number; y: number };
+  } | null>(null);
 
   useGesture(
     {
@@ -199,26 +210,31 @@ export function EyeAdjust({
           ty: prev.ty + dy * stageScale,
         }));
       },
-      onPinchStart: ({ origin: [ox, oy] }) => {
+      onPinchStart: ({ offset: [oScale, oAngle], origin: [ox, oy] }) => {
         const el = containerRef.current;
         if (!el) return;
         const rect = el.getBoundingClientRect();
         const stageScale = TARGET_WIDTH / Math.max(rect.width, 1);
         pinchMemoRef.current = {
           initial: transform,
+          initialOffset: { scale: oScale, angle: oAngle },
           anchorFrame: {
             x: (ox - rect.left) * stageScale,
             y: (oy - rect.top) * stageScale,
           },
         };
       },
-      onPinch: ({ movement: [mScale, mAngle], first }) => {
-        // `movement[0]` is the cumulative scale ratio since gesture start
-        // (1 = unchanged), `movement[1]` is cumulative rotation in degrees.
+      onPinch: ({ offset: [oScale, oAngle], first }) => {
+        // Use `offset` (cumulative, scale-at-rest = prior value) rather than
+        // `movement` (delta since gesture start, starts at 0 not 1). Ratio is
+        // relative to the offset captured at pinch start.
         if (first || !pinchMemoRef.current) return;
         const memo = pinchMemoRef.current;
-        const newScale = clampScale(memo.initial.scale * mScale);
-        const newRotation = memo.initial.rotation + (mAngle * Math.PI) / 180;
+        const baseOffsetScale = memo.initialOffset.scale > 0 ? memo.initialOffset.scale : 1;
+        const scaleRatio = oScale / baseOffsetScale;
+        const angleDeltaDeg = oAngle - memo.initialOffset.angle;
+        const newScale = clampScale(memo.initial.scale * scaleRatio);
+        const newRotation = memo.initial.rotation + (angleDeltaDeg * Math.PI) / 180;
 
         // Keep the anchor fixed: compute anchor in source coords using the
         // ORIGINAL transform, then find the tx/ty such that the NEW transform
@@ -245,7 +261,10 @@ export function EyeAdjust({
       // Allow pinch to start even when the drag has begun (two fingers land
       // after one). `threshold` = 0 so tiny motions still register.
       drag: { filterTaps: true, threshold: 2 },
-      pinch: { scaleBounds: { min: 0.05, max: 20 }, rubberband: false },
+      // No `scaleBounds` here — bounds on `offset` would clip the global
+      // accumulator across gestures. We clamp our *applied* scale explicitly
+      // via clampScale(), which is what the user actually sees.
+      pinch: { rubberband: false },
     }
   );
 
