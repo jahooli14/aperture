@@ -344,11 +344,14 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
         emoji: emoji || '💬'
       };
 
+      // Share partners can edit notes on each other's photos (see migration
+      // 021); we rely on RLS to enforce the own-or-shared check rather than
+      // filtering by user_id here, which would silently exclude partner-owned
+      // photos and make the save look successful with zero rows affected.
       const { error } = await supabase
         .from('photos')
         .update({ metadata } as never)
-        .eq('id', photoId)
-        .eq('user_id', user.id); // Ensure user can only update their own photos
+        .eq('id', photoId);
 
       if (error) {
         logger.error('Error updating photo note', { error: error.message, photoId }, 'PhotoStore');
@@ -585,11 +588,15 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
     // `.select()` returns the rows that were actually updated so we can verify
     // at least one matched. Without this, a zero-row update (e.g. RLS blocks,
     // id not found) looks like success to Supabase's error channel.
+    //
+    // We intentionally do NOT filter by `user_id` here: share partners can
+    // re-align each other's photos (see migration 021), and RLS enforces the
+    // own-or-shared check. Adding `.eq('user_id', user.id)` would silently
+    // exclude the partner's photos even though RLS would allow the update.
     const { data: updatedRows, error: updateError } = await supabase
       .from('photos')
       .update(updatePayload as never)
       .eq('id', photoId)
-      .eq('user_id', user.id)
       .select();
 
     if (updateError) {
