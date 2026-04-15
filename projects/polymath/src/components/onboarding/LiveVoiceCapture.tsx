@@ -1,28 +1,33 @@
 /**
- * LiveVoiceCapture — Gemini Live API voice transport for Aperture onboarding (Option C).
+ * LiveVoiceCapture — Gemini Live API voice transport for Aperture onboarding.
  *
- * Architecture:
- *   - Live model IS the conversational brain. Its system prompt contains all
- *     the onboarding rules: anchor question, 6 coverage slots, reframe style,
- *     stopping criteria, tone. It decides what to ask next and speaks it
- *     naturally with the Kore voice.
- *   - Aperture's coverage planner runs in PARALLEL as an observer
- *     (`?resource=onboarding-observe`) after each turn — it updates slot
- *     confidences so the dots animate and the final reveal analysis has a
- *     rich coverage grid. It does NOT influence what the model says.
+ * Clean-room rewrite — follows the documented Google Gen AI SDK pattern for
+ * bidirectional audio conversations. Deliberately minimal: no observer
+ * parallelism in here, no deferred-onReady races, no short-form begin()
+ * experiments. If the voice stops working, fix it HERE — do not layer
+ * another patch on top.
+ *
+ * Reference: https://ai.google.dev/gemini-api/docs/live-api/get-started-sdk
+ *            https://ai.google.dev/gemini-api/docs/live-guide
  *
  * Lifecycle:
- *   - Mount → mint ephemeral token → open mic AudioContext + worklet →
- *     connect to Live → onReady fires.
- *   - Parent calls `begin()` → sends a seed user turn → model speaks the
- *     anchor question aloud.
- *   - User speaks → native VAD → native input transcription → model responds
- *     with audio + outputTranscription.
- *   - `onTurnComplete(userTranscript, modelUtterance)` fires when the
- *     server emits `turnComplete: true`.
- *   - Incremental text is also streamed via `onUserSpeaking` and
- *     `onModelSpeaking` for live subtitle rendering.
- *   - Parent calls `close()` when the observer decides to stop.
+ *   mount
+ *     → mint ephemeral token from /api/utilities?resource=onboarding-token
+ *     → open AudioContext (input 48k, output 24k) + mic worklet @ 16kHz PCM
+ *     → ai.live.connect with AUDIO response modality + transcription enabled
+ *     → on session open: auto-send a seed user turn so the model speaks the
+ *       anchor question. No begin() race — the seed is sent INSIDE the same
+ *       async scope that stores the session ref, so there is no window in
+ *       which the parent could call begin() before the session exists.
+ *     → pump mic PCM into sendRealtimeInput (gated while the model is
+ *       generating audio so we don't feed the model its own voice).
+ *     → receive model audio chunks → schedule on the output AudioContext.
+ *     → receive transcription deltas → stream to parent via onModelSpeaking /
+ *       onUserSpeaking.
+ *     → on serverContent.turnComplete: flush buffered transcripts to parent
+ *       via onTurnComplete.
+ *   unmount / close()
+ *     → tear down session + audio contexts + mic tracks.
  */
 
 import { useEffect, useImperativeHandle, useRef, useState, forwardRef } from 'react'
@@ -33,12 +38,11 @@ import { GoogleGenAI, Modality, StartSensitivity, EndSensitivity, type Session, 
 // ── Public API ─────────────────────────────────────────────────────────────
 
 export interface LiveVoiceCaptureHandle {
-  /** Trigger the conversation — sends a seed turn that the model responds to
-   *  with the opening anchor question. Safe to call multiple times (noop
-   *  after the first). */
+  /** Ensure the conversation has started. Safe to call from anywhere — the
+   *  seed is auto-sent on connection regardless, so this is now a no-op
+   *  outside of the retry case. Kept for interface compatibility. */
   begin: () => void
-  /** Inject a typed user message (typing fallback). Model responds as if the
-   *  user had spoken it. */
+  /** Inject a typed user message (typing fallback). */
   sendUserText: (text: string) => void
   /** Close the Live session gracefully. */
   close: () => void
@@ -47,29 +51,24 @@ export interface LiveVoiceCaptureHandle {
 export type LiveVoiceStatus = 'connecting' | 'ready' | 'speaking' | 'listening' | 'error'
 
 interface LiveVoiceCaptureProps {
-  /** Both transcripts for a complete user+model exchange. Fires on
-   *  `serverContent.turnComplete`. */
   onTurnComplete: (userTranscript: string, modelUtterance: string) => void
-  /** Incremental model transcript (live subtitle for "current question"). */
   onModelSpeaking?: (accumulated: string) => void
-  /** Incremental user transcript (live subtitle of the user's current answer). */
   onUserSpeaking?: (accumulated: string) => void
-  /** Live session is connected + ready. */
   onReady?: () => void
-  /** Whenever the voice layer status changes — parent can show a prominent
-   *  cue so the user knows when it's their turn. */
   onStatusChange?: (status: LiveVoiceStatus) => void
-  /** Unrecoverable error. */
   onError?: (message: string) => void
-  /** If true, hide the component's internal visualizer (caller renders its own). */
   hideVisualizer?: boolean
-  /** If true, the mic uplink is muted — no audio frames are sent to Live.
-   *  Used by the typing fallback so spurious ambient noise doesn't kick
-   *  off a VAD-driven user turn while the user is deliberately typing. */
+  /** If true, suppress mic uplink (e.g. user is typing instead of speaking). */
   muted?: boolean
+  /** Pre-unlocked AudioContext from a user gesture. Required for reliable
+   *  audio playback on iOS Safari — the context must be created + resumed
+   *  synchronously inside a tap handler or playback silently no-ops. If
+   *  omitted, a new context is created here (fine on desktop). The parent
+   *  retains ownership and we will NOT close it on teardown. */
+  outputAudioContext?: AudioContext | null
 }
 
-// ── System prompt — the whole onboarding design, delivered to the model ───
+// ── System instruction ─────────────────────────────────────────────────────
 
 const SYSTEM_INSTRUCTION = `You are Aperture. You're having a short, natural voice conversation with someone — about 3 minutes, 5 or 6 exchanges. After this chat they'll see a reveal that connects everything they shared.
 
@@ -77,11 +76,11 @@ You are not an interviewer or a coach. You're a curious, warm person who genuine
 
 ## How the conversation starts
 
-Open with exactly this line, verbatim. Do not paraphrase, rewrite, shorten, lengthen, or substitute synonyms. This is the single most important rule:
+Your FIRST message must be exactly this line, spoken warmly, then stop and wait:
 
 "Hey — what's something you've been thinking about a lot lately?"
 
-Say it warmly, like you're genuinely curious. Then stop and wait.
+Do not paraphrase, rewrite, shorten, lengthen, or substitute synonyms. Do not add a greeting before it. Do not add anything after it. Just that one sentence. This is the single most important rule.
 
 ## How each turn should feel
 
@@ -143,9 +142,7 @@ After 5 or 6 good exchanges, OR once you've covered 4+ threads including cross-d
 
 ## The one strict rule
 
-Everything you reflect back must be grounded in what they actually said — their words, not upgrades of their words. Do not make up values, aesthetics, beliefs, or intentions they didn't express. If you can't ground it, ask a small clarifier instead of pretending.
-
-Now, greet them with your opening line.`
+Everything you reflect back must be grounded in what they actually said — their words, not upgrades of their words. Do not make up values, aesthetics, beliefs, or intentions they didn't express. If you can't ground it, ask a small clarifier instead of pretending.`
 
 const OUTPUT_SAMPLE_RATE = 24000
 const INPUT_SAMPLE_RATE = 16000
@@ -173,39 +170,12 @@ function base64ToInt16Array(b64: string): Int16Array {
 
 export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCaptureProps>(
   function LiveVoiceCapture(
-    { onTurnComplete, onModelSpeaking, onUserSpeaking, onReady, onStatusChange, onError, hideVisualizer = false, muted = false },
+    { onTurnComplete, onModelSpeaking, onUserSpeaking, onReady, onStatusChange, onError, hideVisualizer = false, muted = false, outputAudioContext = null },
     ref,
   ) {
-    // Mirror `muted` into a ref so the mic callback (set up once inside
-    // the connect effect) reads the latest value every frame.
-    const mutedRef = useRef(muted)
-    useEffect(() => { mutedRef.current = muted }, [muted])
-    const sessionRef = useRef<Session | null>(null)
-    const inputCtxRef = useRef<AudioContext | null>(null)
-    const outputCtxRef = useRef<AudioContext | null>(null)
-    const micStreamRef = useRef<MediaStream | null>(null)
-    const micNodeRef = useRef<AudioWorkletNode | null>(null)
-    // Active audio playback sources — tracked so we can stop them immediately
-    // if the server emits `interrupted: true` (otherwise the tail of the old
-    // utterance keeps playing over the new one).
-    const activePlaybackRef = useRef<AudioBufferSourceNode[]>([])
-    const playbackTimeRef = useRef<number>(0)
-    // Tracks whether the model is currently speaking — used to gate mic uplink
-    // so the echo cancellation doesn't fight with itself and the model doesn't
-    // hear its own voice and loop on it. Ref (not state) so the mic callback
-    // is always reading the latest value with no re-render needed.
-    const modelSpeakingRef = useRef<boolean>(false)
-    const userTranscriptBufferRef = useRef<string>('')
-    const modelTranscriptBufferRef = useRef<string>('')
-    const beganRef = useRef<boolean>(false)
-    const beganAnchorSpokenRef = useRef<boolean>(false)
-    const closedRef = useRef<boolean>(false)
-    // The SDK's callbacks capture the component closure at connect-time. If
-    // we reference `onTurnComplete` etc. directly in those callbacks, we
-    // capture the FIRST render's callbacks forever — any subsequent
-    // re-render where the parent passes a new closure would be silently
-    // ignored. Mirror the props into refs and read from the refs inside the
-    // callbacks so we always see the latest handler.
+    // Mirror prop callbacks into refs — the SDK captures the callbacks passed
+    // at connect-time, so reading from refs ensures the latest parent
+    // closures always see the current handlers even after re-renders.
     const onTurnCompleteRef = useRef(onTurnComplete)
     const onModelSpeakingRef = useRef(onModelSpeaking)
     const onUserSpeakingRef = useRef(onUserSpeaking)
@@ -219,11 +189,36 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
     useEffect(() => { onStatusChangeRef.current = onStatusChange }, [onStatusChange])
     useEffect(() => { onErrorRef.current = onError }, [onError])
 
+    const mutedRef = useRef(muted)
+    useEffect(() => { mutedRef.current = muted }, [muted])
+
+    const sessionRef = useRef<Session | null>(null)
+    const inputCtxRef = useRef<AudioContext | null>(null)
+    const outputCtxRef = useRef<AudioContext | null>(null)
+    // Whether we own the output context (and are responsible for closing it)
+    // vs. the parent supplied it (keep it alive across remounts for iOS).
+    const outputCtxOwnedRef = useRef<boolean>(false)
+    const micStreamRef = useRef<MediaStream | null>(null)
+    const micNodeRef = useRef<AudioWorkletNode | null>(null)
+    const activePlaybackRef = useRef<AudioBufferSourceNode[]>([])
+    const playbackTimeRef = useRef<number>(0)
+    const modelSpeakingRef = useRef<boolean>(false)
+    // Whether the model has actually produced audio or transcription in the
+    // current turn. Guards the anchor-detection flip so a stray server-side
+    // turnComplete (keepalive, transient reset) can't silently consume the
+    // anchor slot and eat the first real user turn.
+    const modelProducedOutputRef = useRef<boolean>(false)
+    const userTranscriptBufferRef = useRef<string>('')
+    const modelTranscriptBufferRef = useRef<string>('')
+    const anchorSpokenRef = useRef<boolean>(false)
+    const closedRef = useRef<boolean>(false)
+
     const [status, setStatusRaw] = useState<LiveVoiceStatus>('connecting')
     const statusRef = useRef<LiveVoiceStatus>('connecting')
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
     const setStatus = (s: LiveVoiceStatus) => {
+      if (statusRef.current === s) return
       statusRef.current = s
       setStatusRaw(s)
       onStatusChangeRef.current?.(s)
@@ -232,7 +227,7 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
     // ── Audio output ────────────────────────────────────────────────────────
     const enqueueOutputAudio = (pcm: Int16Array) => {
       const ctx = outputCtxRef.current
-      if (!ctx) return
+      if (!ctx || closedRef.current) return
       const float = new Float32Array(pcm.length)
       for (let i = 0; i < pcm.length; i++) {
         float[i] = pcm[i] / (pcm[i] < 0 ? 0x8000 : 0x7fff)
@@ -249,12 +244,15 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
       activePlaybackRef.current.push(source)
       source.onended = () => {
         activePlaybackRef.current = activePlaybackRef.current.filter(s => s !== source)
+        // When the very last chunk in flight finishes, mark the model as
+        // done speaking so the mic uplink re-opens.
+        if (activePlaybackRef.current.length === 0) {
+          modelSpeakingRef.current = false
+          if (statusRef.current === 'speaking') setStatus('listening')
+        }
       }
     }
 
-    // Cut off every queued/playing chunk instantly. Called on `interrupted`
-    // (user barge-in) and on teardown. Without this, the tail of the model's
-    // previous utterance keeps playing on top of whatever comes next.
     const stopAllPlayback = () => {
       for (const s of activePlaybackRef.current) {
         try { s.stop() } catch {}
@@ -264,14 +262,12 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
       playbackTimeRef.current = outputCtxRef.current?.currentTime || 0
     }
 
-    // ── Errors ──────────────────────────────────────────────────────────────
     const handleError = (msg: string) => {
       setErrorMsg(msg)
       setStatus('error')
       onErrorRef.current?.(msg)
     }
 
-    // ── Teardown ────────────────────────────────────────────────────────────
     const teardown = () => {
       closedRef.current = true
       stopAllPlayback()
@@ -279,28 +275,110 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
       try { micNodeRef.current?.disconnect() } catch {}
       try { micStreamRef.current?.getTracks().forEach(t => t.stop()) } catch {}
       try { inputCtxRef.current?.close() } catch {}
-      try { outputCtxRef.current?.close() } catch {}
+      // Only close the output context if WE created it. If the parent
+      // supplied a pre-unlocked context (iOS gesture-unlock path), closing
+      // it would kick us back to the suspended state on reconnect.
+      if (outputCtxOwnedRef.current) {
+        try { outputCtxRef.current?.close() } catch {}
+      }
       sessionRef.current = null
       micNodeRef.current = null
       micStreamRef.current = null
       inputCtxRef.current = null
       outputCtxRef.current = null
+      outputCtxOwnedRef.current = false
+    }
+
+    // ── Server message handler ─────────────────────────────────────────────
+    const handleServerMessage = (message: LiveServerMessage) => {
+      const sc: any = (message as any).serverContent
+      if (!sc) return
+
+      // 1. Model audio chunks → schedule for playback.
+      const parts = sc.modelTurn?.parts as Array<any> | undefined
+      if (parts) {
+        for (const p of parts) {
+          const inline = p.inlineData
+          if (inline?.data && inline.mimeType?.startsWith('audio/pcm')) {
+            const pcm = base64ToInt16Array(inline.data)
+            enqueueOutputAudio(pcm)
+            modelSpeakingRef.current = true
+            modelProducedOutputRef.current = true
+            if (statusRef.current !== 'speaking') setStatus('speaking')
+          }
+        }
+      }
+
+      // 2. Incremental transcripts → stream to parent for live subtitles.
+      if (sc.inputTranscription?.text) {
+        userTranscriptBufferRef.current += sc.inputTranscription.text
+        onUserSpeakingRef.current?.(userTranscriptBufferRef.current)
+      }
+      if (sc.outputTranscription?.text) {
+        modelTranscriptBufferRef.current += sc.outputTranscription.text
+        modelProducedOutputRef.current = true
+        onModelSpeakingRef.current?.(modelTranscriptBufferRef.current)
+      }
+
+      // 3. User interrupted the model → kill outgoing playback.
+      if (sc.interrupted) {
+        stopAllPlayback()
+        modelSpeakingRef.current = false
+        setStatus('listening')
+      }
+
+      // 4. Turn complete → hand the accumulated transcripts to the parent.
+      if (sc.turnComplete) {
+        const user = userTranscriptBufferRef.current.trim()
+        const modelText = modelTranscriptBufferRef.current.trim()
+        const modelSpokeThisTurn = modelProducedOutputRef.current || modelText.length > 0
+        userTranscriptBufferRef.current = ''
+        modelTranscriptBufferRef.current = ''
+        modelProducedOutputRef.current = false
+
+        // If model is no longer actively enqueueing audio, flip to listening.
+        // Playback may still be draining — the onended hook above will
+        // handle the final transition when the buffer is truly empty.
+        if (activePlaybackRef.current.length === 0) {
+          modelSpeakingRef.current = false
+          setStatus('listening')
+        }
+
+        // First turnComplete where the model actually spoke is the anchor.
+        // Swallow it — there's no user transcript yet. Crucially we do NOT
+        // flip `anchorSpokenRef` on stray server-initiated turnCompletes
+        // (keepalive, transient reset, empty protocol frames) — doing so
+        // would silently consume the anchor slot and eat the first real
+        // user turn.
+        if (!anchorSpokenRef.current) {
+          if (modelSpokeThisTurn) {
+            anchorSpokenRef.current = true
+            console.info('[LiveVoice] anchor spoken', { modelLen: modelText.length })
+          } else {
+            console.warn('[LiveVoice] ignoring stray turnComplete before anchor spoken')
+          }
+          return
+        }
+        if (!user) {
+          // Empty user turn (VAD false-positive from ambient noise). Ignore.
+          return
+        }
+
+        onTurnCompleteRef.current(user, modelText)
+      }
     }
 
     // ── Connect ─────────────────────────────────────────────────────────────
     useEffect(() => {
       let cancelled = false
-      // Reset all per-connection flags. Without this, React StrictMode (or
-      // any remount in dev) would leave `closedRef`/`beganRef` stuck from
-      // the previous effect, silently breaking the second connection.
       closedRef.current = false
-      beganRef.current = false
-      beganAnchorSpokenRef.current = false
+      anchorSpokenRef.current = false
       modelSpeakingRef.current = false
+      modelProducedOutputRef.current = false
 
       ;(async () => {
         try {
-          // 1. Mint ephemeral token
+          // 1. Mint ephemeral token.
           const tokRes = await fetch('/api/utilities?resource=onboarding-token', {
             method: 'POST',
           })
@@ -308,26 +386,32 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
           const { token, model } = await tokRes.json()
           if (cancelled) return
 
-          // 2. Audio contexts (relies on preceding user gesture).
-          //    Mobile browsers often return contexts in `suspended` state
-          //    even with a prior gesture; an explicit resume() is needed
-          //    or playback silently no-ops and the mic worklet never ticks.
+          // 2. Set up audio contexts. If the parent supplied a pre-unlocked
+          //    output context (iOS gesture path), reuse it — creating a new
+          //    one here would be outside the gesture tick and silently
+          //    remain suspended on iOS Safari. Otherwise construct our own.
           const inputCtx = new AudioContext({ sampleRate: 48000 })
-          const outputCtx = new AudioContext({ sampleRate: OUTPUT_SAMPLE_RATE })
           inputCtxRef.current = inputCtx
-          outputCtxRef.current = outputCtx
-          console.info('[LiveVoice] audio ctx state', { input: inputCtx.state, output: outputCtx.state })
-          try {
-            if (inputCtx.state === 'suspended') await inputCtx.resume()
-            if (outputCtx.state === 'suspended') await outputCtx.resume()
-          } catch (e) {
-            console.warn('[LiveVoice] audio ctx resume failed (continuing)', e)
+          if (outputAudioContext) {
+            outputCtxRef.current = outputAudioContext
+            outputCtxOwnedRef.current = false
+          } else {
+            outputCtxRef.current = new AudioContext({ sampleRate: OUTPUT_SAMPLE_RATE })
+            outputCtxOwnedRef.current = true
           }
+          const outputCtx = outputCtxRef.current
+          if (inputCtx.state === 'suspended') {
+            try { await inputCtx.resume() } catch {}
+          }
+          if (outputCtx.state === 'suspended') {
+            try { await outputCtx.resume() } catch {}
+          }
+          // Reset playback scheduler — the previous mount's playbackTime may
+          // be in the past relative to a reused context's currentTime.
+          playbackTimeRef.current = outputCtx.currentTime
           await inputCtx.audioWorklet.addModule('/onboarding-mic-worklet.js')
 
-          // 3. Mic — translate the browser's terse errors into something
-          //    actionable. Permission denied is by far the most common failure
-          //    and the generic "NotAllowedError" is not helpful on its own.
+          // 3. Request mic permission.
           let stream: MediaStream
           try {
             stream = await navigator.mediaDevices.getUserMedia({
@@ -362,20 +446,14 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
           micNodeRef.current = workletNode
           sourceNode.connect(workletNode)
 
-          // 4. Connect to Live API
+          // 4. Connect to the Live API. We use v1alpha for ephemeral token
+          //    support. The config shape below mirrors the docs exactly —
+          //    do not add `as any` casts; if a field is rejected, the SDK's
+          //    type error is the signal that the API has changed.
           const ai = new GoogleGenAI({
             apiKey: token,
             httpOptions: { apiVersion: 'v1alpha' },
           })
-
-          // Some versions of the @google/genai SDK fire `onopen` synchronously
-          // during the `await ai.live.connect(...)` promise — i.e. BEFORE we
-          // get a chance to store the session ref. If that happens and we
-          // immediately signal the parent via onReady, the parent's
-          // begin() ends up running against a null sessionRef and does
-          // nothing. Defer the ready signal until after the session is
-          // stored; if onopen arrived early, fire the signal manually.
-          let openedEarly = false
 
           const session = await ai.live.connect({
             model,
@@ -384,43 +462,30 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
               systemInstruction: SYSTEM_INSTRUCTION,
               speechConfig: {
                 voiceConfig: {
-                  // Aoede — softer, warmer "thoughtful friend" voice. Kore
-                  // previously sounded clipped and slightly robotic for a
-                  // reflective conversation.
+                  // Aoede — softer, warmer "thoughtful friend" voice.
                   prebuiltVoiceConfig: { voiceName: 'Aoede' },
                 },
               },
               inputAudioTranscription: {},
               outputAudioTranscription: {},
+              // Custom VAD tuned for a reflective 3-minute chat where people
+              // pause mid-thought. The defaults are ~800ms of silence, which
+              // cut users off mid-sentence in dogfood. HIGH start sensitivity
+              // picks up softly-begun speech; LOW end + 1800ms silence lets
+              // people think before they finish.
               realtimeInputConfig: {
                 automaticActivityDetection: {
                   disabled: false,
-                  // HIGH start = detect user's voice quickly even if they begin softly.
-                  // LOW end   = wait longer before deciding they've stopped speaking.
                   startOfSpeechSensitivity: StartSensitivity.START_SENSITIVITY_HIGH,
                   endOfSpeechSensitivity: EndSensitivity.END_SENSITIVITY_LOW,
                   prefixPaddingMs: 300,
-                  // 1.8s of silence before we consider the user done. Long enough
-                  // that they can pause mid-thought without being cut off, short
-                  // enough that the reply doesn't feel delayed when they're
-                  // actually finished.
                   silenceDurationMs: 1800,
                 },
               },
-            } as any,
+            },
             callbacks: {
               onopen: () => {
-                if (cancelled) return
-                console.info('[LiveVoice] session open')
-                if (sessionRef.current) {
-                  // Session already stored — safe to signal parent now.
-                  setStatus('ready')
-                  onReadyRef.current?.()
-                } else {
-                  // onopen fired DURING the connect await; defer the
-                  // ready signal until sessionRef.current is set below.
-                  openedEarly = true
-                }
+                console.info('[LiveVoice] socket open')
               },
               onmessage: (message: LiveServerMessage) => {
                 handleServerMessage(message)
@@ -432,7 +497,7 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
               },
               onclose: (e: any) => {
                 const reason = e?.reason || e?.code || ''
-                console.warn('[LiveVoice] socket closed', reason, e)
+                console.warn('[LiveVoice] socket closed', reason)
                 if (statusRef.current === 'connecting') {
                   handleError(reason ? `Connection closed: ${reason}` : 'Voice connection closed unexpectedly')
                 }
@@ -446,34 +511,48 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
           }
           sessionRef.current = session
 
-          // If onopen fired during the await, the ready-signal was
-          // deferred. Now that the session is stored, fire it.
-          if (openedEarly) {
-            console.info('[LiveVoice] firing deferred onReady (onopen arrived early)')
-            setStatus('ready')
-            onReadyRef.current?.()
+          // 5. Signal ready to the parent and auto-trigger the opening turn.
+          //    By sending the seed in the SAME async scope that stored the
+          //    session, we eliminate the begin()-before-ready race entirely.
+          //    The system instruction tells the model exactly what to say
+          //    on the first turn, so any nudge is enough — the content of
+          //    the seed message is irrelevant.
+          setStatus('ready')
+          onReadyRef.current?.()
+
+          try {
+            session.sendClientContent({
+              turns: [{ role: 'user', parts: [{ text: 'Hello.' }] }],
+              turnComplete: true,
+            })
+            console.info('[LiveVoice] opening seed sent')
+          } catch (err) {
+            console.error('[LiveVoice] opening seed failed', err)
+            handleError('Could not start the conversation. Refresh to try again.')
+            return
           }
 
-          // 5. Pump mic PCM into the Live session — but gate the uplink
+          // 6. Pump mic PCM frames into the Live session. Gate the uplink
           //    whenever Aperture is audible. Browser echo cancellation is
           //    imperfect, and the model's own voice leaking back as "user
           //    input" makes it interrupt itself or loop on its own tail.
           //
-          //    We gate on TWO signals: modelSpeakingRef (currently
-          //    generating) OR activePlaybackRef.length > 0 (queued audio
+          //    We gate on TWO signals: `modelSpeakingRef` (currently
+          //    generating) OR `activePlaybackRef.length > 0` (queued audio
           //    still playing out of the output context). The second check
-          //    is essential because turnComplete fires as soon as the
-          //    model FINISHES GENERATING — the scheduled AudioBufferSource
-          //    nodes are still playing for up to a few hundred ms after
-          //    that. Without this gate, the mic opens during that tail
-          //    and the Live model hears itself finishing its own sentence.
+          //    is essential because turnComplete fires as soon as the model
+          //    FINISHES GENERATING — the scheduled AudioBufferSource nodes
+          //    are still playing for up to a few hundred ms after that.
+          //    Without this gate, the mic opens during that tail and the
+          //    Live model hears itself finishing its own sentence.
           workletNode.port.onmessage = (event: MessageEvent<ArrayBuffer>) => {
-            if (!sessionRef.current || closedRef.current) return
+            const s = sessionRef.current
+            if (!s || closedRef.current) return
             if (mutedRef.current) return
             if (modelSpeakingRef.current) return
             if (activePlaybackRef.current.length > 0) return
             try {
-              sessionRef.current.sendRealtimeInput({
+              s.sendRealtimeInput({
                 audio: {
                   data: int16ToBase64(event.data),
                   mimeType: `audio/pcm;rate=${INPUT_SAMPLE_RATE}`,
@@ -486,6 +565,11 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
         } catch (err: any) {
           if (cancelled) return
           console.error('[LiveVoice] init failed', err)
+          // Ensure any partial resources we allocated before the failure
+          // (AudioContexts, mic tracks, worklet node) are released. Without
+          // this, a token-mint or getUserMedia failure leaves the page with
+          // an open AudioContext + mic stream until the user navigates away.
+          teardown()
           handleError(err?.message || 'Failed to start voice session')
         }
       })()
@@ -497,118 +581,13 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
-    // ── Server message handling ─────────────────────────────────────────────
-    const handleServerMessage = (message: LiveServerMessage) => {
-      const sc: any = (message as any).serverContent
-      if (!sc) return
-
-      // Model audio chunks
-      const parts = sc.modelTurn?.parts as Array<any> | undefined
-      if (parts) {
-        for (const p of parts) {
-          const inline = p.inlineData
-          if (inline?.data && inline.mimeType?.startsWith('audio/pcm')) {
-            const pcm = base64ToInt16Array(inline.data)
-            enqueueOutputAudio(pcm)
-            modelSpeakingRef.current = true
-            if (statusRef.current !== 'speaking') setStatus('speaking')
-          }
-        }
-      }
-
-      // Incremental transcripts
-      if (sc.inputTranscription?.text) {
-        userTranscriptBufferRef.current += sc.inputTranscription.text
-        onUserSpeakingRef.current?.(userTranscriptBufferRef.current)
-      }
-      if (sc.outputTranscription?.text) {
-        modelTranscriptBufferRef.current += sc.outputTranscription.text
-        onModelSpeakingRef.current?.(modelTranscriptBufferRef.current)
-      }
-
-      // User barged in. Kill the model's remaining playback so their voice
-      // doesn't keep talking over the user, and re-open the mic uplink.
-      if (sc.interrupted) {
-        stopAllPlayback()
-        modelSpeakingRef.current = false
-        setStatus('listening')
-      }
-
-      // Turn complete — hand both transcripts to the parent.
-      if (sc.turnComplete) {
-        const user = userTranscriptBufferRef.current.trim()
-        const modelText = modelTranscriptBufferRef.current.trim()
-        console.info('[LiveVoice] turnComplete', {
-          user_len: user.length,
-          model_len: modelText.length,
-          anchor_spoken: beganAnchorSpokenRef.current,
-        })
-        userTranscriptBufferRef.current = ''
-        modelTranscriptBufferRef.current = ''
-        modelSpeakingRef.current = false
-        setStatus('listening')
-
-        // Skip "empty user" turns: when the model finished speaking and VAD
-        // never detected a real user utterance (just background noise or
-        // silence), we don't want to process it or observe it as a turn —
-        // that would make the model appear to "talk to itself" after
-        // half-a-second of user silence.
-        if (!user && !beganAnchorSpokenRef.current) {
-          // This is the very first turnComplete after begin() — the model
-          // has just finished speaking the anchor question. Mark that and
-          // wait for the real user turn. Don't bubble it up as a "turn".
-          beganAnchorSpokenRef.current = true
-          return
-        }
-        if (!user) {
-          // Subsequent empty turn (usually VAD firing on ambient noise with
-          // no real speech). Ignore — don't call observer, don't disturb
-          // the model. The user's next real utterance will start the next
-          // turn naturally.
-          return
-        }
-
-        onTurnCompleteRef.current(user, modelText)
-      }
-    }
-
     // ── Imperative handle ──────────────────────────────────────────────────
     useImperativeHandle(
       ref,
       () => ({
-        begin: () => {
-          if (beganRef.current) return
-          const session = sessionRef.current
-          if (!session) {
-            console.warn('[LiveVoice] begin() called before session ready — retry when onReady fires')
-            return
-          }
-          beganRef.current = true
-          try {
-            // Seed an opening user turn. This shape ({turns:[{role:'user',
-            // parts:[{text:"Hi."}]}], turnComplete:true}) is the proven
-            // pattern that worked in prior commits (V1 0e715be, 2648900).
-            //
-            // We previously tried the docs' short-form `{turnComplete: true}`
-            // in commit af30756 on the theory it was the idiomatic "begin
-            // generation" trigger. In practice the Live API stayed silent
-            // on that form — the fallback "taking a beat" card fired every
-            // time. Reverted. Don't re-introduce the short form without a
-            // live test confirming it actually produces model output
-            // against the current model ID.
-            session.sendClientContent({
-              turns: [
-                { role: 'user', parts: [{ text: 'Hi.' }] },
-              ],
-              turnComplete: true,
-            } as any)
-            console.info('[LiveVoice] begin seed sent')
-          } catch (err) {
-            console.error('[LiveVoice] begin failed', err)
-            beganRef.current = false
-            handleError('Could not start the conversation. Refresh to try again.')
-          }
-        },
+        // Kept for interface compatibility — the seed is auto-sent on
+        // connection now, so this is a no-op in the happy path.
+        begin: () => {},
         sendUserText: (text: string) => {
           const session = sessionRef.current
           if (!session || !text) return
@@ -616,9 +595,7 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
             session.sendClientContent({
               turns: [{ role: 'user', parts: [{ text }] }],
               turnComplete: true,
-            } as any)
-            // Mirror the typed text into the user transcript buffer so the
-            // parent sees it through onTurnComplete later.
+            })
             userTranscriptBufferRef.current += text
             onUserSpeakingRef.current?.(userTranscriptBufferRef.current)
           } catch (err) {
@@ -632,7 +609,7 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
       [],
     )
 
-    // ── Visual (tiny status pill) ──────────────────────────────────────────
+    // ── Visual ─────────────────────────────────────────────────────────────
     if (hideVisualizer && status !== 'error') return null
 
     if (status === 'error') {
