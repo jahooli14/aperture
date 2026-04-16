@@ -1,32 +1,25 @@
 # Aperture
 
-Personal projects monorepo by Dan Croome-Horgan.
+Personal projects monorepo.
 
-## Projects
+| Project | Path | Status |
+|---------|------|--------|
+| Pupils | `projects/wizard-of-oz/` | Production |
+| Polymath | `projects/polymath/` | Production |
+| Analogue | `projects/analogue/` | Active |
+| Idea Engine | `projects/idea-engine/` | Active |
+| Golf Masters | `projects/golf-masters/` | Active |
 
-| Project | Description | Status |
-|---------|-------------|--------|
-| [Pupils](projects/wizard-of-oz/) | Baby photo alignment app | Production |
-| [Polymath](projects/polymath/) | Voice-to-memory knowledge graph | Production |
-| [Agentic Swarm](agentic-swarm/) | Multi-agent task orchestration | Active |
+React · TypeScript · Vite · Vercel · Supabase.
 
-## Quick Start
+## Run a project
 
 ```bash
-git clone https://github.com/jahooli14/aperture.git
-cd aperture/projects/wizard-of-oz  # or polymath
+cd projects/<name>
 npm install
 npm run dev
 ```
 
-## Tech Stack
+## Working on this repo
 
-- React, TypeScript, Vite
-- Supabase, Vercel
-- Gemini AI, Claude AI
-
-## Docs
-
-- `CLAUDE.md` - Project overview
-- `START_HERE.md` - Getting started
-- `.process/` - Development guides
+See [`CLAUDE.md`](CLAUDE.md) — the single source of truth for tech stack, commit/PR conventions, and project-specific notes.
