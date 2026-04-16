@@ -70,9 +70,6 @@ export default defineConfig(({ mode }) => {
               '@capacitor/splash-screen',
               '@capacitor/status-bar'
             ],
-            // Heavy visualization libraries - separate chunk
-            'graph-vendor': ['three', 'd3-force-3d', 'react-force-graph-3d', 'react-force-graph-2d', 'd3-delaunay', 'd3'],
-            // Animation library
             'animation-vendor': ['framer-motion'],
           },
         },

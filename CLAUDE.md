@@ -106,8 +106,7 @@ Voice-capture life annoyances → AI drafts automated fixes → approve → runs
 - `api/_lib/fix-queue/runner.ts` — Fix execution
 - `api/_lib/fix-queue/types.ts` — FixDraft, FixAction types
 - `src/pages/FixQueuePage.tsx` — Approval UI
-- `.github/workflows/fix-queue-draft.yml` — Cron every 6h
-- `.github/workflows/fix-queue-runner.yml` — Cron every 30min
+- `.github/workflows/cron.yml` — Consolidated cron dispatcher. Draft every 6h (`0 */6 * * *`), runner every 30min (`*/30 * * * *`)
 
 **Env vars**
 - `RESEND_API_KEY` — Email (configured)

@@ -75,7 +75,7 @@ export function handleAPIError(error: unknown, res: VercelResponse) {
       success: false,
       error: error.message,
       code: error.code,
-      ...(error.details && { details: error.details })
+      ...(error.details !== undefined && error.details !== null ? { details: error.details } : {})
     })
   }
 
