@@ -48,13 +48,17 @@ export const CaptureMemoryBody = z
     body: memoryBody.optional(),
     title: title.optional(),
     source_reference: z
-      .object({
-        type: z.enum(['article', 'project', 'suggestion', 'list_item']),
-        id: z.string().max(200),
-        title: z.string().max(500).optional(),
-        url: z.string().max(2000).optional(),
-        list_type: z.string().max(100).optional(),
-      })
+      .union([
+        z.string().max(500),
+        z.object({
+          type: z.enum(['article', 'project', 'suggestion', 'list_item']),
+          id: z.string().max(200),
+          title: z.string().max(500).optional(),
+          url: z.string().max(2000).optional(),
+          list_type: z.string().max(100).optional(),
+        }),
+      ])
+      .nullable()
       .optional(),
     tags: tags.optional(),
     memory_type: memoryType.nullable().optional(),

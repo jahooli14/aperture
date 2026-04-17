@@ -53,6 +53,30 @@ describe('CaptureMemoryBody', () => {
     expect(result.success).toBe(false)
   })
 
+  it('accepts source_reference as a string (legacy shape)', () => {
+    const result = CaptureMemoryBody.safeParse({
+      transcript: 'ok',
+      source_reference: 'project:abc',
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts source_reference as null', () => {
+    const result = CaptureMemoryBody.safeParse({
+      transcript: 'ok',
+      source_reference: null,
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts source_reference as a structured object', () => {
+    const result = CaptureMemoryBody.safeParse({
+      transcript: 'ok',
+      source_reference: { type: 'list_item', id: 'abc' },
+    })
+    expect(result.success).toBe(true)
+  })
+
   it('allows memory_type = null (explicit clear)', () => {
     const result = CaptureMemoryBody.safeParse({
       transcript: 'ok',
