@@ -518,21 +518,22 @@ async function handleOnboardingSegment(req: VercelRequest, res: VercelResponse) 
   }
 
   const transcriptBlock = turns
-    .map(t => `Turn ${t.index}\nQ: ${t.question}\nA: ${t.transcript}`)
+    .map(t => `Interviewer: ${t.question}\nUser: ${t.transcript}`)
     .join('\n\n')
 
-  const prompt = `You're reviewing a voice onboarding chat a user just finished. Their replies came as separate turns, but related thoughts often span multiple turns. Your job is to re-read the whole thing and turn it into coherent memory notes, one per distinct topic.
+  const prompt = `A user just finished a voice onboarding chat. Below is the full transcript — treat it as one connected conversation, not a list of turns. Your job is to distil the whole conversation into a small set of thematic notes the user will read later.
 
-Grouping:
-- Group turns about the same topic into a single note, even if they weren't adjacent.
-- If a single turn jumps between two unrelated topics, split it.
-- Drop filler-only turns (e.g. "yeah", "um, I don't know").
-- Aim for 1–5 notes total. Fewer is better if the conversation was tight.
+Work in two passes:
 
-Body — this is a note the user will read later, NOT a transcript:
-- Clean up the voice. Remove filler words ("um", "uh", "like", "you know", "sort of", "I mean"), false starts, repetitions, and self-corrections. Fix run-ons.
+Pass 1 — read the whole thing end to end. Note what the user actually cares about: the handful of genuine themes running through what they said. Ignore the interviewer's questions except as context. It's fine if a theme is built from fragments scattered across the chat, and fine if a single long answer touches several themes.
+
+Pass 2 — write one note per theme. Draw on every relevant part of the conversation for that theme, wherever it appeared. Aim for 1–5 notes total; fewer is better if the conversation was tight. Drop throwaway replies ("yeah", "I don't know") unless they're part of a larger point.
+
+Body — a note the user will read later, NOT a transcript:
+- Rewrite in clean prose or tight bullets. Whatever reads naturally for the content.
+- Remove filler ("um", "uh", "like", "you know", "sort of", "I mean"), false starts, repetitions, self-corrections, run-ons.
 - Keep the user's own voice, vocabulary, and specifics. First person. Don't paraphrase into corporate-speak or add claims they didn't make.
-- Write in clear prose or tight bullets — whatever reads naturally for the content. No "Q:"/"A:" markers. No turn numbers.
+- No "Interviewer:"/"User:" markers. No turn numbers. No meta commentary about the conversation itself.
 
 Title — plain English, like a friend describing the note:
 - 3–8 words. Sentence case. No quotes, no trailing punctuation, no colons.
