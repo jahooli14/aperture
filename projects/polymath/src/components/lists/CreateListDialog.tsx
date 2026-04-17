@@ -79,7 +79,7 @@ export function CreateListDialog({ open, onOpenChange }: Props) {
                         autoComplete="off"
                     />
 
-                    <div className="grid grid-cols-5 gap-1.5">
+                    <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
                         {TYPES.map(t => {
                             const Icon = t.icon
                             const isSelected = type === t.id
@@ -88,13 +88,13 @@ export function CreateListDialog({ open, onOpenChange }: Props) {
                                     key={t.id}
                                     type="button"
                                     onClick={() => setType(t.id)}
-                                    className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border transition-all text-[10px] font-semibold uppercase tracking-wide ${
+                                    className={`flex flex-col items-center gap-1.5 py-3 min-h-[64px] rounded-xl border transition-all text-[11px] font-bold uppercase tracking-wide ${
                                         isSelected
                                             ? 'bg-white text-black border-white'
-                                            : 'border-white/10 text-white/35 hover:border-white/25 hover:text-white/60'
+                                            : 'border-white/15 text-white/70 hover:border-white/30 hover:text-white'
                                     }`}
                                 >
-                                    <Icon className="h-4 w-4" />
+                                    <Icon className="h-5 w-5" />
                                     {t.label}
                                 </button>
                             )

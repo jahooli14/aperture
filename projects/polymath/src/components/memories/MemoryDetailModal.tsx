@@ -191,7 +191,7 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
               animate={{ y: 0, opacity: 1, scale: 1 }}
               exit={{ y: 20, opacity: 0, scale: 0.95 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="relative w-full max-w-2xl max-h-[calc(100vh-4rem)] sm:max-h-[calc(100vh-8rem)] rounded-2xl p-5 sm:p-6 overflow-y-auto"
+              className="relative w-full max-w-2xl max-h-[calc(100vh-4rem)] sm:max-h-[calc(100vh-8rem)] rounded-2xl p-5 sm:p-6 overflow-y-auto overscroll-contain"
               style={{
                 backgroundColor: 'var(--brand-bg)',
                 boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.12), 0 20px 60px rgba(0,0,0,0.6)',

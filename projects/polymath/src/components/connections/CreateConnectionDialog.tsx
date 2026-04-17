@@ -347,9 +347,9 @@ export function CreateConnectionDialog({
               {/* Empty state */}
               {filteredSuggestions.length === 0 && filteredAllItems.length === 0 && (
                 <div className="py-12 text-center">
-                  <Search className="h-12 w-12 mx-auto mb-3" style={{ color: 'var(--brand-text-muted)', opacity: 0.3 }} />
-                  <p className="font-medium" style={{ color: "var(--brand-primary)" }}>No items found</p>
-                  <p className="text-sm mt-1" style={{ color: "var(--brand-primary)" }}>Try a different search or filter</p>
+                  <Search className="h-12 w-12 mx-auto mb-3 text-[var(--brand-text-muted)]" />
+                  <p className="font-semibold text-[var(--brand-text-primary)]">No items found</p>
+                  <p className="text-sm mt-1 text-[var(--brand-text-secondary)]">Try a different search or filter</p>
                 </div>
               )}
             </div>

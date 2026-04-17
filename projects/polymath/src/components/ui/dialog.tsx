@@ -134,7 +134,7 @@ const DialogContent = React.forwardRef<
             "backdrop-blur-xl rounded-2xl shadow-2xl border",
             "p-5 sm:p-6 pb-6 sm:pb-8",
             "max-h-[calc(100vh-3rem)] sm:max-h-[calc(100vh-4rem)]",
-            "overflow-auto",
+            "overflow-auto overscroll-contain",
             className
           )}
           style={{

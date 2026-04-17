@@ -300,7 +300,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
             {/* Word count */}
             <div className="flex-1 flex items-center justify-center">
               {bodyFocused && wordCount > 0 && (
-                <span className="text-[10px] tabular-nums" style={{ color: 'var(--brand-text-secondary)', opacity: 0.35 }}>
+                <span className="text-[11px] font-medium tabular-nums text-[var(--brand-text-muted)]">
                   {wordCount}w
                 </span>
               )}
@@ -310,10 +310,9 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
             <button
               type="button"
               onClick={() => setShowOptions(!showOptions)}
-              className="flex items-center gap-1 text-[11px] opacity-40 hover:opacity-70 transition-opacity"
-              style={{ color: 'var(--brand-text-secondary)' }}
+              className="flex items-center gap-1 text-[12px] font-semibold text-[var(--brand-text-secondary)] hover:text-[var(--brand-text-primary)] transition-colors min-h-[36px] px-2 -mr-1 rounded-md hover:bg-white/5"
             >
-              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showOptions ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`h-4 w-4 transition-transform ${showOptions ? 'rotate-180' : ''}`} />
               {showOptions ? 'Less' : 'Type & Tags'}
             </button>
           </div>

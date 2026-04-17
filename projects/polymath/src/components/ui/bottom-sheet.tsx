@@ -185,7 +185,7 @@ const BottomSheetContent = React.forwardRef<
         </motion.button>
 
         {/* Content Area (Scrollable) */}
-        <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-6 sm:pb-8">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-4 sm:px-6 pb-6 sm:pb-8">
           {children}
         </div>
 

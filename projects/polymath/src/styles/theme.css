@@ -504,3 +504,14 @@ h6 {
     min-width: 44px;
     min-height: 44px;
 }
+
+/* Prevent scroll-chaining in modals, sheets, and sidebars */
+.overscroll-contain { overscroll-behavior: contain; }
+
+/* Stronger focus ring on mobile for keyboard nav visibility */
+@media (max-width: 640px) {
+    *:focus-visible {
+        outline: 3px solid rgba(var(--brand-primary-rgb), 0.8);
+        outline-offset: 3px;
+    }
+}

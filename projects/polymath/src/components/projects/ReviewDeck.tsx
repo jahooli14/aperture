@@ -184,10 +184,10 @@ export function ReviewDeck({ projects, onClose }: ReviewDeckProps) {
 
                 {/* Task Input Overlay */}
                 {showTaskInput && (
-                    <div className="absolute inset-0 z-20 bg-slate-900 rounded-3xl border border-slate-700 shadow-2xl p-6 flex flex-col">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-xl font-bold text-[var(--brand-text-primary)]">Add Action</h3>
-                            <button onClick={() => setShowTaskInput(false)} className="p-2 hover:bg-[rgba(255,255,255,0.1)] rounded-full">
+                    <div className="absolute inset-0 z-20 bg-slate-900 rounded-3xl border border-slate-700 shadow-2xl p-4 sm:p-6 flex flex-col overscroll-contain">
+                        <div className="flex items-center justify-between mb-5 sm:mb-6">
+                            <h3 className="text-lg sm:text-xl font-bold text-[var(--brand-text-primary)]">Add Action</h3>
+                            <button onClick={() => setShowTaskInput(false)} className="h-11 w-11 flex items-center justify-center hover:bg-[rgba(255,255,255,0.1)] rounded-full">
                                 <X className="h-5 w-5 text-[var(--brand-text-secondary)]" />
                             </button>
                         </div>
@@ -341,13 +341,13 @@ function Card({ project, onSwipe }: { project: Project, onSwipe: (dir: 'left' | 
                 <span className="text-4xl font-bold text-brand-primary uppercase tracking-widest border-4 border-brand-primary p-2 rounded-lg">Action</span>
             </motion.div>
 
-            <div className="h-full flex flex-col p-6">
+            <div className="h-full flex flex-col p-4 sm:p-6 overscroll-contain">
                 <div className="flex-1">
                     <div className="text-xs font-bold text-[var(--brand-text-secondary)] uppercase tracking-wider mb-2">
                         Last active {project.last_active ? new Date(project.last_active).toLocaleDateString() : 'Never'}
                     </div>
-                    <h3 className="text-3xl font-bold text-[var(--brand-text-primary)] mb-4">{project.title}</h3>
-                    <p className="text-[var(--brand-text-secondary)] text-lg leading-relaxed">
+                    <h3 className="text-2xl sm:text-3xl font-bold text-[var(--brand-text-primary)] mb-4 leading-tight">{project.title}</h3>
+                    <p className="text-[var(--brand-text-secondary)] text-base sm:text-lg leading-relaxed">
                         {project.description || "No description provided."}
                     </p>
 
