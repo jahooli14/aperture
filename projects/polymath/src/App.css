@@ -81,6 +81,11 @@
     -webkit-overflow-scrolling: touch;
   }
 
+  /* Prevent iOS rubber-band scroll when body is scrollable */
+  html, body {
+    overscroll-behavior-y: none;
+  }
+
   /* Override browser autofill white background on dark theme inputs */
   input:-webkit-autofill,
   input:-webkit-autofill:hover,

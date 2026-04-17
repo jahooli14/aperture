@@ -105,19 +105,19 @@ export function TimelinePage() {
   }
 
   return (
-    <div className="min-h-screen py-12 relative" style={{ backgroundColor: 'var(--brand-bg)' }}>
+    <div className="min-h-screen py-8 sm:py-12 relative" style={{ backgroundColor: 'var(--brand-bg)' }}>
       <SubtleBackground />
       {/* Header */}
-      <div className="max-w-6xl mx-auto px-4 mb-12">
+      <div className="max-w-6xl mx-auto px-4 mb-8 sm:mb-12">
         <div>
-          <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
+          <h1 className="text-[2rem] sm:text-4xl leading-[0.95] font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
             your <span className="page-accent">timeline</span>
           </h1>
-          <p className="section-subtitle mt-1">When you do your best thinking</p>
+          <p className="section-subtitle mt-1.5 text-sm sm:text-base">When you do your best thinking</p>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 space-y-6">
+      <div className="max-w-6xl mx-auto px-4 space-y-6 pb-24">
         {/* Pattern Cards */}
         {patterns.map((pattern, index) => (
           <Card key={index} className="premium-card">
@@ -161,11 +161,11 @@ export function TimelinePage() {
                                   background: 'linear-gradient(90deg, var(--brand-primary), var(--brand-primary))'
                                 }}
                               />
-                              <div className="relative px-3 py-1 flex items-center justify-between">
-                                <span className="text-sm font-medium" style={{ color: "var(--brand-primary)" }}>
+                              <div className="relative px-3 py-1 flex items-center justify-between gap-2">
+                                <span className="text-xs sm:text-sm font-semibold text-[var(--brand-text-primary)] truncate" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
                                   {time.day} {time.hour === 0 ? '12am' : time.hour < 12 ? time.hour + 'am' : (time.hour === 12 ? '12pm' : (time.hour - 12) + 'pm')}
                                 </span>
-                                <span className="text-sm font-bold" style={{ color: "var(--brand-primary)" }}>
+                                <span className="text-xs sm:text-sm font-bold tabular-nums text-[var(--brand-text-primary)] flex-shrink-0" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
                                   {time.count}
                                 </span>
                               </div>

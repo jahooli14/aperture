@@ -396,38 +396,38 @@ function FixCard({ item, expanded, onToggle, actions }: {
         onClick={onToggle}
         className="w-full text-left p-4 flex items-start gap-3 hover:bg-white/[0.02] transition-colors"
       >
-        <SeverityIcon className="h-4 w-4 mt-0.5 shrink-0" style={{ color: severity.color }} />
+        <SeverityIcon className="h-5 w-5 mt-0.5 shrink-0" style={{ color: severity.color }} />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium leading-snug" style={{ color: 'var(--brand-text)' }}>
+          <p className="text-[15px] font-semibold leading-snug text-[var(--brand-text-primary)]">
             {item.content}
           </p>
           {draft && (
-            <p className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--brand-text-tertiary)' }}>
+            <p className="text-[13px] mt-1.5 leading-relaxed text-[var(--brand-text-secondary)]">
               {draft.description}
             </p>
           )}
-          <div className="flex items-center gap-2 mt-2 flex-wrap">
+          <div className="flex items-center gap-2 mt-2.5 flex-wrap">
             <span
-              className="text-[10px] font-medium px-2 py-0.5 rounded-full"
+              className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
               style={{ backgroundColor: status.bg, color: status.color }}
             >
               {status.label}
             </span>
             {draft?.schedule && (
-              <span className="text-[10px] flex items-center gap-1" style={{ color: 'var(--brand-text-tertiary)' }}>
-                <Clock className="h-2.5 w-2.5" />
+              <span className="text-[11px] font-medium flex items-center gap-1 text-[var(--brand-text-muted)]">
+                <Clock className="h-3 w-3" />
                 {draft.schedule.description}
               </span>
             )}
             {draft?.actions && (
-              <span className="text-[10px] flex items-center gap-1" style={{ color: 'var(--brand-text-tertiary)' }}>
+              <span className="text-[11px] flex items-center gap-1 text-[var(--brand-text-muted)]">
                 {draft.actions.map((a, i) => (
                   <ActionTypeIcon key={i} type={a.type} />
                 ))}
               </span>
             )}
             {meta.last_run_at && (
-              <span className="text-[10px]" style={{ color: meta.last_run_success ? 'rgb(var(--brand-primary-rgb))' : 'rgb(var(--color-error-rgb))' }}>
+              <span className="text-[11px] font-medium" style={{ color: meta.last_run_success ? 'rgb(var(--brand-primary-rgb))' : 'rgb(var(--color-error-rgb))' }}>
                 {meta.last_run_success ? 'Last run' : 'Failed'}: {new Date(meta.last_run_at).toLocaleDateString()}
                 {meta.run_count ? ` (${meta.run_count}x)` : ''}
               </span>

@@ -192,21 +192,22 @@ export function ContextSidebar() {
                         animate={{ x: 0 }}
                         exit={{ x: '100%' }}
                         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                        className="fixed right-0 top-0 bottom-0 z-50 w-80 shadow-2xl border-l border-[var(--glass-surface-hover)] flex flex-col"
+                        className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-[92vw] sm:w-80 shadow-2xl border-l border-white/10 flex flex-col overscroll-contain"
                         style={{
-                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                            backdropFilter: 'blur(20px)'
+                            backgroundColor: 'rgba(15, 23, 42, 0.97)',
+                            backdropFilter: 'blur(20px)',
+                            paddingTop: 'env(safe-area-inset-top)',
                         }}
                     >
                         {/* Header */}
-                        <div className="p-4 border-b border-[var(--glass-surface-hover)] flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <Lightbulb className="h-5 w-5 text-brand-primary" />
-                                <h2 className="font-bold text-[var(--brand-text-primary)]">Context Engine</h2>
+                        <div className="p-3 sm:p-4 border-b border-white/10 flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                                <Lightbulb className="h-5 w-5 text-brand-primary flex-shrink-0" />
+                                <h2 className="font-bold text-[var(--brand-text-primary)] truncate">Context Engine</h2>
                             </div>
                             <button
                                 onClick={() => toggleSidebar(false)}
-                                className="p-2 hover:bg-[rgba(255,255,255,0.1)] rounded-lg transition-colors text-[var(--brand-text-secondary)] hover:text-[var(--brand-text-primary)]"
+                                className="h-11 w-11 flex items-center justify-center flex-shrink-0 hover:bg-[rgba(255,255,255,0.1)] rounded-lg transition-colors text-[var(--brand-text-secondary)] hover:text-[var(--brand-text-primary)]"
                             >
                                 <X className="h-5 w-5" />
                             </button>

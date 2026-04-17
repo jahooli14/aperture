@@ -578,7 +578,7 @@ export function ProjectDetailPage() {
         <div className="flex items-center justify-between mb-6">
           <button
             onClick={() => navigate('/projects')}
-            className="text-[13px] font-medium opacity-40 hover:opacity-70 transition-opacity"
+            className="text-[14px] font-medium opacity-65 hover:opacity-100 transition-opacity min-h-[44px] flex items-center pr-3 -ml-1 px-2 rounded-lg"
             style={{ color: 'var(--brand-text-primary)' }}
           >
             ← Back
@@ -586,11 +586,11 @@ export function ProjectDetailPage() {
           <div className="relative flex items-center gap-2">
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className="h-9 w-9 flex items-center justify-center rounded-xl transition-all hover:bg-white/[0.06]"
+              className="h-11 w-11 flex items-center justify-center rounded-xl transition-all hover:bg-white/[0.06]"
               style={{ color: 'var(--brand-text-secondary)' }}
               aria-label="More options"
             >
-              <MoreVertical className="h-4 w-4" />
+              <MoreVertical className="h-5 w-5" />
             </button>
 
             {showMenu && (
@@ -599,11 +599,11 @@ export function ProjectDetailPage() {
                   className="fixed inset-0 z-50"
                   onClick={() => setShowMenu(false)}
                 />
-                <div className="absolute right-0 top-full mt-2 w-48 rounded-2xl p-1.5 z-[60] bg-[#1a1a24] border border-white/[0.08] shadow-2xl">
+                <div className="absolute right-0 top-full mt-2 w-52 max-w-[calc(100vw-2rem)] rounded-2xl p-1.5 z-[60] bg-[#1a1a24] border border-white/[0.08] shadow-2xl">
                   <button
                     onClick={() => { setShowMenu(false); setShowEditDialog(true) }}
-                    className="w-full px-3.5 py-2.5 text-left text-[13px] font-medium transition-colors hover:bg-white/[0.05] rounded-xl"
-                    style={{ color: 'var(--brand-text-primary)', opacity: 0.7 }}
+                    className="w-full px-3.5 py-3 text-left text-[14px] font-medium transition-colors hover:bg-white/[0.05] rounded-xl min-h-[44px]"
+                    style={{ color: 'var(--brand-text-primary)', opacity: 0.9 }}
                   >
                     Edit Details
                   </button>
@@ -613,14 +613,14 @@ export function ProjectDetailPage() {
                       const isThisPinned = pinnedItem !== null && (pinnedItem.id === project.id || pinnedItem.id === id)
                       if (isThisPinned) { unpinItem() } else { pinItem({ type: 'project', id: project.id, title: project.title, content: pinnedContent }) }
                     }}
-                    className="w-full px-3.5 py-2.5 text-left text-[13px] font-medium transition-colors hover:bg-white/[0.05] rounded-xl flex items-center gap-2"
-                    style={{ color: 'var(--brand-text-primary)', opacity: 0.7 }}
+                    className="w-full px-3.5 py-3 text-left text-[14px] font-medium transition-colors hover:bg-white/[0.05] rounded-xl flex items-center gap-2 min-h-[44px]"
+                    style={{ color: 'var(--brand-text-primary)', opacity: 0.9 }}
                   >
-                    {pinnedItem?.id === project.id ? <><PinOff className="h-3.5 w-3.5" /> Unpin</> : <><Pin className="h-3.5 w-3.5" /> Pin</>}
+                    {pinnedItem?.id === project.id ? <><PinOff className="h-4 w-4" /> Unpin</> : <><Pin className="h-4 w-4" /> Pin</>}
                   </button>
                   <button
                     onClick={() => { setShowMenu(false); handleDelete() }}
-                    className="w-full px-3.5 py-2.5 text-left text-[13px] font-medium transition-colors hover:bg-red-500/10 rounded-xl text-red-400/70"
+                    className="w-full px-3.5 py-3 text-left text-[14px] font-medium transition-colors hover:bg-red-500/10 rounded-xl text-red-400 min-h-[44px]"
                   >
                     Delete
                   </button>

@@ -183,7 +183,7 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md"
             onClick={onClose}
           >
             <motion.div
@@ -191,93 +191,92 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
               animate={{ y: 0, opacity: 1, scale: 1 }}
               exit={{ y: 20, opacity: 0, scale: 0.95 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="relative w-full max-w-2xl max-h-[calc(100vh-8rem)] rounded-2xl p-6 overflow-y-auto"
+              className="relative w-full max-w-2xl max-h-[calc(100vh-4rem)] sm:max-h-[calc(100vh-8rem)] rounded-2xl p-5 sm:p-6 overflow-y-auto overscroll-contain"
               style={{
                 backgroundColor: 'var(--brand-bg)',
-                boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1), 0 20px 60px rgba(0,0,0,0.5)',
+                boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.12), 0 20px 60px rgba(0,0,0,0.6)',
               }}
               onClick={(e) => e.stopPropagation()} // Prevent modal from closing when clicking inside
             >
               <button
                 onClick={onClose}
-                className="absolute top-4 right-4 p-2 rounded-full hover:bg-[rgba(255,255,255,0.1)] transition-colors"
-                style={{ color: "var(--brand-primary)" }}
+                className="absolute top-3 right-3 h-11 w-11 flex items-center justify-center rounded-full hover:bg-[rgba(255,255,255,0.1)] bg-white/5 transition-colors"
+                style={{ color: 'var(--brand-text-primary)' }}
                 aria-label="Close"
               >
                 <X className="h-5 w-5" />
               </button>
 
-              <div className="flex items-center justify-between gap-4 mb-6 pr-10">
-                <h2 className="text-2xl font-bold premium-text-platinum leading-tight">
+              <div className="flex items-start justify-between gap-3 mb-5 pr-14">
+                <h2 className="text-xl sm:text-2xl font-bold text-[var(--brand-text-primary)] leading-tight flex-1 min-w-0 break-words">
                   {memory.title}
                 </h2>
-                <div className="flex items-center gap-1">
-                  {/* AI Analysis Dot (Interactive, Cyan) */}
-                  <button
-                    onClick={handleAnalyze}
-                    className="w-2 h-2 rounded-full mr-2 transition-all duration-300 hover:scale-150 hover:shadow-[0_0_8px_rgba(var(--brand-primary-rgb),0.6)] cursor-pointer"
-                    style={{
-                      backgroundColor: 'rgb(var(--color-accent-dark-rgb))', // Cyan-500
-                      opacity: 1
-                    }}
-                    title="Analyze with AI"
-                  />
+              </div>
 
-                  {/* Pin toggle */}
-                  <button
-                    onClick={() => {
-                      if (memory.is_pinned) {
-                        unpinMemory(memory.id)
-                      } else {
-                        pinMemory(memory.id)
-                        haptic.success()
-                      }
-                    }}
-                    className={`p-2 rounded-full transition-colors ${
-                      memory.is_pinned
-                        ? 'text-brand-text-secondary hover:bg-brand-primary/10'
-                        : 'hover:bg-brand-surface/80'
-                    }`}
-                    style={memory.is_pinned ? undefined : { color: 'var(--brand-text-muted)' }}
-                    title={memory.is_pinned ? 'Unpin' : 'Pin'}
-                  >
-                    <Pin className="h-5 w-5" style={memory.is_pinned ? { fill: 'currentColor' } : undefined} />
-                  </button>
+              <div className="flex items-center gap-1 mb-4">
+                {/* AI Analysis Dot */}
+                <button
+                  onClick={handleAnalyze}
+                  className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-[rgba(var(--brand-primary-rgb),0.1)] transition-colors"
+                  title="Analyze with AI"
+                >
+                  <span className="w-2.5 h-2.5 rounded-full block" style={{
+                    backgroundColor: 'rgb(var(--color-accent-dark-rgb))',
+                    boxShadow: '0 0 8px rgba(var(--brand-primary-rgb),0.5)'
+                  }} />
+                </button>
 
-                  <button
-                    onClick={() => setEditDialogOpen(true)}
-                    className="p-2 rounded-full hover:bg-[rgba(255,255,255,0.1)] transition-colors"
-                    style={{ color: "var(--brand-primary)" }}
-                    title="Edit Memory"
-                  >
-                    <Edit className="h-5 w-5" />
-                  </button>
-                  <button
-                    onClick={handleDelete}
-                    className="p-2 rounded-full hover:bg-brand-primary/10 transition-colors"
-                    style={{ color: "var(--brand-primary)" }}
-                    title="Delete Memory"
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </button>
-                </div>
+                {/* Pin toggle */}
+                <button
+                  onClick={() => {
+                    if (memory.is_pinned) {
+                      unpinMemory(memory.id)
+                    } else {
+                      pinMemory(memory.id)
+                      haptic.success()
+                    }
+                  }}
+                  className={`h-10 w-10 flex items-center justify-center rounded-full transition-colors ${
+                    memory.is_pinned
+                      ? 'text-[var(--brand-primary)] hover:bg-brand-primary/10'
+                      : 'hover:bg-white/5 text-[var(--brand-text-muted)]'
+                  }`}
+                  title={memory.is_pinned ? 'Unpin' : 'Pin'}
+                >
+                  <Pin className="h-5 w-5" style={memory.is_pinned ? { fill: 'currentColor' } : undefined} />
+                </button>
+
+                <button
+                  onClick={() => setEditDialogOpen(true)}
+                  className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-[rgba(255,255,255,0.08)] transition-colors text-[var(--brand-text-secondary)]"
+                  title="Edit Memory"
+                >
+                  <Edit className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-red-500/10 transition-colors text-red-400/80 ml-auto"
+                  title="Delete Memory"
+                >
+                  <Trash2 className="h-5 w-5" />
+                </button>
               </div>
 
               {/* AI Insight Banner */}
               {insight && (
                 <div
-                  className="flex items-start gap-2.5 mb-4 px-3 py-2.5 rounded-xl"
+                  className="flex items-start gap-2.5 mb-4 px-3.5 py-3 rounded-xl"
                   style={{
-                    background: 'rgba(var(--brand-primary-rgb),0.06)',
-                    border: '1px solid rgba(var(--brand-primary-rgb),0.12)',
+                    background: 'rgba(var(--brand-primary-rgb),0.1)',
+                    border: '1px solid rgba(var(--brand-primary-rgb),0.25)',
                   }}
                 >
-                  <Brain className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" style={{ color: "var(--brand-primary)" }} />
+                  <Brain className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--brand-primary)' }} />
                   <div className="flex-1 min-w-0">
                     <MarkdownRenderer
                       content={insight.insight}
-                      className="text-xs"
-                      style={{ color: "var(--brand-primary)" }}
+                      className="text-[13px] leading-relaxed"
+                      style={{ color: 'var(--brand-text-secondary)' }}
                     />
                   </div>
                 </div>

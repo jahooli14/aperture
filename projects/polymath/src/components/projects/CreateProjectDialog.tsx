@@ -316,8 +316,8 @@ export function CreateProjectDialog({
       {!hideTrigger && (trigger || (
         <button
           onClick={() => setOpen(true)}
-          className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-[var(--glass-surface)]"
-          style={{ borderColor: 'rgba(30, 42, 88, 0.2)', color: 'var(--brand-text-secondary)' }}
+          className="h-11 w-11 rounded-xl flex items-center justify-center border transition-all hover:bg-[var(--glass-surface)] bg-[var(--glass-surface)]"
+          style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'var(--brand-primary)' }}
           title="New Project"
         >
           <Plus className="h-5 w-5" />
@@ -353,23 +353,20 @@ export function CreateProjectDialog({
                       {msg.role === 'model' ? (
                         <div className="pr-8">
                           <p
-                            className="text-[15px] leading-relaxed"
-                            style={{ color: 'var(--brand-text-secondary)', opacity: 0.75 }}
+                            className="text-[15px] leading-relaxed text-[var(--brand-text-secondary)]"
                           >
                             {msg.content}
                           </p>
                           {/* Echoes */}
                           {msg.echoes && msg.echoes.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 mt-2">
+                            <div className="flex flex-wrap gap-1.5 mt-2.5">
                               {msg.echoes.map((echo, j) => (
                                 <span
                                   key={j}
-                                  className="text-[10px] px-2 py-0.5 rounded-full"
+                                  className="text-[11px] px-2 py-1 rounded-full text-[var(--brand-text-muted)]"
                                   style={{
-                                    background: 'rgba(255,255,255,0.04)',
-                                    color: 'var(--brand-text-secondary)',
-                                    opacity: 0.5,
-                                    border: '1px solid rgba(255,255,255,0.07)',
+                                    background: 'rgba(255,255,255,0.06)',
+                                    border: '1px solid rgba(255,255,255,0.1)',
                                   }}
                                   title={echo.snippet}
                                 >
@@ -382,8 +379,7 @@ export function CreateProjectDialog({
                       ) : (
                         <div className="pl-8 flex justify-end">
                           <p
-                            className="text-[15px] leading-relaxed text-right"
-                            style={{ color: 'var(--brand-text-primary)', opacity: 0.9 }}
+                            className="text-[15px] leading-relaxed text-right text-[var(--brand-text-primary)]"
                           >
                             {msg.content}
                           </p>
@@ -599,16 +595,17 @@ export function CreateProjectDialog({
                   <button
                     type="submit"
                     disabled={loading || !isFormValid}
-                    className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all touch-manipulation disabled:opacity-25 ml-1"
+                    className="flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center transition-all touch-manipulation disabled:opacity-30 ml-1"
                     style={{
                       background: isFormValid ? 'var(--brand-primary, rgb(var(--brand-primary-rgb)))' : 'rgba(255,255,255,0.1)',
                       color: isFormValid ? '#000' : 'var(--brand-text-secondary)',
+                      boxShadow: isFormValid ? '0 0 16px rgba(var(--brand-primary-rgb),0.4)' : 'none',
                     }}
                     title={loading ? 'Creating…' : 'Create project'}
                   >
                     {loading
-                      ? <Loader2 className="h-4 w-4 animate-spin" />
-                      : <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
+                      ? <Loader2 className="h-5 w-5 animate-spin" />
+                      : <ArrowUp className="h-5 w-5" strokeWidth={2.5} />
                     }
                   </button>
                 </div>
@@ -627,10 +624,9 @@ export function CreateProjectDialog({
                 <button
                   type="button"
                   onClick={() => setQuickAddMode(false)}
-                  className="flex items-center gap-1 text-[11px] mb-3 self-start transition-all"
-                  style={{ color: 'var(--brand-text-secondary)', opacity: 0.35 }}
+                  className="flex items-center gap-1.5 text-[12px] mb-3 self-start transition-all min-h-[36px] -ml-1 px-2 rounded-md hover:bg-white/5 text-[var(--brand-text-secondary)]"
                 >
-                  <ArrowLeft className="h-3 w-3" /> back to conversation
+                  <ArrowLeft className="h-3.5 w-3.5" /> back to conversation
                 </button>
 
                 <input
@@ -655,21 +651,21 @@ export function CreateProjectDialog({
                   style={{ color: 'var(--brand-text-secondary)', fontSize: '15px', opacity: quickDesc ? 0.7 : 0.4 }}
                 />
 
-                <p className="text-[10px] mb-3" style={{ color: 'rgba(245,158,11,0.6)' }}>
+                <p className="text-[12px] mb-3 leading-relaxed" style={{ color: 'rgba(251,191,36,0.85)' }}>
                   Quick-added projects need shaping before they can get Power Hour plans.
                 </p>
 
                 <button
                   onClick={handleQuickAdd}
                   disabled={loading || !quickTitle.trim()}
-                  className="w-full py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all disabled:opacity-25"
+                  className="w-full h-12 rounded-xl font-bold text-sm uppercase tracking-widest flex items-center justify-center gap-2 transition-all disabled:opacity-40"
                   style={{
-                    background: quickTitle.trim() ? 'rgba(255,255,255,0.1)' : 'transparent',
-                    color: 'var(--brand-text-primary)',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    background: quickTitle.trim() ? 'rgba(var(--brand-primary-rgb),0.15)' : 'rgba(255,255,255,0.05)',
+                    color: quickTitle.trim() ? 'var(--brand-primary)' : 'var(--brand-text-muted)',
+                    border: `1px solid ${quickTitle.trim() ? 'rgba(var(--brand-primary-rgb),0.4)' : 'rgba(255,255,255,0.1)'}`,
                   }}
                 >
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save for later'}
+                  {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Save for later'}
                 </button>
               </motion.div>
             )}

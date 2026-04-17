@@ -125,19 +125,21 @@ export function SettingsPage() {
       <div
         className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md"
         style={{
-          backgroundColor: 'rgba(15, 24, 41, 0.7)'
+          backgroundColor: 'rgba(15, 24, 41, 0.85)',
+          paddingTop: 'env(safe-area-inset-top)',
+          borderBottom: '1px solid rgba(255,255,255,0.06)'
         }}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-[1.75rem] sm:text-4xl leading-[0.95] font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] truncate">
               your <span className="page-accent">settings</span>
             </h1>
           </div>
           <button
             onClick={() => navigate('/search')}
-            className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-[var(--glass-surface)] press-spring"
-            style={{ color: 'rgb(var(--page-accent-rgb, var(--brand-primary-rgb)))' }}
+            className="h-11 w-11 rounded-xl flex items-center justify-center transition-all hover:bg-[var(--glass-surface)] bg-[var(--glass-surface)] press-spring flex-shrink-0"
+            style={{ color: 'rgb(var(--page-accent-rgb, var(--brand-primary-rgb)))', border: '1px solid rgba(255,255,255,0.1)' }}
             title="Search everything"
           >
             <Search className="h-5 w-5" />
@@ -145,7 +147,7 @@ export function SettingsPage() {
         </div>
       </div>
 
-      <div className="min-h-screen pb-24" style={{ paddingTop: '5.5rem' }}>
+      <div className="min-h-screen pb-24" style={{ paddingTop: 'calc(5.5rem + env(safe-area-inset-top))' }}>
 
         {/* Appearance Section */}
         <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
@@ -168,7 +170,7 @@ export function SettingsPage() {
               <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider opacity-60 flex items-center gap-2" style={{ color: "var(--brand-primary)" }}>
                 Accent Color
               </h3>
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2.5 sm:gap-3">
                 {getAvailableColors().map((color) => {
                   const preview = getColorPreview(color)
                   const isSelected = accentColor === color
@@ -176,10 +178,10 @@ export function SettingsPage() {
                     <button
                       key={color}
                       onClick={() => setAccentColor(color)}
-                      className={`relative aspect-square rounded-xl transition-all duration-300 ${isSelected ? 'scale-105 ring-2 ring-offset-2 ring-offset-black/50' : 'hover:scale-105'}`}
+                      className={`relative aspect-square rounded-xl transition-all duration-300 min-h-[44px] ${isSelected ? 'scale-105 ring-2 ring-offset-2 ring-offset-black/50' : 'hover:scale-105'}`}
                       style={{
                         background: `linear-gradient(135deg, ${preview.primary}, ${preview.light})`,
-                        boxShadow: isSelected ? `0 0 20px ${preview.primary}40` : 'none',
+                        boxShadow: isSelected ? `0 0 20px ${preview.primary}60` : '0 2px 8px rgba(0,0,0,0.3)',
                         borderColor: isSelected ? preview.primary : 'transparent'
                       }}
                     >

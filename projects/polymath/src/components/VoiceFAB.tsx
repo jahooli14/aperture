@@ -236,16 +236,17 @@ export function VoiceFAB({
       onPointerCancel={onSystemCancel}
       className={cn(
         'fixed z-[25001]',
-        'bottom-28 md:bottom-12 right-6 md:right-12',
+        'right-5 md:right-12',
         'h-14 w-14 md:h-16 md:w-16 rounded-full',
         'flex items-center justify-center',
         'transition-all duration-200',
         'group overflow-hidden touch-none',
       )}
       style={{
+        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 6rem)',
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 0 10px var(--glass-surface)',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5), 0 0 24px rgba(var(--brand-primary-rgb), 0.35), inset 0 0 10px var(--glass-surface)',
       }}
       aria-label="Create  tap to record, hold to choose type"
     >
@@ -297,24 +298,24 @@ export function VoiceFAB({
                   <div className="flex justify-center pt-4 pb-2 md:hidden">
                     <div className="w-12 h-1.5 rounded-full bg-[rgba(255,255,255,0.1)]" />
                   </div>
-                  <div className="flex items-center justify-between px-8 py-8">
-                    <div>
-                      <h3 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] flex items-center gap-2">
-                        <Mic className="h-6 w-6 text-brand-primary" />
-                        Voice Capture
+                  <div className="flex items-center justify-between gap-3 px-5 sm:px-8 py-5 sm:py-8">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-xl sm:text-2xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] flex items-center gap-2">
+                        <Mic className="h-5 w-5 sm:h-6 sm:w-6 text-brand-primary flex-shrink-0" />
+                        <span className="truncate">Voice Capture</span>
                       </h3>
-                      <p className="text-sm text-brand-text-muted mt-1 font-medium">
+                      <p className="text-xs sm:text-sm text-brand-text-muted mt-1 font-medium">
                         {isOnline ? 'Transcribing in real-time' : 'Offline mode  will sync later'}
                       </p>
                     </div>
                     <button
                       onClick={() => setIsVoiceOpen(false)}
-                      className="h-12 w-12 rounded-full bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] flex items-center justify-center transition-all border border-[var(--glass-surface)]"
+                      className="h-11 w-11 sm:h-12 sm:w-12 flex-shrink-0 rounded-full bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] flex items-center justify-center transition-all border border-white/10"
                     >
-                      <X className="h-6 w-6 text-brand-text-muted" />
+                      <X className="h-5 w-5 sm:h-6 sm:w-6 text-[var(--brand-text-primary)]" />
                     </button>
                   </div>
-                  <div className="px-8 pb-10">
+                  <div className="px-5 sm:px-8 pb-8 sm:pb-10">
                     <VoiceInput
                       onTranscript={handleTranscript}
                       maxDuration={maxDuration}

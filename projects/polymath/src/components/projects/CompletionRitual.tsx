@@ -67,19 +67,19 @@ export function CompletionRitual({ project, isOpen, onClose }: CompletionRitualP
             initial={{ opacity: 0, y: 20, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.98 }}
-            className="relative w-full max-w-lg rounded-2xl border p-6 max-h-[90vh] overflow-y-auto"
+            className="relative w-full max-w-lg rounded-2xl border p-4 sm:p-6 max-h-[88vh] overflow-y-auto"
             style={{
               background: 'var(--brand-bg)',
-              borderColor: 'var(--glass-surface-hover)',
+              borderColor: 'rgba(255,255,255,0.12)',
               boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
             }}
             onClick={e => e.stopPropagation()}
           >
             <button
               onClick={reset}
-              className="absolute top-4 right-4 h-8 w-8 rounded-full flex items-center justify-center hover:bg-white/5 transition-colors"
+              className="absolute top-3 right-3 h-11 w-11 rounded-full flex items-center justify-center hover:bg-white/10 bg-white/5 transition-colors"
             >
-              <X className="h-4 w-4" />
+              <X className="h-5 w-5" />
             </button>
 
             {!sparks && (
@@ -98,43 +98,43 @@ export function CompletionRitual({ project, isOpen, onClose }: CompletionRitualP
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--brand-text-muted)] mb-1.5">
+                    <label className="block text-[11px] font-bold uppercase tracking-widest text-[var(--brand-text-secondary)] mb-2">
                       What worked?
                     </label>
                     <textarea
                       value={whatWorked}
                       onChange={e => setWhatWorked(e.target.value)}
                       rows={2}
-                      className="w-full px-3 py-2 rounded-lg border text-sm text-[var(--brand-text-primary)] focus:outline-none focus:border-brand-primary transition-colors"
-                      style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'var(--glass-surface-hover)' }}
+                      className="w-full px-3 py-2.5 rounded-lg border text-[15px] text-[var(--brand-text-primary)] focus:outline-none focus:border-brand-primary transition-colors"
+                      style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.12)' }}
                       placeholder="The thing you'd do again without thinking."
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--brand-text-muted)] mb-1.5">
+                    <label className="block text-[11px] font-bold uppercase tracking-widest text-[var(--brand-text-secondary)] mb-2">
                       What surprised you?
                     </label>
                     <textarea
                       value={whatSurprised}
                       onChange={e => setWhatSurprised(e.target.value)}
                       rows={2}
-                      className="w-full px-3 py-2 rounded-lg border text-sm text-[var(--brand-text-primary)] focus:outline-none focus:border-brand-primary transition-colors"
-                      style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'var(--glass-surface-hover)' }}
+                      className="w-full px-3 py-2.5 rounded-lg border text-[15px] text-[var(--brand-text-primary)] focus:outline-none focus:border-brand-primary transition-colors"
+                      style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.12)' }}
                       placeholder="Something you didn't expect when you started."
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--brand-text-muted)] mb-1.5">
+                    <label className="block text-[11px] font-bold uppercase tracking-widest text-[var(--brand-text-secondary)] mb-2">
                       What's next?
                     </label>
                     <textarea
                       value={whatNext}
                       onChange={e => setWhatNext(e.target.value)}
                       rows={2}
-                      className="w-full px-3 py-2 rounded-lg border text-sm text-[var(--brand-text-primary)] focus:outline-none focus:border-brand-primary transition-colors"
-                      style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'var(--glass-surface-hover)' }}
+                      className="w-full px-3 py-2.5 rounded-lg border text-[15px] text-[var(--brand-text-primary)] focus:outline-none focus:border-brand-primary transition-colors"
+                      style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.12)' }}
                       placeholder="A thread worth pulling on."
                     />
                   </div>
@@ -143,21 +143,21 @@ export function CompletionRitual({ project, isOpen, onClose }: CompletionRitualP
                 <div className="mt-5 flex items-center justify-end gap-2">
                   <button
                     onClick={reset}
-                    className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--brand-text-muted)] hover:text-[var(--brand-text-primary)] transition-colors"
+                    className="min-h-[44px] px-4 text-xs font-bold uppercase tracking-widest text-[var(--brand-text-secondary)] hover:text-[var(--brand-text-primary)] hover:bg-white/5 rounded-lg transition-colors"
                   >
                     Skip
                   </button>
                   <button
                     onClick={submit}
                     disabled={!canSubmit || submitting}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all hover:scale-105 disabled:opacity-40"
+                    className="flex items-center gap-1.5 min-h-[44px] px-4 rounded-lg text-xs font-bold uppercase tracking-wider transition-all hover:scale-105 disabled:opacity-40"
                     style={{
-                      background: 'rgba(52,211,153,0.12)',
-                      border: '1px solid rgba(52,211,153,0.3)',
+                      background: 'rgba(52,211,153,0.18)',
+                      border: '1px solid rgba(52,211,153,0.45)',
                       color: 'rgb(var(--color-accent-light-rgb))',
                     }}
                   >
-                    {submitting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                    {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                     {submitting ? 'Sparking…' : 'Finish & spark'}
                   </button>
                 </div>
@@ -206,10 +206,10 @@ export function CompletionRitual({ project, isOpen, onClose }: CompletionRitualP
                 <div className="mt-5 flex justify-end">
                   <button
                     onClick={reset}
-                    className="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all hover:scale-105"
+                    className="min-h-[44px] px-5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all hover:scale-105"
                     style={{
                       background: 'var(--glass-surface)',
-                      border: '1px solid var(--glass-surface-hover)',
+                      border: '1px solid rgba(255,255,255,0.15)',
                       color: 'var(--brand-text-primary)',
                     }}
                   >

@@ -260,17 +260,17 @@ export function TodosPage() {
         style={{ backgroundColor: 'var(--brand-bg)' }}
       >
         <SubtleBackground />
-        <div className="px-4 pt-10 pb-6 max-w-3xl mx-auto w-full">
-          <div className="mb-6">
-            <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
+        <div className="px-4 pt-8 sm:pt-10 pb-6 max-w-3xl mx-auto w-full">
+          <div className="mb-5">
+            <h1 className="text-[2rem] sm:text-4xl leading-[0.95] font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
               your <span className="page-accent">todos</span>
             </h1>
-            <p className="section-subtitle mt-1">
+            <p className="section-subtitle mt-1.5 text-sm sm:text-base">
               {dayName}, {dateStr} — {streakMessage || 'Keep going.'}
             </p>
           </div>
 
-          <div className="p-6 rounded-2xl mb-6 relative overflow-hidden premium-glass shadow-2xl" style={{
+          <div className="p-4 sm:p-6 rounded-2xl mb-6 relative overflow-hidden premium-glass shadow-2xl" style={{
             background: 'var(--brand-glass-bg)',
             border: '1px solid var(--glass-surface-hover)',
           }}>
@@ -329,18 +329,21 @@ export function TodosPage() {
                   </div>
                 </div>
 
-                {/* Progress bar  neobrutalist: rectangular, 6px tall, hard edges */}
+                {/* Progress bar  taller for visibility on mobile */}
                 {totalTodayItems > 0 && (
                   <div
-                    className="w-full h-[6px] rounded-full overflow-hidden mb-6"
-                    style={{ background: 'var(--glass-surface)', border: '1px solid rgba(255,255,255,0.05)' }}
+                    className="w-full h-2 rounded-full overflow-hidden mb-6"
+                    style={{ background: 'var(--glass-surface)', border: '1px solid rgba(255,255,255,0.08)' }}
                   >
                     <motion.div
-                      className="h-full"
+                      className="h-full rounded-full"
                       style={{
                         background: completedToday === totalTodayItems
                           ? 'rgb(52,211,153)'
                           : 'var(--brand-primary)',
+                        boxShadow: completedToday === totalTodayItems
+                          ? '0 0 12px rgba(52,211,153,0.5)'
+                          : '0 0 12px rgba(var(--brand-primary-rgb),0.5)',
                       }}
                       initial={{ width: 0 }}
                       animate={{ width: `${progressPct}%` }}
@@ -409,9 +412,9 @@ export function TodosPage() {
           </div>
         </div>
 
-        {/* View tabs  neobrutalist: rectangular, thick underline active */}
+        {/* View tabs  scrollable horizontally on mobile */}
         <div className="px-4 max-w-3xl mx-auto w-full">
-          <div className="flex gap-0 overflow-x-auto scrollbar-hide pb-0 border-b border-[var(--glass-surface-hover)]">
+          <div className="flex gap-0 overflow-x-auto scrollbar-hide pb-0 border-b border-white/10 -mx-4 px-4">
             {VIEWS.map(v => {
               const Icon = v.icon
               const count = counts[v.id]
@@ -421,29 +424,29 @@ export function TodosPage() {
                 <button
                   key={v.id}
                   onClick={() => setActiveView(v.id)}
-                  className="relative flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 text-[13px] font-bold transition-all duration-150 uppercase tracking-wide"
+                  className="relative flex-shrink-0 flex items-center gap-1.5 px-4 py-3 text-[13px] font-bold transition-all duration-150 uppercase tracking-wide min-h-[44px]"
                   style={isActive ? {
-                    color: "var(--brand-text-secondary)",
-                    borderBottom: '2px solid rgba(255,255,255,0.8)',
+                    color: 'var(--brand-text-primary)',
+                    borderBottom: '2px solid var(--brand-primary)',
                     marginBottom: '-1px',
                   } : {
-                    color: "var(--brand-text-secondary)",
+                    color: 'var(--brand-text-muted)',
                     borderBottom: '2px solid transparent',
                     marginBottom: '-1px',
                   }}
                 >
-                  <Icon className="h-3.5 w-3.5 flex-shrink-0" />
+                  <Icon className="h-4 w-4 flex-shrink-0" />
                   <span>{v.label}</span>
                   {count > 0 && (
                     <span
                       className="text-[10px] font-black px-1.5 py-0.5 rounded-lg min-w-[20px] text-center"
                       style={isActive ? {
-                        background: 'rgba(255,255,255,0.18)',
-                        color: "var(--brand-text-secondary)",
-                        border: '1px solid rgba(255,255,255,0.15)',
+                        background: 'rgba(var(--brand-primary-rgb),0.2)',
+                        color: 'rgb(var(--brand-primary-rgb))',
+                        border: '1px solid rgba(var(--brand-primary-rgb),0.3)',
                       } : {
                         background: 'var(--glass-surface)',
-                        color: "var(--brand-text-secondary)",
+                        color: 'var(--brand-text-secondary)',
                         border: '1px solid transparent',
                       }}
                     >
@@ -878,23 +881,23 @@ function QuickWinsSection({
               exit={{ opacity: 0, scale: 0.85, transition: { duration: 0.15 } }}
               onClick={() => onToggle(todo.id)}
               whileTap={{ scale: 0.95 }}
-              className="flex-shrink-0 flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-left"
+              className="flex-shrink-0 flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-left min-h-[44px]"
               style={{
                 background: inProgressIds.includes(todo.id)
-                  ? 'rgba(251,146,60,0.12)'
-                  : 'rgba(251,191,36,0.08)',
-                border: `2px solid ${inProgressIds.includes(todo.id) ? 'rgba(251,146,60,0.5)' : 'rgba(251,191,36,0.35)'}`,
-                boxShadow: `2px 2px 0 ${inProgressIds.includes(todo.id) ? 'rgba(251,146,60,0.15)' : 'rgba(251,191,36,0.1)'}`,
-                maxWidth: 220,
+                  ? 'rgba(251,146,60,0.14)'
+                  : 'rgba(251,191,36,0.1)',
+                border: `2px solid ${inProgressIds.includes(todo.id) ? 'rgba(251,146,60,0.55)' : 'rgba(251,191,36,0.4)'}`,
+                boxShadow: `2px 2px 0 ${inProgressIds.includes(todo.id) ? 'rgba(251,146,60,0.18)' : 'rgba(251,191,36,0.12)'}`,
+                maxWidth: 200,
               }}
             >
               <div
-                className="flex-shrink-0 h-[16px] w-[16px] rounded-lg"
-                style={{ border: `2px solid ${inProgressIds.includes(todo.id) ? 'rgba(251,146,60,0.7)' : 'rgba(251,191,36,0.6)'}` }}
+                className="flex-shrink-0 h-[18px] w-[18px] rounded-lg"
+                style={{ border: `2px solid ${inProgressIds.includes(todo.id) ? 'rgba(251,146,60,0.8)' : 'rgba(251,191,36,0.7)'}` }}
               />
               <span
                 className="text-[13px] font-medium truncate"
-                style={{ color: "var(--brand-primary)" }}
+                style={{ color: 'var(--brand-text-primary)' }}
               >
                 {todo.text}
               </span>

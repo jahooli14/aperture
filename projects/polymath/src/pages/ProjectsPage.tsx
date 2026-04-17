@@ -258,20 +258,20 @@ export function ProjectsPage() {
     <>
       <SubtleBackground />
       <div className="min-h-screen">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-6 flex flex-col gap-2">
-          <div className="mb-2 flex items-center justify-between">
-            <div className="flex items-center gap-3">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 sm:pt-10 pb-4 flex flex-col gap-2">
+          <div className="mb-2 flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
               {showCompleted && (
                 <button
                   onClick={() => setShowCompleted(false)}
-                  className="h-10 w-10 rounded-xl flex items-center justify-center transition-all bg-[var(--glass-surface)] border border-white/10"
+                  className="h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-all bg-[var(--glass-surface)] border border-white/10"
                   style={{ color: "var(--brand-primary)" }}
                   title="Back to projects"
                 >
                   <ArrowLeft className="h-5 w-5" />
                 </button>
               )}
-              <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
+              <h1 className="text-[2rem] sm:text-4xl leading-[0.95] font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] break-words">
                 {showCompleted ? (
                   <>what you've <span className="text-brand-primary">built</span></>
                 ) : (
@@ -279,13 +279,13 @@ export function ProjectsPage() {
                 )}
               </h1>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
               {!showCompleted && (
                 <>
                   <CreateProjectDialog />
                   <button
                     onClick={() => navigate('/search')}
-                    className="h-10 w-10 rounded-xl flex items-center justify-center transition-all bg-[var(--glass-surface)] border border-white/10"
+                    className="h-11 w-11 rounded-xl flex items-center justify-center transition-all bg-[var(--glass-surface)] border border-white/10"
                     style={{ color: "var(--brand-primary)" }}
                     title="Search everything"
                   >
@@ -293,7 +293,7 @@ export function ProjectsPage() {
                   </button>
                   <button
                     onClick={() => setShowCompleted(true)}
-                    className="h-10 w-10 rounded-xl flex items-center justify-center transition-all bg-[var(--glass-surface)] border border-white/10"
+                    className="h-11 w-11 rounded-xl flex items-center justify-center transition-all bg-[var(--glass-surface)] border border-white/10"
                     style={{ color: "var(--brand-primary)" }}
                     title="View completed projects"
                   >
@@ -321,9 +321,9 @@ export function ProjectsPage() {
           ) : (<>
 
           {/* Controls */}
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 pt-2">
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pb-6 pt-2">
             {/* Outer Card Structure */}
-            <div className="p-6 rounded-2xl mb-6 relative overflow-hidden premium-glass shadow-2xl" style={{
+            <div className="p-4 sm:p-6 rounded-2xl mb-6 relative overflow-hidden premium-glass shadow-2xl" style={{
               background: 'var(--brand-glass-bg)',
               border: '1px solid var(--glass-surface-hover)',
             }}>

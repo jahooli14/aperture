@@ -62,19 +62,20 @@ export function ForYouToday() {
               exit={{ opacity: 0 }}
               transition={{ delay: i * 0.05 }}
               onClick={() => navigate(`/projects/${p.id}`)}
-              className="text-left p-4 rounded-xl border transition-all hover:scale-[1.01]"
+              className="text-left p-4 rounded-xl border transition-all hover:scale-[1.01] min-h-[80px]"
               style={{
-                background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.08), rgba(var(--brand-primary-rgb),0.02))',
-                borderColor: 'rgba(var(--brand-primary-rgb),0.25)',
+                background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.14), rgba(var(--brand-primary-rgb),0.04))',
+                borderColor: 'rgba(var(--brand-primary-rgb),0.4)',
+                boxShadow: '0 4px 16px rgba(var(--brand-primary-rgb),0.1)',
               }}
             >
               <div className="flex items-start justify-between gap-2 mb-1">
-                <h4 className="font-black italic text-[var(--brand-text-primary)] text-base leading-tight">
+                <h4 className="font-black italic text-[var(--brand-text-primary)] text-base leading-snug line-clamp-2">
                   {p.title}
                 </h4>
               </div>
               {p.heat_reason && (
-                <p className="text-xs text-[var(--brand-text-muted)] leading-relaxed mt-1.5 italic">
+                <p className="text-[13px] text-[var(--brand-text-secondary)] leading-relaxed mt-2 italic line-clamp-3">
                   {p.heat_reason}
                 </p>
               )}

@@ -61,17 +61,17 @@ export default function DrawerPage() {
     <>
       <SubtleBackground />
       <div className="min-h-screen">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-10 pb-24">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8 sm:pt-10 pb-24">
           <div className="mb-6 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl flex items-center justify-center"
-              style={{ background: 'var(--glass-surface)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div className="h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: 'var(--glass-surface)', border: '1px solid rgba(255,255,255,0.1)' }}>
               <Archive className="h-5 w-5" style={{ color: 'var(--brand-primary)' }} />
             </div>
-            <div>
-              <h1 className="text-3xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-[1.75rem] sm:text-3xl leading-[0.95] font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
                 the <span className="text-brand-primary">drawer</span>
               </h1>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mt-1">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-[var(--brand-text-muted)] mt-1">
                 {drawerProjects.length} resting · {warmedCount} warming
               </p>
             </div>
@@ -108,7 +108,7 @@ export default function DrawerPage() {
             </div>
           )}
 
-          <div className="columns-1 md:columns-2 lg:columns-3 gap-4 space-y-4">
+          <div className="columns-1 sm:columns-2 lg:columns-3 gap-4 space-y-4">
             {drawerProjects.map((p, i) => {
               const isWarm = (p.heat_score || 0) > 0 && !!p.heat_reason
               return (
@@ -124,26 +124,28 @@ export default function DrawerPage() {
                     className="block p-4 rounded-xl border transition-all hover:scale-[1.01]"
                     style={{
                       background: isWarm
-                        ? 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.08), rgba(var(--brand-primary-rgb),0.02))'
-                        : 'var(--brand-glass-bg)',
-                      borderColor: isWarm ? 'rgba(var(--brand-primary-rgb),0.25)' : 'var(--glass-surface-hover)',
+                        ? 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.12), rgba(var(--brand-primary-rgb),0.04))'
+                        : 'rgba(15, 24, 41, 0.5)',
+                      borderColor: isWarm ? 'rgba(var(--brand-primary-rgb),0.4)' : 'rgba(255,255,255,0.1)',
+                      boxShadow: isWarm ? '0 4px 16px rgba(var(--brand-primary-rgb),0.12)' : '0 2px 10px rgba(0,0,0,0.35)',
                     }}
                   >
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <h4 className="font-bold text-[var(--brand-text-primary)] text-sm leading-tight">
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                      <h4 className="font-bold text-[var(--brand-text-primary)] text-[15px] leading-tight line-clamp-2">
                         {p.title}
                       </h4>
                       {isWarm && (
-                        <Flame className="h-3.5 w-3.5 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
+                        <Flame className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
                       )}
                     </div>
                     {p.description && (
-                      <p className="text-xs text-[var(--brand-text-secondary)] line-clamp-2 mt-1">
+                      <p className="text-[13px] text-[var(--brand-text-secondary)] line-clamp-3 mt-1.5 leading-relaxed">
                         {p.description}
                       </p>
                     )}
                     {isWarm && p.heat_reason && (
-                      <p className="text-[11px] text-[var(--brand-text-muted)] leading-relaxed mt-2 italic">
+                      <p className="text-[12px] text-[var(--brand-text-secondary)] leading-relaxed mt-2.5 italic border-l-2 pl-2"
+                        style={{ borderColor: 'rgba(var(--brand-primary-rgb),0.5)' }}>
                         {p.heat_reason}
                       </p>
                     )}

@@ -126,7 +126,7 @@ const BottomSheetContent = React.forwardRef<
         }}
         className={cn(
           'fixed inset-x-0 bottom-0 z-[10001]',
-          'max-h-[90vh]',
+          'max-h-[88vh]',
           'rounded-t-3xl',
           'backdrop-blur-xl',
           'shadow-2xl',
@@ -160,7 +160,7 @@ const BottomSheetContent = React.forwardRef<
           }}
           className={cn(
             'absolute right-4 top-4',
-            'h-10 w-10',
+            'h-11 w-11',
             'flex items-center justify-center',
             'rounded-full',
             'backdrop-blur-xl border-2',
@@ -185,7 +185,7 @@ const BottomSheetContent = React.forwardRef<
         </motion.button>
 
         {/* Content Area (Scrollable) */}
-        <div className="flex-1 overflow-y-auto px-6 pb-8">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-4 sm:px-6 pb-6 sm:pb-8">
           {children}
         </div>
 
@@ -218,7 +218,7 @@ const BottomSheetFooter = ({
   <div
     className={cn(
       'flex flex-col gap-3 pt-6 mt-6 border-t',
-      'sticky bottom-0 backdrop-blur-xl -mx-6 px-6 pb-4',
+      'sticky bottom-0 backdrop-blur-xl -mx-4 sm:-mx-6 px-4 sm:px-6 pb-4',
       className
     )}
     style={{
@@ -237,10 +237,10 @@ const BottomSheetTitle = React.forwardRef<
   <h2
     ref={ref}
     className={cn(
-      'text-2xl font-bold leading-tight tracking-tight',
+      'text-xl sm:text-2xl font-bold leading-tight tracking-tight',
       className
     )}
-    style={{ color: "var(--brand-primary)" }}
+    style={{ color: 'var(--brand-text-primary)' }}
     {...props}
   />
 ))
@@ -252,8 +252,8 @@ const BottomSheetDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <p
     ref={ref}
-    className={cn('text-sm', className)}
-    style={{ color: "var(--brand-primary)" }}
+    className={cn('text-sm leading-relaxed', className)}
+    style={{ color: 'var(--brand-text-secondary)' }}
     {...props}
   />
 ))

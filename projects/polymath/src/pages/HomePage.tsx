@@ -86,16 +86,16 @@ function NowConsumingWidget() {
             <Link
               key={item.itemId}
               to={`/lists/${item.listId}`}
-              className="flex items-center gap-3 p-2.5 rounded-xl transition-all hover:bg-[rgba(245,158,11,0.06)]"
+              className="flex items-center gap-3 p-3 rounded-xl transition-all hover:bg-[rgba(245,158,11,0.06)] min-h-[56px]"
             >
-              <div className="h-7 w-7 rounded-lg flex items-center justify-center bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] flex-shrink-0">
-                <Icon className="h-3.5 w-3.5 text-[var(--brand-text-secondary)]" />
+              <div className="h-9 w-9 rounded-lg flex items-center justify-center bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] flex-shrink-0">
+                <Icon className="h-4 w-4 text-[var(--brand-primary)]" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-[var(--brand-text-primary)] truncate">{item.itemContent}</p>
-                <p className="text-[10px] text-[var(--brand-text-secondary)] opacity-50">{item.listTitle}</p>
+                <p className="text-sm font-medium text-[var(--brand-text-primary)] truncate">{item.itemContent}</p>
+                <p className="text-xs text-[var(--brand-text-muted)] truncate">{item.listTitle}</p>
               </div>
-              <ArrowRight className="h-3 w-3 text-[var(--brand-text-secondary)] opacity-30 flex-shrink-0" />
+              <ArrowRight className="h-4 w-4 text-[var(--brand-text-muted)] flex-shrink-0" />
             </Link>
           )
         })}

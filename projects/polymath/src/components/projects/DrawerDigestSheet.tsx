@@ -124,7 +124,7 @@ export function DrawerDigestSheet() {
               initial={{ opacity: 0, y: 20, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.98 }}
-              className="relative w-full max-w-xl max-h-[85vh] overflow-y-auto rounded-2xl border p-6"
+              className="relative w-full max-w-xl max-h-[88vh] overflow-y-auto rounded-2xl border p-4 sm:p-6"
               style={{
                 background: 'var(--brand-bg)',
                 borderColor: 'var(--glass-surface-hover)',
@@ -134,18 +134,18 @@ export function DrawerDigestSheet() {
             >
               <button
                 onClick={() => setOpen(false)}
-                className="absolute top-4 right-4 h-8 w-8 rounded-full flex items-center justify-center hover:bg-white/5 transition-colors"
+                className="absolute top-3 right-3 h-10 w-10 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors bg-white/5"
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5" />
               </button>
 
-              <div className="flex items-center gap-2 mb-5">
-                <h2 className="text-lg font-black italic uppercase tracking-tight text-[var(--brand-text-primary)]">
+              <div className="flex items-center gap-2 mb-4 pr-10">
+                <h2 className="text-lg sm:text-xl font-black italic uppercase tracking-tight text-[var(--brand-text-primary)]">
                   Drawer digest
                 </h2>
               </div>
 
-              <p className="text-xs text-[var(--brand-text-muted)] leading-relaxed mb-5 italic">
+              <p className="text-[13px] text-[var(--brand-text-secondary)] leading-relaxed mb-5 italic">
                 A handful of dormant projects stirred this week. Here's what each could become, with the evidence that surfaced them.
               </p>
 
@@ -157,28 +157,29 @@ export function DrawerDigestSheet() {
                       key={i}
                       className="p-4 rounded-xl border"
                       style={{
-                        background: 'rgba(var(--brand-primary-rgb),0.04)',
-                        borderColor: 'rgba(var(--brand-primary-rgb),0.15)',
+                        background: 'rgba(var(--brand-primary-rgb),0.06)',
+                        borderColor: 'rgba(var(--brand-primary-rgb),0.2)',
                       }}
                     >
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest"
-                          style={{ background: 'rgba(var(--brand-primary-rgb),0.15)', color: 'rgb(var(--color-accent-light-rgb))' }}>
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-widest"
+                          style={{ background: 'rgba(var(--brand-primary-rgb),0.2)', color: 'rgb(var(--color-accent-light-rgb))' }}>
                           {mode.label}
                         </span>
-                        <span className="text-[10px] text-[var(--brand-text-muted)]">{mode.blurb}</span>
+                        <span className="text-[11px] text-[var(--brand-text-secondary)]">{mode.blurb}</span>
                       </div>
 
-                      <p className="text-[10px] uppercase tracking-widest text-[var(--brand-text-muted)] mb-1">
+                      <p className="text-[11px] uppercase tracking-widest text-[var(--brand-text-muted)] mb-1 font-semibold">
                         from · {evo.project_title}
                       </p>
-                      <h3 className="text-base font-bold text-[var(--brand-text-primary)] mb-2">
+                      <h3 className="text-base font-bold text-[var(--brand-text-primary)] mb-2 leading-snug">
                         {evo.title}
                       </h3>
                       <p className="text-sm text-[var(--brand-text-secondary)] leading-relaxed mb-3">
                         {evo.proposal}
                       </p>
-                      <p className="text-[11px] text-[var(--brand-text-muted)] italic leading-relaxed mb-3">
+                      <p className="text-[12px] text-[var(--brand-text-muted)] italic leading-relaxed mb-3 border-l-2 pl-2"
+                        style={{ borderColor: 'rgba(var(--brand-primary-rgb),0.4)' }}>
                         {evo.evidence}
                       </p>
 
@@ -186,14 +187,14 @@ export function DrawerDigestSheet() {
                         <button
                           onClick={() => accept(i)}
                           disabled={busy !== null}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all hover:scale-105 disabled:opacity-50"
+                          className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all hover:scale-105 disabled:opacity-50 min-h-[44px]"
                           style={{
-                            background: 'rgba(52,211,153,0.12)',
-                            border: '1px solid rgba(52,211,153,0.3)',
+                            background: 'rgba(52,211,153,0.15)',
+                            border: '1px solid rgba(52,211,153,0.4)',
                             color: 'rgb(var(--color-accent-light-rgb))',
                           }}
                         >
-                          <Check className="h-3 w-3" />
+                          <Check className="h-4 w-4" />
                           Accept
                         </button>
                       </div>

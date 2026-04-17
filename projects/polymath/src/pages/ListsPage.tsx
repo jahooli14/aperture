@@ -218,48 +218,46 @@ export default function ListsPage() {
     }
 
     return (
-        <div className="min-h-screen pb-32 pt-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto aperture-shelf overflow-hidden">
-            <div className="flex items-center justify-between mb-8">
-                <div className="flex flex-col gap-2">
-                    <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] leading-none">
+        <div className="min-h-screen pb-32 pt-8 sm:pt-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto aperture-shelf overflow-hidden">
+            <div className="flex items-start justify-between gap-3 mb-6 sm:mb-8">
+                <div className="flex flex-col gap-1.5 min-w-0 flex-1">
+                    <h1 className="text-[2rem] sm:text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] leading-[0.95]">
                         your <span className="page-accent">collections</span>
                     </h1>
-                    <p className="section-subtitle mt-1">The stuff you love, curated.</p>
+                    <p className="section-subtitle mt-1 text-sm sm:text-base">The stuff you love, curated.</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                     <button
                         onClick={() => navigate('/favourites')}
                         title="Favourites"
-                        className="flex items-center justify-center h-10 w-10 rounded-lg hover:bg-[var(--glass-surface)] text-[var(--brand-text-primary)] transition-all"
+                        className="flex items-center justify-center h-11 w-11 rounded-xl hover:bg-[var(--glass-surface)] bg-[var(--glass-surface)] text-[var(--brand-primary)] transition-all"
                         style={{ border: '1px solid rgba(255,255,255,0.1)' }}
                     >
-                        <Star className="h-4 w-4" />
+                        <Star className="h-5 w-5" />
                     </button>
                     {lists.length > 0 && (
                         <button
                             onClick={() => setIsReordering(!isReordering)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all ${
+                            className={`flex items-center justify-center h-11 w-11 rounded-xl transition-all ${
                                 isReordering
-                                    ? 'bg-brand-primary text-[var(--brand-text-primary)] rounded-lg'
-                                    : 'text-[var(--brand-text-primary)] hover:bg-[var(--glass-surface)] rounded-lg'
+                                    ? 'text-[var(--brand-primary)]'
+                                    : 'text-[var(--brand-text-primary)] hover:bg-[var(--glass-surface)]'
                             }`}
                             style={isReordering
-                                ? { border: '1px solid rgba(125,211,252,0.5)' }
-                                : { border: '1px solid rgba(255,255,255,0.1)' }
+                                ? { border: '1px solid rgba(125,211,252,0.5)', background: 'rgba(125,211,252,0.15)' }
+                                : { border: '1px solid rgba(255,255,255,0.1)', background: 'var(--glass-surface)' }
                             }
+                            title={isReordering ? 'Done reordering' : 'Reorder lists'}
                         >
-                            {isReordering ? <Check className="h-3 w-3" /> : <ListOrdered className="h-3 w-3" />}
-                            <span className="text-[10px] font-black uppercase tracking-widest">
-                                {isReordering ? 'Done' : 'Order'}
-                            </span>
+                            {isReordering ? <Check className="h-5 w-5" /> : <ListOrdered className="h-5 w-5" />}
                         </button>
                     )}
                     <Button
                         onClick={() => setCreateOpen(true)}
-                        className="h-10 w-10 p-0 rounded-lg hover:bg-[var(--glass-surface)] bg-transparent text-[var(--brand-text-primary)]"
+                        className="h-11 w-11 p-0 rounded-xl hover:bg-[var(--glass-surface)] bg-[var(--glass-surface)] text-[var(--brand-primary)]"
                         style={{ border: '1px solid rgba(255,255,255,0.1)' }}
                     >
-                        <Plus className="h-4 w-4" />
+                        <Plus className="h-5 w-5" />
                     </Button>
                 </div>
             </div>
@@ -417,7 +415,7 @@ export default function ListsPage() {
 
             {/* Normal Mode - Responsive Grid */}
             {lists.length > 0 && !isReordering && (
-                <div className="grid gap-3 pb-20" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(160px, 100%), 1fr))' }}>
+                <div className="grid gap-3 pb-20" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(140px, calc(50% - 6px)), 1fr))' }}>
                 {lists.map((list) => {
                     const rgb = ListColor(list.type)
                     const coverImage = listCovers[list.id]
@@ -500,15 +498,16 @@ export default function ListsPage() {
                                         </div>
                                     </div>
                                 )}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-60" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90" />
+                                <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/60 to-transparent" />
                             </div>
 
                             {/* Overlay Content */}
-                            <div className="absolute inset-0 p-3 flex flex-col justify-between">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-black/60" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+                            <div className="absolute inset-0 p-2.5 flex flex-col justify-between">
+                                <div className="flex items-start justify-between gap-1.5">
+                                    <div className="flex items-center gap-1 px-1.5 py-1 rounded-lg bg-black/70 backdrop-blur-sm" style={{ border: `1px solid rgba(${rgb}, 0.4)` }}>
                                         <ListIcon type={list.type} className="h-3 w-3" style={{ color: `rgb(${rgb})` }} />
-                                        <span className="text-[8px] font-black uppercase tracking-wider text-[var(--brand-text-primary)]">
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--brand-text-primary)]">
                                             {list.type}
                                         </span>
                                     </div>
@@ -519,25 +518,26 @@ export default function ListsPage() {
                                                 e.stopPropagation()
                                                 setQuickAddList(list)
                                             }}
-                                            className="h-6 w-6 flex items-center justify-center rounded-lg bg-black/60 text-[var(--brand-text-primary)]/50 active:text-[var(--brand-text-primary)] transition-all opacity-50"
-                                            style={{ boxShadow: `inset 0 0 0 1px rgba(${rgb}, 0.25)` }}
+                                            className="h-8 w-8 flex items-center justify-center rounded-lg bg-black/70 backdrop-blur-sm text-[var(--brand-text-primary)] transition-all"
+                                            style={{ border: `1px solid rgba(${rgb}, 0.4)` }}
                                             title="Quick add"
                                         >
-                                            <Plus className="h-3 w-3" />
+                                            <Plus className="h-4 w-4" />
                                         </button>
                                     </div>
                                 </div>
 
-                                <div className="space-y-1">
+                                <div className="space-y-1.5">
                                     <div className="flex items-center gap-1.5">
-                                        <h3 className="text-xs font-black text-[var(--brand-text-primary)] uppercase tracking-tight drop-shadow-md leading-tight group-hover:text-brand-primary transition-colors">
+                                        <h3 className="text-sm font-black text-[var(--brand-text-primary)] uppercase tracking-tight leading-tight group-hover:text-brand-primary transition-colors line-clamp-2"
+                                            style={{ textShadow: '0 1px 4px rgba(0,0,0,0.95), 0 0 12px rgba(0,0,0,0.8)' }}>
                                             {list.title}
                                         </h3>
                                         {/* Recently updated dot */}
                                         {recentlyUpdated && (
                                             <span
-                                                className="h-1.5 w-1.5 rounded-full flex-shrink-0"
-                                                style={{ backgroundColor: `rgb(${rgb})`, boxShadow: `0 0 4px rgb(${rgb})` }}
+                                                className="h-2 w-2 rounded-full flex-shrink-0"
+                                                style={{ backgroundColor: `rgb(${rgb})`, boxShadow: `0 0 6px rgb(${rgb})` }}
                                                 title="Recently updated"
                                             />
                                         )}
@@ -545,8 +545,11 @@ export default function ListsPage() {
                                     <div className="flex items-center justify-between">
                                         {/* Item count badge */}
                                         <div className="flex items-center gap-1">
-                                            <span className="text-[9px] font-black uppercase tracking-widest"
-                                                style={{ color: itemCount > 0 ? `rgba(${rgb}, 0.7)` : 'rgba(255,255,255,0.25)' }}>
+                                            <span className="text-[11px] font-bold uppercase tracking-widest"
+                                                style={{
+                                                    color: itemCount > 0 ? `rgb(${rgb})` : 'rgba(255,255,255,0.55)',
+                                                    textShadow: '0 1px 3px rgba(0,0,0,0.95)'
+                                                }}>
                                                 {itemCount > 0 ? `${itemCount} ${itemCount === 1 ? 'item' : 'items'}` : 'empty'}
                                             </span>
                                         </div>

@@ -317,10 +317,10 @@ export function SearchPage() {
         </div>
 
         <div className="min-h-screen pb-24">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
 
           {/* Search Input */}
-          <div className="p-4 rounded-2xl mb-6 relative overflow-hidden premium-glass shadow-2xl" style={{
+          <div className="p-3 sm:p-4 rounded-2xl mb-6 relative overflow-hidden premium-glass shadow-2xl" style={{
             background: 'var(--brand-glass-bg)',
             border: '1px solid var(--glass-surface-hover)',
           }}>
@@ -340,7 +340,7 @@ export function SearchPage() {
                   className="w-full h-12 pl-12 pr-4 rounded-lg border-2 text-base focus:outline-none transition-all duration-200"
                   style={{
                     background: 'var(--glass-surface)',
-                    borderColor: searchFocused ? 'rgba(var(--brand-primary-rgb), 0.6)' : 'rgba(var(--brand-primary-rgb), 0.2)',
+                    borderColor: searchFocused ? 'rgba(var(--brand-primary-rgb), 0.6)' : 'rgba(var(--brand-primary-rgb), 0.4)',
                     color: 'var(--brand-text-primary)',
                   }}
                 />
@@ -458,20 +458,20 @@ export function SearchPage() {
                       transition={{ delay: index * 0.05 }}
                       whileTap={{ scale: 0.98, backgroundColor: 'var(--glass-surface)' }}
                       onClick={() => navigateToResult(result)}
-                      className="p-5 rounded-lg cursor-pointer"
+                      className="p-4 sm:p-5 rounded-lg cursor-pointer"
                       style={{
                         background: 'var(--brand-glass-bg)',
                         border: '1px solid var(--glass-surface-hover)',
                         boxShadow: '4px 4px 0 rgba(0,0,0,0.5)'
                       }}
                     >
-                      <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           {/* Type Badge */}
                           <div className="flex items-center gap-2 mb-2">
                             {getResultIcon(result.type)}
                             <span
-                              className="text-xs font-medium px-2 py-1 rounded-lg capitalize"
+                              className="text-xs font-semibold px-2 py-1 rounded-lg capitalize text-[var(--brand-text-primary)]"
                               style={{ backgroundColor: getResultBadgeColor(result.type) }}
                             >
                               {result.type}
@@ -479,27 +479,28 @@ export function SearchPage() {
                           </div>
 
                           {/* Title */}
-                          <h3 className="text-lg font-semibold mb-1 line-clamp-1 premium-text-platinum">
+                          <h3 className="text-base sm:text-lg font-semibold mb-1.5 line-clamp-2 text-[var(--brand-text-primary)]">
                             {result.title}
                           </h3>
 
                           {/* Description */}
                           {(result.body || result.description) && (
-                            <p className="text-sm line-clamp-2 mb-2" style={{ color: "var(--brand-primary)" }}>
+                            <p className="text-sm line-clamp-2 mb-2 text-[var(--brand-text-secondary)]">
                               {result.body || result.description}
                             </p>
                           )}
 
                           {/* Tags */}
                           {result.tags && result.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
+                            <div className="flex flex-wrap gap-1.5">
                               {result.tags.slice(0, 3).map((tag, i) => (
                                 <span
                                   key={i}
-                                  className="text-xs px-2 py-0.5 rounded-lg"
+                                  className="text-xs font-medium px-2 py-0.5 rounded-lg"
                                   style={{
-                                    backgroundColor: 'rgba(var(--brand-primary-rgb), 0.1)',
-                                    color: 'var(--brand-primary)'
+                                    backgroundColor: 'rgba(var(--brand-primary-rgb), 0.15)',
+                                    color: 'var(--brand-primary)',
+                                    border: '1px solid rgba(var(--brand-primary-rgb),0.25)'
                                   }}
                                 >
                                   {tag}
@@ -510,7 +511,7 @@ export function SearchPage() {
                         </div>
 
                         {/* Arrow always visible on touch */}
-                        <div className="flex-shrink-0 opacity-30">
+                        <div className="flex-shrink-0 opacity-50 mt-1">
                           <ArrowRight className="h-5 w-5" style={{ color: "var(--brand-primary)" }} />
                         </div>
                       </div>

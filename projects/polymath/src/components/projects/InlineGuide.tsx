@@ -338,10 +338,10 @@ export function InlineGuide({
     <div>
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
-        <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--brand-text-secondary)', opacity: 0.3 }}>
+        <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--brand-text-secondary)]">
           Guide
         </span>
-        <div className="h-px flex-grow" style={{ background: 'rgba(255,255,255,0.04)' }} />
+        <div className="h-px flex-grow" style={{ background: 'rgba(255,255,255,0.1)' }} />
       </div>
 
       {/* Loading state */}
@@ -368,7 +368,7 @@ export function InlineGuide({
               >
                 {msg.kind === 'guide' ? (
                   <div className="space-y-3">
-                    <p className="text-[15px] leading-[1.65] whitespace-pre-wrap" style={{ color: 'var(--brand-text-primary)', opacity: 0.6 }}>
+                    <p className="text-[15px] leading-[1.65] whitespace-pre-wrap text-[var(--brand-text-secondary)]">
                       {msg.content}
                     </p>
 
@@ -398,45 +398,44 @@ export function InlineGuide({
                           return (
                             <div
                               key={key}
-                              className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+                              className="flex items-center gap-3 px-3 py-3 rounded-xl"
                               style={{
-                                background: destructive ? 'rgba(239,68,68,0.04)' : 'rgba(255,255,255,0.02)',
-                                border: `1px solid ${destructive ? 'rgba(239,68,68,0.12)' : 'rgba(255,255,255,0.04)'}`,
+                                background: destructive ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.04)',
+                                border: `1px solid ${destructive ? 'rgba(239,68,68,0.25)' : 'rgba(255,255,255,0.1)'}`,
                               }}
                             >
-                              <OpIcon className="h-3.5 w-3.5 flex-shrink-0" style={{ color: destructive ? 'rgb(239,68,68)' : 'var(--brand-text-secondary)', opacity: 0.6 }} />
+                              <OpIcon className="h-4 w-4 flex-shrink-0" style={{ color: destructive ? 'rgb(248,113,113)' : 'var(--brand-text-secondary)' }} />
                               <div className="flex-1 min-w-0">
-                                <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: destructive ? 'rgb(239,68,68)' : 'var(--brand-text-secondary)', opacity: 0.55 }}>
+                                <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: destructive ? 'rgb(248,113,113)' : 'var(--brand-text-secondary)' }}>
                                   {label}
                                 </p>
-                                <p className="text-[13px] leading-snug truncate" style={{ color: 'var(--brand-text-primary)', opacity: 0.7 }}>
+                                <p className="text-[13px] leading-snug truncate text-[var(--brand-text-primary)]">
                                   {preview}
                                 </p>
                               </div>
                               {resolved ? (
-                                <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium" style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--brand-text-secondary)', opacity: 0.4 }}>
+                                <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold" style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--brand-text-muted)' }}>
                                   <Check className="h-3 w-3" /> Applied
                                 </span>
                               ) : (
                                 <div className="flex items-center gap-1 flex-shrink-0">
                                   <button
                                     onClick={() => markOpResolved(i, key)}
-                                    className="h-7 w-7 flex items-center justify-center rounded-lg transition-colors hover:bg-white/[0.05]"
-                                    style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
+                                    className="h-9 w-9 flex items-center justify-center rounded-lg transition-colors hover:bg-white/[0.08] text-[var(--brand-text-muted)]"
                                     aria-label="Dismiss"
                                   >
-                                    <X className="h-3.5 w-3.5" />
+                                    <X className="h-4 w-4" />
                                   </button>
                                   <button
                                     onClick={() => applyTaskOp(i, op, key)}
-                                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all text-[11px] font-medium"
+                                    className="flex items-center gap-1 min-h-[36px] px-3 rounded-lg transition-all text-[11px] font-bold uppercase tracking-wider"
                                     style={{
-                                      background: destructive ? 'rgba(239,68,68,0.1)' : 'rgba(var(--brand-primary-rgb),0.1)',
-                                      color: destructive ? 'rgb(239,68,68)' : 'rgb(var(--brand-primary-rgb))',
-                                      opacity: 0.85,
+                                      background: destructive ? 'rgba(239,68,68,0.18)' : 'rgba(var(--brand-primary-rgb),0.18)',
+                                      color: destructive ? 'rgb(248,113,113)' : 'rgb(var(--brand-primary-rgb))',
+                                      border: `1px solid ${destructive ? 'rgba(239,68,68,0.4)' : 'rgba(var(--brand-primary-rgb),0.4)'}`,
                                     }}
                                   >
-                                    <Check className="h-3 w-3" /> {destructive ? 'Delete' : 'Apply'}
+                                    <Check className="h-3.5 w-3.5" /> {destructive ? 'Delete' : 'Apply'}
                                   </button>
                                 </div>
                               )}

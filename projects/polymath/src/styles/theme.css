@@ -34,8 +34,8 @@
 
     /* Text Standards */
     --brand-text-primary: #ffffff;
-    --brand-text-secondary: #d1d5db;
-    --brand-text-muted: #9ca3af;
+    --brand-text-secondary: #e5e7eb;
+    --brand-text-muted: #b4bac6;
 
     /* Accessible text hierarchy (WCAG AA against #0f1829) */
     --text-primary: rgba(255, 255, 255, 0.92);
@@ -73,11 +73,11 @@
     --color-accent-dark-rgb: 8, 145, 178; /* Cyan-700 darker variant */
 
     /* UI State Surfaces */
-    --glass-surface: rgba(255, 255, 255, 0.05);
-    --glass-surface-hover: rgba(255, 255, 255, 0.08);
-    --glass-surface-active: rgba(255, 255, 255, 0.12);
-    --glass-border: rgba(255, 255, 255, 0.08);
-    --glass-border-bold: rgba(255, 255, 255, 0.15);
+    --glass-surface: rgba(255, 255, 255, 0.06);
+    --glass-surface-hover: rgba(255, 255, 255, 0.1);
+    --glass-surface-active: rgba(255, 255, 255, 0.14);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-border-bold: rgba(255, 255, 255, 0.18);
 
     /* Layout Standards */
     --brand-border: 1px solid var(--glass-border);
@@ -466,4 +466,52 @@ h6 {
 
 .ripple-effect:active::after {
     animation: ripple 0.5s cubic-bezier(0, 0, 0.2, 1) forwards;
+}
+
+/* ─── Mobile UX baseline ──────────────────────────────────── */
+
+/* Safe area utilities for notched phones */
+.pt-safe { padding-top: env(safe-area-inset-top); }
+.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+.pl-safe { padding-left: env(safe-area-inset-left); }
+.pr-safe { padding-right: env(safe-area-inset-right); }
+
+/* Hide scrollbar utility for horizontal pill rails */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { scrollbar-width: none; -ms-overflow-style: none; }
+
+/* Prevent iOS zoom on input focus by ensuring 16px minimum */
+@media (max-width: 640px) {
+    input[type="text"],
+    input[type="search"],
+    input[type="email"],
+    input[type="number"],
+    input[type="tel"],
+    input[type="url"],
+    input[type="password"],
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+
+    /* Tighten huge headings on small screens so they don't dominate */
+    h1 { font-size: 2rem !important; }
+    h2 { font-size: 1.625rem !important; }
+}
+
+/* Universal min tap-target hint for icon-only buttons */
+.tap-44 {
+    min-width: 44px;
+    min-height: 44px;
+}
+
+/* Prevent scroll-chaining in modals, sheets, and sidebars */
+.overscroll-contain { overscroll-behavior: contain; }
+
+/* Stronger focus ring on mobile for keyboard nav visibility */
+@media (max-width: 640px) {
+    *:focus-visible {
+        outline: 3px solid rgba(var(--brand-primary-rgb), 0.8);
+        outline-offset: 3px;
+    }
 }

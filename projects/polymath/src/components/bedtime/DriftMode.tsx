@@ -310,7 +310,8 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
       {/* Exit Button */}
       <button
         onClick={onClose}
-        className="absolute top-6 right-6 p-4 rounded-full bg-[var(--glass-surface)] text-[var(--brand-text-secondary)] hover:bg-[rgba(255,255,255,0.1)]"
+        className="absolute top-4 right-4 sm:top-6 sm:right-6 h-12 w-12 flex items-center justify-center rounded-full bg-[var(--glass-surface)] text-[var(--brand-text-primary)] hover:bg-[rgba(255,255,255,0.15)] border border-white/10"
+        style={{ top: 'calc(1rem + env(safe-area-inset-top))' }}
       >
         <X className="h-6 w-6" />
       </button>
@@ -472,11 +473,11 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
                 </motion.p>
               )}
 
-              <h1 className="text-3xl md:text-4xl font-serif text-[var(--brand-text-secondary)] leading-tight">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif text-[var(--brand-text-secondary)] leading-tight">
                 {currentPrompt.prompt}
               </h1>
               {currentPrompt.metaphor && currentPrompt.context && (
-                <p className="mt-6 text-xl italic text-[var(--brand-text-muted)] font-serif">
+                <p className="mt-6 text-lg sm:text-xl italic text-[var(--brand-text-muted)] font-serif">
                   "{currentPrompt.metaphor}"
                 </p>
               )}
@@ -529,7 +530,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
           >
             <div className="mb-8 relative">
               <div className="absolute inset-0 bg-brand-primary/20 blur-3xl rounded-full" />
-              <div className="relative p-6 rounded-2xl bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)]">
+              <div className="relative p-4 sm:p-6 rounded-2xl bg-[var(--glass-surface)] border border-white/10">
                 <Zap className="h-12 w-12 text-brand-text-secondary mx-auto mb-4" />
                 <h2 className="text-3xl font-serif text-[var(--brand-text-secondary)] mb-2">Session Complete</h2>
                 <p className="text-[var(--brand-text-secondary)]">Your subconscious has been primed.</p>

@@ -104,37 +104,36 @@ export function ProjectListRow({
         }}
       >
         {/* Title row with status badge */}
-        <div className="flex items-start justify-between gap-2 mb-1">
-          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-2 mb-1.5">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
             <button
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
                 setPriority(project.id)
               }}
-              className="flex-shrink-0 p-1 rounded-xl hover:bg-white/20 transition-colors"
+              className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-xl hover:bg-white/10 transition-colors"
               title={project.is_priority ? "Remove from priority" : "Set as priority"}
             >
               <Star
                 size={18}
                 style={{
-                  color: project.is_priority ? 'rgb(var(--brand-primary-rgb))' : 'rgba(255, 255, 255, 0.6)',
+                  color: project.is_priority ? 'rgb(var(--brand-primary-rgb))' : 'rgba(255, 255, 255, 0.45)',
                   fill: project.is_priority ? 'rgb(var(--brand-primary-rgb))' : 'none'
                 }}
               />
             </button>
             <h4
-              className="text-sm font-semibold flex-1 line-clamp-1"
-              style={{ color: "var(--brand-primary)" }}
+              className="text-[15px] font-semibold flex-1 line-clamp-1 text-[var(--brand-text-primary)]"
             >
               {project.title}
             </h4>
           </div>
           <span
-            className="text-xs font-medium px-2 py-0.5 rounded-xl whitespace-nowrap flex-shrink-0"
+            className="text-[10px] font-semibold px-2 py-0.5 rounded-md whitespace-nowrap flex-shrink-0 uppercase tracking-wider"
             style={{
               backgroundColor: statusColors[project.status] || statusColors.active,
-              color: "var(--brand-text-secondary)"
+              color: 'var(--brand-text-secondary)'
             }}
           >
             {project.status}
@@ -144,15 +143,13 @@ export function ProjectListRow({
         {/* Next task */}
         {nextTask ? (
           <p
-            className="text-xs line-clamp-1 mb-2"
-            style={{ color: "var(--brand-primary)" }}
+            className="text-[13px] line-clamp-1 mb-2 text-[var(--brand-text-secondary)]"
           >
             {nextTask.text}
           </p>
         ) : (
           <p
-            className="text-xs mb-2"
-            style={{ color: "var(--brand-primary)" }}
+            className="text-[13px] mb-2 text-[var(--brand-text-muted)] italic"
           >
             No tasks
           </p>
@@ -162,13 +159,14 @@ export function ProjectListRow({
         {totalTasks > 0 && (
           <div className="flex items-center gap-2">
             <div
-              className="flex-1 h-1 rounded-full overflow-hidden"
-              style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+              className="flex-1 h-1.5 rounded-full overflow-hidden"
+              style={{ backgroundColor: 'rgba(255, 255, 255, 0.08)' }}
             >
               <motion.div
-                className="h-full"
+                className="h-full rounded-full"
                 style={{
-                  background: 'linear-gradient(90deg, var(--brand-primary), var(--brand-primary))'
+                  background: 'var(--brand-primary)',
+                  boxShadow: '0 0 8px rgba(var(--brand-primary-rgb),0.5)'
                 }}
                 initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
@@ -176,8 +174,7 @@ export function ProjectListRow({
               />
             </div>
             <span
-              className="text-xs font-medium whitespace-nowrap"
-              style={{ color: "var(--brand-primary)" }}
+              className="text-[11px] font-bold tabular-nums whitespace-nowrap text-[var(--brand-text-secondary)]"
             >
               {completedTasks}/{totalTasks}
             </span>
@@ -210,29 +207,29 @@ export function ProjectListRow({
                     }
                   }}
                   placeholder="Add task..."
-                  className="flex-1 px-2 py-1 text-xs rounded-xl"
+                  className="flex-1 px-3 py-2 text-sm rounded-lg min-h-[40px]"
                   style={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    color: "var(--brand-text-secondary)",
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    color: 'var(--brand-text-primary)',
                     outline: 'none'
                   }}
                 />
                 <button
                   type="submit"
-                  className="p-1 rounded-xl hover:bg-white/20 transition-colors"
-                  style={{ color: "var(--brand-primary)" }}
+                  className="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors"
+                  style={{ color: 'var(--brand-primary)' }}
                 >
-                  <Check size={14} />
+                  <Check size={16} />
                 </button>
               </form>
             ) : (
               <button
                 onClick={handleStartAddingTask}
-                className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-xl hover:bg-[rgba(255,255,255,0.1)] transition-colors w-full"
-                style={{ color: "var(--brand-primary)" }}
+                className="flex items-center gap-1.5 text-sm px-2 py-2 rounded-lg hover:bg-[rgba(255,255,255,0.06)] transition-colors w-full min-h-[36px]"
+                style={{ color: 'var(--brand-text-secondary)' }}
               >
-                <Plus size={14} />
+                <Plus size={16} />
                 <span>Add task</span>
               </button>
             )}

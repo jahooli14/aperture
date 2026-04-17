@@ -223,19 +223,19 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
               )}
 
               {/* Drag Handle */}
-              <div className="flex-shrink-0 opacity-30 cursor-grab active:cursor-grabbing text-[var(--brand-text-primary)]">
-                <GripVertical className="h-4 w-4" />
+              <div className="flex-shrink-0 opacity-40 cursor-grab active:cursor-grabbing text-[var(--brand-text-primary)]">
+                <GripVertical className="h-5 w-5" />
               </div>
 
               {/* Checkbox */}
               <button
                 onClick={() => handleToggleTask(task.id)}
                 className={cn(
-                  "flex-shrink-0 h-6 w-6 rounded-lg flex items-center justify-center transition-all border-2",
-                  isHighlighted ? "border-brand-primary/50 bg-brand-primary/5" : "border-white/20 bg-black/20"
+                  "flex-shrink-0 h-7 w-7 rounded-lg flex items-center justify-center transition-all border-2",
+                  isHighlighted ? "border-brand-primary/60 bg-brand-primary/10" : "border-white/25 bg-black/20"
                 )}
               >
-                {task.done && <Check className="h-3.5 w-3.5 text-[var(--brand-text-primary)]" />}
+                {task.done && <Check className="h-4 w-4 text-[var(--brand-text-primary)]" />}
               </button>
 
               {/* Task Text & Metadata */}
