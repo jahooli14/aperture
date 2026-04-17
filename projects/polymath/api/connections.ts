@@ -1209,6 +1209,8 @@ Be specific: mention actual shared concepts. Do not say "both are about X".`
       })
     }
   }
+
+  return res.status(405).json({ error: 'Method not allowed' })
 }
 
 // ─── Helper: Fetch item with content and embedding ─────────────────────────

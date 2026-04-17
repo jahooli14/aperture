@@ -11,6 +11,7 @@ import { generateText } from './_lib/gemini-chat.js'
 import { generateInsights, getCachedInsights } from './_lib/insights-generator.js'
 import { generateCognitiveReplay } from './_lib/cognitive-replay.js'
 import { MODELS } from './_lib/models.js'
+import { CaptureMemoryBody, CaptureTitleResponse, validate, tryValidate } from './_lib/schemas.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
@@ -620,7 +621,14 @@ Return ONLY valid JSON, no markdown:
  */
 async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: any, userId: string) {
   const startTime = Date.now()
-  const { transcript, body, title: providedTitle, source_reference, tags, memory_type, image_urls, checklist_items } = req.body
+
+  let validatedBody
+  try {
+    validatedBody = validate(CaptureMemoryBody, req.body, 'capture')
+  } catch (err) {
+    return res.status(400).json({ error: err instanceof Error ? err.message : 'invalid body' })
+  }
+  const { transcript, body, title: providedTitle, source_reference, tags, memory_type, image_urls, checklist_items } = validatedBody
 
   // Accept both 'transcript' (voice) and 'body' (manual text) field names
   const text = transcript || body
@@ -668,6 +676,12 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
       console.error('[handleCapture] Checklist insert error:', error)
       return res.status(500).json({ error: 'Failed to create checklist note' })
     }
+  }
+
+  // The two branches above covered checklist-only + missing-input cases, so
+  // `text` is a non-empty string from here on. Narrow for TS.
+  if (!text) {
+    return res.status(400).json({ error: 'transcript or body required' })
   }
 
   console.log('[handleCapture] Starting capture processing', { hasProvidedTitle: !!providedTitle })
@@ -802,24 +816,20 @@ Remember: BE CREATIVE. SUMMARIZE. DO NOT COPY THE BEGINNING OF THE TEXT.`
       console.log('[handleCapture] Gemini raw response:', jsonText)
 
       try {
-        // Robust JSON extraction
         const jsonMatch = jsonText.match(/\{[\s\S]*\}/)
-        const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(jsonText)
+        const raw = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(jsonText)
+        const parsed = tryValidate(CaptureTitleResponse, raw, 'handleCapture:gemini-title')
 
-        if (parsed.title && parsed.bullets) {
-          // Validate that the title is not verbatim
+        if (parsed) {
           if (isVerbatimTitle(parsed.title, text)) {
             console.warn('[handleCapture] ⚠️ Gemini returned verbatim title, rejecting:', parsed.title)
-            console.log('[handleCapture] Using smart fallback instead')
             parsedTitle = (isManualEntry && providedTitle) ? providedTitle : createFallbackTitle(text)
           } else {
-            // For manual entries: respect user-provided title if they explicitly typed one
             parsedTitle = (isManualEntry && providedTitle) ? providedTitle : parsed.title
             parsedBullets = parsed.bullets
             console.log('[handleCapture] ✅ Successfully generated summary title:', parsedTitle)
           }
         } else {
-          console.warn('[handleCapture] Gemini response missing title or bullets')
           parsedTitle = (isManualEntry && providedTitle) ? providedTitle : createFallbackTitle(text)
         }
       } catch (parseError) {
@@ -913,6 +923,7 @@ Remember: BE CREATIVE. SUMMARIZE. DO NOT COPY THE BEGINNING OF THE TEXT.`
     processMemory(memory.id)
       .then(() => console.log(`[handleCapture] ✅ Background processing complete for ${memory.id}`))
       .catch(err => console.error(`[handleCapture] Background processing failed for ${memory.id}:`, err))
+    return
 
   } catch (error) {
     console.error('[handleCapture] Error:', error)

@@ -8,6 +8,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { MODELS } from '../idea-engine-v2/models.js'
 import type { FixDraft } from './types.js'
 import { getRequirementsForDraft, getMissingRequirements } from './types.js'
+import { FixDraftResponse, tryValidate } from '../schemas.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
@@ -87,11 +88,15 @@ Return only valid JSON.`
   if (!jsonMatch) return null
 
   const parsed = JSON.parse(jsonMatch[0])
-  if (!parsed.name) return null
+  // "not automatable" signal from the prompt
+  if (parsed?.name == null) return null
 
-  const draft = parsed as FixDraft
+  // Validate shape + action types before we hand this to the runner. A bad
+  // draft would otherwise sit in the queue and crash cron on execution.
+  const validated = tryValidate(FixDraftResponse, parsed, 'draftFix:gemini-response')
+  if (!validated) return null
 
-  // Attach requirements so the UI can show what's needed
+  const draft: FixDraft = validated as FixDraft
   draft.requirements = getRequirementsForDraft(draft)
   draft.ready = getMissingRequirements(draft).length === 0
 

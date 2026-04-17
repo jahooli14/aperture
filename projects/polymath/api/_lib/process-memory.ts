@@ -7,6 +7,7 @@ import { detectProjectGenesis } from './project-genesis.js'
 import { generateText } from './gemini-chat.js'
 import { MODELS } from './models.js'
 import { draftFix } from './fix-queue/drafter.js'
+import { ExtractMetadataResponse, validate } from './schemas.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 const supabase = getSupabaseClient()
@@ -17,6 +18,13 @@ const logger = {
   error: (objOrMsg: any, msg?: string) => console.error(msg || objOrMsg, typeof objOrMsg === 'object' && msg ? objOrMsg : ''),
   debug: (objOrMsg: any, msg?: string) => console.debug(msg || objOrMsg, typeof objOrMsg === 'object' && msg ? objOrMsg : ''),
 }
+
+/**
+ * Cap on process_attempts before we stop retrying. After this, the memory
+ * stays processed=false with the last error set — surfaced to the user rather
+ * than silently burning Gemini quota on every cron tick.
+ */
+const MAX_PROCESS_ATTEMPTS = 5
 
 /**
  * Process a memory: extract entities, generate embeddings, store results
@@ -35,6 +43,24 @@ export async function processMemory(memoryId: string): Promise<void> {
     if (fetchError || !memory) {
       throw new Error(`Failed to fetch memory: ${fetchError?.message}`)
     }
+
+    if ((memory.process_attempts ?? 0) >= MAX_PROCESS_ATTEMPTS) {
+      logger.warn(
+        { memory_id: memoryId, attempts: memory.process_attempts },
+        'Skipping memory — max process attempts reached'
+      )
+      return
+    }
+
+    // Increment attempt counter up-front so a hard crash (e.g. OOM) still
+    // counts against the cap.
+    await supabase
+      .from('memories')
+      .update({
+        process_attempts: (memory.process_attempts ?? 0) + 1,
+        last_attempt_at: new Date().toISOString(),
+      })
+      .eq('id', memoryId)
 
     logger.info({ memory_id: memoryId, title: memory.title }, 'Processing memory')
 
@@ -481,7 +507,8 @@ Return only valid JSON.`
     throw new Error('Failed to parse Gemini response as JSON')
   }
 
-  const parsed = JSON.parse(jsonMatch[0])
+  const raw = JSON.parse(jsonMatch[0])
+  const parsed = validate(ExtractMetadataResponse, raw, 'extractMetadata')
   logger.info({
     summary_title: parsed.summary_title?.substring(0, 60),
     insightful_body_length: parsed.insightful_body?.length || 0,

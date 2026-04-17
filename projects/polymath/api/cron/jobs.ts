@@ -100,13 +100,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // }
       results.tasks.strengthen = { success: true, nodes_strengthened: 0, message: 'Feature archived' }
 
-      // 2. Process stuck memories (including retrying failed ones)
+      // 2. Process stuck memories (including retrying failed ones, but only
+      // up to MAX_PROCESS_ATTEMPTS — see process-memory.ts).
       try {
         const { data: stuckMemories, error: fetchError } = await supabase
           .from('memories')
-          .select('id, title, created_at')
+          .select('id, title, created_at, process_attempts')
           .eq('processed', false)
-          // Removed .is('error', null) to allow retrying failed memories
+          .or('process_attempts.is.null,process_attempts.lt.5')
           .lt('created_at', new Date(Date.now() - 5 * 60 * 1000).toISOString())
           .order('created_at', { ascending: true })
           .limit(10)
@@ -508,11 +509,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ? 30 * 1000  // 30 seconds
         : 5 * 60 * 1000  // 5 minutes
 
+      // Cap matches MAX_PROCESS_ATTEMPTS in process-memory.ts. Filtering here
+      // keeps the query cheap and stops us even selecting rows that would be
+      // skipped downstream.
       const { data: stuckMemories, error: fetchError } = await supabase
         .from('memories')
-        .select('id, title, created_at')
+        .select('id, title, created_at, process_attempts')
         .eq('processed', false)
-        // Removed .is('error', null) to allow retrying failed memories
+        .or('process_attempts.is.null,process_attempts.lt.5')
         .lt('created_at', new Date(Date.now() - ageThreshold).toISOString())
         .order('created_at', { ascending: true })
         .limit(10)

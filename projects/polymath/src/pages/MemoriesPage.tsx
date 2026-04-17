@@ -6,7 +6,6 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom'
-// import { Virtuoso } from 'react-virtuoso' // Removed Virtuoso
 import { useAuthContext } from '../contexts/AuthContext'
 import { SignInNudge } from '../components/SignInNudge'
 import { useMemoryStore } from '../stores/useMemoryStore'
@@ -15,11 +14,9 @@ import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useOfflineSync } from '../hooks/useOfflineSync'
 import { MemoryCard } from '../components/MemoryCard'
 import { CreateMemoryDialog } from '../components/memories/CreateMemoryDialog'
-// // import { EditMemoryDialog } from '../components/memories/EditMemoryDialog' // Now handled by MemoryDetailModal // Now handled by MemoryDetailModal
 import { SuggestedPrompts } from '../components/onboarding/SuggestedPrompts'
 import { ThemeClusterCard } from '../components/memories/ThemeClusterCard'
 import { Button } from '../components/ui/button'
-// import { Card, CardContent } from '../components/ui/card' // Will use GlassCard
 import { useToast } from '../components/ui/toast'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { PremiumTabs } from '../components/ui/premium-tabs'
@@ -27,7 +24,6 @@ import { SkeletonCard } from '../components/ui/skeleton-card'
 import { Brain, Zap, ArrowLeft, CloudOff, Search, X, Tag, Pin, Wind, Moon } from 'lucide-react'
 import { BrandName } from '../components/BrandName'
 import { SubtleBackground } from '../components/SubtleBackground'
-// import { FocusableList, FocusableItem } from '../components/FocusableList' // Removed for masonry
 import type { Memory, ThemeCluster, ThemeClustersResponse } from '../types'
 import { MemoryDetailModal } from '../components/memories/MemoryDetailModal' // Import MemoryDetailModal
 import { GlassCard } from '../components/ui/GlassCard' // For consistency with other cards
@@ -348,16 +344,18 @@ export function MemoriesPage() {
     }
   }
 
-  const handleOpenDetail = (memory: Memory) => {
+  // useCallback so the memoized MemoryCard inside MasonryGrid actually skips
+  // re-renders when unrelated state on this page changes.
+  const handleOpenDetail = useCallback((memory: Memory) => {
     setSelectedMemoryForModal(memory)
     setShowDetailModal(true)
-  }
+  }, [])
 
   // Called after MemoryCard has already confirmed and deleted the memory.
   // No need for another confirm dialog  just refresh the list.
-  const handleDelete = async (_memory: Memory) => {
+  const handleDelete = useCallback(async (_memory: Memory) => {
     await loadMemories(true)
-  }
+  }, [loadMemories])
 
   const handleVoiceCapture = async (transcript: string) => {
     if (!transcript) {
