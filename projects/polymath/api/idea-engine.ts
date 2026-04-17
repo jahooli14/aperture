@@ -1,5 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { generateIdea, scoreIdea } from './_lib/idea-engine-v2/gemini-client.js';
+import {
+  generateIdea,
+  generateIdeaFromBlock,
+  scoreIdea,
+  extractAbstractPattern,
+} from './_lib/idea-engine-v2/gemini-client.js';
 import { sampleDomainPair, recordDomainPairGeneration } from './_lib/idea-engine-v2/domain-sampler.js';
 import { selectFrontierMode, recordModeUsage } from './_lib/idea-engine-v2/mode-selector.js';
 import { generateIdeaEmbedding, storeIdeaWithDedupe } from './_lib/idea-engine-v2/deduplication.js';
@@ -7,7 +12,26 @@ import { getLatestFeedbackSummary } from './_lib/idea-engine-v2/feedback-summari
 import { supabase, isSupabaseConfigured } from './_lib/idea-engine-v2/supabase.js';
 import { reviewIdea, flashGateIdea } from './_lib/idea-engine-v2/reviewer.js';
 import { sendDailyDigest } from './_lib/idea-engine-v2/digest-email.js';
+import {
+  sampleActiveBlock,
+  getTopActiveBlocks,
+  pickMutation,
+  mutateDomains,
+  markBlockSpawned,
+  updateBlockLifecycle,
+  sweepDormantBlocks,
+  formatFrontierGravity,
+} from './_lib/idea-engine-v2/block-sampler.js';
+import {
+  calculateFAS,
+  createFrontierBlock,
+} from './_lib/idea-engine-v2/frontier-advancement.js';
 import type { Idea } from './_lib/idea-engine-v2/types.js';
+
+// Probability that a generation run spawns from an existing frontier block
+// (rather than drawing a fresh domain pair). Only takes effect when active
+// blocks exist.
+const SPAWN_PROBABILITY = 0.4;
 
 const USER_ID = process.env.IDEA_ENGINE_USER_ID;
 
@@ -63,16 +87,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 async function handleGenerate(res: VercelResponse) {
   const startTime = Date.now();
 
-  // 1. Create generation batch
+  // Decide up-front whether this run spawns from a frontier block or draws
+  // fresh. Done before the batch insert so the batch is tagged correctly.
+  const parentBlock =
+    Math.random() < SPAWN_PROBABILITY
+      ? await sampleActiveBlock(USER_ID!)
+      : null;
+  const isSpawn = parentBlock !== null;
+
   const { data: batch, error: batchError } = await supabase
     .from('ie_generation_batches')
     .insert({
       user_id: USER_ID,
-      batch_type: 'scheduled',
+      batch_type: isSpawn ? 'spawn' : 'scheduled',
       ideas_count: 0,
       prefilter_pass_count: 0,
       status: 'running',
       started_at: new Date().toISOString(),
+      config: isSpawn
+        ? { parent_block_id: parentBlock!.id, parent_concept: parentBlock!.concept_name }
+        : undefined,
     })
     .select()
     .single();
@@ -85,20 +119,57 @@ async function handleGenerate(res: VercelResponse) {
   const batchId = batch.id;
 
   try {
-    // 2. Sample domain pair and frontier mode
-    const [domainA, domainB] = await sampleDomainPair(USER_ID!);
-    const mode = await selectFrontierMode(USER_ID!);
+    const feedbackContext = (await getLatestFeedbackSummary(USER_ID!)) || undefined;
 
-    // 3. Get feedback context for prompt injection
-    const feedbackContext = await getLatestFeedbackSummary(USER_ID!) || undefined;
+    let domainA: string;
+    let domainB: string;
+    let mode: Idea['frontier_mode'];
+    let ideaResponse: Awaited<ReturnType<typeof generateIdea>>;
+    let parentIdeaId: string | undefined;
+    let sourceBlockId: string | undefined;
+    let generationNumber = 1;
+    let mutationLabel: string | undefined;
 
-    // 4. Generate idea via Gemini
-    const ideaResponse = await generateIdea(domainA, domainB, mode, feedbackContext);
+    if (isSpawn && parentBlock) {
+      // Spawn path: mutate a proven frontier block.
+      const mutation = pickMutation();
+      mutationLabel = mutation;
+      [domainA, domainB] = mutateDomains(parentBlock.domain_pair, mutation);
+      // Inversion always runs in 'inversion' mode; other mutations inherit
+      // the parent's cognitive operation so the lineage stays coherent.
+      mode = mutation === 'inversion' ? 'inversion' : parentBlock.frontier_mode;
+      parentIdeaId = parentBlock.source_idea_id;
+      sourceBlockId = parentBlock.id;
+      generationNumber = (parentBlock.generation || 0) + 1;
 
-    // 5. Generate embedding for deduplication
+      ideaResponse = await generateIdeaFromBlock(
+        parentBlock,
+        mutation,
+        domainA,
+        domainB,
+        feedbackContext
+      );
+
+      await markBlockSpawned(USER_ID!, parentBlock.id);
+    } else {
+      // Fresh path: sample domain + mode, but bias toward extending the
+      // current frontier via top-block context.
+      [domainA, domainB] = await sampleDomainPair(USER_ID!);
+      mode = await selectFrontierMode(USER_ID!);
+      const topBlocks = await getTopActiveBlocks(USER_ID!, 3);
+      const frontierGravity = formatFrontierGravity(topBlocks) || undefined;
+
+      ideaResponse = await generateIdea(
+        domainA,
+        domainB,
+        mode,
+        feedbackContext,
+        frontierGravity
+      );
+    }
+
     const embedding = await generateIdeaEmbedding(ideaResponse);
 
-    // 6. Fetch recent ideas for pre-filter scoring
     const { data: recentIdeas } = await supabase
       .from('ie_ideas')
       .select('title, description')
@@ -106,7 +177,6 @@ async function handleGenerate(res: VercelResponse) {
       .order('created_at', { ascending: false })
       .limit(20);
 
-    // 7. Pre-filter score
     const preFilterScore = await scoreIdea(
       {
         title: ideaResponse.title,
@@ -118,7 +188,6 @@ async function handleGenerate(res: VercelResponse) {
       recentIdeas || []
     );
 
-    // 8. Store with deduplication check
     const storeResult = await storeIdeaWithDedupe(
       USER_ID!,
       {
@@ -133,18 +202,18 @@ async function handleGenerate(res: VercelResponse) {
         cross_domain_distance: preFilterScore.cross_domain_distance,
         prefilter_score: preFilterScore.overall,
         status: 'pending',
-        generation_number: 1,
+        generation_number: generationNumber,
+        parent_idea_id: parentIdeaId,
+        source_frontier_block_id: sourceBlockId,
       },
       embedding
     );
 
-    // 9. Record usage stats
     await Promise.all([
       recordDomainPairGeneration(USER_ID!, domainA, domainB),
       recordModeUsage(USER_ID!, mode),
     ]);
 
-    // 10. Update batch status
     const passCount = storeResult.success ? 1 : 0;
     await supabase
       .from('ie_generation_batches')
@@ -162,6 +231,10 @@ async function handleGenerate(res: VercelResponse) {
     return res.status(200).json({
       success: true,
       batch_id: batchId,
+      mode: isSpawn ? 'spawn' : 'fresh',
+      parent_block: isSpawn
+        ? { id: sourceBlockId, concept: parentBlock!.concept_name, mutation: mutationLabel }
+        : undefined,
       idea: storeResult.success
         ? {
             id: storeResult.idea?.id,
@@ -173,12 +246,11 @@ async function handleGenerate(res: VercelResponse) {
         : null,
       duplicate: storeResult.duplicate || false,
       message: storeResult.success
-        ? `Generated: "${ideaResponse.title}" (score: ${preFilterScore.overall.toFixed(2)})`
+        ? `${isSpawn ? `Spawned (${mutationLabel})` : 'Generated'}: "${ideaResponse.title}" (score: ${preFilterScore.overall.toFixed(2)})`
         : storeResult.message,
       elapsed_ms: elapsed,
     });
   } catch (error) {
-    // Mark batch as failed
     await supabase
       .from('ie_generation_batches')
       .update({
@@ -192,8 +264,45 @@ async function handleGenerate(res: VercelResponse) {
   }
 }
 
+/**
+ * Promote an approved idea to a frontier block if its FAS clears the
+ * threshold. This is the step that turns a one-off insight into reusable
+ * compositional material for future generations.
+ */
+async function maybePromoteToFrontierBlock(idea: Idea): Promise<string | null> {
+  try {
+    const fas = await calculateFAS(USER_ID!, idea, []);
+    if (!fas.qualifies_as_frontier_block) return null;
+
+    // Extract a domain-agnostic pattern so domain_shift mutations have
+    // something portable to apply to a new pair.
+    let pattern: string | undefined;
+    try {
+      pattern = await extractAbstractPattern({
+        title: idea.title,
+        description: idea.description,
+        reasoning: idea.reasoning ?? '',
+      });
+    } catch (err) {
+      console.error(`[promote] extractAbstractPattern failed for ${idea.id}:`, err);
+    }
+
+    const block = await createFrontierBlock(USER_ID!, idea, fas, pattern);
+    return block?.id || null;
+  } catch (err) {
+    console.error(`[promote] FAS/block creation failed for ${idea.id}:`, err);
+    return null;
+  }
+}
+
 async function handleReview(res: VercelResponse) {
   const startTime = Date.now();
+
+  // Retire stale blocks once per cycle so the sampler's weighted pool reflects
+  // the live frontier. Cheap; one DB read + one conditional update per user.
+  await sweepDormantBlocks(USER_ID!).catch((err) =>
+    console.error('[review] sweepDormantBlocks failed:', err)
+  );
 
   const { data: pendingIdeas, error } = await supabase
     .from('ie_ideas')
@@ -242,6 +351,17 @@ async function handleReview(res: VercelResponse) {
             console.error(`Failed to update flash-rejected idea ${typedIdea.id}:`, updateError);
             return { id: typedIdea.id, success: false, stage: 'flash' as const, error: updateError.message };
           }
+
+          // Flash rejection still counts as a failed spawn against the parent
+          // block's success rate — otherwise exhausted blocks never retire.
+          if (typedIdea.source_frontier_block_id) {
+            await updateBlockLifecycle(
+              USER_ID!,
+              typedIdea.source_frontier_block_id,
+              false
+            );
+          }
+
           return { id: typedIdea.id, success: true, stage: 'flash' as const, verdict: 'REJECT' as const, title: typedIdea.title };
         }
       } catch (error) {
@@ -274,7 +394,32 @@ async function handleReview(res: VercelResponse) {
           return { id: typedIdea.id, success: false, stage: 'pro' as const, error: updateError.message };
         }
 
-        return { id: typedIdea.id, success: true, stage: 'pro' as const, verdict: verdict.verdict, title: typedIdea.title };
+        const approved = verdict.verdict === 'BUILD';
+
+        // Credit or penalise the parent block. SPARK counts as failure for
+        // lineage purposes: we want spawns that land, not almost-lands.
+        if (typedIdea.source_frontier_block_id) {
+          await updateBlockLifecycle(
+            USER_ID!,
+            typedIdea.source_frontier_block_id,
+            approved
+          );
+        }
+
+        // BUILD + high FAS → new frontier block the sampler can mine next cycle.
+        let promotedBlockId: string | null = null;
+        if (approved) {
+          promotedBlockId = await maybePromoteToFrontierBlock(typedIdea);
+        }
+
+        return {
+          id: typedIdea.id,
+          success: true,
+          stage: 'pro' as const,
+          verdict: verdict.verdict,
+          title: typedIdea.title,
+          promoted_block_id: promotedBlockId || undefined,
+        };
       } catch (error) {
         console.error(`Failed to review idea ${typedIdea.id}:`, error);
         return { id: typedIdea.id, success: false, stage: 'pro' as const, error: error instanceof Error ? error.message : 'Unknown error' };
@@ -286,6 +431,9 @@ async function handleReview(res: VercelResponse) {
   const successCount = results.filter((r) => r.success).length;
   const flashRejected = results.filter((r) => r.stage === 'flash' && r.success).length;
   const proReviewed = results.filter((r) => r.stage === 'pro').length;
+  const promotedBlocks = results.filter(
+    (r) => 'promoted_block_id' in r && r.promoted_block_id
+  ).length;
 
   return res.status(200).json({
     success: true,
@@ -293,6 +441,7 @@ async function handleReview(res: VercelResponse) {
     total: results.length,
     flash_rejected: flashRejected,
     pro_reviewed: proReviewed,
+    promoted_blocks: promotedBlocks,
     results,
     elapsed_ms: elapsed,
   });

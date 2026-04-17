@@ -1,5 +1,11 @@
 import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
-import type { FrontierMode, GeminiResponse, PreFilterScore } from './types.js';
+import type {
+  FrontierBlock,
+  FrontierMode,
+  GeminiResponse,
+  PreFilterScore,
+} from './types.js';
+import type { MutationType } from './block-sampler.js';
 import { MODELS } from './models.js';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
@@ -65,7 +71,8 @@ export async function generateIdea(
   domainA: string,
   domainB: string,
   frontierMode: FrontierMode,
-  feedbackContext?: string
+  feedbackContext?: string,
+  frontierGravity?: string
 ): Promise<GeminiResponse> {
   const mode = frontierModes.modes.find((m: { id: string }) => m.id === frontierMode);
 
@@ -81,6 +88,12 @@ export async function generateIdea(
   // Inject feedback context if provided
   if (feedbackContext) {
     prompt += `\n\n**Learned Context (from past reviews):**\n${feedbackContext}\n\nUse this context to avoid patterns that have been rejected before.`;
+  }
+
+  // Inject frontier gravity: top proven patterns the new idea should either
+  // extend or deliberately break from — never retread.
+  if (frontierGravity) {
+    prompt += `\n\n**Current frontier (already-proven patterns):**\n${frontierGravity}\n\nYour idea must either (a) extend one of these patterns into new ground, or (b) break genuinely new territory they don't touch. Do NOT restate them in different words.`;
   }
 
   // Add clarity instructions - PLAIN ENGLISH IS THE NORTH STAR
@@ -132,6 +145,98 @@ RULES:
     // Validate required fields
     if (!parsed.title || !parsed.description || !parsed.reasoning) {
       throw new Error('Response missing required fields');
+    }
+
+    return {
+      title: parsed.title,
+      description: parsed.description,
+      reasoning: parsed.reasoning,
+      tractability_estimate: parsed.tractability_estimate || '3',
+    };
+  });
+
+  return response;
+}
+
+/**
+ * Spawn a child idea from a proven frontier block, applying a mutation
+ * operator. This is how the frontier compounds: yesterday's breakthrough is
+ * today's starting point, not a random seed.
+ */
+export async function generateIdeaFromBlock(
+  parent: FrontierBlock,
+  mutation: MutationType,
+  childDomainA: string,
+  childDomainB: string,
+  feedbackContext?: string
+): Promise<GeminiResponse> {
+  const parentPattern =
+    parent.abstracted_pattern || parent.concept_description;
+  const parentPair = parent.domain_pair.join(' × ');
+
+  const mutationInstruction =
+    mutation === 'domain_shift'
+      ? `**Mutation: domain shift.** The parent pattern was proven on ${parentPair}. Port it to ${childDomainA} × ${childDomainB}. Does the same structural move land here? Show the specific mechanism in the new domains — not a restatement of the parent.`
+      : mutation === 'expansion'
+        ? `**Mutation: expansion.** The parent pattern is already proven on ${parentPair}. Go one level deeper. What's the sharper, more specific follow-up that the parent points to but doesn't spell out? Don't restate — extend.`
+        : `**Mutation: inversion.** The parent claims the pattern above holds. Flip it: what if the opposite were true in ${parentPair}? Find the concrete counter-case or symmetric move the parent missed.`;
+
+  let prompt = `You are generating a follow-up idea from a proven parent idea. Build on it — don't restart from scratch.
+
+**Parent idea:** ${parent.concept_name}
+**Parent pattern (generalizable):** ${parentPattern}
+**Parent domain pair:** ${parentPair}
+
+${mutationInstruction}
+
+**Output a JSON object with this exact shape:**
+{
+  "title": "Short, punchy title in plain English",
+  "description": "2-3 sentences describing the new idea concretely",
+  "reasoning": "1-2 sentences on how it extends/mutates the parent",
+  "tractability_estimate": "1-5 (5 = buildable this quarter)"
+}`;
+
+  if (feedbackContext) {
+    prompt += `\n\n**Learned Context (from past reviews):**\n${feedbackContext}\n\nUse this context to avoid patterns that have been rejected before.`;
+  }
+
+  prompt += `\n\n**CRITICAL - PLAIN ENGLISH ONLY (YOU WILL BE REJECTED FOR JARGON):**
+
+BANNED WORDS (do not use ANY of these): modular, paradigm, leverage, utilize, synergy, framework, cascading, systemic, polymorphic, entropy, robust, optimization, schema, methodology, holistic, utilize, facilitate, implement, infrastructure, architecture, ecosystem, metric, dynamic, strategic, innovative, scalable, iterative, synthesis, multifaceted
+
+RULES:
+1. Title must use words a 10-year-old knows
+2. No square brackets or colons in titles
+3. Use active voice and concrete examples
+4. Sound excited, not academic
+5. The child must be genuinely different from the parent, not a rephrase`;
+
+  const response = await retryWithBackoff(async () => {
+    const result = await getAgentModel().generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        // Slightly hotter than fresh generation: spawns should feel
+        // surprising, not safe extrapolations of the parent.
+        temperature: 1.1,
+        maxOutputTokens: 500,
+      },
+      systemInstruction:
+        'You are a JSON API. Return only valid JSON with no additional text, explanations, or formatting.',
+    });
+
+    const text = result.response.text();
+    const startIdx = text.indexOf('{');
+    const endIdx = text.lastIndexOf('}');
+
+    if (startIdx === -1 || endIdx === -1) {
+      throw new Error(`Spawn response does not contain JSON: ${text.substring(0, 200)}`);
+    }
+
+    const parsed = JSON.parse(text.substring(startIdx, endIdx + 1));
+
+    if (!parsed.title || !parsed.description || !parsed.reasoning) {
+      throw new Error('Spawn response missing required fields');
     }
 
     return {
