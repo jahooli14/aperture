@@ -258,11 +258,19 @@ export function OnboardingChatPage() {
     }
   }, [])
 
+  // Idempotency guard — persistCapturedItems / persistCapturedProjects
+  // may fire from multiple exit paths (should_stop, Exit button, books
+  // handoff). Each fires at most once per session.
+  const persistedItemsRef = useRef(false)
+  const persistedProjectsRef = useRef(false)
+
   // Persist projects the observer caught mid-chat. Routing splits by
   // status: ideas land in the "Try Something New" carousel via the
   // existing save-idea endpoint; in-progress projects become real
   // Projects in the Projects pillar from day one.
   const persistCapturedProjects = useCallback(async () => {
+    if (persistedProjectsRef.current) return
+    persistedProjectsRef.current = true
     const projects = capturedProjectsRef.current
     if (projects.length === 0) return
     for (const project of projects) {
@@ -300,7 +308,16 @@ export function OnboardingChatPage() {
   // the chat ends. The "quiet seeding" guarantee — when the user wanders
   // into Lists later they find what they mentioned.
   const persistCapturedItems = useCallback(async () => {
+    if (persistedItemsRef.current) return
+    persistedItemsRef.current = true
     const items = capturedItemsRef.current
+    console.log('[onboarding-chat] persisting captured items', {
+      total: items.length,
+      byType: items.reduce<Record<string, number>>((acc, i) => {
+        acc[i.type] = (acc[i.type] || 0) + 1
+        return acc
+      }, {}),
+    })
     if (items.length === 0) return
 
     const byType = new Map<ListType, CapturedItem[]>()
@@ -319,12 +336,23 @@ export function OnboardingChatPage() {
     for (const [type, typeItems] of byType) {
       try {
         const existing = lists.find(l => l.type === type)
+        // Stamp `origin: 'onboarding'` on newly-created lists so the
+        // reset-onboarding action can find and remove them. Existing lists
+        // are left alone — we only own what we create.
         const listId = existing
           ? existing.id
-          : await createList({ title: listTitles[type] || type, type })
+          : await createList({
+              title: listTitles[type] || type,
+              type,
+              settings: { origin: 'onboarding' } as any,
+            })
         for (const item of typeItems) {
           try {
-            await addListItem({ list_id: listId, content: item.name })
+            await addListItem({
+              list_id: listId,
+              content: item.name,
+              metadata: { origin: 'onboarding' },
+            })
           } catch (e) {
             console.warn('[onboarding-chat] failed to add item to list', type, item.name, e)
           }
@@ -481,6 +509,11 @@ export function OnboardingChatPage() {
   const runAnalysis = useCallback(
     async (selectedBooks: BookSearchResult[]) => {
       if (!grid) return
+      // Belt-and-braces: if persistence didn't fire via the should_stop path
+      // (e.g. Live session ended some other way), catch it here before we
+      // run the analyze step. Idempotent — no-op if already persisted.
+      await persistCapturedItems()
+      await persistCapturedProjects()
       setPhase('analyzing')
       try {
         const res = await fetch('/api/utilities?resource=analyze', {
@@ -508,7 +541,7 @@ export function OnboardingChatPage() {
         setPhase('reveal')
       }
     },
-    [grid],
+    [grid, persistCapturedItems, persistCapturedProjects],
   )
 
   const handleBooksComplete = useCallback(
@@ -818,6 +851,10 @@ export function OnboardingChatPage() {
       <button
         onClick={() => {
           try { liveRef.current?.close() } catch {}
+          // Best-effort persist before navigating — keeps whatever they
+          // mentioned up to this point. Fire-and-forget; no UI delay.
+          void persistCapturedItems()
+          void persistCapturedProjects()
           navigate('/')
         }}
         className="absolute top-6 right-6 text-xs transition-opacity hover:opacity-80"

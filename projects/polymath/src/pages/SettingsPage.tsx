@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { Settings, Palette, Check, Bug, ToggleRight, ToggleLeft, Zap, RefreshCw, Search, Type, Bell, GitBranch } from 'lucide-react'
+import { Settings, Palette, Check, Bug, ToggleRight, ToggleLeft, Zap, RefreshCw, Search, Type, Bell, GitBranch, RotateCcw } from 'lucide-react'
 import { api } from '../lib/apiClient'
 import { useThemeStore } from '../stores/useThemeStore'
 import { getAvailableColors, getColorPreview } from '../lib/theme'
@@ -27,6 +27,8 @@ export function SettingsPage() {
   const { addToast } = useToast()
   const [regenerating, setRegenerating] = useState(false)
   const [allowHandoff, setAllowHandoff] = useState(false)
+  const [resetConfirm, setResetConfirm] = useState(false)
+  const [resetting, setResetting] = useState(false)
 
   useEffect(() => {
     ;(async () => {
@@ -61,6 +63,28 @@ export function SettingsPage() {
     toggleTodoNotifications,
     toggleOverdueReminder, updateOverdueReminder,
   } = useNotificationSettings()
+
+  const handleResetOnboarding = async () => {
+    setResetting(true)
+    try {
+      const res = await fetch('/api/utilities?resource=reset-onboarding', { method: 'POST' })
+      if (!res.ok) throw new Error('Reset failed')
+      const { deleted } = await res.json() as { deleted: Record<string, number> }
+      const total = Object.values(deleted || {}).reduce((a, b) => a + b, 0)
+      addToast({
+        title: 'Onboarding reset',
+        description: total > 0
+          ? `Removed ${total} onboarding artifact${total === 1 ? '' : 's'}. Head to /onboarding to run it again.`
+          : 'Nothing to remove — you’re clear to re-run /onboarding.',
+        variant: 'success',
+      })
+      setResetConfirm(false)
+    } catch {
+      addToast({ title: 'Reset failed', description: 'Try again in a moment.', variant: 'destructive' })
+    } finally {
+      setResetting(false)
+    }
+  }
 
   const handleRegenerateConnections = async () => {
     setRegenerating(true)
@@ -509,6 +533,78 @@ export function SettingsPage() {
                   </p>
                 </div>
               </button>
+
+              {/* Reset Onboarding — dev/debug. Two-tap: first reveals the
+                  confirmation, second actually fires. Wipes memories, list
+                  items, lists, projects, and suggestions created by the
+                  voice chat. */}
+              {!resetConfirm ? (
+                <button
+                  onClick={() => setResetConfirm(true)}
+                  className="w-full flex items-center gap-4 p-4 rounded-xl backdrop-blur-xl transition-all text-left border hover:bg-[var(--glass-surface)]"
+                  style={{ background: 'var(--glass-surface)', borderColor: 'var(--glass-surface)' }}
+                >
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ background: 'rgba(var(--color-error-rgb), 0.15)' }}>
+                    <RotateCcw className="w-5 h-5" style={{ color: 'var(--brand-primary)' }} />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold premium-text-platinum text-sm">
+                      Reset onboarding
+                    </h3>
+                    <p style={{ color: 'var(--brand-text-secondary)', fontSize: '0.8rem' }}>
+                      Wipe onboarding-created memories, lists, and ideas so you can run it again
+                    </p>
+                  </div>
+                </button>
+              ) : (
+                <div
+                  className="p-4 rounded-xl border"
+                  style={{
+                    background: 'rgba(var(--color-error-rgb), 0.05)',
+                    borderColor: 'rgba(var(--color-error-rgb), 0.3)',
+                  }}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: 'rgba(var(--color-error-rgb), 0.15)' }}>
+                      <RotateCcw className="w-5 h-5" style={{ color: 'var(--brand-primary)' }} />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold premium-text-platinum text-sm mb-1">
+                        Reset onboarding?
+                      </h3>
+                      <p style={{ color: 'var(--brand-text-secondary)', fontSize: '0.8rem' }}>
+                        This permanently deletes everything the voice chat created — memories, list items, the captured lists (if still empty), projects, and idea suggestions. Items you added manually are kept. Can't be undone.
+                      </p>
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          onClick={handleResetOnboarding}
+                          disabled={resetting}
+                          className="px-4 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50"
+                          style={{
+                            background: 'rgba(var(--color-error-rgb), 0.8)',
+                            color: 'white',
+                          }}
+                        >
+                          {resetting ? 'Resetting…' : 'Yes, reset'}
+                        </button>
+                        <button
+                          onClick={() => setResetConfirm(false)}
+                          disabled={resetting}
+                          className="px-4 py-2 rounded-lg text-sm transition-all disabled:opacity-50"
+                          style={{
+                            background: 'var(--glass-surface)',
+                            color: 'var(--brand-text-secondary)',
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </section>

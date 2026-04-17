@@ -1130,5 +1130,6 @@ export interface CreateListItemInput {
   list_id: string
   content: string
   status?: ListItemStatus
+  metadata?: Record<string, unknown>
 }
 
