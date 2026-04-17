@@ -196,11 +196,11 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
     <div className="space-y-2">
       {/* Header with progress */}
       <div className="flex items-center justify-between mb-1">
-        <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--brand-text-secondary)', opacity: 0.3 }}>
+        <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--brand-text-secondary)]">
           The Path
         </span>
         {totalTasks > 0 && (
-          <span className="text-[11px] font-medium tabular-nums" style={{ color: 'var(--brand-text-secondary)', opacity: 0.35 }}>
+          <span className="text-[11px] font-bold tabular-nums text-[var(--brand-text-secondary)]">
             {completedCount}/{totalTasks}
           </span>
         )}
@@ -208,10 +208,10 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
 
       {/* Thin progress bar */}
       {totalTasks > 0 && (
-        <div className="h-[2px] rounded-full overflow-hidden mb-3" style={{ background: 'rgba(255,255,255,0.04)' }}>
+        <div className="h-1 rounded-full overflow-hidden mb-3" style={{ background: 'rgba(255,255,255,0.08)' }}>
           <motion.div
             className="h-full rounded-full"
-            style={{ background: 'rgb(52,211,153)' }}
+            style={{ background: 'rgb(52,211,153)', boxShadow: '0 0 8px rgba(52,211,153,0.5)' }}
             initial={{ width: 0 }}
             animate={{ width: `${progressPercent}%` }}
             transition={{ duration: 0.5, ease: 'easeOut' }}
@@ -232,33 +232,33 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
           if (phaseTasks.length === 0 && !isActive && phase.key !== 'core') return null
 
           return (
-            <div key={phase.key} className="rounded-2xl overflow-hidden" style={{ background: isExpanded ? 'rgba(255,255,255,0.02)' : 'transparent', border: isExpanded ? '1px solid rgba(255,255,255,0.04)' : '1px solid transparent' }}>
+            <div key={phase.key} className="rounded-2xl overflow-hidden" style={{ background: isExpanded ? 'rgba(255,255,255,0.04)' : 'transparent', border: isExpanded ? '1px solid rgba(255,255,255,0.08)' : '1px solid transparent' }}>
               {/* Phase Header */}
               <button
                 onClick={() => togglePhase(phase.key)}
-                className="w-full flex items-center gap-3 px-4 py-3 transition-all text-left"
+                className="w-full flex items-center gap-3 px-4 min-h-[48px] transition-all text-left hover:bg-white/[0.03]"
               >
                 <PhaseIcon
-                  className="h-3.5 w-3.5 flex-shrink-0"
-                  style={{ color: isActive ? phase.accent : 'var(--brand-text-secondary)', opacity: isActive ? 0.7 : 0.2 }}
+                  className="h-4 w-4 flex-shrink-0"
+                  style={{ color: isActive ? phase.accent : 'var(--brand-text-muted)' }}
                 />
 
                 <span
-                  className="text-[12px] font-semibold uppercase tracking-wider flex-1"
-                  style={{ color: isActive ? phase.accent : 'var(--brand-text-secondary)', opacity: isActive ? 0.7 : 0.3 }}
+                  className="text-[12px] font-bold uppercase tracking-wider flex-1"
+                  style={{ color: isActive ? phase.accent : 'var(--brand-text-secondary)' }}
                 >
                   {phase.label}
                 </span>
 
                 {phaseTasks.length > 0 && (
-                  <span className="text-[10px] font-medium tabular-nums" style={{ color: 'var(--brand-text-secondary)', opacity: 0.25 }}>
+                  <span className="text-[11px] font-bold tabular-nums text-[var(--brand-text-muted)]">
                     {completed.length}/{phaseTasks.length}
                   </span>
                 )}
 
                 {isExpanded
-                  ? <ChevronDown className="h-3 w-3 flex-shrink-0" style={{ color: 'var(--brand-text-secondary)', opacity: 0.15 }} />
-                  : <ChevronRight className="h-3 w-3 flex-shrink-0" style={{ color: 'var(--brand-text-secondary)', opacity: 0.15 }} />
+                  ? <ChevronDown className="h-4 w-4 flex-shrink-0 text-[var(--brand-text-muted)]" />
+                  : <ChevronRight className="h-4 w-4 flex-shrink-0 text-[var(--brand-text-muted)]" />
                 }
               </button>
 

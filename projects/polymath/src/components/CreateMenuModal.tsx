@@ -75,19 +75,19 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
                         </div>
 
                         {/* Header */}
-                        <div className="flex items-center justify-between px-5 pt-3 pb-5">
-                            <div>
+                        <div className="flex items-center justify-between gap-3 px-5 pt-3 pb-5">
+                            <div className="min-w-0 flex-1">
                                 <h2 className="text-lg font-black uppercase tracking-tighter text-white">
                                     Create New
                                 </h2>
-                                <p className="text-xs text-white/30 font-medium mt-0.5">What would you like to add?</p>
+                                <p className="text-xs text-white/60 font-medium mt-0.5">What would you like to add?</p>
                             </div>
                             <button
                                 onClick={onClose}
-                                className="h-9 w-9 rounded-full flex items-center justify-center transition-all"
-                                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}
+                                className="h-11 w-11 rounded-full flex items-center justify-center transition-all flex-shrink-0"
+                                style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.12)' }}
                             >
-                                <X className="h-4 w-4 text-white/50" />
+                                <X className="h-5 w-5 text-white/80" />
                             </button>
                         </div>
 
@@ -106,16 +106,17 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
                                             onAction(action.id as any)
                                             onClose()
                                         }}
-                                        className="relative flex flex-col items-start gap-3 p-4 rounded-2xl text-left overflow-hidden active:scale-[0.97] transition-transform"
+                                        className="relative flex flex-col items-start gap-3 p-4 rounded-2xl text-left overflow-hidden active:scale-[0.97] transition-transform min-h-[110px]"
                                         style={{
-                                            background: `rgba(${rgb}, 0.06)`,
-                                            border: `1px solid rgba(${rgb}, 0.15)`,
+                                            background: `rgba(${rgb}, 0.12)`,
+                                            border: `1px solid rgba(${rgb}, 0.3)`,
+                                            boxShadow: `0 4px 16px rgba(${rgb}, 0.08)`,
                                         }}
                                     >
                                         {/* Icon */}
                                         <div
                                             className="h-11 w-11 rounded-xl flex items-center justify-center"
-                                            style={{ background: `rgba(${rgb}, 0.12)` }}
+                                            style={{ background: `rgba(${rgb}, 0.2)`, border: `1px solid rgba(${rgb}, 0.3)` }}
                                         >
                                             <Icon className="h-5 w-5" style={{ color: `rgb(${rgb})` }} />
                                         </div>
@@ -125,14 +126,14 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
                                             <p className="text-sm font-black uppercase tracking-tight text-white leading-tight">
                                                 {action.label}
                                             </p>
-                                            <p className="text-[10px] text-white/35 mt-0.5 leading-snug">
+                                            <p className="text-[12px] text-white/70 mt-0.5 leading-snug">
                                                 {action.description}
                                             </p>
                                         </div>
 
                                         {/* Corner glow */}
                                         <div
-                                            className="absolute top-0 right-0 w-16 h-16 rounded-full opacity-20 pointer-events-none"
+                                            className="absolute top-0 right-0 w-16 h-16 rounded-full opacity-40 pointer-events-none"
                                             style={{
                                                 background: `radial-gradient(circle at top right, rgba(${rgb}, 0.6), transparent 70%)`,
                                             }}
@@ -143,7 +144,7 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
                         </div>
 
                         {/* Footer hint */}
-                        <p className="text-center text-[9px] font-bold uppercase tracking-[0.2em] text-white/20 pb-4">
+                        <p className="text-center text-[11px] font-bold uppercase tracking-[0.2em] text-white/50 pb-4">
                             Hold the FAB to dictate directly
                         </p>
                     </motion.div>

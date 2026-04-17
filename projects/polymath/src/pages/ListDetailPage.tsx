@@ -658,32 +658,34 @@ const StandardItemCard = memo(({
             )}
 
             {/* Content overlay */}
-            <div className="absolute inset-0 p-3 flex flex-col justify-end">
-                <h3 className={`text-[var(--brand-text-primary)] font-bold leading-tight uppercase tracking-tight drop-shadow-lg text-xs mb-2 ${isCompleted ? 'line-through opacity-50' : ''}`}>
+            <div className="absolute inset-0 p-2.5 sm:p-3 flex flex-col justify-end">
+                <h3 className={`text-[var(--brand-text-primary)] font-bold leading-tight uppercase tracking-tight text-[13px] sm:text-sm mb-2 line-clamp-3 ${isCompleted ? 'line-through opacity-60' : ''}`}
+                    style={{ textShadow: '0 1px 4px rgba(0,0,0,0.95), 0 0 12px rgba(0,0,0,0.75)' }}>
                     {item.content}
                 </h3>
                 {/* Status pill — always visible, tap to cycle (only when status tracking is on) */}
                 {hasStatus && (() => {
                     const labels = getStatusLabels(listType)
                     const label = item.status === 'abandoned' ? labels['pending'] : labels[item.status as 'pending' | 'active' | 'completed'] ?? labels['pending']
-                    const pillColor = isCompleted ? '16, 185, 129' : item.status === 'active' ? rgb : '255, 255, 255'
-                    const pillBg = isCompleted ? 'rgba(16,185,129,0.15)' : item.status === 'active' ? `rgba(${rgb}, 0.15)` : 'rgba(255,255,255,0.08)'
-                    const pillBorder = isCompleted ? 'rgba(16,185,129,0.4)' : item.status === 'active' ? `rgba(${rgb}, 0.4)` : 'rgba(255,255,255,0.2)'
+                    const pillColor = isCompleted ? '52, 211, 153' : item.status === 'active' ? rgb : '255, 255, 255'
+                    const pillBg = isCompleted ? 'rgba(16,185,129,0.2)' : item.status === 'active' ? `rgba(${rgb}, 0.2)` : 'rgba(255,255,255,0.12)'
+                    const pillBorder = isCompleted ? 'rgba(52,211,153,0.5)' : item.status === 'active' ? `rgba(${rgb}, 0.5)` : 'rgba(255,255,255,0.25)'
                     return (
                         <button
                             onClick={handleStatusCycle}
-                            className="self-start flex items-center gap-1.5 px-2.5 py-2 rounded-full active:scale-95 transition-all min-h-[44px]"
+                            className="self-start flex items-center gap-1.5 px-2.5 py-1.5 rounded-full active:scale-95 transition-all min-h-[32px] backdrop-blur-sm"
                             style={{
                                 background: pillBg,
                                 border: `1px solid ${pillBorder}`,
                                 color: `rgb(${pillColor})`,
-                                fontSize: '9px',
-                                fontWeight: 900,
+                                fontSize: '10px',
+                                fontWeight: 800,
                                 letterSpacing: '0.08em',
                                 textTransform: 'uppercase',
+                                textShadow: '0 1px 2px rgba(0,0,0,0.5)',
                             }}
                         >
-                            {isCompleted ? <Check className="w-2.5 h-2.5 flex-shrink-0" /> : <ChevronRight className="w-2.5 h-2.5 flex-shrink-0" />}
+                            {isCompleted ? <Check className="w-3 h-3 flex-shrink-0" /> : <ChevronRight className="w-3 h-3 flex-shrink-0" />}
                             {label}
                         </button>
                     )
@@ -701,19 +703,19 @@ const StandardItemCard = memo(({
 
                 {/* Key metadata on expanded */}
                 {isExpanded && (
-                    <div className="space-y-1.5 backdrop-blur-sm bg-black/30 p-2 rounded-lg border border-[var(--glass-surface-hover)] mt-1">
+                    <div className="space-y-2 backdrop-blur-md bg-black/50 p-2.5 rounded-lg border border-white/15 mt-1.5">
                         {/* Type-aware meta line */}
                         {(() => {
                             const line = getMetaLine(item, listType)
                             return line.length > 0 ? (
-                                <p className="text-[9px] text-brand-text-muted font-medium tracking-wide leading-relaxed">
+                                <p className="text-[11px] text-[var(--brand-text-secondary)] font-semibold tracking-wide leading-relaxed">
                                     {line.join(' · ')}
                                 </p>
                             ) : null
                         })()}
                         {/* Description */}
                         {item.metadata?.description && (
-                            <p className="text-brand-text-muted text-[10px] leading-relaxed line-clamp-2">{item.metadata.description}</p>
+                            <p className="text-[var(--brand-text-secondary)] text-[12px] leading-relaxed line-clamp-3">{item.metadata.description}</p>
                         )}
                         {/* Tags — filtered */}
                         {item.metadata?.tags && item.metadata.tags.length > 0 && (() => {
@@ -723,7 +725,7 @@ const StandardItemCard = memo(({
                             return cleanTags.length > 0 ? (
                                 <div className="flex flex-wrap gap-1">
                                     {cleanTags.map((tag: string) => (
-                                        <span key={tag} className="text-[8px] bg-brand-primary/20 border border-brand-primary/30 px-1.5 py-0.5 rounded-xl text-brand-primary font-medium">
+                                        <span key={tag} className="text-[10px] bg-brand-primary/25 border border-brand-primary/40 px-1.5 py-0.5 rounded-md text-brand-primary font-bold">
                                             {tag}
                                         </span>
                                     ))}
@@ -736,10 +738,10 @@ const StandardItemCard = memo(({
                                 href={item.metadata.link}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-[9px] font-bold text-brand-primary hover:text-[var(--brand-text-primary)] transition-colors uppercase tracking-widest flex items-center gap-1 mt-0.5"
+                                className="text-[11px] font-bold text-brand-primary hover:text-[var(--brand-text-primary)] transition-colors uppercase tracking-widest flex items-center gap-1 mt-1 min-h-[28px]"
                                 onClick={e => e.stopPropagation()}
                             >
-                                Details
+                                Details →
                             </a>
                         )}
                     </div>
@@ -747,8 +749,9 @@ const StandardItemCard = memo(({
 
                 {/* Enriching status */}
                 {!isExpanded && item.enrichment_status === 'pending' && (
-                    <div className="flex items-center gap-1 text-[9px] text-brand-primary font-bold animate-pulse">
-                        <div className="h-1 w-1 rounded-full bg-brand-primary" />
+                    <div className="flex items-center gap-1.5 text-[11px] text-brand-primary font-bold animate-pulse mt-1"
+                        style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
+                        <div className="h-1.5 w-1.5 rounded-full bg-brand-primary" />
                         Enriching...
                     </div>
                 )}
@@ -909,9 +912,9 @@ function MasonryListGrid({
     useEffect(() => {
         const update = () => {
             const w = window.innerWidth
-            if (w < 400) setColumns(1)
-            else if (w < 768) setColumns(2)
-            else setColumns(3)
+            if (w < 640) setColumns(2)
+            else if (w < 1024) setColumns(3)
+            else setColumns(4)
         }
         update()
         window.addEventListener('resize', update)
@@ -1027,8 +1030,8 @@ function ArticleListMode({ list, navigate }: ArticleListModeProps) {
     return (
         <div className="min-h-screen bg-black flex flex-col">
             {/* Header */}
-            <div className="pt-24 px-4 sm:px-6 lg:px-8 pb-4">
-                <Button variant="ghost" onClick={() => navigate('/lists')} className="text-brand-text-muted mb-4 pl-0 hover:text-[var(--brand-text-primary)] hover:bg-transparent">
+            <div className="pt-20 sm:pt-24 px-4 sm:px-6 lg:px-8 pb-4" style={{ paddingTop: 'calc(5rem + env(safe-area-inset-top))' }}>
+                <Button variant="ghost" onClick={() => navigate('/lists')} className="text-[var(--brand-text-secondary)] mb-4 -ml-2 hover:text-[var(--brand-text-primary)] hover:bg-white/5">
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Back to Collections
                 </Button>
@@ -1425,49 +1428,50 @@ export default function ListDetailPage() {
     return (
         <div className="min-h-screen bg-black flex flex-col">
             {/* Header */}
-            <div className="pt-24 px-4 sm:px-6 lg:px-8 pb-4">
-                <Button variant="ghost" onClick={() => navigate('/lists')} className="text-brand-text-muted mb-4 pl-0 hover:text-[var(--brand-text-primary)] hover:bg-transparent">
+            <div className="pt-20 sm:pt-24 px-4 sm:px-6 lg:px-8 pb-4" style={{ paddingTop: 'calc(5rem + env(safe-area-inset-top))' }}>
+                <Button variant="ghost" onClick={() => navigate('/lists')} className="text-[var(--brand-text-secondary)] mb-4 -ml-2 hover:text-[var(--brand-text-primary)] hover:bg-white/5">
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Back to Collections
                 </Button>
 
                 {/* List type header */}
-                <div className="flex items-center gap-3 mb-3">
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full"
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
                         style={{
-                            backgroundColor: `rgba(${rgb}, 0.1)`,
-                            boxShadow: `inset 0 0 0 1px rgba(${rgb}, 0.2)`
+                            backgroundColor: `rgba(${rgb}, 0.14)`,
+                            boxShadow: `inset 0 0 0 1px rgba(${rgb}, 0.35)`
                         }}>
                         <ListIcon type={list.type} className="h-3.5 w-3.5" style={{ color: `rgb(${rgb})` }} />
-                        <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: `rgb(${rgb})` }}>
+                        <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: `rgb(${rgb})` }}>
                             {list.type}
                         </span>
                     </div>
                     {/* Item count badge */}
-                    <div className="px-3 py-1.5 rounded-full bg-zinc-800/50 text-xs font-mono text-brand-text-muted"
-                        style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface)' }}>
+                    <div className="px-2.5 py-1 rounded-full bg-white/8 text-xs font-semibold text-[var(--brand-text-secondary)]"
+                        style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.12)' }}>
                         {displayItems.length} {displayItems.length === 1 ? 'item' : 'items'}
                     </div>
                 </div>
 
-                <div className="flex items-center justify-between">
-                    <h1 className="text-3xl font-bold text-[var(--brand-text-primary)] mb-1 uppercase tracking-tight italic">{list.title}</h1>
-                    <div className="flex items-center gap-2">
+                <div className="flex items-start justify-between gap-3">
+                    <h1 className="text-[1.75rem] sm:text-3xl font-bold text-[var(--brand-text-primary)] mb-1 uppercase tracking-tight italic leading-[1] flex-1 min-w-0 break-words">{list.title}</h1>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
                         {/* Sort picker */}
                         <div className="relative">
                             <button
                                 onClick={(e) => { e.stopPropagation(); setShowSortMenu(v => !v) }}
-                                className="flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all"
+                                className="h-11 flex items-center gap-1.5 px-3 rounded-full border transition-all"
                                 style={{
-                                    borderColor: sortOption !== 'added' ? `rgba(${rgb}, 0.4)` : 'var(--glass-surface-hover)',
-                                    color: sortOption !== 'added' ? `rgb(${rgb})` : 'var(--brand-text-muted)',
+                                    borderColor: sortOption !== 'added' ? `rgba(${rgb}, 0.5)` : 'rgba(255,255,255,0.15)',
+                                    color: sortOption !== 'added' ? `rgb(${rgb})` : 'var(--brand-text-secondary)',
+                                    background: sortOption !== 'added' ? `rgba(${rgb}, 0.1)` : 'var(--glass-surface)',
                                 }}
                             >
-                                <SortAsc className="h-3 w-3" />
-                                <span className="text-[10px] font-black uppercase tracking-widest">
+                                <SortAsc className="h-3.5 w-3.5" />
+                                <span className="text-[11px] font-bold uppercase tracking-widest">
                                     {SORT_OPTIONS.find(o => o.value === sortOption)?.label ?? 'Sort'}
                                 </span>
-                                <ChevronDown className="h-3 w-3" />
+                                <ChevronDown className="h-3.5 w-3.5" />
                             </button>
                             <AnimatePresence>
                                 {showSortMenu && (
@@ -1477,21 +1481,22 @@ export default function ListDetailPage() {
                                         exit={{ opacity: 0, y: -8, scale: 0.95 }}
                                         transition={{ duration: 0.15 }}
                                         onClick={e => e.stopPropagation()}
-                                        className="absolute right-0 top-full mt-2 z-20 rounded-2xl py-2 min-w-[160px]"
+                                        className="absolute right-0 top-full mt-2 z-20 rounded-2xl py-2 w-[160px] max-w-[calc(100vw-2rem)]"
                                         style={{
-                                            backgroundColor: 'var(--glass-surface)',
-                                            boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1), 0 20px 40px rgba(0,0,0,0.5)'
+                                            backgroundColor: 'rgba(20, 27, 38, 0.96)',
+                                            backdropFilter: 'blur(12px)',
+                                            boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.12), 0 20px 40px rgba(0,0,0,0.6)'
                                         }}
                                     >
                                         {SORT_OPTIONS.map(opt => (
                                             <button
                                                 key={opt.value}
                                                 onClick={() => { setSortOption(opt.value); setShowSortMenu(false) }}
-                                                className="w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-[var(--glass-surface)] flex items-center justify-between"
-                                                style={{ color: sortOption === opt.value ? `rgb(${rgb})` : 'rgba(255,255,255,0.6)' }}
+                                                className="w-full text-left px-4 py-3 text-sm transition-colors hover:bg-white/5 flex items-center justify-between min-h-[44px]"
+                                                style={{ color: sortOption === opt.value ? `rgb(${rgb})` : 'var(--brand-text-secondary)' }}
                                             >
-                                                <span className="text-[11px] font-bold uppercase tracking-widest">{opt.label}</span>
-                                                {sortOption === opt.value && <Check className="h-3 w-3" />}
+                                                <span className="text-[12px] font-bold uppercase tracking-widest">{opt.label}</span>
+                                                {sortOption === opt.value && <Check className="h-4 w-4" />}
                                             </button>
                                         ))}
                                     </motion.div>
@@ -1502,13 +1507,13 @@ export default function ListDetailPage() {
                         {/* List settings */}
                         <button
                             onClick={() => setShowListSettings(true)}
-                            className="flex items-center justify-center w-7 h-7 rounded-full border transition-all border-[var(--glass-surface-hover)] text-brand-text-muted hover:text-[var(--brand-text-primary)] hover:border-white/20"
+                            className="flex items-center justify-center w-11 h-11 rounded-full border transition-all border-white/10 bg-[var(--glass-surface)] text-[var(--brand-text-secondary)] hover:text-[var(--brand-text-primary)] hover:border-white/20"
                         >
-                            <Settings2 className="h-3 w-3" />
+                            <Settings2 className="h-4 w-4" />
                         </button>
                     </div>
                 </div>
-                {list.description && <p className="text-brand-text-muted max-w-xl mb-2">{list.description}</p>}
+                {list.description && <p className="text-[var(--brand-text-secondary)] text-sm max-w-xl mb-2 leading-relaxed">{list.description}</p>}
 
                 {/* Add Input */}
                 <div className="mt-4 mb-5 max-w-2xl">

@@ -493,10 +493,10 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
       {!hideTrigger && (trigger || (
         <button
           onClick={() => setOpen(true)}
-          className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-[var(--glass-surface)]"
+          className="h-11 w-11 rounded-xl flex items-center justify-center transition-all hover:bg-[rgba(255,255,255,0.1)] bg-[var(--glass-surface)]"
           style={{
-            boxShadow: 'inset 0 0 0 1px rgba(100,180,255,0.2)',
-            color: "var(--brand-text-secondary)"
+            border: '1px solid rgba(255,255,255,0.1)',
+            color: 'var(--brand-primary)'
           }}
           title="New Thought"
         >
@@ -529,9 +529,9 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                 className="w-full border-0 focus:outline-none focus:ring-0 resize-none appearance-none bg-transparent"
                 style={{
                   color: 'var(--brand-text-primary)',
-                  fontSize: '18px',
+                  fontSize: '17px',
                   lineHeight: '1.65',
-                  minHeight: '160px',
+                  minHeight: '140px',
                 }}
               />
             )}
@@ -684,14 +684,15 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
               <button
                 type="submit"
                 disabled={loading || !canSubmit || uploading}
-                className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all touch-manipulation disabled:opacity-25"
+                className="flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center transition-all touch-manipulation disabled:opacity-30"
                 style={{
                   background: canSubmit ? 'var(--brand-primary, rgb(var(--brand-primary-rgb)))' : 'rgba(255,255,255,0.1)',
                   color: canSubmit ? '#000' : 'var(--brand-text-secondary)',
+                  boxShadow: canSubmit ? '0 0 16px rgba(var(--brand-primary-rgb),0.4)' : 'none',
                 }}
                 title={uploading ? 'Uploading…' : loading ? 'Saving…' : 'Capture'}
               >
-                <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
+                <ArrowUp className="h-5 w-5" strokeWidth={2.5} />
               </button>
             </div>
 

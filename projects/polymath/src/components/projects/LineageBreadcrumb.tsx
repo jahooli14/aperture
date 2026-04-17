@@ -29,13 +29,13 @@ export function LineageBreadcrumb({ project }: LineageBreadcrumbProps) {
 
   return (
     <div className="mb-3">
-      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-[var(--brand-text-muted)]">
-        <GitBranch className="h-3 w-3" style={{ color: 'var(--brand-primary)' }} />
+      <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-[var(--brand-text-secondary)] flex-wrap">
+        <GitBranch className="h-3.5 w-3.5 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
         <span>evolved from</span>
         {parent ? (
           <Link
             to={`/projects/${parent.id}`}
-            className="hover:text-[var(--brand-primary)] transition-colors truncate max-w-[200px]"
+            className="hover:text-[var(--brand-primary)] transition-colors truncate max-w-[180px] text-[var(--brand-text-primary)]"
           >
             {parent.title}
           </Link>
@@ -45,9 +45,9 @@ export function LineageBreadcrumb({ project }: LineageBreadcrumbProps) {
         {siblings.length > 0 && (
           <button
             onClick={() => setExpanded(e => !e)}
-            className="ml-2 flex items-center gap-1 hover:text-[var(--brand-primary)] transition-colors"
+            className="ml-auto flex items-center gap-1 hover:text-[var(--brand-primary)] transition-colors min-h-[32px] px-2 rounded-md -my-1"
           >
-            {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+            {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
             {siblings.length} sibling{siblings.length === 1 ? '' : 's'}
           </button>
         )}

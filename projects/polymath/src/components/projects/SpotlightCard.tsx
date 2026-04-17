@@ -81,15 +81,14 @@ export function SpotlightCard({
         </div>
 
         {/* Title */}
-        <h4 className="text-base font-bold mb-2" style={{ color: "var(--brand-primary)" }}>
+        <h4 className="text-base font-bold mb-2 leading-snug line-clamp-2 text-[var(--brand-text-primary)]">
           {project.title}
         </h4>
 
         {/* Description if exists */}
         {project.description && (
           <p
-            className="text-xs mb-3 line-clamp-2"
-            style={{ color: "var(--brand-primary)" }}
+            className="text-xs mb-3 line-clamp-2 leading-relaxed text-[var(--brand-text-secondary)]"
           >
             {project.description}
           </p>
@@ -98,19 +97,17 @@ export function SpotlightCard({
         {/* Next task */}
         {nextTask && (
           <div
-            className="rounded-lg p-2 mb-3 flex items-center gap-2"
-            style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}
+            className="rounded-lg p-2.5 mb-3 flex items-center gap-2"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.35)', border: '1px solid rgba(255,255,255,0.08)' }}
           >
             <p
-              className="text-xs flex-1 line-clamp-1"
-              style={{ color: "var(--brand-primary)" }}
+              className="text-[13px] flex-1 line-clamp-1 text-[var(--brand-text-primary)]"
             >
               {nextTask.text}
             </p>
             {totalTasks > 0 && (
               <span
-                className="text-xs font-medium flex-shrink-0"
-                style={{ color: "var(--brand-primary)" }}
+                className="text-xs font-bold tabular-nums flex-shrink-0 text-[var(--brand-text-secondary)]"
               >
                 {completedTasks}/{totalTasks}
               </span>

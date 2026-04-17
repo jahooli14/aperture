@@ -226,7 +226,7 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
               <PinButton type="article" id={article.id} title={article.title || 'Article'} content={<></>} />
             </div>
 
-            <div className="flex items-center gap-3 text-[10px] text-brand-text-muted uppercase tracking-wider font-semibold">
+            <div className="flex items-center gap-3 text-[11px] text-[var(--brand-text-secondary)] uppercase tracking-wider font-semibold">
               {(article.read_time_minutes || article.content) && (
                 <span className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
@@ -273,29 +273,26 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
         )}
 
         {/* Action strip — always visible on mobile */}
-        <div className="flex items-center gap-1 mt-3 pt-3 border-t border-[var(--glass-surface)]">
+        <div className="flex items-center gap-1 mt-3 pt-3 border-t border-white/10">
           <button
             onClick={(e) => { e.stopPropagation(); setShowConnectionsDialog(true) }}
-            className="flex items-center gap-1 px-2 py-1 text-[10px] font-black uppercase tracking-widest rounded-lg active:bg-[rgba(255,255,255,0.08)] transition-colors"
-            style={{ color: 'var(--brand-text-muted)' }}
+            className="flex items-center gap-1.5 px-2.5 min-h-[36px] text-[11px] font-bold uppercase tracking-widest rounded-lg active:bg-[rgba(255,255,255,0.08)] transition-colors text-[var(--brand-text-secondary)]"
           >
-            <Link2 className="h-3 w-3" />
+            <Link2 className="h-3.5 w-3.5" />
             Connect
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); openOriginal() }}
-            className="flex items-center gap-1 px-2 py-1 text-[10px] font-black uppercase tracking-widest rounded-lg active:bg-[rgba(255,255,255,0.08)] transition-colors"
-            style={{ color: 'var(--brand-text-muted)' }}
+            className="flex items-center gap-1.5 px-2.5 min-h-[36px] text-[11px] font-bold uppercase tracking-widest rounded-lg active:bg-[rgba(255,255,255,0.08)] transition-colors text-[var(--brand-text-secondary)]"
           >
-            <ExternalLink className="h-3 w-3" />
+            <ExternalLink className="h-3.5 w-3.5" />
             Open
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); handleMarkAsRead() }}
-            className="ml-auto flex items-center gap-1 px-2 py-1 text-[10px] font-black uppercase tracking-widest rounded-lg active:bg-[rgba(255,255,255,0.08)] transition-colors"
-            style={{ color: 'var(--brand-text-muted)' }}
+            className="ml-auto flex items-center gap-1.5 px-2.5 min-h-[36px] text-[11px] font-bold uppercase tracking-widest rounded-lg active:bg-[rgba(255,255,255,0.08)] transition-colors text-[var(--brand-text-secondary)]"
           >
-            <Archive className="h-3 w-3" />
+            <Archive className="h-3.5 w-3.5" />
             Archive
           </button>
         </div>

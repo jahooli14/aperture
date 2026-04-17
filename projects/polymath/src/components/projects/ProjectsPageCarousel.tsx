@@ -52,13 +52,13 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
   return (
     <Link
       to={`/projects/${project.id}`}
-      className={`group block glass-card glass-card-hover transition-all duration-300 break-inside-avoid overflow-hidden ${prominent ? 'p-4 sm:p-5' : 'p-4'}`}
+      className={`group block rounded-xl transition-all duration-300 break-inside-avoid overflow-hidden relative ${prominent ? 'p-4 sm:p-5' : 'p-4'}`}
       style={{
         boxShadow: prominent || project.is_priority
-          ? `0 8px 28px rgba(0,0,0,0.45), 0 0 32px rgba(${theme.rgb}, 0.18)`
-          : `0 4px 14px rgba(0,0,0,0.35), 0 0 18px rgba(${theme.rgb}, 0.08)`,
-        borderColor: prominent || project.is_priority ? `rgba(${theme.rgb}, 0.6)` : `rgba(${theme.rgb}, 0.35)`,
-        background: `linear-gradient(180deg, rgba(${theme.rgb}, 0.14) 0%, rgba(${theme.rgb}, 0.07) 100%), rgba(15, 24, 41, 0.55)`
+          ? `0 10px 32px rgba(0,0,0,0.5), 0 0 36px rgba(${theme.rgb}, 0.22), inset 0 1px 0 rgba(255,255,255,0.08)`
+          : `0 6px 18px rgba(0,0,0,0.42), 0 0 20px rgba(${theme.rgb}, 0.1), inset 0 1px 0 rgba(255,255,255,0.05)`,
+        border: `1px solid ${prominent || project.is_priority ? `rgba(${theme.rgb}, 0.65)` : `rgba(${theme.rgb}, 0.4)`}`,
+        background: `linear-gradient(165deg, rgba(${theme.rgb}, 0.18) 0%, rgba(${theme.rgb}, 0.06) 45%, rgba(15, 24, 41, 0.75) 100%)`
       }}
     >
       {/* Header */}
@@ -268,8 +268,9 @@ export function ProjectsPageCarousel({
       {/* SECTION 1: ACTIVE FOCUS (Grid) */}
       {activeList.length > 0 && (
         <section>
-          <div className="mb-4 px-1">
-            <h3 className="text-xs font-bold text-[var(--brand-text-muted)] uppercase tracking-widest aperture-header">Active Focus</h3>
+          <div className="mb-4 px-1 flex items-center gap-2">
+            <span className="w-1 h-1 rounded-full" style={{ background: 'var(--brand-primary)', boxShadow: '0 0 6px rgba(var(--brand-primary-rgb),0.6)' }} />
+            <h3 className="text-[11px] font-bold text-[var(--brand-text-secondary)] uppercase tracking-widest aperture-header">Active Focus</h3>
           </div>
 
           <MasonryGrid projects={activeList} prominent={true} />
@@ -278,8 +279,9 @@ export function ProjectsPageCarousel({
 
       {drawerList.length > 0 && (
         <section>
-          <div className="mb-4 px-1">
-            <h3 className="text-xs font-bold text-[var(--brand-text-muted)] uppercase tracking-widest aperture-header">In the Drawer</h3>
+          <div className="mb-4 px-1 flex items-center gap-2">
+            <span className="w-1 h-1 rounded-full bg-white/40" />
+            <h3 className="text-[11px] font-bold text-[var(--brand-text-secondary)] uppercase tracking-widest aperture-header">In the Drawer</h3>
           </div>
 
           <MasonryGrid projects={drawerList} />
@@ -319,11 +321,11 @@ export function ProjectsPageCarousel({
               </div>
             </div>
 
-            <h3 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] leading-tight mb-2">
+            <h3 className="text-[1.75rem] sm:text-2xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] leading-[1] mb-3">
               Nothing in motion<br />
               <span className="text-brand-primary">yet.</span>
             </h3>
-            <p className="text-sm text-[var(--brand-text-muted)] leading-relaxed mb-6">
+            <p className="text-sm text-[var(--brand-text-secondary)] leading-relaxed mb-6">
               Projects grow from your thoughts. Capture something with the mic, then turn it into a project.
             </p>
           </div>
