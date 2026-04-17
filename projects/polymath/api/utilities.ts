@@ -521,15 +521,23 @@ async function handleOnboardingSegment(req: VercelRequest, res: VercelResponse) 
     .map(t => `Turn ${t.index}\nQ: ${t.question}\nA: ${t.transcript}`)
     .join('\n\n')
 
-  const prompt = `You're reviewing a voice onboarding chat a user just finished. Their replies came as separate turns, but related thoughts often span multiple turns. Your job is to re-read the whole thing and re-cut it into coherent memory notes, one per distinct topic.
+  const prompt = `You're reviewing a voice onboarding chat a user just finished. Their replies came as separate turns, but related thoughts often span multiple turns. Your job is to re-read the whole thing and turn it into coherent memory notes, one per distinct topic.
 
-Rules:
-- Group turns that are about the same topic into a single note, even if they weren't adjacent.
+Grouping:
+- Group turns about the same topic into a single note, even if they weren't adjacent.
 - If a single turn jumps between two unrelated topics, split it.
-- Keep the user's own words — do NOT paraphrase, summarise, or clean up the voice. Stitch the raw phrases together with light connectors only if needed for flow.
 - Drop filler-only turns (e.g. "yeah", "um, I don't know").
 - Aim for 1–5 notes total. Fewer is better if the conversation was tight.
-- Each note's title is a short (3–7 word) noun phrase describing the topic. No quotes, no trailing punctuation.
+
+Body — this is a note the user will read later, NOT a transcript:
+- Clean up the voice. Remove filler words ("um", "uh", "like", "you know", "sort of", "I mean"), false starts, repetitions, and self-corrections. Fix run-ons.
+- Keep the user's own voice, vocabulary, and specifics. First person. Don't paraphrase into corporate-speak or add claims they didn't make.
+- Write in clear prose or tight bullets — whatever reads naturally for the content. No "Q:"/"A:" markers. No turn numbers.
+
+Title — plain English, like a friend describing the note:
+- 3–8 words. Sentence case. No quotes, no trailing punctuation, no colons.
+- Describe the note the way the user would mention it in conversation, not a taxonomy label.
+- Prefer everyday language over jargon. Good: "What I'm building right now", "Why I left my last job", "Books that shaped how I think". Bad: "Current professional endeavours", "Career transition rationale", "Formative literary influences".
 
 Conversation:
 
