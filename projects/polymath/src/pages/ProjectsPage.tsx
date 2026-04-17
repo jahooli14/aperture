@@ -10,8 +10,7 @@ import { ForYouToday } from '../components/projects/ForYouToday'
 import { DrawerDigestSheet } from '../components/projects/DrawerDigestSheet'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
 import { Button } from '../components/ui/button'
-import { PremiumTabs } from '../components/ui/premium-tabs'
-import { Search, Check } from 'lucide-react'
+import { Search, Check, ArrowLeft } from 'lucide-react'
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import { SubtleBackground } from '../components/SubtleBackground'
@@ -147,10 +146,9 @@ export function ProjectsPage() {
   const {
     projects: allProjects,
     loading,
-    filter,
-    fetchProjects,
-    setFilter
+    fetchProjects
   } = useProjectStore()
+  const [showCompleted, setShowCompleted] = useState(false)
 
   // Check for updates on mount if we have no data
   useEffect(() => {
@@ -261,38 +259,49 @@ export function ProjectsPage() {
       <SubtleBackground />
       <div className="min-h-screen">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-6 flex flex-col gap-2">
-          <div className="mb-6 flex items-center justify-between">
-            <div>
+          <div className="mb-2 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {showCompleted && (
+                <button
+                  onClick={() => setShowCompleted(false)}
+                  className="h-10 w-10 rounded-xl flex items-center justify-center transition-all bg-[var(--glass-surface)] border border-white/10"
+                  style={{ color: "var(--brand-primary)" }}
+                  title="Back to projects"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
+              )}
               <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
-                your <span className="text-brand-primary">projects</span>
+                {showCompleted ? (
+                  <>what you've <span className="text-brand-primary">built</span></>
+                ) : (
+                  <>your <span className="text-brand-primary">projects</span></>
+                )}
               </h1>
             </div>
             <div className="flex items-center gap-2">
-              <CreateProjectDialog />
-              <button
-                onClick={() => navigate('/search')}
-                className="h-10 w-10 rounded-xl flex items-center justify-center transition-all bg-[var(--glass-surface)] border border-white/10"
-                style={{ color: "var(--brand-primary)" }}
-                title="Search everything"
-              >
-                <Search className="h-5 w-5" />
-              </button>
+              {!showCompleted && (
+                <>
+                  <CreateProjectDialog />
+                  <button
+                    onClick={() => navigate('/search')}
+                    className="h-10 w-10 rounded-xl flex items-center justify-center transition-all bg-[var(--glass-surface)] border border-white/10"
+                    style={{ color: "var(--brand-primary)" }}
+                    title="Search everything"
+                  >
+                    <Search className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={() => setShowCompleted(true)}
+                    className="h-10 w-10 rounded-xl flex items-center justify-center transition-all bg-[var(--glass-surface)] border border-white/10"
+                    style={{ color: "var(--brand-primary)" }}
+                    title="View completed projects"
+                  >
+                    <Check className="h-5 w-5" />
+                  </button>
+                </>
+              )}
             </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {/* Filter Tabs */}
-            <PremiumTabs
-              tabs={[
-                { id: 'all', label: 'All' },
-                { id: 'active', label: 'Active' },
-                { id: 'dormant', label: 'Ideas' },
-                { id: 'completed', label: 'Done' }
-              ]}
-              activeTab={filter}
-              onChange={(tabId) => setFilter(tabId as typeof filter)}
-              className="flex-nowrap"
-            />
           </div>
         </div>
 
@@ -304,8 +313,11 @@ export function ProjectsPage() {
           transition={{ duration: 0.2 }}
         >
           {/* Completed Projects Timeline */}
-          {filter === 'completed' ? (
-            <CompletedProjectsTimeline projects={projects} onNavigate={(id) => navigate(`/projects/${id}`)} />
+          {showCompleted ? (
+            <CompletedProjectsTimeline
+              projects={projects.filter(p => p.status === 'completed')}
+              onNavigate={(id) => navigate(`/projects/${id}`)}
+            />
           ) : (<>
 
           {/* Controls */}
@@ -376,10 +388,10 @@ export function ProjectsPage() {
                 )}
 
                 {/* Weekly drawer digest banner — invisible when none unread */}
-                {filter === 'all' && <DrawerDigestSheet />}
+                <DrawerDigestSheet />
 
                 {/* "For you today" — warmed drawer items, invisible when empty */}
-                {filter === 'all' && <ForYouToday />}
+                <ForYouToday />
 
                 {/* Masonry Dashboard */}
                 <ProjectsPageCarousel
