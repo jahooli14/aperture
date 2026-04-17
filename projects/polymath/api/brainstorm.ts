@@ -408,9 +408,17 @@ interface ProjectTask {
 }
 
 interface TaskOp {
-  action: 'complete' | 'uncomplete' | 'delete' | 'edit'
-  taskId: string
+  action: 'complete' | 'uncomplete' | 'delete' | 'edit' | 'add'
+  taskId?: string
   newText?: string
+  task_type?: 'ignition' | 'core' | 'shutdown'
+  estimated_minutes?: number
+  reasoning?: string
+}
+
+interface GoalUpdate {
+  newGoal: string
+  reasoning?: string
 }
 
 interface PowerHourSuggestion {
@@ -478,7 +486,7 @@ async function handleProjectChat(
     history?: ConversationMessage[]
   },
   userId: string
-): Promise<{ reply: string; suggestedTasks: SuggestedTask[]; taskOps: TaskOp[]; echoes: EchoItem[] }> {
+): Promise<{ reply: string; suggestedTasks: SuggestedTask[]; taskOps: TaskOp[]; goalUpdate: GoalUpdate | null; echoes: EchoItem[] }> {
   const {
     projectId,
     projectTitle,
@@ -540,14 +548,15 @@ HOW TO RESPOND:
 2. Keep it real. If their plan doesn't make sense, say so. If they're overcomplicating it, tell them. If they need to just sit down and do the thing, say that.
 3. Ask ONE follow-up question when there's a real decision to make. Not a philosophical question — a practical one. "Are you going to message them by email or DM?" not "How will you frame the request to ensure alignment with your creative vision?"
 4. Reference specific tasks and the finish line by name. Show you know the project.
-5. Only suggest new tasks when they ask for them or when the conversation clearly calls for it.
+5. Only propose changes when they ask for them or when the conversation clearly calls for it.
 
 Rules:
 - 2-3 sentences max. Be brief. Say what matters and stop.
 - Plain everyday English. No jargon, no buzzwords, no coaching speak.
 - Never start with "Great", "Interesting", "Absolutely", "That's a great point", or any sycophantic opener.
 - Always orient toward finishing. If they're going on a tangent, bring them back.
-- If the user asks to mark a task done, delete a task, or edit a task text, return the operation in taskOps.
+- When the user asks to add, mark done, delete, or edit a task, return the operation in taskOps. These are PROPOSALS — the user will see them as confirm/dismiss buttons, so briefly describe the change in your reply too.
+- When the user asks to change the finish line / end goal, return it in goalUpdate. This is also a proposal the user will confirm.
 ${priorTurns ? `\nCONVERSATION SO FAR:\n${priorTurns}\n` : ''}
 USER: ${message}
 
@@ -555,29 +564,43 @@ Return JSON only:
 {
   "reply": "your response",
   "suggestedTasks": [],
-  "taskOps": []
+  "taskOps": [],
+  "goalUpdate": null
 }
 
-suggestedTasks format (only when explicitly warranted): { "text": "task", "task_type": "ignition"|"core"|"shutdown", "estimated_minutes": 15, "reasoning": "why" }
-taskOps format (only when user asks): { "action": "complete"|"uncomplete"|"delete"|"edit", "taskId": "id", "newText": "for edit only" }
-Default both to []. task_type: ignition = breaks inertia, core = main work, shutdown = wraps up.`
+suggestedTasks format (only when offering fresh ideas for them to pick from): { "text": "task", "task_type": "ignition"|"core"|"shutdown", "estimated_minutes": 15, "reasoning": "why" }
+taskOps format (only when user asks to modify their list):
+  - add:        { "action": "add", "newText": "task text", "task_type": "core", "estimated_minutes": 15, "reasoning": "why" }
+  - complete:   { "action": "complete", "taskId": "id" }
+  - uncomplete: { "action": "uncomplete", "taskId": "id" }
+  - delete:     { "action": "delete", "taskId": "id" }
+  - edit:       { "action": "edit", "taskId": "id", "newText": "new text" }
+goalUpdate format (only when user asks to change the finish line): { "newGoal": "the new finish line text", "reasoning": "why" }
+Default arrays to [] and goalUpdate to null. Prefer taskOps.add over suggestedTasks when the user explicitly asks you to add something. task_type: ignition = breaks inertia, core = main work, shutdown = wraps up.`
 
   const raw = await generateText(prompt, { temperature: 0.72, responseFormat: 'json' })
 
   let reply = ''
   let suggestedTasks: SuggestedTask[] = []
   let taskOps: TaskOp[] = []
+  let goalUpdate: GoalUpdate | null = null
 
   try {
     const parsed = JSON.parse(raw)
     reply = (parsed.reply || '').trim()
     suggestedTasks = Array.isArray(parsed.suggestedTasks) ? parsed.suggestedTasks : []
     taskOps = Array.isArray(parsed.taskOps) ? parsed.taskOps : []
+    if (parsed.goalUpdate && typeof parsed.goalUpdate === 'object' && typeof parsed.goalUpdate.newGoal === 'string') {
+      goalUpdate = {
+        newGoal: parsed.goalUpdate.newGoal.trim(),
+        reasoning: typeof parsed.goalUpdate.reasoning === 'string' ? parsed.goalUpdate.reasoning : undefined,
+      }
+    }
   } catch {
     reply = raw.trim()
   }
 
-  return { reply, suggestedTasks, taskOps, echoes }
+  return { reply, suggestedTasks, taskOps, goalUpdate, echoes }
 }
 
 // ─── Mode: project-reveal ────────────────────────────────────────────────────

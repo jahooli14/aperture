@@ -12,7 +12,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { ArrowUp, Plus, Check } from 'lucide-react'
+import { ArrowUp, Plus, Check, X, Target, Trash2, Pencil, RotateCcw } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../../lib/supabase'
 import type { Project } from '../../types'
@@ -54,15 +54,32 @@ interface SessionBrief {
   }
 }
 
-type Message =
-  | { kind: 'guide'; content: string; suggestedTasks?: SuggestedTask[]; echoes?: EchoItem[] }
-  | { kind: 'you'; content: string }
-
 interface TaskOp {
-  action: 'complete' | 'uncomplete' | 'delete' | 'edit'
-  taskId: string
+  action: 'complete' | 'uncomplete' | 'delete' | 'edit' | 'add'
+  taskId?: string
   newText?: string
+  task_type?: 'ignition' | 'core' | 'shutdown'
+  estimated_minutes?: number
+  reasoning?: string
 }
+
+interface GoalUpdate {
+  newGoal: string
+  reasoning?: string
+}
+
+type Message =
+  | {
+      kind: 'guide'
+      content: string
+      suggestedTasks?: SuggestedTask[]
+      echoes?: EchoItem[]
+      pendingOps?: TaskOp[]
+      pendingGoal?: GoalUpdate | null
+      resolvedOpIds?: string[]
+      resolvedGoal?: boolean
+    }
+  | { kind: 'you'; content: string }
 
 interface InlineGuideProps {
   project: Project
@@ -74,6 +91,11 @@ interface InlineGuideProps {
     reasoning?: string
   }) => void
   onUpdateTasks?: (tasks: Task[]) => Promise<void>
+  onUpdateGoal?: (newGoal: string) => Promise<void>
+}
+
+function opKey(op: TaskOp, i: number): string {
+  return `${op.action}:${op.taskId ?? op.newText ?? ''}:${i}`
 }
 
 export function InlineGuide({
@@ -81,6 +103,7 @@ export function InlineGuide({
   recentCompletions,
   onAddTask,
   onUpdateTasks,
+  onUpdateGoal,
 }: InlineGuideProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -201,23 +224,17 @@ export function InlineGuide({
         return
       }
 
-      // Apply task operations
-      if (data.taskOps && Array.isArray(data.taskOps) && onUpdateTasks) {
-        const currentTasks: Task[] = (project.metadata?.tasks as Task[] | undefined) || []
-        let updatedTasks = [...currentTasks]
-        for (const op of data.taskOps as TaskOp[]) {
-          if (op.action === 'complete') {
-            updatedTasks = updatedTasks.map(t => t.id === op.taskId ? { ...t, done: true, completed_at: new Date().toISOString() } : t)
-          } else if (op.action === 'uncomplete') {
-            updatedTasks = updatedTasks.map(t => t.id === op.taskId ? { ...t, done: false, completed_at: undefined } : t)
-          } else if (op.action === 'delete') {
-            updatedTasks = updatedTasks.filter(t => t.id !== op.taskId)
-          } else if (op.action === 'edit' && op.newText) {
-            updatedTasks = updatedTasks.map(t => t.id === op.taskId ? { ...t, text: op.newText! } : t)
-          }
-        }
-        await onUpdateTasks(updatedTasks)
-      }
+      // Capture task operations and goal update as pending proposals
+      const rawOps = (Array.isArray(data.taskOps) ? data.taskOps : []) as TaskOp[]
+      const pendingOps = rawOps.filter(op => {
+        if (op.action === 'add') return !!op.newText
+        return !!op.taskId
+      })
+      const rawGoal = data.goalUpdate as GoalUpdate | null | undefined
+      const pendingGoal: GoalUpdate | null =
+        rawGoal && typeof rawGoal.newGoal === 'string' && rawGoal.newGoal.trim()
+          ? { newGoal: rawGoal.newGoal.trim(), reasoning: rawGoal.reasoning }
+          : null
 
       setMessages(prev => {
         const next: Message[] = [
@@ -227,6 +244,10 @@ export function InlineGuide({
             content: (data.reply as string) || "Couldn't reach the server.",
             suggestedTasks: (data.suggestedTasks as SuggestedTask[]) || [],
             echoes: (data.echoes as EchoItem[]) || [],
+            pendingOps,
+            pendingGoal,
+            resolvedOpIds: [],
+            resolvedGoal: false,
           },
         ]
         persistConversation(next)
@@ -246,6 +267,71 @@ export function InlineGuide({
     if (addedTasks.has(task.text)) return
     onAddTask(task)
     setAddedTasks(prev => new Set(prev).add(task.text))
+  }
+
+  const markOpResolved = (msgIndex: number, key: string) => {
+    setMessages(prev => prev.map((m, i) => {
+      if (i !== msgIndex || m.kind !== 'guide') return m
+      return { ...m, resolvedOpIds: [...(m.resolvedOpIds || []), key] }
+    }))
+  }
+
+  const applyTaskOp = async (msgIndex: number, op: TaskOp, key: string) => {
+    const currentTasks: Task[] = (project.metadata?.tasks as Task[] | undefined) || []
+    if (op.action === 'add') {
+      if (!op.newText) return
+      onAddTask({
+        text: op.newText,
+        task_type: op.task_type,
+        estimated_minutes: op.estimated_minutes,
+        reasoning: op.reasoning,
+      })
+      markOpResolved(msgIndex, key)
+      return
+    }
+    if (!op.taskId || !onUpdateTasks) return
+    let updated = [...currentTasks]
+    if (op.action === 'complete') {
+      updated = updated.map(t => t.id === op.taskId ? { ...t, done: true, completed_at: new Date().toISOString() } : t)
+    } else if (op.action === 'uncomplete') {
+      updated = updated.map(t => t.id === op.taskId ? { ...t, done: false, completed_at: undefined } : t)
+    } else if (op.action === 'delete') {
+      updated = updated.filter(t => t.id !== op.taskId)
+    } else if (op.action === 'edit' && op.newText) {
+      updated = updated.map(t => t.id === op.taskId ? { ...t, text: op.newText! } : t)
+    } else {
+      return
+    }
+    await onUpdateTasks(updated)
+    markOpResolved(msgIndex, key)
+  }
+
+  const applyGoalUpdate = async (msgIndex: number, goal: GoalUpdate) => {
+    if (!onUpdateGoal) return
+    await onUpdateGoal(goal.newGoal)
+    setMessages(prev => prev.map((m, i) => (i === msgIndex && m.kind === 'guide') ? { ...m, resolvedGoal: true } : m))
+  }
+
+  const dismissGoalUpdate = (msgIndex: number) => {
+    setMessages(prev => prev.map((m, i) => (i === msgIndex && m.kind === 'guide') ? { ...m, resolvedGoal: true } : m))
+  }
+
+  const describeOp = (op: TaskOp): { label: string; preview: string; icon: typeof Plus; destructive: boolean } => {
+    const tasks = (project.metadata?.tasks as Task[] | undefined) || []
+    const referenced = op.taskId ? tasks.find(t => t.id === op.taskId) : undefined
+    const existingText = referenced?.text ?? '(unknown task)'
+    switch (op.action) {
+      case 'add':
+        return { label: 'Add task', preview: op.newText || '', icon: Plus, destructive: false }
+      case 'complete':
+        return { label: 'Mark done', preview: existingText, icon: Check, destructive: false }
+      case 'uncomplete':
+        return { label: 'Reopen', preview: existingText, icon: RotateCcw, destructive: false }
+      case 'delete':
+        return { label: 'Delete task', preview: existingText, icon: Trash2, destructive: true }
+      case 'edit':
+        return { label: 'Edit task', preview: `"${existingText}" → "${op.newText || ''}"`, icon: Pencil, destructive: false }
+    }
   }
 
   return (
@@ -299,6 +385,111 @@ export function InlineGuide({
                             {echo.title}
                           </span>
                         ))}
+                      </div>
+                    )}
+
+                    {/* Pending task operations (need user confirmation) */}
+                    {msg.pendingOps && msg.pendingOps.length > 0 && (
+                      <div className="space-y-1.5 pt-1">
+                        {msg.pendingOps.map((op, j) => {
+                          const key = opKey(op, j)
+                          const resolved = (msg.resolvedOpIds || []).includes(key)
+                          const { label, preview, icon: OpIcon, destructive } = describeOp(op)
+                          return (
+                            <div
+                              key={key}
+                              className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+                              style={{
+                                background: destructive ? 'rgba(239,68,68,0.04)' : 'rgba(255,255,255,0.02)',
+                                border: `1px solid ${destructive ? 'rgba(239,68,68,0.12)' : 'rgba(255,255,255,0.04)'}`,
+                              }}
+                            >
+                              <OpIcon className="h-3.5 w-3.5 flex-shrink-0" style={{ color: destructive ? 'rgb(239,68,68)' : 'var(--brand-text-secondary)', opacity: 0.6 }} />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: destructive ? 'rgb(239,68,68)' : 'var(--brand-text-secondary)', opacity: 0.55 }}>
+                                  {label}
+                                </p>
+                                <p className="text-[13px] leading-snug truncate" style={{ color: 'var(--brand-text-primary)', opacity: 0.7 }}>
+                                  {preview}
+                                </p>
+                              </div>
+                              {resolved ? (
+                                <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium" style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--brand-text-secondary)', opacity: 0.4 }}>
+                                  <Check className="h-3 w-3" /> Applied
+                                </span>
+                              ) : (
+                                <div className="flex items-center gap-1 flex-shrink-0">
+                                  <button
+                                    onClick={() => markOpResolved(i, key)}
+                                    className="h-7 w-7 flex items-center justify-center rounded-lg transition-colors hover:bg-white/[0.05]"
+                                    style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
+                                    aria-label="Dismiss"
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => applyTaskOp(i, op, key)}
+                                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all text-[11px] font-medium"
+                                    style={{
+                                      background: destructive ? 'rgba(239,68,68,0.1)' : 'rgba(var(--brand-primary-rgb),0.1)',
+                                      color: destructive ? 'rgb(239,68,68)' : 'rgb(var(--brand-primary-rgb))',
+                                      opacity: 0.85,
+                                    }}
+                                  >
+                                    <Check className="h-3 w-3" /> {destructive ? 'Delete' : 'Apply'}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+
+                    {/* Pending goal / finish line update */}
+                    {msg.pendingGoal && (
+                      <div
+                        className="px-3 py-3 rounded-xl space-y-2"
+                        style={{
+                          background: 'rgba(var(--brand-primary-rgb),0.04)',
+                          border: '1px solid rgba(var(--brand-primary-rgb),0.1)',
+                        }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Target className="h-3.5 w-3.5" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.7 }} />
+                          <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.65 }}>
+                            Update finish line
+                          </p>
+                        </div>
+                        <p className="text-[13px] italic leading-snug font-serif" style={{ color: 'var(--brand-text-primary)', opacity: 0.75 }}>
+                          "{msg.pendingGoal.newGoal}"
+                        </p>
+                        {msg.resolvedGoal ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium" style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--brand-text-secondary)', opacity: 0.4 }}>
+                            <Check className="h-3 w-3" /> Updated
+                          </span>
+                        ) : (
+                          <div className="flex items-center gap-1 justify-end">
+                            <button
+                              onClick={() => dismissGoalUpdate(i)}
+                              className="px-2.5 py-1 text-[11px] font-medium rounded-lg hover:bg-white/[0.05] transition-colors"
+                              style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
+                            >
+                              Dismiss
+                            </button>
+                            <button
+                              onClick={() => msg.pendingGoal && applyGoalUpdate(i, msg.pendingGoal)}
+                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all text-[11px] font-medium"
+                              style={{
+                                background: 'rgba(var(--brand-primary-rgb),0.1)',
+                                color: 'rgb(var(--brand-primary-rgb))',
+                                opacity: 0.85,
+                              }}
+                            >
+                              <Check className="h-3 w-3" /> Apply
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
 

@@ -488,6 +488,20 @@ export function ProjectDetailPage() {
     // debounced enrichment fires automatically via aiEnrichmentManager
   }
 
+  const handleChatUpdateGoal = async (newGoal: string) => {
+    if (!project) return
+    await updateProject(project.id, {
+      metadata: {
+        ...project.metadata,
+        end_goal: newGoal,
+      },
+    })
+    addToast({
+      title: 'Finish line updated',
+      variant: 'success',
+    })
+  }
+
   const handleChatUpdateTasks = async (updatedTasks: Task[]) => {
     if (!project) return
     const now = new Date().toISOString()
@@ -755,6 +769,7 @@ export function ProjectDetailPage() {
                   recentCompletions={recentCompletions}
                   onAddTask={handleChatAddTask}
                   onUpdateTasks={handleChatUpdateTasks}
+                  onUpdateGoal={handleChatUpdateGoal}
                 />
               )}
 
