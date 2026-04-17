@@ -223,14 +223,54 @@ export function OnboardingChatPage() {
     void bootstrapGrid()
   }, [bootstrapGrid, unlockAudioOutput])
 
+  // Mid-turn stall detection. After the user finishes speaking and we've
+  // observed their turn, the model should start talking again within a few
+  // seconds. If nothing arrives for STALL_MS we surface a retry affordance —
+  // otherwise the user is staring at a silent mic icon with no recourse.
+  const STALL_MS = 12000
+  const [turnStalled, setTurnStalled] = useState(false)
+  const stallTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const clearStallTimer = useCallback(() => {
+    if (stallTimerRef.current) {
+      clearTimeout(stallTimerRef.current)
+      stallTimerRef.current = null
+    }
+  }, [])
+  const armStallTimer = useCallback(() => {
+    clearStallTimer()
+    stallTimerRef.current = setTimeout(() => {
+      console.warn('[onboarding-chat] model did not respond within stall window')
+      setTurnStalled(true)
+    }, STALL_MS)
+  }, [clearStallTimer])
+  useEffect(() => () => clearStallTimer(), [clearStallTimer])
+
   // ── Live callbacks ──────────────────────────────────────────────────────
   const handleModelSpeaking = useCallback((accumulated: string) => {
     setCurrentQuestion(accumulated)
-  }, [])
+    // Any model output clears the stall state + timer.
+    clearStallTimer()
+    setTurnStalled(false)
+  }, [clearStallTimer])
 
   const handleUserSpeaking = useCallback((accumulated: string) => {
     setUserPartial(accumulated)
   }, [])
+
+  const handleRetryVoice = useCallback(() => {
+    // Full remount is the reliable path — the Live socket, audio contexts,
+    // and mic stream all need fresh state. We keep the unlocked output
+    // AudioContext around (iOS) and just cycle the voice component by
+    // bouncing out of 'turn' and back.
+    clearStallTimer()
+    setTurnStalled(false)
+    setCurrentQuestion('')
+    setUserPartial('')
+    setError(null)
+    setLiveReady(false)
+    setPhase('bootstrap')
+    void bootstrapGrid()
+  }, [bootstrapGrid, clearStallTimer])
 
   const handleLiveReady = useCallback(() => setLiveReady(true), [])
 
@@ -407,6 +447,12 @@ export function OnboardingChatPage() {
       gridRef.current = data.grid
       setJustFilled(data.newly_filled_slots)
       setUserPartial('')
+      // We've observed the user's turn; now wait for the model to respond.
+      // If nothing arrives within STALL_MS, surface a retry.
+      if (!data.stopping_hint.should_stop) {
+        setCurrentQuestion('')
+        armStallTimer()
+      }
 
       // Accumulate any named entities the observer pulled out.
       if (data.captured_items && data.captured_items.length > 0) {
@@ -449,7 +495,7 @@ export function OnboardingChatPage() {
         }, 400)
       }
     },
-    [createMemory, enrichBook, persistCapturedItems, persistCapturedProjects],
+    [armStallTimer, createMemory, enrichBook, persistCapturedItems, persistCapturedProjects],
   )
 
   // Serialise per-turn processing via a promise chain so no turn is ever
@@ -499,9 +545,7 @@ export function OnboardingChatPage() {
           capabilities: [],
           themes: [],
           patterns: [],
-          entities: { people: [], places: [], topics: [], skills: [] },
           first_insight: 'Your thoughts are saved. Start a project to see how they connect.',
-          graph_preview: { nodes: [], edges: [] },
           project_suggestions: [],
         })
       } finally {
@@ -773,7 +817,28 @@ export function OnboardingChatPage() {
 
   if (phase === 'analyzing' || phase === 'reveal') {
     if (phase === 'reveal' && analysis) {
-      return <RevealSequence analysis={analysis} books={books} transcripts={allTranscriptsRef.current} />
+      // Lift short grounding phrases off the coverage grid so the refine-idea
+      // prompt can keep later rounds anchored in the user's own words.
+      const groundingPhrases = grid
+        ? Object.values(grid.slots).flatMap(s => s.grounding_phrases).filter(Boolean).slice(0, 20)
+        : []
+      // Summarise the lists the observer quietly seeded during the chat, so
+      // the reveal can disclose them rather than have the user stumble on
+      // them in Lists later.
+      const seededCounts = new Map<string, number>()
+      for (const item of capturedItemsRef.current) {
+        seededCounts.set(item.type, (seededCounts.get(item.type) || 0) + 1)
+      }
+      const seededLists = Array.from(seededCounts, ([type, count]) => ({ type, count }))
+      const enrichedAnalysis: OnboardingAnalysis = { ...analysis, seeded_lists: seededLists }
+      return (
+        <RevealSequence
+          analysis={enrichedAnalysis}
+          books={books}
+          transcripts={allTranscriptsRef.current}
+          groundingPhrases={groundingPhrases}
+        />
+      )
     }
     return (
       <div className="min-h-screen flex items-center justify-center px-4 py-12">
@@ -887,6 +952,32 @@ export function OnboardingChatPage() {
                     </details>
                   )}
                 </div>
+              ) : turnStalled ? (
+                <div className="flex flex-col items-center gap-4 text-sm max-w-sm" style={{ color: 'var(--brand-text-secondary)' }}>
+                  <p className="text-center leading-relaxed">
+                    Taking longer than usual — want to try that again? Your thoughts so far are saved.
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={handleRetryVoice}
+                      className="btn-primary px-5 py-2 text-sm font-semibold inline-flex items-center gap-2"
+                    >
+                      <Mic className="h-3.5 w-3.5" />
+                      Try again
+                    </button>
+                    <button
+                      onClick={() => {
+                        setTurnStalled(false)
+                        setTypingMode(true)
+                      }}
+                      className="px-4 py-2 text-sm hover:opacity-80 inline-flex items-center gap-1.5"
+                      style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}
+                    >
+                      <Type className="h-3.5 w-3.5" />
+                      Type instead
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <TurnIndicator status={liveStatus} />
               )}
@@ -960,9 +1051,28 @@ export function OnboardingChatPage() {
           </button>
 
           {error && (
-            <p className="mt-4 text-sm" style={{ color: 'var(--brand-danger, #dc2626)' }}>
-              {error}
-            </p>
+            <div className="mt-4 flex flex-col items-center gap-3">
+              <p className="text-sm" style={{ color: 'var(--brand-danger, #dc2626)' }}>
+                {error}
+              </p>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleRetryVoice}
+                  className="btn-primary px-4 py-1.5 text-xs font-semibold inline-flex items-center gap-1.5"
+                >
+                  <Mic className="h-3 w-3" />
+                  Retry voice
+                </button>
+                <button
+                  onClick={() => { setError(null); setTypingMode(true) }}
+                  className="text-xs hover:opacity-80 inline-flex items-center gap-1.5"
+                  style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}
+                >
+                  <Type className="h-3 w-3" />
+                  Type instead
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>
