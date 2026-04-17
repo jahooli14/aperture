@@ -426,19 +426,13 @@ export function OnboardingChatPage() {
       const isOpeningTurn = currentGrid.turns.length === 0 && userTranscript.trim().length === 0
       if (isOpeningTurn) return
 
-      // Save the user's transcript as a foundational memory (tagged so we
-      // can retrieve later without knowing the Live-decided slot).
+      // Track the user's transcript for the end-of-chat segmentation pass.
+      // We used to persist a foundational memory per turn, but related thoughts
+      // often spanned multiple turns and ended up fragmented. Persistence is
+      // deferred to `persistConversationMemories`, which re-reads the whole
+      // conversation once and cuts it into coherent notes.
       if (userTranscript.trim().length > 0) {
         allTranscriptsRef.current.push(userTranscript)
-        try {
-          await createMemory({
-            body: userTranscript,
-            memory_type: 'foundational',
-            tags: ['onboarding', 'live-hybrid'],
-          })
-        } catch (memErr) {
-          console.warn('[onboarding-chat] memory save failed, continuing', memErr)
-        }
       }
 
       // Observer — updates the coverage grid based on what the user said
@@ -523,7 +517,7 @@ export function OnboardingChatPage() {
         }, 400)
       }
     },
-    [armStallTimer, createMemory, enrichBook, persistCapturedItems, persistCapturedProjects],
+    [armStallTimer, enrichBook, persistCapturedItems, persistCapturedProjects],
   )
 
   // Serialise per-turn processing via a promise chain so no turn is ever
@@ -551,6 +545,63 @@ export function OnboardingChatPage() {
     setTypingDraft('')
   }, [typingDraft])
 
+  // ── Conversation → foundational memories ────────────────────────────────
+  // Runs once, at the end of the chat. Sends the full coverage grid to the
+  // server, which re-reads the whole conversation and returns coherent chunks
+  // grouped by topic. We then create one foundational memory per chunk.
+  // Guarded so it's idempotent across the should_stop and analyze paths.
+  const conversationPersistedRef = useRef(false)
+  const persistConversationMemories = useCallback(
+    async (coverageGrid: CoverageGrid) => {
+      if (conversationPersistedRef.current) return
+      conversationPersistedRef.current = true
+      try {
+        const res = await fetch('/api/utilities?resource=onboarding-segment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ coverage_grid: coverageGrid }),
+        })
+        if (!res.ok) throw new Error(`Segment failed (${res.status})`)
+        const data = (await res.json()) as {
+          memories?: Array<{ title?: string; body?: string }>
+        }
+        const memories = Array.isArray(data.memories) ? data.memories : []
+        for (const m of memories) {
+          const body = (m.body || '').trim()
+          if (!body) continue
+          try {
+            await createMemory({
+              title: (m.title || '').trim() || undefined,
+              body,
+              memory_type: 'foundational',
+              tags: ['onboarding', 'live-hybrid'],
+            })
+          } catch (createErr) {
+            console.warn('[onboarding-chat] memory save failed, continuing', createErr)
+          }
+        }
+      } catch (err) {
+        // Fallback: save the whole conversation as a single memory so the
+        // user doesn't lose their chat if segmentation was unavailable.
+        console.warn('[onboarding-chat] segmentation failed, saving fallback', err)
+        const joined = allTranscriptsRef.current.map(t => t.trim()).filter(Boolean).join('\n\n')
+        if (joined.length > 0) {
+          try {
+            await createMemory({
+              title: 'Onboarding conversation',
+              body: joined,
+              memory_type: 'foundational',
+              tags: ['onboarding', 'live-hybrid'],
+            })
+          } catch (createErr) {
+            console.warn('[onboarding-chat] fallback memory save failed', createErr)
+          }
+        }
+      }
+    },
+    [createMemory],
+  )
+
   // ── Books / analysis handoff ─────────────────────────────────────────────
   const runAnalysis = useCallback(
     async (selectedBooks: BookSearchResult[]) => {
@@ -560,6 +611,7 @@ export function OnboardingChatPage() {
       // run the analyze step. Idempotent — no-op if already persisted.
       await persistCapturedItems()
       await persistCapturedProjects()
+      await persistConversationMemories(grid)
       setPhase('analyzing')
       try {
         const res = await fetch('/api/utilities?resource=analyze', {
@@ -585,7 +637,7 @@ export function OnboardingChatPage() {
         setPhase('reveal')
       }
     },
-    [grid, persistCapturedItems, persistCapturedProjects],
+    [grid, persistCapturedItems, persistCapturedProjects, persistConversationMemories],
   )
 
   const handleBooksComplete = useCallback(

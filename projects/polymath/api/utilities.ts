@@ -11,6 +11,7 @@
  *   POST ?resource=onboarding-turn          — Run the planner for one onboarding turn
  *   POST ?resource=onboarding-observe       — Observe-only planner call (no next-question gen) for the Live API hybrid
  *   POST ?resource=onboarding-token         — Mint an ephemeral Live API token for the browser
+ *   POST ?resource=onboarding-segment       — Re-read the full voice chat and cut it into coherent memory chunks
  *   POST ?resource=reset-onboarding         — Wipe all onboarding-origin artifacts so the user can redo it
  */
 
@@ -73,6 +74,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'POST' && resource === 'onboarding-token') {
     return handleOnboardingToken(req, res)
+  }
+
+  if (req.method === 'POST' && resource === 'onboarding-segment') {
+    return handleOnboardingSegment(req, res)
   }
 
   if (req.method === 'POST' && resource === 'reset-onboarding') {
@@ -482,6 +487,93 @@ Be warm but not sycophantic. Be specific, not generic. Surprise them.`
       analysis_failed: true,
     })
   }
+}
+
+// ── Onboarding Segment ─────────────────────────────────────────────────────
+// The Live onboarding chat fires `turnComplete` after every back-and-forth.
+// Previously we saved each user turn as its own foundational memory, which
+// fragmented thoughts that spanned two or three turns. This endpoint replaces
+// that: it reads the whole conversation once at the end and re-cuts it into
+// coherent sections grouped by topic, so related turns stay together and
+// stray asides don't get promoted to standalone notes.
+async function handleOnboardingSegment(req: VercelRequest, res: VercelResponse) {
+  const { coverage_grid } = req.body as {
+    coverage_grid?: {
+      turns: Array<{
+        index: number
+        question: string
+        transcript: string
+        target_slot: string | null
+        skipped: boolean
+      }>
+    }
+  }
+
+  const turns = (coverage_grid?.turns || []).filter(
+    t => !t.skipped && t.transcript && t.transcript.trim().length > 0,
+  )
+
+  if (turns.length === 0) {
+    return res.status(200).json({ memories: [] })
+  }
+
+  const transcriptBlock = turns
+    .map(t => `Turn ${t.index}\nQ: ${t.question}\nA: ${t.transcript}`)
+    .join('\n\n')
+
+  const prompt = `You're reviewing a voice onboarding chat a user just finished. Their replies came as separate turns, but related thoughts often span multiple turns. Your job is to re-read the whole thing and re-cut it into coherent memory notes, one per distinct topic.
+
+Rules:
+- Group turns that are about the same topic into a single note, even if they weren't adjacent.
+- If a single turn jumps between two unrelated topics, split it.
+- Keep the user's own words — do NOT paraphrase, summarise, or clean up the voice. Stitch the raw phrases together with light connectors only if needed for flow.
+- Drop filler-only turns (e.g. "yeah", "um, I don't know").
+- Aim for 1–5 notes total. Fewer is better if the conversation was tight.
+- Each note's title is a short (3–7 word) noun phrase describing the topic. No quotes, no trailing punctuation.
+
+Conversation:
+
+${transcriptBlock}
+
+Return JSON of the form:
+{
+  "memories": [
+    { "title": "...", "body": "..." }
+  ]
+}`
+
+  try {
+    const result = await generateText(prompt, {
+      maxTokens: 2048,
+      temperature: 0.3,
+      responseFormat: 'json',
+    })
+    const parsed = JSON.parse(result) as { memories?: Array<{ title?: unknown; body?: unknown }> }
+    const memories = Array.isArray(parsed.memories)
+      ? parsed.memories
+          .map(m => ({
+            title: typeof m?.title === 'string' ? m.title.trim() : '',
+            body: typeof m?.body === 'string' ? m.body.trim() : '',
+          }))
+          .filter(m => m.body.length > 0)
+      : []
+
+    if (memories.length === 0) {
+      return res.status(200).json({ memories: fallbackSingleMemory(turns) })
+    }
+    return res.status(200).json({ memories })
+  } catch (error: any) {
+    console.error('[utilities/onboarding-segment] segmentation failed:', error?.message)
+    return res.status(200).json({ memories: fallbackSingleMemory(turns) })
+  }
+}
+
+function fallbackSingleMemory(
+  turns: Array<{ transcript: string }>,
+): Array<{ title: string; body: string }> {
+  const body = turns.map(t => t.transcript.trim()).filter(Boolean).join('\n\n')
+  if (!body) return []
+  return [{ title: 'Onboarding conversation', body }]
 }
 
 // ── Refine Idea ────────────────────────────────────────────────────────────
