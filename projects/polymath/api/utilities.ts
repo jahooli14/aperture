@@ -11,6 +11,7 @@
  *   POST ?resource=onboarding-turn          — Run the planner for one onboarding turn
  *   POST ?resource=onboarding-observe       — Observe-only planner call (no next-question gen) for the Live API hybrid
  *   POST ?resource=onboarding-token         — Mint an ephemeral Live API token for the browser
+ *   POST ?resource=reset-onboarding         — Wipe all onboarding-origin artifacts so the user can redo it
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
@@ -74,11 +75,111 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return handleOnboardingToken(req, res)
   }
 
+  if (req.method === 'POST' && resource === 'reset-onboarding') {
+    return handleResetOnboarding(req, res)
+  }
+
   if (req.method === 'GET' && resource === 'session-brief') {
     return handleSessionBrief(req, res)
   }
 
   return res.status(404).json({ error: 'Not found' })
+}
+
+// ── Reset Onboarding ───────────────────────────────────────────────────────
+// Wipes every artifact created by the onboarding voice chat so the user can
+// run it again. Each surface carries an identifying marker:
+//   memories              → tags contains 'onboarding' (foundational)
+//   list_items            → metadata.origin = 'onboarding'
+//   lists                 → settings.origin = 'onboarding' (only delete if empty
+//                           after items are gone, so we never nuke a list the
+//                           user also added to manually)
+//   projects              → metadata.source = 'onboarding-capture'
+//   project_suggestions   → metadata.source = 'onboarding'
+// Returns per-surface counts so the UI can show a meaningful confirmation.
+async function handleResetOnboarding(req: VercelRequest, res: VercelResponse) {
+  const userId = await getUserId(req)
+  if (!userId) return res.status(401).json({ error: 'Sign in to access your data' })
+  const supabase = getSupabaseClient()
+
+  const result = {
+    memories: 0,
+    list_items: 0,
+    lists: 0,
+    projects: 0,
+    project_suggestions: 0,
+  }
+
+  try {
+    // 1. Memories tagged 'onboarding'. Use `overlaps` against the text[] tags
+    //    column — catches both 'onboarding' and 'live-hybrid' markers.
+    const { data: mems, error: memErr } = await supabase
+      .from('memories')
+      .delete()
+      .eq('user_id', userId)
+      .overlaps('tags', ['onboarding', 'live-hybrid'])
+      .select('id')
+    if (memErr) throw memErr
+    result.memories = mems?.length || 0
+
+    // 2. List items stamped with metadata.origin = 'onboarding'.
+    const { data: items, error: itemsErr } = await supabase
+      .from('list_items')
+      .delete()
+      .eq('user_id', userId)
+      .eq('metadata->>origin', 'onboarding')
+      .select('id, list_id')
+    if (itemsErr) throw itemsErr
+    result.list_items = items?.length || 0
+
+    // 3. Onboarding-origin lists, but only if they now have zero items.
+    //    Avoids clobbering lists the user has since added to manually.
+    const { data: originLists, error: listFetchErr } = await supabase
+      .from('lists')
+      .select('id, items:list_items(count)')
+      .eq('user_id', userId)
+      .eq('settings->>origin', 'onboarding')
+    if (listFetchErr) throw listFetchErr
+    const emptyListIds = (originLists || [])
+      .filter((l: any) => !l.items || l.items[0]?.count === 0)
+      .map((l: any) => l.id)
+    if (emptyListIds.length > 0) {
+      const { data: deletedLists, error: listDelErr } = await supabase
+        .from('lists')
+        .delete()
+        .eq('user_id', userId)
+        .in('id', emptyListIds)
+        .select('id')
+      if (listDelErr) throw listDelErr
+      result.lists = deletedLists?.length || 0
+    }
+
+    // 4. Active projects captured as in-progress during onboarding.
+    const { data: projs, error: projErr } = await supabase
+      .from('projects')
+      .delete()
+      .eq('user_id', userId)
+      .eq('metadata->>source', 'onboarding-capture')
+      .select('id')
+    if (projErr) throw projErr
+    result.projects = projs?.length || 0
+
+    // 5. Project suggestions saved as "idea" from onboarding (the
+    //    "Try Something New" carousel entries).
+    const { data: sugs, error: sugErr } = await supabase
+      .from('project_suggestions')
+      .delete()
+      .eq('user_id', userId)
+      .eq('metadata->>source', 'onboarding')
+      .select('id')
+    if (sugErr) throw sugErr
+    result.project_suggestions = sugs?.length || 0
+
+    return res.status(200).json({ success: true, deleted: result })
+  } catch (err: any) {
+    console.error('[utilities/reset-onboarding] failed', err)
+    return res.status(500).json({ error: err.message || 'Reset failed', deleted: result })
+  }
 }
 
 // ── Upload Image ───────────────────────────────────────────────────────────
@@ -586,11 +687,14 @@ Rules for captured_items:
 - Empty array is fine. Do not invent entries to pad the list.
 
 Rules for captured_projects:
-- Capture two kinds of project, distinguished by the "status" field:
-  - status: "idea" — projects the user EXPLICITLY said they WANT to make, build, write, or start but haven't begun yet. Phrases like "I'm thinking about making a wooden stool", "I want to write a memoir about my dad", "I've been wanting to start a podcast about urban foraging".
-  - status: "in_progress" — projects the user EXPLICITLY said they're CURRENTLY working on, building, writing, making, or running. Phrases like "I'm working on my novel", "I've been building a treehouse with my kids", "I'm writing a newsletter about climate", "I run a small Etsy shop selling pottery".
-- Do NOT include passive interests ("I love woodworking"), generic ambitions ("I want to be more creative"), or things they merely consume ("I read a lot of sci-fi").
-- "title" should be a short noun-phrase project name in their voice (e.g. "Wooden stool", "Memoir about Dad", "Urban foraging podcast", "The novel"). Not a sentence.
+- A "project" is SOMETHING THE USER IS MAKING OR PLANS TO MAKE. A personal creative or constructive endeavour where THEY are the author/maker.
+- Capture two kinds, distinguished by the "status" field:
+  - status: "idea" — projects the user EXPLICITLY said they WANT to make, build, write, or start but haven't begun. "I'm thinking about making a wooden stool", "I want to write a memoir about my dad", "I've been wanting to start a podcast about urban foraging".
+  - status: "in_progress" — projects the user EXPLICITLY said they're CURRENTLY making, building, writing, or running. "I'm working on my novel", "I've been building a treehouse", "I run a small Etsy shop selling pottery".
+- HARD EXCLUSIONS — never capture these as projects:
+  - Products, apps, services, tools, or platforms the user merely uses or subscribes to. Netflix, Claude Code, GitHub, Spotify, Figma, VS Code, Notion, ChatGPT, etc. are NOT projects — even if they say "I use X a lot" or "I want to try X". Route those to captured_items with type "software" or "tech" instead.
+  - Passive interests ("I love woodworking"), generic ambitions ("I want to be more creative"), consumption habits ("I read a lot of sci-fi"), or work tasks assigned by someone else.
+- "title" is a short noun-phrase project name in their voice ("Wooden stool", "Memoir about Dad", "The novel"). Not a sentence, not a product name.
 - "description" is one sentence, ideally drawing on words they used. Concrete, not aspirational waffle.
 - "raw_phrase" is the part of their reply that triggered the capture (must appear verbatim or near-verbatim in the transcript above). This is our anti-hallucination check.
 - Empty array is fine — and is the default. Most turns won't contain a project. Only flag the obvious ones.`

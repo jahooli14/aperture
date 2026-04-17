@@ -20,6 +20,17 @@ export async function enrichListItem(userId: string, listId: string, itemId: str
     try {
         const supabase = getSupabaseClient()
 
+        // Preserve caller-set metadata tags (e.g. `origin: 'onboarding'`)
+        // across the enrichment overwrite so reset-onboarding can find these
+        // items later.
+        const { data: existingRow } = await supabase
+            .from('list_items')
+            .select('metadata')
+            .eq('id', itemId)
+            .eq('user_id', userId)
+            .single()
+        const preservedOrigin = existingRow?.metadata?.origin
+
         // 1. Resolve List Type if not provided
         let category = listType
         let listTitle = ''
@@ -151,6 +162,9 @@ export async function enrichListItem(userId: string, listId: string, itemId: str
         }
 
         // 4. Update the item in Supabase (with embedding if available)
+        if (preservedOrigin && metadata && !metadata.origin) {
+            metadata.origin = preservedOrigin
+        }
         const updateData: any = {
             metadata,
             enrichment_status: 'completed'

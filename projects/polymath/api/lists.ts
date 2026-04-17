@@ -233,22 +233,27 @@ async function handleListItems(req: VercelRequest, res: VercelResponse) {
         }
 
         if (req.method === 'POST') {
-            const { content } = req.body
+            const { content, metadata: initialMetadata } = req.body
             const targetListId = typeof listId === 'string' ? listId : req.body.list_id
 
             if (!targetListId || !content) {
                 return res.status(400).json({ error: 'listId and content required' })
             }
 
+            const insertRow: Record<string, unknown> = {
+                user_id: userId,
+                list_id: targetListId,
+                content,
+                status: 'pending',
+                enrichment_status: 'pending',
+            }
+            if (initialMetadata && typeof initialMetadata === 'object') {
+                insertRow.metadata = initialMetadata
+            }
+
             const { data: item, error } = await supabase
                 .from('list_items')
-                .insert({
-                    user_id: userId,
-                    list_id: targetListId,
-                    content,
-                    status: 'pending',
-                    enrichment_status: 'pending'
-                })
+                .insert(insertRow)
                 .select()
                 .single()
 

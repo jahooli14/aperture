@@ -399,7 +399,10 @@ export const useListStore = create<ListStore>()(
                     const response = await fetch(`/api/lists?scope=items&listId=${input.list_id}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ content: input.content })
+                        body: JSON.stringify({
+                            content: input.content,
+                            ...(input.metadata ? { metadata: input.metadata } : {}),
+                        })
                     })
 
                     if (!response.ok) throw new Error('Failed to add item')
