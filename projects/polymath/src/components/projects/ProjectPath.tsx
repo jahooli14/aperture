@@ -9,8 +9,8 @@
  * Tasks without a task_type default to 'core'.
  */
 
-import { useState, useEffect } from 'react'
-import { Plus, Trash2, Check, ChevronDown, ChevronRight, Clock, Flame, Hammer, Flag } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Plus, Trash2, Check, ChevronDown, ChevronRight, Clock, Flame, Hammer, Flag, GripVertical } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '../../lib/utils'
 import { MarkdownRenderer } from '../ui/MarkdownRenderer'
@@ -88,6 +88,7 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [editingText, setEditingText] = useState('')
   const [showBuilt, setShowBuilt] = useState(false)
+  const [draggedId, setDraggedId] = useState<string | null>(null)
 
   const activePhase = determineActivePhase(tasks)
 
@@ -147,6 +148,32 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
     setEditingTaskId(null)
     setEditingText('')
   }
+
+  const handleReorderInPhase = useCallback((draggedTaskId: string, targetTaskId: string) => {
+    if (draggedTaskId === targetTaskId) return
+    const draggedTask = tasks.find(t => t.id === draggedTaskId)
+    const targetTask = tasks.find(t => t.id === targetTaskId)
+    if (!draggedTask || !targetTask) return
+    if (getPhase(draggedTask) !== getPhase(targetTask)) return
+    if (draggedTask.done || targetTask.done) return
+
+    const phase = getPhase(draggedTask)
+    const phaseTasks = tasks
+      .filter(t => getPhase(t) === phase && !t.done)
+      .sort((a, b) => a.order - b.order)
+    const otherTasks = tasks.filter(t => !(getPhase(t) === phase && !t.done))
+
+    const fromIdx = phaseTasks.findIndex(t => t.id === draggedTaskId)
+    const toIdx = phaseTasks.findIndex(t => t.id === targetTaskId)
+    if (fromIdx === -1 || toIdx === -1) return
+
+    const reordered = [...phaseTasks]
+    const [moved] = reordered.splice(fromIdx, 1)
+    reordered.splice(toIdx, 0, moved)
+
+    const merged = [...otherTasks, ...reordered]
+    onUpdate(merged.map((t, i) => ({ ...t, order: i })))
+  }, [tasks, onUpdate])
 
   const handleEstimateChange = (taskId: string, currentEstimate: number = 0) => {
     const options = [5, 10, 15, 25, 45, 60]
@@ -259,11 +286,28 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
                             initial={{ opacity: 0, x: -6 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ duration: 0.15, delay: index * 0.03 }}
+                            draggable={editingTaskId !== task.id}
+                            onDragStart={() => setDraggedId(task.id)}
+                            onDragOver={(e) => {
+                              e.preventDefault()
+                              if (!draggedId || draggedId === task.id) return
+                              handleReorderInPhase(draggedId, task.id)
+                            }}
+                            onDragEnd={() => setDraggedId(null)}
                             className={cn(
-                              "group flex items-start gap-3 px-3 py-2.5 rounded-xl transition-all relative",
+                              "group flex items-start gap-2 px-3 py-2.5 rounded-xl transition-all relative",
                               isHighlighted && "bg-brand-primary/[0.04]"
                             )}
+                            style={{ opacity: draggedId === task.id ? 0.4 : 1 }}
                           >
+                            {/* Drag handle */}
+                            <div
+                              className="flex-shrink-0 mt-1 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-30 transition-opacity"
+                              style={{ color: 'var(--brand-text-secondary)' }}
+                              aria-label="Drag to reorder"
+                            >
+                              <GripVertical className="h-3 w-3" />
+                            </div>
                             {/* Checkbox */}
                             <button
                               onClick={() => handleToggleTask(task.id)}
