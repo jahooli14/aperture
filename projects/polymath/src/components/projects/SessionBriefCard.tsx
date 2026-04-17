@@ -184,7 +184,7 @@ export function SessionBriefCard({ project, onOpenChat, onBriefLoaded }: Session
         initial={{ opacity: 0, y: 8, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className={`rounded-2xl p-6 relative overflow-hidden bg-gradient-to-br ${config.gradient}`}
+        className={`rounded-2xl p-4 sm:p-6 relative overflow-hidden bg-gradient-to-br ${config.gradient}`}
         style={{
           border: `1.5px solid ${config.border}`,
           boxShadow: `0 0 32px ${config.glow}`,
@@ -240,8 +240,8 @@ export function SessionBriefCard({ project, onOpenChat, onBriefLoaded }: Session
 
         {/* AI Greeting */}
         <p
-          className="text-[17px] sm:text-[19px] leading-relaxed font-medium mb-3"
-          style={{ color: 'var(--brand-text-primary)', opacity: 0.9 }}
+          className="text-[15px] sm:text-[19px] leading-relaxed font-medium mb-3"
+          style={{ color: 'var(--brand-text-primary)' }}
         >
           {brief.greeting}
         </p>
@@ -254,10 +254,10 @@ export function SessionBriefCard({ project, onOpenChat, onBriefLoaded }: Session
             border: '1px solid rgba(255,255,255,0.06)',
           }}
         >
-          <Zap className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" style={{ color: config.accent, opacity: 0.7 }} />
+          <Zap className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: config.accent }} />
           <p
-            className="text-[13px] leading-snug"
-            style={{ color: 'var(--brand-text-primary)', opacity: 0.7 }}
+            className="text-[13px] sm:text-[14px] leading-snug"
+            style={{ color: 'var(--brand-text-primary)' }}
           >
             {brief.focusSuggestion}
           </p>
@@ -270,21 +270,21 @@ export function SessionBriefCard({ project, onOpenChat, onBriefLoaded }: Session
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4, duration: 0.3 }}
             onClick={() => onOpenChat(brief.knowledgeNudge!)}
-            className="flex items-center gap-2 text-left w-full px-3.5 py-2.5 rounded-xl transition-all hover:bg-white/[0.04] active:scale-[0.98] group"
+            className="flex items-center gap-2 text-left w-full px-3.5 py-3 rounded-xl transition-all hover:bg-white/[0.06] active:scale-[0.98] group min-h-[44px]"
             style={{
-              background: 'rgba(255,255,255,0.02)',
-              border: '1px solid rgba(255,255,255,0.05)',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
             }}
           >
-            <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: 'var(--brand-text-secondary)', opacity: 0.4 }} />
+            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: config.accent }} />
             <span
-              className="text-[12px] leading-snug flex-1"
-              style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
+              className="text-[13px] leading-snug flex-1"
+              style={{ color: 'var(--brand-text-secondary)' }}
             >
               {brief.knowledgeNudge}
             </span>
             <ArrowRight
-              className="h-3 w-3 flex-shrink-0 opacity-0 group-hover:opacity-40 transition-opacity"
+              className="h-4 w-4 flex-shrink-0 opacity-50 group-hover:opacity-100 transition-opacity"
               style={{ color: 'var(--brand-text-secondary)' }}
             />
           </motion.button>

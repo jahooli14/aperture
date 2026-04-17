@@ -126,21 +126,21 @@ function ToastItem({ toast, isRemoving, onClose }: { toast: Toast; isRemoving: b
   return (
     <div
       className={cn(
-        "group pointer-events-auto relative flex items-center justify-between space-x-4 p-6 pr-8 mb-2 min-w-[280px] max-w-[420px]",
+        "group pointer-events-auto relative flex items-start justify-between gap-3 p-4 sm:p-5 pr-10 mb-2 min-w-0 w-full max-w-[calc(100vw-1.5rem)] sm:max-w-[420px]",
         "backdrop-blur-xl shadow-2xl transition-all duration-500 ease-out",
         isVisible && !isRemoving ? "opacity-100 scale-100" : "opacity-0 scale-95"
       )}
       style={getVariantStyles()}
     >
-      <div className="grid gap-1">
-        {toast.title && <div className="text-sm font-semibold">{toast.title}</div>}
+      <div className="grid gap-1 min-w-0 flex-1">
+        {toast.title && <div className="text-sm font-semibold leading-snug">{toast.title}</div>}
         {toast.description && (
-          <div className="text-sm opacity-90">{toast.description}</div>
+          <div className="text-sm opacity-90 leading-snug">{toast.description}</div>
         )}
         {toast.action && (
           <button
             onClick={() => { toast.action!.onClick(); onClose() }}
-            className="text-xs font-bold mt-1 text-left opacity-80 active:opacity-60 transition-opacity"
+            className="text-sm font-bold mt-1.5 text-left active:opacity-60 transition-opacity min-h-[28px]"
             style={{ color: 'var(--brand-primary)' }}
           >
             {toast.action.label}
@@ -149,7 +149,7 @@ function ToastItem({ toast, isRemoving, onClose }: { toast: Toast; isRemoving: b
       </div>
       <button
         onClick={onClose}
-        className="absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100"
+        className="absolute right-1.5 top-1.5 h-8 w-8 flex items-center justify-center rounded-md text-white/60 hover:text-white hover:bg-white/10 transition-colors focus:outline-none focus:ring-2"
       >
         <X className="h-4 w-4" />
       </button>

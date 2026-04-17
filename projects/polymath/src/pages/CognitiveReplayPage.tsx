@@ -151,14 +151,14 @@ export function CognitiveReplayPage() {
   ]
 
   return (
-    <div className="min-h-screen pb-20 relative" style={{ paddingTop: '5.5rem' }}>
+    <div className="min-h-screen pb-24 relative" style={{ paddingTop: 'calc(5rem + env(safe-area-inset-top))' }}>
       <SubtleBackground />
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 relative z-10">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold premium-text-platinum tracking-tight">Cognitive Replay</h1>
-          <p className="text-[var(--brand-text-secondary)] text-sm mt-1">Reconstruct what you were thinking</p>
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-[1.75rem] sm:text-3xl font-bold premium-text-platinum tracking-tight leading-[1]">Cognitive Replay</h1>
+          <p className="text-[var(--brand-text-secondary)] text-sm mt-1.5">Reconstruct what you were thinking</p>
         </div>
 
         {isOffline && (
@@ -180,10 +180,10 @@ export function CognitiveReplayPage() {
                 setShowCustom(preset.id === 'custom')
               }}
               className={cn(
-                'px-4 py-2 rounded-full text-sm font-medium transition-all border',
+                'px-4 py-2.5 rounded-full text-sm font-semibold transition-all border min-h-[40px]',
                 selectedPreset === preset.id
-                  ? 'bg-brand-primary/20 text-brand-primary border-brand-primary/30'
-                  : 'bg-[var(--glass-surface)] text-[var(--brand-text-secondary)] border-[var(--glass-surface-hover)] hover:bg-[rgba(255,255,255,0.1)]'
+                  ? 'bg-brand-primary/25 text-brand-primary border-brand-primary/50'
+                  : 'bg-[var(--glass-surface)] text-[var(--brand-text-secondary)] border-white/10 hover:bg-[rgba(255,255,255,0.1)]'
               )}
             >
               {preset.label}
@@ -204,14 +204,14 @@ export function CognitiveReplayPage() {
                 type="date"
                 value={customStart}
                 onChange={e => setCustomStart(e.target.value)}
-                className="flex-1 px-3 py-2 rounded-xl bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] text-[var(--brand-text-primary)] text-sm"
+                className="flex-1 min-w-0 px-3 py-2.5 rounded-xl bg-[var(--glass-surface)] border border-white/10 text-[var(--brand-text-primary)] text-sm min-h-[44px]"
               />
               <span className="text-[var(--brand-text-muted)] self-center">to</span>
               <input
                 type="date"
                 value={customEnd}
                 onChange={e => setCustomEnd(e.target.value)}
-                className="flex-1 px-3 py-2 rounded-xl bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] text-[var(--brand-text-primary)] text-sm"
+                className="flex-1 min-w-0 px-3 py-2.5 rounded-xl bg-[var(--glass-surface)] border border-white/10 text-[var(--brand-text-primary)] text-sm min-h-[44px]"
               />
             </motion.div>
           )}
@@ -258,7 +258,7 @@ export function CognitiveReplayPage() {
                   <BookOpen className="w-3 h-3" />
                   {new Date(chapter.period.start).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} — {new Date(chapter.period.end).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </div>
-                <h2 className="text-3xl md:text-4xl font-bold premium-text-platinum leading-tight">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold premium-text-platinum leading-tight">
                   {chapter.title}
                 </h2>
                 <p className="text-[var(--brand-text-muted)] text-sm mt-2">

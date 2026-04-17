@@ -758,12 +758,12 @@ export function OnboardingChatPage() {
   // circuit this — auto-advance would silently break voice on iPhones.
   if (phase === 'welcome') {
     return (
-      <div className="min-h-screen flex items-center justify-center px-6 py-12">
+      <div className="min-h-screen flex items-center justify-center px-5 py-12">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="text-center max-w-md w-full"
+          className="text-center max-w-[22rem] sm:max-w-md w-full"
         >
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
@@ -779,7 +779,7 @@ export function OnboardingChatPage() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.35 }}
-            className="text-3xl sm:text-4xl font-semibold leading-tight mb-4"
+            className="text-[1.75rem] sm:text-4xl font-semibold leading-[1.1] mb-4"
             style={{ color: 'var(--brand-text-primary)' }}
           >
             The hidden depth of your curiosity.
@@ -938,7 +938,7 @@ export function OnboardingChatPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.35 }}
-              className="text-2xl sm:text-3xl font-semibold leading-snug mb-10 min-h-[4rem]"
+              className="text-xl sm:text-3xl font-semibold leading-snug mb-8 sm:mb-10 min-h-[3rem] sm:min-h-[4rem]"
               style={{ color: 'var(--brand-text-primary)' }}
             >
               {currentQuestion || (liveReady ? '' : '\u00A0')}

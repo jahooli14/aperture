@@ -112,10 +112,10 @@ export function LoginPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.1 }}
-        className="w-full max-w-sm"
+        className="w-full max-w-[22rem] sm:max-w-sm"
       >
         <div
-          className="premium-glass rounded-2xl p-6"
+          className="premium-glass rounded-2xl p-5 sm:p-6"
           style={{
             backgroundColor: 'var(--brand-glass-bg)',
             backdropFilter: 'var(--brand-glass-blur)',
@@ -150,7 +150,7 @@ export function LoginPage() {
                     placeholder="6-digit code"
                     value={otp}
                     onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    className="w-full px-4 py-3 rounded-xl text-center text-xl font-bold tracking-[0.3em] outline-none transition-all"
+                    className="w-full px-4 py-3.5 rounded-xl text-center text-lg sm:text-xl font-bold tracking-[0.25em] sm:tracking-[0.3em] outline-none transition-all min-h-[48px]"
                     style={{
                       backgroundColor: 'var(--glass-surface)',
                       color: 'var(--brand-text-primary)',

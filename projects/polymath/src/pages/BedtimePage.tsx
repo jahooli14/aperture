@@ -257,25 +257,29 @@ export function BedtimePage() {
       {/* Fixed Header */}
       <div
         className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md"
-        style={{ backgroundColor: 'rgba(15, 24, 41, 0.7)' }}
+        style={{
+          backgroundColor: 'rgba(15, 24, 41, 0.85)',
+          paddingTop: 'env(safe-area-inset-top)',
+          borderBottom: '1px solid rgba(255,255,255,0.06)'
+        }}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Moon className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
-              <h1 className="text-xl font-bold premium-text-platinum">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              <Moon className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0" style={{ color: "var(--brand-primary)" }} />
+              <h1 className="text-lg sm:text-xl font-bold premium-text-platinum truncate">
                 Bedtime Ideas
               </h1>
             </div>
-            <button className="p-2 rounded-lg hover:bg-[rgba(255,255,255,0.1)] transition-colors">
-              <Search className="h-5 w-5 premium-text-platinum" />
+            <button className="h-11 w-11 flex items-center justify-center rounded-xl bg-[var(--glass-surface)] border border-white/10 hover:bg-[rgba(255,255,255,0.1)] transition-colors flex-shrink-0">
+              <Search className="h-5 w-5" style={{ color: "var(--brand-primary)" }} />
             </button>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="pt-24 pb-24 px-4 relative">
+      <div className="pb-24 px-4 relative" style={{ paddingTop: 'calc(6rem + env(safe-area-inset-top))' }}>
         {/* Ambient starfield background */}
         <div className="fixed inset-0 pointer-events-none opacity-30">
           <div className="absolute top-10 left-10 w-1 h-1 rounded-full bg-white animate-pulse" />
@@ -303,48 +307,49 @@ export function BedtimePage() {
           </div>
 
           {/* Time indicator */}
-          <div className="premium-glass-subtle rounded-xl p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div>
-                <p className="text-sm font-medium premium-text-platinum">
+          <div className="premium-glass-subtle rounded-xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold premium-text-platinum">
                   {prompts.length > 0 ? "Tonight's Prompts Ready" : "Waiting for 9:30pm"}
                 </p>
                 {message && (
-                  <p className="text-xs mt-0.5" style={{ color: "var(--brand-primary)" }}>
+                  <p className="text-xs mt-0.5 text-[var(--brand-text-secondary)]">
                     {message}
                   </p>
                 )}
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
               {prompts.length > 0 && (
                 <>
                   <button
                     onClick={() => setDriftModeOpen(true)}
-                    className="px-4 py-2 rounded-lg transition-all premium-glass-subtle hover:bg-[rgba(255,255,255,0.1)] flex items-center gap-2"
+                    className="min-h-[44px] px-3 rounded-lg transition-all premium-glass-subtle hover:bg-[rgba(255,255,255,0.1)] flex items-center gap-1.5"
                     style={{ border: '1px solid rgba(255, 255, 255, 0.1)' }}
-                    title="Drift Mode (Motion Activated)"
+                    title="Drift Mode"
                   >
                     <Wind className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
-                    <span className="text-xs font-medium" style={{ color: "var(--brand-primary)" }}>Drift</span>
+                    <span className="text-xs font-semibold" style={{ color: "var(--brand-primary)" }}>Drift</span>
                   </button>
                   <button
                     onClick={() => setZenModeOpen(true)}
-                    className="px-4 py-2 rounded-lg transition-all premium-glass-subtle hover:bg-[rgba(255,255,255,0.1)] flex items-center gap-2"
+                    className="min-h-[44px] px-3 rounded-lg transition-all premium-glass-subtle hover:bg-[rgba(255,255,255,0.1)] flex items-center gap-1.5"
                     style={{ border: '1px solid rgba(255, 255, 255, 0.1)' }}
                     title="Zen Mode"
                   >
                     <Maximize2 className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
-                    <span className="text-xs font-medium" style={{ color: "var(--brand-primary)" }}>Zen</span>
+                    <span className="text-xs font-semibold" style={{ color: "var(--brand-primary)" }}>Zen</span>
                   </button>
                 </>
               )}
               <button
                 onClick={generateNew}
                 disabled={generating}
-                className="px-4 py-2 rounded-lg transition-all premium-glass-subtle hover:bg-[rgba(255,255,255,0.1)]"
+                className="h-11 w-11 flex items-center justify-center rounded-lg transition-all premium-glass-subtle hover:bg-[rgba(255,255,255,0.1)]"
                 style={{ border: '1px solid rgba(255, 255, 255, 0.1)' }}
+                title="Refresh prompts"
               >
                 {generating ? (
                   <Loader2 className="h-4 w-4 animate-spin" style={{ color: "var(--brand-primary)" }} />
@@ -394,7 +399,7 @@ export function BedtimePage() {
                       ease: "easeOut",
                       scale: { duration: 0.2 }
                     }}
-                    className="premium-card p-6 relative overflow-hidden group cursor-pointer"
+                    className="premium-card p-4 sm:p-6 relative overflow-hidden group cursor-pointer"
                     style={{
                       border: `2px solid ${getTypeColor(prompt.type)}40`,
                       opacity: isViewed ? 0.6 : 1,
@@ -437,7 +442,7 @@ export function BedtimePage() {
                       </div>
 
                       {/* Prompt text */}
-                      <p className="text-lg leading-relaxed premium-text-platinum mb-4">
+                      <p className="text-base sm:text-lg leading-relaxed premium-text-platinum mb-4">
                         {prompt.prompt}
                       </p>
 
@@ -468,15 +473,15 @@ export function BedtimePage() {
                                   e.stopPropagation()
                                   ratePrompt(prompt.id, star)
                                 }}
-                                className="p-1 rounded-xl hover:scale-110 transition-transform"
+                                className="h-9 w-9 flex items-center justify-center rounded-lg hover:scale-110 hover:bg-white/5 transition-all"
                                 title={`${star} star${star !== 1 ? 's' : ''}`}
                               >
                                 <Star
-                                  className="h-4 w-4"
+                                  className="h-5 w-5"
                                   style={{
                                     color: (prompt.rating && star <= prompt.rating)
                                       ? 'var(--premium-gold)'
-                                      : 'rgba(255, 255, 255, 0.2)',
+                                      : 'rgba(255, 255, 255, 0.25)',
                                     fill: (prompt.rating && star <= prompt.rating)
                                       ? 'var(--premium-gold)'
                                       : 'transparent'

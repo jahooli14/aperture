@@ -607,7 +607,7 @@ export function ReaderPage() {
         </motion.nav>
 
         {/* Article Content */}
-        <main className="max-w-2xl mx-auto px-6 pt-32 pb-24">
+        <main className="max-w-2xl mx-auto px-4 sm:px-6 pt-28 sm:pt-32 pb-24">
           <header className="mb-16">
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
