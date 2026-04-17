@@ -397,13 +397,6 @@ Return a JSON object with these fields:
   // 2-3 meta-patterns about HOW they think (not just what they think about).
   // e.g. "You gravitate toward problems where craft and logic intersect"
 
-  "entities": {
-    "people": [],
-    "places": [],
-    "topics": ["...", "..."],
-    "skills": ["...", "..."]
-  },
-
   "first_insight": "...",
   // THIS IS THE MOST IMPORTANT FIELD. 2-3 sentences.
   // Connect two DIFFERENT things they actually said${books && books.length > 0 ? ' (or one thing they said + one of their books)' : ''} in a way they probably haven't noticed themselves.
@@ -420,21 +413,25 @@ Return a JSON object with these fields:
       "description": "...",
       // 1-2 sentences. Concrete and actionable — someone should be able to picture what this IS.
 
-      "reasoning": "..."
+      "reasoning": "...",
       // 1-2 sentences explaining WHY this fits them specifically.
       // Reference their actual responses and/or books. Don't be generic.
       // The reader should think "that's so me."
+
+      "is_cross_domain": true | false
+      // Set true on EXACTLY ONE of the three — the one that combines their
+      // cross_domain_curiosity slot with another slot (or, if cross_domain
+      // was skipped, the one combining the two most distant slots). The
+      // other two must be false. This is the "left-field pick" the UI
+      // labels distinctly.
     }
   ]
   // Generate exactly 3 project suggestions.
-  // At least ONE of the three MUST combine their cross_domain_curiosity slot with a different slot — that's the whole point of asking for the rabbit hole. If cross_domain was skipped, combine two other distant slots instead.
+  // Exactly ONE must carry is_cross_domain: true (see above).
   // Each should combine at least 2 different capabilities or interests from their responses.
   // Make them diverse: one practical/buildable, one creative/expressive, one ambitious/stretch.
   // They should feel personal and surprising — not obvious.
   // Each title should be a noun phrase or verb phrase, not a sentence. "Ambient Recipe Engine" not "Build an Ambient Recipe Engine". Think album title, not task description.
-
-  "graph_preview": { "nodes": [], "edges": [] }
-  // Leave empty, not used.
 }
 
 Be warm but not sycophantic. Be specific, not generic. Surprise them.`
@@ -447,29 +444,42 @@ Be warm but not sycophantic. Be specific, not generic. Surprise them.`
 
     const analysis = JSON.parse(result)
 
-    // Ensure required fields exist
+    // Normalise suggestions and enforce the "exactly one cross-domain" rule.
+    // If the model forgot to flag any, pick the first; if it flagged several,
+    // keep only the first. Keeps the UI's "left-field pick" label honest.
+    const rawSuggestions = Array.isArray(analysis.project_suggestions)
+      ? analysis.project_suggestions.slice(0, 3)
+      : []
+    const firstFlagged = rawSuggestions.findIndex((s: any) => s?.is_cross_domain === true)
+    const crossDomainIdx = firstFlagged >= 0 ? firstFlagged : 0
+    const suggestions = rawSuggestions.map((s: any, i: number) => ({
+      title: typeof s?.title === 'string' ? s.title : '',
+      description: typeof s?.description === 'string' ? s.description : '',
+      reasoning: typeof s?.reasoning === 'string' ? s.reasoning : '',
+      is_cross_domain: rawSuggestions.length > 0 && i === crossDomainIdx,
+    }))
+
     const response = {
       capabilities: analysis.capabilities || [],
       themes: analysis.themes || [],
       patterns: analysis.patterns || [],
-      entities: analysis.entities || { people: [], places: [], topics: [], skills: [] },
       first_insight: analysis.first_insight || 'Your thoughts are saved. Start a project to see how they connect.',
-      graph_preview: { nodes: [], edges: [] },
-      project_suggestions: (analysis.project_suggestions || []).slice(0, 3),
+      project_suggestions: suggestions,
     }
 
     return res.status(200).json(response)
   } catch (error: any) {
     console.error('[utilities/analyze] Analysis error:', error.message)
-    // Return minimal fallback so the user isn't stuck
+    // Return minimal fallback so the user isn't stuck. `analysis_failed` lets
+    // the client show a gentler "we're still catching up" message rather
+    // than pretending this was a normal empty result.
     return res.status(200).json({
       capabilities: [],
       themes: [],
       patterns: [],
-      entities: { people: [], places: [], topics: [], skills: [] },
       first_insight: 'Your thoughts are saved. Start a project to see how they connect.',
-      graph_preview: { nodes: [], edges: [] },
       project_suggestions: [],
+      analysis_failed: true,
     })
   }
 }
@@ -477,11 +487,32 @@ Be warm but not sycophantic. Be specific, not generic. Surprise them.`
 // ── Refine Idea ────────────────────────────────────────────────────────────
 async function handleRefineIdea(req: VercelRequest, res: VercelResponse) {
   try {
-    const { original, feedback, attempt, context } = req.body
+    const { original, feedback, attempt, context } = req.body as {
+      original: { title: string; description: string; reasoning: string }
+      feedback: string
+      attempt?: number
+      context?: {
+        themes?: string[]
+        capabilities?: string[]
+        transcripts?: string[]
+        grounding_phrases?: string[]
+      }
+    }
 
     if (!original || !feedback) {
       return res.status(400).json({ error: 'original and feedback are required' })
     }
+
+    // Grounded context keeps refinement rounds 2 and 3 anchored to what the
+    // user actually said rather than drifting into generic themes.
+    const transcripts = Array.isArray(context?.transcripts) ? context!.transcripts : []
+    const phrases = Array.isArray(context?.grounding_phrases) ? context!.grounding_phrases : []
+    const transcriptBlock = transcripts.length > 0
+      ? `\n\nWhat they actually said during onboarding (use their own words when you can):\n${transcripts.map((t, i) => `${i + 1}. "${t}"`).join('\n')}`
+      : ''
+    const phraseBlock = phrases.length > 0
+      ? `\n\nShort exact phrases to lean on (grounding):\n${phrases.slice(0, 10).map(p => `- "${p}"`).join('\n')}`
+      : ''
 
     const prompt = `You are a creative catalyst AI helping someone find a project idea that resonates with them.
 
@@ -493,9 +524,9 @@ Why them: ${original.reasoning}
 User feedback (attempt ${attempt || 1}): "${feedback}"
 
 User's themes: ${(context?.themes || []).join(', ')}
-User's capabilities: ${(context?.capabilities || []).join(', ')}
+User's capabilities: ${(context?.capabilities || []).join(', ')}${transcriptBlock}${phraseBlock}
 
-Reshape the idea based on their feedback. Keep what they liked, change what didn't resonate. Make it more specific to their context.
+Reshape the idea based on their feedback. Keep what they liked, change what didn't resonate. Make it more specific to their context — reference their own words from the transcripts/phrases above where it fits, rather than generic themes.
 
 Respond with JSON only:
 {

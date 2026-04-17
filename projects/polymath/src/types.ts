@@ -405,17 +405,22 @@ export interface OnboardingAnalysis {
   capabilities: string[]
   themes: string[]
   patterns: string[]
-  entities: Entities
   first_insight: string
-  graph_preview: {
-    nodes: { id: string; label: string; type: string }[]
-    edges: { from: string; to: string; label: string }[]
-  }
   project_suggestions: Array<{
     title: string
     description: string
     reasoning: string
+    /** True if this suggestion deliberately combines the user's cross-domain
+     *  curiosity with another thread — the "left-field pick" we surface
+     *  distinctly in the reveal. Exactly one suggestion should carry this
+     *  flag; if cross_domain was skipped the synthesiser falls back to
+     *  combining two other distant slots and still flags one. */
+    is_cross_domain?: boolean
   }>
+  /** Lists the observer quietly seeded during the chat (books, films, etc.)
+   *  so the reveal can disclose them rather than have the user stumble on
+   *  them in Lists later. Populated by the client, not the analyse call. */
+  seeded_lists?: Array<{ type: string; count: number }>
 }
 
 export interface BookSearchResult {

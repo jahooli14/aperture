@@ -14,7 +14,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Zap, ArrowRight, Book, Lock, RotateCcw, Mic, CheckCircle } from 'lucide-react'
+import { Zap, ArrowRight, Book, Lock, RotateCcw, Mic, CheckCircle, Sparkles, TrendingUp } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { PostOnboardingFlow } from './PostOnboardingFlow'
 import { useAuthContext } from '../../contexts/AuthContext'
@@ -25,6 +25,10 @@ interface RevealSequenceProps {
   analysis: OnboardingAnalysis
   books: BookSearchResult[]
   transcripts?: string[]
+  /** Short grounding phrases lifted from the coverage grid, fed to the
+   *  refine-idea prompt so rounds 2-3 stay anchored to what the user
+   *  actually said rather than drifting into generic themes. */
+  groundingPhrases?: string[]
 }
 
 const LOADING_MESSAGES = [
@@ -45,9 +49,10 @@ interface Suggestion {
   title: string
   description: string
   reasoning: string
+  is_cross_domain?: boolean
 }
 
-export function RevealSequence({ analysis, books, transcripts = [] }: RevealSequenceProps) {
+export function RevealSequence({ analysis, books, transcripts = [], groundingPhrases = [] }: RevealSequenceProps) {
   const { isAuthenticated } = useAuthContext()
   const navigate = useNavigate()
   const [beat, setBeat] = useState<'loading' | 'profile' | 'ideas' | 'refining' | 'saved' | 'post-onboarding'>('loading')
@@ -107,7 +112,9 @@ export function RevealSequence({ analysis, books, transcripts = [] }: RevealSequ
           context: {
             themes: analysis.themes,
             capabilities: analysis.capabilities,
-          }
+            transcripts,
+            grounding_phrases: groundingPhrases,
+          },
         })
       })
 
@@ -334,6 +341,53 @@ export function RevealSequence({ analysis, books, transcripts = [] }: RevealSequ
                   </div>
                 </motion.div>
               )}
+
+              {/* Patterns — meta-observations about HOW they think. One line
+                  each, prefixed with a small trend icon so it reads as
+                  observation rather than label. */}
+              {analysis.patterns && analysis.patterns.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 1.7 }}
+                  className="p-5 rounded-xl"
+                  style={{ background: 'var(--brand-glass-bg)', backdropFilter: 'blur(12px)' }}
+                >
+                  <p className="text-xs font-medium mb-3 uppercase tracking-widest" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>
+                    How you think
+                  </p>
+                  <div className="space-y-2">
+                    {analysis.patterns.map((pattern, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, x: -6 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 1.8 + i * 0.12 }}
+                        className="flex items-start gap-2.5"
+                      >
+                        <TrendingUp className="h-3.5 w-3.5 mt-1 flex-shrink-0" style={{ color: 'var(--brand-primary)', opacity: 0.7 }} />
+                        <span className="text-sm leading-relaxed" style={{ color: 'var(--brand-text-primary)', opacity: 0.9 }}>{pattern}</span>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Quiet-seeded lists disclosure — the observer extracted named
+                  things the user mentioned (books, films, places…) and
+                  persisted them to matching lists. Tell them, so later
+                  discovery in Lists doesn't feel magical-in-a-creepy-way. */}
+              {analysis.seeded_lists && analysis.seeded_lists.length > 0 && (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 0.7 }}
+                  transition={{ delay: 2.0 }}
+                  className="text-xs text-center leading-relaxed px-4"
+                  style={{ color: 'var(--brand-text-secondary)' }}
+                >
+                  We also saved a few things you mentioned — {formatSeededLists(analysis.seeded_lists)} — to your lists.
+                </motion.p>
+              )}
             </div>
 
             {beat === 'profile' && (
@@ -374,9 +428,29 @@ export function RevealSequence({ analysis, books, transcripts = [] }: RevealSequ
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.4 + i * 0.2 }}
-                  className="flex-shrink-0 w-[280px] snap-center rounded-xl p-5 flex flex-col"
-                  style={{ background: 'var(--brand-glass-bg)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.08)' }}
+                  className="flex-shrink-0 w-[280px] snap-center rounded-xl p-5 flex flex-col relative"
+                  style={{
+                    background: suggestion.is_cross_domain
+                      ? 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.14), rgba(var(--brand-primary-rgb),0.05))'
+                      : 'var(--brand-glass-bg)',
+                    backdropFilter: 'blur(12px)',
+                    border: suggestion.is_cross_domain
+                      ? '1px solid rgba(var(--brand-primary-rgb),0.3)'
+                      : '1px solid rgba(255,255,255,0.08)',
+                  }}
                 >
+                  {suggestion.is_cross_domain && (
+                    <span
+                      className="absolute -top-2 left-4 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider inline-flex items-center gap-1"
+                      style={{
+                        background: 'var(--brand-primary)',
+                        color: 'var(--brand-text-primary)',
+                      }}
+                    >
+                      <Sparkles className="h-2.5 w-2.5" />
+                      Left-field pick
+                    </span>
+                  )}
                   <h3 className="text-base font-semibold mb-2" style={{ color: 'var(--brand-text-primary)' }}>{suggestion.title}</h3>
                   <p className="text-sm mb-3 leading-relaxed" style={{ color: 'var(--brand-text-secondary)' }}>{suggestion.description}</p>
 
@@ -628,6 +702,36 @@ function InsightBody({ text }: { text: string }) {
       </motion.p>
     </div>
   )
+}
+
+/**
+ * Format the seeded-list summary for the disclosure line on the reveal.
+ * "2 books and a film" reads more naturally than "2 book, 1 film".
+ */
+function formatSeededLists(seeded: Array<{ type: string; count: number }>): string {
+  const labels: Record<string, [string, string]> = {
+    book: ['book', 'books'],
+    film: ['film', 'films'],
+    music: ['track', 'tracks'],
+    game: ['game', 'games'],
+    place: ['place', 'places'],
+    software: ['tool', 'tools'],
+    article: ['article', 'articles'],
+    tech: ['tech', 'tech'],
+    event: ['event', 'events'],
+    quote: ['quote', 'quotes'],
+  }
+  const parts = seeded
+    .filter(s => s.count > 0)
+    .map(s => {
+      const [singular, plural] = labels[s.type] || [s.type, s.type]
+      if (s.count === 1) return `a ${singular}`
+      return `${s.count} ${plural}`
+    })
+  if (parts.length === 0) return ''
+  if (parts.length === 1) return parts[0]
+  if (parts.length === 2) return `${parts[0]} and ${parts[1]}`
+  return `${parts.slice(0, -1).join(', ')}, and ${parts[parts.length - 1]}`
 }
 
 /**
