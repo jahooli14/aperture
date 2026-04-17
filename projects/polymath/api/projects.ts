@@ -34,6 +34,29 @@ interface IntersectionPayload {
 import { invalidateProjectCache } from './_lib/power-hour-cache.js'
 import { recomputeHeatForUser, DRAWER_STATUSES, MUTATION_MODES, MODES_THAT_RETIRE_PARENT, type MutationMode } from './_lib/metabolism.js'
 
+// Derive a human-readable project title from an intersection card. The AI
+// narration step occasionally fails or returns malformed JSON, leaving the
+// card without a `crossover.crossover_title`. In that case we fall back to
+// the card's reason text, then to a join of the source node titles, before
+// giving up with a generic placeholder.
+function deriveCardTitle(card: IntersectionPayload): string {
+  const fromCrossover = card.crossover?.crossover_title?.trim()
+  if (fromCrossover) return fromCrossover
+
+  const reason = card.reason?.trim()
+  if (reason) {
+    const firstSentence = reason.split(/(?<=[.!?])\s+/)[0].trim()
+    return firstSentence.length > 70 ? `${firstSentence.slice(0, 67)}…` : firstSentence
+  }
+
+  const nodeTitles = (card.nodes ?? [])
+    .map(n => n.title?.trim())
+    .filter((t): t is string => Boolean(t))
+  if (nodeTitles.length > 0) return nodeTitles.join(' × ')
+
+  return 'Untitled crossover'
+}
+
 // Daily Queue Scoring Logic
 interface UserContext {
   available_time: 'quick' | 'moderate' | 'deep'
@@ -1205,8 +1228,9 @@ Return JSON only:
         }
 
         // Build the project record. Falls back gracefully if the card lacks
-        // a crossover (older cards may only have a `reason`).
-        const title = card.crossover?.crossover_title?.trim() || 'Untitled crossover'
+        // a crossover (the AI narration step can fail silently, leaving only
+        // `reason` and `nodes` populated).
+        const title = deriveCardTitle(card)
         const description = card.crossover?.concept || card.reason || ''
         const motivation = card.crossover?.why_it_works || ''
         const firstSteps = card.crossover?.first_steps ?? []
