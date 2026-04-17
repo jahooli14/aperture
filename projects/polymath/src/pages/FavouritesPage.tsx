@@ -70,20 +70,23 @@ function FavouriteCard({ item, onClick }: { item: FavouriteItem; onClick: () => 
             )}
 
             <div className="absolute inset-0 p-3 flex flex-col justify-end">
-                <h3 className="text-[var(--brand-text-primary)] font-bold leading-tight uppercase tracking-tight drop-shadow-lg text-xs mb-1">
+                <h3 className="text-[var(--brand-text-primary)] font-bold leading-tight uppercase tracking-tight text-sm mb-1 line-clamp-2"
+                    style={{ textShadow: '0 1px 4px rgba(0,0,0,0.95), 0 0 12px rgba(0,0,0,0.8)' }}>
                     {item.content}
                 </h3>
-                <p className="text-[9px] text-brand-text-muted uppercase tracking-widest mb-1.5 truncate">
+                <p className="text-[10px] uppercase tracking-widest mb-1.5 truncate font-semibold"
+                    style={{ color: 'rgba(255,255,255,0.7)', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>
                     {item.list.title}
                 </p>
                 <div className="flex items-center gap-0.5">
                     {[1, 2, 3, 4, 5].map(s => (
                         <Star
                             key={s}
-                            className="h-3 w-3"
+                            className="h-3.5 w-3.5"
                             style={{
                                 fill: (item.user_rating ?? 0) >= s ? `rgb(${rgb})` : 'transparent',
-                                color: (item.user_rating ?? 0) >= s ? `rgb(${rgb})` : 'rgba(255,255,255,0.15)',
+                                color: (item.user_rating ?? 0) >= s ? `rgb(${rgb})` : 'rgba(255,255,255,0.3)',
+                                filter: (item.user_rating ?? 0) >= s ? `drop-shadow(0 0 4px rgba(${rgb}, 0.6))` : undefined,
                             }}
                         />
                     ))}
@@ -99,9 +102,9 @@ function MasonryGroup({ items, onItemClick }: { items: FavouriteItem[]; onItemCl
     useEffect(() => {
         const update = () => {
             const w = window.innerWidth
-            if (w < 400) setColumns(1)
-            else if (w < 768) setColumns(2)
-            else setColumns(3)
+            if (w < 640) setColumns(2)
+            else if (w < 1024) setColumns(3)
+            else setColumns(4)
         }
         update()
         window.addEventListener('resize', update)

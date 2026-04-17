@@ -316,8 +316,8 @@ export function CreateProjectDialog({
       {!hideTrigger && (trigger || (
         <button
           onClick={() => setOpen(true)}
-          className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-[var(--glass-surface)]"
-          style={{ borderColor: 'rgba(30, 42, 88, 0.2)', color: 'var(--brand-text-secondary)' }}
+          className="h-11 w-11 rounded-xl flex items-center justify-center border transition-all hover:bg-[var(--glass-surface)] bg-[var(--glass-surface)]"
+          style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'var(--brand-primary)' }}
           title="New Project"
         >
           <Plus className="h-5 w-5" />

@@ -537,19 +537,19 @@ export function MemoriesPage() {
     <>
       <SubtleBackground />
       {/* Header */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-6 flex flex-col gap-2">
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 sm:pt-10 pb-4 flex flex-col gap-2">
+          <div className="mb-5 flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-[2rem] sm:text-4xl leading-[0.95] font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
                 your <span className="page-accent">thoughts</span>
               </h1>
-              <p className="section-subtitle mt-1">Everything you've captured, all in one place.</p>
+              <p className="section-subtitle mt-1.5 text-sm sm:text-base">Everything you've captured, all in one place.</p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
               {view !== 'resurfacing' && <CreateMemoryDialog />}
               <button
                 onClick={() => navigate('/search')}
-                className="h-10 w-10 rounded-xl flex items-center justify-center transition-all bg-[var(--glass-surface)] border border-white/10"
+                className="h-11 w-11 rounded-xl flex items-center justify-center transition-all bg-[var(--glass-surface)] border border-white/10"
                 style={{ color: "var(--brand-primary)" }}
                 title="Search everything"
               >
@@ -614,9 +614,9 @@ export function MemoriesPage() {
         </div>
 
       <div className="pb-32 relative z-10" style={{ isolation: 'isolate' }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 pt-2">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pb-6 pt-2">
           {/* Outer Card Structure */}
-          <div className="p-4 sm:p-6 rounded-2xl mb-6 w-full max-w-full relative premium-glass shadow-2xl" style={{
+          <div className="p-3 sm:p-6 rounded-2xl mb-6 w-full max-w-full relative premium-glass shadow-2xl" style={{
             background: 'var(--brand-glass-bg)',
             border: '1px solid var(--glass-surface-hover)',
           }}>
@@ -683,15 +683,15 @@ export function MemoriesPage() {
                           onClick={() => setActiveTags(prev =>
                             isActive ? prev.filter(t => t !== tag) : [...prev, tag]
                           )}
-                          className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide transition-all"
+                          className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide transition-all min-h-[36px]"
                           style={{
                             background: isActive ? 'rgba(var(--brand-primary-rgb),0.2)' : 'var(--glass-surface)',
-                            border: isActive ? '1.5px solid rgba(var(--brand-primary-rgb),0.5)' : '1.5px solid rgba(255,255,255,0.1)',
-                            color: isActive ? 'rgba(var(--brand-primary-rgb),1)' : 'rgba(255,255,255,0.45)',
-                            boxShadow: isActive ? '0 0 12px rgba(var(--brand-primary-rgb),0.15)' : '0 2px 8px rgba(0,0,0,0.4)',
+                            border: isActive ? '1.5px solid rgba(var(--brand-primary-rgb),0.55)' : '1.5px solid rgba(255,255,255,0.12)',
+                            color: isActive ? 'rgb(var(--brand-primary-rgb))' : 'var(--brand-text-secondary)',
+                            boxShadow: isActive ? '0 0 12px rgba(var(--brand-primary-rgb),0.18)' : '0 2px 8px rgba(0,0,0,0.4)',
                           }}
                         >
-                          <Tag className="h-2.5 w-2.5" />
+                          <Tag className="h-3 w-3" />
                           {tag}
                         </button>
                       )
@@ -699,15 +699,15 @@ export function MemoriesPage() {
                     {activeTags.length > 0 && (
                       <button
                         onClick={() => setActiveTags([])}
-                        className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide transition-all"
+                        className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide transition-all min-h-[36px]"
                         style={{
-                          background: 'rgba(239,68,68,0.1)',
-                          border: '1.5px solid rgba(239,68,68,0.3)',
-                          color: "var(--brand-text-secondary)",
-                          boxShadow: '0 0 12px rgba(239,68,68,0.1)',
+                          background: 'rgba(239,68,68,0.12)',
+                          border: '1.5px solid rgba(239,68,68,0.35)',
+                          color: '#fca5a5',
+                          boxShadow: '0 0 12px rgba(239,68,68,0.12)',
                         }}
                       >
-                        <X className="h-2.5 w-2.5" />
+                        <X className="h-3 w-3" />
                         Clear
                       </button>
                     )}
@@ -1038,40 +1038,40 @@ export function MemoriesPage() {
                         <Pin className="w-3.5 h-3.5 text-brand-text-secondary" style={{ fill: 'currentColor' }} />
                         Pinned
                       </h3>
-                      <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+                      <div className="flex gap-3 overflow-x-auto pb-2 -mx-3 px-3 sm:-mx-1 sm:px-1 scrollbar-hide snap-x snap-mandatory">
                         {pinnedMemories.map((memory) => (
                           <motion.div
                             key={memory.id}
                             onClick={() => handleOpenDetail(memory)}
                             whileHover={{ y: -2 }}
-                            className="flex-shrink-0 w-56 rounded-xl p-3 cursor-pointer transition-all"
+                            className="flex-shrink-0 w-[68vw] max-w-[260px] sm:w-56 rounded-xl p-3.5 cursor-pointer transition-all snap-start"
                             style={{
                               background: 'linear-gradient(135deg, var(--glass-surface-hover) 0%, var(--glass-surface) 100%)',
-                              boxShadow: 'inset 0 0 0 1px rgba(var(--brand-primary-rgb),0.2), 0 4px 12px rgba(0,0,0,0.2)',
-                              borderTop: '2px solid rgba(var(--brand-primary-rgb),0.4)',
+                              boxShadow: 'inset 0 0 0 1px rgba(var(--brand-primary-rgb),0.25), 0 4px 12px rgba(0,0,0,0.3)',
+                              borderTop: '2px solid rgba(var(--brand-primary-rgb),0.5)',
                             }}
                           >
-                            <h4 className="text-sm font-semibold truncate mb-1" style={{ color: "var(--brand-primary)" }}>
+                            <h4 className="text-sm font-semibold truncate mb-1.5 text-[var(--brand-text-primary)]">
                               {memory.title}
                             </h4>
                             {memory.checklist_items && memory.checklist_items.length > 0 ? (
-                              <div className="flex flex-col gap-0.5">
+                              <div className="flex flex-col gap-1">
                                 {memory.checklist_items.slice(0, 3).map((item) => (
-                                  <div key={item.id} className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--brand-primary)', opacity: item.checked ? 0.4 : 0.8 }}>
-                                    <span className="w-2.5 h-2.5 rounded-sm border flex-shrink-0" style={{ borderColor: item.checked ? 'var(--brand-primary)' : 'rgba(255,255,255,0.2)', background: item.checked ? 'var(--brand-primary)' : 'transparent' }} />
+                                  <div key={item.id} className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--brand-text-secondary)', opacity: item.checked ? 0.5 : 0.95 }}>
+                                    <span className="w-3 h-3 rounded-sm border flex-shrink-0" style={{ borderColor: item.checked ? 'var(--brand-primary)' : 'rgba(255,255,255,0.3)', background: item.checked ? 'var(--brand-primary)' : 'transparent' }} />
                                     <span style={{ textDecoration: item.checked ? 'line-through' : 'none' }} className="truncate">{item.text}</span>
                                   </div>
                                 ))}
                                 {memory.checklist_items.length > 3 && (
-                                  <span className="text-[10px]" style={{ color: 'var(--brand-primary)', opacity: 0.4 }}>+{memory.checklist_items.length - 3} more</span>
+                                  <span className="text-[11px] mt-0.5" style={{ color: 'var(--brand-text-muted)' }}>+{memory.checklist_items.length - 3} more</span>
                                 )}
                               </div>
                             ) : (
-                              <p className="text-xs line-clamp-2 leading-relaxed" style={{ color: "var(--brand-primary)" }}>
+                              <p className="text-xs line-clamp-3 leading-relaxed" style={{ color: "var(--brand-text-secondary)" }}>
                                 {memory.body}
                               </p>
                             )}
-                            <span className="text-[10px] mt-2 block" style={{ color: "var(--brand-primary)" }}>
+                            <span className="text-[11px] mt-2 block font-medium" style={{ color: "var(--brand-primary)" }}>
                               {new Date(memory.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                             </span>
                           </motion.div>

@@ -315,29 +315,29 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
         onClick={handleClick}
         className="rounded-xl break-inside-avoid cursor-pointer select-none touch-pan-y"
         style={{
-          background: 'rgba(30, 32, 38, 0.9)',
+          background: 'rgba(30, 38, 56, 0.95)',
           border: isOfflinePending
-            ? '1px solid rgba(255,255,255,0.06)'
+            ? '1px solid rgba(255,255,255,0.08)'
             : memory.is_pinned
-              ? '1px solid rgba(251,191,36,0.35)'
-              : '1px solid rgba(255,255,255,0.08)',
+              ? '1px solid rgba(251,191,36,0.45)'
+              : '1px solid rgba(255,255,255,0.1)',
           boxShadow: memory.is_pinned
-            ? '0 0 0 1px rgba(251,191,36,0.08), 0 2px 12px rgba(0,0,0,0.5)'
-            : '0 2px 12px rgba(0,0,0,0.5)',
+            ? '0 0 0 1px rgba(251,191,36,0.12), 0 4px 16px rgba(0,0,0,0.5)'
+            : '0 4px 16px rgba(0,0,0,0.45)',
         }}
       >
         {/* Title row — pin dot when pinned, no buttons */}
-        <div className="flex items-start gap-1.5 px-3 pt-3 pb-0">
+        <div className="flex items-start gap-1.5 px-3.5 pt-3 pb-0">
           <p
-            className="flex-1 min-w-0 font-medium text-[11.5px] leading-snug line-clamp-2"
+            className="flex-1 min-w-0 font-semibold text-[13px] leading-snug line-clamp-2"
             style={{ color: 'var(--brand-text-primary)' }}
           >
             {memory.title}
           </p>
           {memory.is_pinned && (
             <Pin
-              className="w-2 h-2 flex-shrink-0 mt-0.5"
-              style={{ color: 'rgba(251,191,36,0.7)', fill: 'rgba(251,191,36,0.7)' }}
+              className="w-3 h-3 flex-shrink-0 mt-0.5"
+              style={{ color: 'rgb(251,191,36)', fill: 'rgb(251,191,36)' }}
             />
           )}
         </div>
@@ -346,13 +346,13 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
         {memory.source_reference?.type === 'list_item' && memory.source_reference.title && (() => {
           const ListIcon = getListIcon(memory.source_reference?.list_type)
           return (
-            <div className="px-3 pt-1">
+            <div className="px-3.5 pt-1.5">
               <span
                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium"
                 style={{
-                  background: 'rgba(251,191,36,0.08)',
-                  border: '1px solid rgba(251,191,36,0.2)',
-                  color: 'rgba(251,191,36,0.7)',
+                  background: 'rgba(251,191,36,0.12)',
+                  border: '1px solid rgba(251,191,36,0.3)',
+                  color: 'rgb(252,211,77)',
                 }}
               >
                 <ListIcon className="w-2.5 h-2.5" />
@@ -364,7 +364,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
 
         {/* Checklist or body preview */}
         {memory.checklist_items && memory.checklist_items.length > 0 ? (
-          <div className="px-3 pt-1.5 pb-0 flex flex-col gap-0.5">
+          <div className="px-3.5 pt-2 pb-0 flex flex-col gap-1">
             {memory.checklist_items.slice(0, 5).map((item) => (
               <button
                 key={item.id}
@@ -376,14 +376,14 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
                 className="flex items-center gap-1.5 text-left w-full group"
               >
                 {item.checked
-                  ? <CheckSquare className="h-3 w-3 flex-shrink-0" style={{ color: 'rgba(var(--brand-primary-rgb),0.7)' }} />
-                  : <Square className="h-3 w-3 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.2)' }} />
+                  ? <CheckSquare className="h-3.5 w-3.5 flex-shrink-0" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
+                  : <Square className="h-3.5 w-3.5 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.35)' }} />
                 }
                 <span
-                  className="text-[11px] leading-relaxed truncate"
+                  className="text-[12px] leading-relaxed truncate"
                   style={{
-                    color: item.checked ? 'var(--brand-text-muted)' : 'var(--brand-text-muted)',
-                    opacity: item.checked ? 0.4 : 0.8,
+                    color: item.checked ? 'var(--brand-text-muted)' : 'var(--brand-text-secondary)',
+                    opacity: item.checked ? 0.55 : 1,
                     textDecoration: item.checked ? 'line-through' : 'none',
                   }}
                 >
@@ -392,15 +392,15 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
               </button>
             ))}
             {memory.checklist_items.length > 5 && (
-              <p className="text-[10px] pl-[18px]" style={{ color: 'var(--brand-text-muted)', opacity: 0.35 }}>
+              <p className="text-[11px] pl-[20px] font-medium" style={{ color: 'var(--brand-text-muted)' }}>
                 +{memory.checklist_items.length - 5} more
               </p>
             )}
           </div>
         ) : (
           <p
-            className="px-3 pt-1.5 pb-0 text-[11px] leading-relaxed line-clamp-4"
-            style={{ color: 'var(--brand-text-muted)' }}
+            className="px-3.5 pt-2 pb-0 text-[12px] leading-relaxed line-clamp-4"
+            style={{ color: 'var(--brand-text-secondary)' }}
           >
             {toPreviewText(memory.body)}
           </p>
@@ -426,13 +426,13 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
 
         {/* Footer: date + badges */}
         <div
-          className="flex items-center justify-between gap-2 px-3 pt-1.5 pb-2.5 mt-1.5"
-          style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
+          className="flex items-center justify-between gap-2 px-3.5 pt-2 pb-3 mt-2"
+          style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}
         >
           <div className="flex items-center gap-1.5">
             <span
-              className="text-[10px] tabular-nums"
-              style={{ color: 'var(--brand-text-muted)', opacity: 0.5 }}
+              className="text-[11px] font-medium tabular-nums"
+              style={{ color: 'var(--brand-text-muted)' }}
             >
               {displayDate}
             </span>
@@ -445,10 +445,10 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
             ) > 0 && (
               <span
                 className="inline-flex items-center gap-0.5"
-                style={{ color: 'var(--brand-text-muted)', opacity: 0.35 }}
+                style={{ color: 'rgba(var(--brand-primary-rgb),0.7)' }}
                 title="Has connections"
               >
-                <Link2 className="w-2.5 h-2.5" />
+                <Link2 className="w-3 h-3" />
               </span>
             )}
           </div>
@@ -457,11 +457,11 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
 
             {memory.checklist_items && memory.checklist_items.length > 0 && (
               <span
-                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-medium"
+                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-semibold"
                 style={{
-                  background: 'rgba(var(--brand-primary-rgb),0.08)',
-                  border: '1px solid rgba(var(--brand-primary-rgb),0.2)',
-                  color: 'rgba(var(--brand-primary-rgb),0.65)',
+                  background: 'rgba(var(--brand-primary-rgb),0.14)',
+                  border: '1px solid rgba(var(--brand-primary-rgb),0.3)',
+                  color: 'rgb(var(--brand-primary-rgb))',
                 }}
               >
                 <CheckSquare className="w-2.5 h-2.5" />
@@ -471,18 +471,18 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
 
             {typeConfig ? (
               <span
-                className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium"
+                className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold"
                 style={{ background: typeConfig.bg, border: typeConfig.border, color: typeConfig.text }}
               >
                 {typeConfig.label}
               </span>
             ) : firstTag ? (
               <span
-                className="px-1.5 py-0.5 rounded-md text-[10px] font-medium truncate max-w-[80px]"
+                className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold truncate max-w-[90px]"
                 style={{
-                  background: 'rgba(148,163,184,0.06)',
-                  border: '1px solid rgba(148,163,184,0.15)',
-                  color: 'rgba(148,163,184,0.6)',
+                  background: 'rgba(148,163,184,0.12)',
+                  border: '1px solid rgba(148,163,184,0.25)',
+                  color: 'rgba(203,213,225,0.95)',
                 }}
               >
                 {firstTag}

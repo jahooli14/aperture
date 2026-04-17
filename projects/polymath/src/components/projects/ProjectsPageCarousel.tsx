@@ -52,28 +52,28 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
   return (
     <Link
       to={`/projects/${project.id}`}
-      className={`group block glass-card glass-card-hover transition-all duration-300 break-inside-avoid overflow-hidden ${prominent ? 'p-4 scale-[1.02]' : 'p-3'}`}
+      className={`group block glass-card glass-card-hover transition-all duration-300 break-inside-avoid overflow-hidden ${prominent ? 'p-4 sm:p-5' : 'p-4'}`}
       style={{
-        boxShadow: prominent || project.is_priority ? `0 12px 40px rgba(${theme.rgb}, 0.2)` : '0 4px 12px rgba(0, 0, 0, 0.2)',
-        borderColor: prominent || project.is_priority ? 'var(--brand-primary)' : theme.borderColor,
-        background: `rgba(${theme.rgb}, 0.08)`
+        boxShadow: prominent || project.is_priority
+          ? `0 8px 28px rgba(0,0,0,0.45), 0 0 32px rgba(${theme.rgb}, 0.18)`
+          : `0 4px 14px rgba(0,0,0,0.35), 0 0 18px rgba(${theme.rgb}, 0.08)`,
+        borderColor: prominent || project.is_priority ? `rgba(${theme.rgb}, 0.6)` : `rgba(${theme.rgb}, 0.35)`,
+        background: `linear-gradient(180deg, rgba(${theme.rgb}, 0.14) 0%, rgba(${theme.rgb}, 0.07) 100%), rgba(15, 24, 41, 0.55)`
       }}
     >
       {/* Header */}
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <h4 className={`text-[var(--brand-text-primary)] font-bold leading-tight aperture-header ${prominent ? 'text-lg' : 'text-sm'}`}>
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <h4 className={`text-[var(--brand-text-primary)] font-bold leading-tight aperture-header break-words ${prominent ? 'text-base sm:text-lg' : 'text-[15px]'}`}
+          style={{ textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
           {project.title}
         </h4>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-1 flex-shrink-0 -mr-1 -mt-1">
           <button
             onClick={handleAnalyze}
-            className="w-1.5 h-1.5 rounded-full transition-colors hover:scale-125"
-            style={{
-              backgroundColor: theme.textColor,
-              opacity: 0.6
-            }}
+            className="h-9 w-9 rounded-full flex items-center justify-center transition-colors hover:bg-white/10"
             title="AI Analysis"
           >
+            <span className="block w-2 h-2 rounded-full" style={{ backgroundColor: theme.textColor, opacity: 0.75 }} />
           </button>
           <button
             onClick={(e) => {
@@ -81,13 +81,13 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
               e.stopPropagation()
               setPriority(project.id)
             }}
-            className="flex-shrink-0 p-0.5 rounded-lg hover:bg-white/10 transition-colors"
+            className="h-9 w-9 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
             title={project.is_priority ? 'Remove priority' : 'Set as priority'}
           >
             <Star
-              className="h-4 w-4"
+              className="h-[18px] w-[18px]"
               style={{
-                color: project.is_priority ? 'var(--brand-primary)' : 'rgba(255,255,255,0.25)',
+                color: project.is_priority ? 'var(--brand-primary)' : 'rgba(255,255,255,0.35)',
                 fill: project.is_priority ? 'var(--brand-primary)' : 'none'
               }}
             />
@@ -98,45 +98,46 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
       {/* Next Action or Description (show one, not both) */}
       {nextTask ? (
         <div
-          className="rounded-lg p-2.5 mb-3 flex items-start gap-2 transition-colors min-w-0"
+          className="rounded-lg p-3 mb-3 flex items-start gap-2 transition-colors min-w-0"
           style={{
-            backgroundColor: `rgba(${theme.rgb}, 0.1)`,
-            border: `1px solid rgba(${theme.rgb}, 0.2)`
+            backgroundColor: `rgba(${theme.rgb}, 0.16)`,
+            border: `1px solid rgba(${theme.rgb}, 0.35)`
           }}
         >
           <div className="mt-0.5 flex-shrink-0" style={{ color: theme.textColor }}>
-            <CheckCircle2 className="h-3.5 w-3.5" />
+            <CheckCircle2 className="h-4 w-4" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className={`text-xs font-medium text-[var(--brand-text-primary)] line-clamp-2 aperture-body`}>
+            <p className="text-[13px] leading-snug font-medium text-[var(--brand-text-primary)] line-clamp-3 aperture-body">
               {nextTask.text}
             </p>
           </div>
         </div>
       ) : project.description ? (
-        <p className={`text-[var(--brand-text-secondary)] mb-3 italic aperture-body ${prominent ? 'text-xs line-clamp-3' : 'text-[11px] line-clamp-3'}`}>
+        <p className={`text-[var(--brand-text-secondary)] mb-3 italic aperture-body line-clamp-3 ${prominent ? 'text-[13px]' : 'text-xs'}`}>
           "{project.description}"
         </p>
       ) : null}
 
       {/* Footer / Meta */}
-      <div className="flex items-center justify-between gap-2 pt-2 border-t border-[var(--glass-surface)]">
+      <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-white/10">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           {totalTasks > 0 ? (
             <div className="flex items-center gap-2 min-w-0 flex-1">
-              <div className="h-1 flex-1 min-w-[2rem] bg-[var(--glass-surface)] rounded-full overflow-hidden">
+              <div className="h-1.5 flex-1 min-w-[2rem] bg-white/10 rounded-full overflow-hidden">
                 <div
-                  className="h-full"
+                  className="h-full rounded-full"
                   style={{
                     width: `${progress}%`,
-                    background: theme.textColor
+                    background: theme.textColor,
+                    boxShadow: `0 0 8px rgba(${theme.rgb}, 0.6)`
                   }}
                 />
               </div>
-              <span className="text-[10px] font-bold text-[var(--brand-text-muted)] aperture-header uppercase tracking-wider flex-shrink-0">{completedTasks}/{totalTasks}</span>
+              <span className="text-[11px] font-bold text-white/75 aperture-header uppercase tracking-wider flex-shrink-0">{completedTasks}/{totalTasks}</span>
             </div>
           ) : (
-            <span className="text-[10px] font-bold text-[var(--brand-text-muted)] flex items-center gap-1 aperture-header uppercase tracking-wider truncate">
+            <span className="text-[11px] font-bold text-white/60 flex items-center gap-1 aperture-header uppercase tracking-wider truncate">
               <Clock className="h-3 w-3 flex-shrink-0" />
               {new Date(project.last_active || project.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
             </span>
@@ -145,16 +146,14 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
 
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {project.status === 'dormant' && (
-            <span className="flex items-center gap-0.5 text-[8px] font-black uppercase tracking-widest px-1 py-0.5 rounded-md"
-              style={{ color: 'rgba(148,163,184,0.7)', background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.15)' }}>
+            <span className="flex items-center gap-0.5 text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md"
+              style={{ color: 'rgba(203,213,225,0.9)', background: 'rgba(148,163,184,0.12)', border: '1px solid rgba(148,163,184,0.25)' }}>
               <Snowflake className="h-2.5 w-2.5" />
             </span>
           )}
-          {prominent && (
-            <div className="p-1 rounded-full bg-[var(--glass-surface)] group-hover:bg-[var(--brand-secondary)] group-hover:text-black transition-colors text-[var(--brand-secondary)]">
-              <ArrowRight className="h-3.5 w-3.5" />
-            </div>
-          )}
+          <div className="h-7 w-7 rounded-full flex items-center justify-center bg-white/5 group-hover:bg-[var(--brand-primary)] group-hover:text-black transition-colors text-white/70">
+            <ArrowRight className="h-3.5 w-3.5" />
+          </div>
         </div>
       </div>
     </Link>
@@ -229,9 +228,9 @@ function MasonryGrid({ projects, prominent = false }: { projects: Project[], pro
   })
 
   return (
-    <div className="flex gap-3 items-start w-full">
+    <div className="flex gap-3 sm:gap-4 items-start w-full">
       {cols.map((colProjects, colIndex) => (
-        <div key={colIndex} className="flex-1 flex flex-col gap-3 min-w-0">
+        <div key={colIndex} className="flex-1 flex flex-col gap-3 sm:gap-4 min-w-0">
           {colProjects.map((project, index) => (
             <motion.div
               key={project.id}
