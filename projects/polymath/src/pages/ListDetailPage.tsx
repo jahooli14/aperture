@@ -1332,10 +1332,13 @@ export default function ListDetailPage() {
 
         const sourceSection = sectionForItem(activeItem.status)
 
-        // Cross-section drop → update status first (optimistic via store)
+        // Cross-section drop → update status first (optimistic via store).
+        // Fire the completion celebration when a drag promotes an item into Done,
+        // matching the tap-the-status-pill flow.
         if (hasStatus && sourceSection !== targetSection) {
             const newStatus: ListItem['status'] = targetSection === 'completed' ? 'completed' : targetSection === 'active' ? 'active' : 'pending'
             await updateListItemStatus(activeId, newStatus)
+            if (targetSection === 'completed') setCelebrationItem(activeItem)
         }
 
         // Build the new flat order by inserting active at the overId position within the target section.

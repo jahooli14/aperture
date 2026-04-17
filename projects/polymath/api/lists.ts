@@ -197,6 +197,23 @@ async function handleListItems(req: VercelRequest, res: VercelResponse) {
     const { listId, id, resource } = req.query
 
     try {
+        // GET /api/lists?scope=items&resource=favourites
+        // Returns items with user_rating >= 4 across all the user's lists,
+        // joined with the parent list's type + title so the client can group
+        // and label without extra round-trips.
+        if (req.method === 'GET' && resource === 'favourites') {
+            const minRating = req.query.min ? parseInt(req.query.min as string) : 4
+            const { data, error } = await supabase
+                .from('list_items')
+                .select('*, list:lists!inner(id, title, type)')
+                .eq('user_id', userId)
+                .gte('user_rating', minRating)
+                .order('user_rating', { ascending: false })
+                .order('updated_at', { ascending: false })
+            if (error) throw error
+            return res.status(200).json(data)
+        }
+
         if (req.method === 'GET' && listId) {
             const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined
 

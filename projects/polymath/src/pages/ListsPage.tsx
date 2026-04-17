@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { Reorder, motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, GripVertical, ListOrdered, Check } from 'lucide-react'
+import { Plus, Trash2, GripVertical, ListOrdered, Check, Star } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthContext } from '../contexts/AuthContext'
 import { SignInNudge } from '../components/SignInNudge'
@@ -227,6 +227,14 @@ export default function ListsPage() {
                     <p className="section-subtitle mt-1">The stuff you love, curated.</p>
                 </div>
                 <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => navigate('/favourites')}
+                        title="Favourites"
+                        className="flex items-center justify-center h-10 w-10 rounded-lg hover:bg-[var(--glass-surface)] text-[var(--brand-text-primary)] transition-all"
+                        style={{ border: '1px solid rgba(255,255,255,0.1)' }}
+                    >
+                        <Star className="h-4 w-4" />
+                    </button>
                     {lists.length > 0 && (
                         <button
                             onClick={() => setIsReordering(!isReordering)}
