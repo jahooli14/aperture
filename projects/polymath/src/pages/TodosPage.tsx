@@ -262,7 +262,7 @@ export function TodosPage() {
         <SubtleBackground />
         <div className="px-4 pt-10 pb-6 max-w-3xl mx-auto w-full">
           <div className="mb-6">
-            <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
+            <h1 className="text-[1.75rem] sm:text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] leading-none">
               your <span className="page-accent">todos</span>
             </h1>
             <p className="section-subtitle mt-1">

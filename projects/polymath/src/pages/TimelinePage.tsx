@@ -110,7 +110,7 @@ export function TimelinePage() {
       {/* Header */}
       <div className="max-w-6xl mx-auto px-4 mb-12">
         <div>
-          <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
+          <h1 className="text-[1.75rem] sm:text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] leading-none">
             your <span className="page-accent">timeline</span>
           </h1>
           <p className="section-subtitle mt-1">When you do your best thinking</p>

@@ -743,10 +743,10 @@ export function ReadingPage() {
   return (
     <>
       <SubtleBackground />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-6 flex flex-col gap-4">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 pt-6 sm:pt-10 pb-4 sm:pb-6 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
+              <h1 className="text-[1.75rem] sm:text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] leading-none">
                 your <span className="page-accent">reading</span>
               </h1>
               <p className="section-subtitle mt-1">Deep dives and quick catches.</p>

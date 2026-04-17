@@ -258,7 +258,7 @@ export function ProjectsPage() {
     <>
       <SubtleBackground />
       <div className="min-h-screen">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-6 flex flex-col gap-2">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 pt-6 sm:pt-10 pb-4 sm:pb-6 flex flex-col gap-2">
           <div className="mb-2 flex items-center justify-between">
             <div className="flex items-center gap-3">
               {showCompleted && (
@@ -271,7 +271,7 @@ export function ProjectsPage() {
                   <ArrowLeft className="h-5 w-5" />
                 </button>
               )}
-              <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
+              <h1 className="text-[1.75rem] sm:text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] leading-none">
                 {showCompleted ? (
                   <>what you've <span className="text-brand-primary">built</span></>
                 ) : (
@@ -321,9 +321,9 @@ export function ProjectsPage() {
           ) : (<>
 
           {/* Controls */}
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 pt-2">
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pb-6 pt-2">
             {/* Outer Card Structure */}
-            <div className="p-6 rounded-2xl mb-6 relative overflow-hidden premium-glass shadow-2xl" style={{
+            <div className="p-3 sm:p-6 rounded-2xl mb-6 relative overflow-hidden premium-glass shadow-2xl" style={{
               background: 'var(--brand-glass-bg)',
               border: '1px solid var(--glass-surface-hover)',
             }}>

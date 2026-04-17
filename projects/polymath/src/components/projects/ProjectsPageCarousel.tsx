@@ -52,7 +52,7 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
   return (
     <Link
       to={`/projects/${project.id}`}
-      className={`group block glass-card glass-card-hover transition-all duration-300 break-inside-avoid overflow-hidden ${prominent ? 'p-4 scale-[1.02]' : 'p-3'}`}
+      className={`group block glass-card glass-card-hover transition-all duration-300 break-inside-avoid overflow-hidden ${prominent ? 'p-3 sm:p-4 scale-[1.02]' : 'p-2.5 sm:p-3'}`}
       style={{
         boxShadow: prominent || project.is_priority ? `0 12px 40px rgba(${theme.rgb}, 0.2)` : '0 4px 12px rgba(0, 0, 0, 0.2)',
         borderColor: prominent || project.is_priority ? 'var(--brand-primary)' : theme.borderColor,
@@ -60,8 +60,8 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
       }}
     >
       {/* Header */}
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <h4 className={`text-[var(--brand-text-primary)] font-bold leading-tight aperture-header ${prominent ? 'text-lg' : 'text-sm'}`}>
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <h4 className={`flex-1 min-w-0 text-[var(--brand-text-primary)] font-bold leading-tight aperture-header line-clamp-2 ${prominent ? 'text-[15px] sm:text-lg' : 'text-[13px] sm:text-sm'}`}>
           {project.title}
         </h4>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -229,9 +229,9 @@ function MasonryGrid({ projects, prominent = false }: { projects: Project[], pro
   })
 
   return (
-    <div className="flex gap-3 items-start w-full">
+    <div className="flex gap-2 sm:gap-3 items-start w-full">
       {cols.map((colProjects, colIndex) => (
-        <div key={colIndex} className="flex-1 flex flex-col gap-3 min-w-0">
+        <div key={colIndex} className="flex-1 flex flex-col gap-2 sm:gap-3 min-w-0">
           {colProjects.map((project, index) => (
             <motion.div
               key={project.id}

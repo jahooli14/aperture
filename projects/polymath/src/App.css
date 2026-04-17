@@ -469,7 +469,13 @@
 
   /* Padding to clear the Floating Navigation bar */
   .pb-floating-nav {
-    padding-bottom: 120px;
+    padding-bottom: calc(var(--safe-area-inset-bottom, 20px) + 96px);
+  }
+
+  @media (min-width: 640px) {
+    .pb-floating-nav {
+      padding-bottom: 120px;
+    }
   }
 
   /* Subtle pulse animation for callouts */

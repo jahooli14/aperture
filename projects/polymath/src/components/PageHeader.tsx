@@ -69,7 +69,7 @@ export function PageHeader({
 
         <div className="min-w-0">
           <div className="flex items-center gap-2.5">
-            <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] leading-none">
+            <h1 className="text-[1.75rem] sm:text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] leading-none">
               {prefix}{' '}
               <span style={{ color: accent }}>{title}</span>
             </h1>

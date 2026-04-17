@@ -309,8 +309,8 @@ export function SearchPage() {
       {/* Subtle Background Effect */}
       <SubtleBackground />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-6">
-          <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 pt-6 sm:pt-10 pb-4 sm:pb-6">
+          <h1 className="text-[1.75rem] sm:text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] leading-none">
             your <span className="page-accent">stuff</span>
           </h1>
           <p className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mt-1">Search memories, projects, and articles.</p>
