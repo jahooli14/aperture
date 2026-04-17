@@ -204,14 +204,14 @@ export function CognitiveReplayPage() {
                 type="date"
                 value={customStart}
                 onChange={e => setCustomStart(e.target.value)}
-                className="flex-1 px-3 py-2 rounded-xl bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] text-[var(--brand-text-primary)] text-sm"
+                className="flex-1 min-w-0 px-3 h-11 rounded-xl bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] text-[var(--brand-text-primary)] text-base"
               />
-              <span className="text-[var(--brand-text-muted)] self-center">to</span>
+              <span className="text-[var(--brand-text-muted)] self-center flex-shrink-0">to</span>
               <input
                 type="date"
                 value={customEnd}
                 onChange={e => setCustomEnd(e.target.value)}
-                className="flex-1 px-3 py-2 rounded-xl bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] text-[var(--brand-text-primary)] text-sm"
+                className="flex-1 min-w-0 px-3 h-11 rounded-xl bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] text-[var(--brand-text-primary)] text-base"
               />
             </motion.div>
           )}

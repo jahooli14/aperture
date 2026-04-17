@@ -337,7 +337,7 @@ export function ProjectsPage() {
                       placeholder="Search projects..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 rounded-lg border-2 transition-all focus:outline-none"
+                      className="w-full pl-10 pr-4 h-11 rounded-lg border-2 transition-all focus:outline-none text-base"
                       style={{
                         backgroundColor: 'var(--glass-surface)',
                         borderColor: searchQuery ? 'var(--brand-primary)' : 'rgba(255, 255, 255, 0.1)',

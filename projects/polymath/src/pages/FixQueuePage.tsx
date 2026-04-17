@@ -225,18 +225,18 @@ export function FixQueuePage() {
                     <button
                       onClick={() => handleApprove(item)}
                       disabled={approving === item.id}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:scale-105"
+                      className="flex items-center gap-1.5 px-3.5 py-2 min-h-[40px] rounded-lg text-sm font-medium transition-all hover:scale-105 touch-manipulation"
                       style={{ backgroundColor: 'rgba(var(--brand-primary-rgb), 0.15)', color: 'rgb(var(--brand-primary-rgb))' }}
                     >
-                      <Check className="h-3.5 w-3.5" />
+                      <Check className="h-4 w-4" />
                       {approving === item.id ? 'Approving...' : 'Approve'}
                     </button>
                     <button
                       onClick={() => handleReject(item)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:scale-105"
+                      className="flex items-center gap-1.5 px-3.5 py-2 min-h-[40px] rounded-lg text-sm font-medium transition-all hover:scale-105 touch-manipulation"
                       style={{ backgroundColor: 'rgba(var(--color-error-rgb), 0.1)', color: 'rgb(var(--color-error-rgb))' }}
                     >
-                      <X className="h-3.5 w-3.5" />
+                      <X className="h-4 w-4" />
                       Reject
                     </button>
                   </>

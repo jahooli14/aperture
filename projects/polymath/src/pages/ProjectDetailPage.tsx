@@ -573,7 +573,7 @@ export function ProjectDetailPage() {
   return (
     <div className="min-h-screen pb-24 relative" style={{ backgroundColor: 'var(--brand-bg)' }}>
       <SubtleBackground />
-      <div className="max-w-2xl mx-auto px-5 sm:px-6 pt-8 pb-4">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8 pb-4">
         {/* Nav row */}
         <div className="flex items-center justify-between mb-6">
           <button
@@ -638,7 +638,7 @@ export function ProjectDetailPage() {
         <LineageBreadcrumb project={project} />
 
         {/* Title */}
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--brand-text-primary)] leading-[0.95] mb-4">
+        <h1 className="text-xl sm:text-3xl font-bold tracking-tight text-[var(--brand-text-primary)] leading-[1.05] sm:leading-[0.95] mb-4 break-words">
           {project.title}
         </h1>
 
@@ -652,7 +652,7 @@ export function ProjectDetailPage() {
           <div className="relative">
             <button
               onClick={() => setShowStatusMenu(!showStatusMenu)}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-all hover:bg-white/[0.04]"
+              className="flex items-center gap-1.5 px-3 py-2 min-h-[36px] rounded-lg transition-all hover:bg-white/[0.04] touch-manipulation"
               style={{ background: 'rgba(255,255,255,0.03)' }}
             >
               <span className="h-1.5 w-1.5 rounded-full" style={{ background: project.status === 'active' ? 'rgb(var(--brand-primary-rgb))' : project.status === 'completed' ? 'rgb(var(--brand-primary-rgb))' : 'rgba(255,255,255,0.25)' }} />

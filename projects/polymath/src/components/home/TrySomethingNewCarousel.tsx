@@ -174,16 +174,18 @@ export function TrySomethingNewCarousel({ onShapeIdea }: TrySomethingNewCarousel
           <div className="flex items-center justify-end gap-1 mb-3">
             <button
               onClick={() => { haptic.light(); setDirection(-1); setIdx(i => (i - 1 + total) % total) }}
-              className="h-6 w-6 rounded-md flex items-center justify-center hover:bg-[var(--glass-surface)] transition-colors"
+              className="h-10 w-10 rounded-lg flex items-center justify-center hover:bg-[var(--glass-surface)] transition-colors touch-manipulation"
+              aria-label="Previous"
             >
-              <ChevronLeft className="h-3.5 w-3.5 text-[var(--brand-text-secondary)] opacity-50" />
+              <ChevronLeft className="h-4 w-4 text-[var(--brand-text-secondary)] opacity-60" />
             </button>
-            <span className="text-[10px] text-[var(--brand-text-secondary)] opacity-40">{idx + 1}/{total}</span>
+            <span className="text-[10px] text-[var(--brand-text-secondary)] opacity-40 tabular-nums">{idx + 1}/{total}</span>
             <button
               onClick={() => { haptic.light(); setDirection(1); setIdx(i => (i + 1) % total) }}
-              className="h-6 w-6 rounded-md flex items-center justify-center hover:bg-[var(--glass-surface)] transition-colors"
+              className="h-10 w-10 rounded-lg flex items-center justify-center hover:bg-[var(--glass-surface)] transition-colors touch-manipulation"
+              aria-label="Next"
             >
-              <ChevronRight className="h-3.5 w-3.5 text-[var(--brand-text-secondary)] opacity-50" />
+              <ChevronRight className="h-4 w-4 text-[var(--brand-text-secondary)] opacity-60" />
             </button>
           </div>
         )}

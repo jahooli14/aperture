@@ -11,7 +11,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         type={type}
         className={cn(
           // Base layout
-          "flex h-11 w-full rounded-xl px-3.5 py-2 text-[15px]",
+          "flex h-11 w-full rounded-xl px-3.5 py-2 text-[16px]",
           // Reset native browser styling that causes white backgrounds on mobile
           "appearance-none",
           // Dark glass appearance  bg-brand-surface works correctly with appearance-none

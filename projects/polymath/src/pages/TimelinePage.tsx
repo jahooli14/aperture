@@ -105,10 +105,10 @@ export function TimelinePage() {
   }
 
   return (
-    <div className="min-h-screen py-12 relative" style={{ backgroundColor: 'var(--brand-bg)' }}>
+    <div className="min-h-screen py-8 sm:py-12 relative" style={{ backgroundColor: 'var(--brand-bg)' }}>
       <SubtleBackground />
       {/* Header */}
-      <div className="max-w-6xl mx-auto px-4 mb-12">
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 mb-8 sm:mb-12">
         <div>
           <h1 className="text-[1.75rem] sm:text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] leading-none">
             your <span className="page-accent">timeline</span>
@@ -209,8 +209,8 @@ export function TimelinePage() {
                       </p>
                       <div className="space-y-2">
                         {pattern.data.map((month: any, i: number) => (
-                          <div key={i} className="flex items-center gap-3">
-                            <span className="text-sm font-medium w-24" style={{ color: "var(--brand-primary)" }}>
+                          <div key={i} className="flex items-center gap-2 sm:gap-3">
+                            <span className="text-xs sm:text-sm font-medium w-16 sm:w-24 flex-shrink-0" style={{ color: "var(--brand-primary)" }}>
                               {new Date(month.month + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                             </span>
                             <div className="flex-1 rounded-full h-8 relative overflow-hidden" style={{ backgroundColor: 'var(--glass-surface)' }}>

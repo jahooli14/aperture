@@ -643,7 +643,7 @@ export function MemoriesPage() {
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                     placeholder="Search thoughts..."
-                    className="w-full pl-9 pr-9 py-2.5 rounded-lg text-sm outline-none transition-all"
+                    className="w-full pl-9 pr-9 h-11 rounded-lg text-base outline-none transition-all"
                     style={{
                       background: 'var(--brand-glass-bg)',
                       border: '1px solid rgba(255,255,255,0.1)',
