@@ -1,7 +1,25 @@
 import React, { useEffect, useState, useRef, useMemo, memo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, Send, Trash2, Mic, MicOff, ListOrdered, Check, ChevronRight, GripVertical, Pencil, Star, SortAsc, ChevronDown, Copy, Brain, Link as LinkIcon, BookOpen, Loader2, RefreshCw, Settings2, ToggleLeft, ToggleRight, Search, X } from 'lucide-react'
+import { ArrowLeft, Send, Trash2, Mic, MicOff, Check, ChevronRight, Pencil, Star, SortAsc, ChevronDown, Copy, Brain, Link as LinkIcon, BookOpen, Loader2, RefreshCw, Settings2, ToggleLeft, ToggleRight, Search, X } from 'lucide-react'
+import {
+    DndContext,
+    DragOverlay,
+    PointerSensor,
+    TouchSensor,
+    useSensor,
+    useSensors,
+    useDroppable,
+    closestCenter,
+    type DragEndEvent,
+    type DragStartEvent,
+} from '@dnd-kit/core'
+import {
+    SortableContext,
+    useSortable,
+    rectSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { useListStore } from '../stores/useListStore'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useReadingStore } from '../stores/useReadingStore'
@@ -12,7 +30,6 @@ import { ItemInsightStrip } from '../components/ItemInsightStrip'
 import { VoiceInput } from '../components/VoiceInput'
 import { OptimizedImage } from '../components/ui/optimized-image'
 import { ArticleCard } from '../components/reading/ArticleCard'
-import { Reorder } from 'framer-motion'
 import type { ListItem, ListType, ListSettings } from '../types'
 import { listHasStatus } from '../types'
 import { useToast } from '../components/ui/toast'
@@ -222,57 +239,63 @@ const CompletionCelebration = ({
 }
 
 // ============================================================================
-// Status tab labels per list type
+// Section labels per list type (pending -> active -> completed)
 // ============================================================================
 
-type StatusFilter = 'all' | 'queue' | 'pending' | 'active' | 'completed'
+type SectionStatus = 'pending' | 'active' | 'completed'
 
-const getStatusLabels = (listType: string): Record<StatusFilter, string> => {
+const getStatusLabels = (listType: string): Record<SectionStatus, string> => {
     switch (listType) {
         case 'film':
         case 'movie':
         case 'show':
         case 'tv':
-            return { all: 'All', queue: 'To Watch', pending: 'Want to Watch', active: 'Watching', completed: 'Watched' }
+            return { pending: 'To Watch', active: 'Watching', completed: 'Watched' }
         case 'book':
-            return { all: 'All', queue: 'To Read', pending: 'Want to Read', active: 'Reading', completed: 'Read' }
+            return { pending: 'To Read', active: 'Reading', completed: 'Read' }
         case 'article':
-            return { all: 'All', queue: 'To Read', pending: 'To Read', active: 'Reading', completed: 'Read' }
+            return { pending: 'To Read', active: 'Reading', completed: 'Read' }
         case 'music':
-            return { all: 'All', queue: 'Queue', pending: 'Want to Listen', active: 'Listening', completed: 'Listened' }
+            return { pending: 'To Listen', active: 'Listening', completed: 'Listened' }
         case 'game':
-            return { all: 'All', queue: 'To Play', pending: 'Want to Play', active: 'Playing', completed: 'Played' }
+            return { pending: 'To Play', active: 'Playing', completed: 'Played' }
         case 'place':
-            return { all: 'All', queue: 'To Visit', pending: 'Want to Visit', active: 'Been Once', completed: 'Visited' }
+            return { pending: 'To Visit', active: 'Visiting', completed: 'Visited' }
         default:
-            return { all: 'All', queue: 'Queue', pending: 'Pending', active: 'In Progress', completed: 'Done' }
+            return { pending: 'To Do', active: 'In Progress', completed: 'Done' }
     }
+}
+
+const SECTION_ORDER: SectionStatus[] = ['pending', 'active', 'completed']
+
+const sectionForItem = (status: string): SectionStatus => {
+    if (status === 'completed') return 'completed'
+    if (status === 'active') return 'active'
+    return 'pending'
 }
 
 // ============================================================================
 // Sort options
 // ============================================================================
 
-type SortOption = 'added' | 'rating' | 'status' | 'alpha'
+type SortOption = 'manual' | 'added' | 'rating' | 'alpha'
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+    { value: 'manual', label: 'Manual' },
     { value: 'added', label: 'Date Added' },
     { value: 'rating', label: 'Rating' },
-    { value: 'status', label: 'Status' },
     { value: 'alpha', label: 'AZ' },
 ]
 
 function sortItems(items: ListItem[], sort: SortOption): ListItem[] {
     const copy = [...items]
     switch (sort) {
+        case 'manual':
+            return copy.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
         case 'added':
             return copy.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
         case 'rating':
             return copy.sort((a, b) => (b.user_rating ?? 0) - (a.user_rating ?? 0))
-        case 'status': {
-            const order: Record<string, number> = { active: 0, pending: 1, completed: 2, abandoned: 3 }
-            return copy.sort((a, b) => (order[a.status] ?? 4) - (order[b.status] ?? 4))
-        }
         case 'alpha':
             return copy.sort((a, b) => a.content.localeCompare(b.content))
         default:
@@ -759,6 +782,99 @@ const StandardItemCard = memo(({
 // Masonry Grid
 // ============================================================================
 
+function SectionBlock({
+    status,
+    label,
+    count,
+    rgb,
+    children,
+}: {
+    status: SectionStatus
+    label: string
+    count: number
+    rgb: string
+    children: React.ReactNode
+}) {
+    const { setNodeRef, isOver } = useDroppable({ id: `section-${status}` })
+    return (
+        <section ref={setNodeRef}>
+            <div
+                className="flex items-center gap-2 mb-3 transition-colors"
+                style={{ color: isOver ? `rgb(${rgb})` : undefined }}
+            >
+                <span className="text-[11px] font-black uppercase tracking-widest text-brand-text-muted">{label}</span>
+                <span className="text-[10px] font-bold text-zinc-600">{count}</span>
+                <div className="flex-1 h-px bg-[var(--glass-surface)]" />
+            </div>
+            {children}
+        </section>
+    )
+}
+
+function EmptySectionDropzone({ status, label, rgb }: { status: SectionStatus; label: string; rgb: string }) {
+    const { setNodeRef, isOver } = useDroppable({ id: `section-${status}-empty` })
+    return (
+        <div
+            ref={setNodeRef}
+            className="rounded-xl border border-dashed py-8 text-center text-[11px] font-bold uppercase tracking-widest transition-all"
+            style={{
+                borderColor: isOver ? `rgba(${rgb}, 0.5)` : 'rgba(255,255,255,0.08)',
+                color: isOver ? `rgb(${rgb})` : 'rgba(255,255,255,0.25)',
+                backgroundColor: isOver ? `rgba(${rgb}, 0.05)` : 'transparent',
+            }}
+        >
+            Drop here to mark as {label}
+        </div>
+    )
+}
+
+function SortableQuote({
+    item,
+    isExpanded,
+    onItemClick,
+    onDelete,
+}: {
+    item: ListItem
+    isExpanded: boolean
+    onItemClick: (id: string) => void
+    onDelete: (id: string, listId: string) => void
+}) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
+    const style: React.CSSProperties = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.3 : 1,
+    }
+    return (
+        <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+            <QuoteCard
+                item={item}
+                isExpanded={isExpanded}
+                onItemClick={onItemClick}
+                onDelete={onDelete}
+                onCopy={(text) => { navigator.clipboard?.writeText(text).catch(() => {}) }}
+            />
+        </div>
+    )
+}
+
+// Sortable wrapper: applies dnd-kit transforms and long-press activation listeners.
+// Children's clicks/buttons still fire because sensors require a delay/distance
+// before activating a drag.
+const SortableItemCard = memo((props: React.ComponentProps<typeof StandardItemCard>) => {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.item.id })
+    const style: React.CSSProperties = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.3 : 1,
+    }
+    return (
+        <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+            <StandardItemCard {...props} />
+        </div>
+    )
+})
+
 function MasonryListGrid({
     items,
     listType,
@@ -806,33 +922,12 @@ function MasonryListGrid({
         return cols
     }, [items, columns])
 
-    const isQuoteType = listType === 'quote'
-
-    if (isQuoteType) {
-        return (
-            <div className="flex flex-col gap-8 max-w-3xl mx-auto">
-                {items.map((item) => (
-                    <QuoteCard
-                        key={item.id}
-                        item={item}
-                        isExpanded={expandedItemId === item.id}
-                        onItemClick={onItemClick}
-                        onDelete={onDelete}
-                        onCopy={(text) => {
-                            navigator.clipboard?.writeText(text).catch(() => {})
-                        }}
-                    />
-                ))}
-            </div>
-        )
-    }
-
     return (
         <div className="flex gap-3 items-start w-full">
             {distributedColumns.map((colItems, colIndex) => (
                 <div key={colIndex} className="flex-1 flex flex-col gap-3 min-w-0">
                     {colItems.map((item) => (
-                        <StandardItemCard
+                        <SortableItemCard
                             key={item.id}
                             item={item}
                             listType={listType}
@@ -1059,10 +1154,9 @@ export default function ListDetailPage() {
     const [showSearch, setShowSearch] = useState(false)
 
     const [isVoiceMode, setIsVoiceMode] = useState(false)
-    const [isReordering, setIsReordering] = useState(false)
     const [expandedItemId, setExpandedItemId] = useState<string | null>(null)
-    const [statusFilter, setStatusFilter] = useState<StatusFilter>('queue')
-    const [sortOption, setSortOption] = useState<SortOption>('added')
+    const [sortOption, setSortOption] = useState<SortOption>('manual')
+    const [activeDragId, setActiveDragId] = useState<string | null>(null)
     const [showSortMenu, setShowSortMenu] = useState(false)
     const [showListSettings, setShowListSettings] = useState(false)
     const [celebrationItem, setCelebrationItem] = useState<ListItem | null>(null)
@@ -1078,7 +1172,6 @@ export default function ListDetailPage() {
         const defaults = list ? getStatusLabels(list.type) : getStatusLabels('generic')
         const custom = list?.settings?.status_labels ?? {}
         return {
-            ...defaults,
             pending: custom.pending ?? defaults.pending,
             active: custom.active ?? defaults.active,
             completed: custom.completed ?? defaults.completed,
@@ -1148,11 +1241,9 @@ export default function ListDetailPage() {
         return () => document.removeEventListener('click', handler)
     }, [showSortMenu])
 
-    // Filter + sort items
+    // Search-filter + baseline sort
     const filteredItems = useMemo(() => {
         let items = displayItems
-
-        // Apply search filter
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase()
             items = items.filter(i =>
@@ -1161,22 +1252,19 @@ export default function ListDetailPage() {
                 i.metadata?.subtitle?.toLowerCase().includes(q)
             )
         }
-
-        // When status is disabled, show all items regardless of filter
-        if (!hasStatus) return sortItems(items, sortOption)
-        if (statusFilter === 'queue') {
-            // Queue view: active items pinned to top, then pending
-            const activeItems = sortItems(items.filter(i => i.status === 'active'), sortOption)
-            const pendingItems = sortItems(items.filter(i => i.status === 'pending' || i.status === 'abandoned'), sortOption)
-            return [...activeItems, ...pendingItems]
-        } else if (statusFilter !== 'all') {
-            items = items.filter(i => i.status === statusFilter)
-            return sortItems(items, sortOption)
-        }
         return sortItems(items, sortOption)
-    }, [displayItems, statusFilter, sortOption, hasStatus, searchQuery])
+    }, [displayItems, sortOption, searchQuery])
 
-    const inferredStatus = statusFilter === 'completed' ? 'completed' as const : 'pending' as const
+    // Group items into sections by status. Only used when the list has status tracking.
+    const sections = useMemo(() => {
+        const map: Record<SectionStatus, ListItem[]> = { pending: [], active: [], completed: [] }
+        filteredItems.forEach(item => {
+            map[sectionForItem(item.status)].push(item)
+        })
+        return map
+    }, [filteredItems])
+
+    const inferredStatus = 'pending' as const
 
     const handleAddItem = async (e?: React.FormEvent) => {
         e?.preventDefault()
@@ -1199,14 +1287,83 @@ export default function ListDetailPage() {
         await addListItem({ list_id: id, content: text.trim(), status: inferredStatus })
     }
 
-    const handleReorder = async (newItems: ListItem[]) => {
-        if (!id) return
-        await reorderItems(id, newItems.map(item => item.id))
-    }
-
     const handleStatusChange = useCallback((itemId: string, status: 'active' | 'completed' | 'pending') => {
         updateListItemStatus(itemId, status as any)
     }, [updateListItemStatus])
+
+    // Long-press to pick up on touch; small drag threshold on mouse to preserve clicks.
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+        useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 6 } }),
+    )
+
+    const handleDragStart = useCallback((e: DragStartEvent) => {
+        setActiveDragId(String(e.active.id))
+    }, [])
+
+    const handleDragEnd = useCallback(async (e: DragEndEvent) => {
+        setActiveDragId(null)
+        if (!id) return
+        const { active, over } = e
+        if (!over) return
+        const activeId = String(active.id)
+        const overId = String(over.id)
+        if (activeId === overId) return
+
+        const activeItem = displayItems.find(i => i.id === activeId)
+        if (!activeItem) return
+
+        // Determine target section — either explicit droppable section id, or infer from target item.
+        let targetSection: SectionStatus | null = null
+        if (overId.startsWith('section-')) {
+            const rest = overId.slice('section-'.length)
+            const parsed = rest.replace(/-empty$/, '') as SectionStatus
+            if (parsed === 'pending' || parsed === 'active' || parsed === 'completed') {
+                targetSection = parsed
+            }
+        } else {
+            const overItem = displayItems.find(i => i.id === overId)
+            if (overItem) targetSection = sectionForItem(overItem.status)
+        }
+        if (!targetSection) return
+
+        // If user reorders manually, switch sort view to manual so the change is visible.
+        if (sortOption !== 'manual') setSortOption('manual')
+
+        const sourceSection = sectionForItem(activeItem.status)
+
+        // Cross-section drop → update status first (optimistic via store)
+        if (hasStatus && sourceSection !== targetSection) {
+            const newStatus: ListItem['status'] = targetSection === 'completed' ? 'completed' : targetSection === 'active' ? 'active' : 'pending'
+            await updateListItemStatus(activeId, newStatus)
+        }
+
+        // Build the new flat order by inserting active at the overId position within the target section.
+        // Work against the currently displayed order (sort-applied).
+        const sorted = sortItems(displayItems, sortOption)
+        const sectionMap: Record<SectionStatus, ListItem[]> = { pending: [], active: [], completed: [] }
+        sorted.forEach(i => {
+            const sec = i.id === activeId ? targetSection! : sectionForItem(i.status)
+            if (i.id !== activeId) sectionMap[sec].push(i)
+        })
+
+        // Find insert index within target section
+        const targetIds = sectionMap[targetSection].map(i => i.id)
+        let insertAt = targetIds.length
+        if (!overId.startsWith('section-')) {
+            const idx = targetIds.indexOf(overId)
+            if (idx >= 0) insertAt = idx
+        }
+        sectionMap[targetSection].splice(insertAt, 0, activeItem)
+
+        const flatIds = [
+            ...sectionMap.pending,
+            ...sectionMap.active,
+            ...sectionMap.completed,
+        ].map(i => i.id)
+
+        await reorderItems(id, flatIds)
+    }, [id, displayItems, hasStatus, sortOption, reorderItems, updateListItemStatus])
 
     // Mark done -> show celebration
     const handleMarkDone = useCallback((item: ListItem) => {
@@ -1233,14 +1390,11 @@ export default function ListDetailPage() {
         })
     }, [celebrationItem, handleRate, addToast])
 
-    // Count per status tab
-    const counts = useMemo(() => ({
-        all: displayItems.length,
-        queue: displayItems.filter(i => i.status === 'active' || i.status === 'pending' || i.status === 'abandoned').length,
-        pending: displayItems.filter(i => i.status === 'pending').length,
-        active: displayItems.filter(i => i.status === 'active').length,
-        completed: displayItems.filter(i => i.status === 'completed').length,
-    }), [displayItems])
+    const sectionCounts = useMemo(() => ({
+        pending: sections.pending.length,
+        active: sections.active.length,
+        completed: sections.completed.length,
+    }), [sections])
 
     if (!list) {
         return (
@@ -1340,15 +1494,6 @@ export default function ListDetailPage() {
                             </AnimatePresence>
                         </div>
 
-                        {/* Reorder toggle */}
-                        <button
-                            onClick={() => setIsReordering(!isReordering)}
-                            className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all ${isReordering ? 'bg-brand-primary border-brand-primary text-[var(--brand-text-primary)]' : 'border-[var(--glass-surface-hover)] text-brand-text-muted hover:text-[var(--brand-text-primary)] hover:border-white/20'}`}
-                        >
-                            {isReordering ? <Check className="h-3 w-3" /> : <ListOrdered className="h-3 w-3" />}
-                            <span className="text-[10px] font-black uppercase tracking-widest">{isReordering ? 'Done' : 'Order'}</span>
-                        </button>
-
                         {/* List settings */}
                         <button
                             onClick={() => setShowListSettings(true)}
@@ -1360,44 +1505,8 @@ export default function ListDetailPage() {
                 </div>
                 {list.description && <p className="text-brand-text-muted max-w-xl mb-2">{list.description}</p>}
 
-                {/* Status Filter Tabs */}
-                {!isReordering && hasStatus && displayItems.length > 0 && (
-                    <div className="flex items-center gap-1 mt-3 overflow-x-auto pb-1 scrollbar-hide">
-                        {(['queue', 'completed', 'all'] as StatusFilter[]).map(tab => {
-                            const isActive = statusFilter === tab
-                            const count = counts[tab]
-                            return (
-                                <button
-                                    key={tab}
-                                    onClick={() => setStatusFilter(tab)}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full whitespace-nowrap transition-all flex-shrink-0"
-                                    style={{
-                                        backgroundColor: isActive ? `rgba(${rgb}, 0.15)` : 'var(--glass-surface)',
-                                        boxShadow: isActive
-                                            ? `inset 0 0 0 1px rgba(${rgb}, 0.35)`
-                                            : 'inset 0 0 0 1px var(--glass-surface)',
-                                        color: isActive ? `rgb(${rgb})` : 'rgba(255,255,255,0.35)'
-                                    }}
-                                >
-                                    <span className="text-[10px] font-black uppercase tracking-widest">{statusLabels[tab]}</span>
-                                    {count > 0 && (
-                                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-                                            style={{
-                                                backgroundColor: isActive ? `rgba(${rgb}, 0.2)` : 'var(--glass-surface)',
-                                                color: isActive ? `rgb(${rgb})` : 'rgba(255,255,255,0.25)'
-                                            }}>
-                                            {count}
-                                        </span>
-                                    )}
-                                </button>
-                            )
-                        })}
-                    </div>
-                )}
-
                 {/* Add Input */}
-                {!isReordering && (
-                    <div className="mt-4 mb-5 max-w-2xl">
+                <div className="mt-4 mb-5 max-w-2xl">
                         <AnimatePresence mode="wait">
                             {isVoiceMode ? (
                                 <motion.div
@@ -1457,11 +1566,10 @@ export default function ListDetailPage() {
                             )}
                         </AnimatePresence>
                     </div>
-                )}
             </div>
 
             {/* Search bar - show toggle when 10+ items, or when user has activated it */}
-            {!isReordering && displayItems.length > 0 && (
+            {displayItems.length > 0 && (
                 <div className="px-4 sm:px-6 lg:px-8 max-w-5xl">
                     {(showSearch || displayItems.length >= 10) && (
                         <div className="relative mb-4">
@@ -1498,90 +1606,136 @@ export default function ListDetailPage() {
                 </div>
             )}
 
-            {/* Items Grid */}
+            {/* Items Grid — sections per status, with long-press reorder */}
             <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-48 max-w-5xl">
-                <AnimatePresence mode="wait">
-                    {isReordering ? (
-                        <motion.div key="reorder-view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                            <Reorder.Group axis="y" values={displayItems} onReorder={handleReorder} className="space-y-2">
-                                {displayItems.map((item) => (
-                                    <Reorder.Item
+                {filteredItems.length === 0 && loading && !hasCachedItems ? (
+                    <div className="flex flex-wrap gap-3">
+                        {[1, 2, 3, 4].map((i) => (
+                            <div key={i} className="shimmer h-48 rounded-2xl" style={{ width: 'calc(50% - 6px)' }} />
+                        ))}
+                    </div>
+                ) : filteredItems.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-40 text-zinc-600">
+                        <p className="text-brand-text-muted font-medium text-lg mb-1">
+                            {searchQuery.trim() ? 'No matches.' : 'Nothing in here yet.'}
+                        </p>
+                        {!searchQuery.trim() && (
+                            <p className="text-sm text-brand-text-muted opacity-60">Start adding things above.</p>
+                        )}
+                    </div>
+                ) : list.type === 'quote' ? (
+                    <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragStart={handleDragStart}
+                        onDragEnd={handleDragEnd}
+                    >
+                        <SortableContext items={filteredItems.map(i => i.id)} strategy={rectSortingStrategy}>
+                            <div className="flex flex-col gap-8 max-w-3xl mx-auto">
+                                {filteredItems.map((item) => (
+                                    <SortableQuote
                                         key={item.id}
-                                        value={item}
-                                        className="flex items-center gap-4 bg-zinc-900/40 p-4 rounded-xl cursor-grab active:cursor-grabbing hover:bg-zinc-900/60 transition-all"
-                                        style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface)' }}
-                                    >
-                                        <GripVertical className="h-4 w-4 text-zinc-600" />
-                                        {item.metadata?.image && (
-                                            <div className="h-10 w-10 rounded-lg overflow-hidden shrink-0" style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface-hover)' }}>
-                                                <OptimizedImage
-                                                    src={item.metadata.image}
-                                                    alt={item.content}
-                                                    className="w-full h-full"
-                                                    aspectRatio="1/1"
-                                                    priority={false}
-                                                />
-                                            </div>
-                                        )}
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-[var(--brand-text-primary)] font-bold uppercase tracking-tight truncate">{item.content}</p>
-                                            {item.metadata?.subtitle && (
-                                                <p className="text-[10px] text-brand-text-muted italic truncate">{item.metadata.subtitle}</p>
-                                            )}
-                                        </div>
-                                        {item.user_rating && (
-                                            <StarRating rating={item.user_rating} readonly size="sm" />
-                                        )}
-                                    </Reorder.Item>
+                                        item={item}
+                                        isExpanded={expandedItemId === item.id}
+                                        onItemClick={(itemId) => setExpandedItemId(expandedItemId === itemId ? null : itemId)}
+                                        onDelete={handleDeleteItem}
+                                    />
                                 ))}
-                            </Reorder.Group>
-                        </motion.div>
-                    ) : (
-                        <motion.div key="masonry-view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                            {filteredItems.length > 0 ? (
-                                <MasonryListGrid
-                                    key={`${sortOption}-${statusFilter}`}
-                                    items={filteredItems}
-                                    listType={list.type}
-                                    expandedItemId={expandedItemId}
-                                    onItemClick={(itemId) => setExpandedItemId(expandedItemId === itemId ? null : itemId)}
-                                    onDelete={handleDeleteItem}
-                                    onStatusChange={handleStatusChange}
-                                    onRate={handleRate}
-                                    onMarkDone={handleMarkDone}
-                                    rgb={rgb}
-                                    thoughtCapturedIds={thoughtCapturedIds}
-                                    hasStatus={hasStatus}
-                                    coverOverrides={coverOverrides}
-                                />
-                            ) : loading && !hasCachedItems ? (
-                                <div className="flex flex-wrap gap-3">
-                                    {[1, 2, 3, 4].map((i) => (
-                                        <div key={i} className="shimmer h-48 rounded-2xl" style={{ width: 'calc(50% - 6px)' }} />
-                                    ))}
-                                </div>
-                            ) : statusFilter !== 'all' ? (
-                                <div className="flex flex-col items-center justify-center py-24 text-zinc-600">
-                                    <p className="text-brand-text-muted font-medium text-base mb-1">Nothing here yet.</p>
-                                    <p className="text-sm text-zinc-600">
-                                        No items with status "{statusLabels[statusFilter]}"
-                                    </p>
-                                    <button
-                                        onClick={() => setStatusFilter('all')}
-                                        className="mt-4 text-xs font-bold uppercase tracking-widest text-brand-text-muted hover:text-[var(--brand-text-primary)] transition-colors"
+                            </div>
+                        </SortableContext>
+                        <DragOverlay dropAnimation={null} />
+                    </DndContext>
+                ) : !hasStatus ? (
+                    <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragStart={handleDragStart}
+                        onDragEnd={handleDragEnd}
+                    >
+                        <SortableContext items={filteredItems.map(i => i.id)} strategy={rectSortingStrategy}>
+                            <MasonryListGrid
+                                items={filteredItems}
+                                listType={list.type}
+                                expandedItemId={expandedItemId}
+                                onItemClick={(itemId) => setExpandedItemId(expandedItemId === itemId ? null : itemId)}
+                                onDelete={handleDeleteItem}
+                                onStatusChange={handleStatusChange}
+                                onRate={handleRate}
+                                onMarkDone={handleMarkDone}
+                                rgb={rgb}
+                                thoughtCapturedIds={thoughtCapturedIds}
+                                hasStatus={hasStatus}
+                                coverOverrides={coverOverrides}
+                            />
+                        </SortableContext>
+                        <DragOverlay dropAnimation={null} />
+                    </DndContext>
+                ) : (
+                    <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragStart={handleDragStart}
+                        onDragEnd={handleDragEnd}
+                    >
+                        <div className="flex flex-col gap-10">
+                            {SECTION_ORDER.map(status => {
+                                const sectionItems = sections[status]
+                                if (sectionItems.length === 0 && status !== 'pending') return null
+                                return (
+                                    <SectionBlock
+                                        key={status}
+                                        status={status}
+                                        label={statusLabels[status]}
+                                        count={sectionCounts[status]}
+                                        rgb={rgb}
                                     >
-                                        Show all 
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="flex flex-col items-center justify-center py-40 text-zinc-600">
-                                    <p className="text-brand-text-muted font-medium text-lg mb-1">Nothing in here yet.</p>
-                                    <p className="text-sm text-brand-text-muted opacity-60">Start adding things above.</p>
-                                </div>
-                            )}
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                                        <SortableContext items={sectionItems.map(i => i.id)} strategy={rectSortingStrategy}>
+                                            {sectionItems.length > 0 ? (
+                                                <MasonryListGrid
+                                                    items={sectionItems}
+                                                    listType={list.type}
+                                                    expandedItemId={expandedItemId}
+                                                    onItemClick={(itemId) => setExpandedItemId(expandedItemId === itemId ? null : itemId)}
+                                                    onDelete={handleDeleteItem}
+                                                    onStatusChange={handleStatusChange}
+                                                    onRate={handleRate}
+                                                    onMarkDone={handleMarkDone}
+                                                    rgb={rgb}
+                                                    thoughtCapturedIds={thoughtCapturedIds}
+                                                    hasStatus={hasStatus}
+                                                    coverOverrides={coverOverrides}
+                                                />
+                                            ) : (
+                                                <EmptySectionDropzone status={status} label={statusLabels[status]} rgb={rgb} />
+                                            )}
+                                        </SortableContext>
+                                    </SectionBlock>
+                                )
+                            })}
+                        </div>
+                        <DragOverlay dropAnimation={null}>
+                            {activeDragId ? (() => {
+                                const item = displayItems.find(i => i.id === activeDragId)
+                                return item ? (
+                                    <div className="rotate-1 scale-105 opacity-90">
+                                        <StandardItemCard
+                                            item={item}
+                                            listType={list.type}
+                                            isExpanded={false}
+                                            onItemClick={() => {}}
+                                            onDelete={() => {}}
+                                            onRate={() => {}}
+                                            onMarkDone={() => {}}
+                                            rgb={rgb}
+                                            hasStatus={hasStatus}
+                                            coverOverride={coverOverrides[item.id]}
+                                        />
+                                    </div>
+                                ) : null
+                            })() : null}
+                        </DragOverlay>
+                    </DndContext>
+                )}
             </div>
 
             {confirmDialog}
