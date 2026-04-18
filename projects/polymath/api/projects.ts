@@ -1640,8 +1640,11 @@ Return JSON only:
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  // PROJECTS CRUD (default)
-  if (req.method === 'GET') {
+  // PROJECTS CRUD (default) — only runs when no `resource` is specified.
+  // Without this guard, POSTs like /api/projects?resource=evolve fall through
+  // to the create-project handler (empty body → NOT NULL violation → 500
+  // "Failed to create project") before reaching their resource branch below.
+  if (!resource && req.method === 'GET') {
     try {
       const { id, include_notes, filter } = req.query
 
@@ -1711,7 +1714,7 @@ Return JSON only:
     }
   }
 
-  if (req.method === 'POST') {
+  if (!resource && req.method === 'POST') {
     try {
       const projectData = {
         ...req.body,
@@ -1785,7 +1788,7 @@ Return JSON only:
     }
   }
 
-  if (req.method === 'PUT' || req.method === 'PATCH') {
+  if (!resource && (req.method === 'PUT' || req.method === 'PATCH')) {
     try {
       const projectId = req.query.id as string
 
@@ -1905,7 +1908,7 @@ Return JSON only:
     }
   }
 
-  if (req.method === 'DELETE') {
+  if (!resource && req.method === 'DELETE') {
     try {
       const { id } = req.query
 
