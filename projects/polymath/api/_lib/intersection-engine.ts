@@ -470,7 +470,7 @@ Be terse — long fields will get truncated.`
  * last complete object and close the array. Better to keep N-1 valid candidates
  * than throw and lose them all.
  */
-function parseCandidatesJSON(raw: string): any[] {
+export function parseCandidatesJSON(raw: string): any[] {
   try {
     const parsed = JSON.parse(raw)
     return Array.isArray(parsed) ? parsed : []
@@ -697,7 +697,7 @@ function buildFeedbackPromptBlock(feedback: PriorFeedback): string {
  *
  * Used as fallback when AI discovery fails, and as the base for classicIntersections.
  */
-function embeddingBasedDiscovery(
+export function embeddingBasedDiscovery(
   projects: ProjectInput[],
   memories: MemoryInput[],
   articles: ArticleInput[],
