@@ -205,8 +205,13 @@ export function InlineGuide({
           projectMotivation: project.metadata?.motivation,
           projectGoal: project.metadata?.end_goal,
           tasks: tasks.map(t => ({
-            id: t.id, text: t.text, done: t.done,
-            is_ai_suggested: t.is_ai_suggested, task_type: t.task_type,
+            id: t.id,
+            text: t.text,
+            done: t.done,
+            is_ai_suggested: t.is_ai_suggested,
+            ai_reasoning: t.ai_reasoning,
+            task_type: t.task_type,
+            estimated_minutes: t.estimated_minutes,
           })),
           message,
           history: getApiHistory(),
@@ -398,20 +403,25 @@ export function InlineGuide({
                           return (
                             <div
                               key={key}
-                              className="flex items-center gap-3 px-3 py-3 rounded-xl"
+                              className="flex items-start gap-3 px-3 py-3 rounded-xl"
                               style={{
                                 background: destructive ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.04)',
                                 border: `1px solid ${destructive ? 'rgba(239,68,68,0.25)' : 'rgba(255,255,255,0.1)'}`,
                               }}
                             >
-                              <OpIcon className="h-4 w-4 flex-shrink-0" style={{ color: destructive ? 'rgb(248,113,113)' : 'var(--brand-text-secondary)' }} />
-                              <div className="flex-1 min-w-0">
+                              <OpIcon className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: destructive ? 'rgb(248,113,113)' : 'var(--brand-text-secondary)' }} />
+                              <div className="flex-1 min-w-0 space-y-0.5">
                                 <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: destructive ? 'rgb(248,113,113)' : 'var(--brand-text-secondary)' }}>
                                   {label}
                                 </p>
-                                <p className="text-[13px] leading-snug truncate text-[var(--brand-text-primary)]">
+                                <p className="text-[13px] leading-snug text-[var(--brand-text-primary)]">
                                   {preview}
                                 </p>
+                                {op.reasoning && (
+                                  <p className="text-[11px] leading-snug italic pt-0.5" style={{ color: 'var(--brand-text-muted)', opacity: 0.75 }}>
+                                    {op.reasoning}
+                                  </p>
+                                )}
                               </div>
                               {resolved ? (
                                 <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold" style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--brand-text-muted)' }}>
@@ -463,6 +473,11 @@ export function InlineGuide({
                         <p className="text-[13px] italic leading-snug font-serif" style={{ color: 'var(--brand-text-primary)', opacity: 0.75 }}>
                           "{msg.pendingGoal.newGoal}"
                         </p>
+                        {msg.pendingGoal.reasoning && (
+                          <p className="text-[11px] leading-snug" style={{ color: 'var(--brand-text-muted)', opacity: 0.7 }}>
+                            {msg.pendingGoal.reasoning}
+                          </p>
+                        )}
                         {msg.resolvedGoal ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium" style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--brand-text-secondary)', opacity: 0.4 }}>
                             <Check className="h-3 w-3" /> Updated

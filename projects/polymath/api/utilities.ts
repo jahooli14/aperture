@@ -1195,12 +1195,15 @@ async function handleSessionBrief(req: VercelRequest, res: VercelResponse) {
     ? `RECENTLY COMPLETED (last 7 days):\n${recentCompletionTexts.map(t => `✓ ${t}`).join('\n')}`
     : ''
 
-  const prompt = `You are a project coach for "${project.title}". Write the opening message someone sees when they open this project. Your job is to move them closer to finishing.
+  const hasGoal = !!project.metadata?.end_goal
+  const hasTasks = totalTasks > 0
+
+  const prompt = `You are the finish-line coach for the project "${project.title}". Write the opening message someone sees when they open this project. Your job is to move them closer to DONE.
 
 PROJECT: ${project.title}
 ${project.description ? `DESCRIPTION: ${project.description}` : ''}
 ${project.metadata?.motivation ? `WHY: ${project.metadata.motivation}` : ''}
-${project.metadata?.end_goal ? `FINISH LINE: ${project.metadata.end_goal}` : ''}
+${project.metadata?.end_goal ? `FINISH LINE: ${project.metadata.end_goal}` : 'FINISH LINE: NOT SET'}
 
 PHASE: ${phase} (${SESSION_BRIEF_PHASE_LABELS[phase]})
 MOMENTUM: ${momentum}
@@ -1210,30 +1213,42 @@ PROGRESS: ${completedTasks}/${totalTasks} tasks (${progressPercent}%)
 ${taskSummary}
 ${completionSummary}
 
-Write three things:
+═══════════════════════════════════════════════════════════════════
+STATE-SPECIFIC INSTRUCTIONS — follow exactly
+═══════════════════════════════════════════════════════════════════
 
-1. "greeting" — 1-2 sentences in plain everyday English. Like a friend checking in, not a productivity robot. Reference something concrete: what they last did, what's next, or how long it's been. Keep it warm but direct.
-   - shaping: Point out what's missing (no goal? no tasks?) and nudge them to define it
-   - building: Name the next task and tell them to do it
-   - closing: Tell them how close they are and what's left
-   - stale: Be honest about the gap, suggest one tiny thing they could do right now
+${!hasGoal ? `THIS PROJECT HAS NO FINISH LINE SET. That's the only thing that matters right now.
+- greeting: Name the problem directly (2 sentences max). "${project.title} doesn't have a finish line yet — so we can't tell when it's done. Let's fix that first."
+- focusSuggestion: "Define what 'done' looks like for ${project.title}."
+- proactiveQuestion: A concrete, grounded question that pulls on what a finished version would look like. Choose the one that fits best:
+    • "When you picture this finished — what are you actually looking at? A shipped site? A working prototype? A published piece?"
+    • "Is this done when YOU can use it, or when someone else can?"
+    • "What's the one artifact that'd let you happily close the tab on this?"
+  Pick ONE question. Don't stack them.
+` : !hasTasks ? `FINISH LINE IS SET BUT NO TASKS YET.
+- greeting: Reference the finish line by name. "Finish line is '[goal]'. Nothing on the task list yet — first move?"
+- focusSuggestion: Name the single most obvious first step given the finish line.
+- proactiveQuestion: "What's the very first thing you need to do to get to '[finish line]'?"
+` : phase === 'stale' ? `THEY'VE BEEN AWAY FOR ${daysSinceActive} DAYS.
+- greeting: Acknowledge the gap honestly, reference the finish line, suggest the smallest thing they could do right now.
+- focusSuggestion: One tiny concrete thing — not "get back into it" but e.g. "Open the file and read the last paragraph you wrote."
+- proactiveQuestion: "What's actually blocking you from [specific next task]?"
+` : phase === 'closing' ? `HOME STRETCH — ${progressPercent}% done.
+- greeting: Tell them how close they are, name what's left.
+- focusSuggestion: Name the specific remaining task most likely to close this out.
+- proactiveQuestion: "What's the LAST thing standing between you and done?"
+` : `BUILDING PHASE — tasks in flight toward a set finish line.
+- greeting: Reference what they last did or the next obvious task by name.
+- focusSuggestion: Name the specific task to do this session.
+- proactiveQuestion: ONE practical question. Examples: "Is [next task] actually the right next move, or are you avoiding [harder task]?" / "Does [next task] still fit the finish line, or has that changed?"
+`}
 
-2. "focusSuggestion" — One plain sentence. The ONE thing to do this session. Name the specific task. "Finish writing the outreach message" not "Continue working on communication tasks".
-
-3. "proactiveQuestion" — ONE practical question that drives toward the finish line. Not philosophical. Not abstract. Think "have you actually messaged those 10 people yet?" not "how will you frame the request to ensure alignment with your vision?"
-   - No end goal? → "What would the finished version of this actually look like?"
-   - No tasks? → "What's the first real thing you need to do?"
-   - Stuck? → "What's actually stopping you from doing [next task]?"
-   - Building? → "Is [next task] actually the right next move, or are you avoiding something harder?"
-   - Closing? → "What's the last thing standing between you and done?"
-   ALWAYS reference specific tasks/goals by name. Never be vague.
-
-Rules:
-- Plain English. Write like a real person, not a coach or an AI. No buzzwords.
-- No filler. No "Great to see you", "Welcome back", "Let's dive in".
-- Short sentences. Say it straight.
-- Always orient toward the finish line. Every message should make them think about getting this done.
-- Second person ("you").
+Rules for ALL states:
+- Plain everyday English. Write like a real person. No buzzwords, no coaching speak, no "as an AI".
+- No filler. No "Great to see you", "Welcome back", "Let's dive in", "Let's explore".
+- Short sentences. Say it straight. Second person ("you").
+- Always reference specific tasks or the finish line by name. Never be vague.
+- Ask ONE question, not two. Don't stack questions with "and".
 
 Return JSON only:
 {
