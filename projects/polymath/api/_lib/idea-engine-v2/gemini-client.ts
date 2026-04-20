@@ -125,6 +125,7 @@ RULES:
       generationConfig: {
         temperature: mode.temperature,
         maxOutputTokens: 500,
+        responseMimeType: 'application/json',
       },
       systemInstruction: 'You are a JSON API. Return only valid JSON with no additional text, explanations, or formatting.',
     });
@@ -220,6 +221,7 @@ RULES:
         // surprising, not safe extrapolations of the parent.
         temperature: 1.1,
         maxOutputTokens: 500,
+        responseMimeType: 'application/json',
       },
       systemInstruction:
         'You are a JSON API. Return only valid JSON with no additional text, explanations, or formatting.',
