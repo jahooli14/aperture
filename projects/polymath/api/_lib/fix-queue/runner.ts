@@ -57,23 +57,25 @@ async function executeAction(action: FixAction): Promise<void> {
   switch (action.type) {
     case 'send_email': {
       const resend = getResend()
-      await resend.emails.send({
+      const { error } = await resend.emails.send({
         from: FROM_EMAIL,
         to: action.to,
         subject: action.subject,
         html: formatEmailHtml(action.subject, action.body)
       })
+      if (error) throw new Error(`Resend: ${error.message ?? JSON.stringify(error)}`)
       break
     }
 
     case 'send_email_digest': {
       const resend = getResend()
-      await resend.emails.send({
+      const { error } = await resend.emails.send({
         from: FROM_EMAIL,
         to: action.to,
         subject: action.subject,
         html: formatEmailHtml(action.subject, action.items_query)
       })
+      if (error) throw new Error(`Resend: ${error.message ?? JSON.stringify(error)}`)
       break
     }
 
@@ -81,12 +83,13 @@ async function executeAction(action: FixAction): Promise<void> {
       const weather = await fetchWeather(action)
       const body = action.template.replace('{{weather}}', weather)
       const resend = getResend()
-      await resend.emails.send({
+      const { error } = await resend.emails.send({
         from: FROM_EMAIL,
         to: action.to,
         subject: action.subject,
         html: formatEmailHtml(action.subject, body)
       })
+      if (error) throw new Error(`Resend: ${error.message ?? JSON.stringify(error)}`)
       break
     }
 
@@ -122,12 +125,15 @@ interface WeatherData {
 async function fetchWeather(action: WeatherEmailAction): Promise<string> {
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${action.lat}&longitude=${action.lon}&current=temperature_2m,apparent_temperature,weather_code,precipitation,wind_speed_10m,relative_humidity_2m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code&timezone=Europe%2FLondon&forecast_days=1`
 
-  const resp = await fetch(url)
+  const resp = await fetch(url, { signal: AbortSignal.timeout(10000) })
   if (!resp.ok) return 'Weather data unavailable'
 
   const data = await resp.json() as Record<string, any>
-  const current = data.current
-  const daily = data.daily
+  const current = data?.current
+  const daily = data?.daily
+  if (!current || !daily || !Array.isArray(daily.temperature_2m_max)) {
+    return 'Weather data unavailable'
+  }
 
   const weather: WeatherData = {
     temperature: Math.round(current.temperature_2m),
@@ -141,7 +147,7 @@ async function fetchWeather(action: WeatherEmailAction): Promise<string> {
   const condition = weatherCodeToText(weather.weatherCode)
   const maxTemp = Math.round(daily.temperature_2m_max[0])
   const minTemp = Math.round(daily.temperature_2m_min[0])
-  const rainTotal = daily.precipitation_sum[0]
+  const rainTotal = daily.precipitation_sum?.[0] ?? 0
 
   const lines = [
     `${condition}, ${weather.temperature}°C (feels like ${weather.feelsLike}°C)`,
