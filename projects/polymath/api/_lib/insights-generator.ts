@@ -263,7 +263,9 @@ Return ONLY valid JSON — no markdown, no explanation:
 ]`
 
   try {
-    const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
+    // Pro: shadow-project + collision detection reads the whole corpus
+    // (memories + articles + projects + list items) and is debounced to 10min.
+    const model = genAI.getGenerativeModel({ model: MODELS.PRO })
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: { responseMimeType: 'application/json' },
@@ -290,7 +292,6 @@ Return ONLY valid JSON — no markdown, no explanation:
 
     // Archive previous insights before overwriting
     if (previousInsights.length > 0 && cached?.generated_at) {
-      Promise.resolve(
       supabase
         .from('synthesis_insights_history')
         .insert({
@@ -299,7 +300,9 @@ Return ONLY valid JSON — no markdown, no explanation:
           generated_at: cached.generated_at,
           item_count: memories.length + articles.length + projects.length + listItems.length,
         })
-    ).catch(() => {}) // Non-critical
+        .then(({ error }) => {
+          if (error) console.error('[insights-generator] Failed to archive previous insights:', error)
+        })
     }
 
     // Upsert — preserve feedback
