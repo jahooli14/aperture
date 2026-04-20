@@ -12,6 +12,7 @@ import { useFocusedProjects } from '../../stores/useProjectStore'
 import { useFocusStore } from '../../stores/useFocusStore'
 import { getTheme } from '../../lib/projectTheme'
 import { haptic } from '../../utils/haptics'
+import { useToast } from '../ui/toast'
 
 const SWIPE_THRESHOLD = 50
 const DURATION_KEY = 'polymath-power-hour-duration'
@@ -31,6 +32,7 @@ export function KeepGoingCarousel() {
   const navigate = useNavigate()
   const projects = useFocusedProjects()
   const startSession = useFocusStore(s => s.startSession)
+  const { addToast } = useToast()
 
   const [idx, setIdx] = useState(0)
   const [direction, setDirection] = useState(1)
@@ -85,7 +87,6 @@ export function KeepGoingCarousel() {
     try {
       const plan = sessionPlans[projectId]
       if (plan) {
-        // Build task list from the cached plan
         const tasks = [
           ...(plan.ignition_tasks || []).map((t: any, i: number) => ({ id: `ign-${i}`, text: t.text })),
           ...(plan.checklist_items || []).map((t: any, i: number) => ({ id: `core-${i}`, text: t.text })),
@@ -97,29 +98,50 @@ export function KeepGoingCarousel() {
         }
       }
 
-      // Fallback: fetch fresh plan
       const duration = Number(localStorage.getItem(DURATION_KEY)) || 60
       const res = await fetch(`/api/power-hour?projectId=${projectId}&duration=${duration}`)
-      if (res.ok) {
-        const data = await res.json()
-        const task = data.tasks?.[0]
-        if (task) {
-          const tasks = [
-            ...(task.ignition_tasks || []).map((t: any, i: number) => ({ id: `ign-${i}`, text: t.text })),
-            ...(task.checklist_items || []).map((t: any, i: number) => ({ id: `core-${i}`, text: t.text })),
-            ...(task.shutdown_tasks || []).map((t: any, i: number) => ({ id: `shut-${i}`, text: t.text })),
-          ]
-          if (tasks.length > 0) {
-            startSession(projectId, tasks)
-            return
-          }
+
+      if (!res.ok) {
+        // authFetch will sign the user out on an unrecoverable 401, so don't
+        // toast that case — the app will redirect to sign-in on its own.
+        if (res.status !== 401) {
+          const body = await res.json().catch(() => ({}))
+          addToast({
+            title: "Couldn't plan session",
+            description: body.error || `Power Hour API returned ${res.status}`,
+            variant: 'destructive',
+            action: { label: 'Open project', onClick: () => navigate(`/projects/${projectId}`) },
+          })
         }
+        return
       }
 
-      // Last fallback: navigate to project page
-      navigate(`/projects/${projectId}`)
-    } catch {
-      navigate(`/projects/${projectId}`)
+      const data = await res.json()
+      const task = data.tasks?.[0]
+      const tasks = task ? [
+        ...(task.ignition_tasks || []).map((t: any, i: number) => ({ id: `ign-${i}`, text: t.text })),
+        ...(task.checklist_items || []).map((t: any, i: number) => ({ id: `core-${i}`, text: t.text })),
+        ...(task.shutdown_tasks || []).map((t: any, i: number) => ({ id: `shut-${i}`, text: t.text })),
+      ] : []
+
+      if (tasks.length > 0) {
+        startSession(projectId, tasks)
+      } else {
+        addToast({
+          title: "Couldn't plan session",
+          description: 'No tasks were generated for this project.',
+          variant: 'destructive',
+          action: { label: 'Open project', onClick: () => navigate(`/projects/${projectId}`) },
+        })
+      }
+    } catch (err) {
+      console.error('[KeepGoingCarousel] start session failed:', err)
+      addToast({
+        title: "Couldn't plan session",
+        description: err instanceof Error ? err.message : 'Unexpected error',
+        variant: 'destructive',
+        action: { label: 'Open project', onClick: () => navigate(`/projects/${projectId}`) },
+      })
     } finally {
       setLoadingSession(null)
     }

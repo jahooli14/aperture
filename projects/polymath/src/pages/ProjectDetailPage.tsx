@@ -184,10 +184,13 @@ export function ProjectDetailPage() {
     } catch (error) {
       console.warn('[ProjectDetail] Fetch failed:', error)
 
-      // Only show "Offline" toast if we actually have data to show
+      // Only toast if we have cached data to show. Distinguish a real offline
+      // state from a server / auth failure so the user isn't told they're
+      // offline when they aren't.
       if (project) {
+        const offline = typeof navigator !== 'undefined' && !navigator.onLine
         addToast({
-          title: 'Offline',
+          title: offline ? 'Offline' : "Couldn't refresh",
           description: 'Showing cached project content',
           variant: 'default',
         })
