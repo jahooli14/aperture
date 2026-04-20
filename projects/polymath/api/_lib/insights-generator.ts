@@ -264,7 +264,10 @@ Return ONLY valid JSON — no markdown, no explanation:
 
   try {
     const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
-    const result = await model.generateContent(prompt)
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: 'application/json' },
+    })
     const text = result.response.text()
 
     let cleanedText = text.trim()

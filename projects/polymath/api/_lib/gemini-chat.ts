@@ -191,5 +191,11 @@ Output as JSON array:
     responseFormat: 'json'
   })
 
-  return JSON.parse(response)
+  try {
+    const parsed = JSON.parse(response)
+    return Array.isArray(parsed) ? parsed : []
+  } catch (e) {
+    console.error('[Gemini Chat] generateBatchReasoning: failed to parse response', e)
+    return []
+  }
 }

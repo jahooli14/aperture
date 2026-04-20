@@ -330,7 +330,10 @@ Rules: Name actual titles. No generic observations. No hedging. Write like someo
 
         let responseText = ''
         try {
-          const result = await model.generateContent(analysisPrompt)
+          const result = await model.generateContent({
+            contents: [{ role: 'user', parts: [{ text: analysisPrompt }] }],
+            generationConfig: { responseMimeType: 'application/json' },
+          })
           responseText = result.response.text()
         } catch (apiError: any) {
           console.error('[connections] Gemini API Error during analyze:', apiError)
@@ -933,7 +936,10 @@ Be specific: mention actual shared concepts. Do not say "both are about X".`
 
         let reasonings: Array<{ reason: string; type: string }> = []
         try {
-          const result = await model.generateContent(prompt)
+          const result = await model.generateContent({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: 'application/json' },
+          })
           const text = result.response.text()
           const match = text.match(/\[[\s\S]*?\]/)
           if (match) reasonings = JSON.parse(match[0])

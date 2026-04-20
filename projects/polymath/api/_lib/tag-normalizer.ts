@@ -255,7 +255,10 @@ export async function identifyTagMerges(): Promise<any[]> {
   ]`
 
   try {
-    const result = await model.generateContent(prompt)
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: 'application/json' },
+    })
     const text = result.response.text()
     const jsonMatch = text.match(/[\[][\s\S]*[/\]]/)
     if (!jsonMatch) return []

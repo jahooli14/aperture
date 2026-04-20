@@ -62,7 +62,10 @@ export async function getCohesiveSummary(userId: string): Promise<CohesiveSummar
   `
 
   try {
-    const result = await model.generateContent(prompt)
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: 'application/json' },
+    })
     const text = result.response.text()
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     return jsonMatch ? JSON.parse(jsonMatch[0]) : { overview: "Keeping track of your polymath journey.", flows: [] }
