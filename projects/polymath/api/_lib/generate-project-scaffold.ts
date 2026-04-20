@@ -76,6 +76,7 @@ Return ONLY valid JSON (no markdown, no code blocks):
     generationConfig: {
       temperature: 0.7,
       maxOutputTokens: 2048,
+      responseMimeType: 'application/json',
     }
   })
 
@@ -143,6 +144,7 @@ Return ONLY valid JSON (no markdown, no code blocks):
     generationConfig: {
       temperature: 0.8,
       maxOutputTokens: 2048,
+      responseMimeType: 'application/json',
     }
   })
 

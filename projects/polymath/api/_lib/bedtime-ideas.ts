@@ -65,7 +65,10 @@ export async function generateBreakPrompts(userId: string): Promise<BedtimePromp
 
   try {
         const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
-    const result = await model.generateContent(prompt)
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: 'application/json' },
+    })
     const text = result.response.text()
     const jsonMatch = text.match(/[\[][\s\S]*[\]]/)
     const prompts = jsonMatch ? JSON.parse(jsonMatch[0]) : []
@@ -358,7 +361,10 @@ Return JSON array:
   }
 ]`
 
-  const result = await model.generateContent(prompt)
+  const result = await model.generateContent({
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    generationConfig: { responseMimeType: 'application/json' },
+  })
   const text = result.response.text()
 
   const jsonMatch = text.match(/[\[][\s\S]*[\]]/) // Corrected escape for regex
@@ -490,7 +496,10 @@ Return JSON array:
 ]`
 
   try {
-    const result = await model.generateContent(prompt)
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: 'application/json' },
+    })
     const text = result.response.text()
     const jsonMatch = text.match(/[\[][\s\S]*[\]]/)
     return jsonMatch ? JSON.parse(jsonMatch[0]) : []
@@ -527,7 +536,10 @@ export async function generateMorningBriefing(userId: string): Promise<MorningBr
   }`
 
   try {
-    const result = await model.generateContent(prompt)
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: 'application/json' },
+    })
     const text = result.response.text()
     const jsonMatch = text.match(/\{[\s\S]*\}/) // Corrected escape for regex
     if (!jsonMatch) throw new Error('Invalid JSON')

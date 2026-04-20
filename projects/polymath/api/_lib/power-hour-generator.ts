@@ -393,7 +393,10 @@ ${durationMinutes === 25 ? `Pick 8 projects with clear 'Quick Wins'.` : `Priorit
 
 REMEMBER: The user is looking at this list to decide "What do I do?". Make it appealing, clear, and DOABLE.`
 
-    const result = await model.generateContent(prompt)
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: 'application/json' },
+    })
     const responseText = result.response.text()
     console.log('[PowerHour] Raw Gemini response (first 500 chars):', responseText.substring(0, 500))
     const jsonMatch = responseText.match(/\{[\s\S]*\}/)
