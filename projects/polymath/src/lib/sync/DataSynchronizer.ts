@@ -163,7 +163,7 @@ class DataSynchronizer {
           await useListStore.getState().fetchListItems(list.id)
         } else {
           try {
-            const response = await fetch(`/api/list-items?listId=${list.id}`)
+            const response = await fetch(`/api/lists?scope=items&listId=${list.id}`)
             if (response.ok) {
               const items = await response.json()
               await readingDb.cacheListItems(items)

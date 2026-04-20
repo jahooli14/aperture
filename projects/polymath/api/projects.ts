@@ -1311,7 +1311,7 @@ Return JSON only:
       try {
         const { data: existing, error: checkErr } = await supabase
           .from('weekly_intersections')
-          .select('expires_at')
+          .select('expires_at, intersections, insights')
           .eq('user_id', userId)
           .maybeSingle()
 
@@ -1330,9 +1330,16 @@ Return JSON only:
           throw checkErr
         }
 
+        // Only block regeneration if the existing row is both fresh AND has
+        // actual cards. An empty row (generator returned 0 cards, typically
+        // because projects/memories lacked embeddings at the time) should be
+        // re-seedable on demand so the user isn't stuck for a week.
         if (existing?.expires_at) {
           const expiresMs = new Date(existing.expires_at).getTime()
-          if (expiresMs > Date.now()) {
+          const intArr = (existing.intersections ?? []) as unknown[]
+          const insArr = (existing.insights ?? []) as unknown[]
+          const hasCards = intArr.length > 0 || insArr.length > 0
+          if (expiresMs > Date.now() && hasCards) {
             return res.status(409).json({
               error: 'Already have a fresh deck this week',
               code: 'already_seeded',
