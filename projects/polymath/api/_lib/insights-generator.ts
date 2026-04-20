@@ -20,6 +20,7 @@ import { MODELS } from './models.js'
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
 const DEBOUNCE_MS = 10 * 60 * 1000 // 10 minutes
+const DAILY_CAP = 3 // max Flash regenerations per user per UTC day
 
 interface InsightData {
   evidence?: string[]
@@ -67,6 +68,25 @@ export async function generateInsights(userId: string): Promise<GeneratedInsight
       console.log(`[insights-generator] Debounced — last ran ${Math.round(ageMs / 60000)}m ago`)
       return (cached.insights as GeneratedInsight[]) || []
     }
+  }
+
+  // Daily cap: the archive stores the previous snapshot's generated_at on every
+  // run, so counting history rows with today's generated_at gives (runs today
+  // − 1). Add 1 if the current cache is also from today to get the true count.
+  const startOfToday = new Date()
+  startOfToday.setUTCHours(0, 0, 0, 0)
+  const { count: archivedToday } = await supabase
+    .from('synthesis_insights_history')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .gte('generated_at', startOfToday.toISOString())
+  const cachedIsToday = cached?.generated_at
+    ? new Date(cached.generated_at).getTime() >= startOfToday.getTime()
+    : false
+  const runsToday = (cachedIsToday ? 1 : 0) + (archivedToday || 0)
+  if (runsToday >= DAILY_CAP) {
+    console.log(`[insights-generator] Daily cap reached (${runsToday}/${DAILY_CAP}) — skipping`)
+    return (cached?.insights as GeneratedInsight[]) || []
   }
 
   const previousInsights = (cached?.insights as GeneratedInsight[]) || []
@@ -263,9 +283,11 @@ Return ONLY valid JSON — no markdown, no explanation:
 ]`
 
   try {
-    // Pro: shadow-project + collision detection reads the whole corpus
-    // (memories + articles + projects + list items) and is debounced to 10min.
-    const model = genAI.getGenerativeModel({ model: MODELS.PRO })
+    // Flash: corpus-wide shadow-project + collision detection. Flash handles
+    // the prompt's anti-pattern rules reliably and is ~7x cheaper than Pro.
+    // Cost containment here matters because this runs fire-and-forget on every
+    // memory save (debounced to 10min + hard-capped to 3 runs/day below).
+    const model = genAI.getGenerativeModel({ model: MODELS.FLASH_CHAT })
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: { responseMimeType: 'application/json' },
