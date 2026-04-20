@@ -232,6 +232,23 @@ async function handleListItems(req: VercelRequest, res: VercelResponse) {
             return res.status(200).json(data)
         }
 
+        // POST ?scope=items&action=enrich&listId=... — re-run enrichment for an
+        // existing item. Used by the offline-sync path which inserts directly
+        // into Supabase (bypassing the normal POST that also enriches).
+        if (req.method === 'POST' && resource === 'enrich') {
+            const { itemId, content } = req.body as { itemId?: string; content?: string }
+            const targetListId = typeof listId === 'string' ? listId : undefined
+            if (!targetListId || !itemId || !content) {
+                return res.status(400).json({ error: 'listId, itemId and content required' })
+            }
+            try {
+                const metadata = await enrichListItem(userId, targetListId, itemId, content)
+                return res.status(200).json({ success: true, metadata })
+            } catch (err: any) {
+                return res.status(500).json({ error: err?.message || 'Enrichment failed' })
+            }
+        }
+
         if (req.method === 'POST') {
             const { content, metadata: initialMetadata } = req.body
             const targetListId = typeof listId === 'string' ? listId : req.body.list_id

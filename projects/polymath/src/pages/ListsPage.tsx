@@ -129,7 +129,7 @@ export default function ListsPage() {
                     }
 
                     // Only fetch from API if not in cache (fallback)
-                    const response = await fetch(`/api/list-items?listId=${list.id}&limit=50`)
+                    const response = await fetch(`/api/lists?scope=items&listId=${list.id}&limit=50`)
                     if (!response.ok) return null
 
                     const items = await response.json()

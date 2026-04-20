@@ -171,7 +171,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         try {
           const { data: existing, error: existingErr } = await supabase
             .from('weekly_intersections')
-            .select('expires_at')
+            .select('expires_at, intersections, insights')
             .eq('user_id', userId)
             .maybeSingle()
 
@@ -191,10 +191,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const nowMs = Date.now()
             const hasRow = !!existing
             const isExpired = existing?.expires_at && new Date(existing.expires_at).getTime() < nowMs
-            const shouldGenerate = isMonday || !hasRow || !!isExpired
+            const intArr = (existing?.intersections ?? []) as unknown[]
+            const insArr = (existing?.insights ?? []) as unknown[]
+            const isEmpty = hasRow && intArr.length === 0 && insArr.length === 0
+            const shouldGenerate = isMonday || !hasRow || !!isExpired || isEmpty
 
             if (shouldGenerate) {
-              const reason = isMonday ? 'weekly' : !hasRow ? 'first_seed' : 'expired'
+              const reason = isMonday ? 'weekly' : !hasRow ? 'first_seed' : isEmpty ? 'empty_retry' : 'expired'
               const result = await generateWeeklyIntersections(userId)
               results.tasks.intersections = {
                 success: true,
