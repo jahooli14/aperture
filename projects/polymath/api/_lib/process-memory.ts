@@ -2,8 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getSupabaseClient } from './supabase.js'
 import type { Entities, ExtractedMetadata } from '../../src/types'
 import { updateItemConnections } from './connection-logic.js'
-import { generateInsights, mergeGenesisInsights } from './insights-generator.js'
-import { detectProjectGenesis } from './project-genesis.js'
+import { detectProjectGenesis, mergeGenesisInsights } from './project-genesis.js'
 import { generateText } from './gemini-chat.js'
 import { MODELS } from './models.js'
 import { draftFix } from './fix-queue/drafter.js'
@@ -144,11 +143,9 @@ export async function processMemory(memoryId: string): Promise<void> {
       // Module not available — ignore
     }
 
-    // 7. Regenerate insights over all user data — fire-and-forget, never blocks processing
-    generateInsights(userId).catch(() => {}) // Non-critical
-
-    // 7b. Project genesis detection — find theme clusters with no active project
-    // Runs independently so it works even when insights are debounced
+    // 7. Project genesis detection — find theme clusters with no active project.
+    // Non-AI: pure theme clustering, writes 'opportunity' rows into
+    // synthesis_insights for the ItemInsightStrip to surface on reader/list pages.
     detectProjectGenesis(userId)
       .then(genesisInsights => mergeGenesisInsights(userId, genesisInsights))
       .catch(() => {}) // Non-critical

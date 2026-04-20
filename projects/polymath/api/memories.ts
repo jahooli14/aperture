@@ -8,7 +8,7 @@ import fs from 'fs'
 import { generateEmbedding, cosineSimilarity } from './_lib/gemini-embeddings.js'
 import { processMemory } from './_lib/process-memory.js'
 import { generateText } from './_lib/gemini-chat.js'
-import { generateInsights, getCachedInsights } from './_lib/insights-generator.js'
+import { getCachedInsights } from './_lib/project-genesis.js'
 import { generateCognitiveReplay } from './_lib/cognitive-replay.js'
 import { MODELS } from './_lib/models.js'
 import { CaptureMemoryBody, CaptureTitleResponse, validate, tryValidate } from './_lib/schemas.js'
@@ -265,33 +265,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // GET /api/memories?action=evolution  → return cached synthesis insights + shadow_project
-    // POST /api/memories?action=evolution → force-regenerate from all user data
+    // GET /api/memories?action=evolution → return cached insights (genesis-detected
+    // opportunities written by process-memory). No on-demand generation.
     if (action === 'evolution') {
       if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+      if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
       try {
-        if (req.method === 'GET') {
-          const cached = await getCachedInsights(userId)
-          return res.status(200).json({
-            insights: cached.insights,
-            shadow_project: cached.shadow_project,
-            generated_at: cached.generated_at,
-          })
-        }
-        if (req.method === 'POST') {
-          const all = await generateInsights(userId)
-          const shadow_project = all.find(i => i.type === 'shadow_project') ?? null
-          const insights = all.filter(i => i.type !== 'shadow_project')
-          return res.status(200).json({
-            insights,
-            shadow_project,
-            generated_at: new Date().toISOString(),
-          })
-        }
-        return res.status(405).json({ error: 'Method not allowed' })
+        const cached = await getCachedInsights(userId)
+        return res.status(200).json({
+          insights: cached.insights,
+          generated_at: cached.generated_at,
+        })
       } catch (error) {
         console.error('[memories:evolution] Error:', error)
-        return res.status(500).json({ error: 'Analysis failed', insights: [], shadow_project: null })
+        return res.status(500).json({ error: 'Read failed', insights: [] })
       }
     }
 

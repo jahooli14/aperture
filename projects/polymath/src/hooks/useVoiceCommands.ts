@@ -66,12 +66,6 @@ const createCommands = (navigate: any): VoiceCommand[] => [
     examples: ['go to constellation', 'show graph', 'open connections']
   },
   {
-    pattern: /(?:go to|open|show|navigate to|take me to)\s+(?:the\s+)?(?:insights?|analytics)/i,
-    action: () => navigate('/insights'),
-    description: 'Navigate to insights',
-    examples: ['go to insights', 'show analytics', 'open insights']
-  },
-  {
     pattern: /(?:go to|open|show|navigate to|take me to)\s+(?:the\s+)?(?:settings?|preferences)/i,
     action: () => navigate('/settings'),
     description: 'Navigate to settings',

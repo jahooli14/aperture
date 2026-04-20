@@ -6,8 +6,7 @@
  */
 
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { TrendingUp, Zap, AlertCircle, Lightbulb, ArrowRight, Route } from 'lucide-react'
+import { TrendingUp, Zap, AlertCircle, Lightbulb, Route } from 'lucide-react'
 import { useItemInsights } from '../hooks/useItemInsights'
 import { ConnectionPathPicker } from './connections/ConnectionPathPicker'
 import { ConnectionRevealOverlay } from './connections/ConnectionRevealOverlay'
@@ -35,7 +34,6 @@ const TYPE_COLOR = {
 }
 
 export function ItemInsightStrip({ title, themes, itemId, itemType }: ItemInsightStripProps) {
-  const navigate = useNavigate()
   const { insights, loaded } = useItemInsights(title, themes)
   const [showPathPicker, setShowPathPicker] = useState(false)
   const [pathTarget, setPathTarget] = useState<{ id: string; type: string; title: string } | null>(null)
@@ -49,10 +47,9 @@ export function ItemInsightStrip({ title, themes, itemId, itemType }: ItemInsigh
         const bg = TYPE_COLOR[insight.type] || 'rgba(255,255,255,0.05)'
 
         return (
-          <button
+          <div
             key={i}
-            onClick={() => navigate('/insights')}
-            className="w-full text-left p-3 rounded-xl transition-all hover:brightness-110 flex items-start gap-3"
+            className="w-full text-left p-3 rounded-xl flex items-start gap-3"
             style={{ background: bg }}
           >
             <Icon className="h-3.5 w-3.5 flex-shrink-0 mt-0.5 opacity-70" style={{ color: 'var(--brand-primary)' }} />
@@ -64,8 +61,7 @@ export function ItemInsightStrip({ title, themes, itemId, itemType }: ItemInsigh
                 {insight.description}
               </p>
             </div>
-            <ArrowRight className="h-3 w-3 flex-shrink-0 mt-1 opacity-30" style={{ color: 'var(--brand-primary)' }} />
-          </button>
+          </div>
         )
       })}
 

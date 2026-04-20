@@ -10,12 +10,31 @@
  * 2. Velocity spikes: a theme that has appeared more in the last 14 days
  *    than in the prior 46 days — a signal that something is heating up.
  *
- * Results are returned as GeneratedInsight[] with type 'opportunity' and
- * merged fire-and-forget into synthesis_insights via mergeGenesisInsights.
+ * Results are written as GeneratedInsight[] rows into synthesis_insights so the
+ * ItemInsightStrip on reader/list pages can surface them.
  */
 
 import { getSupabaseClient } from './supabase.js'
-import type { GeneratedInsight } from './insights-generator.js'
+
+interface InsightData {
+  evidence?: string[]
+  recommendation?: string
+  how_long?: string
+  project_name?: string
+  [key: string]: unknown
+}
+
+export interface GeneratedInsight {
+  type: 'collision' | 'pattern' | 'evolution' | 'opportunity' | 'shadow_project'
+  title: string
+  description: string
+  data: InsightData
+  actionable: boolean
+  action?: string
+  is_new?: boolean
+  status?: 'new' | 'strengthened' | 'evolved' | 'persistent'
+  first_seen?: string
+}
 
 const LOOKBACK_DAYS = 60
 const VELOCITY_WINDOW_DAYS = 14
@@ -147,4 +166,65 @@ export async function detectProjectGenesis(userId: string): Promise<GeneratedIns
   }
 
   return insights
+}
+
+/**
+ * Upsert genesis insights into synthesis_insights, deduplicating by title.
+ * Creates the row if missing so the first-ever memory for a user still works.
+ */
+export async function mergeGenesisInsights(
+  userId: string,
+  genesisInsights: GeneratedInsight[]
+): Promise<void> {
+  if (genesisInsights.length === 0) return
+  const supabase = getSupabaseClient()
+
+  const { data } = await supabase
+    .from('synthesis_insights')
+    .select('insights')
+    .eq('user_id', userId)
+    .single()
+
+  const existing = (data?.insights as GeneratedInsight[]) || []
+  const existingTitles = new Set(existing.map(i => i.title.trim().toLowerCase()))
+
+  const toAdd = genesisInsights.filter(
+    i => !existingTitles.has(i.title.trim().toLowerCase())
+  )
+  if (toAdd.length === 0) return
+
+  const merged = [...existing, ...toAdd]
+
+  if (data) {
+    await supabase
+      .from('synthesis_insights')
+      .update({ insights: merged })
+      .eq('user_id', userId)
+  } else {
+    await supabase
+      .from('synthesis_insights')
+      .insert({ user_id: userId, insights: merged, generated_at: new Date().toISOString() })
+  }
+
+  console.log(`[project-genesis] Merged ${toAdd.length} genesis insight(s) for user ${userId}`)
+}
+
+/**
+ * Read cached insights from synthesis_insights for UI consumers.
+ */
+export async function getCachedInsights(userId: string): Promise<{
+  insights: GeneratedInsight[]
+  generated_at: string | null
+}> {
+  const supabase = getSupabaseClient()
+  const { data } = await supabase
+    .from('synthesis_insights')
+    .select('insights, generated_at')
+    .eq('user_id', userId)
+    .single()
+
+  return {
+    insights: (data?.insights as GeneratedInsight[]) || [],
+    generated_at: data?.generated_at || null,
+  }
 }
