@@ -443,8 +443,11 @@ node_ids: use the EXACT bracketed IDs from the list above. You may mix projects,
 Only return crossovers scoring 7+. Sort by non_obvious_score descending.
 Be terse — long fields will get truncated.`
 
+  // Pro: cross-project pattern discovery is the core synthesis step of this
+  // engine. Narration below (narrateClusters) stays on Flash — it only dresses
+  // up clusters Pro has already picked.
   const raw = await generateText(prompt, {
-    model: MODELS.FLASH_CHAT,
+    model: MODELS.PRO,
     responseFormat: 'json',
     temperature: 1.0,
     maxTokens: 8192,

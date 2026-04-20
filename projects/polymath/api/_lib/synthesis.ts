@@ -439,7 +439,9 @@ Return ONLY a JSON array:
   "isWildcard": false
 }]`
 
-  const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
+  // Pro: cross-source project suggestion is a high-stakes synthesis task.
+  // Runs on-demand / scheduled — not per memory — so the cost is bounded.
+  const model = genAI.getGenerativeModel({ model: MODELS.PRO })
   const result = await model.generateContent({
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     generationConfig: { responseMimeType: 'application/json' },

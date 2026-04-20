@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Brain, Users, Hash, Heart, Link2, ArrowRight, X } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { Brain, Users, Hash, Heart, Link2, X } from 'lucide-react'
 import { useJourneyStore } from '../../stores/useJourneyStore'
 
 interface ExtractionDetail {
@@ -17,7 +16,6 @@ interface ExtractionDetail {
 export function ExtractionSummary() {
   const [extraction, setExtraction] = useState<ExtractionDetail | null>(null)
   const [visible, setVisible] = useState(false)
-  const navigate = useNavigate()
   const { incrementDataPoints, onboardingCompletedAt } = useJourneyStore()
 
   useEffect(() => {
@@ -108,10 +106,7 @@ export function ExtractionSummary() {
             {extraction.bridgeInsight && (
               <>
                 <div className="h-px bg-[rgba(255,255,255,0.07)] my-2.5" />
-                <button
-                  onClick={(e) => { e.stopPropagation(); navigate('/insights') }}
-                  className="w-full text-left flex items-start gap-2 group"
-                >
+                <div className="w-full text-left flex items-start gap-2">
                   <div
                     className="flex-shrink-0 h-1.5 w-1.5 rounded-full mt-1.5"
                     style={{ backgroundColor: 'var(--brand-primary)', opacity: 0.7 }}
@@ -122,11 +117,7 @@ export function ExtractionSummary() {
                   >
                     {extraction.bridgeInsight}
                   </p>
-                  <ArrowRight
-                    className="w-3 h-3 flex-shrink-0 mt-0.5 opacity-0 group-hover:opacity-40 transition-opacity"
-                    style={{ color: 'var(--brand-primary)' }}
-                  />
-                </button>
+                </div>
               </>
             )}
           </div>
