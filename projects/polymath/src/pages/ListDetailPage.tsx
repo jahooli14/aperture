@@ -5,7 +5,7 @@ import { ArrowLeft, Send, Trash2, Mic, MicOff, Check, ChevronRight, Pencil, Star
 import {
     DndContext,
     DragOverlay,
-    PointerSensor,
+    MouseSensor,
     TouchSensor,
     useSensor,
     useSensors,
@@ -1296,10 +1296,13 @@ export default function ListDetailPage() {
         updateListItemStatus(itemId, status as any)
     }, [updateListItemStatus])
 
-    // Long-press to pick up on touch; small drag threshold on mouse to preserve clicks.
+    // Mouse: small distance threshold so clicks still work. Touch: long-press
+    // (350ms) so vertical scrolling doesn't get hijacked into a reorder drag.
+    // Using MouseSensor + TouchSensor (not PointerSensor) keeps those two
+    // activation rules from bleeding into each other on touch devices.
     const sensors = useSensors(
-        useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-        useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 6 } }),
+        useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+        useSensor(TouchSensor, { activationConstraint: { delay: 350, tolerance: 8 } }),
     )
 
     const handleDragStart = useCallback((e: DragStartEvent) => {

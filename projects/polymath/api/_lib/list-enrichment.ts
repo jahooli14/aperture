@@ -230,18 +230,32 @@ export async function enrichListItem(userId: string, listId: string, itemId: str
             stack: error?.stack?.split('\n').slice(0, 3).join('\n')
         })
 
-        // Set to failed so we don't keep spinner forever
+        // Flag the item as failed so the UI stops the spinner, but DO NOT
+        // overwrite the existing metadata — a mid-chain failure used to wipe
+        // any image/description the item already had from a previous
+        // successful enrichment. Merge the error into existing metadata
+        // instead.
         try {
             const supabase = getSupabaseClient()
+            const { data: existingRow } = await supabase
+                .from('list_items')
+                .select('metadata')
+                .eq('id', itemId)
+                .eq('user_id', userId)
+                .single()
+            const mergedMetadata = {
+                ...(existingRow?.metadata || {}),
+                enrichment_error: {
+                    message: error.message || 'Unknown error',
+                    errorType: error.name,
+                    timestamp: new Date().toISOString(),
+                },
+            }
             await supabase
                 .from('list_items')
                 .update({
                     enrichment_status: 'failed',
-                    metadata: {
-                        error: error.message || 'Unknown error',
-                        errorType: error.name,
-                        timestamp: new Date().toISOString()
-                    }
+                    metadata: mergedMetadata,
                 })
                 .eq('id', itemId)
                 .eq('user_id', userId)

@@ -129,7 +129,7 @@ async function processOperation(operation: QueuedOperation): Promise<boolean> {
         // This ensures AI enrichment happens when back online
         if (data) {
           try {
-            await fetch(`/api/list-items?listId=${data.list_id}&action=enrich`, {
+            await fetch(`/api/lists?scope=items&resource=enrich&listId=${data.list_id}`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ itemId: data.id, content: data.content })

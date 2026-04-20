@@ -26,9 +26,13 @@ interface IntersectionPayload {
   nodes?: Array<{ id: string; title: string; type: string }>
   crossover?: {
     crossover_title?: string
-    why_it_works?: string
-    concept?: string
+    the_pattern?: string
+    the_experiment?: string
     first_steps?: string[]
+    /** @deprecated — still read as fallback for cards cached before the schema change. */
+    why_it_works?: string
+    /** @deprecated — still read as fallback for cards cached before the schema change. */
+    concept?: string
   }
 }
 import { invalidateProjectCache } from './_lib/power-hour-cache.js'
@@ -1229,10 +1233,19 @@ Return JSON only:
 
         // Build the project record. Falls back gracefully if the card lacks
         // a crossover (the AI narration step can fail silently, leaving only
-        // `reason` and `nodes` populated).
+        // `reason` and `nodes` populated). Prefer the new field names; fall
+        // back to the old `why_it_works` / `concept` for cards cached before
+        // the prompt rewrite.
         const title = deriveCardTitle(card)
-        const description = card.crossover?.concept || card.reason || ''
-        const motivation = card.crossover?.why_it_works || ''
+        const description =
+          card.crossover?.the_experiment ||
+          card.crossover?.concept ||
+          card.reason ||
+          ''
+        const motivation =
+          card.crossover?.the_pattern ||
+          card.crossover?.why_it_works ||
+          ''
         const firstSteps = card.crossover?.first_steps ?? []
 
         const nowIso = new Date().toISOString()
@@ -1298,7 +1311,7 @@ Return JSON only:
       try {
         const { data: existing, error: checkErr } = await supabase
           .from('weekly_intersections')
-          .select('expires_at')
+          .select('expires_at, intersections, insights')
           .eq('user_id', userId)
           .maybeSingle()
 
@@ -1317,9 +1330,16 @@ Return JSON only:
           throw checkErr
         }
 
+        // Only block regeneration if the existing row is both fresh AND has
+        // actual cards. An empty row (generator returned 0 cards, typically
+        // because projects/memories lacked embeddings at the time) should be
+        // re-seedable on demand so the user isn't stuck for a week.
         if (existing?.expires_at) {
           const expiresMs = new Date(existing.expires_at).getTime()
-          if (expiresMs > Date.now()) {
+          const intArr = (existing.intersections ?? []) as unknown[]
+          const insArr = (existing.insights ?? []) as unknown[]
+          const hasCards = intArr.length > 0 || insArr.length > 0
+          if (expiresMs > Date.now() && hasCards) {
             return res.status(409).json({
               error: 'Already have a fresh deck this week',
               code: 'already_seeded',
