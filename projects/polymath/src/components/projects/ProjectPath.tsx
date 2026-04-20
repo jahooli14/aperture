@@ -43,7 +43,7 @@ const PHASES: PhaseConfig[] = [
     sublabel: 'Small moves to build momentum',
     icon: Flame,
     emptyPrompt: 'What\'s the smallest thing you could do in 10 minutes to start?',
-    accent: 'rgb(251,146,60)',
+    accent: '251,146,60',
   },
   {
     key: 'core',
@@ -51,7 +51,7 @@ const PHASES: PhaseConfig[] = [
     sublabel: 'Where the real building happens',
     icon: Hammer,
     emptyPrompt: 'What does the main effort look like?',
-    accent: 'rgb(var(--brand-primary-rgb))',
+    accent: 'var(--brand-primary-rgb)',
   },
   {
     key: 'shutdown',
@@ -59,7 +59,7 @@ const PHASES: PhaseConfig[] = [
     sublabel: 'Tying loose ends, shipping it',
     icon: Flag,
     emptyPrompt: 'How do you want to finish this session?',
-    accent: 'rgb(16,185,129)',
+    accent: '16,185,129',
   },
 ]
 
@@ -240,12 +240,12 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
               >
                 <PhaseIcon
                   className="h-4 w-4 flex-shrink-0"
-                  style={{ color: isActive ? phase.accent : 'var(--brand-text-muted)' }}
+                  style={{ color: isActive ? `rgb(${phase.accent})` : 'var(--brand-text-muted)' }}
                 />
 
                 <span
                   className="text-[12px] font-bold uppercase tracking-wider flex-1"
-                  style={{ color: isActive ? phase.accent : 'var(--brand-text-secondary)' }}
+                  style={{ color: isActive ? `rgb(${phase.accent})` : 'var(--brand-text-secondary)' }}
                 >
                   {phase.label}
                 </span>
@@ -313,11 +313,11 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
                               onClick={() => handleToggleTask(task.id)}
                               className="flex-shrink-0 h-5 w-5 rounded-lg flex items-center justify-center transition-all mt-0.5"
                               style={{
-                                border: `1.5px solid ${isNext ? `${phase.accent}40` : 'rgba(255,255,255,0.12)'}`,
-                                background: isNext ? `${phase.accent}08` : 'transparent',
+                                border: `1.5px solid ${isNext ? `rgba(${phase.accent}, 0.5)` : 'rgba(255,255,255,0.2)'}`,
+                                background: isNext ? `rgba(${phase.accent}, 0.08)` : 'transparent',
                               }}
                             >
-                              {task.done && <Check className="h-3 w-3" style={{ color: phase.accent }} />}
+                              {task.done && <Check className="h-3 w-3" style={{ color: `rgb(${phase.accent})` }} />}
                             </button>
 
                             {/* Task content */}
@@ -348,16 +348,21 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
                                   <div className="flex items-center gap-2 mt-0.5">
                                     <button
                                       onClick={(e) => { e.stopPropagation(); handleEstimateChange(task.id, task.estimated_minutes) }}
-                                      className="text-[10px] font-medium px-1.5 py-0.5 rounded-md transition-colors hover:bg-white/[0.04]"
-                                      style={{ color: 'var(--brand-text-secondary)', opacity: task.estimate_set ? 0.35 : 0.15 }}
+                                      className={cn(
+                                        "text-[10px] font-medium px-1.5 py-0.5 rounded-md transition-all hover:bg-white/[0.04] flex items-center gap-1",
+                                        task.estimate_set ? "opacity-60" : "opacity-0 group-hover:opacity-50"
+                                      )}
+                                      style={{ color: 'var(--brand-text-secondary)' }}
+                                      aria-label={task.estimate_set ? 'Change time estimate' : 'Set time estimate'}
                                     >
-                                      {task.estimate_set ? `${task.estimated_minutes}m` : <Clock className="h-2.5 w-2.5" />}
+                                      <Clock className="h-2.5 w-2.5" />
+                                      {task.estimate_set && <span>{task.estimated_minutes}m</span>}
                                     </button>
                                     {task.is_ai_suggested && (
                                       <span className="text-[9px] font-medium uppercase tracking-wider" style={{ color: 'var(--brand-primary)', opacity: 0.35 }}>suggested</span>
                                     )}
                                     {isHighlighted && (
-                                      <span className="text-[9px] font-semibold uppercase tracking-wider" style={{ color: phase.accent, opacity: 0.5 }}>focus</span>
+                                      <span className="text-[9px] font-semibold uppercase tracking-wider" style={{ color: `rgb(${phase.accent})`, opacity: 0.5 }}>focus</span>
                                     )}
                                   </div>
                                 </>
@@ -379,7 +384,7 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
 
                       {/* Completed count */}
                       {completed.length > 0 && (
-                        <p className="text-[10px] font-medium px-3 pt-1" style={{ color: phase.accent, opacity: 0.25 }}>
+                        <p className="text-[10px] font-medium px-3 pt-1" style={{ color: `rgb(${phase.accent})`, opacity: 0.25 }}>
                           {completed.length} done
                         </p>
                       )}
@@ -405,7 +410,7 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
                             onClick={() => handleAddTask(phase.key)}
                             disabled={!newTaskText.trim()}
                             className="px-3 py-2 text-[11px] font-medium rounded-xl transition-all disabled:opacity-20"
-                            style={{ background: `${phase.accent}12`, color: phase.accent }}
+                            style={{ background: `rgba(${phase.accent}, 0.07)`, color: `rgb(${phase.accent})` }}
                           >
                             Add
                           </button>
@@ -468,9 +473,9 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
                         <button
                           onClick={() => handleToggleTask(task.id)}
                           className="flex-shrink-0 h-4 w-4 rounded-md flex items-center justify-center transition-all"
-                          style={{ background: `${phase.accent}12`, border: `1px solid ${phase.accent}18` }}
+                          style={{ background: `rgba(${phase.accent}, 0.07)`, border: `1px solid rgba(${phase.accent}, 0.1)` }}
                         >
-                          <Check className="h-2.5 w-2.5" style={{ color: phase.accent, opacity: 0.7 }} />
+                          <Check className="h-2.5 w-2.5" style={{ color: `rgb(${phase.accent})`, opacity: 0.7 }} />
                         </button>
                         <span className="text-[12px] leading-snug" style={{ color: 'var(--brand-text-secondary)', opacity: 0.3 }}>
                           {task.text}
