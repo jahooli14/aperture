@@ -43,6 +43,11 @@ export function setupAuthFetch() {
         retryHeaders.set('Authorization', `Bearer ${refreshed.access_token}`)
         return originalFetch(input, { ...init, headers: retryHeaders })
       }
+      // Refresh failed — the local session is dead. Sign out so onAuthStateChange
+      // fires SIGNED_OUT, AuthContext clears state, and the user sees the login
+      // screen instead of every API call silently returning 401.
+      console.warn('[authFetch] Session refresh failed on 401 — signing out')
+      await supabase.auth.signOut()
     }
 
     return response
