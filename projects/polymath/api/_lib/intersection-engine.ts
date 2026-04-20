@@ -165,23 +165,25 @@ export async function discoverIntersections(
   // with — not just "Baby photo app" but the WHY and HOW behind it.
   const richContext = buildRichProjectContext(projects, memories, articles, listItems)
 
-  // --- Phase 2: AI spots latent patterns ---
-  // If the AI path fails or returns nothing, fall back to embedding-based
-  // discovery — but ALWAYS narrate the result so cards never render empty.
+  // --- Phase 2: Pro spots latent patterns ---
+  // If Pro fails or returns nothing, return empty rather than silently
+  // masking with embedding+narration. The MASHUPS deck (classicIntersections)
+  // is a separate path that still renders; this deck (INSIGHTS) stays empty
+  // when Pro can't produce a 7+ observation. That's honest and visible —
+  // previously the fallback hid failure behind weak Flash prose.
   let candidates: RawCandidate[]
   try {
     candidates = await discoverPatterns(projects, richContext, priorFeedback)
   } catch (err) {
-    console.error('[intersection-engine] AI discovery failed, falling back to embedding-based:', err)
-    const fallback = embeddingBasedDiscovery(projects, memories, articles, listItems)
-    await narrateClusters(fallback)
-    return fallback
+    console.error('[intersection-engine] discoverIntersections: Pro call failed, returning empty (no silent fallback):', err)
+    return []
   }
 
+  console.log('[intersection-engine] discoverIntersections: Pro returned', candidates.length, 'candidates')
+
   if (candidates.length === 0) {
-    const fallback = embeddingBasedDiscovery(projects, memories, articles, listItems)
-    await narrateClusters(fallback)
-    return fallback
+    console.warn('[intersection-engine] discoverIntersections: Pro returned zero candidates \u2014 nothing scored 7+. Returning empty.')
+    return []
   }
 
   // --- Phase 3: Find supporting fuel via embeddings ---
@@ -269,17 +271,20 @@ export async function discoverIntersections(
   }
 
   if (results.length === 0) {
-    console.warn('[intersection-engine] discoverIntersections dropped all candidates', {
+    console.warn('[intersection-engine] discoverIntersections: all candidates dropped by filters', {
       rawCandidates: candidates.length,
       droppedMissingId,
       droppedTooSmall,
       droppedNoProject,
     })
-    // Fall back rather than return nothing — the UI just shows an empty section otherwise.
-    const fallback = embeddingBasedDiscovery(projects, memories, articles, listItems)
-    await narrateClusters(fallback)
-    return fallback
+    return []
   }
+
+  console.log('[intersection-engine] discoverIntersections: kept', results.length, 'of', candidates.length, 'candidates', {
+    droppedMissingId,
+    droppedTooSmall,
+    droppedNoProject,
+  })
 
   results.sort((a, b) => b.score - a.score)
   return results.slice(0, MAX_CARDS_PER_DECK)
@@ -403,9 +408,9 @@ async function discoverPatterns(
 
   const feedbackBlock = buildFeedbackPromptBlock(priorFeedback)
 
-  const prompt = `You are reading through everything one person has been working on and thinking about. Your job: spot a pattern in their thinking they haven't noticed yet, then turn it into something they can actually try.
+  const prompt = `You are reading through everything one person has been working on and thinking about. Your job is NOT to propose new products. Your job is to catch THEM doing something they haven't noticed about themselves, then turn that observation into ONE thing they can actually try.
 
-This is NOT about combining projects ("A + B = AB"). A mashup is a feature request, not an insight. The goal is a hidden thread — a mechanism, constraint, or principle — that keeps showing up across their work in different disguises.
+This is NOT about combining projects ("A + B = AB"). A mashup is a feature request, not an insight. The goal is a hidden thread — a mechanism, habit, or tension — that keeps showing up across their work in different disguises. Once you point it out, they can't unsee it.
 
 HERE IS EVERYTHING THIS PERSON IS WORKING ON AND THINKING ABOUT:
 
@@ -413,36 +418,69 @@ ${richContext}
 
 ---
 
-WHAT MAKES A GREAT CROSSOVER:
-- Names a specific mechanism in plain words (not a category like "data" or "creativity").
-- Connects things that LOOK different but ARE the same underneath.
-- Changes how they think about their work — not what product to build.
-- Lands in one or two sentences. If it needs more, it's not sharp.
+WHAT MAKES A GREAT CROSSOVER vs A FORGETTABLE ONE:
 
-BAD (mashup): "Your baby app and your knowledge graph both handle data, so you could build a baby data dashboard."
+A great crossover is an OBSERVATION about the person. It names a mechanism, habit, or tension already operating in their work — they just never put words on it. It's specific, plain, and lands in one or two sentences.
+
+A bad crossover is a MASHUP. It combines two things into a hypothetical product. "Walkable library app", "interactive book portals", "centuries-long dream sci-fi" — all mashups. Nobody's brain lights up reading a feature spec.
+
+BANNED OPENING PHRASES for \`hook\` and \`the_pattern\` (if a field starts with any of these, rewrite):
+- "If you put these together…"
+- "If you combine…"
+- "You've basically designed…"
+- "You could build…" / "You could write…"
+- "Imagine a…" / "What if you…"
+- "Together they form…"
+- "This lets you…"
+
+REQUIRED OPENING for \`hook\`: Start with "You" + a verb that names what the person is ALREADY DOING. Good openers: "You keep…", "You already…", "You treat…", "You notice…", "You've been…". No conditional, no hypothetical.
+
+EXAMPLES:
+
+BAD (mashup): "If you combine your dream ideas with the long now concept, you could write about people who live for centuries inside a single vivid dream."
+— Product pitch. Science fiction premise. Says nothing about the person.
+
+BAD (mashup): "You've basically designed a book that works like a board game map of a person's brain."
+— Starts with a mashup opener. Describes a product, not a pattern.
+
 BAD (category): "Both your book editor and your voice tool involve creativity."
-GOOD (insight): "You keep solving the same problem three different ways: spotting meaningful signal in a noisy stream. Baby photos, scattered thoughts, bird migration — same challenge from three angles."
-GOOD (tension): "Your book editor imposes structure on messy material. Your voice tool refuses structure on purpose. You're building tools for both sides of the same creative workflow — the bridge between them is the missing piece."
+— A category, not a mechanism. Anyone could say this.
+
+GOOD (insight): "You keep solving the same problem in three different disguises. Your baby app spots meaningful change in a stream of nearly-identical photos. Your knowledge graph spots meaningful links in scattered thoughts. The bird migration article you saved is the same challenge in positions. You've quietly become an expert at signal detection in noisy sequences."
+— Names a specific mechanism. References at least 2 specific items. Observation about the person.
+
+GOOD (tension): "Your book editor imposes structure on messy material. Your voice tool refuses structure on purpose. You're building both ends of the same creative workflow — the bridge between unstructured capture and structured output is missing from both."
+— Names a tension already present. References specific items. Not a product.
 ${feedbackBlock}
 RULES:
 
-1. Patterns that span 3+ items beat pairs.${numProjects >= 4 ? ' You have plenty of material — go for 3+.' : ''}
-2. Mix freely: projects, standalone thoughts, list items. At least ONE node_id MUST be a project.
-3. Name specific items from the input. "Your book editor" is good. "Your creative projects" is filler.
-4. Every sentence you write must either (a) name a specific item from the input, or (b) describe a specific action. No abstract observations like "A way to talk about growth and aging" — that's padding.
-5. No jargon. A 14-year-old should understand every word. Avoid academic words like emergent, paradigm, heuristic, ontological, stochastic. If a word has 4+ syllables, double-check.
-6. the_pattern and the_experiment do DIFFERENT jobs. the_pattern names what's hidden. the_experiment proposes ONE action, starting with a verb. Do NOT restate the pattern in the experiment.
+1. OBSERVATION, not product. If the card only makes sense as a new thing to build, it's a mashup — reject it.
+2. Patterns that span 3+ items beat pairs.${numProjects >= 4 ? ' You have plenty of material — go for 3+.' : ''} Mix freely: projects, standalone thoughts, list items. At least ONE node_id MUST be a project.
+3. Name specific items from the input by title/topic. "Your book editor" ✓. "Your creative projects" ✗. "The bird migration article" ✓.
+4. Every sentence must either (a) name a specific item from the input, or (b) describe a specific action. Abstract padding ("A way to talk about growth and aging") scores 0.
+5. PLAIN ENGLISH. BANNED words: stochastic, ontological, epistemological, heuristic, emergent, bifurcation, recursion, isomorphism, bisociation, exaptation, orthogonal, teleological, dialectical, paradigm, meta-, -ness, -icity, actualize, paradigmatic, topology. A 14-year-old should understand every word. If a word has 4+ syllables, double-check.
+6. Each field has a DIFFERENT job. Do not restate:
+   - \`crossover_title\` = 3-6 words naming the mechanism itself (not a poetic product name).
+   - \`hook\` = One sentence starting with "You". The aha that makes them stop scrolling. NOT a restatement of the_pattern.
+   - \`the_pattern\` = 1-2 sentences naming the hidden thread, referencing ≥2 specific items by title/topic. What is the person already doing?
+   - \`the_experiment\` = 1-2 sentences. ONE concrete action, starts with an imperative verb (Try, Pick, Write, Swap, Open...). Names a specific project/thing they already have. NOT a business plan, NOT a restatement of the_pattern.
+   - \`first_steps\` = 3 imperative-verb actions, 8-14 words each, each naming something specific. No shorthand ("Schedule stuck time" ✗ — rewrite in full with the actual project/person/file).
+7. SCORING CALIBRATION (non_obvious_score):
+   - 10: Names something they've been circling for months without words. Would make them stop scrolling.
+   - 8-9: Solid observation. Non-obvious. Specific. Clearly about THIS person.
+   - 7: Defensible but not electric. Keep only if you can't do better.
+   - Below 7: Drop it.
 
-OUTPUT: JSON array of UP TO ${targetCount} crossovers. Fewer is fine — never force a weak one. No preamble, no markdown.
+OUTPUT: JSON array of UP TO ${targetCount} crossovers. Fewer is fine — NEVER force a weak one. If nothing scores 7+, return []. No preamble, no markdown.
 
 For each crossover:
 
 {
   "node_ids": ["id1", "id2", "id3"],
-  "crossover_title": "3-6 words, concrete, not cute",
-  "hook": "One sentence. The aha in plain words. Starts with 'You keep' or similar — make them stop scrolling. NOT a restatement of the_pattern.",
-  "the_pattern": "1-2 sentences naming the hidden thread. Must reference at least 2 specific items by their title/topic.",
-  "the_experiment": "1-2 sentences. ONE concrete thing to try. Starts with a verb (Try, Pick, Build, Write, Swap...). Not a business plan.",
+  "crossover_title": "3-6 words naming the mechanism, concrete, not cute",
+  "hook": "One sentence starting with 'You' + present-tense verb. The aha. NOT a restatement of the_pattern.",
+  "the_pattern": "1-2 sentences naming the hidden thread. Must reference at least 2 specific items by title/topic.",
+  "the_experiment": "1-2 sentences. ONE concrete thing to try. Starts with a verb (Try, Pick, Build, Write, Swap...). Names a specific project they already have.",
   "first_steps": [
     "imperative verb, 8-14 words, names a specific item",
     "same form — verb first, 8-14 words, specific",
@@ -452,11 +490,13 @@ For each crossover:
 }
 
 BEFORE RETURNING each item, self-check:
+- Does hook start with "You" + a present-tense verb (not "you could", not "if you")? (if no, rewrite)
 - Does the_pattern name at least 2 specific items from the input? (if no, rewrite)
-- Does the_experiment start with a verb and propose ONE action? (if no, rewrite)
-- Are all 3 first_steps verb-led, 8-14 words, each naming something specific? (if any drift into shorthand like "Schedule stuck time", rewrite in full)
+- Does the_experiment start with a verb and propose ONE action using a project they already have? (if no, rewrite)
+- Are all 3 first_steps verb-led, 8-14 words, each naming something specific? (if any drift into shorthand, rewrite in full)
 - Is the_experiment just the_pattern reworded? (if yes, rewrite)
 - Is the hook just the_pattern reworded? (if yes, rewrite)
+- Does any field start with a banned opening phrase? (if yes, rewrite)
 
 node_ids: use EXACT bracketed IDs from the list above. At least one must be a project.
 
@@ -600,27 +640,34 @@ export async function classicIntersections(
       memoriesWithEmbeddings: memories.filter(m => m.embedding).length,
       listItemsWithEmbeddings: listItems.filter(li => li.embedding).length,
     })
+    return results
   }
 
-  // Narrate ALL clusters (was previously slice(0, 3) which left cards 4-5
-  // empty in the UI). We now generate weekly via cron with no Vercel timeout
-  // pressure, so the parallelism is safe.
+  console.log('[intersection-engine] classicIntersections: found', results.length, 'embedding clusters, narrating with Pro')
+
   await narrateClusters(results)
+
+  const narrated = results.filter(r => r.reason && r.crossover).length
+  console.log('[intersection-engine] classicIntersections: narrated', narrated, 'of', results.length, 'clusters')
 
   return results
 }
 
 /**
  * Generate `reason` and `crossover` for every cluster in-place. Used by the
- * classic embedding pipeline (and as a safety net on the AI fallback path) so
- * cards never render with empty bodies. Clusters fan out in parallel, one
- * Gemini call per cluster producing the whole card in a single pass.
+ * classic embedding pipeline (whose clusters come from cosine-similarity
+ * geometry and arrive without any narrative attached).
+ *
+ * Uses Pro — the same model that powers discoverIntersections — because the
+ * narration IS the insight. Flash produced product-pitch prose ("if you put
+ * these together you could build X") that read exactly like the mashups the
+ * Pro discovery prompt bans. Upgrading the model + applying the same
+ * anti-mashup rules keeps the MASHUPS deck quality consistent with INSIGHTS.
  */
 export async function narrateClusters(clusters: IntersectionResult[]): Promise<void> {
   if (clusters.length === 0) return
-  await Promise.all(clusters.map(async (intersection) => {
-    // Skip if both fields are already populated (e.g. discoverIntersections
-    // path) — nothing to do.
+  const settled = await Promise.allSettled(clusters.map(async (intersection) => {
+    // Skip if already fully populated upstream (discoverIntersections path).
     if (intersection.reason && intersection.crossover) return
 
     const nodeLabel = intersection.nodes
@@ -631,30 +678,44 @@ export async function narrateClusters(clusters: IntersectionResult[]): Promise<v
     const prompt = `Someone has these threads on their mind right now:
 - ${nodeLabel}${fuelContext ? `\n\nAcross them, these items keep showing up: ${fuelContext}.` : ''}
 
-Spot the hidden thread that links them — a mechanism, constraint, or principle that shows up in each in a different disguise. Then propose ONE small, concrete thing to try.
+Your job is NOT to propose a new product. Your job is to catch the person doing something they haven't noticed, then propose ONE small concrete thing to try.
+
+BANNED OPENING PHRASES for \`hook\` and \`the_pattern\` (if a field starts with any of these, rewrite):
+- "If you put these together…"
+- "If you combine…"
+- "You've basically designed…"
+- "You could build…" / "You could write…"
+- "Imagine a…" / "What if…"
+- "Together they form…"
+- "This lets you…"
+
+REQUIRED OPENING for \`hook\`: start with "You" + a present-tense verb ("You keep…", "You already…", "You treat…", "You notice…"). Observation, not hypothesis.
+
+GOOD hook: "You keep framing the same question in different clothes."
+BAD hook: "If you put these together, you could build a tool that handles both." ← product pitch, banned.
 
 RULES:
-- Plain English. A 14-year-old should understand every word.
-- the_pattern MUST name at least 2 of the specific items above (by their title or topic).
-- the_experiment MUST start with a verb and propose exactly ONE action.
-- No mashups ("combine A and B into AB"). Find a shared mechanism instead.
+- Plain English. A 14-year-old should understand every word. BANNED words: stochastic, ontological, emergent, heuristic, isomorphism, paradigm, teleological, epistemological, bifurcation, exaptation, orthogonal, dialectical, paradigmatic.
+- No mashups ("combine A and B into AB"). Find the shared mechanism instead.
+- the_pattern MUST name at least 2 of the specific items above by their title/topic.
+- the_experiment MUST start with an imperative verb (Try, Pick, Build, Write, Swap, Open...) and propose exactly ONE action.
 - Do not restate the_pattern inside the_experiment or the hook. Each field does a different job.
-- first_steps: 3 imperative-verb actions, 8-14 words each, every one naming something specific.
+- first_steps: 3 imperative-verb actions, 8-14 words each, every one naming something specific. No shorthand ("Schedule stuck time" ✗ — rewrite in full naming the actual project/person/file).
 
 Return JSON only:
 {
-  "crossover_title": "3-6 words, concrete",
-  "hook": "One sentence. Plain words. 'You keep doing X and haven't noticed' style.",
+  "crossover_title": "3-6 words naming the mechanism, concrete, not cute",
+  "hook": "One sentence starting with 'You' + present-tense verb. The aha. NOT a restatement of the_pattern.",
   "the_pattern": "1-2 sentences naming the hidden thread. Names at least 2 specific items.",
-  "the_experiment": "1-2 sentences. ONE thing to try. Starts with a verb.",
-  "first_steps": ["verb-led, 8-14 words, specific", "...", "..."]
+  "the_experiment": "1-2 sentences. ONE thing to try. Starts with a verb. Names a specific project they already have.",
+  "first_steps": ["verb-led, 8-14 words, specific", "verb-led, 8-14 words, specific", "verb-led, 8-14 words, specific"]
 }`
 
     try {
       const raw = await generateText(prompt, {
-        model: MODELS.FLASH_CHAT,
+        model: MODELS.PRO,
         responseFormat: 'json',
-        temperature: 0.95,
+        temperature: 0.9,
         maxTokens: 1024,
       })
       const parsed = JSON.parse(raw) as {
@@ -681,10 +742,18 @@ Return JSON only:
           concept: theExperiment,
         }
       }
-    } catch {
-      // Non-critical — cluster still renders with whatever we have.
+    } catch (err) {
+      console.warn('[intersection-engine] narrateClusters: Pro call failed for cluster', {
+        clusterId: intersection.id,
+        err: err instanceof Error ? err.message : String(err),
+      })
     }
   }))
+
+  const failed = settled.filter(r => r.status === 'rejected').length
+  if (failed > 0) {
+    console.warn('[intersection-engine] narrateClusters: narration failed for', failed, 'of', clusters.length, 'clusters')
+  }
 }
 
 /**
