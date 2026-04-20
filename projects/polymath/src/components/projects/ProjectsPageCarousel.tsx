@@ -67,7 +67,7 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
           style={{ textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
           {project.title}
         </h4>
-        <div className="flex items-center gap-1 flex-shrink-0 -mr-1 -mt-1">
+        <div className="flex items-center gap-1 flex-shrink-0">
           <button
             onClick={handleAnalyze}
             className="h-9 w-9 rounded-full flex items-center justify-center transition-colors hover:bg-white/10"
