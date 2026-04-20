@@ -42,12 +42,19 @@ export interface IntersectionResult {
   nodes: IntersectionNode[]
   score: number
   sharedFuel: Array<{ type: string; title: string; id: string }>
+  /** Single-sentence hook. Not a restatement of the card body. */
   reason?: string
   crossover?: {
     crossover_title: string
-    why_it_works: string
-    concept: string
+    /** 1-2 sentences naming the hidden thread, with specific items referenced. */
+    the_pattern: string
+    /** 1-2 sentences. ONE concrete thing to try, starts with a verb. */
+    the_experiment: string
     first_steps: string[]
+    /** @deprecated — populated on write for already-deployed clients. */
+    why_it_works?: string
+    /** @deprecated — populated on write for already-deployed clients. */
+    concept?: string
   }
 }
 
@@ -56,13 +63,20 @@ interface RawCandidate {
   node_ids?: string[]
   /** Legacy field name — still accepted for backwards compat. */
   project_ids?: string[]
-  pattern_name: string
-  the_insight: string
-  why_its_not_obvious: string
-  what_it_unlocks: string
-  one_thing_to_try: string
-  further_steps: string[]
+  crossover_title?: string
+  hook?: string
+  the_pattern?: string
+  the_experiment?: string
+  first_steps?: string[]
   non_obvious_score: number
+
+  /** @deprecated legacy field names — mapped if the model returns them. */
+  pattern_name?: string
+  the_insight?: string
+  why_its_not_obvious?: string
+  what_it_unlocks?: string
+  one_thing_to_try?: string
+  further_steps?: string[]
 }
 
 export interface ProjectInput {
@@ -218,6 +232,21 @@ export async function discoverIntersections(
     const fuel = findSupportingFuel(matchedProjects, memories, articles)
     const projectIds = matchedProjects.map(p => p.id)
 
+    // Map new fields, falling back to legacy names if the model returned the
+    // old schema (or if we hit the back-compat parse path).
+    const title = candidate.crossover_title || candidate.pattern_name || 'Untitled'
+    const thePattern = candidate.the_pattern || candidate.the_insight || ''
+    const theExperiment =
+      candidate.the_experiment ||
+      candidate.one_thing_to_try ||
+      candidate.what_it_unlocks ||
+      ''
+    const hook = candidate.hook || candidate.the_insight || thePattern
+    const steps = (candidate.first_steps && candidate.first_steps.length > 0
+      ? candidate.first_steps
+      : [candidate.one_thing_to_try, ...(candidate.further_steps || [])]
+    ).filter(Boolean).slice(0, 3) as string[]
+
     results.push({
       id: matchedNodes.map(n => n.id).sort().join(','),
       projectIds,
@@ -225,15 +254,16 @@ export async function discoverIntersections(
       nodes: matchedNodes,
       score: (candidate.non_obvious_score || 7) * (matchedNodes.length * 0.8),
       sharedFuel: fuel.slice(0, 8),
-      reason: candidate.the_insight,
+      reason: hook,
       crossover: {
-        crossover_title: candidate.pattern_name,
-        why_it_works: candidate.why_its_not_obvious,
-        concept: candidate.what_it_unlocks,
-        first_steps: [
-          candidate.one_thing_to_try,
-          ...(candidate.further_steps || [])
-        ].filter(Boolean).slice(0, 3)
+        crossover_title: title,
+        the_pattern: thePattern,
+        the_experiment: theExperiment,
+        first_steps: steps,
+        // Back-compat for any already-deployed client still reading the old
+        // field names. Drop these once every client is on the new schema.
+        why_it_works: thePattern,
+        concept: theExperiment,
       }
     })
   }
@@ -373,9 +403,9 @@ async function discoverPatterns(
 
   const feedbackBlock = buildFeedbackPromptBlock(priorFeedback)
 
-  const prompt = `You are reading through everything one person has been working on and thinking about recently. Your job: spot patterns in their thinking that THEY haven't noticed yet.
+  const prompt = `You are reading through everything one person has been working on and thinking about. Your job: spot a pattern in their thinking they haven't noticed yet, then turn it into something they can actually try.
 
-This is not about combining projects into one product. That's boring. This is about finding a hidden thread — a mechanism, a constraint, a principle — that keeps showing up across their work in different disguises. Something that, once pointed out, makes them go: "Oh. I've been circling the same idea from three different directions and I didn't even see it."
+This is NOT about combining projects ("A + B = AB"). A mashup is a feature request, not an insight. The goal is a hidden thread — a mechanism, constraint, or principle — that keeps showing up across their work in different disguises.
 
 HERE IS EVERYTHING THIS PERSON IS WORKING ON AND THINKING ABOUT:
 
@@ -383,65 +413,54 @@ ${richContext}
 
 ---
 
-Now. Read all of that carefully. What patterns do you see that this person probably hasn't noticed?
+WHAT MAKES A GREAT CROSSOVER:
+- Names a specific mechanism in plain words (not a category like "data" or "creativity").
+- Connects things that LOOK different but ARE the same underneath.
+- Changes how they think about their work — not what product to build.
+- Lands in one or two sentences. If it needs more, it's not sharp.
 
-WHAT MAKES A GREAT CROSSOVER vs A FORGETTABLE ONE:
-
-A great crossover is an INSIGHT — it reveals something that was already there but invisible. It's clever but simple. Once you hear it, you can't unhear it.
-
-A bad crossover is a MASHUP — it just staples ideas together. "Your photo app + your book editor = a photo book tool!" That's not clever. That's a feature request. Nobody's mind is blown by concatenation.
-
-THE DIFFERENCE, BY EXAMPLE:
-
-BAD (mashup): "Your baby tracking app and your knowledge graph both handle data, so you could build a baby data dashboard."
-— This is just noticing they both involve data. That's a category, not an insight. Anyone could see this.
-
-BAD (artificial): "Combine your photo app, knowledge graph, and book editor into one mega-app."
-— This is just putting three things in a bag. There's no underlying connection. It's forced.
-
-GOOD (insight): "You keep solving the same problem without realising it. In your baby app, you're figuring out how to spot meaningful change in a stream of nearly-identical photos. In your knowledge graph, you're figuring out how to spot meaningful connections in a stream of scattered thoughts. Both are the same challenge: signal detection in noisy sequences. And that article you read about bird migration patterns? Same thing — how do individual data points become a visible pattern? You've accidentally become an expert in this one specific problem from three completely different angles."
-— This names a specific mechanism. It connects things that LOOK different but ARE the same. It changes how you think about each project. And it's simple to explain.
-
-GOOD (insight): "There's a tension in your work you might not have noticed. Your book editor is all about imposing structure on messy material — taking raw creativity and shaping it. Your voice capture tool does the opposite — it deliberately avoids structure to capture raw thought. You're building tools for both sides of the same creative process. What if the connection between them isn't a feature — it's a workflow? The thing missing from both is the BRIDGE between unstructured capture and structured output."
-— This finds a genuine tension. It doesn't combine the projects. It reveals what they share at a deeper level.
+BAD (mashup): "Your baby app and your knowledge graph both handle data, so you could build a baby data dashboard."
+BAD (category): "Both your book editor and your voice tool involve creativity."
+GOOD (insight): "You keep solving the same problem three different ways: spotting meaningful signal in a noisy stream. Baby photos, scattered thoughts, bird migration — same challenge from three angles."
+GOOD (tension): "Your book editor imposes structure on messy material. Your voice tool refuses structure on purpose. You're building tools for both sides of the same creative workflow — the bridge between them is the missing piece."
 ${feedbackBlock}
-YOUR RULES:
+RULES:
 
-1. Find patterns that span 3-5 items when possible. A pattern that shows up in 3 different items is far more interesting than one in 2 — it suggests something fundamental about how this person thinks.${numProjects >= 4 ? ' You have enough ideas here. Go for it.' : ''}
+1. Patterns that span 3+ items beat pairs.${numProjects >= 4 ? ' You have plenty of material — go for 3+.' : ''}
+2. Mix freely: projects, standalone thoughts, list items. At least ONE node_id MUST be a project.
+3. Name specific items from the input. "Your book editor" is good. "Your creative projects" is filler.
+4. Every sentence you write must either (a) name a specific item from the input, or (b) describe a specific action. No abstract observations like "A way to talk about growth and aging" — that's padding.
+5. No jargon. A 14-year-old should understand every word. Avoid academic words like emergent, paradigm, heuristic, ontological, stochastic. If a word has 4+ syllables, double-check.
+6. the_pattern and the_experiment do DIFFERENT jobs. the_pattern names what's hidden. the_experiment proposes ONE action, starting with a verb. Do NOT restate the pattern in the experiment.
 
-2. Items can be projects, standalone thoughts, OR list items. A collision between a project and a stray thought the person had last month is just as valid as a collision between two projects. If a thought about "how birds navigate" connects with a software project, say so. Don't limit yourself to project-vs-project.
-
-3. Name the MECHANISM. Every good crossover has a specific, nameable thing at its core. Name it in plain words the person would actually use out loud.
-
-4. No mashups. If your crossover is "combine A and B into AB" — delete it and think harder. The crossover should be an insight that changes how the person THINKS about their work, not a product spec.
-
-5. Keep it simple. If the crossover needs three paragraphs to explain, it's not elegant enough. The best ones land in two sentences.
-
-6. Be specific to THIS person. Reference their actual projects, their actual thinking, the actual words they've used. Generic insights ("creativity benefits from cross-pollination") are worthless. This should feel like it could only be said to THIS person about THESE ideas.
-
-7. Every crossover should suggest ONE clear thing to try. Not a business plan. Just: "Next time you're working on X, try approaching it the way you approach Y. See what happens."
-
-8. PLAIN ENGLISH. NO JARGON. Write like you're explaining it to a friend in a pub, not to an academic or a VC. Specifically BANNED words: stochastic, ontological, epistemological, heuristic, emergent, bifurcation, recursion, isomorphism, bisociation, exaptation, orthogonal, teleological, dialectical, paradigm, meta-, -ness, -icity, actualize, paradigmatic, topology. If you find yourself reaching for one of those words, you're being a show-off — rewrite with normal words. A 14-year-old should be able to read your crossover and understand every single word. If a word has more than 4 syllables, double-check whether it's really the best word.
-
-Return a JSON array of UP TO ${targetCount} crossovers (fewer is fine — never force a weak one). KEEP EVERY FIELD TIGHT. No preamble, no markdown, just JSON.
+OUTPUT: JSON array of UP TO ${targetCount} crossovers. Fewer is fine — never force a weak one. No preamble, no markdown.
 
 For each crossover:
 
 {
   "node_ids": ["id1", "id2", "id3"],
-  "pattern_name": "3-6 words",
-  "the_insight": "1-2 sentences max. The aha moment, plain English.",
-  "why_its_not_obvious": "1 sentence.",
-  "what_it_unlocks": "1 sentence. New way of thinking, not a product.",
-  "one_thing_to_try": "1 sentence. Concrete action.",
-  "further_steps": ["short step", "short step"],
+  "crossover_title": "3-6 words, concrete, not cute",
+  "hook": "One sentence. The aha in plain words. Starts with 'You keep' or similar — make them stop scrolling. NOT a restatement of the_pattern.",
+  "the_pattern": "1-2 sentences naming the hidden thread. Must reference at least 2 specific items by their title/topic.",
+  "the_experiment": "1-2 sentences. ONE concrete thing to try. Starts with a verb (Try, Pick, Build, Write, Swap...). Not a business plan.",
+  "first_steps": [
+    "imperative verb, 8-14 words, names a specific item",
+    "same form — verb first, 8-14 words, specific",
+    "same form — verb first, 8-14 words, specific"
+  ],
   "non_obvious_score": 1-10
 }
 
-node_ids: use the EXACT bracketed IDs from the list above. You may mix projects, standalone thoughts, and list items — anything with an ID in brackets is fair game. At least ONE of the IDs MUST be a project (the blocks at the top, before the STANDALONE THOUGHTS and LIST ITEMS sections). No crossover with zero projects.
+BEFORE RETURNING each item, self-check:
+- Does the_pattern name at least 2 specific items from the input? (if no, rewrite)
+- Does the_experiment start with a verb and propose ONE action? (if no, rewrite)
+- Are all 3 first_steps verb-led, 8-14 words, each naming something specific? (if any drift into shorthand like "Schedule stuck time", rewrite in full)
+- Is the_experiment just the_pattern reworded? (if yes, rewrite)
+- Is the hook just the_pattern reworded? (if yes, rewrite)
 
-Only return crossovers scoring 7+. Sort by non_obvious_score descending.
-Be terse — long fields will get truncated.`
+node_ids: use EXACT bracketed IDs from the list above. At least one must be a project.
+
+Only return crossovers scoring 7+. Sort by non_obvious_score descending.`
 
   // Pro: cross-project pattern discovery is the core synthesis step of this
   // engine. Narration below (narrateClusters) stays on Flash — it only dresses
@@ -458,12 +477,9 @@ Be terse — long fields will get truncated.`
 
   return parsed.filter((c: any) => {
     const ids = Array.isArray(c.node_ids) ? c.node_ids : Array.isArray(c.project_ids) ? c.project_ids : null
-    return (
-      ids !== null &&
-      ids.length >= 2 &&
-      typeof c.the_insight === 'string' &&
-      typeof c.pattern_name === 'string'
-    )
+    const hasTitle = typeof c.crossover_title === 'string' || typeof c.pattern_name === 'string'
+    const hasBody = typeof c.the_pattern === 'string' || typeof c.the_insight === 'string'
+    return ids !== null && ids.length >= 2 && hasTitle && hasBody
   }) as RawCandidate[]
 }
 
@@ -595,62 +611,78 @@ export async function classicIntersections(
 }
 
 /**
- * Generate `reason` and `crossover` for every cluster in-place. Used by both
- * the classic embedding pipeline and (as a safety net) the AI fallback so
- * cards never render with empty bodies. Each cluster runs its two Gemini
- * calls in parallel; clusters themselves also fan out in parallel.
+ * Generate `reason` and `crossover` for every cluster in-place. Used by the
+ * classic embedding pipeline (and as a safety net on the AI fallback path) so
+ * cards never render with empty bodies. Clusters fan out in parallel, one
+ * Gemini call per cluster producing the whole card in a single pass.
  */
 export async function narrateClusters(clusters: IntersectionResult[]): Promise<void> {
   if (clusters.length === 0) return
   await Promise.all(clusters.map(async (intersection) => {
     // Skip if both fields are already populated (e.g. discoverIntersections
-    // path) — only fill in what's missing.
+    // path) — nothing to do.
     if (intersection.reason && intersection.crossover) return
 
     const nodeLabel = intersection.nodes
       .map(n => n.type === 'project' ? `the project "${n.title}"` : n.type === 'memory' ? `a thought: "${n.title}"` : `a list item: "${n.title}"`)
-      .join(' + ')
+      .join('\n- ')
     const fuelContext = intersection.sharedFuel.slice(0, 5).map(f => `${f.type}: "${f.title}"`).join(', ')
 
-    const needReason = !intersection.reason
-    const needCrossover = !intersection.crossover
+    const prompt = `Someone has these threads on their mind right now:
+- ${nodeLabel}${fuelContext ? `\n\nAcross them, these items keep showing up: ${fuelContext}.` : ''}
 
-    const calls: Array<Promise<string>> = []
-    if (needReason) {
-      calls.push(generateText(
-        `One person has these things on their mind: ${nodeLabel}.${fuelContext ? ` Things that keep showing up across them: ${fuelContext}.` : ''}
+Spot the hidden thread that links them — a mechanism, constraint, or principle that shows up in each in a different disguise. Then propose ONE small, concrete thing to try.
 
-In 2-3 plain-English sentences, say what surprising thing becomes possible when you line these up next to each other. Be specific. Write like a friend who just noticed something clever. No buzzwords, no jargon. BANNED words: stochastic, ontological, emergent, heuristic, isomorphism, paradigm, teleological. If a 14-year-old wouldn't understand a word, don't use it.`,
-        { model: MODELS.FLASH_CHAT, temperature: 0.95 }
-      ))
-    }
-    if (needCrossover) {
-      calls.push(generateText(
-        `Someone has these things on their mind: ${nodeLabel}.${fuelContext ? ` Things that keep showing up across them: ${fuelContext}.` : ''}
+RULES:
+- Plain English. A 14-year-old should understand every word.
+- the_pattern MUST name at least 2 of the specific items above (by their title or topic).
+- the_experiment MUST start with a verb and propose exactly ONE action.
+- No mashups ("combine A and B into AB"). Find a shared mechanism instead.
+- Do not restate the_pattern inside the_experiment or the hook. Each field does a different job.
+- first_steps: 3 imperative-verb actions, 8-14 words each, every one naming something specific.
 
-What's one concrete thing they could try that only makes sense because they have ALL of these on their mind at once? Not a feature. Not a business plan. A small, specific experiment. Write in plain English only. BANNED words: stochastic, ontological, emergent, heuristic, isomorphism, paradigm, teleological. A 14-year-old should understand every word.
+Return JSON only:
+{
+  "crossover_title": "3-6 words, concrete",
+  "hook": "One sentence. Plain words. 'You keep doing X and haven't noticed' style.",
+  "the_pattern": "1-2 sentences naming the hidden thread. Names at least 2 specific items.",
+  "the_experiment": "1-2 sentences. ONE thing to try. Starts with a verb.",
+  "first_steps": ["verb-led, 8-14 words, specific", "...", "..."]
+}`
 
-Return JSON:
-{"crossover_title":"plain 3-6 word title","why_it_works":"2-3 short sentences in plain English","concept":"what you'd actually try, 2-3 sentences","first_steps":["first simple step","second simple step","third simple step"]}`,
-        { model: MODELS.FLASH_CHAT, responseFormat: 'json', temperature: 0.95, maxTokens: 1024 }
-      ))
-    }
+    try {
+      const raw = await generateText(prompt, {
+        model: MODELS.FLASH_CHAT,
+        responseFormat: 'json',
+        temperature: 0.95,
+        maxTokens: 1024,
+      })
+      const parsed = JSON.parse(raw) as {
+        crossover_title?: string
+        hook?: string
+        the_pattern?: string
+        the_experiment?: string
+        first_steps?: string[]
+      }
 
-    const settled = await Promise.allSettled(calls)
-    let cursor = 0
-    if (needReason) {
-      const r = settled[cursor++]
-      if (r && r.status === 'fulfilled') intersection.reason = r.value
-    }
-    if (needCrossover) {
-      const r = settled[cursor++]
-      if (r && r.status === 'fulfilled') {
-        try {
-          intersection.crossover = JSON.parse(r.value)
-        } catch {
-          // Non-critical — cluster still renders with reason only
+      if (!intersection.reason) {
+        intersection.reason = parsed.hook || parsed.the_pattern || ''
+      }
+      if (!intersection.crossover) {
+        const thePattern = parsed.the_pattern || ''
+        const theExperiment = parsed.the_experiment || ''
+        intersection.crossover = {
+          crossover_title: parsed.crossover_title || 'Untitled',
+          the_pattern: thePattern,
+          the_experiment: theExperiment,
+          first_steps: (parsed.first_steps || []).filter(Boolean).slice(0, 3),
+          // Back-compat for any already-deployed client on the old field names.
+          why_it_works: thePattern,
+          concept: theExperiment,
         }
       }
+    } catch {
+      // Non-critical — cluster still renders with whatever we have.
     }
   }))
 }
