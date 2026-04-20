@@ -53,9 +53,16 @@ interface IntersectionFuel {
 
 interface CrossoverIdea {
   crossover_title: string
-  why_it_works: string
-  concept: string
+  /** New schema: the hidden thread. Falls back to `why_it_works` for cards
+   *  generated before the prompt rewrite. */
+  the_pattern?: string
+  /** New schema: the one thing to try. Falls back to `concept`. */
+  the_experiment?: string
   first_steps: string[]
+  /** @deprecated — old schema. Read as fallback for already-cached cards. */
+  why_it_works?: string
+  /** @deprecated — old schema. Read as fallback for already-cached cards. */
+  concept?: string
 }
 
 interface Intersection {
@@ -289,7 +296,7 @@ function CardSet({ items, label, feedback, onFeedback, onShape, shapingId, refre
                 >
                   <Layers className="h-3.5 w-3.5 text-brand-primary/80" />
                   <span className="text-[11px] font-mono tracking-wide uppercase text-brand-primary/90">
-                    {getNodes(current).length} {getNodes(current).length === 1 ? 'item' : 'items'}
+                    {getNodes(current).length} {getNodes(current).length === 1 ? 'thread' : 'threads'}
                   </span>
                   <ChevronDown className={`h-3 w-3 text-brand-primary/60 transition-transform ${nodesExpanded ? 'rotate-180' : ''}`} />
                 </button>
@@ -339,44 +346,76 @@ function CardSet({ items, label, feedback, onFeedback, onShape, shapingId, refre
                 </p>
               )}
 
-              {!isDisliked && current.crossover && (
-                <div
-                  className="mb-3 p-4 rounded-xl"
-                  style={{
-                    background: 'rgba(var(--brand-primary-rgb),0.06)',
-                    border: '1px solid rgba(var(--brand-primary-rgb),0.15)',
-                  }}
-                >
-                  <p
-                    className="text-[10px] font-medium tracking-wide lowercase mb-2"
-                    style={{ color: 'var(--brand-primary)', opacity: 0.6 }}
+              {!isDisliked && current.crossover && (() => {
+                // New schema prefers the_pattern / the_experiment. Older cached
+                // cards have why_it_works / concept — render those as fallback
+                // so nothing breaks during the transition week.
+                const pattern = current.crossover.the_pattern || current.crossover.why_it_works || ''
+                const experiment = current.crossover.the_experiment || current.crossover.concept || ''
+                return (
+                  <div
+                    className="mb-3 p-4 rounded-xl"
+                    style={{
+                      background: 'rgba(var(--brand-primary-rgb),0.06)',
+                      border: '1px solid rgba(var(--brand-primary-rgb),0.15)',
+                    }}
                   >
-                    crossover concept
-                  </p>
-                  <h4 className="text-base font-bold text-[var(--brand-text-primary)] mb-2">
-                    {current.crossover.crossover_title}
-                  </h4>
-                  <p className="text-sm text-[var(--brand-text-secondary)] leading-relaxed mb-2">
-                    {current.crossover.why_it_works}
-                  </p>
-                  <p className="text-sm text-[var(--brand-text-secondary)] leading-relaxed opacity-80">
-                    {current.crossover.concept}
-                  </p>
-                  {current.crossover.first_steps.length > 0 && (
-                    <div className="space-y-1 mt-3">
-                      {current.crossover.first_steps.map((step, i) => (
+                    <h4 className="text-base font-bold text-[var(--brand-text-primary)] mb-3">
+                      {current.crossover.crossover_title}
+                    </h4>
+
+                    {pattern && (
+                      <div className="mb-3">
                         <p
-                          key={i}
-                          className="text-xs text-[var(--brand-text-secondary)] opacity-60 flex items-start gap-2"
+                          className="text-[10px] font-semibold tracking-widest uppercase mb-1.5"
+                          style={{ color: 'var(--brand-primary)', opacity: 0.7 }}
                         >
-                          <span className="text-brand-primary opacity-50 mt-0.5">{i + 1}.</span>
-                          {step}
+                          the pattern
                         </p>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+                        <p className="text-sm text-[var(--brand-text-secondary)] leading-relaxed">
+                          {pattern}
+                        </p>
+                      </div>
+                    )}
+
+                    {experiment && (
+                      <div className="mb-3">
+                        <p
+                          className="text-[10px] font-semibold tracking-widest uppercase mb-1.5"
+                          style={{ color: 'var(--brand-primary)', opacity: 0.7 }}
+                        >
+                          to try
+                        </p>
+                        <p className="text-sm text-[var(--brand-text-secondary)] leading-relaxed">
+                          {experiment}
+                        </p>
+                      </div>
+                    )}
+
+                    {current.crossover.first_steps.length > 0 && (
+                      <div>
+                        <p
+                          className="text-[10px] font-semibold tracking-widest uppercase mb-1.5"
+                          style={{ color: 'var(--brand-primary)', opacity: 0.7 }}
+                        >
+                          first steps
+                        </p>
+                        <div className="space-y-1">
+                          {current.crossover.first_steps.map((step, i) => (
+                            <p
+                              key={i}
+                              className="text-xs text-[var(--brand-text-secondary)] opacity-75 flex items-start gap-2"
+                            >
+                              <span className="text-brand-primary opacity-60 mt-0.5 font-mono">{i + 1}.</span>
+                              <span>{step}</span>
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
 
               {!isDisliked && current.sharedFuel.length > 0 && (
                 <div className="mb-3">
