@@ -20,15 +20,24 @@ async function getAccessToken(): Promise<string | null> {
   return session?.access_token ?? null
 }
 
-// A refresh_token_not_found / invalid_grant error means the session is truly
-// dead and the user must sign in again. Anything else (network, 5xx, rate
-// limit) is transient and should not sign the user out.
+// Only a handful of error codes from refreshSession() mean the session is
+// truly dead and the user must sign in again. Everything else (network,
+// 5xx, rate limit, malformed request) is transient — keep the session
+// intact and let the caller deal with the 401. Being conservative here
+// avoids the pre-fix redirect loop where a transient refresh failure
+// would force a sign-out and bounce the user back to /login.
+const DEAD_SESSION_CODES = new Set([
+  'refresh_token_not_found',
+  'refresh_token_already_used',
+  'invalid_grant',
+  'session_not_found',
+  'user_not_found',
+])
+
 function isDeadSessionError(error: AuthError | null): boolean {
   if (!error) return false
   const code = (error as { code?: string }).code
-  if (code === 'refresh_token_not_found' || code === 'invalid_grant') return true
-  const status = (error as { status?: number }).status
-  return status === 400 || status === 401 || status === 403
+  return !!code && DEAD_SESSION_CODES.has(code)
 }
 
 export function setupAuthFetch() {

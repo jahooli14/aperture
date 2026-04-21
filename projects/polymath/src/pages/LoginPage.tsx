@@ -1,8 +1,9 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Mail, ArrowRight, Loader2, CheckCircle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { useAuthContext } from '../contexts/AuthContext'
 
 type Step = 'initial' | 'otp-sent' | 'success'
 
@@ -23,11 +24,21 @@ export function LoginPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const next = safeNextFrom(searchParams)
+  const { isAuthenticated, loading: authLoading } = useAuthContext()
   const [email, setEmail] = useState('')
   const [otp, setOtp] = useState('')
   const [step, setStep] = useState<Step>('initial')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // If the user is already signed in, don't let them sit on /login — that's
+  // how you accidentally re-trigger OAuth and end up with a stale state. Bounce
+  // them to their intended destination (or home) as soon as auth resolves.
+  useEffect(() => {
+    if (!authLoading && isAuthenticated && step !== 'success') {
+      navigate(next, { replace: true })
+    }
+  }, [authLoading, isAuthenticated, next, navigate, step])
 
   const handleGoogleLogin = async () => {
     setLoading(true)
