@@ -206,17 +206,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 : typeof cx.why_it_works === 'string' ? cx.why_it_works.trim() : ''
               return Boolean(title && pattern)
             }
+            // A "healthy" deck has at least one card with body content. If either
+            // deck is empty or all shells, the UI ends up missing a whole
+            // section (e.g. mashups label disappears because its array is []),
+            // with no way for the user to trigger a retry mid-week. Heal that
+            // here so the next cron run rebuilds both decks from scratch.
+            const mashupsHealthy = intArr.some(hasCardBody)
+            const insightsHealthy = insArr.some(hasCardBody)
             const isEmpty = hasRow && intArr.length === 0 && insArr.length === 0
-            const allShells = hasRow && !isEmpty
-              && intArr.every(c => !hasCardBody(c))
-              && insArr.every(c => !hasCardBody(c))
-            const shouldGenerate = isMonday || !hasRow || !!isExpired || isEmpty || allShells
+            const allShells = hasRow && !isEmpty && !mashupsHealthy && !insightsHealthy
+            const deckMissing = hasRow && !isEmpty && !allShells && (!mashupsHealthy || !insightsHealthy)
+            const shouldGenerate = isMonday || !hasRow || !!isExpired || isEmpty || allShells || deckMissing
 
             if (shouldGenerate) {
               const reason = isMonday ? 'weekly'
                 : !hasRow ? 'first_seed'
                 : isEmpty ? 'empty_retry'
                 : allShells ? 'shell_retry'
+                : deckMissing ? 'deck_retry'
                 : 'expired'
               const result = await generateWeeklyIntersections(userId)
               results.tasks.intersections = {
