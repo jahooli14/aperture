@@ -493,8 +493,13 @@ export function WeeklyIntersection() {
         return
       }
       const data = (await res.json()) as ApiResponse
-      setIntersections(data.intersections || [])
-      setInsights(data.insights || [])
+      // Defensive: if a card was persisted before the AI narration step
+      // succeeded, `reason` and `crossover` are missing and the body renders
+      // blank. Drop those here so users never see a card that's just chrome
+      // and vote buttons. New generations also filter at the source.
+      const hasBody = (c: Intersection) => Boolean(c.reason || c.crossover)
+      setIntersections((data.intersections || []).filter(hasBody))
+      setInsights((data.insights || []).filter(hasBody))
       setFeedback(data.feedback || {})
       setNextRefreshAt(data.next_refresh_at)
       setRefreshKey(k => k + 1)
