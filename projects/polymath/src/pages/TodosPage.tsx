@@ -218,7 +218,8 @@ export function TodosPage() {
     }
   }
 
-  //  Delete with undo toast 
+  //  Delete with real undo. We snapshot the todo, delete it, and show a toast
+  //  with an Undo button that restores it via addTodo.
   const handleDelete = async (id: string) => {
     const todo = todos.find(t => t.id === id)
     if (!todo) return
@@ -230,6 +231,10 @@ export function TodosPage() {
       description: todo.text.length > 40 ? todo.text.slice(0, 40) + '' : todo.text,
       variant: 'default',
       duration: 5000,
+      action: {
+        label: 'Undo',
+        onClick: () => { addTodo(todo.text) },
+      },
     })
   }
 
