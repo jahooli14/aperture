@@ -2,7 +2,7 @@
  * SelfModelHome — experimental homepage surface.
  *
  * On mount: shows a ticker ("reading 247 memories… 3 threads active…") while
- * /api/self-model is generating. Once the model arrives we reveal the Thesis
+ * /api/utilities?resource=self-model is generating. Once the model arrives we reveal the Thesis
  * word-by-word, then the Threads, then the Move. An "Argue with me" button
  * opens a textarea; the critique is POSTed with mode=argue and the model
  * re-derives in place so the user can watch it move.
@@ -88,7 +88,7 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
         body.previous = data?.model
         body.critique = critiqueText
       }
-      const res = await fetch('/api/self-model', {
+      const res = await fetch('/api/utilities?resource=self-model', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
