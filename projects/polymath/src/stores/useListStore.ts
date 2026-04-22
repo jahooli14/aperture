@@ -742,14 +742,18 @@ export const useListStore = create<ListStore>()(
             reorderItems: async (listId, itemIds) => {
                 const { isOnline } = useOfflineStore.getState()
 
-                // Optimistic
+                // Optimistic — update sort_order too so manual-sort views
+                // don't re-sort the array back to the previous order on the
+                // next render.
                 const currentItems = get().currentListItems
                 const previousMap = get().itemsByListId
-                const newItems = [...currentItems].sort((a, b) => {
-                    const indexA = itemIds.indexOf(a.id)
-                    const indexB = itemIds.indexOf(b.id)
-                    return indexA - indexB
-                })
+                const newItems = [...currentItems]
+                    .sort((a, b) => {
+                        const indexA = itemIds.indexOf(a.id)
+                        const indexB = itemIds.indexOf(b.id)
+                        return indexA - indexB
+                    })
+                    .map((item, index) => ({ ...item, sort_order: index }))
                 set(state => ({
                     currentListItems: newItems,
                     itemsByListId: { ...state.itemsByListId, [listId]: newItems },
