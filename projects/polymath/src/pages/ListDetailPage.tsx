@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useMemo, memo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, Send, Trash2, Mic, MicOff, Check, ChevronRight, Pencil, Star, SortAsc, ChevronDown, Copy, Brain, Link as LinkIcon, BookOpen, Loader2, RefreshCw, Settings2, ToggleLeft, ToggleRight, Search, X, GripVertical } from 'lucide-react'
+import { ArrowLeft, Send, Trash2, Mic, MicOff, Check, ChevronRight, Pencil, Star, SortAsc, ChevronDown, Copy, Brain, Link as LinkIcon, BookOpen, Loader2, RefreshCw, Settings2, ToggleLeft, ToggleRight, Search, X } from 'lucide-react'
 import {
     DndContext,
     DragOverlay,
@@ -332,14 +332,12 @@ const QuoteCard = memo(({
     onItemClick,
     onDelete,
     onCopy,
-    dragHandleProps,
 }: {
     item: ListItem
     isExpanded: boolean
     onItemClick: (id: string) => void
     onDelete: (id: string, listId: string) => void
     onCopy: (text: string) => void
-    dragHandleProps?: Record<string, any>
 }) => {
     const [isEditingAuthor, setIsEditingAuthor] = useState(false)
     const [authorValue, setAuthorValue] = useState(item.metadata?.specs?.Author || 'Me')
@@ -490,17 +488,6 @@ const QuoteCard = memo(({
 
                 {/* Actions row */}
                 <div className="absolute top-6 right-6 flex items-center gap-2">
-                    {dragHandleProps && (
-                        <button
-                            {...dragHandleProps}
-                            onClick={(e) => e.stopPropagation()}
-                            aria-label="Drag to reorder"
-                            className="p-2.5 rounded-xl bg-zinc-900/50 backdrop-blur-sm border border-[var(--glass-surface-hover)] text-brand-text-muted opacity-60 cursor-grab active:cursor-grabbing active:scale-95 transition-all"
-                            style={{ touchAction: 'none' }}
-                        >
-                            <GripVertical className="h-4 w-4" />
-                        </button>
-                    )}
                     {/* Copy button */}
                     <button
                         onClick={(e) => { e.stopPropagation(); onCopy(item.content) }}
@@ -608,7 +595,6 @@ const StandardItemCard = memo(({
     hasThought?: boolean
     hasStatus?: boolean
     coverOverride?: string
-    dragHandleProps?: Record<string, any>
 }) => {
     const hasImage = coverOverride || item.metadata?.image
     const imageUrl = coverOverride || item.metadata?.image
@@ -797,20 +783,6 @@ const StandardItemCard = memo(({
                 </button>
             </div>
 
-            {/* Drag handle — the ONLY element that initiates a reorder drag, so
-                touches elsewhere on the card scroll the page normally. Sized
-                generously for comfortable thumb use on mobile. */}
-            {dragHandleProps && (
-                <button
-                    {...dragHandleProps}
-                    onClick={(e) => e.stopPropagation()}
-                    aria-label="Drag to reorder"
-                    className="absolute top-2 left-2 z-10 flex items-center justify-center h-10 w-10 rounded-xl bg-black/65 backdrop-blur-md border border-white/15 text-[var(--brand-text-primary)]/70 active:text-[var(--brand-text-primary)] active:scale-95 cursor-grab active:cursor-grabbing transition-colors"
-                    style={{ touchAction: 'none' }}
-                >
-                    <GripVertical className="h-4 w-4" />
-                </button>
-            )}
         </motion.div>
     )
 })
@@ -865,6 +837,9 @@ function EmptySectionDropzone({ status, label, rgb }: { status: SectionStatus; l
     )
 }
 
+// Google Keep style: the entire card is the drag target. On touch the press
+// must be held (delay sensor) before drag activates, so taps still open the
+// card and finger-drags within the delay window scroll the page normally.
 function SortableQuote({
     item,
     isExpanded,
@@ -880,35 +855,33 @@ function SortableQuote({
     const style: React.CSSProperties = {
         transform: CSS.Transform.toString(transform),
         transition,
-        opacity: isDragging ? 0.3 : 1,
+        opacity: isDragging ? 0 : 1,
+        touchAction: 'manipulation',
     }
     return (
-        <div ref={setNodeRef} style={style}>
+        <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
             <QuoteCard
                 item={item}
                 isExpanded={isExpanded}
                 onItemClick={onItemClick}
                 onDelete={onDelete}
                 onCopy={(text) => { navigator.clipboard?.writeText(text).catch(() => {}) }}
-                dragHandleProps={{ ...attributes, ...listeners }}
             />
         </div>
     )
 }
 
-// Sortable wrapper. Listeners are passed down to a dedicated drag handle inside
-// the card, NOT spread on the wrapper — so the card surface remains scrollable
-// on touch devices. Tap anywhere on the card opens it; only the grabber drags.
 const SortableItemCard = memo((props: React.ComponentProps<typeof StandardItemCard>) => {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.item.id })
     const style: React.CSSProperties = {
         transform: CSS.Transform.toString(transform),
         transition,
-        opacity: isDragging ? 0.3 : 1,
+        opacity: isDragging ? 0 : 1,
+        touchAction: 'manipulation',
     }
     return (
-        <div ref={setNodeRef} style={style}>
-            <StandardItemCard {...props} dragHandleProps={{ ...attributes, ...listeners }} />
+        <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+            <StandardItemCard {...props} />
         </div>
     )
 })
@@ -1329,12 +1302,12 @@ export default function ListDetailPage() {
         updateListItemStatus(itemId, status as any)
     }, [updateListItemStatus])
 
-    // Drags activate only from a dedicated grabber on each card (touch-action:
-    // none is set on the handle itself), so the card body never steals scroll.
-    // Distance thresholds keep taps on the handle from firing as drags.
+    // Google Keep pattern: long-press to drag on touch (so the page still
+    // scrolls when the user swipes). Mouse uses a small distance threshold so
+    // a click on the card opens it but any real drag motion grabs it.
     const sensors = useSensors(
-        useSensor(MouseSensor, { activationConstraint: { distance: 4 } }),
-        useSensor(TouchSensor, { activationConstraint: { distance: 6 } }),
+        useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+        useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 6 } }),
     )
 
     const handleDragStart = useCallback((e: DragStartEvent) => {
@@ -1689,7 +1662,22 @@ export default function ListDetailPage() {
                                 ))}
                             </div>
                         </SortableContext>
-                        <DragOverlay dropAnimation={null} />
+                        <DragOverlay dropAnimation={null}>
+                            {activeDragId ? (() => {
+                                const item = displayItems.find(i => i.id === activeDragId)
+                                return item ? (
+                                    <div className="rotate-1 scale-[1.03]" style={{ filter: 'drop-shadow(0 24px 32px rgba(0,0,0,0.55))' }}>
+                                        <QuoteCard
+                                            item={item}
+                                            isExpanded={false}
+                                            onItemClick={() => {}}
+                                            onDelete={() => {}}
+                                            onCopy={() => {}}
+                                        />
+                                    </div>
+                                ) : null
+                            })() : null}
+                        </DragOverlay>
                     </DndContext>
                 ) : !hasStatus ? (
                     <DndContext
@@ -1714,7 +1702,27 @@ export default function ListDetailPage() {
                                 coverOverrides={coverOverrides}
                             />
                         </SortableContext>
-                        <DragOverlay dropAnimation={null} />
+                        <DragOverlay dropAnimation={null}>
+                            {activeDragId ? (() => {
+                                const item = displayItems.find(i => i.id === activeDragId)
+                                return item ? (
+                                    <div className="rotate-1 scale-[1.03]" style={{ filter: 'drop-shadow(0 24px 32px rgba(0,0,0,0.55))' }}>
+                                        <StandardItemCard
+                                            item={item}
+                                            listType={list.type}
+                                            isExpanded={false}
+                                            onItemClick={() => {}}
+                                            onDelete={() => {}}
+                                            onRate={() => {}}
+                                            onMarkDone={() => {}}
+                                            rgb={rgb}
+                                            hasStatus={hasStatus}
+                                            coverOverride={coverOverrides[item.id]}
+                                        />
+                                    </div>
+                                ) : null
+                            })() : null}
+                        </DragOverlay>
                     </DndContext>
                 ) : (
                     <DndContext
@@ -1763,7 +1771,7 @@ export default function ListDetailPage() {
                             {activeDragId ? (() => {
                                 const item = displayItems.find(i => i.id === activeDragId)
                                 return item ? (
-                                    <div className="rotate-1 scale-105 opacity-90">
+                                    <div className="rotate-1 scale-[1.03]" style={{ filter: 'drop-shadow(0 24px 32px rgba(0,0,0,0.55))' }}>
                                         <StandardItemCard
                                             item={item}
                                             listType={list.type}
