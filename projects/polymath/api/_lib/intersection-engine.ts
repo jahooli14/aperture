@@ -503,8 +503,8 @@ node_ids: use EXACT bracketed IDs from the list above. At least one must be a pr
 Only return crossovers scoring 7+. Sort by non_obvious_score descending.`
 
   // Pro: cross-project pattern discovery is the core synthesis step of this
-  // engine. Narration below (narrateClusters) stays on Flash — it only dresses
-  // up clusters Pro has already picked.
+  // engine. narrateClusters also runs on Pro for the mashup deck, but with
+  // bounded concurrency and a tolerant parser to keep it reliable.
   const raw = await generateText(prompt, {
     model: MODELS.PRO,
     responseFormat: 'json',
@@ -662,6 +662,72 @@ export async function classicIntersections(
 }
 
 /**
+ * Recover a single object from a possibly-truncated JSON response. Mirrors
+ * parseCandidatesJSON but for one object instead of an array — Pro sometimes
+ * returns a clean JSON, sometimes wraps it in prose, sometimes truncates the
+ * last brace when output budget is hit. Returning {} lets the caller's
+ * field-validation step decide whether the response was usable.
+ */
+function parseObjectJSON(raw: string): Record<string, unknown> {
+  try {
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
+  } catch {
+    const startIdx = raw.indexOf('{')
+    if (startIdx === -1) return {}
+    let depth = 0
+    let inString = false
+    let escape = false
+    let lastCompleteEnd = -1
+    for (let i = startIdx; i < raw.length; i++) {
+      const ch = raw[i]
+      if (escape) { escape = false; continue }
+      if (ch === '\\') { escape = true; continue }
+      if (ch === '"') { inString = !inString; continue }
+      if (inString) continue
+      if (ch === '{') depth++
+      else if (ch === '}') { depth--; if (depth === 0) { lastCompleteEnd = i; break } }
+    }
+    if (lastCompleteEnd === -1) return {}
+    try {
+      const parsed = JSON.parse(raw.slice(startIdx, lastCompleteEnd + 1))
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
+    } catch {
+      return {}
+    }
+  }
+}
+
+const sleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
+
+/**
+ * Run an async function over an array with a bounded concurrency window.
+ * Pro models have aggressive RPM tier limits; firing N parallel calls when
+ * embedding clustering produces 5+ groups is the main reason narration was
+ * losing clusters to silent 429s.
+ */
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length)
+  let cursor = 0
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (true) {
+      const i = cursor++
+      if (i >= items.length) return
+      results[i] = await fn(items[i], i)
+    }
+  })
+  await Promise.all(workers)
+  return results
+}
+
+const NARRATION_MAX_RETRIES = 1
+const NARRATION_CONCURRENCY = 2
+
+/**
  * Generate `reason` and `crossover` for every cluster in-place. Used by the
  * classic embedding pipeline (whose clusters come from cosine-similarity
  * geometry and arrive without any narrative attached).
@@ -669,21 +735,29 @@ export async function classicIntersections(
  * Uses Pro — the same model that powers discoverIntersections — because the
  * narration IS the insight. Flash produced product-pitch prose ("if you put
  * these together you could build X") that read exactly like the mashups the
- * Pro discovery prompt bans. Upgrading the model + applying the same
- * anti-mashup rules keeps the MASHUPS deck quality consistent with INSIGHTS.
+ * Pro discovery prompt bans.
+ *
+ * Why this looks more careful than it used to:
+ *   - Concurrency-limited (NARRATION_CONCURRENCY) so we don't fan out N
+ *     parallel Pro calls and hit RPM limits.
+ *   - maxTokens raised from 1024 → 2048 so the structured response (5 fields
+ *     plus 3 first_steps in JSON wrapping) doesn't truncate.
+ *   - Tolerant JSON parser (parseObjectJSON) so a missing trailing brace
+ *     doesn't drop an otherwise-fine cluster.
+ *   - One retry on failure, including on parse / empty-field validation.
+ *   - Validates that the AI actually returned text in every required field
+ *     before committing to intersection.reason/crossover. Half-empty
+ *     responses no longer turn into chrome-only cards downstream.
  */
 export async function narrateClusters(clusters: IntersectionResult[]): Promise<void> {
   if (clusters.length === 0) return
-  const settled = await Promise.allSettled(clusters.map(async (intersection) => {
-    // Skip if already fully populated upstream (discoverIntersections path).
-    if (intersection.reason && intersection.crossover) return
 
+  const buildPrompt = (intersection: IntersectionResult): string => {
     const nodeLabel = intersection.nodes
       .map(n => n.type === 'project' ? `the project "${n.title}"` : n.type === 'memory' ? `a thought: "${n.title}"` : `a list item: "${n.title}"`)
       .join('\n- ')
     const fuelContext = intersection.sharedFuel.slice(0, 5).map(f => `${f.type}: "${f.title}"`).join(', ')
-
-    const prompt = `Someone has these threads on their mind right now:
+    return `Someone has these threads on their mind right now:
 - ${nodeLabel}${fuelContext ? `\n\nAcross them, these items keep showing up: ${fuelContext}.` : ''}
 
 Your job is NOT to propose a new product. Your job is to catch the person doing something they haven't noticed, then propose ONE small concrete thing to try.
@@ -718,15 +792,18 @@ Return JSON only:
   "the_experiment": "1-2 sentences. ONE thing to try. Starts with a verb. Names a specific project they already have.",
   "first_steps": ["verb-led, 8-14 words, specific", "verb-led, 8-14 words, specific", "verb-led, 8-14 words, specific"]
 }`
+  }
 
+  const narrateOne = async (intersection: IntersectionResult, attempt = 0): Promise<boolean> => {
+    if (intersection.reason && intersection.crossover) return true
     try {
-      const raw = await generateText(prompt, {
+      const raw = await generateText(buildPrompt(intersection), {
         model: MODELS.PRO,
         responseFormat: 'json',
         temperature: 0.9,
-        maxTokens: 1024,
+        maxTokens: 2048,
       })
-      const parsed = JSON.parse(raw) as {
+      const parsed = parseObjectJSON(raw) as {
         crossover_title?: string
         hook?: string
         the_pattern?: string
@@ -734,31 +811,46 @@ Return JSON only:
         first_steps?: string[]
       }
 
-      if (!intersection.reason) {
-        intersection.reason = parsed.hook || parsed.the_pattern || ''
-      }
-      if (!intersection.crossover) {
-        const thePattern = parsed.the_pattern || ''
-        const theExperiment = parsed.the_experiment || ''
-        intersection.crossover = {
-          crossover_title: parsed.crossover_title || 'Untitled',
-          the_pattern: thePattern,
-          the_experiment: theExperiment,
-          first_steps: (parsed.first_steps || []).filter(Boolean).slice(0, 3),
-          // Back-compat for any already-deployed client on the old field names.
-          why_it_works: thePattern,
-          concept: theExperiment,
-        }
-      }
-    } catch (err) {
-      console.warn('[intersection-engine] narrateClusters: Pro call failed for cluster', {
-        clusterId: intersection.id,
-        err: err instanceof Error ? err.message : String(err),
-      })
-    }
-  }))
+      const title = parsed.crossover_title?.trim() || ''
+      const hook = parsed.hook?.trim() || parsed.the_pattern?.trim() || ''
+      const thePattern = parsed.the_pattern?.trim() || ''
+      const theExperiment = parsed.the_experiment?.trim() || ''
+      const steps = Array.isArray(parsed.first_steps)
+        ? parsed.first_steps.map(s => (typeof s === 'string' ? s.trim() : '')).filter(Boolean).slice(0, 3)
+        : []
 
-  const failed = settled.filter(r => r.status === 'rejected').length
+      // Reject responses that are missing any required field. An empty
+      // crossover renders as a chrome-only card downstream, which is exactly
+      // the failure mode we're trying to eliminate.
+      if (!title || !hook || !thePattern || !theExperiment) {
+        throw new Error(`narration returned empty fields (title=${!!title} hook=${!!hook} pattern=${!!thePattern} experiment=${!!theExperiment})`)
+      }
+
+      intersection.reason = hook
+      intersection.crossover = {
+        crossover_title: title,
+        the_pattern: thePattern,
+        the_experiment: theExperiment,
+        first_steps: steps,
+        // Back-compat for any already-deployed client on the old field names.
+        why_it_works: thePattern,
+        concept: theExperiment,
+      }
+      return true
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      if (attempt < NARRATION_MAX_RETRIES) {
+        console.warn('[intersection-engine] narrateClusters: retrying cluster', { clusterId: intersection.id, attempt: attempt + 1, err: message })
+        await sleep(1200 + Math.floor(Math.random() * 600))
+        return narrateOne(intersection, attempt + 1)
+      }
+      console.warn('[intersection-engine] narrateClusters: giving up on cluster', { clusterId: intersection.id, err: message })
+      return false
+    }
+  }
+
+  const outcomes = await mapWithConcurrency(clusters, NARRATION_CONCURRENCY, narrateOne)
+  const failed = outcomes.filter(ok => !ok).length
   if (failed > 0) {
     console.warn('[intersection-engine] narrateClusters: narration failed for', failed, 'of', clusters.length, 'clusters')
   }
