@@ -191,13 +191,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const nowMs = Date.now()
             const hasRow = !!existing
             const isExpired = existing?.expires_at && new Date(existing.expires_at).getTime() < nowMs
-            const intArr = (existing?.intersections ?? []) as unknown[]
-            const insArr = (existing?.insights ?? []) as unknown[]
+            const intArr = (existing?.intersections ?? []) as Array<Record<string, unknown>>
+            const insArr = (existing?.insights ?? []) as Array<Record<string, unknown>>
+            // A card has body content when its `reason` is a non-empty string
+            // OR its `crossover` object has a usable title + pattern. Empty
+            // strings or `{}` count as a shell (renders as chrome only).
+            const hasCardBody = (c: Record<string, unknown>) => {
+              const reason = typeof c.reason === 'string' ? c.reason.trim() : ''
+              if (reason) return true
+              const cx = c.crossover as Record<string, unknown> | undefined | null
+              if (!cx || typeof cx !== 'object') return false
+              const title = typeof cx.crossover_title === 'string' ? cx.crossover_title.trim() : ''
+              const pattern = typeof cx.the_pattern === 'string' ? cx.the_pattern.trim()
+                : typeof cx.why_it_works === 'string' ? cx.why_it_works.trim() : ''
+              return Boolean(title && pattern)
+            }
             const isEmpty = hasRow && intArr.length === 0 && insArr.length === 0
-            const shouldGenerate = isMonday || !hasRow || !!isExpired || isEmpty
+            const allShells = hasRow && !isEmpty
+              && intArr.every(c => !hasCardBody(c))
+              && insArr.every(c => !hasCardBody(c))
+            const shouldGenerate = isMonday || !hasRow || !!isExpired || isEmpty || allShells
 
             if (shouldGenerate) {
-              const reason = isMonday ? 'weekly' : !hasRow ? 'first_seed' : isEmpty ? 'empty_retry' : 'expired'
+              const reason = isMonday ? 'weekly'
+                : !hasRow ? 'first_seed'
+                : isEmpty ? 'empty_retry'
+                : allShells ? 'shell_retry'
+                : 'expired'
               const result = await generateWeeklyIntersections(userId)
               results.tasks.intersections = {
                 success: true,

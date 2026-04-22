@@ -494,10 +494,19 @@ export function WeeklyIntersection() {
       }
       const data = (await res.json()) as ApiResponse
       // Defensive: if a card was persisted before the AI narration step
-      // succeeded, `reason` and `crossover` are missing and the body renders
-      // blank. Drop those here so users never see a card that's just chrome
-      // and vote buttons. New generations also filter at the source.
-      const hasBody = (c: Intersection) => Boolean(c.reason || c.crossover)
+      // succeeded, `reason` and `crossover` are missing or empty and the body
+      // renders blank. Drop those here so users never see a card that's just
+      // chrome and vote buttons. `Boolean(c.crossover)` alone isn't enough —
+      // older generations stored `{}` or fields-with-empty-strings, both of
+      // which are truthy objects. New generations filter at the source.
+      const hasBody = (c: Intersection) => {
+        if (typeof c.reason === 'string' && c.reason.trim()) return true
+        const cx = c.crossover
+        if (!cx) return false
+        const title = (cx.crossover_title || '').trim()
+        const pattern = (cx.the_pattern || cx.why_it_works || '').trim()
+        return Boolean(title && pattern)
+      }
       setIntersections((data.intersections || []).filter(hasBody))
       setInsights((data.insights || []).filter(hasBody))
       setFeedback(data.feedback || {})
