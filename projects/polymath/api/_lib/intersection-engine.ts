@@ -647,10 +647,18 @@ export async function classicIntersections(
 
   await narrateClusters(results)
 
-  const narrated = results.filter(r => r.reason && r.crossover).length
-  console.log('[intersection-engine] classicIntersections: narrated', narrated, 'of', results.length, 'clusters')
+  // Drop any cluster the AI failed to narrate. Without `reason` and `crossover`
+  // the card renders as an empty shell — the threads list and vote buttons
+  // appear but the body is blank, which looks broken. Better to surface fewer
+  // mashups than blank ones.
+  const narrated = results.filter(r => r.reason && r.crossover)
+  if (narrated.length < results.length) {
+    console.warn('[intersection-engine] classicIntersections: dropped', results.length - narrated.length, 'unnarrated clusters of', results.length)
+  } else {
+    console.log('[intersection-engine] classicIntersections: narrated', narrated.length, 'of', results.length, 'clusters')
+  }
 
-  return results
+  return narrated
 }
 
 /**
