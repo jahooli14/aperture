@@ -198,6 +198,7 @@ export async function discoverIntersections(
   let droppedMissingId = 0
   let droppedTooSmall = 0
   let droppedNoProject = 0
+  let droppedEmptyBody = 0
 
   for (const candidate of candidates) {
     const rawIds = candidate.node_ids ?? candidate.project_ids ?? []
@@ -236,18 +237,28 @@ export async function discoverIntersections(
 
     // Map new fields, falling back to legacy names if the model returned the
     // old schema (or if we hit the back-compat parse path).
-    const title = candidate.crossover_title || candidate.pattern_name || 'Untitled'
-    const thePattern = candidate.the_pattern || candidate.the_insight || ''
-    const theExperiment =
+    const title = (candidate.crossover_title || candidate.pattern_name || '').trim()
+    const thePattern = (candidate.the_pattern || candidate.the_insight || '').trim()
+    const theExperiment = (
       candidate.the_experiment ||
       candidate.one_thing_to_try ||
       candidate.what_it_unlocks ||
       ''
-    const hook = candidate.hook || candidate.the_insight || thePattern
+    ).trim()
+    const hook = (candidate.hook || candidate.the_insight || thePattern || '').trim()
     const steps = (candidate.first_steps && candidate.first_steps.length > 0
       ? candidate.first_steps
       : [candidate.one_thing_to_try, ...(candidate.further_steps || [])]
     ).filter(Boolean).slice(0, 3) as string[]
+
+    // Drop candidates whose body fields came back empty. An empty crossover
+    // renders as a chrome-only card downstream — exactly the failure mode the
+    // narrateClusters retry path also guards against. Mirror that here so
+    // discoverIntersections can't persist shell cards either.
+    if (!title || !hook || !thePattern || !theExperiment) {
+      droppedEmptyBody++
+      continue
+    }
 
     results.push({
       id: matchedNodes.map(n => n.id).sort().join(','),
@@ -276,6 +287,7 @@ export async function discoverIntersections(
       droppedMissingId,
       droppedTooSmall,
       droppedNoProject,
+      droppedEmptyBody,
     })
     return []
   }
@@ -284,6 +296,7 @@ export async function discoverIntersections(
     droppedMissingId,
     droppedTooSmall,
     droppedNoProject,
+    droppedEmptyBody,
   })
 
   results.sort((a, b) => b.score - a.score)
@@ -517,8 +530,9 @@ Only return crossovers scoring 7+. Sort by non_obvious_score descending.`
 
   return parsed.filter((c: any) => {
     const ids = Array.isArray(c.node_ids) ? c.node_ids : Array.isArray(c.project_ids) ? c.project_ids : null
-    const hasTitle = typeof c.crossover_title === 'string' || typeof c.pattern_name === 'string'
-    const hasBody = typeof c.the_pattern === 'string' || typeof c.the_insight === 'string'
+    const isNonEmptyString = (v: unknown) => typeof v === 'string' && v.trim().length > 0
+    const hasTitle = isNonEmptyString(c.crossover_title) || isNonEmptyString(c.pattern_name)
+    const hasBody = isNonEmptyString(c.the_pattern) || isNonEmptyString(c.the_insight)
     return ids !== null && ids.length >= 2 && hasTitle && hasBody
   }) as RawCandidate[]
 }

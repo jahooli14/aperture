@@ -1331,15 +1331,26 @@ Return JSON only:
         }
 
         // Only block regeneration if the existing row is both fresh AND has
-        // actual cards. An empty row (generator returned 0 cards, typically
-        // because projects/memories lacked embeddings at the time) should be
+        // actual cards with body content. An empty row (generator returned 0
+        // cards) or a row full of shell cards (cards persisted before AI
+        // narration completed — chrome only, blank body) should be
         // re-seedable on demand so the user isn't stuck for a week.
         if (existing?.expires_at) {
           const expiresMs = new Date(existing.expires_at).getTime()
-          const intArr = (existing.intersections ?? []) as unknown[]
-          const insArr = (existing.insights ?? []) as unknown[]
-          const hasCards = intArr.length > 0 || insArr.length > 0
-          if (expiresMs > Date.now() && hasCards) {
+          const intArr = (existing.intersections ?? []) as Array<Record<string, unknown>>
+          const insArr = (existing.insights ?? []) as Array<Record<string, unknown>>
+          const hasCardBody = (c: Record<string, unknown>) => {
+            const reason = typeof c.reason === 'string' ? c.reason.trim() : ''
+            if (reason) return true
+            const cx = c.crossover as Record<string, unknown> | undefined | null
+            if (!cx || typeof cx !== 'object') return false
+            const title = typeof cx.crossover_title === 'string' ? cx.crossover_title.trim() : ''
+            const pattern = typeof cx.the_pattern === 'string' ? cx.the_pattern.trim()
+              : typeof cx.why_it_works === 'string' ? cx.why_it_works.trim() : ''
+            return Boolean(title && pattern)
+          }
+          const hasUsableCards = intArr.some(hasCardBody) || insArr.some(hasCardBody)
+          if (expiresMs > Date.now() && hasUsableCards) {
             return res.status(409).json({
               error: 'Already have a fresh deck this week',
               code: 'already_seeded',
