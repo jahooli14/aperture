@@ -35,6 +35,7 @@ import { listHasStatus } from '../types'
 import { useToast } from '../components/ui/toast'
 import { BottomSheet, BottomSheetContent, BottomSheetHeader, BottomSheetTitle } from '../components/ui/bottom-sheet'
 import { ListIcon, ListColor } from '../lib/listTheme'
+import { haptic } from '../utils/haptics'
 
 // ============================================================================
 // Star Rating component
@@ -856,10 +857,19 @@ function SortableQuote({
         transform: CSS.Transform.toString(transform),
         transition,
         opacity: isDragging ? 0 : 1,
-        touchAction: 'manipulation',
+        touchAction: isDragging ? 'none' : 'manipulation',
+        WebkitTouchCallout: 'none',
+        WebkitUserSelect: 'none',
+        userSelect: 'none',
     }
     return (
-        <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+        <div
+            ref={setNodeRef}
+            style={style}
+            onContextMenu={(e) => e.preventDefault()}
+            {...attributes}
+            {...listeners}
+        >
             <QuoteCard
                 item={item}
                 isExpanded={isExpanded}
@@ -877,10 +887,19 @@ const SortableItemCard = memo((props: React.ComponentProps<typeof StandardItemCa
         transform: CSS.Transform.toString(transform),
         transition,
         opacity: isDragging ? 0 : 1,
-        touchAction: 'manipulation',
+        touchAction: isDragging ? 'none' : 'manipulation',
+        WebkitTouchCallout: 'none',
+        WebkitUserSelect: 'none',
+        userSelect: 'none',
     }
     return (
-        <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+        <div
+            ref={setNodeRef}
+            style={style}
+            onContextMenu={(e) => e.preventDefault()}
+            {...attributes}
+            {...listeners}
+        >
             <StandardItemCard {...props} />
         </div>
     )
@@ -1312,6 +1331,7 @@ export default function ListDetailPage() {
 
     const handleDragStart = useCallback((e: DragStartEvent) => {
         setActiveDragId(String(e.active.id))
+        haptic.medium()
     }, [])
 
     const handleDragEnd = useCallback(async (e: DragEndEvent) => {
