@@ -236,7 +236,8 @@ function ChecklistEditor({
             <button
               type="button"
               onClick={() => removeItem(item.id)}
-              className="flex-shrink-0 opacity-0 group-hover:opacity-40 transition-opacity p-1"
+              aria-label="Remove item"
+              className="flex-shrink-0 opacity-30 hover:opacity-80 transition-opacity p-2 rounded-lg min-h-[32px] min-w-[32px] flex items-center justify-center"
               style={{ color: 'var(--brand-text-secondary)' }}
             >
               <X className="h-3.5 w-3.5" />

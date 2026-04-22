@@ -70,10 +70,10 @@ export function ItemInsightStrip({ title, themes, itemId, itemType }: ItemInsigh
         <>
           <button
             onClick={() => setShowPathPicker(true)}
-            className="w-full p-3 rounded-xl transition-all hover:bg-brand-primary/5 flex items-center justify-center gap-2 border border-dashed border-brand-primary/15 group"
+            className="w-full p-3 rounded-xl transition-all hover:bg-brand-primary/10 flex items-center justify-center gap-2 border border-dashed border-brand-primary/25 group min-h-[44px]"
           >
-            <Route className="h-3.5 w-3.5 text-brand-primary opacity-50 group-hover:opacity-100 transition-opacity" />
-            <span className="text-xs font-medium text-brand-primary opacity-50 group-hover:opacity-100 transition-opacity">
+            <Route className="h-3.5 w-3.5 text-brand-primary opacity-80 group-hover:opacity-100 transition-opacity" />
+            <span className="text-xs font-medium text-brand-primary opacity-80 group-hover:opacity-100 transition-opacity">
               See how this connects to...
             </span>
           </button>

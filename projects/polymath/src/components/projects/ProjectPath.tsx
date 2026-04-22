@@ -16,6 +16,7 @@ import { cn } from '../../lib/utils'
 import { MarkdownRenderer } from '../ui/MarkdownRenderer'
 import { handleInputFocus } from '../../utils/keyboard'
 import { useTodoStore, selectByProject } from '../../stores/useTodoStore'
+import { useConfirmDialog } from '../ui/confirm-dialog'
 import type { Task } from './TaskList'
 
 interface ProjectPathProps {
@@ -89,6 +90,7 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
   const [editingText, setEditingText] = useState('')
   const [showBuilt, setShowBuilt] = useState(false)
   const [draggedId, setDraggedId] = useState<string | null>(null)
+  const { confirm, dialog: confirmDialog } = useConfirmDialog()
 
   const activePhase = determineActivePhase(tasks)
 
@@ -133,7 +135,15 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
     ))
   }
 
-  const handleDeleteTask = (taskId: string) => {
+  const handleDeleteTask = async (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId)
+    const confirmed = await confirm({
+      title: task ? `Remove "${task.text.length > 60 ? task.text.slice(0, 60) + '…' : task.text}"?` : 'Remove this task?',
+      description: 'The task will be permanently removed from this project.',
+      confirmText: 'Remove',
+      variant: 'destructive',
+    })
+    if (!confirmed) return
     onUpdate(tasks.filter(t => t.id !== taskId).map((t, i) => ({ ...t, order: i })))
   }
 
@@ -300,9 +310,10 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
                             )}
                             style={{ opacity: draggedId === task.id ? 0.4 : 1 }}
                           >
-                            {/* Drag handle */}
+                            {/* Drag handle — always visible (faded) so touch
+                                users know tasks can be reordered. */}
                             <div
-                              className="flex-shrink-0 mt-1 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-30 transition-opacity"
+                              className="flex-shrink-0 mt-1 cursor-grab active:cursor-grabbing opacity-25 group-hover:opacity-60 transition-opacity"
                               style={{ color: 'var(--brand-text-secondary)' }}
                               aria-label="Drag to reorder"
                             >
@@ -350,13 +361,13 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
                                       onClick={(e) => { e.stopPropagation(); handleEstimateChange(task.id, task.estimated_minutes) }}
                                       className={cn(
                                         "text-[10px] font-medium px-1.5 py-0.5 rounded-md transition-all hover:bg-white/[0.04] flex items-center gap-1",
-                                        task.estimate_set ? "opacity-60" : "opacity-0 group-hover:opacity-50"
+                                        task.estimate_set ? "opacity-60 hover:opacity-90" : "opacity-35 hover:opacity-70"
                                       )}
                                       style={{ color: 'var(--brand-text-secondary)' }}
                                       aria-label={task.estimate_set ? 'Change time estimate' : 'Set time estimate'}
                                     >
                                       <Clock className="h-2.5 w-2.5" />
-                                      {task.estimate_set && <span>{task.estimated_minutes}m</span>}
+                                      <span>{task.estimate_set ? `${task.estimated_minutes}m` : 'Estimate'}</span>
                                     </button>
                                     {task.is_ai_suggested && (
                                       <span className="text-[9px] font-medium uppercase tracking-wider" style={{ color: 'var(--brand-primary)', opacity: 0.35 }}>suggested</span>
@@ -369,14 +380,14 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
                               )}
                             </div>
 
-                            {/* Delete */}
+                            {/* Delete — always visible (faded) for touch reach. */}
                             <button
                               onClick={() => handleDeleteTask(task.id)}
-                              className="flex-shrink-0 h-7 w-7 flex items-center justify-center rounded-lg opacity-0 group-hover:opacity-30 hover:!opacity-60 transition-all"
+                              className="flex-shrink-0 h-9 w-9 flex items-center justify-center rounded-lg opacity-25 group-hover:opacity-60 hover:!opacity-100 hover:bg-red-500/10 transition-all"
                               style={{ color: 'var(--brand-text-primary)' }}
                               aria-label="Delete task"
                             >
-                              <Trash2 className="h-3 w-3" />
+                              <Trash2 className="h-3.5 w-3.5" />
                             </button>
                           </motion.div>
                         )
@@ -505,6 +516,7 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
           <p className="text-[12px] mt-1" style={{ color: 'var(--brand-text-secondary)', opacity: 0.18 }}>Break it into phases — start small, build up, wrap clean.</p>
         </div>
       )}
+      {confirmDialog}
     </div>
   )
 }

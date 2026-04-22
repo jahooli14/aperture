@@ -118,6 +118,7 @@ export function VoiceFAB({
   const { isOnline } = useOnlineStatus()
   const pressTimerRef = useRef<NodeJS.Timeout | null>(null)
   const pressStartTimeRef = useRef<number>(0)
+  const pressStartPosRef = useRef<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
     const handleOpenVoiceCapture = () => {
@@ -152,8 +153,9 @@ export function VoiceFAB({
     if (e.pointerType === 'mouse' && e.button !== 0) return
     setIsLongPressRecording(false)
     pressStartTimeRef.current = Date.now()
+    pressStartPosRef.current = { x: e.clientX, y: e.clientY }
     if (pressTimerRef.current) clearTimeout(pressTimerRef.current)
-    
+
     pressTimerRef.current = setTimeout(() => {
       setIsLongPressRecording(true)
       setShouldStopRecording(false)
@@ -162,12 +164,16 @@ export function VoiceFAB({
     }, LONG_PRESS_DELAY)
   }, [])
 
+  // Cancel the long-press timer if the finger moves far enough to be a scroll.
+  // Prevents the FAB from hijacking vertical scrolls that start on top of it.
   const onMove = useCallback((e: React.PointerEvent) => {
-    // We can add swipe-to-cancel logic here if needed, but for now just stop the press timer if they move too far
-    if (pressTimerRef.current) {
-      if (Math.abs(e.movementX) > 10 || Math.abs(e.movementY) > 10) {
-        // Optional: cancel long press if they swipe away
-      }
+    if (!pressTimerRef.current || !pressStartPosRef.current) return
+    const dx = e.clientX - pressStartPosRef.current.x
+    const dy = e.clientY - pressStartPosRef.current.y
+    if (dx * dx + dy * dy > 144) { // >12px movement
+      clearTimeout(pressTimerRef.current)
+      pressTimerRef.current = null
+      pressStartPosRef.current = null
     }
   }, [])
 
@@ -176,6 +182,7 @@ export function VoiceFAB({
       clearTimeout(pressTimerRef.current)
       pressTimerRef.current = null
     }
+    pressStartPosRef.current = null
     const duration = Date.now() - pressStartTimeRef.current
 
     if (isLongPressRecording) {
@@ -197,6 +204,7 @@ export function VoiceFAB({
       clearTimeout(pressTimerRef.current)
       pressTimerRef.current = null
     }
+    pressStartPosRef.current = null
     // If they leave while long-press recording, we stop it
     if (isLongPressRecording) {
       setShouldStopRecording(true)
@@ -208,6 +216,7 @@ export function VoiceFAB({
       clearTimeout(pressTimerRef.current)
       pressTimerRef.current = null
     }
+    pressStartPosRef.current = null
     setIsLongPressRecording(false)
     setIsVoiceOpen(false)
   }, [])

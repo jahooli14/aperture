@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { Reorder, motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, GripVertical, ListOrdered, Check, Star } from 'lucide-react'
+import { Plus, Trash2, GripVertical, ListOrdered, Check, Star, ArrowUpDown } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthContext } from '../contexts/AuthContext'
 import { SignInNudge } from '../components/SignInNudge'
@@ -58,6 +58,7 @@ export default function ListsPage() {
     // Long-press detection
     const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
     const longPressActivated = useRef(false)
+    const pointerStart = useRef<{ x: number; y: number } | null>(null)
 
     useEffect(() => {
         fetchLists().finally(() => setInitialLoad(false))
@@ -183,28 +184,35 @@ export default function ListsPage() {
         reorderLists(newOrder.map(l => l.id))
     }
 
-    // Long press handlers - show action sheet
+    // Long press handlers - show action sheet. Cancel the timer as soon as the
+    // finger moves enough to count as a scroll, so the sheet never hijacks
+    // a scroll gesture on mobile.
     const handlePointerDown = (list: List) => (e: React.PointerEvent) => {
         if (isReordering) return
         longPressActivated.current = false
+        pointerStart.current = { x: e.clientX, y: e.clientY }
         longPressTimer.current = setTimeout(() => {
             longPressActivated.current = true
             setActionSheetList(list)
         }, 500)
     }
 
-    const handlePointerUp = () => {
+    const cancelLongPress = () => {
         if (longPressTimer.current) {
             clearTimeout(longPressTimer.current)
             longPressTimer.current = null
         }
+        pointerStart.current = null
     }
 
-    const handlePointerCancel = () => {
-        if (longPressTimer.current) {
-            clearTimeout(longPressTimer.current)
-            longPressTimer.current = null
-        }
+    const handlePointerUp = () => cancelLongPress()
+    const handlePointerCancel = () => cancelLongPress()
+
+    const handlePointerMove = (e: React.PointerEvent) => {
+        if (!pointerStart.current || !longPressTimer.current) return
+        const dx = e.clientX - pointerStart.current.x
+        const dy = e.clientY - pointerStart.current.y
+        if (dx * dx + dy * dy > 100) cancelLongPress() // >10px movement = scroll intent
     }
 
     const handleCardClick = (list: List) => {
@@ -429,6 +437,7 @@ export default function ListsPage() {
                             layoutId={list.id}
                             onClick={() => handleCardClick(list)}
                             onPointerDown={handlePointerDown(list)}
+                            onPointerMove={handlePointerMove}
                             onPointerUp={handlePointerUp}
                             onPointerCancel={handlePointerCancel}
                             className="group relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 bg-zinc-900/40 select-none"
@@ -621,11 +630,22 @@ export default function ListsPage() {
                                             setActionSheetList(null)
                                             setQuickAddList(list)
                                         }}
-                                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:bg-[var(--glass-surface)]"
+                                        className="w-full flex items-center gap-3 px-4 py-4 rounded-xl transition-all hover:bg-[var(--glass-surface)] min-h-[52px]"
                                         style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface-hover)' }}
                                     >
                                         <Plus className="h-4 w-4 text-brand-primary" />
                                         <span className="text-sm font-bold text-[var(--brand-text-primary)] uppercase tracking-widest">Quick Add</span>
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setActionSheetList(null)
+                                            setIsReordering(true)
+                                        }}
+                                        className="w-full flex items-center gap-3 px-4 py-4 rounded-xl transition-all hover:bg-[var(--glass-surface)] min-h-[52px]"
+                                        style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface-hover)' }}
+                                    >
+                                        <ArrowUpDown className="h-4 w-4 text-brand-primary" />
+                                        <span className="text-sm font-bold text-[var(--brand-text-primary)] uppercase tracking-widest">Reorder Collections</span>
                                     </button>
                                     <button
                                         onClick={async () => {
@@ -641,7 +661,7 @@ export default function ListsPage() {
                                                 useListStore.getState().deleteList(listToDelete.id)
                                             }
                                         }}
-                                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:bg-red-500/10"
+                                        className="w-full flex items-center gap-3 px-4 py-4 rounded-xl transition-all hover:bg-red-500/10 min-h-[52px]"
                                         style={{ boxShadow: 'inset 0 0 0 1px rgba(239,68,68,0.15)' }}
                                     >
                                         <Trash2 className="h-4 w-4 text-red-400" />
