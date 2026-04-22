@@ -1331,10 +1331,10 @@ Return JSON only:
         }
 
         // Only block regeneration if the existing row is both fresh AND has
-        // actual cards with body content. An empty row (generator returned 0
-        // cards) or a row full of shell cards (cards persisted before AI
-        // narration completed — chrome only, blank body) should be
-        // re-seedable on demand so the user isn't stuck for a week.
+        // BOTH decks populated with usable cards. If one deck is empty or all
+        // shells (e.g. narrateClusters dropped every mashup cluster while
+        // discoverIntersections succeeded), the UI hides the missing deck
+        // entirely — the user should be able to re-seed and try again.
         if (existing?.expires_at) {
           const expiresMs = new Date(existing.expires_at).getTime()
           const intArr = (existing.intersections ?? []) as Array<Record<string, unknown>>
@@ -1349,8 +1349,8 @@ Return JSON only:
               : typeof cx.why_it_works === 'string' ? cx.why_it_works.trim() : ''
             return Boolean(title && pattern)
           }
-          const hasUsableCards = intArr.some(hasCardBody) || insArr.some(hasCardBody)
-          if (expiresMs > Date.now() && hasUsableCards) {
+          const bothDecksUsable = intArr.some(hasCardBody) && insArr.some(hasCardBody)
+          if (expiresMs > Date.now() && bothDecksUsable) {
             return res.status(409).json({
               error: 'Already have a fresh deck this week',
               code: 'already_seeded',

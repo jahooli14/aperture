@@ -468,6 +468,47 @@ function CardSet({ items, label, feedback, onFeedback, onShape, shapingId, refre
   )
 }
 
+// ---------- Missing-deck placeholder ----------
+//
+// Rendered when one deck has cards but the other is empty (e.g. narrateClusters
+// dropped every mashup cluster while insights generated fine). Without this,
+// the section silently hid the missing deck and left the user with no way to
+// retry until next Monday.
+
+interface MissingDeckProps {
+  label: string
+  seeding: boolean
+  seedError: string | null
+  onSeed: () => void
+}
+
+function MissingDeck({ label, seeding, seedError, onSeed }: MissingDeckProps) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-medium tracking-widest uppercase text-[var(--brand-text-muted)]">
+          {label}
+        </span>
+      </div>
+      <div className="rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-surface)] p-4 text-center space-y-2">
+        <p className="text-xs text-[var(--brand-text-secondary)]">
+          {seeding ? `Rebuilding ${label}…` : `${label} didn't land this week.`}
+        </p>
+        {!seeding && (
+          <button
+            type="button"
+            onClick={onSeed}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-white bg-brand-primary hover:bg-brand-primary/90 transition-colors"
+          >
+            Regenerate
+          </button>
+        )}
+        {seedError && <p className="text-xs text-red-400">{seedError}</p>}
+      </div>
+    </div>
+  )
+}
+
 // ---------- Main component ----------
 
 export function WeeklyIntersection() {
@@ -650,7 +691,7 @@ export function WeeklyIntersection() {
 
       {hasData ? (
         <div className="space-y-5">
-          {intersections.length > 0 && (
+          {intersections.length > 0 ? (
             <CardSet
               items={intersections}
               label="mashups"
@@ -660,8 +701,15 @@ export function WeeklyIntersection() {
               shapingId={shapingId}
               refreshKey={refreshKey}
             />
+          ) : (
+            <MissingDeck
+              label="mashups"
+              seeding={seeding}
+              seedError={seedError}
+              onSeed={handleSeed}
+            />
           )}
-          {insights.length > 0 && (
+          {insights.length > 0 ? (
             <CardSet
               items={insights}
               label="insights"
@@ -670,6 +718,13 @@ export function WeeklyIntersection() {
               onShape={handleShape}
               shapingId={shapingId}
               refreshKey={refreshKey}
+            />
+          ) : (
+            <MissingDeck
+              label="insights"
+              seeding={seeding}
+              seedError={seedError}
+              onSeed={handleSeed}
             />
           )}
         </div>
