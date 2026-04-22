@@ -70,6 +70,25 @@ async function processOperation(operation: QueuedOperation): Promise<boolean> {
         return true
       }
 
+      case 'create_project': {
+        // tempId was used client-side for the optimistic row; strip it before insert.
+        const { tempId: _tempId, ...insertData } = operation.data
+        const { data, error } = await supabase
+          .from('projects')
+          .insert(insertData)
+          .select()
+          .single()
+
+        if (error) throw error
+
+        // Schedule AI enrichment on the real project id so the server can
+        // backfill anything the offline create skipped (summary, embeddings).
+        if (data?.id) {
+          projectsNeedingEnrichment.add(data.id)
+        }
+        return true
+      }
+
       case 'update_project': {
         const { id, ...updateData } = operation.data
         const { error } = await supabase

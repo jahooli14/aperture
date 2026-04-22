@@ -43,10 +43,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     //     subscription below picks that up and clears the state correctly.
     //   - authFetch handles 401s on individual API calls by refreshing +
     //     retrying once. A genuinely dead session surfaces there.
+    // getSession() reads local storage and should resolve effectively
+    // instantly, but we've seen it hang in the wild (stale IndexedDB lock on
+    // iOS PWA, etc). A stuck promise here leaves the app on a blank spinner
+    // forever, which at demo time looks like the app is totally dead. Cap it
+    // at 5s and fall through to the unauthenticated state — worst case the
+    // user has to sign in again, which is strictly better than a frozen UI.
+    let settled = false
+    const bail = setTimeout(() => {
+      if (settled) return
+      settled = true
+      console.warn('[Auth] getSession() timed out after 5s — continuing as unauthenticated')
+      currentUserId.current = null
+      setState({ user: null, session: null, loading: false })
+    }, 5000)
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (settled) return
+      settled = true
+      clearTimeout(bail)
       currentUserId.current = session?.user?.id ?? null
       setState({ user: session?.user ?? null, session, loading: false })
     }).catch(error => {
+      if (settled) return
+      settled = true
+      clearTimeout(bail)
       console.error('[Auth] Failed to get session:', error)
       currentUserId.current = null
       setState({ user: null, session: null, loading: false })

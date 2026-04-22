@@ -245,6 +245,7 @@ export const useProjectStore = create<ProjectState>()(
       createProject: async (data) => {
         const previousAllProjects = get().allProjects
         const tempId = `temp-${Date.now()}`
+        const { isOnline } = useOfflineStore.getState()
 
         // Optimistic Update
         const newProject = {
@@ -263,6 +264,18 @@ export const useProjectStore = create<ProjectState>()(
           allProjects: newAllProjects,
           projects: filterProjects(newAllProjects, state.filter)
         }))
+
+        // If offline, queue the create and keep the optimistic temp-id project
+        // in view. syncManager replays this on reconnect and the next pull will
+        // reconcile the real server id.
+        if (!isOnline) {
+          import('../lib/db').then(({ readingDb }) => {
+            readingDb.cacheProjects(newAllProjects).catch(e => logger.warn('Failed to cache projects after offline create:', e))
+          })
+          await queueOperation('create_project', { tempId, ...data })
+          await useOfflineStore.getState().updateQueueSize()
+          return
+        }
 
         try {
           const result = await api.post('projects', data)

@@ -61,62 +61,61 @@ export function usePWA(): PWAState {
   }, [])
 
   useEffect(() => {
-    // Register service worker
-    if ('serviceWorker' in navigator) {
-      // Track if we've already reloaded to prevent infinite loops
-      let hasReloaded = sessionStorage.getItem('sw-reloaded') === 'true'
+    // The service worker itself is registered once in main.tsx (/sw.js, built
+    // by vite-plugin-pwa). Here we just observe it so we can surface the
+    // "update available" UI. Registering a second time from this hook used to
+    // pull in a separate legacy SW (/service-worker.js) that cached API
+    // responses — including 401s — for 7 days, trapping users in auth loops
+    // until they redownloaded the PWA. Don't resurrect that.
+    if (!('serviceWorker' in navigator)) return
 
-      navigator.serviceWorker
-        .register('/service-worker.js', { scope: '/' })
-        .then((registration) => {
-          console.log('[PWA] Service worker registered:', registration.scope)
+    let cancelled = false
+    let updateInterval: ReturnType<typeof setInterval> | undefined
 
-          // Check for updates every hour
-          const updateInterval = setInterval(() => {
-            registration.update()
-          }, 60 * 60 * 1000)
+    const watchForUpdates = async () => {
+      try {
+        const registration = await navigator.serviceWorker.getRegistration()
+        if (cancelled || !registration) return
 
-          // Listen for updates
-          registration.addEventListener('updatefound', () => {
-            const newWorker = registration.installing
-            if (newWorker) {
-              newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  console.log('[PWA] New service worker installed, update available')
-                  // Only show update notification if not dismissed recently
-                  const dismissed = localStorage.getItem('pwa-update-dismissed')
-                  if (!dismissed || Date.now() - parseInt(dismissed) > 60 * 60 * 1000) {
-                    setIsUpdateAvailable(true)
-                  }
-                }
-              })
+        updateInterval = setInterval(() => {
+          registration.update().catch(() => {})
+        }, 60 * 60 * 1000)
+
+        const handleUpdateFound = () => {
+          const newWorker = registration.installing
+          if (!newWorker) return
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              const dismissed = localStorage.getItem('pwa-update-dismissed')
+              if (!dismissed || Date.now() - parseInt(dismissed) > 60 * 60 * 1000) {
+                setIsUpdateAvailable(true)
+              }
             }
           })
+        }
 
-          // Clean up interval on unmount
-          return () => {
-            clearInterval(updateInterval)
-          }
-        })
-        .catch((error) => {
-          console.error('[PWA] Service worker registration failed:', error)
-        })
+        registration.addEventListener('updatefound', handleUpdateFound)
 
-      // Listen for controller change (new SW activated)
-      // NOTE: We DON'T auto-reload here anymore - let the user click "Update Now" button
-      // This prevents unwanted reloads when returning to the app
-      const handleControllerChange = () => {
-        console.log('[PWA] New service worker activated')
-        // Clear the reload flag so next update can work
-        sessionStorage.removeItem('sw-reloaded')
+        // If an update was already waiting when we mounted, surface it now.
+        if (registration.waiting && navigator.serviceWorker.controller) {
+          setIsUpdateAvailable(true)
+        }
+      } catch (error) {
+        console.error('[PWA] Could not observe service worker:', error)
       }
+    }
 
-      navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange)
+    watchForUpdates()
 
-      // Cleanup listener on unmount
-      return () => {
-        navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange)
-      }
+    const handleControllerChange = () => {
+      sessionStorage.removeItem('sw-reloaded')
+    }
+    navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange)
+
+    return () => {
+      cancelled = true
+      if (updateInterval) clearInterval(updateInterval)
+      navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange)
     }
   }, [])
 
