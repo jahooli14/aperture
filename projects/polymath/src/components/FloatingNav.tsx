@@ -6,7 +6,7 @@
 import React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Home, Lightbulb, Rocket, ListChecks, User, LogOut } from 'lucide-react'
+import { Home, Lightbulb, Rocket, ListChecks, User, LogOut, Settings } from 'lucide-react'
 import { VoiceFAB } from './VoiceFAB'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useKeyboardVisible } from '../hooks/useKeyboardVisible'
@@ -365,6 +365,18 @@ export function FloatingNav() {
                     {user.email}
                   </p>
                 </div>
+                {/* Settings */}
+                <button
+                  onClick={() => {
+                    setShowUserMenu(false)
+                    navigate('/settings')
+                  }}
+                  className="flex items-center gap-3 w-full px-4 py-3 text-sm transition-colors hover:bg-white/5 border-b"
+                  style={{ color: 'var(--brand-text-secondary)', borderColor: 'rgba(255,255,255,0.06)' }}
+                >
+                  <Settings className="h-4 w-4 flex-shrink-0" />
+                  settings
+                </button>
                 {/* Sign out */}
                 <button
                   onClick={handleSignOut}
