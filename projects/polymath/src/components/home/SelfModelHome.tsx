@@ -1,10 +1,16 @@
 /**
- * SelfModelHome — experimental homepage surface.
+ * SelfModelHome — the home "reveal" surface.
  *
- * Shows a ticker while /api/utilities?resource=self-model generates, then
- * reveals the Thesis (word-by-word), three Threads (latent questions), and a
- * single Move for today. "Argue with me" re-runs the model with the user's
- * critique. Off by default — opt in via ?self=1, Settings, or localStorage.
+ * Fetches /api/utilities?resource=self-model, which finds 3–5 things the user
+ * said across time that converge on the same underlying thing (the "middle
+ * of the Venn"). Each quote reveals in sequence, then the connection, then
+ * the one move for today. Grounded entirely in the user's own words — the
+ * quotes are verbatim fragments, so the wow comes from seeing yourself
+ * quoted back.
+ *
+ * Falls back to "single" mode (one quote + move) when there isn't enough
+ * signal for a convergence. Off by default — opt in via ?self=1, Settings,
+ * or localStorage('polymath-self-model', '1').
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -12,17 +18,24 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowRight, MessageSquareWarning, RefreshCw } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
 
+interface Quote {
+  quote: string
+  date: string
+  memory_id: string
+}
+
 interface SelfModel {
-  thesis: string
-  threads: string[]
+  mode: 'convergence' | 'single'
+  convergence?: { quotes: Quote[]; connection: string }
+  single?: Quote
   move: { action: string; why: string; artefact: string }
 }
 
 interface Sources {
   projects: number
   memories: number
-  articles: number
-  list_items: number
+  memories_with_embedding: number
+  convergence_size: number
 }
 
 interface ApiResponse {
@@ -38,27 +51,20 @@ interface SelfModelHomeProps {
 
 const TICKER_STEPS = [
   (s: Sources) => `reading ${s.memories} memories`,
-  (s: Sources) => `scanning ${s.projects} active projects`,
-  (s: Sources) => `following ${s.articles} reading threads`,
-  (s: Sources) => `weighing ${s.list_items} open loops`,
-  () => 'finding today\'s move',
+  (s: Sources) => `listening for repeats across ${s.memories_with_embedding} voice notes`,
+  () => 'finding the middle of the Venn',
+  () => 'picking today\'s move',
 ]
 
-function useWordReveal(text: string, delay = 28): string {
-  const [shown, setShown] = useState('')
-  useEffect(() => {
-    if (!text) { setShown(''); return }
-    setShown('')
-    const words = text.split(/(\s+)/)
-    let i = 0
-    const id = window.setInterval(() => {
-      i += 1
-      setShown(words.slice(0, i).join(''))
-      if (i >= words.length) window.clearInterval(id)
-    }, delay)
-    return () => window.clearInterval(id)
-  }, [text, delay])
-  return shown
+function relativeDate(iso: string): string {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / (24 * 60 * 60 * 1000))
+  if (days <= 0) return 'today'
+  if (days === 1) return 'yesterday'
+  if (days < 7) return `${days} days ago`
+  if (days < 14) return 'last week'
+  if (days < 60) return `${Math.floor(days / 7)} weeks ago`
+  const months = Math.floor(days / 30)
+  return months === 1 ? 'a month ago' : `${months} months ago`
 }
 
 export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
@@ -104,26 +110,22 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
     }
   }, [data?.model])
 
-  // Initial load
   useEffect(() => {
     fetchModel('generate')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Rotate the ticker while loading so the page visibly "thinks"
   useEffect(() => {
     if (!loading) return
     setTickerIdx(0)
     const id = window.setInterval(() => {
       setTickerIdx(i => (i + 1) % TICKER_STEPS.length)
-    }, 700)
+    }, 900)
     return () => window.clearInterval(id)
   }, [loading])
 
   const model = data?.model ?? null
-  const sources = data?.sources ?? { projects: 0, memories: 0, articles: 0, list_items: 0 }
-
-  const thesisReveal = useWordReveal(model?.thesis ?? '')
+  const sources = data?.sources ?? { projects: 0, memories: 0, memories_with_embedding: 0, convergence_size: 0 }
 
   const handleArgueSubmit = useCallback(async () => {
     if (!critique.trim() || submittingCritique) return
@@ -151,7 +153,7 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
     <section className="relative">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-primary/80">
-          self-model · experimental
+          today · experimental
         </h2>
         {model && !loading && (
           <button
@@ -203,7 +205,7 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
 
         {!loading && error && (
           <div className="text-sm text-red-300">
-            <p className="mb-2">Couldn't build the model right now.</p>
+            <p className="mb-2">Couldn't read the signal right now.</p>
             <p className="text-xs opacity-70">{error}</p>
             <button
               type="button"
@@ -217,96 +219,28 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
 
         {!loading && !error && !model && data?.reason === 'not-enough-signal' && (
           <div className="text-sm text-[var(--brand-text-secondary)]">
-            Not enough signal yet. Add a few voice notes and projects, then check back.
+            Not enough voice notes yet. Record a few, then check back.
           </div>
         )}
 
         {!loading && model && (
           <div className="space-y-5">
-            {/* Thesis */}
-            <div>
-              <p
-                className="text-[10px] font-bold tracking-[0.2em] uppercase mb-2"
-                style={{ color: 'var(--brand-primary)', opacity: 0.7 }}
-              >
-                the thesis
-              </p>
-              <p className="text-xl sm:text-2xl font-bold leading-tight text-[var(--brand-text-primary)] aperture-header">
-                {thesisReveal}
-                {thesisReveal.length < (model.thesis?.length ?? 0) && (
-                  <span className="inline-block w-1.5 h-5 ml-1 align-middle bg-brand-primary animate-pulse" />
-                )}
-              </p>
-            </div>
-
-            {/* Threads */}
-            {model.threads.length > 0 && (
-              <div>
-                <p
-                  className="text-[10px] font-bold tracking-[0.2em] uppercase mb-2"
-                  style={{ color: 'var(--brand-primary)', opacity: 0.7 }}
-                >
-                  threads
-                </p>
-                <div className="space-y-2">
-                  {model.threads.map((q, i) => (
-                    <motion.div
-                      key={`${q}-${i}`}
-                      initial={{ opacity: 0, x: -8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.2 + i * 0.12, duration: 0.3 }}
-                      className="p-3 rounded-xl bg-[var(--glass-surface)] border border-[var(--glass-border)]"
-                    >
-                      <p className="text-sm font-semibold text-[var(--brand-text-primary)] leading-snug">
-                        {q}
-                      </p>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
+            {model.mode === 'convergence' && model.convergence && (
+              <Convergence convergence={model.convergence} />
             )}
 
-            {/* Move */}
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6, duration: 0.35 }}
-              className="p-4 rounded-xl"
-              style={{
-                background: 'rgba(var(--brand-primary-rgb),0.12)',
-                border: '1px solid rgba(var(--brand-primary-rgb),0.3)',
-              }}
-            >
-              <p
-                className="text-[10px] font-bold tracking-[0.2em] uppercase mb-2"
-                style={{ color: 'var(--brand-primary)', opacity: 0.8 }}
-              >
-                the move · today
-              </p>
-              <p className="text-base font-semibold text-[var(--brand-text-primary)] leading-snug mb-2">
-                {model.move.action}
-              </p>
-              {model.move.why && (
-                <p className="text-xs text-[var(--brand-text-secondary)] opacity-80 mb-2">
-                  {model.move.why}
-                </p>
-              )}
-              {model.move.artefact && (
-                <p className="text-[11px] text-[var(--brand-text-secondary)] opacity-70">
-                  ↳ by tonight: <span className="italic">{model.move.artefact}</span>
-                </p>
-              )}
-              <button
-                type="button"
-                onClick={handleShapeMove}
-                className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest text-white bg-brand-primary hover:bg-brand-primary/90 transition-colors"
-              >
-                Shape this move
-                <ArrowRight className="h-3 w-3" />
-              </button>
-            </motion.div>
+            {model.mode === 'single' && model.single && (
+              <Single single={model.single} />
+            )}
 
-            {/* Argue */}
+            <MoveCard
+              move={model.move}
+              delay={model.mode === 'convergence' && model.convergence
+                ? 0.4 + model.convergence.quotes.length * 0.5 + 0.5
+                : 0.9}
+              onShape={handleShapeMove}
+            />
+
             <div className="pt-2 border-t border-[var(--glass-border)]">
               {!arguing ? (
                 <button
@@ -315,7 +249,7 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
                   className="inline-flex items-center gap-2 text-xs font-medium text-[var(--brand-text-muted)] hover:text-brand-primary transition-colors"
                 >
                   <MessageSquareWarning className="h-3.5 w-3.5" />
-                  Argue with me — this isn't right
+                  Wrong read — try again
                 </button>
               ) : (
                 <div className="space-y-2">
@@ -325,7 +259,7 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
                   <textarea
                     value={critique}
                     onChange={e => setCritique(e.target.value)}
-                    placeholder="e.g. the thesis is close but the move is wrong — I'm not ready to ship, I need to think"
+                    placeholder="e.g. the quotes are right but the move is off — I don't want to ship, I want to think"
                     className="w-full min-h-[80px] p-3 text-sm rounded-xl bg-[var(--glass-surface)] border border-[var(--glass-border)] text-[var(--brand-text-primary)] placeholder:text-[var(--brand-text-muted)] focus:border-brand-primary/50 focus:outline-none resize-none"
                     autoFocus
                   />
@@ -336,7 +270,7 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
                       disabled={!critique.trim() || submittingCritique}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest text-white bg-brand-primary hover:bg-brand-primary/90 disabled:opacity-50 transition-colors"
                     >
-                      {submittingCritique ? 'Re-modelling…' : 'Re-model'}
+                      {submittingCritique ? 'Re-reading…' : 'Re-read'}
                     </button>
                     <button
                       type="button"
@@ -353,5 +287,129 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
         )}
       </div>
     </section>
+  )
+}
+
+function Convergence({ convergence }: { convergence: { quotes: Quote[]; connection: string } }) {
+  const { quotes, connection } = convergence
+  return (
+    <div className="space-y-4">
+      <p
+        className="text-[10px] font-bold tracking-[0.2em] uppercase"
+        style={{ color: 'var(--brand-primary)', opacity: 0.7 }}
+      >
+        {quotes.length} things you said
+      </p>
+      <div className="space-y-4">
+        {quotes.map((q, i) => (
+          <motion.div
+            key={`${q.memory_id}-${i}`}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 + i * 0.5, duration: 0.5, ease: 'easeOut' }}
+            className="relative pl-4"
+          >
+            <span
+              className="absolute left-0 top-1 bottom-1 w-[2px] rounded-full"
+              style={{ background: 'rgba(var(--brand-primary-rgb),0.45)' }}
+            />
+            <p className="text-[10px] font-mono uppercase tracking-widest text-[var(--brand-text-muted)] mb-1">
+              {relativeDate(q.date)}
+            </p>
+            <p className="text-[15px] leading-snug text-[var(--brand-text-primary)] italic">
+              “{q.quote}”
+            </p>
+          </motion.div>
+        ))}
+      </div>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 + quotes.length * 0.5, duration: 0.5 }}
+        className="pt-2"
+      >
+        <p
+          className="text-[10px] font-bold tracking-[0.2em] uppercase mb-2"
+          style={{ color: 'var(--brand-primary)', opacity: 0.7 }}
+        >
+          the middle
+        </p>
+        <p className="text-lg sm:text-xl font-bold leading-snug text-[var(--brand-text-primary)] aperture-header">
+          {connection}
+        </p>
+      </motion.div>
+    </div>
+  )
+}
+
+function Single({ single }: { single: Quote }) {
+  return (
+    <div className="space-y-3">
+      <p
+        className="text-[10px] font-bold tracking-[0.2em] uppercase"
+        style={{ color: 'var(--brand-primary)', opacity: 0.7 }}
+      >
+        you said, {relativeDate(single.date)}
+      </p>
+      <motion.p
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
+        className="text-lg sm:text-xl font-semibold leading-snug text-[var(--brand-text-primary)] italic"
+      >
+        “{single.quote}”
+      </motion.p>
+    </div>
+  )
+}
+
+function MoveCard({
+  move,
+  delay,
+  onShape,
+}: {
+  move: { action: string; why: string; artefact: string }
+  delay: number
+  onShape: () => void
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.45, ease: 'easeOut' }}
+      className="p-4 rounded-xl"
+      style={{
+        background: 'rgba(var(--brand-primary-rgb),0.12)',
+        border: '1px solid rgba(var(--brand-primary-rgb),0.3)',
+      }}
+    >
+      <p
+        className="text-[10px] font-bold tracking-[0.2em] uppercase mb-2"
+        style={{ color: 'var(--brand-primary)', opacity: 0.8 }}
+      >
+        today
+      </p>
+      <p className="text-base font-semibold text-[var(--brand-text-primary)] leading-snug mb-2">
+        {move.action}
+      </p>
+      {move.why && (
+        <p className="text-xs text-[var(--brand-text-secondary)] opacity-80 mb-2">
+          {move.why}
+        </p>
+      )}
+      {move.artefact && (
+        <p className="text-[11px] text-[var(--brand-text-secondary)] opacity-70">
+          by tonight: <span className="italic">{move.artefact}</span>
+        </p>
+      )}
+      <button
+        type="button"
+        onClick={onShape}
+        className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest text-white bg-brand-primary hover:bg-brand-primary/90 transition-colors"
+      >
+        Take it on
+        <ArrowRight className="h-3 w-3" />
+      </button>
+    </motion.div>
   )
 }
