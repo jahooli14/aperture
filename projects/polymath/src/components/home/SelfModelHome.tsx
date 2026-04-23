@@ -1,39 +1,59 @@
 /**
- * SelfModelHome — experimental homepage surface.
+ * SelfModelHome — the home "reveal" surface.
  *
- * On mount: shows a ticker ("reading 247 memories… 3 threads active…") while
- * /api/utilities?resource=self-model is generating. Once the model arrives we reveal the Thesis
- * word-by-word, then the Threads, then the Move. An "Argue with me" button
- * opens a textarea; the critique is POSTed with mode=argue and the model
- * re-derives in place so the user can watch it move.
+ * Fetches /api/utilities?resource=self-model, which finds 3–5 things the user
+ * has captured across voice notes, list items, and project ideas that all
+ * land on the same underlying thing (the "middle of the Venn"). Quotes are
+ * verbatim fragments of what the user actually said — the wow comes from
+ * seeing yourself quoted back.
  *
- * Off by default — opt in via ?self=1, the Settings toggle, or
- * localStorage('polymath-self-model', '1').
+ * First load runs with full reveal theatre; subsequent loads in the same
+ * session skip the stagger. Cached locally for 2h so returning to the
+ * surface is instant. Refresh / argue both pass the current source_ids as
+ * exclude_ids so tapping "refresh" or "wrong read" actually surfaces a
+ * *different* convergence instead of re-serving the same cluster.
+ *
+ * Falls back to "single" mode (one quote + move) when there isn't enough
+ * cross-surface signal for a convergence. Off by default — opt in via
+ * ?self=1, Settings, or localStorage('polymath-self-model', '1').
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowRight, MessageSquareWarning, RefreshCw, Sparkles } from 'lucide-react'
+import { ArrowRight, Check, MessageSquareWarning, RefreshCw } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
 
+type SignalKind = 'memory' | 'list_item' | 'project'
+
+interface Quote {
+  quote: string
+  date: string
+  source_id: string
+  kind: SignalKind
+  source_label?: string
+}
+
 interface SelfModel {
-  thesis: string
-  threads: Array<{ title: string; evidence: string[] }>
+  mode: 'convergence' | 'single'
+  convergence?: { quotes: Quote[]; connection: string }
+  single?: Quote
   move: { action: string; why: string; artefact: string }
-  signature: string
 }
 
 interface Sources {
   projects: number
   memories: number
-  articles: number
   list_items: number
+  signals_with_embedding: number
+  convergence_size: number
 }
 
 interface ApiResponse {
   sources: Sources
   model: SelfModel | null
   reason?: string
+  source_ids?: string[]
+  relaxed_excludes?: boolean
   took_ms: number
 }
 
@@ -41,42 +61,89 @@ interface SelfModelHomeProps {
   onShapeIdea: (idea: { title: string; description: string }) => void
 }
 
+const CACHE_KEY = 'polymath-selfmodel-v2'
+const CACHE_TTL_MS = 2 * 60 * 60 * 1000
+const SEEN_KEY = 'polymath-self-model-seen'
+
 const TICKER_STEPS = [
-  (s: Sources) => `reading ${s.memories} memories`,
-  (s: Sources) => `scanning ${s.projects} active projects`,
-  (s: Sources) => `following ${s.articles} reading threads`,
-  (s: Sources) => `weighing ${s.list_items} open loops`,
-  () => 'finding the signature',
+  (s: Sources) => `reading ${s.memories} voice notes`,
+  (s: Sources) => `scanning ${s.list_items} list items`,
+  (s: Sources) => `scanning ${s.projects} project ideas`,
+  () => 'finding what they share',
+  () => 'picking today\'s move',
 ]
 
-function useWordReveal(text: string, delay = 28): string {
-  const [shown, setShown] = useState('')
-  useEffect(() => {
-    if (!text) { setShown(''); return }
-    setShown('')
-    const words = text.split(/(\s+)/)
-    let i = 0
-    const id = window.setInterval(() => {
-      i += 1
-      setShown(words.slice(0, i).join(''))
-      if (i >= words.length) window.clearInterval(id)
-    }, delay)
-    return () => window.clearInterval(id)
-  }, [text, delay])
-  return shown
+function relativeDate(iso: string): string {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / (24 * 60 * 60 * 1000))
+  if (days <= 0) return 'today'
+  if (days === 1) return 'yesterday'
+  if (days < 7) return `${days} days ago`
+  if (days < 14) return 'last week'
+  if (days < 60) return `${Math.floor(days / 7)} weeks ago`
+  const months = Math.floor(days / 30)
+  return months === 1 ? 'a month ago' : `${months} months ago`
+}
+
+function readCache(): { cached_at: number; response: ApiResponse } | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as { cached_at: number; response: ApiResponse }
+    if (!parsed?.cached_at || Date.now() - parsed.cached_at > CACHE_TTL_MS) return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+function writeCache(response: ApiResponse) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ cached_at: Date.now(), response }))
+  } catch {
+    // storage full / disabled — no big deal, we'll just refetch next time
+  }
+}
+
+function emptyStateCopy(sources: Sources | null): string {
+  if (!sources || (sources.memories === 0 && sources.list_items === 0 && sources.projects === 0)) {
+    return 'No signal yet. Record a voice note, jot a list item, or sketch a project — then check back.'
+  }
+  if (sources.memories === 0 && sources.list_items > 0) {
+    return 'Plenty of list items, but your notes and projects aren\'t converging yet. A voice note or two would help.'
+  }
+  if (sources.signals_with_embedding < 3) {
+    return 'Not enough captured yet for a convergence. A few more notes and this surface will start to hum.'
+  }
+  return 'Nothing\'s converging on the same thread today. Try again in a day or two once more signal lands.'
 }
 
 export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
-  const [loading, setLoading] = useState(true)
-  const [data, setData] = useState<ApiResponse | null>(null)
+  const firstLoadRef = useRef(true)
+  // Prime from cache immediately so the surface feels instant on repeat opens.
+  const initialCache = typeof window !== 'undefined' ? readCache() : null
+  const [loading, setLoading] = useState(!initialCache)
+  const [data, setData] = useState<ApiResponse | null>(initialCache?.response ?? null)
+  const [fromCache, setFromCache] = useState(!!initialCache)
   const [error, setError] = useState<string | null>(null)
   const [tickerIdx, setTickerIdx] = useState(0)
   const [arguing, setArguing] = useState(false)
   const [critique, setCritique] = useState('')
   const [submittingCritique, setSubmittingCritique] = useState(false)
+  const [todoState, setTodoState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const abortRef = useRef<AbortController | null>(null)
 
-  const fetchModel = useCallback(async (mode: 'generate' | 'argue' = 'generate', critiqueText = '') => {
+  // First-time theatre vs. minimal stagger on repeat. sessionStorage so it
+  // persists across refreshes within a session but not across tab closes.
+  const [firstTime] = useState(() => {
+    if (typeof window === 'undefined') return true
+    const seen = window.sessionStorage.getItem(SEEN_KEY)
+    return !seen
+  })
+
+  const fetchModel = useCallback(async (
+    mode: 'generate' | 'argue' = 'generate',
+    opts: { critiqueText?: string; excludeIds?: string[]; previous?: SelfModel | null } = {},
+  ) => {
     abortRef.current?.abort()
     const ctrl = new AbortController()
     abortRef.current = ctrl
@@ -84,9 +151,10 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
     setError(null)
     try {
       const body: Record<string, unknown> = { mode }
+      if (opts.excludeIds?.length) body.exclude_ids = opts.excludeIds
       if (mode === 'argue') {
-        body.previous = data?.model
-        body.critique = critiqueText
+        body.previous = opts.previous
+        body.critique = opts.critiqueText
       }
       const res = await fetch('/api/utilities?resource=self-model', {
         method: 'POST',
@@ -101,70 +169,121 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
       }
       const json = (await res.json()) as ApiResponse
       setData(json)
+      setFromCache(false)
+      setTodoState('idle')
+      writeCache(json)
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return
       setError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
       setLoading(false)
     }
-  }, [data?.model])
+  }, [])
 
-  // Initial load
+  // Initial fetch: only if we didn't hydrate from cache. If we did, the user
+  // sees the cached card instantly and can tap refresh for fresh content.
   useEffect(() => {
-    fetchModel('generate')
+    if (!initialCache) fetchModel('generate')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Rotate the ticker while loading so the page visibly "thinks"
+  // Mark first-time seen once a model has been shown.
+  useEffect(() => {
+    if (data?.model && firstTime) {
+      try { window.sessionStorage.setItem(SEEN_KEY, '1') } catch { /* ignore */ }
+    }
+  }, [data?.model, firstTime])
+
   useEffect(() => {
     if (!loading) return
     setTickerIdx(0)
     const id = window.setInterval(() => {
       setTickerIdx(i => (i + 1) % TICKER_STEPS.length)
-    }, 700)
+    }, 900)
     return () => window.clearInterval(id)
   }, [loading])
 
   const model = data?.model ?? null
-  const sources = data?.sources ?? { projects: 0, memories: 0, articles: 0, list_items: 0 }
+  const sources = data?.sources ?? null
+  const currentSourceIds = useMemo(() => data?.source_ids ?? [], [data?.source_ids])
 
-  const thesisReveal = useWordReveal(model?.thesis ?? '')
+  const handleRefresh = useCallback(() => {
+    haptic.light()
+    fetchModel('generate', { excludeIds: currentSourceIds })
+  }, [fetchModel, currentSourceIds])
 
   const handleArgueSubmit = useCallback(async () => {
     if (!critique.trim() || submittingCritique) return
     setSubmittingCritique(true)
     haptic.medium()
     try {
-      await fetchModel('argue', critique.trim())
+      await fetchModel('argue', {
+        critiqueText: critique.trim(),
+        excludeIds: currentSourceIds,
+        previous: model,
+      })
       setCritique('')
       setArguing(false)
     } finally {
       setSubmittingCritique(false)
     }
-  }, [critique, submittingCritique, fetchModel])
+  }, [critique, submittingCritique, fetchModel, currentSourceIds, model])
 
-  const handleShapeMove = useCallback(() => {
-    if (!model) return
+  const handleAddToToday = useCallback(async () => {
+    if (!model || todoState === 'saving' || todoState === 'saved') return
     haptic.medium()
+    setTodoState('saving')
+    try {
+      const today = new Date()
+      const year = today.getFullYear()
+      const month = String(today.getMonth() + 1).padStart(2, '0')
+      const day = String(today.getDate()).padStart(2, '0')
+      const scheduled_date = `${year}-${month}-${day}`
+      const notes = [
+        model.move.why && `Why: ${model.move.why}`,
+        model.move.artefact && `By tonight: ${model.move.artefact}`,
+      ].filter(Boolean).join('\n\n')
+      const res = await fetch('/api/todos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: model.move.action,
+          notes: notes || null,
+          scheduled_date,
+          estimated_minutes: 60,
+        }),
+      })
+      if (!res.ok) throw new Error(await res.text().catch(() => 'Failed'))
+      setTodoState('saved')
+      haptic.success?.()
+    } catch {
+      setTodoState('error')
+    }
+  }, [model, todoState])
+
+  const handleShapeAsIdea = useCallback(() => {
+    if (!model) return
+    haptic.light()
     onShapeIdea({
       title: model.move.action,
-      description: `${model.move.why}\n\nArtefact: ${model.move.artefact}\n\nWhy only you: ${model.signature}`,
+      description: `${model.move.why}\n\nWhen you're done: ${model.move.artefact}`,
     })
   }, [model, onShapeIdea])
+
+  // Reveal timings — full theatre first time, quick on repeat.
+  const stagger = firstTime && !fromCache ? 0.5 : 0.08
+  const firstDelay = firstTime && !fromCache ? 0.15 : 0
 
   return (
     <section className="relative">
       <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-brand-primary" />
-          <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-primary/80">
-            self-model · experimental
-          </h2>
-        </div>
+        <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-primary/80">
+          today · experimental
+        </h2>
         {model && !loading && (
           <button
             type="button"
-            onClick={() => fetchModel('generate')}
+            onClick={handleRefresh}
             className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-widest text-[var(--brand-text-muted)] hover:text-brand-primary transition-colors"
           >
             <RefreshCw className="h-3 w-3" />
@@ -188,7 +307,7 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
           style={{ background: 'linear-gradient(90deg, transparent, rgba(var(--brand-primary-rgb),0.5), transparent)' }}
         />
 
-        {loading && (
+        {loading && !model && (
           <div className="flex items-center gap-3">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-primary opacity-70" />
@@ -203,7 +322,7 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
                 transition={{ duration: 0.25 }}
                 className="text-[11px] font-mono uppercase tracking-widest text-brand-primary/90"
               >
-                {TICKER_STEPS[tickerIdx](sources)}…
+                {TICKER_STEPS[tickerIdx](sources ?? { projects: 0, memories: 0, list_items: 0, signals_with_embedding: 0, convergence_size: 0 })}…
               </motion.span>
             </AnimatePresence>
           </div>
@@ -211,7 +330,7 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
 
         {!loading && error && (
           <div className="text-sm text-red-300">
-            <p className="mb-2">Couldn't build the model right now.</p>
+            <p className="mb-2">Couldn't read the signal right now.</p>
             <p className="text-xs opacity-70">{error}</p>
             <button
               type="button"
@@ -223,115 +342,36 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
           </div>
         )}
 
-        {!loading && !error && !model && data?.reason === 'not-enough-signal' && (
+        {!loading && !error && !model && (
           <div className="text-sm text-[var(--brand-text-secondary)]">
-            Not enough signal yet. Add a few voice notes and projects, then check back.
+            {emptyStateCopy(sources)}
           </div>
         )}
 
-        {!loading && model && (
+        {model && (
           <div className="space-y-5">
-            {/* Thesis */}
-            <div>
-              <p
-                className="text-[10px] font-bold tracking-[0.2em] uppercase mb-2"
-                style={{ color: 'var(--brand-primary)', opacity: 0.7 }}
-              >
-                the thesis
-              </p>
-              <p className="text-xl sm:text-2xl font-bold leading-tight text-[var(--brand-text-primary)] aperture-header">
-                {thesisReveal}
-                {thesisReveal.length < (model.thesis?.length ?? 0) && (
-                  <span className="inline-block w-1.5 h-5 ml-1 align-middle bg-brand-primary animate-pulse" />
-                )}
-              </p>
-            </div>
-
-            {/* Threads */}
-            {model.threads.length > 0 && (
-              <div>
-                <p
-                  className="text-[10px] font-bold tracking-[0.2em] uppercase mb-2"
-                  style={{ color: 'var(--brand-primary)', opacity: 0.7 }}
-                >
-                  threads
-                </p>
-                <div className="space-y-2">
-                  {model.threads.map((t, i) => (
-                    <motion.div
-                      key={`${t.title}-${i}`}
-                      initial={{ opacity: 0, x: -8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.2 + i * 0.12, duration: 0.3 }}
-                      className="p-3 rounded-xl bg-[var(--glass-surface)] border border-[var(--glass-border)]"
-                    >
-                      <p className="text-sm font-semibold text-[var(--brand-text-primary)] mb-1">
-                        {t.title}
-                      </p>
-                      {t.evidence.length > 0 && (
-                        <p className="text-[11px] text-[var(--brand-text-secondary)] opacity-70">
-                          {t.evidence.join(' · ')}
-                        </p>
-                      )}
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
+            {model.mode === 'convergence' && model.convergence && (
+              <Convergence
+                convergence={model.convergence}
+                stagger={stagger}
+                firstDelay={firstDelay}
+              />
             )}
 
-            {/* Move */}
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6, duration: 0.35 }}
-              className="p-4 rounded-xl"
-              style={{
-                background: 'rgba(var(--brand-primary-rgb),0.12)',
-                border: '1px solid rgba(var(--brand-primary-rgb),0.3)',
-              }}
-            >
-              <p
-                className="text-[10px] font-bold tracking-[0.2em] uppercase mb-2"
-                style={{ color: 'var(--brand-primary)', opacity: 0.8 }}
-              >
-                the move · today
-              </p>
-              <p className="text-base font-semibold text-[var(--brand-text-primary)] leading-snug mb-2">
-                {model.move.action}
-              </p>
-              {model.move.why && (
-                <p className="text-xs text-[var(--brand-text-secondary)] opacity-80 mb-2">
-                  {model.move.why}
-                </p>
-              )}
-              {model.move.artefact && (
-                <p className="text-[11px] text-[var(--brand-text-secondary)] opacity-70">
-                  ↳ by tonight: <span className="italic">{model.move.artefact}</span>
-                </p>
-              )}
-              <button
-                type="button"
-                onClick={handleShapeMove}
-                className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest text-white bg-brand-primary hover:bg-brand-primary/90 transition-colors"
-              >
-                Shape this move
-                <ArrowRight className="h-3 w-3" />
-              </button>
-            </motion.div>
-
-            {/* Signature */}
-            {model.signature && (
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.8, duration: 0.4 }}
-                className="text-xs italic text-[var(--brand-text-secondary)] opacity-80 pl-3 border-l-2 border-brand-primary/40"
-              >
-                {model.signature}
-              </motion.p>
+            {model.mode === 'single' && model.single && (
+              <Single single={model.single} />
             )}
 
-            {/* Argue */}
+            <MoveCard
+              move={model.move}
+              delay={model.mode === 'convergence' && model.convergence
+                ? firstDelay + stagger * (model.convergence.quotes.length + 1) + 0.1
+                : firstDelay + 0.3}
+              todoState={todoState}
+              onAddToToday={handleAddToToday}
+              onShapeAsIdea={handleShapeAsIdea}
+            />
+
             <div className="pt-2 border-t border-[var(--glass-border)]">
               {!arguing ? (
                 <button
@@ -340,7 +380,7 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
                   className="inline-flex items-center gap-2 text-xs font-medium text-[var(--brand-text-muted)] hover:text-brand-primary transition-colors"
                 >
                   <MessageSquareWarning className="h-3.5 w-3.5" />
-                  Argue with me — this isn't right
+                  Wrong read — try again
                 </button>
               ) : (
                 <div className="space-y-2">
@@ -350,7 +390,7 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
                   <textarea
                     value={critique}
                     onChange={e => setCritique(e.target.value)}
-                    placeholder="e.g. the thesis is close but the move is wrong — I'm not ready to ship, I need to think"
+                    placeholder="e.g. the quotes are right but the move is off — I don't want to ship, I want to think"
                     className="w-full min-h-[80px] p-3 text-sm rounded-xl bg-[var(--glass-surface)] border border-[var(--glass-border)] text-[var(--brand-text-primary)] placeholder:text-[var(--brand-text-muted)] focus:border-brand-primary/50 focus:outline-none resize-none"
                     autoFocus
                   />
@@ -361,7 +401,7 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
                       disabled={!critique.trim() || submittingCritique}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest text-white bg-brand-primary hover:bg-brand-primary/90 disabled:opacity-50 transition-colors"
                     >
-                      {submittingCritique ? 'Re-modelling…' : 'Re-model'}
+                      {submittingCritique ? 'Re-reading…' : 'Re-read'}
                     </button>
                     <button
                       type="button"
@@ -378,5 +418,156 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
         )}
       </div>
     </section>
+  )
+}
+
+function Convergence({
+  convergence,
+  stagger,
+  firstDelay,
+}: {
+  convergence: { quotes: Quote[]; connection: string }
+  stagger: number
+  firstDelay: number
+}) {
+  const { quotes, connection } = convergence
+  return (
+    <div className="space-y-4">
+      <p
+        className="text-[10px] font-bold tracking-[0.2em] uppercase"
+        style={{ color: 'var(--brand-primary)', opacity: 0.7 }}
+      >
+        {quotes.length} things on your mind
+      </p>
+      <div className="space-y-4">
+        {quotes.map((q, i) => (
+          <motion.div
+            key={`${q.kind}-${q.source_id}-${i}`}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: firstDelay + i * stagger, duration: Math.max(0.25, stagger), ease: 'easeOut' }}
+            className="relative pl-4"
+          >
+            <span
+              className="absolute left-0 top-1 bottom-1 w-[2px] rounded-full"
+              style={{ background: 'rgba(var(--brand-primary-rgb),0.45)' }}
+            />
+            <p className="text-[10px] font-mono uppercase tracking-widest text-[var(--brand-text-muted)] mb-1">
+              {q.source_label ?? q.kind} · {relativeDate(q.date)}
+            </p>
+            <p className="text-[15px] leading-snug text-[var(--brand-text-primary)] italic">
+              “{q.quote}”
+            </p>
+          </motion.div>
+        ))}
+      </div>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: firstDelay + quotes.length * stagger, duration: 0.4 }}
+        className="pt-2"
+      >
+        <p
+          className="text-[10px] font-bold tracking-[0.2em] uppercase mb-2"
+          style={{ color: 'var(--brand-primary)', opacity: 0.7 }}
+        >
+          what they share
+        </p>
+        <p className="text-lg sm:text-xl font-bold leading-snug text-[var(--brand-text-primary)] aperture-header">
+          {connection}
+        </p>
+      </motion.div>
+    </div>
+  )
+}
+
+function Single({ single }: { single: Quote }) {
+  return (
+    <div className="space-y-3">
+      <p
+        className="text-[10px] font-bold tracking-[0.2em] uppercase"
+        style={{ color: 'var(--brand-primary)', opacity: 0.7 }}
+      >
+        {single.source_label ?? single.kind} · {relativeDate(single.date)}
+      </p>
+      <motion.p
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
+        className="text-lg sm:text-xl font-semibold leading-snug text-[var(--brand-text-primary)] italic"
+      >
+        “{single.quote}”
+      </motion.p>
+    </div>
+  )
+}
+
+function MoveCard({
+  move,
+  delay,
+  todoState,
+  onAddToToday,
+  onShapeAsIdea,
+}: {
+  move: { action: string; why: string; artefact: string }
+  delay: number
+  todoState: 'idle' | 'saving' | 'saved' | 'error'
+  onAddToToday: () => void
+  onShapeAsIdea: () => void
+}) {
+  const buttonLabel =
+    todoState === 'saving' ? 'Adding…' :
+    todoState === 'saved' ? 'Added to today' :
+    todoState === 'error' ? 'Try again' :
+    'Add to today'
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.45, ease: 'easeOut' }}
+      className="p-4 rounded-xl"
+      style={{
+        background: 'rgba(var(--brand-primary-rgb),0.12)',
+        border: '1px solid rgba(var(--brand-primary-rgb),0.3)',
+      }}
+    >
+      <p
+        className="text-[10px] font-bold tracking-[0.2em] uppercase mb-2"
+        style={{ color: 'var(--brand-primary)', opacity: 0.8 }}
+      >
+        today
+      </p>
+      <p className="text-base font-semibold text-[var(--brand-text-primary)] leading-snug mb-2">
+        {move.action}
+      </p>
+      {move.why && (
+        <p className="text-xs text-[var(--brand-text-secondary)] opacity-80 mb-2">
+          {move.why}
+        </p>
+      )}
+      {move.artefact && (
+        <p className="text-[11px] text-[var(--brand-text-secondary)] opacity-70">
+          by tonight: <span className="italic">{move.artefact}</span>
+        </p>
+      )}
+      <div className="mt-3 flex items-center gap-3 flex-wrap">
+        <button
+          type="button"
+          onClick={onAddToToday}
+          disabled={todoState === 'saving' || todoState === 'saved'}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest text-white bg-brand-primary hover:bg-brand-primary/90 disabled:opacity-70 transition-colors"
+        >
+          {todoState === 'saved' ? <Check className="h-3 w-3" /> : <ArrowRight className="h-3 w-3" />}
+          {buttonLabel}
+        </button>
+        <button
+          type="button"
+          onClick={onShapeAsIdea}
+          className="text-[11px] font-medium text-[var(--brand-text-muted)] hover:text-brand-primary transition-colors underline underline-offset-2 decoration-dotted"
+        >
+          shape as an idea instead
+        </button>
+      </div>
+    </motion.div>
   )
 }
