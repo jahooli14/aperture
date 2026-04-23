@@ -1309,16 +1309,21 @@ Return JSON only:
 //   body: { mode: 'generate' }
 //   body: { mode: 'argue', previous: SelfModel, critique: string }
 //
-// Wow moment: surface 3–5 things the user has said across time — in their
-// own voice notes — that all converge on the same shape. The middle of the
-// Venn. Then the one move that sits at the convergence point. Grounded in
-// their own words, so it can't be faked. Falls back to "single" mode when
-// there isn't enough signal for a convergence.
+// Wow moment: surface 3–5 things the user has captured across time — voice
+// notes, list items, project ideas — that all land on the same underlying
+// thing. The middle of the Venn. Then the one move that sits at the
+// convergence point. Grounded in their own words (verbatim fragments), so
+// the read can't be faked. Falls back to a single-signal mode when there
+// isn't enough signal for a convergence.
+
+type SignalKind = 'memory' | 'list_item' | 'project'
 
 interface Quote {
   quote: string
   date: string
-  memory_id: string
+  source_id: string
+  kind: SignalKind
+  source_label?: string
 }
 
 interface Move {
@@ -1337,7 +1342,8 @@ interface SelfModel {
 interface SelfModelSources {
   projects: number
   memories: number
-  memories_with_embedding: number
+  list_items: number
+  signals_with_embedding: number
   convergence_size: number
 }
 
@@ -1348,47 +1354,130 @@ const MIN_NEIGHBOUR_SIMILARITY = 0.68
 const MIN_CONVERGENCE_SIZE = 3
 const MAX_CONVERGENCE_SIZE = 5
 
-interface MemoryRow {
+interface Signal {
   id: string
-  title: string | null
-  body: string | null
+  kind: SignalKind
+  text: string           // the body we can quote verbatim from
+  title: string | null   // optional header for display / prompt context
+  source_label: string   // short UI label ("voice note", "list item", "project 'X'")
   created_at: string
-  embedding: number[] | string | null
+  embedding: number[] | string
 }
 
-type ProjectRow = {
-  title: string
-  description: string | null
-}
-
-async function gatherSelfModelSources(
+async function gatherSignals(
   supabase: ReturnType<typeof getSupabaseClient>,
   userId: string,
-) {
+): Promise<Signal[]> {
   const since = new Date(Date.now() - SELF_MODEL_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString()
 
-  const [projRes, memRes] = await Promise.all([
-    supabase
-      .from('projects')
-      .select('title, description, status, is_priority, updated_at')
-      .eq('user_id', userId)
-      .in('status', ['active', 'upcoming'])
-      .order('updated_at', { ascending: false })
-      .limit(25),
+  const [memRes, listRes, projRes] = await Promise.all([
     supabase
       .from('memories')
       .select('id, title, body, created_at, embedding')
       .eq('user_id', userId)
       .gte('created_at', since)
       .not('body', 'is', null)
+      .not('embedding', 'is', null)
       .order('created_at', { ascending: false })
       .limit(150),
+    supabase
+      .from('list_items')
+      .select('id, content, metadata, status, created_at, embedding')
+      .eq('user_id', userId)
+      .gte('created_at', since)
+      .not('embedding', 'is', null)
+      .in('status', ['active', 'queued', 'completed'])
+      .order('created_at', { ascending: false })
+      .limit(120),
+    supabase
+      .from('projects')
+      .select('id, title, description, status, created_at, embedding')
+      .eq('user_id', userId)
+      .not('embedding', 'is', null)
+      .in('status', ['active', 'upcoming', 'paused'])
+      .order('created_at', { ascending: false })
+      .limit(40),
   ])
 
-  return {
-    projects: (projRes.data ?? []) as ProjectRow[],
-    memories: (memRes.data ?? []) as MemoryRow[],
+  const signals: Signal[] = []
+
+  for (const m of (memRes.data ?? []) as Array<{
+    id: string
+    title: string | null
+    body: string | null
+    created_at: string
+    embedding: number[] | string | null
+  }>) {
+    if (!m.embedding || !m.body || m.body.trim().length < 20) continue
+    signals.push({
+      id: m.id,
+      kind: 'memory',
+      text: m.body,
+      title: m.title,
+      source_label: 'voice note',
+      created_at: m.created_at,
+      embedding: m.embedding,
+    })
   }
+
+  for (const li of (listRes.data ?? []) as Array<{
+    id: string
+    content: string | null
+    metadata: Record<string, unknown> | null
+    created_at: string
+    embedding: number[] | string | null
+  }>) {
+    if (!li.embedding || !li.content || li.content.trim().length < 6) continue
+    const listName = typeof li.metadata?.list_name === 'string' ? (li.metadata.list_name as string) : null
+    signals.push({
+      id: li.id,
+      kind: 'list_item',
+      text: li.content,
+      title: null,
+      source_label: listName ? `list · ${listName}` : 'list item',
+      created_at: li.created_at,
+      embedding: li.embedding,
+    })
+  }
+
+  for (const p of (projRes.data ?? []) as Array<{
+    id: string
+    title: string | null
+    description: string | null
+    created_at: string
+    embedding: number[] | string | null
+  }>) {
+    if (!p.embedding) continue
+    const text = (p.description && p.description.trim().length > 10) ? p.description : (p.title ?? '')
+    if (!text || text.trim().length < 10) continue
+    signals.push({
+      id: p.id,
+      kind: 'project',
+      text,
+      title: p.title,
+      source_label: p.title ? `project · ${p.title}` : 'project',
+      created_at: p.created_at,
+      embedding: p.embedding,
+    })
+  }
+
+  return signals
+}
+
+// Small helper kept for prompt context — the move benefits from seeing the
+// user's active projects even when projects are also in the signal pool.
+async function gatherActiveProjects(
+  supabase: ReturnType<typeof getSupabaseClient>,
+  userId: string,
+): Promise<Array<{ title: string; description: string | null }>> {
+  const res = await supabase
+    .from('projects')
+    .select('title, description')
+    .eq('user_id', userId)
+    .in('status', ['active', 'upcoming'])
+    .order('updated_at', { ascending: false })
+    .limit(15)
+  return (res.data ?? []) as Array<{ title: string; description: string | null }>
 }
 
 function daysAgo(iso: string): number {
@@ -1401,53 +1490,50 @@ function truncateToWords(s: string, maxWords: number): string {
   return words.slice(0, maxWords).join(' ') + '…'
 }
 
-function formatProjects(projects: ProjectRow[]): string {
+function formatProjects(projects: Array<{ title: string; description: string | null }>): string {
   return projects
     .slice(0, 15)
     .map(p => `- ${p.title}${p.description ? ` — ${String(p.description).slice(0, 140)}` : ''}`)
     .join('\n') || '(none)'
 }
 
-// Find a cluster of 3–5 memories that semantically converge — the "middle of
-// the Venn". Prefers time-spread (different weeks) and at least one recent
-// memory so the read stays current.
-function findConvergence(memories: MemoryRow[]): MemoryRow[] | null {
-  const candidates = memories.filter(m =>
-    m.embedding != null && m.body != null && m.body.trim().length > 30,
-  )
+// Find a cluster of 3–5 signals that semantically converge — the "middle of
+// the Venn", pulling across voice notes, list items, and projects. Prefers
+// time-spread (different weeks) and kind-diversity (mixed sources make the
+// convergence more uncanny). At least one signal must be recent.
+function findConvergence(signals: Signal[]): Signal[] | null {
+  const candidates = signals.filter(s => s.embedding != null && s.text.trim().length >= 10)
   if (candidates.length < MIN_CONVERGENCE_SIZE) return null
 
   const now = Date.now()
   const recentCutoff = now - RECENT_WINDOW_DAYS * 24 * 60 * 60 * 1000
   const minGapMs = MIN_CLUSTER_DAYS_APART * 24 * 60 * 60 * 1000
 
-  const anchors = candidates.filter(m => new Date(m.created_at).getTime() >= recentCutoff)
+  const anchors = candidates.filter(s => new Date(s.created_at).getTime() >= recentCutoff)
   if (anchors.length === 0) return null
 
-  let best: { items: MemoryRow[]; score: number } | null = null
+  let best: { items: Signal[]; score: number } | null = null
 
-  for (const anchor of anchors.slice(0, 8)) {
-    const anchorEmbedding = anchor.embedding as number[] | string
-    const neighbours: Array<{ memory: MemoryRow; sim: number }> = []
+  for (const anchor of anchors.slice(0, 10)) {
+    const anchorEmbedding = anchor.embedding
+    const neighbours: Array<{ signal: Signal; sim: number }> = []
     for (const other of candidates) {
-      if (other.id === anchor.id) continue
-      const sim = cosineSimilarity(anchorEmbedding, other.embedding as number[] | string)
+      if (other.id === anchor.id && other.kind === anchor.kind) continue
+      const sim = cosineSimilarity(anchorEmbedding, other.embedding)
       if (sim < MIN_NEIGHBOUR_SIMILARITY) continue
-      neighbours.push({ memory: other, sim })
+      neighbours.push({ signal: other, sim })
     }
     if (neighbours.length < MIN_CONVERGENCE_SIZE - 1) continue
 
-    // Greedy pick: highest-sim first, but skip neighbours too close in time to
-    // anything already picked (so we get week-level time spread).
     neighbours.sort((a, b) => b.sim - a.sim)
-    const picked: Array<{ memory: MemoryRow; sim: number }> = []
+    const picked: Array<{ signal: Signal; sim: number }> = []
     const pickedTimes: number[] = [new Date(anchor.created_at).getTime()]
 
     const tryPick = (allowCloseInTime: boolean) => {
       for (const n of neighbours) {
         if (picked.length >= MAX_CONVERGENCE_SIZE - 1) break
-        if (picked.some(p => p.memory.id === n.memory.id)) continue
-        const t = new Date(n.memory.created_at).getTime()
+        if (picked.some(p => p.signal.id === n.signal.id && p.signal.kind === n.signal.kind)) continue
+        const t = new Date(n.signal.created_at).getTime()
         if (!allowCloseInTime && pickedTimes.some(pt => Math.abs(pt - t) < minGapMs)) continue
         picked.push(n)
         pickedTimes.push(t)
@@ -1458,11 +1544,14 @@ function findConvergence(memories: MemoryRow[]): MemoryRow[] | null {
     if (picked.length < MIN_CONVERGENCE_SIZE - 1) tryPick(true)
     if (picked.length < MIN_CONVERGENCE_SIZE - 1) continue
 
-    const items = [anchor, ...picked.map(p => p.memory)]
+    const items = [anchor, ...picked.map(p => p.signal)]
     const avgSim = picked.reduce((s, p) => s + p.sim, 0) / picked.length
     const times = items.map(i => new Date(i.created_at).getTime())
     const spanDays = (Math.max(...times) - Math.min(...times)) / (24 * 60 * 60 * 1000)
-    const score = avgSim * Math.log(1 + spanDays / 7) * Math.log(1 + items.length)
+    const kindCount = new Set(items.map(i => i.kind)).size
+    // Reward time spread, size, and kind diversity (cross-source convergence
+    // is more uncanny than all-from-one-surface).
+    const score = avgSim * Math.log(1 + spanDays / 7) * Math.log(1 + items.length) * (1 + 0.25 * (kindCount - 1))
 
     if (!best || score > best.score) best = { items, score }
   }
@@ -1472,9 +1561,16 @@ function findConvergence(memories: MemoryRow[]): MemoryRow[] | null {
   return best.items
 }
 
+function describeSignal(s: Signal, index: number): string {
+  const kindLabel = s.kind === 'memory' ? 'VOICE NOTE' : s.kind === 'list_item' ? 'LIST ITEM' : 'PROJECT'
+  const header = `SIGNAL ${index + 1} — ${kindLabel}${s.title ? ` "${s.title}"` : ''} — ${daysAgo(s.created_at)} days ago:`
+  const body = s.text.slice(0, 600)
+  return `${header}\n${body}`
+}
+
 function buildConvergencePrompt(
-  cluster: MemoryRow[],
-  projects: ProjectRow[],
+  cluster: Signal[],
+  projects: Array<{ title: string; description: string | null }>,
   critique?: { previous: SelfModel; critique: string },
 ): string {
   const critiqueBlock = critique
@@ -1483,29 +1579,29 @@ USER PUSHED BACK: "${critique.critique}"
 Pick a different move that still honours the same convergence. Don't get defensive.`
     : ''
 
-  const memBlocks = cluster.map((m, i) => {
-    const header = `MEMORY ${i + 1} — ${daysAgo(m.created_at)} days ago:`
-    const body = (m.title ? m.title + '\n' : '') + String(m.body ?? '').slice(0, 600)
-    return `${header}\n${body}`
-  }).join('\n\n')
+  const signalBlocks = cluster.map((s, i) => describeSignal(s, i)).join('\n\n')
 
-  return `You are looking at ${cluster.length} things the user has said across time — in their own voice notes — that all land on the same underlying thing. This is the middle of a Venn. They haven't noticed these connect.
+  return `You are looking at ${cluster.length} things the user has captured across time — some voice notes, some list items, some project ideas — that all land on the same underlying thing. This is the middle of a Venn. They haven't noticed these connect.
 
 Your job is precise:
 
-1) Pull ONE QUOTE from each of the ${cluster.length} memories — a verbatim fragment of 6–20 words, lifted directly from the body. NEVER paraphrase. NEVER invent. Copy exact words. Pick the line in each that makes the shared thing visible when read alongside the others.
+1) Pull ONE QUOTE from each of the ${cluster.length} signals — a verbatim fragment lifted directly from the text below. NEVER paraphrase. NEVER invent. Copy exact words.
+   - For voice notes: a 6–20 word fragment of the body.
+   - For list items: the item itself (often short — just use the whole content if it's under 20 words).
+   - For projects: a 6–20 word fragment from the description.
+   Pick the line in each that makes the shared thing visible when read alongside the others.
 
 2) Write the CONNECTION in ONE plain-English sentence (≤ 22 words). Name what all ${cluster.length} quotes share, using words the user uses. No metaphors. Don't say "you're obsessed" or "you keep circling" — the UI already implies that. Just describe the shared thing plainly, the way a friend would point it out.
 
-3) Pick the one MOVE for today — 30 to 90 minutes — that sits at the centre of this convergence. The most natural next step given that ${cluster.length} separate notes are saying the same thing. Plain verbs, plain nouns. Forbidden words: "weaponize", "geometry of", "architecture of", "language of", "blueprint", "draft a [abstract noun]". Just say what to actually do.
+3) Pick the one MOVE for today — 30 to 90 minutes — that sits at the centre of this convergence. The most natural next step given that ${cluster.length} separate signals are saying the same thing. Plain verbs, plain nouns. Forbidden words: "weaponize", "geometry of", "architecture of", "language of", "blueprint", "draft a [abstract noun]". Just say what to actually do.
    - action: ≤ 16 words, imperative
    - why: one sentence linking the move to the shared thread
    - artefact: what's on their screen / in their hand when done (e.g. "a 30-second voice note", "a working prototype", "one email sent", "a 1-page brief")
 
-Output JSON only, with this EXACT shape (quotes array must have exactly ${cluster.length} items, in the same order as the memories below):
+Output JSON only, with this EXACT shape (quotes array must have exactly ${cluster.length} items, in the same order as the signals below):
 { "quotes": [${cluster.map(() => '{ "quote": "…" }').join(', ')}], "connection": "…", "move": { "action": "…", "why": "…", "artefact": "…" } }
 
-${memBlocks}
+${signalBlocks}
 
 ACTIVE PROJECTS (context for the move):
 ${formatProjects(projects)}${critiqueBlock}
@@ -1514,8 +1610,8 @@ Return the JSON now.`
 }
 
 function buildSinglePrompt(
-  memory: MemoryRow,
-  projects: ProjectRow[],
+  signal: Signal,
+  projects: Array<{ title: string; description: string | null }>,
   critique?: { previous: SelfModel; critique: string },
 ): string {
   const critiqueBlock = critique
@@ -1524,11 +1620,11 @@ USER PUSHED BACK: "${critique.critique}"
 Pick a different move. Don't get defensive.`
     : ''
 
-  const memBody = (memory.title ? memory.title + '\n' : '') + String(memory.body ?? '').slice(0, 800)
+  const kindLabel = signal.kind === 'memory' ? 'voice note' : signal.kind === 'list_item' ? 'list item' : 'project idea'
 
-  return `You are looking at one voice note from the user, plus their active projects.
+  return `You are looking at one ${kindLabel} from the user${signal.title ? ` ("${signal.title}")` : ''}, plus their active projects.
 
-1) Pull one QUOTE — a verbatim fragment of 6–20 words from the memory body. NEVER paraphrase. Copy exact words. Pick the line that captures what they're thinking about right now.
+1) Pull one QUOTE — a verbatim fragment (or the whole content if it's short) from the text below. NEVER paraphrase. Copy exact words.
 
 2) Pick the one MOVE for today — 30 to 90 minutes — that pushes that thought forward. Plain English, imperative. No metaphors. No "weaponize", "geometry of", "blueprint", "draft a [abstract noun]".
    - action: ≤ 16 words
@@ -1538,8 +1634,8 @@ Pick a different move. Don't get defensive.`
 Output JSON only with this exact shape:
 { "single": { "quote": "…" }, "move": { "action": "…", "why": "…", "artefact": "…" } }
 
-THE MEMORY (${daysAgo(memory.created_at)} days ago):
-${memBody}
+THE ${kindLabel.toUpperCase()} (${daysAgo(signal.created_at)} days ago):
+${signal.text.slice(0, 800)}
 
 ACTIVE PROJECTS:
 ${formatProjects(projects)}${critiqueBlock}
@@ -1547,19 +1643,25 @@ ${formatProjects(projects)}${critiqueBlock}
 Return the JSON now.`
 }
 
-// Verify a quote really is a fragment of the memory — the wow depends on the
-// quotes being the user's actual words, not a paraphrase.
-function isVerbatim(quote: string, memory: MemoryRow): boolean {
+// Verify a quote really is a fragment of the signal's text. The wow depends
+// on quotes being the user's own words, not a paraphrase. For list items
+// (often <4 words) we relax to substring containment.
+function isVerbatim(quote: string, signal: Signal): boolean {
   const norm = (s: string) =>
     s.toLowerCase().replace(/[''`"""]/g, "'").replace(/[^\w\s']/g, ' ').replace(/\s+/g, ' ').trim()
-  const normBody = norm((memory.title ? memory.title + ' ' : '') + (memory.body ?? ''))
-  const quoteWords = norm(quote).split(' ').filter(Boolean)
-  if (quoteWords.length < 4) return false
-  // Require a run of ≥5 consecutive quote words to appear verbatim in the body.
+  const sourceText = (signal.title ? signal.title + ' ' : '') + signal.text
+  const normSource = norm(sourceText)
+  const normQuote = norm(quote)
+  if (!normQuote) return false
+  const quoteWords = normQuote.split(' ').filter(Boolean)
+  if (quoteWords.length === 0) return false
+  // Short items (list items, project titles) — require full substring.
+  if (quoteWords.length < 4) return normSource.includes(normQuote)
+  // Otherwise require a run of ≥5 consecutive quote words in the source.
   const windowSize = Math.min(5, quoteWords.length)
   for (let i = 0; i <= quoteWords.length - windowSize; i++) {
     const needle = quoteWords.slice(i, i + windowSize).join(' ')
-    if (normBody.includes(needle)) return true
+    if (normSource.includes(needle)) return true
   }
   return false
 }
@@ -1583,7 +1685,17 @@ function extractJson(raw: string): unknown | null {
   }
 }
 
-function parseConvergenceModel(raw: string, cluster: MemoryRow[]): SelfModel | null {
+function quoteFromSignal(text: string, signal: Signal): Quote {
+  return {
+    quote: truncateToWords(text, 25),
+    date: signal.created_at,
+    source_id: signal.id,
+    kind: signal.kind,
+    source_label: signal.source_label,
+  }
+}
+
+function parseConvergenceModel(raw: string, cluster: Signal[]): SelfModel | null {
   const obj = extractJson(raw) as {
     quotes?: Array<{ quote?: unknown } | string>
     connection?: unknown
@@ -1593,12 +1705,12 @@ function parseConvergenceModel(raw: string, cluster: MemoryRow[]): SelfModel | n
 
   const quotes: Quote[] = []
   for (let i = 0; i < cluster.length; i++) {
-    const raw = obj.quotes[i]
+    const rawItem = obj.quotes[i]
     const text =
-      typeof raw === 'string'
-        ? raw
-        : raw && typeof raw === 'object' && typeof raw.quote === 'string'
-          ? raw.quote
+      typeof rawItem === 'string'
+        ? rawItem
+        : rawItem && typeof rawItem === 'object' && typeof rawItem.quote === 'string'
+          ? rawItem.quote
           : ''
     const trimmed = text.trim()
     if (!trimmed) return null
@@ -1606,11 +1718,7 @@ function parseConvergenceModel(raw: string, cluster: MemoryRow[]): SelfModel | n
       console.warn('[self-model] rejected non-verbatim quote:', trimmed.slice(0, 80))
       return null
     }
-    quotes.push({
-      quote: truncateToWords(trimmed, 25),
-      date: cluster[i].created_at,
-      memory_id: cluster[i].id,
-    })
+    quotes.push(quoteFromSignal(trimmed, cluster[i]))
   }
 
   const connection = typeof obj.connection === 'string' ? obj.connection.trim() : ''
@@ -1624,19 +1732,19 @@ function parseConvergenceModel(raw: string, cluster: MemoryRow[]): SelfModel | n
   }
 }
 
-function parseSingleModel(raw: string, memory: MemoryRow): SelfModel | null {
+function parseSingleModel(raw: string, signal: Signal): SelfModel | null {
   const obj = extractJson(raw) as { single?: { quote?: unknown }; move?: unknown } | null
   if (!obj) return null
   const quote = typeof obj.single?.quote === 'string' ? obj.single.quote.trim() : ''
   const move = parseMove(obj.move)
   if (!quote || !move) return null
-  if (!isVerbatim(quote, memory)) {
+  if (!isVerbatim(quote, signal)) {
     console.warn('[self-model] rejected non-verbatim single quote:', quote.slice(0, 80))
     return null
   }
   return {
     mode: 'single',
-    single: { quote: truncateToWords(quote, 25), date: memory.created_at, memory_id: memory.id },
+    single: quoteFromSignal(quote, signal),
     move,
   }
 }
@@ -1651,19 +1759,22 @@ async function handleSelfModel(req: VercelRequest, res: VercelResponse) {
 
     const started = Date.now()
     const supabase = getSupabaseClient()
-    const data = await gatherSelfModelSources(supabase, userId)
+    const [signals, activeProjects] = await Promise.all([
+      gatherSignals(supabase, userId),
+      gatherActiveProjects(supabase, userId),
+    ])
 
-    const memoriesWithEmbedding = data.memories.filter(m => m.embedding != null)
-    const cluster = findConvergence(data.memories)
+    const cluster = findConvergence(signals)
 
     const sources: SelfModelSources = {
-      projects: data.projects.length,
-      memories: data.memories.length,
-      memories_with_embedding: memoriesWithEmbedding.length,
+      memories: signals.filter(s => s.kind === 'memory').length,
+      list_items: signals.filter(s => s.kind === 'list_item').length,
+      projects: signals.filter(s => s.kind === 'project').length,
+      signals_with_embedding: signals.length,
       convergence_size: cluster?.length ?? 0,
     }
 
-    if (data.memories.length === 0) {
+    if (signals.length === 0) {
       return res.status(200).json({
         sources,
         model: null,
@@ -1680,7 +1791,7 @@ async function handleSelfModel(req: VercelRequest, res: VercelResponse) {
     let model: SelfModel | null = null
 
     if (cluster) {
-      const prompt = buildConvergencePrompt(cluster, data.projects, critique)
+      const prompt = buildConvergencePrompt(cluster, activeProjects, critique)
       const raw = await generateText(prompt, {
         maxTokens: 1200,
         temperature: 0.7,
@@ -1694,7 +1805,11 @@ async function handleSelfModel(req: VercelRequest, res: VercelResponse) {
     }
 
     if (!model) {
-      const latest = data.memories.find(m => (m.body ?? '').trim().length > 30)
+      // Single-signal fallback — prefer a recent voice note for the quote.
+      const latest =
+        signals.find(s => s.kind === 'memory') ??
+        signals.find(s => s.kind === 'list_item') ??
+        signals[0]
       if (!latest) {
         return res.status(200).json({
           sources,
@@ -1703,7 +1818,7 @@ async function handleSelfModel(req: VercelRequest, res: VercelResponse) {
           took_ms: Date.now() - started,
         })
       }
-      const prompt = buildSinglePrompt(latest, data.projects, critique)
+      const prompt = buildSinglePrompt(latest, activeProjects, critique)
       const raw = await generateText(prompt, {
         maxTokens: 600,
         temperature: 0.7,

@@ -18,10 +18,14 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowRight, MessageSquareWarning, RefreshCw } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
 
+type SignalKind = 'memory' | 'list_item' | 'project'
+
 interface Quote {
   quote: string
   date: string
-  memory_id: string
+  source_id: string
+  kind: SignalKind
+  source_label?: string
 }
 
 interface SelfModel {
@@ -34,7 +38,8 @@ interface SelfModel {
 interface Sources {
   projects: number
   memories: number
-  memories_with_embedding: number
+  list_items: number
+  signals_with_embedding: number
   convergence_size: number
 }
 
@@ -50,8 +55,9 @@ interface SelfModelHomeProps {
 }
 
 const TICKER_STEPS = [
-  (s: Sources) => `reading ${s.memories} memories`,
-  (s: Sources) => `listening for repeats across ${s.memories_with_embedding} voice notes`,
+  (s: Sources) => `reading ${s.memories} voice notes`,
+  (s: Sources) => `scanning ${s.list_items} list items`,
+  (s: Sources) => `scanning ${s.projects} project ideas`,
   () => 'finding the middle of the Venn',
   () => 'picking today\'s move',
 ]
@@ -125,7 +131,7 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
   }, [loading])
 
   const model = data?.model ?? null
-  const sources = data?.sources ?? { projects: 0, memories: 0, memories_with_embedding: 0, convergence_size: 0 }
+  const sources = data?.sources ?? { projects: 0, memories: 0, list_items: 0, signals_with_embedding: 0, convergence_size: 0 }
 
   const handleArgueSubmit = useCallback(async () => {
     if (!critique.trim() || submittingCritique) return
@@ -290,6 +296,22 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
   )
 }
 
+function headerLabel(quotes: Quote[]): string {
+  const kinds = new Set(quotes.map(q => q.kind))
+  if (kinds.size === 1) {
+    const only = quotes[0].kind
+    if (only === 'memory') return `${quotes.length} things you said`
+    if (only === 'list_item') return `${quotes.length} things on your lists`
+    return `${quotes.length} ideas you've been building`
+  }
+  return `${quotes.length} things you've been circling`
+}
+
+function sourceLine(q: Quote): string {
+  const label = q.source_label ?? (q.kind === 'memory' ? 'voice note' : q.kind === 'list_item' ? 'list item' : 'project')
+  return `${label} · ${relativeDate(q.date)}`
+}
+
 function Convergence({ convergence }: { convergence: { quotes: Quote[]; connection: string } }) {
   const { quotes, connection } = convergence
   return (
@@ -298,12 +320,12 @@ function Convergence({ convergence }: { convergence: { quotes: Quote[]; connecti
         className="text-[10px] font-bold tracking-[0.2em] uppercase"
         style={{ color: 'var(--brand-primary)', opacity: 0.7 }}
       >
-        {quotes.length} things you said
+        {headerLabel(quotes)}
       </p>
       <div className="space-y-4">
         {quotes.map((q, i) => (
           <motion.div
-            key={`${q.memory_id}-${i}`}
+            key={`${q.kind}-${q.source_id}-${i}`}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 + i * 0.5, duration: 0.5, ease: 'easeOut' }}
@@ -314,7 +336,7 @@ function Convergence({ convergence }: { convergence: { quotes: Quote[]; connecti
               style={{ background: 'rgba(var(--brand-primary-rgb),0.45)' }}
             />
             <p className="text-[10px] font-mono uppercase tracking-widest text-[var(--brand-text-muted)] mb-1">
-              {relativeDate(q.date)}
+              {sourceLine(q)}
             </p>
             <p className="text-[15px] leading-snug text-[var(--brand-text-primary)] italic">
               “{q.quote}”
@@ -349,7 +371,7 @@ function Single({ single }: { single: Quote }) {
         className="text-[10px] font-bold tracking-[0.2em] uppercase"
         style={{ color: 'var(--brand-primary)', opacity: 0.7 }}
       >
-        you said, {relativeDate(single.date)}
+        {sourceLine(single)}
       </p>
       <motion.p
         initial={{ opacity: 0, y: 8 }}
