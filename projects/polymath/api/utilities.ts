@@ -1311,9 +1311,8 @@ Return JSON only:
 
 interface SelfModel {
   thesis: string
-  threads: Array<{ title: string; evidence: string[] }>
+  threads: string[]
   move: { action: string; why: string; artefact: string }
-  signature: string
 }
 
 interface SelfModelSources {
@@ -1401,24 +1400,30 @@ function buildSelfModelPrompt(
   const critiqueBlock = critique
     ? `\n\nLAST TIME YOU SAID:
 Thesis: "${critique.previous.thesis}"
-Signature: "${critique.previous.signature}"
 Move: "${critique.previous.move.action}"
 
 THE USER PUSHED BACK:
 "${critique.critique}"
 
-Re-model from scratch in light of that critique. Don't be defensive — update the thesis, threads, and move to reflect what they just told you. Show you actually heard them. If the critique is narrow ("wrong move, rest is fine") keep the thesis; if broad ("this whole read is off") rewrite everything.`
+Rewrite in light of that. Don't get defensive. If they only flagged the move, keep the thesis. If they said the whole read is off, start over.`
     : ''
 
-  return `You are modelling the creative signature of a specific person, from their own data. Produce a JSON object describing what they are actually trying to do with their life this quarter, three latent threads pulling at their attention, and the single move that advances the most threads at once.
+  return `You are reading a real person's stream — their projects, voice notes, reading, and open loops — and reflecting back what they're actually working on right now.
 
-RULES:
-- Cite specific titles from their data (named projects, memories, books, list items). Never generic categories.
-- The thesis must sting a little. Avoid LinkedIn-bio voice. Prefer one crisp claim that names a tension (e.g. "You're building X but keep stalling at the Y part").
-- Threads are latent questions, not project names. Things they're circling without noticing.
-- The move is one concrete 30–90 minute action, doable today, with an artefact at the end (a voice note, a one-page doc, a prototype, a commit, an email sent).
-- The signature is the "only you" line — why this specific stack, this specific person, makes this move uniquely theirs. Name 2–3 sources.
-- Output ONLY valid JSON with keys: thesis (string), threads (array of {title, evidence[]}, 3 items, evidence = array of 2–3 source titles), move ({action, why, artefact}), signature (string).
+Write like a clear-eyed friend, not a coach, not a critic, not a poet. Plain English. Short sentences. Current tense.
+
+You will return JSON with three sections.
+
+1) THESIS — one sentence. What they're really trying to figure out or build right now. Direct and a bit energising. Do NOT catastrophise ("terrifying", "sleepless", "losing control"). Do NOT do pep talk ("you've got this"). Do NOT use metaphors. No hedging. Just the true thing, said plainly.
+
+2) THREADS — exactly three short questions they keep circling without saying out loud. Each thread is one question, written the way they might think it. No project names. No evidence list. No jargon. Maximum ~14 words each.
+
+3) MOVE — one specific 30–90 minute thing they could do today that pushes more than one thread forward.
+   - action: imperative, ≤ 16 words, plain English. NO metaphors, NO aesthetic language, NO words like "weaponize", "geometry of", "blueprint", "architecture of", "language of", "draft a [abstract noun]". Just say what to actually do.
+   - why: one sentence on why this is the right move today.
+   - artefact: what's on their screen / in their hand when they're done. Concrete (e.g. "a one-page brief", "a 30-second voice memo", "a working prototype", "an email sent").
+
+Output ONLY valid JSON with keys: thesis (string), threads (array of 3 strings), move ({action, why, artefact}).
 
 THEIR ACTIVE PROJECTS (${data.projects.length}):
 ${projectLines || '(none)'}
@@ -1443,21 +1448,21 @@ function parseSelfModel(raw: string): SelfModel | null {
       obj &&
       typeof obj.thesis === 'string' &&
       Array.isArray(obj.threads) &&
-      obj.move && typeof obj.move.action === 'string' &&
-      typeof obj.signature === 'string'
+      obj.move && typeof obj.move.action === 'string'
     ) {
+      const threads = obj.threads.slice(0, 3).map((t: unknown) => {
+        if (typeof t === 'string') return t
+        if (t && typeof t === 'object' && 'title' in t) return String((t as { title: unknown }).title ?? '')
+        return ''
+      }).filter((s: string) => s.length > 0)
       return {
         thesis: obj.thesis,
-        threads: obj.threads.slice(0, 3).map((t: { title?: unknown; evidence?: unknown }) => ({
-          title: String(t.title ?? ''),
-          evidence: Array.isArray(t.evidence) ? t.evidence.slice(0, 4).map((s: unknown) => String(s)) : [],
-        })),
+        threads,
         move: {
           action: String(obj.move.action ?? ''),
           why: String(obj.move.why ?? ''),
           artefact: String(obj.move.artefact ?? ''),
         },
-        signature: obj.signature,
       }
     }
   } catch {

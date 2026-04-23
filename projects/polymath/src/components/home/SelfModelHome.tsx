@@ -1,26 +1,21 @@
 /**
  * SelfModelHome — experimental homepage surface.
  *
- * On mount: shows a ticker ("reading 247 memories… 3 threads active…") while
- * /api/utilities?resource=self-model is generating. Once the model arrives we reveal the Thesis
- * word-by-word, then the Threads, then the Move. An "Argue with me" button
- * opens a textarea; the critique is POSTed with mode=argue and the model
- * re-derives in place so the user can watch it move.
- *
- * Off by default — opt in via ?self=1, the Settings toggle, or
- * localStorage('polymath-self-model', '1').
+ * Shows a ticker while /api/utilities?resource=self-model generates, then
+ * reveals the Thesis (word-by-word), three Threads (latent questions), and a
+ * single Move for today. "Argue with me" re-runs the model with the user's
+ * critique. Off by default — opt in via ?self=1, Settings, or localStorage.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowRight, MessageSquareWarning, RefreshCw, Sparkles } from 'lucide-react'
+import { ArrowRight, MessageSquareWarning, RefreshCw } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
 
 interface SelfModel {
   thesis: string
-  threads: Array<{ title: string; evidence: string[] }>
+  threads: string[]
   move: { action: string; why: string; artefact: string }
-  signature: string
 }
 
 interface Sources {
@@ -46,7 +41,7 @@ const TICKER_STEPS = [
   (s: Sources) => `scanning ${s.projects} active projects`,
   (s: Sources) => `following ${s.articles} reading threads`,
   (s: Sources) => `weighing ${s.list_items} open loops`,
-  () => 'finding the signature',
+  () => 'finding today\'s move',
 ]
 
 function useWordReveal(text: string, delay = 28): string {
@@ -148,19 +143,16 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
     haptic.medium()
     onShapeIdea({
       title: model.move.action,
-      description: `${model.move.why}\n\nArtefact: ${model.move.artefact}\n\nWhy only you: ${model.signature}`,
+      description: `${model.move.why}\n\nWhen you're done: ${model.move.artefact}`,
     })
   }, [model, onShapeIdea])
 
   return (
     <section className="relative">
       <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-brand-primary" />
-          <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-primary/80">
-            self-model · experimental
-          </h2>
-        </div>
+        <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-primary/80">
+          self-model · experimental
+        </h2>
         {model && !loading && (
           <button
             type="button"
@@ -257,22 +249,17 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
                   threads
                 </p>
                 <div className="space-y-2">
-                  {model.threads.map((t, i) => (
+                  {model.threads.map((q, i) => (
                     <motion.div
-                      key={`${t.title}-${i}`}
+                      key={`${q}-${i}`}
                       initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.2 + i * 0.12, duration: 0.3 }}
                       className="p-3 rounded-xl bg-[var(--glass-surface)] border border-[var(--glass-border)]"
                     >
-                      <p className="text-sm font-semibold text-[var(--brand-text-primary)] mb-1">
-                        {t.title}
+                      <p className="text-sm font-semibold text-[var(--brand-text-primary)] leading-snug">
+                        {q}
                       </p>
-                      {t.evidence.length > 0 && (
-                        <p className="text-[11px] text-[var(--brand-text-secondary)] opacity-70">
-                          {t.evidence.join(' · ')}
-                        </p>
-                      )}
                     </motion.div>
                   ))}
                 </div>
@@ -318,18 +305,6 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
                 <ArrowRight className="h-3 w-3" />
               </button>
             </motion.div>
-
-            {/* Signature */}
-            {model.signature && (
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.8, duration: 0.4 }}
-                className="text-xs italic text-[var(--brand-text-secondary)] opacity-80 pl-3 border-l-2 border-brand-primary/40"
-              >
-                {model.signature}
-              </motion.p>
-            )}
 
             {/* Argue */}
             <div className="pt-2 border-t border-[var(--glass-border)]">
