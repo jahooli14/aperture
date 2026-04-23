@@ -2,20 +2,25 @@
  * SelfModelHome — the home "reveal" surface.
  *
  * Fetches /api/utilities?resource=self-model, which finds 3–5 things the user
- * said across time that converge on the same underlying thing (the "middle
- * of the Venn"). Each quote reveals in sequence, then the connection, then
- * the one move for today. Grounded entirely in the user's own words — the
- * quotes are verbatim fragments, so the wow comes from seeing yourself
- * quoted back.
+ * has captured across voice notes, list items, and project ideas that all
+ * land on the same underlying thing (the "middle of the Venn"). Quotes are
+ * verbatim fragments of what the user actually said — the wow comes from
+ * seeing yourself quoted back.
+ *
+ * First load runs with full reveal theatre; subsequent loads in the same
+ * session skip the stagger. Cached locally for 2h so returning to the
+ * surface is instant. Refresh / argue both pass the current source_ids as
+ * exclude_ids so tapping "refresh" or "wrong read" actually surfaces a
+ * *different* convergence instead of re-serving the same cluster.
  *
  * Falls back to "single" mode (one quote + move) when there isn't enough
- * signal for a convergence. Off by default — opt in via ?self=1, Settings,
- * or localStorage('polymath-self-model', '1').
+ * cross-surface signal for a convergence. Off by default — opt in via
+ * ?self=1, Settings, or localStorage('polymath-self-model', '1').
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowRight, MessageSquareWarning, RefreshCw } from 'lucide-react'
+import { ArrowRight, Check, MessageSquareWarning, RefreshCw } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
 
 type SignalKind = 'memory' | 'list_item' | 'project'
@@ -47,6 +52,8 @@ interface ApiResponse {
   sources: Sources
   model: SelfModel | null
   reason?: string
+  source_ids?: string[]
+  relaxed_excludes?: boolean
   took_ms: number
 }
 
@@ -54,11 +61,15 @@ interface SelfModelHomeProps {
   onShapeIdea: (idea: { title: string; description: string }) => void
 }
 
+const CACHE_KEY = 'polymath-selfmodel-v2'
+const CACHE_TTL_MS = 2 * 60 * 60 * 1000
+const SEEN_KEY = 'polymath-self-model-seen'
+
 const TICKER_STEPS = [
   (s: Sources) => `reading ${s.memories} voice notes`,
   (s: Sources) => `scanning ${s.list_items} list items`,
   (s: Sources) => `scanning ${s.projects} project ideas`,
-  () => 'finding the middle of the Venn',
+  () => 'finding what they share',
   () => 'picking today\'s move',
 ]
 
@@ -73,17 +84,66 @@ function relativeDate(iso: string): string {
   return months === 1 ? 'a month ago' : `${months} months ago`
 }
 
+function readCache(): { cached_at: number; response: ApiResponse } | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as { cached_at: number; response: ApiResponse }
+    if (!parsed?.cached_at || Date.now() - parsed.cached_at > CACHE_TTL_MS) return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+function writeCache(response: ApiResponse) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ cached_at: Date.now(), response }))
+  } catch {
+    // storage full / disabled — no big deal, we'll just refetch next time
+  }
+}
+
+function emptyStateCopy(sources: Sources | null): string {
+  if (!sources || (sources.memories === 0 && sources.list_items === 0 && sources.projects === 0)) {
+    return 'No signal yet. Record a voice note, jot a list item, or sketch a project — then check back.'
+  }
+  if (sources.memories === 0 && sources.list_items > 0) {
+    return 'Plenty of list items, but your notes and projects aren\'t converging yet. A voice note or two would help.'
+  }
+  if (sources.signals_with_embedding < 3) {
+    return 'Not enough captured yet for a convergence. A few more notes and this surface will start to hum.'
+  }
+  return 'Nothing\'s converging on the same thread today. Try again in a day or two once more signal lands.'
+}
+
 export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
-  const [loading, setLoading] = useState(true)
-  const [data, setData] = useState<ApiResponse | null>(null)
+  const firstLoadRef = useRef(true)
+  // Prime from cache immediately so the surface feels instant on repeat opens.
+  const initialCache = typeof window !== 'undefined' ? readCache() : null
+  const [loading, setLoading] = useState(!initialCache)
+  const [data, setData] = useState<ApiResponse | null>(initialCache?.response ?? null)
+  const [fromCache, setFromCache] = useState(!!initialCache)
   const [error, setError] = useState<string | null>(null)
   const [tickerIdx, setTickerIdx] = useState(0)
   const [arguing, setArguing] = useState(false)
   const [critique, setCritique] = useState('')
   const [submittingCritique, setSubmittingCritique] = useState(false)
+  const [todoState, setTodoState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const abortRef = useRef<AbortController | null>(null)
 
-  const fetchModel = useCallback(async (mode: 'generate' | 'argue' = 'generate', critiqueText = '') => {
+  // First-time theatre vs. minimal stagger on repeat. sessionStorage so it
+  // persists across refreshes within a session but not across tab closes.
+  const [firstTime] = useState(() => {
+    if (typeof window === 'undefined') return true
+    const seen = window.sessionStorage.getItem(SEEN_KEY)
+    return !seen
+  })
+
+  const fetchModel = useCallback(async (
+    mode: 'generate' | 'argue' = 'generate',
+    opts: { critiqueText?: string; excludeIds?: string[]; previous?: SelfModel | null } = {},
+  ) => {
     abortRef.current?.abort()
     const ctrl = new AbortController()
     abortRef.current = ctrl
@@ -91,9 +151,10 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
     setError(null)
     try {
       const body: Record<string, unknown> = { mode }
+      if (opts.excludeIds?.length) body.exclude_ids = opts.excludeIds
       if (mode === 'argue') {
-        body.previous = data?.model
-        body.critique = critiqueText
+        body.previous = opts.previous
+        body.critique = opts.critiqueText
       }
       const res = await fetch('/api/utilities?resource=self-model', {
         method: 'POST',
@@ -108,18 +169,30 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
       }
       const json = (await res.json()) as ApiResponse
       setData(json)
+      setFromCache(false)
+      setTodoState('idle')
+      writeCache(json)
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return
       setError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
       setLoading(false)
     }
-  }, [data?.model])
+  }, [])
 
+  // Initial fetch: only if we didn't hydrate from cache. If we did, the user
+  // sees the cached card instantly and can tap refresh for fresh content.
   useEffect(() => {
-    fetchModel('generate')
+    if (!initialCache) fetchModel('generate')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Mark first-time seen once a model has been shown.
+  useEffect(() => {
+    if (data?.model && firstTime) {
+      try { window.sessionStorage.setItem(SEEN_KEY, '1') } catch { /* ignore */ }
+    }
+  }, [data?.model, firstTime])
 
   useEffect(() => {
     if (!loading) return
@@ -131,29 +204,75 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
   }, [loading])
 
   const model = data?.model ?? null
-  const sources = data?.sources ?? { projects: 0, memories: 0, list_items: 0, signals_with_embedding: 0, convergence_size: 0 }
+  const sources = data?.sources ?? null
+  const currentSourceIds = useMemo(() => data?.source_ids ?? [], [data?.source_ids])
+
+  const handleRefresh = useCallback(() => {
+    haptic.light()
+    fetchModel('generate', { excludeIds: currentSourceIds })
+  }, [fetchModel, currentSourceIds])
 
   const handleArgueSubmit = useCallback(async () => {
     if (!critique.trim() || submittingCritique) return
     setSubmittingCritique(true)
     haptic.medium()
     try {
-      await fetchModel('argue', critique.trim())
+      await fetchModel('argue', {
+        critiqueText: critique.trim(),
+        excludeIds: currentSourceIds,
+        previous: model,
+      })
       setCritique('')
       setArguing(false)
     } finally {
       setSubmittingCritique(false)
     }
-  }, [critique, submittingCritique, fetchModel])
+  }, [critique, submittingCritique, fetchModel, currentSourceIds, model])
 
-  const handleShapeMove = useCallback(() => {
-    if (!model) return
+  const handleAddToToday = useCallback(async () => {
+    if (!model || todoState === 'saving' || todoState === 'saved') return
     haptic.medium()
+    setTodoState('saving')
+    try {
+      const today = new Date()
+      const year = today.getFullYear()
+      const month = String(today.getMonth() + 1).padStart(2, '0')
+      const day = String(today.getDate()).padStart(2, '0')
+      const scheduled_date = `${year}-${month}-${day}`
+      const notes = [
+        model.move.why && `Why: ${model.move.why}`,
+        model.move.artefact && `By tonight: ${model.move.artefact}`,
+      ].filter(Boolean).join('\n\n')
+      const res = await fetch('/api/todos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: model.move.action,
+          notes: notes || null,
+          scheduled_date,
+          estimated_minutes: 60,
+        }),
+      })
+      if (!res.ok) throw new Error(await res.text().catch(() => 'Failed'))
+      setTodoState('saved')
+      haptic.success?.()
+    } catch {
+      setTodoState('error')
+    }
+  }, [model, todoState])
+
+  const handleShapeAsIdea = useCallback(() => {
+    if (!model) return
+    haptic.light()
     onShapeIdea({
       title: model.move.action,
       description: `${model.move.why}\n\nWhen you're done: ${model.move.artefact}`,
     })
   }, [model, onShapeIdea])
+
+  // Reveal timings — full theatre first time, quick on repeat.
+  const stagger = firstTime && !fromCache ? 0.5 : 0.08
+  const firstDelay = firstTime && !fromCache ? 0.15 : 0
 
   return (
     <section className="relative">
@@ -164,7 +283,7 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
         {model && !loading && (
           <button
             type="button"
-            onClick={() => fetchModel('generate')}
+            onClick={handleRefresh}
             className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-widest text-[var(--brand-text-muted)] hover:text-brand-primary transition-colors"
           >
             <RefreshCw className="h-3 w-3" />
@@ -188,7 +307,7 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
           style={{ background: 'linear-gradient(90deg, transparent, rgba(var(--brand-primary-rgb),0.5), transparent)' }}
         />
 
-        {loading && (
+        {loading && !model && (
           <div className="flex items-center gap-3">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-primary opacity-70" />
@@ -203,7 +322,7 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
                 transition={{ duration: 0.25 }}
                 className="text-[11px] font-mono uppercase tracking-widest text-brand-primary/90"
               >
-                {TICKER_STEPS[tickerIdx](sources)}…
+                {TICKER_STEPS[tickerIdx](sources ?? { projects: 0, memories: 0, list_items: 0, signals_with_embedding: 0, convergence_size: 0 })}…
               </motion.span>
             </AnimatePresence>
           </div>
@@ -223,16 +342,20 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
           </div>
         )}
 
-        {!loading && !error && !model && data?.reason === 'not-enough-signal' && (
+        {!loading && !error && !model && (
           <div className="text-sm text-[var(--brand-text-secondary)]">
-            Not enough voice notes yet. Record a few, then check back.
+            {emptyStateCopy(sources)}
           </div>
         )}
 
-        {!loading && model && (
+        {model && (
           <div className="space-y-5">
             {model.mode === 'convergence' && model.convergence && (
-              <Convergence convergence={model.convergence} />
+              <Convergence
+                convergence={model.convergence}
+                stagger={stagger}
+                firstDelay={firstDelay}
+              />
             )}
 
             {model.mode === 'single' && model.single && (
@@ -242,9 +365,11 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
             <MoveCard
               move={model.move}
               delay={model.mode === 'convergence' && model.convergence
-                ? 0.4 + model.convergence.quotes.length * 0.5 + 0.5
-                : 0.9}
-              onShape={handleShapeMove}
+                ? firstDelay + stagger * (model.convergence.quotes.length + 1) + 0.1
+                : firstDelay + 0.3}
+              todoState={todoState}
+              onAddToToday={handleAddToToday}
+              onShapeAsIdea={handleShapeAsIdea}
             />
 
             <div className="pt-2 border-t border-[var(--glass-border)]">
@@ -296,23 +421,15 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
   )
 }
 
-function headerLabel(quotes: Quote[]): string {
-  const kinds = new Set(quotes.map(q => q.kind))
-  if (kinds.size === 1) {
-    const only = quotes[0].kind
-    if (only === 'memory') return `${quotes.length} things you said`
-    if (only === 'list_item') return `${quotes.length} things on your lists`
-    return `${quotes.length} ideas you've been building`
-  }
-  return `${quotes.length} things you've been circling`
-}
-
-function sourceLine(q: Quote): string {
-  const label = q.source_label ?? (q.kind === 'memory' ? 'voice note' : q.kind === 'list_item' ? 'list item' : 'project')
-  return `${label} · ${relativeDate(q.date)}`
-}
-
-function Convergence({ convergence }: { convergence: { quotes: Quote[]; connection: string } }) {
+function Convergence({
+  convergence,
+  stagger,
+  firstDelay,
+}: {
+  convergence: { quotes: Quote[]; connection: string }
+  stagger: number
+  firstDelay: number
+}) {
   const { quotes, connection } = convergence
   return (
     <div className="space-y-4">
@@ -320,7 +437,7 @@ function Convergence({ convergence }: { convergence: { quotes: Quote[]; connecti
         className="text-[10px] font-bold tracking-[0.2em] uppercase"
         style={{ color: 'var(--brand-primary)', opacity: 0.7 }}
       >
-        {headerLabel(quotes)}
+        {quotes.length} things on your mind
       </p>
       <div className="space-y-4">
         {quotes.map((q, i) => (
@@ -328,7 +445,7 @@ function Convergence({ convergence }: { convergence: { quotes: Quote[]; connecti
             key={`${q.kind}-${q.source_id}-${i}`}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 + i * 0.5, duration: 0.5, ease: 'easeOut' }}
+            transition={{ delay: firstDelay + i * stagger, duration: Math.max(0.25, stagger), ease: 'easeOut' }}
             className="relative pl-4"
           >
             <span
@@ -336,7 +453,7 @@ function Convergence({ convergence }: { convergence: { quotes: Quote[]; connecti
               style={{ background: 'rgba(var(--brand-primary-rgb),0.45)' }}
             />
             <p className="text-[10px] font-mono uppercase tracking-widest text-[var(--brand-text-muted)] mb-1">
-              {sourceLine(q)}
+              {q.source_label ?? q.kind} · {relativeDate(q.date)}
             </p>
             <p className="text-[15px] leading-snug text-[var(--brand-text-primary)] italic">
               “{q.quote}”
@@ -347,14 +464,14 @@ function Convergence({ convergence }: { convergence: { quotes: Quote[]; connecti
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 + quotes.length * 0.5, duration: 0.5 }}
+        transition={{ delay: firstDelay + quotes.length * stagger, duration: 0.4 }}
         className="pt-2"
       >
         <p
           className="text-[10px] font-bold tracking-[0.2em] uppercase mb-2"
           style={{ color: 'var(--brand-primary)', opacity: 0.7 }}
         >
-          the middle
+          what they share
         </p>
         <p className="text-lg sm:text-xl font-bold leading-snug text-[var(--brand-text-primary)] aperture-header">
           {connection}
@@ -371,7 +488,7 @@ function Single({ single }: { single: Quote }) {
         className="text-[10px] font-bold tracking-[0.2em] uppercase"
         style={{ color: 'var(--brand-primary)', opacity: 0.7 }}
       >
-        {sourceLine(single)}
+        {single.source_label ?? single.kind} · {relativeDate(single.date)}
       </p>
       <motion.p
         initial={{ opacity: 0, y: 8 }}
@@ -388,12 +505,21 @@ function Single({ single }: { single: Quote }) {
 function MoveCard({
   move,
   delay,
-  onShape,
+  todoState,
+  onAddToToday,
+  onShapeAsIdea,
 }: {
   move: { action: string; why: string; artefact: string }
   delay: number
-  onShape: () => void
+  todoState: 'idle' | 'saving' | 'saved' | 'error'
+  onAddToToday: () => void
+  onShapeAsIdea: () => void
 }) {
+  const buttonLabel =
+    todoState === 'saving' ? 'Adding…' :
+    todoState === 'saved' ? 'Added to today' :
+    todoState === 'error' ? 'Try again' :
+    'Add to today'
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -424,14 +550,24 @@ function MoveCard({
           by tonight: <span className="italic">{move.artefact}</span>
         </p>
       )}
-      <button
-        type="button"
-        onClick={onShape}
-        className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest text-white bg-brand-primary hover:bg-brand-primary/90 transition-colors"
-      >
-        Take it on
-        <ArrowRight className="h-3 w-3" />
-      </button>
+      <div className="mt-3 flex items-center gap-3 flex-wrap">
+        <button
+          type="button"
+          onClick={onAddToToday}
+          disabled={todoState === 'saving' || todoState === 'saved'}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest text-white bg-brand-primary hover:bg-brand-primary/90 disabled:opacity-70 transition-colors"
+        >
+          {todoState === 'saved' ? <Check className="h-3 w-3" /> : <ArrowRight className="h-3 w-3" />}
+          {buttonLabel}
+        </button>
+        <button
+          type="button"
+          onClick={onShapeAsIdea}
+          className="text-[11px] font-medium text-[var(--brand-text-muted)] hover:text-brand-primary transition-colors underline underline-offset-2 decoration-dotted"
+        >
+          shape as an idea instead
+        </button>
+      </div>
     </motion.div>
   )
 }

@@ -1361,7 +1361,13 @@ interface Signal {
   title: string | null   // optional header for display / prompt context
   source_label: string   // short UI label ("voice note", "list item", "project 'X'")
   created_at: string
+  effective_date: string // created_at for memories/lists; max(created, updated) for projects
   embedding: number[] | string
+}
+
+function signalKey(s: { id: string; kind: SignalKind } | { kind: SignalKind; source_id: string }): string {
+  const id = 'source_id' in s ? s.source_id : s.id
+  return `${s.kind}:${id}`
 }
 
 async function gatherSignals(
@@ -1391,11 +1397,11 @@ async function gatherSignals(
       .limit(120),
     supabase
       .from('projects')
-      .select('id, title, description, status, created_at, embedding')
+      .select('id, title, description, status, created_at, updated_at, embedding')
       .eq('user_id', userId)
       .not('embedding', 'is', null)
       .in('status', ['active', 'upcoming', 'paused'])
-      .order('created_at', { ascending: false })
+      .order('updated_at', { ascending: false })
       .limit(40),
   ])
 
@@ -1416,6 +1422,7 @@ async function gatherSignals(
       title: m.title,
       source_label: 'voice note',
       created_at: m.created_at,
+      effective_date: m.created_at,
       embedding: m.embedding,
     })
   }
@@ -1436,6 +1443,7 @@ async function gatherSignals(
       title: null,
       source_label: listName ? `list · ${listName}` : 'list item',
       created_at: li.created_at,
+      effective_date: li.created_at,
       embedding: li.embedding,
     })
   }
@@ -1445,11 +1453,17 @@ async function gatherSignals(
     title: string | null
     description: string | null
     created_at: string
+    updated_at: string | null
     embedding: number[] | string | null
   }>) {
     if (!p.embedding) continue
     const text = (p.description && p.description.trim().length > 10) ? p.description : (p.title ?? '')
     if (!text || text.trim().length < 10) continue
+    // Projects stay alive via description edits — use the most recent signal
+    // of care so a freshly-refined idea doesn't read as "3 months ago".
+    const effective = p.updated_at && new Date(p.updated_at).getTime() > new Date(p.created_at).getTime()
+      ? p.updated_at
+      : p.created_at
     signals.push({
       id: p.id,
       kind: 'project',
@@ -1457,6 +1471,7 @@ async function gatherSignals(
       title: p.title,
       source_label: p.title ? `project · ${p.title}` : 'project',
       created_at: p.created_at,
+      effective_date: effective,
       embedding: p.embedding,
     })
   }
@@ -1499,22 +1514,41 @@ function formatProjects(projects: Array<{ title: string; description: string | n
 
 // Find a cluster of 3–5 signals that semantically converge — the "middle of
 // the Venn", pulling across voice notes, list items, and projects. Prefers
-// time-spread (different weeks) and kind-diversity (mixed sources make the
-// convergence more uncanny). At least one signal must be recent.
-function findConvergence(signals: Signal[]): Signal[] | null {
-  const candidates = signals.filter(s => s.embedding != null && s.text.trim().length >= 10)
+// time-spread (different weeks) and REQUIRES kind-diversity (cross-surface
+// convergence is the wow; a clump of four list items is obvious to the
+// user and lands flat). At least one signal must be recent OR an active
+// project — a long-running preoccupation is a live signal even if the
+// project row is old.
+//
+// `excludeKeys` lets refresh/argue skip the last-shown set and surface the
+// next-best convergence, so tapping "wrong read" or "refresh" actually
+// moves the card instead of re-serving the same cluster.
+function findConvergence(signals: Signal[], excludeKeys: Set<string> = new Set()): Signal[] | null {
+  const candidates = signals.filter(s =>
+    s.embedding != null &&
+    s.text.trim().length >= 10 &&
+    !excludeKeys.has(signalKey(s)),
+  )
   if (candidates.length < MIN_CONVERGENCE_SIZE) return null
 
   const now = Date.now()
   const recentCutoff = now - RECENT_WINDOW_DAYS * 24 * 60 * 60 * 1000
   const minGapMs = MIN_CLUSTER_DAYS_APART * 24 * 60 * 60 * 1000
 
-  const anchors = candidates.filter(s => new Date(s.created_at).getTime() >= recentCutoff)
+  // Anchors: anything recent OR any project (active/upcoming/paused filter is
+  // already applied upstream, so projects in the pool represent live care).
+  const anchors = candidates.filter(s =>
+    new Date(s.effective_date).getTime() >= recentCutoff || s.kind === 'project',
+  )
   if (anchors.length === 0) return null
+
+  // Sort anchors: recent-first, then projects. Cap at 30 — cosine is cheap
+  // but 30 anchors × 300 candidates is still negligible.
+  anchors.sort((a, b) => new Date(b.effective_date).getTime() - new Date(a.effective_date).getTime())
 
   let best: { items: Signal[]; score: number } | null = null
 
-  for (const anchor of anchors.slice(0, 10)) {
+  for (const anchor of anchors.slice(0, 30)) {
     const anchorEmbedding = anchor.embedding
     const neighbours: Array<{ signal: Signal; sim: number }> = []
     for (const other of candidates) {
@@ -1527,43 +1561,52 @@ function findConvergence(signals: Signal[]): Signal[] | null {
 
     neighbours.sort((a, b) => b.sim - a.sim)
     const picked: Array<{ signal: Signal; sim: number }> = []
-    const pickedTimes: number[] = [new Date(anchor.created_at).getTime()]
+    const pickedTimes: number[] = [new Date(anchor.effective_date).getTime()]
+    const kindsPicked = new Set<SignalKind>([anchor.kind])
 
-    const tryPick = (allowCloseInTime: boolean) => {
+    // Pass 1: prefer neighbours of different kinds AND time-spaced.
+    // Pass 2: relax the kind preference.
+    // Pass 3: relax time-spacing too.
+    const tryPick = (preferDifferentKind: boolean, allowCloseInTime: boolean) => {
       for (const n of neighbours) {
         if (picked.length >= MAX_CONVERGENCE_SIZE - 1) break
         if (picked.some(p => p.signal.id === n.signal.id && p.signal.kind === n.signal.kind)) continue
-        const t = new Date(n.signal.created_at).getTime()
+        if (preferDifferentKind && kindsPicked.has(n.signal.kind) && kindsPicked.size === 1) continue
+        const t = new Date(n.signal.effective_date).getTime()
         if (!allowCloseInTime && pickedTimes.some(pt => Math.abs(pt - t) < minGapMs)) continue
         picked.push(n)
         pickedTimes.push(t)
+        kindsPicked.add(n.signal.kind)
       }
     }
 
-    tryPick(false)
-    if (picked.length < MIN_CONVERGENCE_SIZE - 1) tryPick(true)
+    tryPick(true, false)
+    if (picked.length < MIN_CONVERGENCE_SIZE - 1) tryPick(false, false)
+    if (picked.length < MIN_CONVERGENCE_SIZE - 1) tryPick(false, true)
     if (picked.length < MIN_CONVERGENCE_SIZE - 1) continue
 
     const items = [anchor, ...picked.map(p => p.signal)]
-    const avgSim = picked.reduce((s, p) => s + p.sim, 0) / picked.length
-    const times = items.map(i => new Date(i.created_at).getTime())
-    const spanDays = (Math.max(...times) - Math.min(...times)) / (24 * 60 * 60 * 1000)
     const kindCount = new Set(items.map(i => i.kind)).size
-    // Reward time spread, size, and kind diversity (cross-source convergence
-    // is more uncanny than all-from-one-surface).
-    const score = avgSim * Math.log(1 + spanDays / 7) * Math.log(1 + items.length) * (1 + 0.25 * (kindCount - 1))
+    // HARD requirement: cross-surface convergence only. Same-kind clumps
+    // aren't the wow — they're a category. Skip if we didn't get ≥2 kinds.
+    if (kindCount < 2) continue
+
+    const avgSim = picked.reduce((s, p) => s + p.sim, 0) / picked.length
+    const times = items.map(i => new Date(i.effective_date).getTime())
+    const spanDays = (Math.max(...times) - Math.min(...times)) / (24 * 60 * 60 * 1000)
+    const score = avgSim * Math.log(1 + spanDays / 7) * Math.log(1 + items.length) * (1 + 0.35 * (kindCount - 1))
 
     if (!best || score > best.score) best = { items, score }
   }
 
   if (!best) return null
-  best.items.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+  best.items.sort((a, b) => new Date(a.effective_date).getTime() - new Date(b.effective_date).getTime())
   return best.items
 }
 
 function describeSignal(s: Signal, index: number): string {
   const kindLabel = s.kind === 'memory' ? 'VOICE NOTE' : s.kind === 'list_item' ? 'LIST ITEM' : 'PROJECT'
-  const header = `SIGNAL ${index + 1} — ${kindLabel}${s.title ? ` "${s.title}"` : ''} — ${daysAgo(s.created_at)} days ago:`
+  const header = `SIGNAL ${index + 1} — ${kindLabel}${s.title ? ` "${s.title}"` : ''} — ${daysAgo(s.effective_date)} days ago:`
   const body = s.text.slice(0, 600)
   return `${header}\n${body}`
 }
@@ -1572,11 +1615,16 @@ function buildConvergencePrompt(
   cluster: Signal[],
   projects: Array<{ title: string; description: string | null }>,
   critique?: { previous: SelfModel; critique: string },
+  strictGrounding: boolean = false,
 ): string {
   const critiqueBlock = critique
     ? `\n\nLAST TIME YOU SUGGESTED: "${critique.previous.move.action}"
 USER PUSHED BACK: "${critique.critique}"
 Pick a different move that still honours the same convergence. Don't get defensive.`
+    : ''
+
+  const groundingBlock = strictGrounding
+    ? `\n\nIMPORTANT — your last attempt drifted into generic language. The connection sentence MUST reuse at least two concrete words (nouns, specific verbs, project names) that appear in the quotes themselves. No elegant metaphors. No "the idea of a…". Name the actual thing using their actual words.`
     : ''
 
   const signalBlocks = cluster.map((s, i) => describeSignal(s, i)).join('\n\n')
@@ -1604,7 +1652,7 @@ Output JSON only, with this EXACT shape (quotes array must have exactly ${cluste
 ${signalBlocks}
 
 ACTIVE PROJECTS (context for the move):
-${formatProjects(projects)}${critiqueBlock}
+${formatProjects(projects)}${critiqueBlock}${groundingBlock}
 
 Return the JSON now.`
 }
@@ -1634,7 +1682,7 @@ Pick a different move. Don't get defensive.`
 Output JSON only with this exact shape:
 { "single": { "quote": "…" }, "move": { "action": "…", "why": "…", "artefact": "…" } }
 
-THE ${kindLabel.toUpperCase()} (${daysAgo(signal.created_at)} days ago):
+THE ${kindLabel.toUpperCase()} (${daysAgo(signal.effective_date)} days ago):
 ${signal.text.slice(0, 800)}
 
 ACTIVE PROJECTS:
@@ -1644,8 +1692,11 @@ Return the JSON now.`
 }
 
 // Verify a quote really is a fragment of the signal's text. The wow depends
-// on quotes being the user's own words, not a paraphrase. For list items
-// (often <4 words) we relax to substring containment.
+// on quotes being the user's own words, not a paraphrase. For very short
+// items we relax to substring containment, and for longer ones we require a
+// 4-word consecutive run (relaxed from 5 — voice transcripts are messy and
+// 5-word windows over-rejected legitimate quotes where the model normalised
+// punctuation or dropped a filler word).
 function isVerbatim(quote: string, signal: Signal): boolean {
   const norm = (s: string) =>
     s.toLowerCase().replace(/[''`"""]/g, "'").replace(/[^\w\s']/g, ' ').replace(/\s+/g, ' ').trim()
@@ -1657,11 +1708,52 @@ function isVerbatim(quote: string, signal: Signal): boolean {
   if (quoteWords.length === 0) return false
   // Short items (list items, project titles) — require full substring.
   if (quoteWords.length < 4) return normSource.includes(normQuote)
-  // Otherwise require a run of ≥5 consecutive quote words in the source.
-  const windowSize = Math.min(5, quoteWords.length)
+  // Otherwise require a run of ≥4 consecutive quote words in the source.
+  const windowSize = Math.min(4, quoteWords.length)
   for (let i = 0; i <= quoteWords.length - windowSize; i++) {
     const needle = quoteWords.slice(i, i + windowSize).join(' ')
     if (normSource.includes(needle)) return true
+  }
+  return false
+}
+
+// Stopwords we ignore when checking that the connection sentence is grounded
+// in the user's own vocabulary. Tiny list — we only need to strip obvious
+// function words; content words are what ground the read.
+const CONTENT_STOPWORDS = new Set([
+  'about', 'again', 'also', 'another', 'around', 'away', 'back', 'because',
+  'been', 'being', 'before', 'could', 'done', 'down', 'even', 'every',
+  'from', 'give', 'going', 'good', 'have', 'here', 'into', 'just', 'keep',
+  'kind', 'know', 'like', 'little', 'look', 'made', 'make', 'many', 'more',
+  'much', 'need', 'never', 'next', 'only', 'other', 'over', 'own', 'really',
+  'same', 'said', 'seem', 'should', 'some', 'something', 'still', 'such',
+  'take', 'than', 'that', 'them', 'then', 'there', 'these', 'they', 'thing',
+  'things', 'think', 'this', 'those', 'thought', 'time', 'true', 'very',
+  'want', 'well', 'were', 'what', 'when', 'where', 'which', 'while', 'will',
+  'with', 'would', 'your', 'yours', 'youre', 'actually', 'maybe', 'probably',
+  'always', 'around', 'sort', 'feel', 'feels',
+])
+
+function contentWords(s: string): string[] {
+  return s
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length >= 4 && !CONTENT_STOPWORDS.has(w))
+}
+
+// Does the connection sentence share ≥2 content words with the quote set?
+// If not, the LLM has probably written an elegant generic framing instead of
+// naming what the quotes actually share — so we reject and retry once with
+// an explicit grounding instruction.
+function connectionGrounded(connection: string, quotes: Quote[]): boolean {
+  const quoteBags = quotes.map(q => new Set(contentWords(q.quote)))
+  const connWords = new Set(contentWords(connection))
+  let hits = 0
+  for (const w of connWords) {
+    const inHowMany = quoteBags.filter(bag => bag.has(w)).length
+    if (inHowMany >= 1) hits++
+    if (hits >= 2) return true
   }
   return false
 }
@@ -1688,7 +1780,7 @@ function extractJson(raw: string): unknown | null {
 function quoteFromSignal(text: string, signal: Signal): Quote {
   return {
     quote: truncateToWords(text, 25),
-    date: signal.created_at,
+    date: signal.effective_date,
     source_id: signal.id,
     kind: signal.kind,
     source_label: signal.source_label,
@@ -1754,8 +1846,14 @@ async function handleSelfModel(req: VercelRequest, res: VercelResponse) {
     const userId = await getUserId(req)
     if (!userId) return res.status(401).json({ error: 'Sign in to view your self-model' })
 
-    const body = (req.body ?? {}) as { mode?: 'generate' | 'argue'; previous?: SelfModel; critique?: string }
+    const body = (req.body ?? {}) as {
+      mode?: 'generate' | 'argue'
+      previous?: SelfModel
+      critique?: string
+      exclude_ids?: string[]
+    }
     const reqMode = body.mode ?? 'generate'
+    const excludeKeys = new Set<string>(Array.isArray(body.exclude_ids) ? body.exclude_ids : [])
 
     const started = Date.now()
     const supabase = getSupabaseClient()
@@ -1764,7 +1862,15 @@ async function handleSelfModel(req: VercelRequest, res: VercelResponse) {
       gatherActiveProjects(supabase, userId),
     ])
 
-    const cluster = findConvergence(signals)
+    // Try with excludes first; if that starves the finder, relax and retry
+    // so we still produce *something* usable rather than silently collapsing
+    // to single-mode just because the user has been refreshing.
+    let cluster = findConvergence(signals, excludeKeys)
+    let relaxedExcludes = false
+    if (!cluster && excludeKeys.size > 0) {
+      cluster = findConvergence(signals)
+      relaxedExcludes = true
+    }
 
     const sources: SelfModelSources = {
       memories: signals.filter(s => s.kind === 'memory').length,
@@ -1791,25 +1897,45 @@ async function handleSelfModel(req: VercelRequest, res: VercelResponse) {
     let model: SelfModel | null = null
 
     if (cluster) {
-      const prompt = buildConvergencePrompt(cluster, activeProjects, critique)
-      const raw = await generateText(prompt, {
-        maxTokens: 1200,
-        temperature: 0.7,
-        responseFormat: 'json',
-        model: MODELS.FLASH_CHAT,
-      })
-      model = parseConvergenceModel(raw, cluster)
-      if (!model) {
-        console.warn('[self-model] convergence parse failed; raw head:', raw.slice(0, 400))
+      const runConvergence = async (strict: boolean): Promise<SelfModel | null> => {
+        const prompt = buildConvergencePrompt(cluster!, activeProjects, critique, strict)
+        const raw = await generateText(prompt, {
+          maxTokens: 1200,
+          temperature: strict ? 0.5 : 0.7,
+          responseFormat: 'json',
+          model: MODELS.FLASH_CHAT,
+        })
+        const parsed = parseConvergenceModel(raw, cluster!)
+        if (!parsed) {
+          console.warn(`[self-model] convergence parse failed (strict=${strict}); raw head:`, raw.slice(0, 400))
+          return null
+        }
+        return parsed
+      }
+
+      model = await runConvergence(false)
+
+      // If the connection sentence isn't grounded in the user's words, give
+      // the LLM one more go with an explicit grounding instruction. Cheap
+      // insurance — the connection is where the wow actually lands.
+      if (model?.convergence && !connectionGrounded(model.convergence.connection, model.convergence.quotes)) {
+        console.warn('[self-model] connection ungrounded; retrying with strict prompt. was:', model.convergence.connection)
+        const retried = await runConvergence(true)
+        if (retried?.convergence && connectionGrounded(retried.convergence.connection, retried.convergence.quotes)) {
+          model = retried
+        }
+        // If the retry still drifts, ship the first attempt rather than
+        // falling to single-mode — a slightly loose connection beats a
+        // single-quote fallback when we have a real cluster.
       }
     }
 
     if (!model) {
-      // Single-signal fallback — prefer a recent voice note for the quote.
-      const latest =
-        signals.find(s => s.kind === 'memory') ??
-        signals.find(s => s.kind === 'list_item') ??
-        signals[0]
+      // Single-signal fallback — pick the most recent substantive signal
+      // across all kinds, not just memories.
+      const latest = signals
+        .filter(s => s.text.trim().length >= 10)
+        .sort((a, b) => new Date(b.effective_date).getTime() - new Date(a.effective_date).getTime())[0]
       if (!latest) {
         return res.status(200).json({
           sources,
@@ -1832,9 +1958,21 @@ async function handleSelfModel(req: VercelRequest, res: VercelResponse) {
       return res.status(502).json({ error: 'Model returned unparseable output' })
     }
 
+    // Return the source_ids we used so the client can exclude them on the
+    // next refresh / argue — guaranteeing the next card is a different
+    // read rather than a re-served cluster.
+    const usedSourceIds =
+      model.mode === 'convergence' && model.convergence
+        ? model.convergence.quotes.map(q => signalKey(q))
+        : model.single
+          ? [signalKey(model.single)]
+          : []
+
     return res.status(200).json({
       sources,
       model,
+      source_ids: usedSourceIds,
+      relaxed_excludes: relaxedExcludes || undefined,
       took_ms: Date.now() - started,
     })
   } catch (err) {
