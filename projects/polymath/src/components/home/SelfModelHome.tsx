@@ -84,12 +84,24 @@ function relativeDate(iso: string): string {
   return months === 1 ? 'a month ago' : `${months} months ago`
 }
 
+function isValidModel(m: unknown): m is SelfModel {
+  if (!m || typeof m !== 'object') return false
+  const model = m as SelfModel
+  if (model.mode === 'convergence') {
+    return !!model.convergence && Array.isArray(model.convergence.quotes)
+  }
+  if (model.mode === 'single') return !!model.single
+  return false
+}
+
 function readCache(): { cached_at: number; response: ApiResponse } | null {
   try {
     const raw = localStorage.getItem(CACHE_KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw) as { cached_at: number; response: ApiResponse }
     if (!parsed?.cached_at || Date.now() - parsed.cached_at > CACHE_TTL_MS) return null
+    // Drop malformed cached models rather than letting them crash the render.
+    if (parsed.response?.model && !isValidModel(parsed.response.model)) return null
     return parsed
   } catch {
     return null
@@ -350,7 +362,7 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
 
         {model && (
           <div className="space-y-5">
-            {model.mode === 'convergence' && model.convergence && (
+            {model.mode === 'convergence' && model.convergence && Array.isArray(model.convergence.quotes) && (
               <Convergence
                 convergence={model.convergence}
                 stagger={stagger}
@@ -365,7 +377,7 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
             <MoveCard
               move={model.move}
               delay={model.mode === 'convergence' && model.convergence
-                ? firstDelay + stagger * (model.convergence.quotes.length + 1) + 0.1
+                ? firstDelay + stagger * ((model.convergence.quotes?.length ?? 0) + 1) + 0.1
                 : firstDelay + 0.3}
               todoState={todoState}
               onAddToToday={handleAddToToday}
@@ -430,7 +442,7 @@ function Convergence({
   stagger: number
   firstDelay: number
 }) {
-  const { quotes, connection } = convergence
+  const { quotes = [], connection } = convergence
   return (
     <div className="space-y-4">
       <p
