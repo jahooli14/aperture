@@ -477,6 +477,19 @@
     padding-bottom: 120px;
   }
 
+  /* When a project is pinned, the overlay covers the bottom half of the
+     viewport. Reserve room in <main> so navigated pages can scroll past it
+     instead of being trapped behind the overlay. */
+  body[data-pinned="half"] .pb-floating-nav {
+    padding-bottom: calc(50vh + 120px);
+  }
+  body[data-pinned="maximized"] .pb-floating-nav {
+    padding-bottom: calc(95vh + 120px);
+  }
+  body[data-pinned="minimized"] .pb-floating-nav {
+    padding-bottom: calc(120px + 4rem);
+  }
+
   /* Subtle pulse animation for callouts */
   @keyframes pulseSubtle {
 

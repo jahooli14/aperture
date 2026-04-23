@@ -1900,7 +1900,11 @@ async function handleSelfModel(req: VercelRequest, res: VercelResponse) {
       const runConvergence = async (strict: boolean): Promise<SelfModel | null> => {
         const prompt = buildConvergencePrompt(cluster!, activeProjects, critique, strict)
         const raw = await generateText(prompt, {
-          maxTokens: 1200,
+          // Generous ceiling — with up to 5 quotes + connection + move, the
+          // JSON can run long. Truncated output parse-fails and falls to
+          // single-mode, which isn't the wow. Carry forward the lesson from
+          // main's hardening (old self-model was truncating at 1400).
+          maxTokens: 2400,
           temperature: strict ? 0.5 : 0.7,
           responseFormat: 'json',
           model: MODELS.FLASH_CHAT,
@@ -1946,7 +1950,7 @@ async function handleSelfModel(req: VercelRequest, res: VercelResponse) {
       }
       const prompt = buildSinglePrompt(latest, activeProjects, critique)
       const raw = await generateText(prompt, {
-        maxTokens: 600,
+        maxTokens: 900,
         temperature: 0.7,
         responseFormat: 'json',
         model: MODELS.FLASH_CHAT,

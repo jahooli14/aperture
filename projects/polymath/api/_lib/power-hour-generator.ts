@@ -400,11 +400,22 @@ REMEMBER: The user is looking at this list to decide "What do I do?". Make it ap
     const responseText = result.response.text()
     console.log('[PowerHour] Raw Gemini response (first 500 chars):', responseText.substring(0, 500))
     const jsonMatch = responseText.match(/\{[\s\S]*\}/)
-    const tasksData = jsonMatch ? JSON.parse(jsonMatch[0]) : { tasks: [] }
-    console.log('[PowerHour] Parsed tasks data:', JSON.stringify(tasksData, null, 2))
+    let tasksData: { tasks?: unknown } = { tasks: [] }
+    if (jsonMatch) {
+        try {
+            tasksData = JSON.parse(jsonMatch[0])
+        } catch (err) {
+            console.error('[PowerHour] Failed to parse Gemini JSON response:', err)
+        }
+    }
+    const rawTasks = Array.isArray(tasksData.tasks) ? tasksData.tasks : []
+    if (!Array.isArray(tasksData.tasks)) {
+        console.warn('[PowerHour] Gemini response missing tasks array; returning empty plan')
+    }
+    console.log(`[PowerHour] Parsed ${rawTasks.length} raw tasks from Gemini`)
 
     // 5. Validate & Return
-    const validatedTasks: PowerHourTask[] = tasksData.tasks.map((task: any) => {
+    const validatedTasks: PowerHourTask[] = rawTasks.map((task: any) => {
         // Look up dormancy info for this project to pass through
         const project = shapedProjects.find(p => p.id === task.project_id)
         const lastActiveDate = project?.last_active ? new Date(project.last_active).getTime() : now
