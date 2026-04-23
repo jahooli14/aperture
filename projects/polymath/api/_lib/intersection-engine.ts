@@ -21,6 +21,7 @@
 import { generateText } from './gemini-chat.js'
 import { cosineSimilarity } from './gemini-embeddings.js'
 import { MODELS } from './models.js'
+import { auditCandidate, validateCandidate } from './intersection-critic.js'
 
 // --- Types matching the frontend contract (WeeklyIntersection.tsx) ---
 
@@ -186,6 +187,34 @@ export async function discoverIntersections(
     return []
   }
 
+  // --- Phase 2b: Critic gate ---
+  // Every Pro candidate passes through a deterministic rule check plus a
+  // Flash critic. Rejections log their reasons so we can tune the prompt.
+  // Concurrency bounded so the critic doesn't hit Flash rate limits.
+  const audited = await mapWithConcurrency(candidates, 3, async (c) => {
+    const result = await auditCandidate(c)
+    return { candidate: c, result }
+  })
+  const survivors = audited
+    .filter(({ candidate, result }) => {
+      if (result.ok) return true
+      console.warn('[intersection-engine] critic rejected candidate', {
+        title: candidate.crossover_title,
+        reasons: result.reasons,
+      })
+      return false
+    })
+    .map(({ candidate }) => candidate)
+
+  console.log('[intersection-engine] discoverIntersections: critic kept', survivors.length, 'of', candidates.length)
+
+  if (survivors.length === 0) {
+    console.warn('[intersection-engine] discoverIntersections: critic rejected every candidate. Returning empty.')
+    return []
+  }
+
+  const filteredCandidates = survivors
+
   // --- Phase 3: Find supporting fuel via embeddings ---
   // Build lookup tables across ALL candidate pools. The AI prompt tells the
   // model that collisions can mix projects, thoughts, and list items, so the
@@ -200,7 +229,7 @@ export async function discoverIntersections(
   let droppedNoProject = 0
   let droppedEmptyBody = 0
 
-  for (const candidate of candidates) {
+  for (const candidate of filteredCandidates) {
     const rawIds = candidate.node_ids ?? candidate.project_ids ?? []
     const matchedNodes: IntersectionNode[] = []
     const matchedProjects: ProjectInput[] = []
@@ -284,6 +313,7 @@ export async function discoverIntersections(
   if (results.length === 0) {
     console.warn('[intersection-engine] discoverIntersections: all candidates dropped by filters', {
       rawCandidates: candidates.length,
+      criticSurvivors: filteredCandidates.length,
       droppedMissingId,
       droppedTooSmall,
       droppedNoProject,
@@ -292,7 +322,7 @@ export async function discoverIntersections(
     return []
   }
 
-  console.log('[intersection-engine] discoverIntersections: kept', results.length, 'of', candidates.length, 'candidates', {
+  console.log('[intersection-engine] discoverIntersections: kept', results.length, 'of', filteredCandidates.length, 'post-critic (raw=' + candidates.length + ')', {
     droppedMissingId,
     droppedTooSmall,
     droppedNoProject,
@@ -477,7 +507,11 @@ RULES:
    - \`hook\` = One sentence starting with "You". The aha that makes them stop scrolling. NOT a restatement of the_pattern.
    - \`the_pattern\` = 1-2 sentences naming the hidden thread, referencing ≥2 specific items by title/topic. What is the person already doing?
    - \`the_experiment\` = 1-2 sentences. ONE concrete action, starts with an imperative verb (Try, Pick, Write, Swap, Open...). Names a specific project/thing they already have. NOT a business plan, NOT a restatement of the_pattern.
-   - \`first_steps\` = 3 imperative-verb actions, 8-14 words each, each naming something specific. No shorthand ("Schedule stuck time" ✗ — rewrite in full with the actual project/person/file).
+   - \`first_steps\` = 3 imperative-verb actions, 8-14 words each, each naming a SPECIFIC item from the input above by title/quote.
+     GOOD: "Reread the brass-doorknob entry in your replaced-objects draft and underline the first sensory detail."
+     BAD: "Pick one specific item from your replaced-objects list." ← naked category noun, no specific item named. REJECTED.
+     BAD: "Choose a mundane item from your notes." ← same failure. REJECTED.
+     If you cannot name a specific item, you don't have enough signal — drop this card, don't ship a vague step.
 7. SCORING CALIBRATION (non_obvious_score):
    - 10: Names something they've been circling for months without words. Would make them stop scrolling.
    - 8-9: Solid observation. Non-obvious. Specific. Clearly about THIS person.
@@ -796,7 +830,10 @@ RULES:
 - the_pattern MUST name at least 2 of the specific items above by their title/topic.
 - the_experiment MUST start with an imperative verb (Try, Pick, Build, Write, Swap, Open...) and propose exactly ONE action.
 - Do not restate the_pattern inside the_experiment or the hook. Each field does a different job.
-- first_steps: 3 imperative-verb actions, 8-14 words each, every one naming something specific. No shorthand ("Schedule stuck time" ✗ — rewrite in full naming the actual project/person/file).
+- first_steps: 3 imperative-verb actions, 8-14 words each, every one naming a SPECIFIC item above by title/quote.
+  GOOD: "Reread the brass-doorknob entry in your replaced-objects draft and underline the first sensory detail."
+  BAD: "Pick one specific item from your replaced-objects list." ← naked category noun, no item named. REJECTED server-side.
+  If you can't name a specific item, you don't have enough signal — drop this card.
 
 Return JSON only:
 {
@@ -838,6 +875,19 @@ Return JSON only:
       // the failure mode we're trying to eliminate.
       if (!title || !hook || !thePattern || !theExperiment) {
         throw new Error(`narration returned empty fields (title=${!!title} hook=${!!hook} pattern=${!!thePattern} experiment=${!!theExperiment})`)
+      }
+
+      // Deterministic critic gate. Throw on failure so the retry path fires;
+      // if the second attempt also fails, narrateOne gives up on this cluster.
+      const ruleCheck = validateCandidate({
+        crossover_title: title,
+        hook,
+        the_pattern: thePattern,
+        the_experiment: theExperiment,
+        first_steps: steps,
+      })
+      if (!ruleCheck.ok) {
+        throw new Error(`narration failed critic rules: ${ruleCheck.reasons.join('; ')}`)
       }
 
       intersection.reason = hook
