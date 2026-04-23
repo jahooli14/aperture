@@ -1418,7 +1418,7 @@ RULES:
 - Threads are latent questions, not project names. Things they're circling without noticing.
 - The move is one concrete 30–90 minute action, doable today, with an artefact at the end (a voice note, a one-page doc, a prototype, a commit, an email sent).
 - The signature is the "only you" line — why this specific stack, this specific person, makes this move uniquely theirs. Name 2–3 sources.
-- Output ONLY valid JSON with keys: thesis (string), threads (array of {title, evidence[]}, 3 items, evidence = array of 2–3 source titles), move ({action, why, artefact}), signature (string).
+- Output ONLY valid JSON with keys: thesis (string, ≤ 320 chars), threads (array of {title, evidence[]}, 3 items, evidence = array of 2–3 source titles), move ({action, why, artefact}), signature (string, ≤ 240 chars). Keep every field tight — truncated JSON is unusable.
 
 THEIR ACTIVE PROJECTS (${data.projects.length}):
 ${projectLines || '(none)'}
@@ -1503,7 +1503,7 @@ async function handleSelfModel(req: VercelRequest, res: VercelResponse) {
     const prompt = buildSelfModelPrompt(data, critique)
 
     const raw = await generateText(prompt, {
-      maxTokens: 1400,
+      maxTokens: 2400,
       temperature: 0.85,
       responseFormat: 'json',
       model: MODELS.FLASH_CHAT,
