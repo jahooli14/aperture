@@ -171,12 +171,30 @@ export function ThisWeekIdeas({ onShapeSuggestion }: ThisWeekIdeasProps) {
 
     for (const s of relevantSuggestions) {
       if (out.length >= MAX_IDEAS) break
+      // Synthesis now emits the same crossover shape as INSIGHT/MASHUP,
+      // stored on metadata.crossover so no DB migration was needed. Read
+      // it when present; fall back to legacy description/reasoning for
+      // older rows.
+      const crossover = s.metadata?.crossover as
+        | {
+            crossover_title?: string
+            hook?: string
+            the_pattern?: string
+            the_experiment?: string
+            first_steps?: string[]
+          }
+        | undefined
+      const sourceSnippets =
+        (s.metadata?.source_snippets as string[] | undefined) || []
       out.push({
         id: `sug-${s.id}`,
         kind: 'suggestion',
-        title: s.title,
-        description: s.description,
-        pattern: s.synthesis_reasoning,
+        title: crossover?.crossover_title?.trim() || s.title,
+        pattern: (crossover?.the_pattern || s.synthesis_reasoning || '').trim() || undefined,
+        experiment: crossover?.the_experiment?.trim() || undefined,
+        firstSteps: crossover?.first_steps?.slice(0, 2),
+        description: !crossover?.the_pattern ? s.description : undefined,
+        sourceLabels: sourceSnippets.slice(0, 4),
         suggestionId: s.id,
       })
     }
@@ -304,15 +322,19 @@ export function ThisWeekIdeas({ onShapeSuggestion }: ThisWeekIdeasProps) {
     )
   }
 
+  // All three AI sources (intersection engine, synthesis, classic mashup)
+  // now render with the same structure and the same label. The distinction
+  // was cosmetic and inconsistent — users don't need three badges for three
+  // internal pipelines that produce the same card.
   const kindLabel: Record<CardKind, string> = {
-    intersection: 'mashup',
+    intersection: 'insight',
     insight: 'insight',
-    suggestion: 'spark',
+    suggestion: 'insight',
     drawer: 'in the drawer',
   }
   const isShaping = current ? shapingId === current.id : false
   const domains = current?.sourceLabels?.length ?? 0
-  const isRare = (current?.kind === 'intersection' || current?.kind === 'insight') && domains >= 3
+  const isRare = current?.kind !== 'drawer' && domains >= 3
 
   return (
     <section className="pb-6">
@@ -377,10 +399,10 @@ export function ThisWeekIdeas({ onShapeSuggestion }: ThisWeekIdeasProps) {
             >
               <div className="flex items-center gap-2 mb-3 flex-wrap">
                 <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-brand-primary/12 border border-brand-primary/25">
-                  {current.kind === 'intersection' || current.kind === 'insight' ? (
-                    <Layers className="h-3 w-3 text-brand-primary/80" />
-                  ) : (
+                  {current.kind === 'drawer' ? (
                     <Sparkles className="h-3 w-3 text-brand-primary/80" />
+                  ) : (
+                    <Layers className="h-3 w-3 text-brand-primary/80" />
                   )}
                   <span className="text-[10px] font-bold uppercase tracking-widest text-brand-primary/90">
                     {kindLabel[current.kind]}
@@ -408,7 +430,7 @@ export function ThisWeekIdeas({ onShapeSuggestion }: ThisWeekIdeasProps) {
                     className="text-[10px] font-semibold tracking-widest uppercase mb-1.5"
                     style={{ color: 'var(--brand-primary)', opacity: 0.7 }}
                   >
-                    {current.kind === 'suggestion' ? 'why' : 'the pattern'}
+                    the pattern
                   </p>
                   <p className="text-sm text-[var(--brand-text-secondary)] leading-relaxed">
                     {current.pattern}

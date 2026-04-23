@@ -7,6 +7,19 @@ import { create } from 'zustand'
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api'
 
+/**
+ * Unified crossover shape — identical for INSIGHT, MASHUP, and synthesis
+ * outputs. Lives on `metadata.crossover` for suggestions so no DB migration
+ * was needed. The home carousel renders all three with the same structure.
+ */
+export interface SuggestionCrossover {
+  crossover_title: string
+  hook: string
+  the_pattern: string
+  the_experiment: string
+  first_steps: string[]
+}
+
 interface ProjectSuggestion {
   id: string
   user_id: string
@@ -22,7 +35,12 @@ interface ProjectSuggestion {
   is_wildcard: boolean
   status: 'pending' | 'spark' | 'meh' | 'built' | 'dismissed' | 'saved'
   suggested_at: string
-  metadata?: Record<string, unknown>
+  metadata?: {
+    observation_basis?: string
+    crossover?: SuggestionCrossover
+    source_snippets?: string[]
+    [key: string]: unknown
+  }
 }
 
 interface SuggestionState {

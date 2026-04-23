@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { validateCandidate, validateSpark } from './intersection-critic'
+import { validateCandidate } from './intersection-critic'
 
 // A known-good candidate that should pass every rule. Used as a baseline —
 // most tests mutate one field and check that the mutation alone trips the
@@ -240,135 +240,47 @@ describe('missing fields', () => {
   })
 })
 
-// ----- SPARK schema (title + description + reasoning) --------------------
+// ----- Synthesis output goes through the same validator -------------------
+//
+// Synthesis used to emit a different shape (title + description + reasoning)
+// and had its own critic. Now it emits the unified crossover and passes
+// through validateCandidate like every other deck. These tests pin the
+// failure modes we saw on the SPARK cards in the reviewed screenshots.
 
-const GOOD_SPARK = {
-  title: 'offline postman puzzle piece',
-  description: 'A short game you play with friends using physical coasters as puzzle tokens.',
-  reasoning:
-    'You keep writing fiction about offline worlds in your Going Analogue draft, and your saved list includes three books about game theory. The coasters you painted last month are the missing piece — a physical token that could actually run the game for real.',
-}
-
-describe('validateSpark — happy path', () => {
-  it('passes a well-formed SPARK suggestion', () => {
-    const result = validateSpark(GOOD_SPARK)
-    expect(result.ok).toBe(true)
-    expect(result.reasons).toEqual([])
-  })
-})
-
-describe('SPARK reasoning opener', () => {
-  it('rejects "I\'m looking at your..." observer voice', () => {
-    // From card 5: "I'm looking at your 'Going Analogue' story..."
-    const result = validateSpark({
-      ...GOOD_SPARK,
-      reasoning: "I'm looking at your Going Analogue story alongside your love of game theory and those painted coasters.",
+describe('unified critic catches former-SPARK failures', () => {
+  it('rejects the card-4 "massive flex" body', () => {
+    const result = validateCandidate({
+      crossover_title: 'penrose portfolio website',
+      hook: 'You keep stacking narrative loops on top of your dev work.',
+      the_pattern:
+        'Your Penrose-stairs essay and your React portfolio both loop the reader back to the start without telling them.',
+      the_experiment:
+        'Ship a one-page site that forces the reader through the same essay twice via invisible routing — a massive flex that directly combines your React skills with your narrative work.',
+      first_steps: [
+        'Open your penrose-stairs draft and mark the exact paragraph the loop should close on.',
+        'Sketch the two route paths that share the same essay component in your notes.',
+        'Wire a router redirect in your portfolio repo and deploy a preview.',
+      ],
     })
     expect(result.ok).toBe(false)
-    expect(result.reasons.some(r => r.includes('observer voice'))).toBe(true)
+    expect(result.reasons.some(r => r.includes('cringe') || r.includes('mashup'))).toBe(true)
   })
 
-  it('rejects "It feels like you..." hedged voice', () => {
-    const result = validateSpark({
-      ...GOOD_SPARK,
-      reasoning: "It feels like you're writing fiction about what you actually want to do in real life.",
+  it('rejects the card-5 observer-voice body', () => {
+    const result = validateCandidate({
+      crossover_title: 'anonymous postman puzzle',
+      hook: "I'm looking at your Going Analogue story and your game theory notes.",
+      the_pattern:
+        'Your offline postman fiction and your painted coasters both want a quiet ritual with friends that runs without screens.',
+      the_experiment:
+        'Design a short postman-themed puzzle your friends can play using four of the coasters you painted.',
+      first_steps: [
+        'Reread the offline-postman passage in Going Analogue and list the rituals mentioned.',
+        'Pick four painted coasters and write a single rule on the back of each.',
+        'Play one round with a friend over coffee and note what breaks.',
+      ],
     })
     expect(result.ok).toBe(false)
-    expect(result.reasons.some(r => r.includes('hedged'))).toBe(true)
-  })
-
-  it('rejects "Imagine a..." hypothetical opener', () => {
-    const result = validateSpark({
-      ...GOOD_SPARK,
-      reasoning: "Imagine a site that loops you through the same essay twice via invisible Penrose stairs.",
-    })
-    expect(result.ok).toBe(false)
-  })
-
-  it('rejects "So," filler opener', () => {
-    const result = validateSpark({
-      ...GOOD_SPARK,
-      reasoning: 'So, you keep writing about offline worlds across three different notes and one list item.',
-    })
-    expect(result.ok).toBe(false)
-  })
-})
-
-describe('SPARK mashup tells', () => {
-  it('rejects "directly combines your X with your Y"', () => {
-    // From card 4: "directly combines your dev skills with your narrative design philosophy"
-    const result = validateSpark({
-      ...GOOD_SPARK,
-      reasoning:
-        'You keep writing about Penrose stairs and narrative loops. Building the site directly combines your dev skills with your narrative design philosophy.',
-    })
-    expect(result.ok).toBe(false)
-    expect(result.reasons.some(r => r.includes('mashup tell'))).toBe(true)
-  })
-
-  it('rejects "fuses your X"', () => {
-    const result = validateSpark({
-      ...GOOD_SPARK,
-      reasoning: 'You keep circling the same question. This fuses your book editor work with your voice notes.',
-    })
-    expect(result.ok).toBe(false)
-  })
-})
-
-describe('SPARK cringe phrases', () => {
-  it('rejects "massive flex"', () => {
-    // From card 4 verbatim
-    const result = validateSpark({
-      ...GOOD_SPARK,
-      reasoning: 'You keep building infinite-loop interfaces across three projects. Shipping this site would be a massive flex.',
-    })
-    expect(result.ok).toBe(false)
-    expect(result.reasons.some(r => r.includes('cringe'))).toBe(true)
-  })
-
-  it('rejects "deeply fascinated"', () => {
-    const result = validateSpark({
-      ...GOOD_SPARK,
-      reasoning: 'You are deeply fascinated by how Penrose stairs trick the eye in your writing and your design work.',
-    })
-    expect(result.ok).toBe(false)
-  })
-})
-
-describe('SPARK title rules', () => {
-  it('rejects title with flowery phrase', () => {
-    const result = validateSpark({ ...GOOD_SPARK, title: 'the profound postman' })
-    expect(result.ok).toBe(false)
-  })
-
-  it('rejects title too long', () => {
-    const result = validateSpark({
-      ...GOOD_SPARK,
-      title: 'a long hypothetical name for a single weekend project idea',
-    })
-    expect(result.ok).toBe(false)
-  })
-})
-
-describe('SPARK description vs reasoning paraphrase', () => {
-  it('rejects when reasoning just restates the description', () => {
-    const text =
-      'You keep writing fiction about offline worlds and saving books about game theory. You keep writing fiction about offline worlds and saving books about game theory.'
-    const result = validateSpark({
-      ...GOOD_SPARK,
-      description: 'A game about offline worlds using painted coasters.',
-      reasoning: text,
-    })
-    // The reasoning above is self-duplicating; description is unrelated length-wise.
-    // So the real test is reasoning overlapping description heavily:
-    const tight = validateSpark({
-      title: 'offline coaster game',
-      description: 'You keep writing fiction about offline worlds using painted coasters as physical tokens for a game.',
-      reasoning: 'You keep writing fiction about offline worlds using painted coasters as physical tokens for a game.',
-    })
-    expect(tight.ok).toBe(false)
-    expect(tight.reasons.some(r => r.includes('overlap'))).toBe(true)
-    // Avoid lint warning about unused var
-    expect(result).toBeDefined()
+    expect(result.reasons.some(r => r.includes('"You" + verb') || r.includes('banned opener'))).toBe(true)
   })
 })

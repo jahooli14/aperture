@@ -11,7 +11,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { COST_OPTS } from './optimization-config.js'
 import { batchGenerateEmbeddings, cosineSimilarity } from './gemini-embeddings.js'
 import { MODELS } from './models.js'
-import { auditSpark } from './intersection-critic.js'
+import { auditCandidate } from './intersection-critic.js'
 
 const logger = {
   info: (objOrMsg: any, msg?: string) => console.log(msg || objOrMsg, typeof objOrMsg === 'object' && msg ? objOrMsg : ''),
@@ -85,7 +85,15 @@ interface Observation {
 interface ProjectIdea {
   title: string
   description: string
+  /** @deprecated — kept for DB back-compat. New code reads crossover.the_pattern. */
   reasoning: string
+  crossover: {
+    crossover_title: string
+    hook: string
+    the_pattern: string
+    the_experiment: string
+    first_steps: string[]
+  }
   observationBasis: string
   sourceSnippets: string[]
   capabilityIds: string[]
@@ -444,17 +452,34 @@ async function generateFromObservations(
     ? `\n═══ WHAT THEY'RE CONSUMING ═══\n${listItems.slice(0, 15).map(li => `- ${li.content} (${li.list_type}: ${li.list_title})`).join('\n')}\n\nThese are books, films, music, etc. they're actively engaged with. Use these as creative fuel — if they're watching a lot of sci-fi, or reading about design, that's signal for what kind of project might excite them.\n`
     : ''
 
-  const prompt = `You are a perceptive friend who has read all of someone's notes and saved articles. Your job is to connect dots they haven't connected yet and suggest projects in plain English — the kind of thing a smart friend says over coffee, not a startup pitch deck.
+  const prompt = `You are a perceptive friend who has read all of someone's notes, saved articles, lists, and projects. Your job is to catch THEM doing something they haven't noticed, then turn that observation into ONE concrete thing they can actually try.
 
-RULES (enforce strictly):
-- NO startup speak. Words like "leverage", "synergize", "unlock potential", "drive value", "scalable", "actionable insights", "massive flex", "game-changer" are banned.
-- NO consultant voice in \`reasoning\`. Banned opening phrases: "I'm looking at your…", "It feels like you…", "I noticed…", "So,", "Here's what I see…". Open with what the PERSON is doing ("You keep…", "You already…", "You treat…"), not with yourself narrating.
-- NO mashup framing. Banned phrases in \`reasoning\` and \`description\`: "directly combines your X with your Y", "mashes together", "fuses your", "ties your work together". A project that only exists to join two things isn't an insight — it's a feature request. Drop it.
-- NO flattery without specifics. "Deeply fascinated", "quietly brilliant", "truly beautiful" — if you can't name the specific note/project/list item that demonstrates the behaviour, the observation is a horoscope. Drop it.
-- Every idea must be grounded in at least one specific observation below, and \`reasoning\` must NAME the specific memory title, project, or list item that prompted it — by its actual title/content, not "your notes" or "your projects".
-- Write like a human, not a consultant or product manager.
-- Ideas should feel like "oh, THAT'S what I've been circling" — not "here's a generic app idea."
-- The reasoning field must be a unique, specific insight about THIS person's actual content. It must NOT be a fill-in-the-blank template. Each reasoning should be completely different in character from the others. Show you read the actual notes.
+This output ships next to cards from another engine, rendered identically. The shape is:
+  - crossover_title  (3-6 words, concrete, names the mechanism — not cute, not poetic)
+  - hook             (one sentence starting with "You" + present-tense verb — what they are ALREADY doing)
+  - the_pattern      (1-2 sentences naming a hidden thread, referencing ≥2 specific items by title/content)
+  - the_experiment   (1-2 sentences, ONE concrete action, starts with an imperative verb, names a specific project/note/list item they already have)
+  - first_steps      (3 imperative-verb actions, 8-14 words each, each naming a specific item from the input)
+
+RULES (enforced server-side — violations get dropped):
+
+1. OBSERVATION, not product. If the card only makes sense as "combine A with B to make AB", it's a mashup — drop it. A real observation would still land with one of the sources removed.
+
+2. REQUIRED HOOK OPENING: Start with "You" + a present-tense verb. Good: "You keep…", "You already…", "You treat…", "You notice…", "You've been…". BANNED: "Your" (possessive), "You're", "You could/should/would", "I'm looking at", "It feels like", "Imagine", "Picture", "Here's".
+
+3. BANNED PHRASES anywhere: "massive flex", "deeply fascinated", "at the intersection of", "directly combines your X with your Y", "fuses your", "mashes together", "truly beautiful", "quietly brilliant", "leverage", "synergize", "unlock potential", "game-changer", "actionable", "paradigm", "stochastic", "orthogonal", "emergent", "heuristic", "ontological", "epistemological", "isomorphism".
+
+4. NAME SPECIFIC ITEMS. Every reference to a memory/note/project/list item must use its actual title or a direct quote — never "your notes", "your projects", "your list", "one of your X". If you can't name a specific item, you don't have enough signal — drop the card.
+
+5. NO SHORTHAND in first_steps. Each step must reference a specific named item. BAD: "Pick one specific item from your X list" (REJECTED server-side). GOOD: "Reread the brass-doorknob entry in your replaced-objects draft and underline the first sensory detail."
+
+6. EACH FIELD DOES A DIFFERENT JOB. Do not restate:
+   - hook: the aha, NOT a restatement of the_pattern
+   - the_pattern: names the hidden thread with ≥2 specific items
+   - the_experiment: ONE action, imperative verb, specific project, NOT a restatement of the_pattern
+   - first_steps: 3 different concrete actions, each naming something specific
+
+7. PLAIN ENGLISH. A 14-year-old should understand every word. If a word has 4+ syllables, double-check.
 
 ═══ WHAT I NOTICED IN THEIR NOTES ═══
 
@@ -463,31 +488,44 @@ ${observationsBlock}
 ═══ THEIR TECHNICAL CAPABILITIES ═══
 ${capabilityList}
 ${pairWeightsSection}
-═══ ACTIVE PROJECTS (don't suggest things already being built) ═══
+═══ ACTIVE PROJECTS (don't re-suggest; use as collision material) ═══
 ${activeProjectsList}
 ${consumingSection}${avoidSection}${modeSection}
 ═══ YOUR TASK ═══
 
-Generate ${count} project ideas. For each idea:
-1. Ground it in one of the observations above — the reasoning must open with what you noticed, not what they should do
-2. Describe the project in 1-2 plain English sentences
-3. Say why THIS specific person would find it meaningful — based on their actual notes, not generic benefits
-4. Name the exact memory or article titles that prompted the idea in source_snippets
+Generate up to ${count} crossovers. FEWER IS FINE — never force a weak one. If nothing scores, return [].
 
-Diversity:
-- 1 wildcard: something surprising that the observations only hint at sideways — an unexpected synthesis
-- The rest: grounded, practical, clearly connected to the observed patterns
+For each crossover, the observation must open with what the PERSON is doing across their notes/projects/list items. Ground every field in at least one named specific item. Mix freely across memories, projects, and list items — a cross-surface collision (memory + list item + project on the same idea) is the strongest possible signal.
 
-Return ONLY a JSON array:
+Return ONLY a JSON array, no preamble, no markdown:
+
 [{
-  "title": "Short name (5 words max)",
-  "description": "1-2 sentences, plain English. No jargon.",
-  "reasoning": "Unique observation about this person's actual notes — must reference specific titles or patterns. NOT a template. Each one should read completely differently.",
+  "crossover_title": "3-6 words naming the mechanism, concrete, not cute",
+  "hook": "One sentence starting with 'You' + present-tense verb. The aha. NOT a restatement of the_pattern.",
+  "the_pattern": "1-2 sentences naming the hidden thread. References ≥2 specific items by title/content.",
+  "the_experiment": "1-2 sentences. ONE thing to try. Starts with an imperative verb. Names a specific project/note/list item they already have.",
+  "first_steps": [
+    "verb-led, 8-14 words, names a specific item",
+    "verb-led, 8-14 words, names a specific item",
+    "verb-led, 8-14 words, names a specific item"
+  ],
   "observation_basis": "cross_source_echo | capability_gap | memory_cluster | new_project_idea | cross_surface_cluster | synthesis",
-  "source_snippets": ["exact memory title or article title that triggered this idea"],
+  "source_snippets": ["exact memory / article / list-item / project title that triggered this"],
   "capabilityIds": ["uuid-from-capabilities-list-above"],
-  "isWildcard": false
-}]`
+  "isWildcard": false,
+  "non_obvious_score": 1-10
+}]
+
+BEFORE RETURNING each item, self-check:
+- Does hook start with "You" + present-tense verb (not "Your", not "You're", not conditional)?
+- Does the_pattern name ≥2 specific items by title?
+- Does the_experiment start with an imperative verb and name a specific item?
+- Are all 3 first_steps verb-led, 8-14 words, each naming a specific item?
+- Is the_experiment just the_pattern reworded? If yes, rewrite.
+- Is the hook just the_pattern reworded? If yes, rewrite.
+- Any banned phrase anywhere? If yes, rewrite.
+
+Only return items scoring 7+. Fewer is fine.`
 
   // Pro: cross-source project suggestion is a high-stakes synthesis task.
   // Runs on-demand / scheduled — not per memory — so the cost is bounded.
@@ -543,14 +581,29 @@ async function filterAndScoreSuggestions(
     const idea = ideas[i]
     const emb = newEmbeddings[i]
 
+    // Unified schema: synthesis now emits the same crossover shape as the
+    // intersection engine (hook / the_pattern / the_experiment / first_steps).
+    const title = (idea.crossover_title || idea.title || '').trim()
+    const hook = (idea.hook || '').trim()
+    const thePattern = (idea.the_pattern || idea.reasoning || '').trim()
+    const theExperiment = (idea.the_experiment || '').trim()
+    const firstSteps = Array.isArray(idea.first_steps)
+      ? idea.first_steps.map((s: unknown) => (typeof s === 'string' ? s.trim() : '')).filter(Boolean).slice(0, 3)
+      : []
+
+    if (!title || !hook || !thePattern || !theExperiment) {
+      logger.warn({ title, hook: !!hook, pattern: !!thePattern, experiment: !!theExperiment }, 'Synthesis idea missing required crossover fields — dropping')
+      continue
+    }
+
     const isDuplicate = (history || []).some(h => {
       const embeddingSimilar = h.embedding && cosineSimilarity(emb, h.embedding) > 0.92
-      const titleSimilar = h.title?.toLowerCase().trim() === idea.title?.toLowerCase().trim()
+      const titleSimilar = h.title?.toLowerCase().trim() === title.toLowerCase().trim()
       return embeddingSimilar || titleSimilar
     })
 
     if (isDuplicate) {
-      logger.info({ title: idea.title }, 'Skipping duplicate suggestion')
+      logger.info({ title }, 'Skipping duplicate suggestion')
       continue
     }
 
@@ -578,9 +631,18 @@ async function filterAndScoreSuggestions(
     ))
 
     finalSuggestions.push({
-      title: idea.title,
-      description: idea.description,
-      reasoning: idea.reasoning || '',
+      title,
+      // Keep description as a short fallback for legacy readers. New UI reads
+      // the_pattern / the_experiment / first_steps from crossover instead.
+      description: (idea.description || theExperiment).trim(),
+      reasoning: thePattern,
+      crossover: {
+        crossover_title: title,
+        hook,
+        the_pattern: thePattern,
+        the_experiment: theExperiment,
+        first_steps: firstSteps,
+      },
       observationBasis: idea.observation_basis || 'synthesis',
       sourceSnippets,
       capabilityIds: (idea.capabilityIds || []).filter((id: string) =>
@@ -837,26 +899,28 @@ export async function runSynthesis(userId: string, mode?: string) {
     rawIdeas, userId, memories, capabilities, dismissalPatterns
   )
 
-  // Critic gate — same quality bar as INSIGHT / MASHUP decks. Audits run in
-  // parallel with bounded concurrency because each one makes a Flash call.
-  // Rejections are logged with reasons so we can tune the prompt; the card
-  // simply doesn't reach the DB.
+  // Unified critic gate — synthesis now emits the same crossover shape as
+  // the intersection engine, so the same auditCandidate() runs here. One
+  // quality bar across INSIGHT, MASHUP, and synthesis decks. Audits run in
+  // parallel; rejections are logged with reasons so we can tune the prompt.
   const auditResults = await Promise.all(
-    scored.map(idea => auditSpark({
-      title: idea.title,
-      description: idea.description,
-      reasoning: idea.reasoning,
+    scored.map(idea => auditCandidate({
+      crossover_title: idea.crossover.crossover_title,
+      hook: idea.crossover.hook,
+      the_pattern: idea.crossover.the_pattern,
+      the_experiment: idea.crossover.the_experiment,
+      first_steps: idea.crossover.first_steps,
     }).then(result => ({ idea, result })))
   )
   const suggestions = auditResults
     .filter(({ idea, result }) => {
       if (result.ok) return true
-      logger.warn({ title: idea.title, reasons: result.reasons }, 'SPARK critic rejected suggestion')
+      logger.warn({ title: idea.title, reasons: result.reasons }, 'Synthesis critic rejected suggestion')
       return false
     })
     .map(({ idea }) => idea)
 
-  logger.info({ scored: scored.length, keptAfterCritic: suggestions.length }, 'SPARK critic complete')
+  logger.info({ scored: scored.length, keptAfterCritic: suggestions.length }, 'Synthesis critic complete')
 
   if (suggestions.length > 0) {
     const { error } = await supabase
@@ -874,7 +938,14 @@ export async function runSynthesis(userId: string, mode?: string) {
         memory_ids: s.memoryIds,
         is_wildcard: s.isWildcard,
         status: 'pending',
-        metadata: { observation_basis: s.observationBasis },
+        // Crossover lives in metadata so no DB migration is needed. The UI
+        // reads metadata.crossover to render pattern / experiment / steps
+        // with the same structure as INSIGHT and MASHUP cards.
+        metadata: {
+          observation_basis: s.observationBasis,
+          crossover: s.crossover,
+          source_snippets: s.sourceSnippets,
+        },
       })))
 
     if (error) logger.error({ error }, 'Failed to store suggestions')
