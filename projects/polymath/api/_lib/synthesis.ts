@@ -11,6 +11,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { COST_OPTS } from './optimization-config.js'
 import { batchGenerateEmbeddings, cosineSimilarity } from './gemini-embeddings.js'
 import { MODELS } from './models.js'
+import { auditSpark } from './intersection-critic.js'
 
 const logger = {
   info: (objOrMsg: any, msg?: string) => console.log(msg || objOrMsg, typeof objOrMsg === 'object' && msg ? objOrMsg : ''),
@@ -56,6 +57,7 @@ interface RichProject {
   description: string
   status: string
   metadata: any
+  embedding: number[] | null
 }
 
 interface Capability {
@@ -75,7 +77,7 @@ interface RichListItem {
 }
 
 interface Observation {
-  type: 'cross_source_echo' | 'capability_gap' | 'memory_cluster' | 'new_project_idea'
+  type: 'cross_source_echo' | 'capability_gap' | 'memory_cluster' | 'new_project_idea' | 'cross_surface_cluster'
   description: string
   sourceRefs: string[]
 }
@@ -145,7 +147,7 @@ async function loadRichArticles(userId: string): Promise<RichArticle[]> {
 async function loadRichProjects(userId: string): Promise<RichProject[]> {
   const { data, error } = await supabase
     .from('projects')
-    .select('id, title, description, status, metadata')
+    .select('id, title, description, status, metadata, embedding')
     .eq('user_id', userId)
     .in('status', ['active', 'on-hold', 'maintaining', 'completed', 'upcoming'])
 
@@ -159,6 +161,7 @@ async function loadRichProjects(userId: string): Promise<RichProject[]> {
     description: p.description || '',
     status: p.status || '',
     metadata: p.metadata || {},
+    embedding: p.embedding || null,
   }))
 }
 
@@ -214,7 +217,8 @@ function minePatterns(
   memories: RichMemory[],
   articles: RichArticle[],
   projects: RichProject[],
-  capabilities: Capability[]
+  capabilities: Capability[],
+  listItems: RichListItem[] = []
 ): Observation[] {
   const observations: Observation[] = []
 
@@ -360,6 +364,49 @@ function minePatterns(
     })
   }
 
+  // Pattern E: Cross-surface cluster.
+  // A memory that sits semantically close to BOTH a list item AND a project
+  // is a three-surface collision — the same idea surfacing in their thoughts,
+  // their consumption, and their active work. That's the strongest possible
+  // signal for synthesis and the exact thing a SPARK should build on.
+  const CROSS_SURFACE_SIM = 0.55
+  const memoriesWithEmb = memories.filter(m => m.embedding && m.embedding.length > 0)
+  const listItemsWithEmb = listItems.filter(li => li.embedding && li.embedding.length > 0)
+  const projectsWithEmb = projects.filter(p => p.embedding && p.embedding.length > 0)
+
+  const emittedSurfaceClusters = new Set<string>()
+  for (const mem of memoriesWithEmb) {
+    const relatedListItems = listItemsWithEmb
+      .map(li => ({ li, sim: cosineSimilarity(mem.embedding!, li.embedding!) }))
+      .filter(x => x.sim >= CROSS_SURFACE_SIM)
+      .sort((a, b) => b.sim - a.sim)
+      .slice(0, 2)
+    const relatedProjects = projectsWithEmb
+      .map(p => ({ p, sim: cosineSimilarity(mem.embedding!, p.embedding!) }))
+      .filter(x => x.sim >= CROSS_SURFACE_SIM)
+      .sort((a, b) => b.sim - a.sim)
+      .slice(0, 2)
+
+    // Only interesting when ALL THREE surfaces light up — thought, consumed,
+    // active work. Two surfaces alone are already covered by Patterns A-D.
+    if (relatedListItems.length === 0 || relatedProjects.length === 0) continue
+
+    const liTitles = relatedListItems.map(({ li }) => li.content.slice(0, 80))
+    const projTitles = relatedProjects.map(({ p }) => p.title)
+    const key = [mem.id, ...relatedListItems.map(x => x.li.id), ...relatedProjects.map(x => x.p.id)].sort().join('|')
+    if (emittedSurfaceClusters.has(key)) continue
+    emittedSurfaceClusters.add(key)
+
+    observations.push({
+      type: 'cross_surface_cluster',
+      description: `Your note "${mem.title}" sits right next to a list item you're consuming ("${liTitles.join('", "')}") AND your active project${relatedProjects.length > 1 ? 's' : ''} "${projTitles.join('", "')}". Same idea, three surfaces — thought, input, work.`,
+      sourceRefs: [mem.title, ...liTitles, ...projTitles],
+    })
+
+    // Cap to keep the prompt bounded — pattern miner shouldn't dominate.
+    if (observations.filter(o => o.type === 'cross_surface_cluster').length >= 4) break
+  }
+
   logger.info({ count: observations.length }, 'Pattern mining complete')
   return observations
 }
@@ -400,8 +447,11 @@ async function generateFromObservations(
   const prompt = `You are a perceptive friend who has read all of someone's notes and saved articles. Your job is to connect dots they haven't connected yet and suggest projects in plain English — the kind of thing a smart friend says over coffee, not a startup pitch deck.
 
 RULES (enforce strictly):
-- NO startup speak. Words like "leverage", "synergize", "unlock potential", "drive value", "scalable", "actionable insights" are banned.
-- Every idea must be grounded in at least one specific observation below.
+- NO startup speak. Words like "leverage", "synergize", "unlock potential", "drive value", "scalable", "actionable insights", "massive flex", "game-changer" are banned.
+- NO consultant voice in \`reasoning\`. Banned opening phrases: "I'm looking at your…", "It feels like you…", "I noticed…", "So,", "Here's what I see…". Open with what the PERSON is doing ("You keep…", "You already…", "You treat…"), not with yourself narrating.
+- NO mashup framing. Banned phrases in \`reasoning\` and \`description\`: "directly combines your X with your Y", "mashes together", "fuses your", "ties your work together". A project that only exists to join two things isn't an insight — it's a feature request. Drop it.
+- NO flattery without specifics. "Deeply fascinated", "quietly brilliant", "truly beautiful" — if you can't name the specific note/project/list item that demonstrates the behaviour, the observation is a horoscope. Drop it.
+- Every idea must be grounded in at least one specific observation below, and \`reasoning\` must NAME the specific memory title, project, or list item that prompted it — by its actual title/content, not "your notes" or "your projects".
 - Write like a human, not a consultant or product manager.
 - Ideas should feel like "oh, THAT'S what I've been circling" — not "here's a generic app idea."
 - The reasoning field must be a unique, specific insight about THIS person's actual content. It must NOT be a fill-in-the-blank template. Each reasoning should be completely different in character from the others. Show you read the actual notes.
@@ -433,7 +483,7 @@ Return ONLY a JSON array:
   "title": "Short name (5 words max)",
   "description": "1-2 sentences, plain English. No jargon.",
   "reasoning": "Unique observation about this person's actual notes — must reference specific titles or patterns. NOT a template. Each one should read completely differently.",
-  "observation_basis": "cross_source_echo | capability_gap | memory_cluster | new_project_idea | synthesis",
+  "observation_basis": "cross_source_echo | capability_gap | memory_cluster | new_project_idea | cross_surface_cluster | synthesis",
   "source_snippets": ["exact memory title or article title that triggered this idea"],
   "capabilityIds": ["uuid-from-capabilities-list-above"],
   "isWildcard": false
@@ -708,8 +758,10 @@ export async function runSynthesis(userId: string, mode?: string) {
     return []
   }
 
-  // Mine patterns from the full data lake
-  let observations = minePatterns(memories, articles, projects, capabilities)
+  // Mine patterns from the full data lake — memories, articles, projects,
+  // AND list items. The cross_surface_cluster pattern lights up when the
+  // same idea appears across all three user-facing surfaces.
+  let observations = minePatterns(memories, articles, projects, capabilities, listItems)
 
   // Boost observations from preferred types and deprioritize avoided types
   if (obsPreferences.preferred.length > 0 || obsPreferences.avoided.length > 0) {
@@ -781,9 +833,30 @@ export async function runSynthesis(userId: string, mode?: string) {
     listItems
   )
 
-  const suggestions = await filterAndScoreSuggestions(
+  const scored = await filterAndScoreSuggestions(
     rawIdeas, userId, memories, capabilities, dismissalPatterns
   )
+
+  // Critic gate — same quality bar as INSIGHT / MASHUP decks. Audits run in
+  // parallel with bounded concurrency because each one makes a Flash call.
+  // Rejections are logged with reasons so we can tune the prompt; the card
+  // simply doesn't reach the DB.
+  const auditResults = await Promise.all(
+    scored.map(idea => auditSpark({
+      title: idea.title,
+      description: idea.description,
+      reasoning: idea.reasoning,
+    }).then(result => ({ idea, result })))
+  )
+  const suggestions = auditResults
+    .filter(({ idea, result }) => {
+      if (result.ok) return true
+      logger.warn({ title: idea.title, reasons: result.reasons }, 'SPARK critic rejected suggestion')
+      return false
+    })
+    .map(({ idea }) => idea)
+
+  logger.info({ scored: scored.length, keptAfterCritic: suggestions.length }, 'SPARK critic complete')
 
   if (suggestions.length > 0) {
     const { error } = await supabase

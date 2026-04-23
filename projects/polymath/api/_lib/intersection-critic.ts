@@ -319,3 +319,151 @@ export async function auditCandidate(c: CandidateFields): Promise<AuditResult> {
   const critic = await critiqueCandidate(c)
   return critic
 }
+
+// --- SPARK schema (runSynthesis) -----------------------------------------
+//
+// SPARK cards use a different shape: title + description + reasoning prose.
+// Same failure modes still apply — first-person observer voice ("I'm looking
+// at your..."), mashup framing ("directly combines A with B"), cringe copy
+// ("massive flex"), horoscope-grade generalities.
+
+export interface SparkFields {
+  title?: string
+  description?: string
+  reasoning?: string
+}
+
+/**
+ * Reasoning must OPEN with what the writer noticed, in the person's own
+ * voice — the prompt in synthesis.ts already says "must open with what you
+ * noticed, not what they should do". This enforces it server-side.
+ */
+function checkReasoningOpening(reasoning: string): string | null {
+  const trimmed = reasoning.trim()
+  if (!trimmed) return 'reasoning is empty'
+  if (/^i('m| am) (looking at|seeing|noticing|reading)\b/i.test(trimmed)) {
+    return 'reasoning opens with first-person observer voice ("I\'m looking at...")'
+  }
+  if (/^it (feels like|seems like|looks like) you\b/i.test(trimmed)) {
+    return 'reasoning opens with hedged observer voice ("It feels like you...")'
+  }
+  if (/^(imagine|picture) (a|an|the|you)\b/i.test(trimmed)) {
+    return 'reasoning opens with hypothetical ("Imagine...", "Picture...")'
+  }
+  if (/^here's (an|the|what)\b/i.test(trimmed)) {
+    return 'reasoning opens with "Here\'s..." — state the observation directly'
+  }
+  if (/^(so|okay|alright|now),?\b/i.test(trimmed)) {
+    return 'reasoning opens with filler word'
+  }
+  return null
+}
+
+export function validateSpark(s: SparkFields): AuditResult {
+  const reasons: string[] = []
+  const title = (s.title || '').trim()
+  const description = (s.description || '').trim()
+  const reasoning = (s.reasoning || '').trim()
+
+  if (!title) reasons.push('missing title')
+  if (!description) reasons.push('missing description')
+  if (!reasoning) reasons.push('missing reasoning')
+
+  // Reasoning opening — first-person / hedged / hypothetical all rejected.
+  const openErr = checkReasoningOpening(reasoning)
+  if (openErr) reasons.push(openErr)
+
+  // Banned mashup openers — reasoning should be an observation, not a pitch.
+  for (const re of BANNED_OPENERS) {
+    if (re.test(reasoning)) reasons.push(`reasoning starts with banned opener (${re.source})`)
+    if (re.test(description)) reasons.push(`description starts with banned opener (${re.source})`)
+  }
+
+  // Jargon + cringe across every text field.
+  reasons.push(...checkField(title, 'title'))
+  reasons.push(...checkField(description, 'description'))
+  reasons.push(...checkField(reasoning, 'reasoning'))
+
+  // Mashup-phrase detector specific to SPARK — "directly combines X with Y"
+  // was the telltale on the "penrose portfolio website" card.
+  const MASHUP_TELLS: RegExp[] = [
+    /\bdirectly combines? (your|the)\b/i,
+    /\bmash(es|ed|ing)? (together|up)\b/i,
+    /\b(ties|brings|pulls) (your|the) (\w+ )?(work|projects?|ideas?) together\b/i,
+    /\bfuses? (your|the)\b/i,
+  ]
+  for (const re of MASHUP_TELLS) {
+    if (re.test(reasoning)) reasons.push(`reasoning uses mashup tell (${re.source})`)
+    if (re.test(description)) reasons.push(`description uses mashup tell (${re.source})`)
+  }
+
+  // Title rules — mirror INSIGHT deck.
+  for (const re of TITLE_CRINGE_PATTERNS) {
+    if (re.test(title)) reasons.push(`title uses flowery phrase (${re.source})`)
+  }
+  const titleWords = title.split(/\s+/).filter(Boolean).length
+  if (titleWords > 7) reasons.push(`title too long (${titleWords} words, target 3-6)`)
+
+  // Description <> reasoning paraphrase — if the reasoning just restates the
+  // description with more adjectives, it isn't pulling its weight.
+  if (description && reasoning) {
+    const overlap = jaccardOverlap(description, reasoning)
+    if (overlap > 0.6) {
+      reasons.push(`description and reasoning overlap heavily (Jaccard=${overlap.toFixed(2)})`)
+    }
+  }
+
+  return { ok: reasons.length === 0, reasons }
+}
+
+/**
+ * Flash critic for SPARK — shorter prompt since the card has fewer fields.
+ * Same failure modes as INSIGHT though, so the criteria translate directly.
+ */
+export async function critiqueSpark(s: SparkFields): Promise<AuditResult> {
+  const prompt = `You are a sharp critic reviewing one project suggestion card before it ships to the user. Your job is to catch failures the writer fooled itself about.
+
+CARD:
+Title: ${s.title || ''}
+Description: ${s.description || ''}
+Reasoning: ${s.reasoning || ''}
+
+REJECT the card if ANY of these are true:
+
+1. MASHUP IN DISGUISE. The reasoning only makes sense as "combine A and B into AB". A real observation would still land even without one of the sources.
+
+2. HOROSCOPE. The reasoning applies to most creative people, not specifically THIS person. Every sentence should name something specific from their notes.
+
+3. FIRST-PERSON OBSERVER. The reasoning reads like a consultant narrating themselves reading notes ("I'm looking at...", "It feels like you..."). The user doesn't need a narrator — just the observation.
+
+4. MARKETING COPY. "Massive flex", "deeply fascinated", "at the intersection of", "truly beautiful" — any tone that belongs in a pitch deck.
+
+5. FLATTERY WITHOUT SPECIFICS. The card tells the user they're deep / brilliant / obsessed without naming the specific behaviour.
+
+Respond with plain JSON only, no markdown:
+{"verdict": "PASS" | "REJECT", "reason": "one short sentence if REJECT, empty string if PASS"}`
+
+  try {
+    const raw = await generateText(prompt, {
+      model: MODELS.DEFAULT_CHAT,
+      responseFormat: 'json',
+      temperature: 0.2,
+      maxTokens: 200,
+    })
+    const parsed = JSON.parse(raw) as { verdict?: string; reason?: string }
+    if (parsed.verdict === 'REJECT') {
+      return { ok: false, reasons: [`critic: ${parsed.reason || 'rejected'}`] }
+    }
+    return { ok: true, reasons: [] }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.warn('[intersection-critic] SPARK critic call failed, falling open:', message)
+    return { ok: true, reasons: [] }
+  }
+}
+
+export async function auditSpark(s: SparkFields): Promise<AuditResult> {
+  const rule = validateSpark(s)
+  if (!rule.ok) return rule
+  return critiqueSpark(s)
+}
