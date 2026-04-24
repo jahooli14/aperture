@@ -1350,7 +1350,11 @@ interface SelfModelSources {
 const SELF_MODEL_WINDOW_DAYS = 180
 const RECENT_WINDOW_DAYS = 30
 const MIN_CLUSTER_DAYS_APART = 7
+// Strict pass: things that clearly share a theme. Loose pass is a fallback
+// so we don't silently drop to single-mode when the user genuinely has
+// cross-surface signal that's just a shade below the strict threshold.
 const MIN_NEIGHBOUR_SIMILARITY = 0.68
+const LOOSE_NEIGHBOUR_SIMILARITY = 0.56
 const MIN_CONVERGENCE_SIZE = 3
 const MAX_CONVERGENCE_SIZE = 5
 
@@ -1508,11 +1512,63 @@ function truncateToWords(s: string, maxWords: number): string {
 function formatProjects(projects: Array<{ title: string; description: string | null }>): string {
   return projects
     .slice(0, 15)
-    .map(p => `- ${p.title}${p.description ? ` — ${String(p.description).slice(0, 140)}` : ''}`)
+    .map(p => `- ${p.title}${p.description ? ` — ${String(p.description).slice(0, 320)}` : ''}`)
     .join('\n') || '(none)'
 }
 
-// Find a cluster of 3–5 signals that semantically converge — the "middle of
+// Ambient signal outside the cluster — recent voice notes + list items the
+// AI can use to spot crossovers even when a formal convergence wasn't found.
+// Cluster members are excluded so we don't duplicate them back into context.
+function formatRecentCaptures(signals: Signal[], excludeKeys: Set<string>): string {
+  const captures = signals
+    .filter(s => !excludeKeys.has(signalKey(s)))
+    .filter(s => s.kind !== 'project') // projects are already listed separately
+    .sort((a, b) => new Date(b.effective_date).getTime() - new Date(a.effective_date).getTime())
+    .slice(0, 6)
+  if (captures.length === 0) return '(none)'
+  return captures
+    .map(s => {
+      const label = s.kind === 'memory' ? 'voice note' : 'list item'
+      return `- ${label} (${daysAgo(s.effective_date)}d ago): ${s.text.slice(0, 220).replace(/\s+/g, ' ').trim()}`
+    })
+    .join('\n')
+}
+
+// Pick the single signal to build a fallback card around. We bias HARD away
+// from project descriptions — they're the user's pitch copy, which reads as
+// generic by construction. Voice notes capture spontaneous, specific thought;
+// list items capture concrete asks. Only fall back to a project when there's
+// genuinely nothing else and the project text isn't just a repurposed pitch.
+function pickSingleSignal(
+  signals: Signal[],
+  excludeKeys: Set<string>,
+): Signal | null {
+  const usable = signals
+    .filter(s => !excludeKeys.has(signalKey(s)))
+    .filter(s => s.text.trim().length >= 20)
+
+  const byKind = (kind: SignalKind) =>
+    usable
+      .filter(s => s.kind === kind)
+      .sort((a, b) => new Date(b.effective_date).getTime() - new Date(a.effective_date).getTime())
+
+  // Order: voice notes → list items → projects. Within each, most recent.
+  const memory = byKind('memory')[0]
+  if (memory) return memory
+  const listItem = byKind('list_item')[0]
+  if (listItem) return listItem
+  const project = byKind('project')[0]
+  if (project) return project
+
+  // Excludes starved us — relax and pick the most recent thing that meets
+  // the length bar, still preferring non-projects.
+  const relaxed = signals.filter(s => s.text.trim().length >= 20)
+  const relaxedByKind = (kind: SignalKind) =>
+    relaxed
+      .filter(s => s.kind === kind)
+      .sort((a, b) => new Date(b.effective_date).getTime() - new Date(a.effective_date).getTime())
+  return relaxedByKind('memory')[0] || relaxedByKind('list_item')[0] || relaxedByKind('project')[0] || null
+}
 // the Venn", pulling across voice notes, list items, and projects. Prefers
 // time-spread (different weeks) and REQUIRES kind-diversity (cross-surface
 // convergence is the wow; a clump of four list items is obvious to the
@@ -1523,7 +1579,14 @@ function formatProjects(projects: Array<{ title: string; description: string | n
 // `excludeKeys` lets refresh/argue skip the last-shown set and surface the
 // next-best convergence, so tapping "wrong read" or "refresh" actually
 // moves the card instead of re-serving the same cluster.
-function findConvergence(signals: Signal[], excludeKeys: Set<string> = new Set()): Signal[] | null {
+// `minSim` is the cosine floor — strict pass first; caller retries with a
+// looser floor when the strict pass starves, so we don't collapse to single
+// mode over a few hundredths of a point.
+function findConvergence(
+  signals: Signal[],
+  excludeKeys: Set<string> = new Set(),
+  minSim: number = MIN_NEIGHBOUR_SIMILARITY,
+): Signal[] | null {
   const candidates = signals.filter(s =>
     s.embedding != null &&
     s.text.trim().length >= 10 &&
@@ -1554,7 +1617,7 @@ function findConvergence(signals: Signal[], excludeKeys: Set<string> = new Set()
     for (const other of candidates) {
       if (other.id === anchor.id && other.kind === anchor.kind) continue
       const sim = cosineSimilarity(anchorEmbedding, other.embedding)
-      if (sim < MIN_NEIGHBOUR_SIMILARITY) continue
+      if (sim < minSim) continue
       neighbours.push({ signal: other, sim })
     }
     if (neighbours.length < MIN_CONVERGENCE_SIZE - 1) continue
@@ -1611,9 +1674,28 @@ function describeSignal(s: Signal, index: number): string {
   return `${header}\n${body}`
 }
 
+// Phrases that consistently signal LLM boilerplate in this surface. Listed
+// explicitly in the prompt so the model can't lean on them — they all sound
+// smart and all read flat.
+const FORBIDDEN_PHRASES = [
+  'weaponize', 'geometry of', 'architecture of', 'language of', 'blueprint',
+  'leverage', 'synergy', 'unlock', 'crystallise', 'crystallize',
+  'clarify', 'clarifies', 'clarification',
+  'identify', 'identifies', 'identifying', 'identification',
+  'mapping', 'map out', 'roadmap',
+  'core functionality', 'underlying', 'fundamental',
+  'draft a framework', 'draft a strategy', 'draft a blueprint',
+  'actionable', 'systematically', 'holistic', 'ecosystem',
+]
+
+function forbiddenList(): string {
+  return FORBIDDEN_PHRASES.map(p => `"${p}"`).join(', ')
+}
+
 function buildConvergencePrompt(
   cluster: Signal[],
   projects: Array<{ title: string; description: string | null }>,
+  ambientCaptures: string,
   critique?: { previous: SelfModel; critique: string },
   strictGrounding: boolean = false,
 ): string {
@@ -1629,30 +1711,47 @@ Pick a different move that still honours the same convergence. Don't get defensi
 
   const signalBlocks = cluster.map((s, i) => describeSignal(s, i)).join('\n\n')
 
-  return `You are looking at ${cluster.length} things the user has captured across time — some voice notes, some list items, some project ideas — that all land on the same underlying thing. This is the middle of a Venn. They haven't noticed these connect.
+  // Count distinct projects referenced in the cluster — if ≥2, demand a
+  // named crossover, because that's the whole point of this surface.
+  const projectNames = Array.from(new Set(
+    cluster.filter(s => s.kind === 'project' && s.title).map(s => s.title as string),
+  ))
+  const crossoverBlock = projectNames.length >= 2
+    ? `\n\nCROSSOVER — ${projectNames.length} of these signals come from different projects (${projectNames.map(n => `"${n}"`).join(', ')}). Your CONNECTION sentence MUST name at least two of these projects by name and say specifically what the crossover is — what can one project borrow from the other? That's the reveal.`
+    : ''
 
-Your job is precise:
+  return `You're the user's second brain. They've been dropping voice notes, list items, and project ideas over weeks. ${cluster.length} of those captures share the same underlying thread — and the user hasn't noticed. Your job is to show them the thread using THEIR OWN WORDS, then hand them a real next move.
 
-1) Pull ONE QUOTE from each of the ${cluster.length} signals — a verbatim fragment lifted directly from the text below. NEVER paraphrase. NEVER invent. Copy exact words.
-   - For voice notes: a 6–20 word fragment of the body.
-   - For list items: the item itself (often short — just use the whole content if it's under 20 words).
-   - For projects: a 6–20 word fragment from the description.
-   Pick the line in each that makes the shared thing visible when read alongside the others.
+This is the app's reveal moment. It has to feel like being seen — not like reading a generic productivity tip. Specificity wins. Concrete nouns win. Pitch copy loses.
 
-2) Write the CONNECTION in ONE plain-English sentence (≤ 22 words). Name what all ${cluster.length} quotes share, using words the user uses. No metaphors. Don't say "you're obsessed" or "you keep circling" — the UI already implies that. Just describe the shared thing plainly, the way a friend would point it out.
+DO THREE THINGS:
 
-3) Pick the one MOVE for today — 30 to 90 minutes — that sits at the centre of this convergence. The most natural next step given that ${cluster.length} separate signals are saying the same thing. Plain verbs, plain nouns. Forbidden words: "weaponize", "geometry of", "architecture of", "language of", "blueprint", "draft a [abstract noun]". Just say what to actually do.
-   - action: ≤ 16 words, imperative
-   - why: one sentence linking the move to the shared thread
-   - artefact: what's on their screen / in their hand when done (e.g. "a 30-second voice note", "a working prototype", "one email sent", "a 1-page brief")
+1) Pull ONE QUOTE from each of the ${cluster.length} signals below — a verbatim fragment lifted directly from the text. NEVER paraphrase. NEVER invent. Copy exact words.
+   - Voice notes: 6–20 word fragment of the body. Pick the line that lands.
+   - List items: the whole item if short; otherwise a fragment.
+   - Projects: 6–20 word fragment of the description. AVOID the pitch opener — find a specific line deeper in that reveals the actual angle, not the elevator pitch.
+   Pick the fragment that makes the shared thread visible when read alongside the others.
+
+2) Write the CONNECTION in ONE plain-English sentence (≤ 22 words). Name what all ${cluster.length} quotes share, using words the user actually uses in the quotes. No metaphors. Don't narrate ("you keep thinking about…", "you've been circling…"). Don't summarise the productivity theme. Name the specific thing — the specific user, the specific problem, the specific mechanism. If you can't name it specifically, you haven't found the real connection yet — try a different angle.
+
+3) Pick the one MOVE for today — 30 to 90 minutes — that sits at the centre of this convergence. The most natural next step given that ${cluster.length} separate signals are saying the same thing. Plain verbs, plain nouns.
+   - action: ≤ 16 words, imperative, starts with a verb, names a specific output. Not "list five…", not "identify the…", not "map the…". Make it the thing they'd actually do in a focused hour.
+   - why: one sentence linking the move to the shared thread in the user's own language.
+   - artefact: what's on their screen / in their hand when done (e.g. "a 30-second voice note", "a working prototype", "one email sent", "a 1-page brief", "a named list of 7 people"). Be concrete.
+
+FORBIDDEN PHRASES (anywhere in your output — these are the boilerplate tells): ${forbiddenList()}. If you find yourself reaching for one of these, you're drifting into generic territory — try again with plainer words.
 
 Output JSON only, with this EXACT shape (quotes array must have exactly ${cluster.length} items, in the same order as the signals below):
 { "quotes": [${cluster.map(() => '{ "quote": "…" }').join(', ')}], "connection": "…", "move": { "action": "…", "why": "…", "artefact": "…" } }
 
+=== THE ${cluster.length} CONVERGING SIGNALS ===
 ${signalBlocks}
 
-ACTIVE PROJECTS (context for the move):
-${formatProjects(projects)}${critiqueBlock}${groundingBlock}
+=== ACTIVE PROJECTS (context for the move) ===
+${formatProjects(projects)}
+
+=== RECENT AMBIENT CAPTURES (not in the cluster — use as flavour, don't quote from these) ===
+${ambientCaptures}${crossoverBlock}${critiqueBlock}${groundingBlock}
 
 Return the JSON now.`
 }
@@ -1660,6 +1759,7 @@ Return the JSON now.`
 function buildSinglePrompt(
   signal: Signal,
   projects: Array<{ title: string; description: string | null }>,
+  ambientCaptures: string,
   critique?: { previous: SelfModel; critique: string },
 ): string {
   const critiqueBlock = critique
@@ -1670,23 +1770,44 @@ Pick a different move. Don't get defensive.`
 
   const kindLabel = signal.kind === 'memory' ? 'voice note' : signal.kind === 'list_item' ? 'list item' : 'project idea'
 
-  return `You are looking at one ${kindLabel} from the user${signal.title ? ` ("${signal.title}")` : ''}, plus their active projects.
+  // Extra warning for project signals — project descriptions are pitch copy
+  // and produce the flattest reads. Push the model hard toward a specific
+  // angle instead of paraphrasing the pitch.
+  const pitchWarning = signal.kind === 'project'
+    ? `\n\nWARNING — this signal is a project description, which is the user's own pitch copy. If you paraphrase the pitch back at them, this card is worthless. Look for the one concrete, surprising angle inside the description. Ignore the generic "what it does" sentences. Find the specific mechanism, user, or constraint.`
+    : ''
 
-1) Pull one QUOTE — a verbatim fragment (or the whole content if it's short) from the text below. NEVER paraphrase. Copy exact words.
+  // If there are active projects, nudge the model to find a crossover angle
+  // even in single mode — it's the closest we can get to the "wow" without
+  // a real convergence.
+  const crossoverHint = projects.length >= 2
+    ? `\n\nCROSSOVER HINT — if this ${kindLabel} has any bearing on one of the active projects listed, say so by name in your "why". The move is stronger when it visibly connects to what they're already building.`
+    : ''
 
-2) Pick the one MOVE for today — 30 to 90 minutes — that pushes that thought forward. Plain English, imperative. No metaphors. No "weaponize", "geometry of", "blueprint", "draft a [abstract noun]".
-   - action: ≤ 16 words
-   - why: one sentence
-   - artefact: what's on their screen / in their hand at the end
+  return `You're the user's second brain. They captured this ${kindLabel} and you need to hand them today's next move — 30 to 90 minutes of focused work. There wasn't enough cross-surface signal to show a convergence this time, so this single card has to earn its keep: a specific, surprising read of what they actually said, and a move that isn't a generic productivity tip.
+
+DO TWO THINGS:
+
+1) Pull one QUOTE — a verbatim fragment (or the whole content if it's short) from the text below. NEVER paraphrase. Copy exact words. Pick the line that reveals the specific angle, not the opening summary.
+
+2) Pick the one MOVE for today — 30 to 90 minutes — that pushes this specific thought forward. Plain English, imperative.
+   - action: ≤ 16 words, starts with a verb, names a specific output. Not "list five…", not "identify the…", not "draft a framework for…". Make it the thing they'd actually do.
+   - why: one sentence, connects to what they actually said in their own words.
+   - artefact: what's on their screen / in their hand at the end — concrete noun.
+
+FORBIDDEN PHRASES: ${forbiddenList()}. These are boilerplate tells. If you're reaching for them, the move isn't specific enough yet.
 
 Output JSON only with this exact shape:
 { "single": { "quote": "…" }, "move": { "action": "…", "why": "…", "artefact": "…" } }
 
-THE ${kindLabel.toUpperCase()} (${daysAgo(signal.effective_date)} days ago):
-${signal.text.slice(0, 800)}
+=== THE ${kindLabel.toUpperCase()} (${daysAgo(signal.effective_date)} days ago)${signal.title ? ` — "${signal.title}"` : ''} ===
+${signal.text.slice(0, 1200)}
 
-ACTIVE PROJECTS:
-${formatProjects(projects)}${critiqueBlock}
+=== ACTIVE PROJECTS (context) ===
+${formatProjects(projects)}
+
+=== RECENT AMBIENT CAPTURES (flavour — don't quote from these) ===
+${ambientCaptures}${pitchWarning}${crossoverHint}${critiqueBlock}
 
 Return the JSON now.`
 }
@@ -1862,14 +1983,24 @@ async function handleSelfModel(req: VercelRequest, res: VercelResponse) {
       gatherActiveProjects(supabase, userId),
     ])
 
-    // Try with excludes first; if that starves the finder, relax and retry
-    // so we still produce *something* usable rather than silently collapsing
-    // to single-mode just because the user has been refreshing.
+    // Try strict first (0.68 cosine); if that starves with excludes, try
+    // strict without excludes; if THAT also starves, fall to a looser
+    // similarity floor (0.56) so we don't silently collapse to single-mode
+    // over a few hundredths of a similarity point.
     let cluster = findConvergence(signals, excludeKeys)
     let relaxedExcludes = false
+    let relaxedSimilarity = false
     if (!cluster && excludeKeys.size > 0) {
       cluster = findConvergence(signals)
-      relaxedExcludes = true
+      if (cluster) relaxedExcludes = true
+    }
+    if (!cluster) {
+      cluster = findConvergence(signals, excludeKeys, LOOSE_NEIGHBOUR_SIMILARITY)
+      if (cluster) relaxedSimilarity = true
+    }
+    if (!cluster && excludeKeys.size > 0) {
+      cluster = findConvergence(signals, new Set(), LOOSE_NEIGHBOUR_SIMILARITY)
+      if (cluster) { relaxedExcludes = true; relaxedSimilarity = true }
     }
 
     const sources: SelfModelSources = {
@@ -1896,9 +2027,14 @@ async function handleSelfModel(req: VercelRequest, res: VercelResponse) {
 
     let model: SelfModel | null = null
 
+    // Cluster members are excluded from ambient context so we don't feed
+    // the same text twice into the prompt.
+    const clusterKeys = new Set(cluster ? cluster.map(signalKey) : [])
+    const ambientCaptures = formatRecentCaptures(signals, clusterKeys)
+
     if (cluster) {
       const runConvergence = async (strict: boolean): Promise<SelfModel | null> => {
-        const prompt = buildConvergencePrompt(cluster!, activeProjects, critique, strict)
+        const prompt = buildConvergencePrompt(cluster!, activeProjects, ambientCaptures, critique, strict)
         const raw = await generateText(prompt, {
           // Generous ceiling — with up to 5 quotes + connection + move, the
           // JSON can run long. Truncated output parse-fails and falls to
@@ -1935,11 +2071,10 @@ async function handleSelfModel(req: VercelRequest, res: VercelResponse) {
     }
 
     if (!model) {
-      // Single-signal fallback — pick the most recent substantive signal
-      // across all kinds, not just memories.
-      const latest = signals
-        .filter(s => s.text.trim().length >= 10)
-        .sort((a, b) => new Date(b.effective_date).getTime() - new Date(a.effective_date).getTime())[0]
+      // Single-signal fallback — prefer voice notes > list items > projects
+      // and honour excludeKeys so refresh actually moves the card. Project
+      // descriptions read as boilerplate, so they're the last resort.
+      const latest = pickSingleSignal(signals, excludeKeys)
       if (!latest) {
         return res.status(200).json({
           sources,
@@ -1948,7 +2083,10 @@ async function handleSelfModel(req: VercelRequest, res: VercelResponse) {
           took_ms: Date.now() - started,
         })
       }
-      const prompt = buildSinglePrompt(latest, activeProjects, critique)
+      // Rebuild ambient block excluding the chosen signal so we don't feed it
+      // twice into the prompt.
+      const singleAmbient = formatRecentCaptures(signals, new Set([signalKey(latest)]))
+      const prompt = buildSinglePrompt(latest, activeProjects, singleAmbient, critique)
       const raw = await generateText(prompt, {
         maxTokens: 900,
         temperature: 0.7,
@@ -1977,6 +2115,7 @@ async function handleSelfModel(req: VercelRequest, res: VercelResponse) {
       model,
       source_ids: usedSourceIds,
       relaxed_excludes: relaxedExcludes || undefined,
+      relaxed_similarity: relaxedSimilarity || undefined,
       took_ms: Date.now() - started,
     })
   } catch (err) {

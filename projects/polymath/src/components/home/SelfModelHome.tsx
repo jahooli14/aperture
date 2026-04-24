@@ -292,14 +292,16 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
         <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-primary/80">
           today · experimental
         </h2>
-        {model && !loading && (
+        {model && (
           <button
             type="button"
             onClick={handleRefresh}
-            className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-widest text-[var(--brand-text-muted)] hover:text-brand-primary transition-colors"
+            disabled={loading}
+            className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-widest text-[var(--brand-text-muted)] hover:text-brand-primary transition-colors disabled:opacity-60"
+            aria-busy={loading}
           >
-            <RefreshCw className="h-3 w-3" />
-            refresh
+            <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
+            {loading ? 'refreshing…' : 'refresh'}
           </button>
         )}
       </div>
@@ -318,6 +320,31 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
           className="absolute top-0 left-0 right-0 h-px"
           style={{ background: 'linear-gradient(90deg, transparent, rgba(var(--brand-primary-rgb),0.5), transparent)' }}
         />
+
+        {/* Refresh overlay — shown when we're refetching with a model already visible.
+            The dimmed card + this ticker make it clear work is happening. */}
+        {loading && model && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+            <div className="flex items-center gap-2 rounded-full border border-[var(--glass-border)] bg-[rgba(15,24,41,0.85)] px-3 py-1.5 shadow-lg backdrop-blur">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-primary opacity-70" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-brand-primary" />
+              </span>
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={tickerIdx}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.2 }}
+                  className="text-[10px] font-mono uppercase tracking-widest text-brand-primary/90"
+                >
+                  {TICKER_STEPS[tickerIdx](sources ?? { projects: 0, memories: 0, list_items: 0, signals_with_embedding: 0, convergence_size: 0 })}…
+                </motion.span>
+              </AnimatePresence>
+            </div>
+          </div>
+        )}
 
         {loading && !model && (
           <div className="flex items-center gap-3">
@@ -340,7 +367,8 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
           </div>
         )}
 
-        {!loading && error && (
+        {/* Error when we have no model to fall back on (first load, no cache). */}
+        {!loading && error && !model && (
           <div className="text-sm text-red-300">
             <p className="mb-2">Couldn't read the signal right now.</p>
             <p className="text-xs opacity-70">{error}</p>
@@ -360,8 +388,23 @@ export function SelfModelHome({ onShapeIdea }: SelfModelHomeProps) {
           </div>
         )}
 
+        {/* Transient error on refresh — stale model stays visible beneath,
+            surfaced as a banner instead of stacked content. */}
+        {!loading && error && model && (
+          <div className="mb-3 flex items-center justify-between gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+            <span className="truncate">Refresh failed — showing last read. {error}</span>
+            <button
+              type="button"
+              onClick={() => fetchModel('generate', { excludeIds: currentSourceIds })}
+              className="shrink-0 font-medium underline underline-offset-2 hover:text-red-100"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
         {model && (
-          <div className="space-y-5">
+          <div className={`space-y-5 transition-opacity duration-200 ${loading ? 'opacity-40 pointer-events-none' : ''}`}>
             {model.mode === 'convergence' && model.convergence && Array.isArray(model.convergence.quotes) && (
               <Convergence
                 convergence={model.convergence}
