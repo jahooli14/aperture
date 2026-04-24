@@ -27,20 +27,25 @@ This file is the **single source of truth** for working on this repo. If somethi
 
 ## Commands
 
+Each project is its own npm workspace — `cd projects/<name>` first, then:
+
 ```bash
-cd projects/wizard-of-oz && npm run dev   # Pupils
-cd projects/polymath && npm run dev       # Polymath
-cd projects/analogue && npm run dev       # Analogue
-cd projects/idea-engine && npm run dev    # Idea Engine
-cd projects/golf-masters && npm run dev   # Golf Masters
+npm run dev                  # all JS projects
+npm run build                # all JS projects (run before pushing)
+npm test                     # polymath, wizard-of-oz (vitest)
+npm test -- <pattern>        # run a single test file
+npm run lint                 # polymath (eslint src/ api/), analogue (eslint .)
+npm run type-check           # polymath only (tsc --noEmit)
 ```
 
-Build before pushing: `cd projects/<name> && npm run build`.
+`projects/idea-engine/` is Python (pyproject.toml, requires 3.11+) — no `npm` here. Tests via `pytest`, format/lint via `black` + `ruff`.
+
+`projects/polymath/` also wraps as an Android app via Capacitor — see `build-android.sh`.
 
 ## Tech + Style
 
-- **Frontend**: React 18, TypeScript (strict, no `any`), Vite
-- **Backend**: Vercel serverless functions, Supabase (Postgres + RLS)
+- **Frontend**: React (18 in polymath, 19 elsewhere), TypeScript (strict, no `any`), Vite
+- **Backend**: Vercel serverless functions in each project's `api/`, Supabase (Postgres + RLS)
 - **AI**: Gemini for embeddings/classification, Claude for synthesis
 - **Naming**: PascalCase components, camelCase functions, feature-based folders, files ≤ 300 lines
 - **AI model IDs**: Verify against live docs (e.g. [Gemini models](https://ai.google.dev/gemini-api/docs/models)) before changing. Models get deprecated — don't guess.
@@ -83,6 +88,19 @@ Conventional commits. PR metadata is short.
 - Develop on the branch from the session brief.
 - Only open a PR when explicitly asked.
 - Run `npm run build` in the project folder before opening a PR.
+- A PreToolUse hook (`.claude/hooks/check-pr-title.sh`) blocks PR titles that are multi-line or > 70 chars.
+
+## Cron (`.github/workflows/cron.yml`)
+
+One workflow dispatches every Vercel cron endpoint. Branches on `github.event.schedule` (the cron string that fired) — never wall-clock time, because GitHub delays scheduled runs. `BASE` is hardcoded to `https://aper-ture.vercel.app`. `workflow_dispatch` with `force=true` runs everything.
+
+| Schedule | Endpoints |
+|----------|-----------|
+| `*/30 * * * *` | `idea-engine?action=generate`, `fix-queue?action=run-fixes` |
+| `0 */6 * * *` | `fix-queue?action=draft-pending`, `projects?resource=recompute-heat` |
+| `0 8 * * *` | `projects?resource=evolve` |
+| `0 9 * * *` | `idea-engine?action=review` then `idea-engine?action=send-digest` (sequential) |
+| `0 8 * * 0` | `projects?resource=generate-digest` |
 
 ## Fix Queue (Polymath feature)
 
@@ -92,7 +110,7 @@ Voice-capture life annoyances → AI drafts automated fixes → approve → runs
 - Triage: voice notes classified as `annoyance` by Gemini (severity + automatable flag)
 - Drafting: AI generates data-driven fix specs
 - Approval: `/fixes` page in Polymath UI
-- Execution: GitHub Actions cron (every 30min) hits `/api/fix-queue`
+- Execution: cron (see table above) hits `/api/fix-queue`
 
 **Fix action types**
 - `send_email` — Reminder/notification via Resend
@@ -100,16 +118,16 @@ Voice-capture life annoyances → AI drafts automated fixes → approve → runs
 - `smart_home` — Frame TV / Sonos / bird cam (Home Assistant or direct)
 - `http_request` — Generic API calls
 
-**Key files**
+**Key files** (all under `projects/polymath/`)
 - `api/fix-queue.ts` — Main API (draft-pending, run-fixes, approve, reject, list)
 - `api/_lib/fix-queue/drafter.ts` — AI fix generation
-- `api/_lib/fix-queue/runner.ts` — Fix execution
+- `api/_lib/fix-queue/runner.ts` — Fix execution (tests in `runner.test.ts`)
 - `api/_lib/fix-queue/types.ts` — FixDraft, FixAction types
 - `src/pages/FixQueuePage.tsx` — Approval UI
-- `.github/workflows/cron.yml` — Consolidated cron dispatcher. Draft every 6h (`0 */6 * * *`), runner every 30min (`*/30 * * * *`)
 
 **Env vars**
 - `RESEND_API_KEY` — Email (configured)
+- `IDEA_ENGINE_SECRET` — Bearer token cron uses to call `/api/*` endpoints
 - `HOME_ASSISTANT_URL` + `HOME_ASSISTANT_TOKEN` — Smart home hub (optional)
 - `SONOS_HTTP_API_URL` — node-sonos-http-api bridge (optional)
 - `FRAME_TV_IP` — Samsung Frame TV local IP (optional)
