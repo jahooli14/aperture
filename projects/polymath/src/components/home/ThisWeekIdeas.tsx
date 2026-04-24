@@ -19,10 +19,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, type PanInfo } from 'framer-motion'
-import { ChevronLeft, ChevronRight, Layers, Sparkles, ThumbsDown } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Layers, RefreshCw, Sparkles, ThumbsDown } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useSuggestionStore } from '../../stores/useSuggestionStore'
+import { useThemeStore } from '../../stores/useThemeStore'
 import { haptic } from '../../utils/haptics'
 
 const SWIPE_THRESHOLD = 50
@@ -105,12 +106,15 @@ export function ThisWeekIdeas({ onShapeSuggestion }: ThisWeekIdeasProps) {
   const suggestions = useSuggestionStore(s => s.suggestions)
   const allProjects = useProjectStore(s => s.allProjects)
 
+  const showRegenerateInsights = useThemeStore(s => s.showRegenerateInsights)
+
   const [apiData, setApiData] = useState<IntersectionApiResponse | null>(null)
   const [loaded, setLoaded] = useState(false)
   const [idx, setIdx] = useState(0)
   const [direction, setDirection] = useState(1)
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
   const [shapingId, setShapingId] = useState<string | null>(null)
+  const [regenerating, setRegenerating] = useState(false)
   const inflight = useRef<Set<string>>(new Set())
 
   useEffect(() => {
@@ -130,6 +134,29 @@ export function ThisWeekIdeas({ onShapeSuggestion }: ThisWeekIdeasProps) {
     })()
     return () => { cancelled = true }
   }, [])
+
+  const handleRegenerate = useCallback(async () => {
+    if (regenerating) return
+    setRegenerating(true)
+    haptic.light()
+    try {
+      const seed = await fetch('/api/projects?resource=intersections&action=seed&force=1', {
+        method: 'POST',
+      })
+      if (!seed.ok) return
+      const fresh = await fetch('/api/projects?resource=intersections')
+      if (fresh.ok) {
+        const data = (await fresh.json()) as IntersectionApiResponse
+        setApiData(data)
+        setIdx(0)
+        setDismissed(new Set())
+      }
+    } catch {
+      // swallow — the deck just stays stale
+    } finally {
+      setRegenerating(false)
+    }
+  }, [regenerating])
 
   const focusIds = useMemo(() => {
     const active = allProjects.filter(p =>
@@ -340,27 +367,40 @@ export function ThisWeekIdeas({ onShapeSuggestion }: ThisWeekIdeasProps) {
     <section className="pb-6">
       <div className="flex items-end justify-between mb-2">
         <h2 className="section-header">this <span>week</span></h2>
-        {total > 1 && (
-          <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1">
+          {showRegenerateInsights && (
             <button
-              onClick={prev}
-              className="h-6 w-6 rounded-md flex items-center justify-center hover:bg-[var(--glass-surface)] transition-colors"
-              aria-label="Previous idea"
+              onClick={handleRegenerate}
+              disabled={regenerating}
+              className="h-6 w-6 rounded-md flex items-center justify-center hover:bg-[var(--glass-surface)] transition-colors disabled:opacity-50"
+              aria-label={regenerating ? 'Regenerating this week' : 'Regenerate this week'}
+              title={regenerating ? 'Regenerating…' : 'Regenerate this week'}
             >
-              <ChevronLeft className="h-3.5 w-3.5 text-[var(--brand-text-secondary)] opacity-60" />
+              <RefreshCw className={`h-3.5 w-3.5 text-[var(--brand-text-secondary)] opacity-60 ${regenerating ? 'animate-spin' : ''}`} />
             </button>
-            <span className="text-[10px] text-[var(--brand-text-secondary)] opacity-50 font-mono">
-              {idx + 1}/{total}
-            </span>
-            <button
-              onClick={next}
-              className="h-6 w-6 rounded-md flex items-center justify-center hover:bg-[var(--glass-surface)] transition-colors"
-              aria-label="Next idea"
-            >
-              <ChevronRight className="h-3.5 w-3.5 text-[var(--brand-text-secondary)] opacity-60" />
-            </button>
-          </div>
-        )}
+          )}
+          {total > 1 && (
+            <>
+              <button
+                onClick={prev}
+                className="h-6 w-6 rounded-md flex items-center justify-center hover:bg-[var(--glass-surface)] transition-colors"
+                aria-label="Previous idea"
+              >
+                <ChevronLeft className="h-3.5 w-3.5 text-[var(--brand-text-secondary)] opacity-60" />
+              </button>
+              <span className="text-[10px] text-[var(--brand-text-secondary)] opacity-50 font-mono">
+                {idx + 1}/{total}
+              </span>
+              <button
+                onClick={next}
+                className="h-6 w-6 rounded-md flex items-center justify-center hover:bg-[var(--glass-surface)] transition-colors"
+                aria-label="Next idea"
+              >
+                <ChevronRight className="h-3.5 w-3.5 text-[var(--brand-text-secondary)] opacity-60" />
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       <div

@@ -1306,9 +1306,14 @@ Return JSON only:
     // daily cron's Monday branch seeds this, but on first install (or if you
     // just can't wait) this lets the signed-in user kick off generation from
     // the UI without needing CRON_SECRET. Rate-limited by the expires_at
-    // check: refuses to run if there's already a non-expired row.
+    // check: refuses to run if there's already a non-expired row. Pass
+    // ?force=1 to bypass the freshness check (e.g. after changing the
+    // generation prompts and wanting to see output immediately).
     if (req.method === 'POST' && action === 'seed') {
       try {
+        const forceParam = req.query.force
+        const force = forceParam === '1' || forceParam === 'true'
+
         const { data: existing, error: checkErr } = await supabase
           .from('weekly_intersections')
           .select('expires_at, intersections, insights')
@@ -1335,7 +1340,7 @@ Return JSON only:
         // shells (e.g. narrateClusters dropped every mashup cluster while
         // discoverIntersections succeeded), the UI hides the missing deck
         // entirely — the user should be able to re-seed and try again.
-        if (existing?.expires_at) {
+        if (!force && existing?.expires_at) {
           const expiresMs = new Date(existing.expires_at).getTime()
           const intArr = (existing.intersections ?? []) as Array<Record<string, unknown>>
           const insArr = (existing.insights ?? []) as Array<Record<string, unknown>>
@@ -1359,7 +1364,7 @@ Return JSON only:
           }
         }
 
-        console.log(`[intersections] user-triggered seed for ${userId}`)
+        console.log(`[intersections] user-triggered seed for ${userId}${force ? ' (force)' : ''}`)
         const result = await generateWeeklyIntersections(userId)
         return res.status(200).json({
           success: true,
