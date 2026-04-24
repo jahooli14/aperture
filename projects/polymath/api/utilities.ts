@@ -1534,40 +1534,31 @@ function formatRecentCaptures(signals: Signal[], excludeKeys: Set<string>): stri
     .join('\n')
 }
 
-// Pick the single signal to build a fallback card around. We bias HARD away
-// from project descriptions — they're the user's pitch copy, which reads as
-// generic by construction. Voice notes capture spontaneous, specific thought;
-// list items capture concrete asks. Only fall back to a project when there's
-// genuinely nothing else and the project text isn't just a repurposed pitch.
+// Pick the single signal to build a fallback card around. Most-recent-wins
+// across all kinds — voice notes, list items, and projects all count as
+// live signal. A refined project idea is real intent, not filler. We do
+// require ≥20 chars so we don't land on a one-liner, and we honour
+// excludeKeys so refresh actually moves the card.
+//
+// (The "don't paraphrase the pitch" protection for project signals lives
+// in the prompt, not here — kind shouldn't gate selection.)
 function pickSingleSignal(
   signals: Signal[],
   excludeKeys: Set<string>,
 ): Signal | null {
-  const usable = signals
-    .filter(s => !excludeKeys.has(signalKey(s)))
-    .filter(s => s.text.trim().length >= 20)
+  const byRecency = (pool: Signal[]) =>
+    [...pool].sort(
+      (a, b) => new Date(b.effective_date).getTime() - new Date(a.effective_date).getTime(),
+    )[0] ?? null
 
-  const byKind = (kind: SignalKind) =>
-    usable
-      .filter(s => s.kind === kind)
-      .sort((a, b) => new Date(b.effective_date).getTime() - new Date(a.effective_date).getTime())
+  const eligible = signals.filter(
+    s => !excludeKeys.has(signalKey(s)) && s.text.trim().length >= 20,
+  )
+  const pick = byRecency(eligible)
+  if (pick) return pick
 
-  // Order: voice notes → list items → projects. Within each, most recent.
-  const memory = byKind('memory')[0]
-  if (memory) return memory
-  const listItem = byKind('list_item')[0]
-  if (listItem) return listItem
-  const project = byKind('project')[0]
-  if (project) return project
-
-  // Excludes starved us — relax and pick the most recent thing that meets
-  // the length bar, still preferring non-projects.
-  const relaxed = signals.filter(s => s.text.trim().length >= 20)
-  const relaxedByKind = (kind: SignalKind) =>
-    relaxed
-      .filter(s => s.kind === kind)
-      .sort((a, b) => new Date(b.effective_date).getTime() - new Date(a.effective_date).getTime())
-  return relaxedByKind('memory')[0] || relaxedByKind('list_item')[0] || relaxedByKind('project')[0] || null
+  // Excludes starved us — relax, same length bar.
+  return byRecency(signals.filter(s => s.text.trim().length >= 20))
 }
 // the Venn", pulling across voice notes, list items, and projects. Prefers
 // time-spread (different weeks) and REQUIRES kind-diversity (cross-surface
