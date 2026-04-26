@@ -1899,6 +1899,18 @@ function quoteFromSignal(text: string, signal: Signal): Quote {
   }
 }
 
+// Lift a guaranteed-verbatim fragment from the signal itself. Used as a
+// fallback when the model's chosen quote fails the verbatim check — better
+// to substitute a real fragment of the user's own words than to nuke the
+// whole convergence (the connection + move is what carries the wow).
+function liftFragment(signal: Signal): string {
+  const text = signal.text.trim().replace(/\s+/g, ' ')
+  if (!text) return ''
+  const sentenceMatch = text.match(/^[^.!?]+[.!?]?/)
+  const first = (sentenceMatch ? sentenceMatch[0] : text).trim()
+  return truncateToWords(first, 16)
+}
+
 function parseConvergenceModel(raw: string, cluster: Signal[]): SelfModel | null {
   const obj = extractJson(raw) as {
     quotes?: Array<{ quote?: unknown } | string>
@@ -1916,11 +1928,11 @@ function parseConvergenceModel(raw: string, cluster: Signal[]): SelfModel | null
         : rawItem && typeof rawItem === 'object' && typeof rawItem.quote === 'string'
           ? rawItem.quote
           : ''
-    const trimmed = text.trim()
-    if (!trimmed) return null
-    if (!isVerbatim(trimmed, cluster[i])) {
-      console.warn('[self-model] rejected non-verbatim quote:', trimmed.slice(0, 80))
-      return null
+    let trimmed = text.trim()
+    if (!trimmed || !isVerbatim(trimmed, cluster[i])) {
+      if (trimmed) console.warn('[self-model] non-verbatim quote, substituting from source:', trimmed.slice(0, 80))
+      trimmed = liftFragment(cluster[i])
+      if (!trimmed) return null
     }
     quotes.push(quoteFromSignal(trimmed, cluster[i]))
   }
@@ -1939,12 +1951,13 @@ function parseConvergenceModel(raw: string, cluster: Signal[]): SelfModel | null
 function parseSingleModel(raw: string, signal: Signal): SelfModel | null {
   const obj = extractJson(raw) as { single?: { quote?: unknown }; move?: unknown } | null
   if (!obj) return null
-  const quote = typeof obj.single?.quote === 'string' ? obj.single.quote.trim() : ''
+  let quote = typeof obj.single?.quote === 'string' ? obj.single.quote.trim() : ''
   const move = parseMove(obj.move)
-  if (!quote || !move) return null
-  if (!isVerbatim(quote, signal)) {
-    console.warn('[self-model] rejected non-verbatim single quote:', quote.slice(0, 80))
-    return null
+  if (!move) return null
+  if (!quote || !isVerbatim(quote, signal)) {
+    if (quote) console.warn('[self-model] non-verbatim single quote, substituting from source:', quote.slice(0, 80))
+    quote = liftFragment(signal)
+    if (!quote) return null
   }
   return {
     mode: 'single',
@@ -2046,6 +2059,11 @@ async function handleSelfModel(req: VercelRequest, res: VercelResponse) {
 
       model = await runConvergence(false)
 
+      // If the first attempt didn't parse at all, retry once with the strict
+      // prompt before dropping to single-signal mode. Convergence is the wow
+      // of this surface — a single drift shouldn't cost us the cluster card.
+      if (!model) model = await runConvergence(true)
+
       // If the connection sentence isn't grounded in the user's words, give
       // the LLM one more go with an explicit grounding instruction. Cheap
       // insurance — the connection is where the wow actually lands.
@@ -2077,14 +2095,42 @@ async function handleSelfModel(req: VercelRequest, res: VercelResponse) {
       // Rebuild ambient block excluding the chosen signal so we don't feed it
       // twice into the prompt.
       const singleAmbient = formatRecentCaptures(signals, new Set([signalKey(latest)]))
-      const prompt = buildSinglePrompt(latest, activeProjects, singleAmbient, critique)
-      const raw = await generateText(prompt, {
-        maxTokens: 900,
-        temperature: 0.7,
-        responseFormat: 'json',
-        model: MODELS.FLASH_CHAT,
-      })
-      model = parseSingleModel(raw, latest)
+      const runSingle = async (temperature: number): Promise<SelfModel | null> => {
+        const prompt = buildSinglePrompt(latest, activeProjects, singleAmbient, critique)
+        const raw = await generateText(prompt, {
+          maxTokens: 900,
+          temperature,
+          responseFormat: 'json',
+          model: MODELS.FLASH_CHAT,
+        })
+        const parsed = parseSingleModel(raw, latest)
+        if (!parsed) console.warn(`[self-model] single parse failed (temp=${temperature}); raw head:`, raw.slice(0, 400))
+        return parsed
+      }
+      model = await runSingle(0.7)
+      // One retry at lower temperature — tightens JSON adherence when the
+      // first attempt drifted into prose or returned an off-shape blob.
+      if (!model) model = await runSingle(0.4)
+
+      // Last-ditch demo safety: synthesise a card from the signal directly
+      // rather than 502-ing the user. Quote is lifted verbatim from their
+      // own text; move is a generic-but-honest "push this forward" prompt.
+      // Ugly compared to a real read, but the demo never sees a red error.
+      if (!model) {
+        const fragment = liftFragment(latest)
+        if (fragment) {
+          console.warn('[self-model] both parse attempts failed; serving synthesised card')
+          model = {
+            mode: 'single',
+            single: quoteFromSignal(fragment, latest),
+            move: {
+              action: 'Spend 30 focused minutes pushing this thought into a concrete next step',
+              why: 'You captured this recently — the quickest way to learn if it matters is to act on it.',
+              artefact: 'a written paragraph, voice note, or sketch capturing what you decided',
+            },
+          }
+        }
+      }
     }
 
     if (!model) {
