@@ -2098,7 +2098,12 @@ async function handleSelfModel(req: VercelRequest, res: VercelResponse) {
       const runSingle = async (temperature: number): Promise<SelfModel | null> => {
         const prompt = buildSinglePrompt(latest, activeProjects, singleAmbient, critique)
         const raw = await generateText(prompt, {
-          maxTokens: 900,
+          // Visible JSON only needs ~150 tokens, but Gemini 3's dynamic
+          // thinking tokens count toward maxOutputTokens — a 500–800 token
+          // think on a complex prompt at the old 900 budget left ~100 for
+          // the actual output, truncating the JSON and parse-failing. Match
+          // convergence's headroom.
+          maxTokens: 2000,
           temperature,
           responseFormat: 'json',
           model: MODELS.FLASH_CHAT,
