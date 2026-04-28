@@ -19,8 +19,14 @@ export interface FASComponents {
 
 export interface FASResult extends FASComponents {
   overall: number; // 0-1
-  qualifies_as_frontier_block: boolean; // true if overall > 0.7
+  is_high_signal: boolean; // overall > HIGH_SIGNAL_THRESHOLD — used for digest curation, not block promotion
 }
+
+// FAS bar above which an approved idea is "meaningful" enough to surface in
+// the daily email. Block promotion ignores this — every BUILD idea becomes a
+// block so the sampler has more compositional material; the sampler weights
+// by FAS, so low-FAS blocks get drawn rarely.
+export const HIGH_SIGNAL_THRESHOLD = 0.7;
 
 /**
  * Calculate Frontier Advancement Score
@@ -69,7 +75,7 @@ export async function calculateFAS(
     tractability_leap: tractabilityLeap,
     surprise_factor: surpriseFactor,
     overall,
-    qualifies_as_frontier_block: overall > 0.7,
+    is_high_signal: overall > HIGH_SIGNAL_THRESHOLD,
   };
 }
 
@@ -221,7 +227,11 @@ async function calculateSurpriseFactor(
 }
 
 /**
- * Create a frontier block from an approved idea
+ * Create a frontier block from an approved idea. Every BUILD idea is promoted
+ * — the sampler's weight function down-ranks low-FAS blocks naturally, so a
+ * hard threshold here just deletes compositional material the engine could
+ * still benefit from. Curation for the human-facing digest happens elsewhere
+ * via the is_high_signal flag.
  */
 export async function createFrontierBlock(
   userId: string,
@@ -229,11 +239,6 @@ export async function createFrontierBlock(
   fas: FASResult,
   abstractPattern?: string
 ): Promise<FrontierBlock | null> {
-  if (!fas.qualifies_as_frontier_block) {
-    console.log(`Idea "${idea.title}" does not qualify as frontier block (FAS: ${fas.overall})`);
-    return null;
-  }
-
   const { data, error } = await supabase
     .from('ie_frontier_blocks')
     .insert({

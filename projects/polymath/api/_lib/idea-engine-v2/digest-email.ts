@@ -90,34 +90,41 @@ async function getVaultIdea(userId: string): Promise<Idea | null> {
 }
 
 /**
- * Send daily digest email with approved ideas (building blocks)
+ * Send daily digest email. Caller passes the curated high-signal subset of
+ * today's approved ideas — the engine promotes every BUILD to a frontier
+ * block, but only the meaningful ones surface here. Use progress.today.approved
+ * for the true day's count.
  */
 export async function sendDailyDigest(userId: string, ideas: Idea[]) {
   const resend = getResend();
 
-  const approvedIdeas = ideas.filter(i => i.status === 'approved');
+  const highlights = ideas.filter(i => i.status === 'approved');
 
   const progress = await getProgressStats(userId);
-  const vaultIdea = approvedIdeas.length === 0 ? await getVaultIdea(userId) : null;
+  const vaultIdea = highlights.length === 0 ? await getVaultIdea(userId) : null;
 
-  const html = approvedIdeas.length > 0
-    ? generateDigestHTML(approvedIdeas, progress)
+  const html = highlights.length > 0
+    ? generateDigestHTML(highlights, progress)
     : generateEmptyDigestHTML(progress, vaultIdea);
 
-  const subject = approvedIdeas.length > 0
+  const n = highlights.length;
+  const total = progress.today.approved;
+  const ofTotal = total > n ? ` of ${total}` : '';
+
+  const subject = n > 0
     ? pick([
-        `${approvedIdeas.length} fresh idea${approvedIdeas.length === 1 ? '' : 's'} just cleared review`,
-        `Your frontier grew — ${approvedIdeas.length} new building block${approvedIdeas.length === 1 ? '' : 's'}`,
-        `${approvedIdeas.length} new concept${approvedIdeas.length === 1 ? '' : 's'} waiting for you`,
-        `Today's harvest: ${approvedIdeas.length} approved idea${approvedIdeas.length === 1 ? '' : 's'}`,
-        `${approvedIdeas.length} idea${approvedIdeas.length === 1 ? '' : 's'} made the cut today`,
+        `${n} highlight${n === 1 ? '' : 's'}${ofTotal} cleared the high-signal bar`,
+        `Your frontier grew — top ${n}${ofTotal} worth your time today`,
+        `${n} idea${n === 1 ? '' : 's'} stood out${ofTotal} approved today`,
+        `Today's headliners: ${n} high-signal concept${n === 1 ? '' : 's'}`,
+        `${n} idea${n === 1 ? '' : 's'} earned the spotlight today`,
       ])
     : pick([
         'Quiet day on the frontier — here\'s one from the vault',
         'The engine is thinking — catch up on a past gem',
-        'Nothing new today, but your archive has depth',
+        'Nothing high-signal today, but your archive has depth',
         'Rest day for the frontier — revisit a past favourite',
-        'No new approvals — the bar stays high',
+        'Nothing stood out — the bar stays high',
         'The machine hums on — a look back while it works',
         'Selectivity wins — plus a throwback idea',
       ]);
@@ -134,8 +141,8 @@ export async function sendDailyDigest(userId: string, ideas: Idea[]) {
     throw error;
   }
 
-  console.log(`Digest email sent to ${DIGEST_EMAIL} with ${approvedIdeas.length} approved ideas`);
-  return { success: true, data, message: approvedIdeas.length > 0 ? 'Digest sent' : 'Empty digest sent (no approved ideas today)' };
+  console.log(`Digest email sent to ${DIGEST_EMAIL} with ${highlights.length} highlights (of ${progress.today.approved} approved today)`);
+  return { success: true, data, message: highlights.length > 0 ? 'Digest sent' : 'Empty digest sent (no high-signal ideas today)' };
 }
 
 function ideaCardHTML(idea: Idea, index?: number): string {
@@ -214,13 +221,16 @@ function footerHTML(): string {
 
 function generateDigestHTML(ideas: Idea[], progress: ProgressStats): string {
   const ideaRows = ideas.map((idea, i) => ideaCardHTML(idea, i)).join('');
+  const n = ideas.length;
+  const total = progress.today.approved;
+  const ofTotal = total > n ? ` of ${total} approved` : '';
 
   const intro = pick([
-    `${ideas.length} new building block${ideas.length === 1 ? '' : 's'} added to your frontier.`,
-    `The overnight sweep pulled ${ideas.length} concept${ideas.length === 1 ? '' : 's'} through review.`,
-    `${ideas.length} idea${ideas.length === 1 ? '' : 's'} earned a BUILD verdict — here's what made it.`,
-    `Fresh off the line: ${ideas.length} approved concept${ideas.length === 1 ? '' : 's'} for your map.`,
-    `Your engine explored hundreds of combinations. ${ideas.length} survived.`,
+    `${n} high-signal building block${n === 1 ? '' : 's'}${ofTotal} added to your frontier.`,
+    `The overnight sweep flagged ${n}${ofTotal} worth your attention.`,
+    `${n} idea${n === 1 ? '' : 's'} earned the spotlight today${ofTotal ? ` (the rest are in the UI)` : ''}.`,
+    `Today's headliners: ${n} concept${n === 1 ? '' : 's'} that pushed the frontier hardest.`,
+    `Your engine explored hundreds of combinations. ${n}${ofTotal} stood out.`,
   ]);
 
   return `
@@ -251,23 +261,39 @@ function generateDigestHTML(ideas: Idea[], progress: ProgressStats): string {
 }
 
 function generateEmptyDigestHTML(progress: ProgressStats, vaultIdea: Idea | null): string {
-  const headline = pick([
-    'Quiet day on the frontier',
-    'The bar held firm today',
-    'Nothing cleared review — but the engine\'s still at it',
-    'A rest day for the frontier',
-    'No new approvals today',
-    'The reviewer was feeling selective',
-    'Quality over quantity today',
-  ]);
+  const someApproved = progress.today.approved > 0;
 
-  const blurb = pick([
-    'Not every sweep finds gold, and that\'s how it should work. High standards keep the signal strong.',
-    'Some days the combinations don\'t quite land. The engine will keep searching.',
-    'The pipeline ran, the reviewer reviewed, but nothing hit the mark. Tomorrow\'s a new sweep.',
-    'Think of it as the engine raising its own bar. Better ideas are brewing.',
-    'A quiet inbox means the filter is working. Mediocre ideas stay out.',
-  ]);
+  const headline = someApproved
+    ? pick([
+        `${progress.today.approved} approved, none stood out`,
+        'Approvals landed but nothing pushed the frontier hard',
+        'Solid day, no headliners',
+        'The bar held firm — see the UI for the full list',
+        'Approvals are in the UI; nothing earned the spotlight',
+      ])
+    : pick([
+        'Quiet day on the frontier',
+        'The bar held firm today',
+        'Nothing cleared review — but the engine\'s still at it',
+        'A rest day for the frontier',
+        'No new approvals today',
+        'The reviewer was feeling selective',
+        'Quality over quantity today',
+      ]);
+
+  const blurb = someApproved
+    ? pick([
+        `${progress.today.approved} ideas cleared review, but none scored high enough on the frontier-advancement bar to feature here. They\'re still in the UI as building blocks.`,
+        'Approvals happened, but nothing broke new ground today. The engine still grew — just quietly.',
+        'Today\'s approvals strengthened the existing frontier rather than pushing it. Browse the UI to see them all.',
+      ])
+    : pick([
+        'Not every sweep finds gold, and that\'s how it should work. High standards keep the signal strong.',
+        'Some days the combinations don\'t quite land. The engine will keep searching.',
+        'The pipeline ran, the reviewer reviewed, but nothing hit the mark. Tomorrow\'s a new sweep.',
+        'Think of it as the engine raising its own bar. Better ideas are brewing.',
+        'A quiet inbox means the filter is working. Mediocre ideas stay out.',
+      ]);
 
   const diagnosticHTML = progress.today.generated === 0
     ? `<div style="padding: 24px; background: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b; margin-bottom: 24px;">

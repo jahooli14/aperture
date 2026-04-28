@@ -25,6 +25,7 @@ import {
 import {
   calculateFAS,
   createFrontierBlock,
+  HIGH_SIGNAL_THRESHOLD,
 } from './_lib/idea-engine-v2/frontier-advancement.js';
 import type { Idea } from './_lib/idea-engine-v2/types.js';
 
@@ -265,14 +266,13 @@ async function handleGenerate(res: VercelResponse) {
 }
 
 /**
- * Promote an approved idea to a frontier block if its FAS clears the
- * threshold. This is the step that turns a one-off insight into reusable
- * compositional material for future generations.
+ * Promote an approved idea to a frontier block. Every BUILD becomes a block —
+ * the sampler weights by FAS, so low-FAS blocks fade naturally without us
+ * having to delete them. Returns null only on extraction or DB failure.
  */
 async function maybePromoteToFrontierBlock(idea: Idea): Promise<string | null> {
   try {
     const fas = await calculateFAS(USER_ID!, idea, []);
-    if (!fas.qualifies_as_frontier_block) return null;
 
     // Extract a domain-agnostic pattern so domain_shift mutations have
     // something portable to apply to a new pair.
@@ -467,12 +467,37 @@ async function handleSendDigest(res: VercelResponse) {
     return res.status(500).json({ error: 'Failed to fetch approved ideas', details: error.message });
   }
 
-  try {
-    const result = await sendDailyDigest(USER_ID!, approvedIdeas as Idea[]);
+  // Curate: surface only high-FAS ideas in the email. Every BUILD becomes a
+  // block (so the engine grows), but the human only wants the meaningful
+  // subset. FAS lives on the block; pull it via source_idea_id.
+  const allApproved = (approvedIdeas ?? []) as Idea[];
+  let highlights: Idea[] = [];
+  if (allApproved.length > 0) {
+    const ideaIds = allApproved.map(i => i.id);
+    const { data: blocks } = await supabase
+      .from('ie_frontier_blocks')
+      .select('source_idea_id, frontier_advancement_score')
+      .in('source_idea_id', ideaIds);
+    const fasByIdea = new Map<string, number>(
+      (blocks ?? []).map((b: { source_idea_id: string; frontier_advancement_score: number | null }) =>
+        [b.source_idea_id, b.frontier_advancement_score ?? 0]
+      )
+    );
+    highlights = allApproved
+      .map(idea => ({ idea, fas: fasByIdea.get(idea.id) ?? 0 }))
+      .filter(x => x.fas > HIGH_SIGNAL_THRESHOLD)
+      .sort((a, b) => b.fas - a.fas)
+      .map(x => x.idea);
+  }
 
-    // Mark ideas as sent in digest
-    if (approvedIdeas && approvedIdeas.length > 0) {
-      const ideaIds = approvedIdeas.map(i => i.id);
+  try {
+    const result = await sendDailyDigest(USER_ID!, highlights);
+
+    // Mark every approved-today idea as sent — they've all been considered
+    // for the digest. Low-FAS ones stay accessible via the UI but won't
+    // re-surface in tomorrow's email.
+    if (allApproved.length > 0) {
+      const ideaIds = allApproved.map(i => i.id);
       await supabase
         .from('ie_ideas')
         .update({ digest_sent_at: new Date().toISOString() })
@@ -483,7 +508,8 @@ async function handleSendDigest(res: VercelResponse) {
 
     return res.status(200).json({
       success: true,
-      ideas_count: approvedIdeas?.length || 0,
+      ideas_count: highlights.length,
+      approved_count: allApproved.length,
       message: result.message || 'Digest sent successfully',
       elapsed_ms: elapsed,
     });
