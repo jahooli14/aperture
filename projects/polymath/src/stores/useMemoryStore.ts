@@ -338,9 +338,15 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
   createMemory: async (input: CreateMemoryInput) => {
     const now = new Date().toISOString()
 
+    // Generate a soft fallback title from the body so empty titles don't look broken.
+    // Server-side Gemini will overwrite this with a real summary on capture / sync.
+    const fallbackTitle = input.title?.trim()
+      || (input.checklist_items?.length ? 'Checklist' : null)
+      || (input.body?.trim().split(/\s+/).slice(0, 8).join(' ') || 'New thought')
+
     const newMemory = {
       audiopen_id: `manual_${Date.now()}`, // Generate unique ID for manual entries
-      title: input.title,
+      title: input.title || fallbackTitle,
       body: input.body,
       orig_transcript: null, // Manual entries don't have transcripts
       tags: input.tags || [],
@@ -378,15 +384,33 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
         memories: [optimisticMemory, ...(Array.isArray(state.memories) ? state.memories : [])],
       }))
 
-      // Queue for sync when back online
-      await queueOperation('create_memory', newMemory)
+      // Queue for sync when back online — strip the fallback title so the
+      // server can generate a proper Gemini summary once we're online again.
+      await queueOperation('create_memory', { ...newMemory, title: input.title || null })
       await useOfflineStore.getState().updateQueueSize()
 
       logger.debug('[MemoryStore] Memory queued for offline sync')
       return optimisticMemory
     }
 
-    // Online flow - use API endpoint which handles auth and user_id properly
+    // Online flow — show the memory IMMEDIATELY (optimistic), then reconcile
+    // with the server response. This is what makes capture feel instant.
+    const tempId = `temp_${Date.now()}`
+    const optimisticMemory = {
+      id: tempId,
+      created_at: now,
+      ...newMemory,
+      last_reviewed_at: null,
+      review_count: 0,
+      source_reference: input.source_reference || null,
+      triage: null,
+    } as Memory
+
+    set((state) => ({
+      memories: [optimisticMemory, ...(Array.isArray(state.memories) ? state.memories : [])],
+      lastFetched: Date.now(),
+    }))
+
     try {
       logger.debug('[MemoryStore] Creating memory via API...')
       const response = await fetch('/api/memories?capture=true', {
@@ -411,9 +435,11 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
 
       const { memory: data } = await response.json()
 
-      // Add to local state and update cache timestamp
+      // Replace optimistic memory with the server one (preserve the position)
       set((state) => ({
-        memories: [data, ...(Array.isArray(state.memories) ? state.memories : [])],
+        memories: Array.isArray(state.memories)
+          ? state.memories.map((m) => (m.id === tempId ? data : m))
+          : [data],
         lastFetched: Date.now(),
       }))
 
@@ -443,6 +469,12 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       return data
     } catch (error) {
       logger.error('[MemoryStore] Create memory failed:', error)
+      // Roll back the optimistic memory so the user knows it failed
+      set((state) => ({
+        memories: Array.isArray(state.memories)
+          ? state.memories.filter((m) => m.id !== tempId)
+          : state.memories,
+      }))
       throw error instanceof Error ? error : new Error('Failed to create memory')
     }
   },

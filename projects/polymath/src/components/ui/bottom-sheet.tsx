@@ -109,9 +109,9 @@ const BottomSheetContent = React.forwardRef<
         exit={{ y: '100%' }}
         transition={{
           type: 'spring',
-          damping: 32,
-          stiffness: 500,
-          mass: 0.5,
+          damping: 38,
+          stiffness: 560,
+          mass: 0.4,
         }}
         drag="y"
         dragConstraints={{ top: 0, bottom: 0 }}

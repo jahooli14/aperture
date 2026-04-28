@@ -60,7 +60,7 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
                         initial={{ y: '100%' }}
                         animate={{ y: 0 }}
                         exit={{ y: '100%' }}
-                        transition={{ type: 'spring', damping: 30, stiffness: 400, mass: 0.6 }}
+                        transition={{ type: 'spring', damping: 36, stiffness: 520, mass: 0.45 }}
                         className="relative w-full z-10 overflow-hidden"
                         style={{
                             background: 'linear-gradient(to top, #0d0d10, #111116)',
@@ -99,9 +99,9 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
                                 return (
                                     <motion.button
                                         key={action.id}
-                                        initial={{ opacity: 0, y: 16 }}
+                                        initial={{ opacity: 0, y: 12 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: i * 0.04, type: 'spring', damping: 20, stiffness: 300 }}
+                                        transition={{ delay: i * 0.02, type: 'spring', damping: 24, stiffness: 420 }}
                                         onClick={() => {
                                             onAction(action.id as any)
                                             onClose()
