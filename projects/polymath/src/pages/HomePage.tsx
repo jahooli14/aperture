@@ -10,7 +10,7 @@
  *   6. Thought of the Day — resurfaced memory quote
  *   7. Bedtime floating icon — appears after 9:30pm
  *
- * Experimental self-model variant lives behind a flag (useSelfModelFlag).
+ * Witness-mode "noticed" surface lives behind a flag (useSelfModelFlag).
  */
 
 import React, { useEffect, useState } from 'react'
@@ -32,7 +32,7 @@ import { ThisWeekIdeas } from '../components/home/ThisWeekIdeas'
 import { UnshapedNudgeBar } from '../components/home/UnshapedNudgeBar'
 import { ThoughtOfTheDay } from '../components/home/ThoughtOfTheDay'
 import { BedtimeFloatingIcon } from '../components/home/BedtimeFloatingIcon'
-import { SelfModelHome } from '../components/home/SelfModelHome'
+import { NoticingHome } from '../components/home/NoticingHome'
 import { useSelfModelFlag } from '../lib/useSelfModelFlag'
 import { UnauthHome } from '../components/onboarding/UnauthHome'
 import { AlertCircle, ArrowRight, Film, Music, Monitor, Book, MapPin, Gamepad2, Calendar, FileText, Quote, Box } from 'lucide-react'
@@ -200,7 +200,7 @@ export function HomePage() {
 
           {selfModelEnabled && (
             <div className="mb-8">
-              <SelfModelHome onShapeIdea={handleShapeIdea} />
+              <NoticingHome />
             </div>
           )}
 
