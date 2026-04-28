@@ -13,7 +13,9 @@
  *   POST ?resource=onboarding-token         — Mint an ephemeral Live API token for the browser
  *   POST ?resource=onboarding-segment       — Re-read the full voice chat and cut it into coherent memory chunks
  *   POST ?resource=reset-onboarding         — Wipe all onboarding-origin artifacts so the user can redo it
- *   POST ?resource=self-model                — Find 3–5 converging voice notes + today's move (generate | argue)
+ *   POST ?resource=noticing                  — Generate a witness-mode noticing (3-agent pipeline)
+ *   POST ?resource=noticing-save             — Save / unsave a served noticing
+ *   GET  ?resource=noticing-thread           — List the user's saved noticings
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
@@ -89,8 +91,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return handleSessionBrief(req, res)
   }
 
-  if (req.method === 'POST' && resource === 'self-model') {
-    return handleSelfModel(req, res)
+  if (req.method === 'POST' && resource === 'noticing') {
+    return handleNoticing(req, res)
+  }
+
+  if (req.method === 'POST' && resource === 'noticing-save') {
+    return handleNoticingSave(req, res)
+  }
+
+  if (req.method === 'GET' && resource === 'noticing-thread') {
+    return handleNoticingThread(req, res)
   }
 
   return res.status(404).json({ error: 'Not found' })
@@ -1304,864 +1314,233 @@ Return JSON only:
   return res.json(brief)
 }
 
-// ── Self-Model ─────────────────────────────────────────────────────────────
-// POST ?resource=self-model
-//   body: { mode: 'generate' }
-//   body: { mode: 'argue', previous: SelfModel, critique: string }
+
+// ── Noticing — witness-mode home surface ─────────────────────────────────
+// Three-agent pipeline (Historian → Noticer → Writer) with deterministic
+// forbidden-shapes filter. The output is a "noticing" — 2–3 short sentences
+// that hold the user's through-line. No CTAs, no time estimates, no artefact
+// nouns. Silence is an acceptable output.
 //
-// Wow moment: surface 3–5 things the user has captured across time — voice
-// notes, list items, project ideas — that all land on the same underlying
-// thing. The middle of the Venn. Then the one move that sits at the
-// convergence point. Grounded in their own words (verbatim fragments), so
-// the read can't be faked. Falls back to a single-signal mode when there
-// isn't enough signal for a convergence.
+//   POST ?resource=noticing
+//     body: { mode?: 'fresh' | 'resume', critique?: string, exclude_keys?: string[] }
+//     - 'resume' (default) returns the most recent served noticing if it's
+//       under 18h old; the screen should feel inhabited, not empty.
+//     - 'fresh' forces a new generation, excluding the most recent served
+//       noticing's source keys.
+//     - 'critique' is user pushback ("doesn't read true"); regenerates with
+//       different evidence.
+//
+//   POST ?resource=noticing-save  body: { id, saved }
+//   GET  ?resource=noticing-thread
+//
+// The full design is in docs/architecture (or the redesign branch's commit
+// message); this file is the route layer. The agent prompts live in
+// api/_lib/noticing/.
 
-type SignalKind = 'memory' | 'list_item' | 'project'
+const RESUME_WINDOW_HOURS = 18
 
-interface Quote {
-  quote: string
-  date: string
-  source_id: string
-  kind: SignalKind
-  source_label?: string
-}
+type NoticingShape = 'observation' | 'commission'
 
-interface Move {
-  action: string
-  why: string
-  artefact: string
-}
-
-interface SelfModel {
-  mode: 'convergence' | 'single'
-  convergence?: { quotes: Quote[]; connection: string }
-  single?: Quote
-  move: Move
-}
-
-interface SelfModelSources {
-  projects: number
-  memories: number
-  list_items: number
-  signals_with_embedding: number
-  convergence_size: number
-}
-
-const SELF_MODEL_WINDOW_DAYS = 180
-const RECENT_WINDOW_DAYS = 30
-const MIN_CLUSTER_DAYS_APART = 7
-// Strict pass: things that clearly share a theme. Loose pass is a fallback
-// so we don't silently drop to single-mode when the user genuinely has
-// cross-surface signal that's just a shade below the strict threshold.
-const MIN_NEIGHBOUR_SIMILARITY = 0.68
-const LOOSE_NEIGHBOUR_SIMILARITY = 0.56
-const MIN_CONVERGENCE_SIZE = 3
-const MAX_CONVERGENCE_SIZE = 5
-
-interface Signal {
+interface StoredNoticing {
   id: string
-  kind: SignalKind
-  text: string           // the body we can quote verbatim from
-  title: string | null   // optional header for display / prompt context
-  source_label: string   // short UI label ("voice note", "list item", "project 'X'")
-  created_at: string
-  effective_date: string // created_at for memories/lists; max(created, updated) for projects
-  embedding: number[] | string
+  user_id: string
+  lines: string[]
+  shape: NoticingShape
+  source_keys: string[]
+  source_meta: Array<{ kind: string; source_id: string; label: string; date: string; excerpt?: string }>
+  saved: boolean
+  served_at: string
+  saved_at: string | null
 }
 
-function signalKey(s: { id: string; kind: SignalKind } | { kind: SignalKind; source_id: string }): string {
-  const id = 'source_id' in s ? s.source_id : s.id
-  return `${s.kind}:${id}`
-}
+async function handleNoticing(req: VercelRequest, res: VercelResponse) {
+  const started = Date.now()
+  try {
+    const userId = await getUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Sign in to read your noticing' })
 
-async function gatherSignals(
-  supabase: ReturnType<typeof getSupabaseClient>,
-  userId: string,
-): Promise<Signal[]> {
-  const since = new Date(Date.now() - SELF_MODEL_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString()
-
-  const [memRes, listRes, projRes] = await Promise.all([
-    supabase
-      .from('memories')
-      .select('id, title, body, created_at, embedding')
-      .eq('user_id', userId)
-      .gte('created_at', since)
-      .not('body', 'is', null)
-      .not('embedding', 'is', null)
-      .order('created_at', { ascending: false })
-      .limit(150),
-    supabase
-      .from('list_items')
-      .select('id, content, metadata, status, created_at, embedding')
-      .eq('user_id', userId)
-      .gte('created_at', since)
-      .not('embedding', 'is', null)
-      .in('status', ['active', 'queued', 'completed'])
-      .order('created_at', { ascending: false })
-      .limit(120),
-    supabase
-      .from('projects')
-      .select('id, title, description, status, created_at, updated_at, embedding')
-      .eq('user_id', userId)
-      .not('embedding', 'is', null)
-      .in('status', ['active', 'upcoming', 'paused'])
-      .order('updated_at', { ascending: false })
-      .limit(40),
-  ])
-
-  const signals: Signal[] = []
-
-  for (const m of (memRes.data ?? []) as Array<{
-    id: string
-    title: string | null
-    body: string | null
-    created_at: string
-    embedding: number[] | string | null
-  }>) {
-    if (!m.embedding || !m.body || m.body.trim().length < 20) continue
-    signals.push({
-      id: m.id,
-      kind: 'memory',
-      text: m.body,
-      title: m.title,
-      source_label: 'voice note',
-      created_at: m.created_at,
-      effective_date: m.created_at,
-      embedding: m.embedding,
-    })
-  }
-
-  for (const li of (listRes.data ?? []) as Array<{
-    id: string
-    content: string | null
-    metadata: Record<string, unknown> | null
-    created_at: string
-    embedding: number[] | string | null
-  }>) {
-    if (!li.embedding || !li.content || li.content.trim().length < 6) continue
-    const listName = typeof li.metadata?.list_name === 'string' ? (li.metadata.list_name as string) : null
-    signals.push({
-      id: li.id,
-      kind: 'list_item',
-      text: li.content,
-      title: null,
-      source_label: listName ? `list · ${listName}` : 'list item',
-      created_at: li.created_at,
-      effective_date: li.created_at,
-      embedding: li.embedding,
-    })
-  }
-
-  for (const p of (projRes.data ?? []) as Array<{
-    id: string
-    title: string | null
-    description: string | null
-    created_at: string
-    updated_at: string | null
-    embedding: number[] | string | null
-  }>) {
-    if (!p.embedding) continue
-    const text = (p.description && p.description.trim().length > 10) ? p.description : (p.title ?? '')
-    if (!text || text.trim().length < 10) continue
-    // Projects stay alive via description edits — use the most recent signal
-    // of care so a freshly-refined idea doesn't read as "3 months ago".
-    const effective = p.updated_at && new Date(p.updated_at).getTime() > new Date(p.created_at).getTime()
-      ? p.updated_at
-      : p.created_at
-    signals.push({
-      id: p.id,
-      kind: 'project',
-      text,
-      title: p.title,
-      source_label: p.title ? `project · ${p.title}` : 'project',
-      created_at: p.created_at,
-      effective_date: effective,
-      embedding: p.embedding,
-    })
-  }
-
-  return signals
-}
-
-// Small helper kept for prompt context — the move benefits from seeing the
-// user's active projects even when projects are also in the signal pool.
-async function gatherActiveProjects(
-  supabase: ReturnType<typeof getSupabaseClient>,
-  userId: string,
-): Promise<Array<{ title: string; description: string | null }>> {
-  const res = await supabase
-    .from('projects')
-    .select('title, description')
-    .eq('user_id', userId)
-    .in('status', ['active', 'upcoming'])
-    .order('updated_at', { ascending: false })
-    .limit(15)
-  return (res.data ?? []) as Array<{ title: string; description: string | null }>
-}
-
-function daysAgo(iso: string): number {
-  return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / (24 * 60 * 60 * 1000)))
-}
-
-function truncateToWords(s: string, maxWords: number): string {
-  const words = s.trim().split(/\s+/)
-  if (words.length <= maxWords) return s.trim()
-  return words.slice(0, maxWords).join(' ') + '…'
-}
-
-function formatProjects(projects: Array<{ title: string; description: string | null }>): string {
-  return projects
-    .slice(0, 15)
-    .map(p => `- ${p.title}${p.description ? ` — ${String(p.description).slice(0, 320)}` : ''}`)
-    .join('\n') || '(none)'
-}
-
-// Ambient signal outside the cluster — recent voice notes + list items the
-// AI can use to spot crossovers even when a formal convergence wasn't found.
-// Cluster members are excluded so we don't duplicate them back into context.
-function formatRecentCaptures(signals: Signal[], excludeKeys: Set<string>): string {
-  const captures = signals
-    .filter(s => !excludeKeys.has(signalKey(s)))
-    .filter(s => s.kind !== 'project') // projects are already listed separately
-    .sort((a, b) => new Date(b.effective_date).getTime() - new Date(a.effective_date).getTime())
-    .slice(0, 6)
-  if (captures.length === 0) return '(none)'
-  return captures
-    .map(s => {
-      const label = s.kind === 'memory' ? 'voice note' : 'list item'
-      return `- ${label} (${daysAgo(s.effective_date)}d ago): ${s.text.slice(0, 220).replace(/\s+/g, ' ').trim()}`
-    })
-    .join('\n')
-}
-
-// Pick the single signal to build a fallback card around. Most-recent-wins
-// across all kinds — voice notes, list items, and projects all count as
-// live signal. A refined project idea is real intent, not filler. We do
-// require ≥20 chars so we don't land on a one-liner, and we honour
-// excludeKeys so refresh actually moves the card.
-//
-// (The "don't paraphrase the pitch" protection for project signals lives
-// in the prompt, not here — kind shouldn't gate selection.)
-function pickSingleSignal(
-  signals: Signal[],
-  excludeKeys: Set<string>,
-): Signal | null {
-  const byRecency = (pool: Signal[]) =>
-    [...pool].sort(
-      (a, b) => new Date(b.effective_date).getTime() - new Date(a.effective_date).getTime(),
-    )[0] ?? null
-
-  const eligible = signals.filter(
-    s => !excludeKeys.has(signalKey(s)) && s.text.trim().length >= 20,
-  )
-  const pick = byRecency(eligible)
-  if (pick) return pick
-
-  // Excludes starved us — relax, same length bar.
-  return byRecency(signals.filter(s => s.text.trim().length >= 20))
-}
-// the Venn", pulling across voice notes, list items, and projects. Prefers
-// time-spread (different weeks) and REQUIRES kind-diversity (cross-surface
-// convergence is the wow; a clump of four list items is obvious to the
-// user and lands flat). At least one signal must be recent OR an active
-// project — a long-running preoccupation is a live signal even if the
-// project row is old.
-//
-// `excludeKeys` lets refresh/argue skip the last-shown set and surface the
-// next-best convergence, so tapping "wrong read" or "refresh" actually
-// moves the card instead of re-serving the same cluster.
-// `minSim` is the cosine floor — strict pass first; caller retries with a
-// looser floor when the strict pass starves, so we don't collapse to single
-// mode over a few hundredths of a point.
-function findConvergence(
-  signals: Signal[],
-  excludeKeys: Set<string> = new Set(),
-  minSim: number = MIN_NEIGHBOUR_SIMILARITY,
-): Signal[] | null {
-  const candidates = signals.filter(s =>
-    s.embedding != null &&
-    s.text.trim().length >= 10 &&
-    !excludeKeys.has(signalKey(s)),
-  )
-  if (candidates.length < MIN_CONVERGENCE_SIZE) return null
-
-  const now = Date.now()
-  const recentCutoff = now - RECENT_WINDOW_DAYS * 24 * 60 * 60 * 1000
-  const minGapMs = MIN_CLUSTER_DAYS_APART * 24 * 60 * 60 * 1000
-
-  // Anchors: anything recent OR any project (active/upcoming/paused filter is
-  // already applied upstream, so projects in the pool represent live care).
-  const anchors = candidates.filter(s =>
-    new Date(s.effective_date).getTime() >= recentCutoff || s.kind === 'project',
-  )
-  if (anchors.length === 0) return null
-
-  // Sort anchors: recent-first, then projects. Cap at 30 — cosine is cheap
-  // but 30 anchors × 300 candidates is still negligible.
-  anchors.sort((a, b) => new Date(b.effective_date).getTime() - new Date(a.effective_date).getTime())
-
-  let best: { items: Signal[]; score: number } | null = null
-
-  for (const anchor of anchors.slice(0, 30)) {
-    const anchorEmbedding = anchor.embedding
-    const neighbours: Array<{ signal: Signal; sim: number }> = []
-    for (const other of candidates) {
-      if (other.id === anchor.id && other.kind === anchor.kind) continue
-      const sim = cosineSimilarity(anchorEmbedding, other.embedding)
-      if (sim < minSim) continue
-      neighbours.push({ signal: other, sim })
+    const body = (req.body ?? {}) as {
+      mode?: 'fresh' | 'resume'
+      critique?: string
+      exclude_keys?: string[]
     }
-    if (neighbours.length < MIN_CONVERGENCE_SIZE - 1) continue
+    const mode = body.mode ?? 'resume'
+    const critique = typeof body.critique === 'string' && body.critique.trim().length > 0
+      ? body.critique.trim()
+      : undefined
 
-    neighbours.sort((a, b) => b.sim - a.sim)
-    const picked: Array<{ signal: Signal; sim: number }> = []
-    const pickedTimes: number[] = [new Date(anchor.effective_date).getTime()]
-    const kindsPicked = new Set<SignalKind>([anchor.kind])
+    const supabase = getSupabaseClient()
 
-    // Pass 1: prefer neighbours of different kinds AND time-spaced.
-    // Pass 2: relax the kind preference.
-    // Pass 3: relax time-spacing too.
-    const tryPick = (preferDifferentKind: boolean, allowCloseInTime: boolean) => {
-      for (const n of neighbours) {
-        if (picked.length >= MAX_CONVERGENCE_SIZE - 1) break
-        if (picked.some(p => p.signal.id === n.signal.id && p.signal.kind === n.signal.kind)) continue
-        if (preferDifferentKind && kindsPicked.has(n.signal.kind) && kindsPicked.size === 1) continue
-        const t = new Date(n.signal.effective_date).getTime()
-        if (!allowCloseInTime && pickedTimes.some(pt => Math.abs(pt - t) < minGapMs)) continue
-        picked.push(n)
-        pickedTimes.push(t)
-        kindsPicked.add(n.signal.kind)
+    // Resume: hand back the most recent served noticing if it's young enough
+    // and the user didn't ask for fresh. Re-reading is a feature.
+    if (mode === 'resume' && !critique) {
+      const recent = await readMostRecentNoticing(supabase, userId)
+      if (recent && noticingAgeHours(recent) < RESUME_WINDOW_HOURS) {
+        return res.status(200).json({
+          noticing: serialiseNoticing(recent),
+          resumed: true,
+          took_ms: Date.now() - started,
+        })
       }
     }
 
-    tryPick(true, false)
-    if (picked.length < MIN_CONVERGENCE_SIZE - 1) tryPick(false, false)
-    if (picked.length < MIN_CONVERGENCE_SIZE - 1) tryPick(false, true)
-    if (picked.length < MIN_CONVERGENCE_SIZE - 1) continue
-
-    const items = [anchor, ...picked.map(p => p.signal)]
-    const kindCount = new Set(items.map(i => i.kind)).size
-    // HARD requirement: cross-surface convergence only. Same-kind clumps
-    // aren't the wow — they're a category. Skip if we didn't get ≥2 kinds.
-    if (kindCount < 2) continue
-
-    const avgSim = picked.reduce((s, p) => s + p.sim, 0) / picked.length
-    const times = items.map(i => new Date(i.effective_date).getTime())
-    const spanDays = (Math.max(...times) - Math.min(...times)) / (24 * 60 * 60 * 1000)
-    const score = avgSim * Math.log(1 + spanDays / 7) * Math.log(1 + items.length) * (1 + 0.35 * (kindCount - 1))
-
-    if (!best || score > best.score) best = { items, score }
-  }
-
-  if (!best) return null
-  best.items.sort((a, b) => new Date(a.effective_date).getTime() - new Date(b.effective_date).getTime())
-  return best.items
-}
-
-function describeSignal(s: Signal, index: number): string {
-  const kindLabel = s.kind === 'memory' ? 'VOICE NOTE' : s.kind === 'list_item' ? 'LIST ITEM' : 'PROJECT'
-  const header = `SIGNAL ${index + 1} — ${kindLabel}${s.title ? ` "${s.title}"` : ''} — ${daysAgo(s.effective_date)} days ago:`
-  const body = s.text.slice(0, 600)
-  return `${header}\n${body}`
-}
-
-// Phrases that consistently signal LLM boilerplate in this surface. Listed
-// explicitly in the prompt so the model can't lean on them — they all sound
-// smart and all read flat.
-const FORBIDDEN_PHRASES = [
-  'weaponize', 'geometry of', 'architecture of', 'language of', 'blueprint',
-  'leverage', 'synergy', 'unlock', 'crystallise', 'crystallize',
-  'clarify', 'clarifies', 'clarification',
-  'identify', 'identifies', 'identifying', 'identification',
-  'mapping', 'map out', 'roadmap',
-  'core functionality', 'underlying', 'fundamental',
-  'draft a framework', 'draft a strategy', 'draft a blueprint',
-  'actionable', 'systematically', 'holistic', 'ecosystem',
-]
-
-function forbiddenList(): string {
-  return FORBIDDEN_PHRASES.map(p => `"${p}"`).join(', ')
-}
-
-function buildConvergencePrompt(
-  cluster: Signal[],
-  projects: Array<{ title: string; description: string | null }>,
-  ambientCaptures: string,
-  critique?: { previous: SelfModel; critique: string },
-  strictGrounding: boolean = false,
-): string {
-  const critiqueBlock = critique
-    ? `\n\nLAST TIME YOU SUGGESTED: "${critique.previous.move.action}"
-USER PUSHED BACK: "${critique.critique}"
-Pick a different move that still honours the same convergence. Don't get defensive.`
-    : ''
-
-  const groundingBlock = strictGrounding
-    ? `\n\nIMPORTANT — your last attempt drifted into generic language. The connection sentence MUST reuse at least two concrete words (nouns, specific verbs, project names) that appear in the quotes themselves. No elegant metaphors. No "the idea of a…". Name the actual thing using their actual words.`
-    : ''
-
-  const signalBlocks = cluster.map((s, i) => describeSignal(s, i)).join('\n\n')
-
-  // Count distinct projects referenced in the cluster — if ≥2, demand a
-  // named crossover, because that's the whole point of this surface.
-  const projectNames = Array.from(new Set(
-    cluster.filter(s => s.kind === 'project' && s.title).map(s => s.title as string),
-  ))
-  const crossoverBlock = projectNames.length >= 2
-    ? `\n\nCROSSOVER — ${projectNames.length} of these signals come from different projects (${projectNames.map(n => `"${n}"`).join(', ')}). Your CONNECTION sentence MUST name at least two of these projects by name and say specifically what the crossover is — what can one project borrow from the other? That's the reveal.`
-    : ''
-
-  return `You're the user's second brain. They've been dropping voice notes, list items, and project ideas over weeks. ${cluster.length} of those captures share the same underlying thread — and the user hasn't noticed. Your job is to show them the thread using THEIR OWN WORDS, then hand them a real next move.
-
-This is the app's reveal moment. It has to feel like being seen — not like reading a generic productivity tip. Specificity wins. Concrete nouns win. Pitch copy loses.
-
-DO THREE THINGS:
-
-1) Pull ONE QUOTE from each of the ${cluster.length} signals below — a verbatim fragment lifted directly from the text. NEVER paraphrase. NEVER invent. Copy exact words.
-   - Voice notes: 6–20 word fragment of the body. Pick the line that lands.
-   - List items: the whole item if short; otherwise a fragment.
-   - Projects: 6–20 word fragment of the description. AVOID the pitch opener — find a specific line deeper in that reveals the actual angle, not the elevator pitch.
-   Pick the fragment that makes the shared thread visible when read alongside the others.
-
-2) Write the CONNECTION in ONE plain-English sentence (≤ 22 words). Name what all ${cluster.length} quotes share, using words the user actually uses in the quotes. No metaphors. Don't narrate ("you keep thinking about…", "you've been circling…"). Don't summarise the productivity theme. Name the specific thing — the specific user, the specific problem, the specific mechanism. If you can't name it specifically, you haven't found the real connection yet — try a different angle.
-
-3) Pick the one MOVE for today — 30 to 90 minutes — that sits at the centre of this convergence. The most natural next step given that ${cluster.length} separate signals are saying the same thing. Plain verbs, plain nouns.
-   - action: ≤ 16 words, imperative, starts with a verb, names a specific output. Not "list five…", not "identify the…", not "map the…". Make it the thing they'd actually do in a focused hour.
-   - why: one sentence linking the move to the shared thread in the user's own language.
-   - artefact: what's on their screen / in their hand when done (e.g. "a 30-second voice note", "a working prototype", "one email sent", "a 1-page brief", "a named list of 7 people"). Be concrete.
-
-FORBIDDEN PHRASES (anywhere in your output — these are the boilerplate tells): ${forbiddenList()}. If you find yourself reaching for one of these, you're drifting into generic territory — try again with plainer words.
-
-Output JSON only, with this EXACT shape (quotes array must have exactly ${cluster.length} items, in the same order as the signals below):
-{ "quotes": [${cluster.map(() => '{ "quote": "…" }').join(', ')}], "connection": "…", "move": { "action": "…", "why": "…", "artefact": "…" } }
-
-=== THE ${cluster.length} CONVERGING SIGNALS ===
-${signalBlocks}
-
-=== ACTIVE PROJECTS (context for the move) ===
-${formatProjects(projects)}
-
-=== RECENT AMBIENT CAPTURES (not in the cluster — use as flavour, don't quote from these) ===
-${ambientCaptures}${crossoverBlock}${critiqueBlock}${groundingBlock}
-
-Return the JSON now.`
-}
-
-function buildSinglePrompt(
-  signal: Signal,
-  projects: Array<{ title: string; description: string | null }>,
-  ambientCaptures: string,
-  critique?: { previous: SelfModel; critique: string },
-): string {
-  const critiqueBlock = critique
-    ? `\n\nLAST TIME YOU SUGGESTED: "${critique.previous.move.action}"
-USER PUSHED BACK: "${critique.critique}"
-Pick a different move. Don't get defensive.`
-    : ''
-
-  const kindLabel = signal.kind === 'memory' ? 'voice note' : signal.kind === 'list_item' ? 'list item' : 'project idea'
-
-  // Extra warning for project signals — project descriptions are pitch copy
-  // and produce the flattest reads. Push the model hard toward a specific
-  // angle instead of paraphrasing the pitch.
-  const pitchWarning = signal.kind === 'project'
-    ? `\n\nWARNING — this signal is a project description, which is the user's own pitch copy. If you paraphrase the pitch back at them, this card is worthless. Look for the one concrete, surprising angle inside the description. Ignore the generic "what it does" sentences. Find the specific mechanism, user, or constraint.`
-    : ''
-
-  // If there are active projects, nudge the model to find a crossover angle
-  // even in single mode — it's the closest we can get to the "wow" without
-  // a real convergence.
-  const crossoverHint = projects.length >= 2
-    ? `\n\nCROSSOVER HINT — if this ${kindLabel} has any bearing on one of the active projects listed, say so by name in your "why". The move is stronger when it visibly connects to what they're already building.`
-    : ''
-
-  return `You're the user's second brain. They captured this ${kindLabel} and you need to hand them today's next move — 30 to 90 minutes of focused work. There wasn't enough cross-surface signal to show a convergence this time, so this single card has to earn its keep: a specific, surprising read of what they actually said, and a move that isn't a generic productivity tip.
-
-DO TWO THINGS:
-
-1) Pull one QUOTE — a verbatim fragment (or the whole content if it's short) from the text below. NEVER paraphrase. Copy exact words. Pick the line that reveals the specific angle, not the opening summary.
-
-2) Pick the one MOVE for today — 30 to 90 minutes — that pushes this specific thought forward. Plain English, imperative.
-   - action: ≤ 16 words, starts with a verb, names a specific output. Not "list five…", not "identify the…", not "draft a framework for…". Make it the thing they'd actually do.
-   - why: one sentence, connects to what they actually said in their own words.
-   - artefact: what's on their screen / in their hand at the end — concrete noun.
-
-FORBIDDEN PHRASES: ${forbiddenList()}. These are boilerplate tells. If you're reaching for them, the move isn't specific enough yet.
-
-Output JSON only with this exact shape:
-{ "single": { "quote": "…" }, "move": { "action": "…", "why": "…", "artefact": "…" } }
-
-=== THE ${kindLabel.toUpperCase()} (${daysAgo(signal.effective_date)} days ago)${signal.title ? ` — "${signal.title}"` : ''} ===
-${signal.text.slice(0, 1200)}
-
-=== ACTIVE PROJECTS (context) ===
-${formatProjects(projects)}
-
-=== RECENT AMBIENT CAPTURES (flavour — don't quote from these) ===
-${ambientCaptures}${pitchWarning}${crossoverHint}${critiqueBlock}
-
-Return the JSON now.`
-}
-
-// Verify a quote really is a fragment of the signal's text. The wow depends
-// on quotes being the user's own words, not a paraphrase. For very short
-// items we relax to substring containment, and for longer ones we require a
-// 4-word consecutive run (relaxed from 5 — voice transcripts are messy and
-// 5-word windows over-rejected legitimate quotes where the model normalised
-// punctuation or dropped a filler word).
-function isVerbatim(quote: string, signal: Signal): boolean {
-  const norm = (s: string) =>
-    s.toLowerCase().replace(/[''`"""]/g, "'").replace(/[^\w\s']/g, ' ').replace(/\s+/g, ' ').trim()
-  const sourceText = (signal.title ? signal.title + ' ' : '') + signal.text
-  const normSource = norm(sourceText)
-  const normQuote = norm(quote)
-  if (!normQuote) return false
-  const quoteWords = normQuote.split(' ').filter(Boolean)
-  if (quoteWords.length === 0) return false
-  // Short items (list items, project titles) — require full substring.
-  if (quoteWords.length < 4) return normSource.includes(normQuote)
-  // Otherwise require a run of ≥4 consecutive quote words in the source.
-  const windowSize = Math.min(4, quoteWords.length)
-  for (let i = 0; i <= quoteWords.length - windowSize; i++) {
-    const needle = quoteWords.slice(i, i + windowSize).join(' ')
-    if (normSource.includes(needle)) return true
-  }
-  return false
-}
-
-// Stopwords we ignore when checking that the connection sentence is grounded
-// in the user's own vocabulary. Tiny list — we only need to strip obvious
-// function words; content words are what ground the read.
-const CONTENT_STOPWORDS = new Set([
-  'about', 'again', 'also', 'another', 'around', 'away', 'back', 'because',
-  'been', 'being', 'before', 'could', 'done', 'down', 'even', 'every',
-  'from', 'give', 'going', 'good', 'have', 'here', 'into', 'just', 'keep',
-  'kind', 'know', 'like', 'little', 'look', 'made', 'make', 'many', 'more',
-  'much', 'need', 'never', 'next', 'only', 'other', 'over', 'own', 'really',
-  'same', 'said', 'seem', 'should', 'some', 'something', 'still', 'such',
-  'take', 'than', 'that', 'them', 'then', 'there', 'these', 'they', 'thing',
-  'things', 'think', 'this', 'those', 'thought', 'time', 'true', 'very',
-  'want', 'well', 'were', 'what', 'when', 'where', 'which', 'while', 'will',
-  'with', 'would', 'your', 'yours', 'youre', 'actually', 'maybe', 'probably',
-  'always', 'around', 'sort', 'feel', 'feels',
-])
-
-function contentWords(s: string): string[] {
-  return s
-    .toLowerCase()
-    .replace(/[^\w\s]/g, ' ')
-    .split(/\s+/)
-    .filter(w => w.length >= 4 && !CONTENT_STOPWORDS.has(w))
-}
-
-// Does the connection sentence share ≥2 content words with the quote set?
-// If not, the LLM has probably written an elegant generic framing instead of
-// naming what the quotes actually share — so we reject and retry once with
-// an explicit grounding instruction.
-function connectionGrounded(connection: string, quotes: Quote[]): boolean {
-  const quoteBags = quotes.map(q => new Set(contentWords(q.quote)))
-  const connWords = new Set(contentWords(connection))
-  let hits = 0
-  for (const w of connWords) {
-    const inHowMany = quoteBags.filter(bag => bag.has(w)).length
-    if (inHowMany >= 1) hits++
-    if (hits >= 2) return true
-  }
-  return false
-}
-
-function parseMove(obj: unknown): Move | null {
-  if (!obj || typeof obj !== 'object') return null
-  const m = obj as { action?: unknown; why?: unknown; artefact?: unknown }
-  if (typeof m.action !== 'string' || m.action.trim().length === 0) return null
-  return {
-    action: String(m.action).trim(),
-    why: String(m.why ?? '').trim(),
-    artefact: String(m.artefact ?? '').trim(),
-  }
-}
-
-function extractJson(raw: string): unknown | null {
-  try {
-    return JSON.parse(raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, ''))
-  } catch {
-    return null
-  }
-}
-
-function quoteFromSignal(text: string, signal: Signal): Quote {
-  return {
-    quote: truncateToWords(text, 25),
-    date: signal.effective_date,
-    source_id: signal.id,
-    kind: signal.kind,
-    source_label: signal.source_label,
-  }
-}
-
-// Lift a guaranteed-verbatim fragment from the signal itself. Used as a
-// fallback when the model's chosen quote fails the verbatim check — better
-// to substitute a real fragment of the user's own words than to nuke the
-// whole convergence (the connection + move is what carries the wow).
-function liftFragment(signal: Signal): string {
-  const text = signal.text.trim().replace(/\s+/g, ' ')
-  if (!text) return ''
-  const sentenceMatch = text.match(/^[^.!?]+[.!?]?/)
-  const first = (sentenceMatch ? sentenceMatch[0] : text).trim()
-  return truncateToWords(first, 16)
-}
-
-function parseConvergenceModel(raw: string, cluster: Signal[]): SelfModel | null {
-  const obj = extractJson(raw) as {
-    quotes?: Array<{ quote?: unknown } | string>
-    connection?: unknown
-    move?: unknown
-  } | null
-  if (!obj || !Array.isArray(obj.quotes)) return null
-
-  const quotes: Quote[] = []
-  for (let i = 0; i < cluster.length; i++) {
-    const rawItem = obj.quotes[i]
-    const text =
-      typeof rawItem === 'string'
-        ? rawItem
-        : rawItem && typeof rawItem === 'object' && typeof rawItem.quote === 'string'
-          ? rawItem.quote
-          : ''
-    let trimmed = text.trim()
-    if (!trimmed || !isVerbatim(trimmed, cluster[i])) {
-      if (trimmed) console.warn('[self-model] non-verbatim quote, substituting from source:', trimmed.slice(0, 80))
-      trimmed = liftFragment(cluster[i])
-      if (!trimmed) return null
-    }
-    quotes.push(quoteFromSignal(trimmed, cluster[i]))
-  }
-
-  const connection = typeof obj.connection === 'string' ? obj.connection.trim() : ''
-  const move = parseMove(obj.move)
-  if (!connection || !move) return null
-
-  return {
-    mode: 'convergence',
-    convergence: { quotes, connection },
-    move,
-  }
-}
-
-function parseSingleModel(raw: string, signal: Signal): SelfModel | null {
-  const obj = extractJson(raw) as { single?: { quote?: unknown }; move?: unknown } | null
-  if (!obj) return null
-  let quote = typeof obj.single?.quote === 'string' ? obj.single.quote.trim() : ''
-  const move = parseMove(obj.move)
-  if (!move) return null
-  if (!quote || !isVerbatim(quote, signal)) {
-    if (quote) console.warn('[self-model] non-verbatim single quote, substituting from source:', quote.slice(0, 80))
-    quote = liftFragment(signal)
-    if (!quote) return null
-  }
-  return {
-    mode: 'single',
-    single: quoteFromSignal(quote, signal),
-    move,
-  }
-}
-
-async function handleSelfModel(req: VercelRequest, res: VercelResponse) {
-  try {
-    const userId = await getUserId(req)
-    if (!userId) return res.status(401).json({ error: 'Sign in to view your self-model' })
-
-    const body = (req.body ?? {}) as {
-      mode?: 'generate' | 'argue'
-      previous?: SelfModel
-      critique?: string
-      exclude_ids?: string[]
-    }
-    const reqMode = body.mode ?? 'generate'
-    const excludeKeys = new Set<string>(Array.isArray(body.exclude_ids) ? body.exclude_ids : [])
-
-    const started = Date.now()
-    const supabase = getSupabaseClient()
-    const [signals, activeProjects] = await Promise.all([
-      gatherSignals(supabase, userId),
-      gatherActiveProjects(supabase, userId),
-    ])
-
-    // Try strict first (0.68 cosine); if that starves with excludes, try
-    // strict without excludes; if THAT also starves, fall to a looser
-    // similarity floor (0.56) so we don't silently collapse to single-mode
-    // over a few hundredths of a similarity point.
-    let cluster = findConvergence(signals, excludeKeys)
-    let relaxedExcludes = false
-    let relaxedSimilarity = false
-    if (!cluster && excludeKeys.size > 0) {
-      cluster = findConvergence(signals)
-      if (cluster) relaxedExcludes = true
-    }
-    if (!cluster) {
-      cluster = findConvergence(signals, excludeKeys, LOOSE_NEIGHBOUR_SIMILARITY)
-      if (cluster) relaxedSimilarity = true
-    }
-    if (!cluster && excludeKeys.size > 0) {
-      cluster = findConvergence(signals, new Set(), LOOSE_NEIGHBOUR_SIMILARITY)
-      if (cluster) { relaxedExcludes = true; relaxedSimilarity = true }
+    // Build the exclude set: anything the client passed plus, if mode=fresh,
+    // the most recent served noticing's source keys (so refresh actually
+    // moves the read).
+    const excludeKeys = new Set<string>(Array.isArray(body.exclude_keys) ? body.exclude_keys : [])
+    if (mode === 'fresh') {
+      const recent = await readMostRecentNoticing(supabase, userId)
+      if (recent) recent.source_keys.forEach(k => excludeKeys.add(k))
     }
 
-    const sources: SelfModelSources = {
-      memories: signals.filter(s => s.kind === 'memory').length,
-      list_items: signals.filter(s => s.kind === 'list_item').length,
-      projects: signals.filter(s => s.kind === 'project').length,
-      signals_with_embedding: signals.length,
-      convergence_size: cluster?.length ?? 0,
-    }
+    const { orchestrate } = await import('./_lib/noticing/orchestrator.js')
+    const result = await orchestrate({ supabase, userId, excludeKeys, critique })
 
-    if (signals.length === 0) {
+    if (!result.noticing) {
+      // Soft-fail: if there's a stored noticing, hand that back rather than
+      // showing the user an empty surface.
+      const recent = await readMostRecentNoticing(supabase, userId)
+      if (recent) {
+        return res.status(200).json({
+          noticing: serialiseNoticing(recent),
+          resumed: true,
+          reason: result.reason,
+          sources_seen: result.sources_seen,
+          took_ms: Date.now() - started,
+        })
+      }
       return res.status(200).json({
-        sources,
-        model: null,
-        reason: 'not-enough-signal',
+        noticing: null,
+        reason: result.reason,
+        sources_seen: result.sources_seen,
         took_ms: Date.now() - started,
       })
     }
 
-    const critique =
-      reqMode === 'argue' && body.previous && body.critique
-        ? { previous: body.previous, critique: body.critique }
-        : undefined
-
-    let model: SelfModel | null = null
-
-    // Cluster members are excluded from ambient context so we don't feed
-    // the same text twice into the prompt.
-    const clusterKeys = new Set(cluster ? cluster.map(signalKey) : [])
-    const ambientCaptures = formatRecentCaptures(signals, clusterKeys)
-
-    if (cluster) {
-      const runConvergence = async (strict: boolean): Promise<SelfModel | null> => {
-        const prompt = buildConvergencePrompt(cluster!, activeProjects, ambientCaptures, critique, strict)
-        const raw = await generateText(prompt, {
-          // Generous ceiling — with up to 5 quotes + connection + move, the
-          // JSON can run long. Truncated output parse-fails and falls to
-          // single-mode, which isn't the wow. Carry forward the lesson from
-          // main's hardening (old self-model was truncating at 1400).
-          maxTokens: 2400,
-          temperature: strict ? 0.5 : 0.7,
-          responseFormat: 'json',
-          model: MODELS.FLASH_CHAT,
-        })
-        const parsed = parseConvergenceModel(raw, cluster!)
-        if (!parsed) {
-          console.warn(`[self-model] convergence parse failed (strict=${strict}); raw head:`, raw.slice(0, 400))
-          return null
-        }
-        return parsed
-      }
-
-      model = await runConvergence(false)
-
-      // If the first attempt didn't parse at all, retry once with the strict
-      // prompt before dropping to single-signal mode. Convergence is the wow
-      // of this surface — a single drift shouldn't cost us the cluster card.
-      if (!model) model = await runConvergence(true)
-
-      // If the connection sentence isn't grounded in the user's words, give
-      // the LLM one more go with an explicit grounding instruction. Cheap
-      // insurance — the connection is where the wow actually lands.
-      if (model?.convergence && !connectionGrounded(model.convergence.connection, model.convergence.quotes)) {
-        console.warn('[self-model] connection ungrounded; retrying with strict prompt. was:', model.convergence.connection)
-        const retried = await runConvergence(true)
-        if (retried?.convergence && connectionGrounded(retried.convergence.connection, retried.convergence.quotes)) {
-          model = retried
-        }
-        // If the retry still drifts, ship the first attempt rather than
-        // falling to single-mode — a slightly loose connection beats a
-        // single-quote fallback when we have a real cluster.
-      }
+    // Persist the served noticing — the saved-thread view reads from this
+    // table, and the resume window depends on having served_at recorded.
+    const insertRow = {
+      user_id: userId,
+      lines: result.noticing.lines,
+      shape: result.noticing.shape,
+      source_keys: result.noticing.sources.map(s => `${s.kind}:${s.source_id}`),
+      source_meta: result.noticing.sources,
+      saved: false,
+      served_at: result.noticing.served_at,
     }
 
-    if (!model) {
-      // Single-signal fallback — prefer voice notes > list items > projects
-      // and honour excludeKeys so refresh actually moves the card. Project
-      // descriptions read as boilerplate, so they're the last resort.
-      const latest = pickSingleSignal(signals, excludeKeys)
-      if (!latest) {
-        return res.status(200).json({
-          sources,
-          model: null,
-          reason: 'not-enough-signal',
-          took_ms: Date.now() - started,
-        })
-      }
-      // Rebuild ambient block excluding the chosen signal so we don't feed it
-      // twice into the prompt.
-      const singleAmbient = formatRecentCaptures(signals, new Set([signalKey(latest)]))
-      const runSingle = async (temperature: number): Promise<SelfModel | null> => {
-        const prompt = buildSinglePrompt(latest, activeProjects, singleAmbient, critique)
-        const raw = await generateText(prompt, {
-          // Visible JSON only needs ~150 tokens, but Gemini 3's dynamic
-          // thinking tokens count toward maxOutputTokens — a 500–800 token
-          // think on a complex prompt at the old 900 budget left ~100 for
-          // the actual output, truncating the JSON and parse-failing. Match
-          // convergence's headroom.
-          maxTokens: 2000,
-          temperature,
-          responseFormat: 'json',
-          model: MODELS.FLASH_CHAT,
-        })
-        const parsed = parseSingleModel(raw, latest)
-        if (!parsed) console.warn(`[self-model] single parse failed (temp=${temperature}); raw head:`, raw.slice(0, 400))
-        return parsed
-      }
-      model = await runSingle(0.7)
-      // One retry at lower temperature — tightens JSON adherence when the
-      // first attempt drifted into prose or returned an off-shape blob.
-      if (!model) model = await runSingle(0.4)
+    const { data: inserted, error: insertErr } = await supabase
+      .from('noticings')
+      .insert(insertRow)
+      .select('id, user_id, lines, shape, source_keys, source_meta, saved, served_at, saved_at')
+      .single()
 
-      // Last-ditch demo safety: synthesise a card from the signal directly
-      // rather than 502-ing the user. Quote is lifted verbatim from their
-      // own text; move is a generic-but-honest "push this forward" prompt.
-      // Ugly compared to a real read, but the demo never sees a red error.
-      if (!model) {
-        const fragment = liftFragment(latest)
-        if (fragment) {
-          console.warn('[self-model] both parse attempts failed; serving synthesised card')
-          model = {
-            mode: 'single',
-            single: quoteFromSignal(fragment, latest),
-            move: {
-              action: 'Spend 30 focused minutes pushing this thought into a concrete next step',
-              why: 'You captured this recently — the quickest way to learn if it matters is to act on it.',
-              artefact: 'a written paragraph, voice note, or sketch capturing what you decided',
-            },
-          }
-        }
-      }
+    if (insertErr || !inserted) {
+      console.error('[noticing] insert failed:', insertErr)
+      // Still return the noticing — the user-facing payload doesn't depend on
+      // persistence. Save just won't work for this one.
+      return res.status(200).json({
+        noticing: { ...result.noticing, id: null, saved: false },
+        sources_seen: result.sources_seen,
+        attempts: result.attempts,
+        took_ms: Date.now() - started,
+      })
     }
-
-    if (!model) {
-      return res.status(502).json({ error: 'Model returned unparseable output' })
-    }
-
-    // Return the source_ids we used so the client can exclude them on the
-    // next refresh / argue — guaranteeing the next card is a different
-    // read rather than a re-served cluster.
-    const usedSourceIds =
-      model.mode === 'convergence' && model.convergence
-        ? model.convergence.quotes.map(q => signalKey(q))
-        : model.single
-          ? [signalKey(model.single)]
-          : []
 
     return res.status(200).json({
-      sources,
-      model,
-      source_ids: usedSourceIds,
-      relaxed_excludes: relaxedExcludes || undefined,
-      relaxed_similarity: relaxedSimilarity || undefined,
+      noticing: serialiseNoticing(inserted as StoredNoticing),
+      sources_seen: result.sources_seen,
+      attempts: result.attempts,
       took_ms: Date.now() - started,
     })
   } catch (err) {
-    console.error('[self-model] error', err)
+    console.error('[noticing] error:', err)
     return res.status(500).json({ error: err instanceof Error ? err.message : 'Unknown error' })
+  }
+}
+
+async function handleNoticingSave(req: VercelRequest, res: VercelResponse) {
+  try {
+    const userId = await getUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Sign in to save a noticing' })
+
+    const { id, saved } = (req.body ?? {}) as { id?: string; saved?: boolean }
+    if (typeof id !== 'string' || !id) return res.status(400).json({ error: 'id required' })
+    if (typeof saved !== 'boolean') return res.status(400).json({ error: 'saved must be boolean' })
+
+    const supabase = getSupabaseClient()
+    const { error } = await supabase
+      .from('noticings')
+      .update({ saved, saved_at: saved ? new Date().toISOString() : null })
+      .eq('id', id)
+      .eq('user_id', userId)
+
+    if (error) {
+      console.error('[noticing-save] update failed:', error)
+      return res.status(500).json({ error: error.message })
+    }
+
+    return res.status(200).json({ ok: true })
+  } catch (err) {
+    console.error('[noticing-save] error:', err)
+    return res.status(500).json({ error: err instanceof Error ? err.message : 'Unknown error' })
+  }
+}
+
+async function handleNoticingThread(req: VercelRequest, res: VercelResponse) {
+  try {
+    const userId = await getUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Sign in to read your thread' })
+
+    const supabase = getSupabaseClient()
+    const { data, error } = await supabase
+      .from('noticings')
+      .select('id, lines, shape, source_keys, source_meta, saved, served_at, saved_at')
+      .eq('user_id', userId)
+      .eq('saved', true)
+      .order('saved_at', { ascending: false })
+      .limit(50)
+
+    if (error) {
+      console.error('[noticing-thread] query failed:', error)
+      return res.status(500).json({ error: error.message })
+    }
+
+    return res.status(200).json({
+      items: (data ?? []).map(row => serialiseNoticing(row as StoredNoticing)),
+    })
+  } catch (err) {
+    console.error('[noticing-thread] error:', err)
+    return res.status(500).json({ error: err instanceof Error ? err.message : 'Unknown error' })
+  }
+}
+
+async function readMostRecentNoticing(
+  supabase: ReturnType<typeof getSupabaseClient>,
+  userId: string,
+): Promise<StoredNoticing | null> {
+  const { data } = await supabase
+    .from('noticings')
+    .select('id, user_id, lines, shape, source_keys, source_meta, saved, served_at, saved_at')
+    .eq('user_id', userId)
+    .order('served_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  return (data as StoredNoticing | null) ?? null
+}
+
+function noticingAgeHours(n: StoredNoticing): number {
+  return (Date.now() - new Date(n.served_at).getTime()) / (60 * 60 * 1000)
+}
+
+function serialiseNoticing(n: StoredNoticing) {
+  return {
+    id: n.id,
+    lines: n.lines,
+    shape: n.shape,
+    sources: n.source_meta,
+    saved: n.saved,
+    served_at: n.served_at,
+    saved_at: n.saved_at,
   }
 }

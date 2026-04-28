@@ -528,10 +528,10 @@ export function SettingsPage() {
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold premium-text-platinum text-sm">
-                    Self-model homepage (experimental)
+                    "Noticed" homepage surface (experimental)
                   </h3>
                   <p style={{ color: 'var(--brand-text-secondary)', fontSize: '0.8rem' }}>
-                    Show the Thesis + Threads + Move panel at the top of the home page.
+                    A quiet witness panel at the top of home — two or three short sentences holding the through-line of what you've been capturing. No CTAs.
                   </p>
                 </div>
                 <div>
