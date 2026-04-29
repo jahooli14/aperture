@@ -1,10 +1,17 @@
 /**
- * CreateMemoryDialog - Manual Memory Creation
- * Mobile-optimized bottom sheet for capturing thoughts manually
- * Supports both freeform text and checklist (Apple Notes-style)
+ * CreateMemoryDialog — Keep-style instant capture
+ *
+ *  • Tap → sheet slides up, textarea is already focused
+ *  • Every keystroke is persisted to localStorage so nothing is ever lost
+ *  • Closing the sheet (X / drag / tap-outside) saves automatically when
+ *    there's content — no save button needed
+ *  • Optimistic: the new memory appears in the list the instant you close,
+ *    while the server quietly enriches it (title, tags, embeddings) behind
+ *    the scenes
+ *  • Offline: queued, then re-titled by the server on reconnect
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   BottomSheet,
   BottomSheetContent,
@@ -13,13 +20,17 @@ import {
 } from '../ui/bottom-sheet'
 import { useMemoryStore } from '../../stores/useMemoryStore'
 import { useToast } from '../ui/toast'
-import { Plus, ArrowUp, Bold, Italic, List, Image as ImageIcon, X, CheckSquare, Square } from 'lucide-react'
+import { useOfflineStore } from '../../stores/useOfflineStore'
+import {
+  Plus, Bold, Italic, List, Image as ImageIcon, X, CheckSquare, Square, MoreHorizontal,
+} from 'lucide-react'
 import { celebrate, checkThoughtMilestone, getMilestoneMessage } from '../../utils/celebrations'
 import { handleInputFocus } from '../../utils/keyboard'
 import { useAutoSuggestion } from '../../contexts/AutoSuggestionContext'
 import { SuggestionToast } from '../SuggestionToast'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useBodyEditor } from '../../hooks/useBodyEditor'
+import { useNoteDraft } from '../../hooks/useNoteDraft'
 import type { ChecklistItem } from '../../types'
 
 interface VoiceSeed {
@@ -49,7 +60,8 @@ function VoiceSeeds({
     if (isOpen) setDismissed(false)
   }, [isOpen])
 
-  // Fetch after dialog animation settles; use cache if fresh
+  // Fetch only after the sheet is fully on-screen, so the open animation
+  // never competes with a network request.
   useEffect(() => {
     if (!isOpen) return
     const cacheValid = seedsCache && Date.now() - seedsCache.fetchedAt < SEEDS_CACHE_TTL
@@ -66,11 +78,10 @@ function VoiceSeeds({
           setSeeds(fresh)
         })
         .catch(() => {})
-    }, 350) // Let dialog animation complete first
+    }, 600) // After spring settles
     return () => clearTimeout(timer)
   }, [isOpen])
 
-  // Hide when: dismissed, no seeds, or user has started typing
   if (dismissed || seeds.length === 0 || hasContent) return null
 
   return (
@@ -95,37 +106,35 @@ function VoiceSeeds({
           <X className="h-3 w-3" />
         </button>
       </div>
-      <AnimatePresence>
-        <div className="flex flex-col gap-1">
-          {seeds.map((seed, i) => (
-            <motion.button
-              key={seed.id}
-              type="button"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: i * 0.06 }}
-              onClick={() => {
-                onSelect(seed.text)
-                setDismissed(true)
-              }}
-              className="text-left text-sm px-3 py-1.5 rounded-lg transition-all active:scale-[0.98]"
-              style={{
-                background: 'rgba(255,255,255,0.03)',
-                color: 'var(--brand-text-secondary)',
-                boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.05)',
-              }}
-            >
-              {seed.text}
-            </motion.button>
-          ))}
-        </div>
-      </AnimatePresence>
+      <div className="flex flex-col gap-1">
+        {seeds.map((seed, i) => (
+          <motion.button
+            key={seed.id}
+            type="button"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: i * 0.04 }}
+            onClick={() => {
+              onSelect(seed.text)
+              setDismissed(true)
+            }}
+            className="text-left text-sm px-3 py-1.5 rounded-lg transition-all active:scale-[0.98]"
+            style={{
+              background: 'rgba(255,255,255,0.03)',
+              color: 'var(--brand-text-secondary)',
+              boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.05)',
+            }}
+          >
+            {seed.text}
+          </motion.button>
+        ))}
+      </div>
     </div>
   )
 }
 
 function ToolbarBtn({
-  title, onClick, children, active
+  title, onClick, children, active,
 }: {
   title: string; onClick: () => void; children: React.ReactNode; active?: boolean
 }) {
@@ -137,7 +146,7 @@ function ToolbarBtn({
       className="relative p-2 rounded-lg transition-all"
       style={{
         color: active ? 'var(--brand-primary)' : 'var(--brand-text-secondary)',
-        opacity: active ? 1 : 0.35,
+        opacity: active ? 1 : 0.4,
       }}
     >
       {children}
@@ -159,7 +168,6 @@ function ChecklistEditor({
       checked: false,
     }
     onChange([...items, newItem])
-    // Focus the new input after render
     setTimeout(() => {
       const inputs = document.querySelectorAll('[data-checklist-item]')
       const last = inputs[inputs.length - 1] as HTMLInputElement
@@ -186,7 +194,6 @@ function ChecklistEditor({
     } else if (e.key === 'Backspace' && (e.target as HTMLInputElement).value === '' && items.length > 1) {
       e.preventDefault()
       removeItem(id)
-      // Focus previous item
       setTimeout(() => {
         const inputs = document.querySelectorAll('[data-checklist-item]')
         const prev = inputs[Math.max(0, index - 1)] as HTMLInputElement
@@ -204,7 +211,7 @@ function ChecklistEditor({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.15 }}
+            transition={{ duration: 0.12 }}
             className="flex items-center gap-2 group"
           >
             <button
@@ -264,36 +271,57 @@ export interface CreateMemoryDialogProps {
   hideTrigger?: boolean
   trigger?: React.ReactNode
   initialMode?: 'text' | 'checklist'
+  onSwitchType?: () => void
 }
 
-export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, trigger, initialMode = 'text' }: CreateMemoryDialogProps = {}) {
+export function CreateMemoryDialog({
+  isOpen,
+  onOpenChange,
+  hideTrigger = false,
+  trigger,
+  initialMode = 'text',
+  onSwitchType,
+}: CreateMemoryDialogProps = {}) {
   const [internalOpen, setInternalOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
   const [lastCreatedId, setLastCreatedId] = useState<string | null>(null)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [previewUrls, setPreviewUrls] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
-  const [showOptions, setShowOptions] = useState(false)
-  const [isChecklistMode, setIsChecklistMode] = useState(initialMode === 'checklist')
-  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([
-    { id: `item_${Date.now()}`, text: '', checked: false }
-  ])
+
+  const { initialDraft, persist: persistDraft, clear: clearDraft } = useNoteDraft()
+
+  const [isChecklistMode, setIsChecklistMode] = useState(
+    initialDraft?.isChecklistMode ?? initialMode === 'checklist'
+  )
+  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>(
+    initialDraft?.checklistItems?.length
+      ? initialDraft.checklistItems
+      : [{ id: `item_${Date.now()}`, text: '', checked: false }]
+  )
   const { createMemory, memories } = useMemoryStore()
   const { addToast } = useToast()
   const { fetchSuggestions } = useAutoSuggestion()
+  const { isOnline } = useOfflineStore()
 
   const {
     body, setBody, bodyRef, bodyFocused, setBodyFocused,
     wordCount, handleBodyChange, handleBodyKeyDown, applyFormat,
   } = useBodyEditor({ minHeight: 160 })
 
+  // Restore body draft once on first render
+  const bodyHydrated = useRef(false)
+  useEffect(() => {
+    if (bodyHydrated.current) return
+    if (initialDraft?.body) setBody(initialDraft.body)
+    bodyHydrated.current = true
+  }, [initialDraft, setBody])
+
   // Create and cleanup object URLs to prevent memory leaks
   useEffect(() => {
-    const urls = selectedFiles.map(file => URL.createObjectURL(file))
+    const urls = selectedFiles.map((file) => URL.createObjectURL(file))
     setPreviewUrls(urls)
-
     return () => {
-      urls.forEach(url => URL.revokeObjectURL(url))
+      urls.forEach((url) => URL.revokeObjectURL(url))
     }
   }, [selectedFiles])
 
@@ -302,18 +330,31 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
   const setOpen = onOpenChange || setInternalOpen
 
   const [formData, setFormData] = useState({
-    title: '',
-    tags: '',
-    memory_type: '' as '' | 'foundational' | 'event' | 'insight' | 'quick-note',
+    title: initialDraft?.title ?? '',
+    tags: initialDraft?.tags ?? '',
+    memory_type: (initialDraft?.memoryType ?? '') as '' | 'foundational' | 'event' | 'insight' | 'quick-note',
   })
   const [recentTags, setRecentTags] = useState<string[]>([])
   const titleRef = useRef<HTMLInputElement>(null)
 
-  // Load recent tags from memories
+  // Persist draft on every meaningful change (debounced inside the hook)
   useEffect(() => {
+    persistDraft({
+      body,
+      title: formData.title,
+      isChecklistMode,
+      checklistItems,
+      memoryType: formData.memory_type,
+      tags: formData.tags,
+    })
+  }, [body, formData.title, formData.tags, formData.memory_type, isChecklistMode, checklistItems, persistDraft])
+
+  // Load recent tags from memories — only when sheet opens, not on every mount
+  useEffect(() => {
+    if (!open) return
     const memoryStore = useMemoryStore.getState()
     const allTags = memoryStore.memories
-      .flatMap(m => m.tags || [])
+      .flatMap((m) => m.tags || [])
       .filter(Boolean)
 
     const tagCounts = allTags.reduce((acc, tag) => {
@@ -327,25 +368,25 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
       .map(([tag]) => tag)
 
     setRecentTags(topTags)
-  }, [])
+  }, [open])
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setFormData({ title: '', tags: '', memory_type: '' })
     setBody('')
     setSelectedFiles([])
-    setShowOptions(false)
     setIsChecklistMode(initialMode === 'checklist')
     setChecklistItems([{ id: `item_${Date.now()}`, text: '', checked: false }])
-  }
+    clearDraft()
+  }, [initialMode, setBody, clearDraft])
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setSelectedFiles(prev => [...prev, ...Array.from(e.target.files || [])])
+      setSelectedFiles((prev) => [...prev, ...Array.from(e.target.files || [])])
     }
   }
 
   const removeFile = (index: number) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index))
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index))
   }
 
   const uploadImages = async (): Promise<string[]> => {
@@ -395,52 +436,72 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
     }
   }
 
-  const hasChecklistContent = checklistItems.some(item => item.text.trim().length > 0)
-  const canSubmit = isChecklistMode ? hasChecklistContent : body.trim().length > 0
+  const hasChecklistContent = checklistItems.some((item) => item.text.trim().length > 0)
+  const hasContent = isChecklistMode ? hasChecklistContent : body.trim().length > 0
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
+  // Single source of truth for "save what's in the sheet right now". Used by:
+  //   • the floating Done button (explicit save)
+  //   • close-to-save (drag down / X / tap outside)
+  // Returns true if a save was kicked off.
+  const saveNow = useCallback(async (): Promise<boolean> => {
+    if (!hasContent) return false
 
     const tags = formData.tags
       .split(',')
       .map((t) => t.trim())
       .filter((t) => t.length > 0)
 
-    try {
-      const imageUrls = await uploadImages()
-      const userTitle = formData.title.trim() || undefined
+    const userTitle = formData.title.trim() || undefined
 
-      let memoryData: Parameters<typeof createMemory>[0]
-
-      if (isChecklistMode) {
-        const validItems = checklistItems.filter(item => item.text.trim().length > 0)
-        memoryData = {
-          title: userTitle || 'Checklist',
-          checklist_items: validItems,
-          tags: tags.length > 0 ? tags : undefined,
-          memory_type: 'quick-note',
-        }
-      } else {
-        memoryData = {
-          ...(userTitle && { title: userTitle }),
-          body: body.trim(),
-          tags: tags.length > 0 ? tags : undefined,
-          memory_type: formData.memory_type || undefined,
-          image_urls: imageUrls.length > 0 ? imageUrls : undefined,
-        }
+    let memoryData: Parameters<typeof createMemory>[0]
+    if (isChecklistMode) {
+      const validItems = checklistItems.filter((item) => item.text.trim().length > 0)
+      memoryData = {
+        title: userTitle || 'Checklist',
+        checklist_items: validItems,
+        tags: tags.length > 0 ? tags : undefined,
+        memory_type: 'quick-note',
       }
+    } else {
+      memoryData = {
+        ...(userTitle && { title: userTitle }),
+        body: body.trim(),
+        tags: tags.length > 0 ? tags : undefined,
+        memory_type: formData.memory_type || undefined,
+      }
+    }
 
-      const savedTitle = userTitle || (isChecklistMode ? 'Checklist' : body.trim().substring(0, 60)) || 'Quick thought'
+    const savedTitle = userTitle
+      || (isChecklistMode ? 'Checklist' : body.trim().substring(0, 60))
+      || 'Quick thought'
 
-      // Close dialog immediately for better UX
-      resetForm()
-      setOpen(false)
-      setLoading(false)
+    const previousMemoryCount = memories.length
 
-      // Save in background
+    // Tear down the form synchronously so the UI feels instant. The store
+    // already adds an optimistic memory at the top of the list.
+    resetForm()
+
+    // Run the network work in the background — never block the UI.
+    void (async () => {
       try {
-        const newMemory = await createMemory(memoryData)
+        let imageUrls: string[] = []
+        if (selectedFiles.length > 0) {
+          try {
+            imageUrls = await uploadImages()
+          } catch (uploadErr) {
+            addToast({
+              title: 'Image upload failed',
+              description: uploadErr instanceof Error ? uploadErr.message : 'Unknown error',
+              variant: 'destructive',
+            })
+          }
+        }
+
+        const finalData = imageUrls.length > 0
+          ? { ...memoryData, image_urls: imageUrls }
+          : memoryData
+
+        const newMemory = await createMemory(finalData)
 
         if (newMemory?.id) {
           setLastCreatedId(newMemory.id)
@@ -449,7 +510,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
           }
         }
 
-        const newCount = memories.length + 1
+        const newCount = previousMemoryCount + 1
         const isMilestone = checkThoughtMilestone(newCount)
         const milestoneMessage = getMilestoneMessage('thought', newCount)
 
@@ -460,14 +521,14 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
           else if (newCount === 100) celebrate.hundredthThought()
 
           addToast({
-            title: milestoneMessage || 'Note saved!',
-            description: newCount === 1 ? 'Keep going!' : 'You\'re building an incredible knowledge base',
+            title: milestoneMessage || 'Note saved',
+            description: newCount === 1 ? 'Keep going.' : 'You\'re building an incredible knowledge base',
             variant: 'success',
           })
-        } else {
+        } else if (!isOnline) {
           addToast({
-            title: isChecklistMode ? 'Checklist saved!' : 'Thought captured!',
-            description: 'Your note is saved',
+            title: 'Saved offline',
+            description: 'Will sync and get a smart title when back online.',
             variant: 'success',
           })
         }
@@ -478,14 +539,30 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
           variant: 'destructive',
         })
       }
-    } catch (error) {
-      addToast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to prepare submission',
-        variant: 'destructive',
-      })
-      setLoading(false)
+    })()
+
+    return true
+  }, [
+    hasContent, formData, body, isChecklistMode, checklistItems, memories.length,
+    selectedFiles, isOnline, createMemory, fetchSuggestions, addToast, resetForm,
+  ])
+
+  // Auto-save on close. Closing the sheet IS the save action — no button required.
+  const handleOpenChange = useCallback(async (next: boolean) => {
+    if (!next && hasContent) {
+      await saveNow()
+    } else if (!next) {
+      // Closing with no content — clear the draft so it doesn't reappear empty
+      clearDraft()
     }
+    setOpen(next)
+  }, [hasContent, saveNow, clearDraft, setOpen])
+
+  // Submit handler for the explicit Done affordance
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const saved = await saveNow()
+    if (saved) setOpen(false)
   }
 
   return (
@@ -505,7 +582,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
         </button>
       ))}
 
-      <BottomSheet open={open} onOpenChange={setOpen}>
+      <BottomSheet open={open} onOpenChange={handleOpenChange}>
         <BottomSheetContent>
           {/* Visually hidden title for accessibility */}
           <BottomSheetHeader className="sr-only">
@@ -532,7 +609,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                   color: 'var(--brand-text-primary)',
                   fontSize: '17px',
                   lineHeight: '1.65',
-                  minHeight: '140px',
+                  minHeight: '160px',
                 }}
               />
             )}
@@ -541,7 +618,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
             <input
               ref={titleRef}
               id="title"
-              placeholder={isChecklistMode ? 'Checklist title…' : 'Add a title…'}
+              placeholder={isChecklistMode ? 'Checklist title…' : 'Title (optional — we\'ll write one for you)'}
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               onFocus={handleInputFocus}
@@ -567,9 +644,9 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                   {selectedFiles.map((file, index) => (
                     <motion.div
                       layout
-                      initial={{ opacity: 0, scale: 0.8 }}
+                      initial={{ opacity: 0, scale: 0.85 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
+                      exit={{ opacity: 0, scale: 0.85 }}
                       key={`${file.name}-${index}`}
                       className={`relative rounded-xl overflow-hidden ${
                         selectedFiles.length === 3 && index === 0 ? 'col-span-2 aspect-[2/1]' :
@@ -641,16 +718,34 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                 </ToolbarBtn>
               </div>
 
-              {/* Spacer + word count */}
-              <div className="flex-1 flex items-center justify-center">
+              {/* Other note types — projects, articles, lists */}
+              {onSwitchType && (
+                <ToolbarBtn title="Other types" onClick={onSwitchType}>
+                  <MoreHorizontal className="h-4 w-4" />
+                </ToolbarBtn>
+              )}
+
+              {/* Spacer + ambient status */}
+              <div className="flex-1 flex items-center justify-center gap-2">
                 {bodyFocused && wordCount > 0 && !isChecklistMode && (
-                  <span className="text-[10px] tabular-nums" style={{ color: 'var(--brand-text-secondary)', opacity: 0.35 }}>
+                  <span className="text-[10px] tabular-nums" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}>
                     {wordCount}w
                   </span>
                 )}
                 {isChecklistMode && (
-                  <span className="text-[10px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.25 }}>
-                    {checklistItems.filter(i => i.checked).length}/{checklistItems.filter(i => i.text).length} done
+                  <span className="text-[10px]" style={{ color: 'var(--brand-text-secondary)', opacity: 0.3 }}>
+                    {checklistItems.filter((i) => i.checked).length}/{checklistItems.filter((i) => i.text).length} done
+                  </span>
+                )}
+                {hasContent && (
+                  <span
+                    className="text-[10px] tracking-widest uppercase font-semibold"
+                    style={{
+                      color: isOnline ? 'rgba(var(--brand-primary-rgb), 0.6)' : 'rgba(255, 200, 80, 0.65)',
+                      opacity: 0.7,
+                    }}
+                  >
+                    {isOnline ? 'Saved' : 'Offline draft'}
                   </span>
                 )}
               </div>
@@ -681,19 +776,22 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                 </div>
               )}
 
-              {/* Submit */}
+              {/* Done — explicit save shortcut. Close-to-save still works without it. */}
               <button
                 type="submit"
-                disabled={loading || !canSubmit || uploading}
-                className="flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center transition-all touch-manipulation disabled:opacity-30"
+                disabled={!hasContent || uploading}
+                aria-label="Done"
+                className="flex-shrink-0 px-3 h-9 rounded-full text-[12px] font-bold uppercase tracking-[0.15em] transition-all touch-manipulation disabled:opacity-30"
                 style={{
-                  background: canSubmit ? 'var(--brand-primary, rgb(var(--brand-primary-rgb)))' : 'rgba(255,255,255,0.1)',
-                  color: canSubmit ? '#000' : 'var(--brand-text-secondary)',
-                  boxShadow: canSubmit ? '0 0 16px rgba(var(--brand-primary-rgb),0.4)' : 'none',
+                  background: hasContent ? 'rgba(var(--brand-primary-rgb), 0.18)' : 'transparent',
+                  color: hasContent ? 'rgb(var(--brand-primary-rgb))' : 'var(--brand-text-secondary)',
+                  border: hasContent
+                    ? '1px solid rgba(var(--brand-primary-rgb), 0.35)'
+                    : '1px solid transparent',
                 }}
-                title={uploading ? 'Uploading…' : loading ? 'Saving…' : 'Capture'}
+                title={uploading ? 'Uploading…' : 'Done'}
               >
-                <ArrowUp className="h-5 w-5" strokeWidth={2.5} />
+                {uploading ? '…' : 'Done'}
               </button>
             </div>
 

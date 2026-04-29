@@ -192,10 +192,12 @@ export function VoiceFAB({
       return
     }
 
-    // Short tap - open menu
+    // Short tap — open thought capture immediately (Keep-style direct path).
+    // Other types (project/article/list) are reachable from the "switch type"
+    // button inside the thought sheet header.
     if (duration < LONG_PRESS_DELAY) {
       haptic.light()
-      setIsMenuOpen(true)
+      setShowThoughtDialog(true)
     }
   }, [isLongPressRecording])
 
@@ -342,7 +344,17 @@ export function VoiceFAB({
       )}
 
       <CreateProjectDialog isOpen={showProjectDialog} onOpenChange={setShowProjectDialog} hideTrigger />
-      <CreateMemoryDialog isOpen={showThoughtDialog} onOpenChange={setShowThoughtDialog} hideTrigger />
+      <CreateMemoryDialog
+        isOpen={showThoughtDialog}
+        onOpenChange={setShowThoughtDialog}
+        hideTrigger
+        onSwitchType={() => {
+          // Let the user jump from thought sheet into the full-type menu
+          // without losing what they typed (draft is auto-persisted).
+          setShowThoughtDialog(false)
+          requestAnimationFrame(() => setIsMenuOpen(true))
+        }}
+      />
       <AddItemToListDialog isOpen={showListDialog} onOpenChange={setShowListDialog} />
       <SaveArticleDialog isOpen={showArticleDialog} onOpenChange={setShowArticleDialog} />
 

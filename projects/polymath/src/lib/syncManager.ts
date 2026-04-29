@@ -27,23 +27,43 @@ async function processOperation(operation: QueuedOperation): Promise<boolean> {
   try {
     switch (operation.type) {
       case 'create_memory': {
+        // Strip any client-only fallback title — the offline path may have
+        // stuffed in a "first 8 words" placeholder so the optimistic memory
+        // wasn't blank. We want Gemini to write the real title server-side.
+        const insertPayload = { ...operation.data }
+        if (typeof insertPayload.title === 'string' && insertPayload.title.trim() === '') {
+          insertPayload.title = null
+        }
+
         const { data, error } = await supabase
           .from('memories')
-          .insert(operation.data)
+          .insert(insertPayload)
           .select()
           .single()
 
         if (error) throw error
 
-        // Trigger background processing
-        try {
-          await fetch('/api/memories?action=process', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ memory_id: data.id }),
-          })
-        } catch (processError) {
-          console.warn('[SyncManager] Processing trigger failed:', processError)
+        // Trigger Gemini title + entity processing. This is the offline →
+        // online "re-title" path. Retry a couple of times on transient
+        // failures so users don't end up with an unprocessed memory.
+        let processed = false
+        for (let attempt = 0; attempt < 3 && !processed; attempt++) {
+          try {
+            const res = await fetch('/api/memories?action=process', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ memory_id: data.id }),
+            })
+            if (res.ok) {
+              processed = true
+            } else {
+              console.warn(`[SyncManager] Process attempt ${attempt + 1} returned ${res.status}`)
+              await new Promise((r) => setTimeout(r, 600 * (attempt + 1)))
+            }
+          } catch (processError) {
+            console.warn(`[SyncManager] Process attempt ${attempt + 1} failed:`, processError)
+            await new Promise((r) => setTimeout(r, 600 * (attempt + 1)))
+          }
         }
 
         return true
@@ -345,6 +365,14 @@ export async function syncPendingOperations(): Promise<{
     console.log(
       `[SyncManager] Sync complete: ${success} succeeded, ${failed} failed, ${operations.length} total`
     )
+
+    // Tell the UI to swap optimistic offline memories for the freshly-titled
+    // server rows. The MemoriesPage listens for this and re-fetches.
+    if (success > 0) {
+      window.dispatchEvent(new CustomEvent('memories-synced', {
+        detail: { success, failed, total: operations.length },
+      }))
+    }
 
     // Trigger AI enrichment for projects that had task updates (immediate, no debounce)
     if (projectsNeedingEnrichment.size > 0) {
