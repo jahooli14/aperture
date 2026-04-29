@@ -104,7 +104,7 @@ Cross-Domain Distance: ${idea.cross_domain_distance?.toFixed(2) || 'N/A'}
 Tractability Score: ${idea.tractability_score?.toFixed(2) || 'N/A'}
 
 **Review Criteria:**
-1. **Clarity** - Can I understand what's being proposed without a PhD? REJECT if it uses academic jargon like "modular", "paradigm", "leverage", "systemic", "polymorphic", "cascading", "entropy", "robust control" etc.
+1. **Clarity (hard gate)** - Can a smart non-specialist understand it on first read? REJECT if it leans on academic dress-up like "endogenous", "isomorphism", "stochastic", "modular", "paradigm", "leverage", "systemic", "polymorphic", "cascading", "entropy", "robust control", "autonomous" (when "runs by itself" would do), "dynamically adjust", or stacked abstract nouns. The description should also tell the reader what they could actually build, run, or test — if it doesn't, REJECT as too_vague.
 2. **Insight** - Does this reveal something genuinely new or useful?
 3. **Actionable** - Could someone actually build/test this within 3-12 months?
 4. **Interesting** - Would this be exciting to work on or talk about?
