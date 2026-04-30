@@ -110,9 +110,10 @@ jobs:
             hit "/api/idea-engine?action=send-digest"
           fi
 
-          # ── Sunday 08:00 UTC: Polymath drawer digest ──────────────────
+          # ── Sunday 08:00 UTC: Polymath drawer digest + project ideas ──
           if [ "$SCHEDULE" = "0 8 * * 0" ] || [ "$FORCE" = "true" ]; then
             hit "/api/projects?resource=generate-digest" &
+            hit "/api/utilities?resource=generate-project-ideas" &
           fi
 
           wait
