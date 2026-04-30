@@ -1461,10 +1461,13 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
       }
     }
 
+    const tGatherStart = Date.now()
     const { gatherForIdeas } = await import('./_lib/project-ideas/gather.js')
     const gathered = await gatherForIdeas(supabase, userId)
+    console.log(`[generate-project-ideas] gather: ${gathered.total_signal_count} signals (${gathered.memories.length}m + ${gathered.list_items.length}li + ${gathered.active_projects.length + gathered.dormant_projects.length}p + ${gathered.reading.length}r + ${gathered.highlights.length}h + ${gathered.todos.length}t) in ${Date.now() - tGatherStart}ms; via=${viaCron ? 'cron' : 'user'}`)
 
     if (gathered.total_signal_count < 8) {
+      console.log(`[generate-project-ideas] returning insufficient_data (${gathered.total_signal_count})`)
       return res.status(200).json({
         ideas: [],
         reason: 'insufficient_data',
@@ -1473,8 +1476,10 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
       })
     }
 
+    const tLlmStart = Date.now()
     const { generateProjectIdeas } = await import('./_lib/project-ideas/generator.js')
     const result = await generateProjectIdeas(gathered)
+    console.log(`[generate-project-ideas] generation finished in ${Date.now() - tLlmStart}ms: ${result.ideas.length} ideas, reason=${result.reason ?? 'ok'}`)
 
     if (!result.ideas.length) {
       return res.status(200).json({

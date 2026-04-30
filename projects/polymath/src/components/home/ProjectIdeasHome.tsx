@@ -19,7 +19,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { BookmarkPlus, BookmarkCheck, X, Sparkles, ChevronLeft, ChevronRight, Hammer, RotateCw } from 'lucide-react'
+import { BookmarkPlus, BookmarkCheck, X, ChevronLeft, ChevronRight, Hammer, RotateCw } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
 import { api } from '../../lib/apiClient'
 
@@ -84,6 +84,19 @@ function relativeAge(iso: string | null): string {
   return `${Math.floor(days / 7)} weeks ago`
 }
 
+// Staged loading copy for the ~30s synthesis window. The thresholds add
+// up to ~40s so a slightly slow Flash call doesn't hit the last stage
+// suspiciously early. Each stage names what the model is roughly doing
+// at that point so the wait feels intentional, not broken.
+const LOADING_STAGES: Array<{ at_ms: number; line: string }> = [
+  { at_ms: 0,      line: 'reading your captures' },
+  { at_ms: 6_000,  line: 'connecting voice notes to lists' },
+  { at_ms: 12_000, line: 'looking at dormant projects' },
+  { at_ms: 18_000, line: 'drafting candidate projects' },
+  { at_ms: 26_000, line: 'critiquing for clichés' },
+  { at_ms: 34_000, line: 'picking the strongest three' },
+]
+
 export function ProjectIdeasHome() {
   const [ideas, setIdeas] = useState<ProjectIdea[]>([])
   const [generatedAt, setGeneratedAt] = useState<string | null>(null)
@@ -94,6 +107,7 @@ export function ProjectIdeasHome() {
   const [activeIdx, setActiveIdx] = useState(0)
   const [showEvidence, setShowEvidence] = useState(false)
   const [pendingFeedback, setPendingFeedback] = useState<string | null>(null)
+  const [loadingStage, setLoadingStage] = useState(0)
 
   const load = useCallback(async () => {
     setError(null)
@@ -111,6 +125,28 @@ export function ProjectIdeasHome() {
   }, [])
 
   useEffect(() => { void load() }, [load])
+
+  // Advance the loading-stage copy while a generation is in flight. Stages
+  // are time-anchored to the start of `generating`; on completion the
+  // stage resets so the next run starts fresh.
+  useEffect(() => {
+    if (!generating) {
+      setLoadingStage(0)
+      return
+    }
+    const startedAt = Date.now()
+    setLoadingStage(0)
+    const tick = () => {
+      const elapsed = Date.now() - startedAt
+      let idx = 0
+      for (let i = 0; i < LOADING_STAGES.length; i++) {
+        if (elapsed >= LOADING_STAGES[i].at_ms) idx = i
+      }
+      setLoadingStage(idx)
+    }
+    const id = window.setInterval(tick, 1000)
+    return () => window.clearInterval(id)
+  }, [generating])
 
   // Reset the evidence drawer whenever the active idea changes — without
   // this, switching slides while evidence is open animates two layouts at
@@ -248,7 +284,6 @@ export function ProjectIdeasHome() {
                 border: '1px solid rgba(var(--brand-primary-rgb), 0.4)',
               }}
             >
-              <Sparkles className="h-4 w-4" />
               <span className="text-sm tracking-wide">show me ideas</span>
             </button>
             {error && (
@@ -258,25 +293,49 @@ export function ProjectIdeasHome() {
         )}
 
         {generating && (
-          <div className="flex items-center justify-center py-10 text-center">
-            <div>
-              <Sparkles
-                className="h-5 w-5 mx-auto mb-3 animate-pulse"
-                style={{ color: 'rgb(var(--brand-primary-rgb))' }}
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            {/* Slow shimmer rule — visual anchor while we wait. The
+                background gradient cycles ~3s and the rule itself is
+                offset to feel like a wave rolling across the surface. */}
+            <div
+              className="relative w-48 h-[2px] overflow-hidden mb-8"
+              style={{ background: 'rgba(var(--brand-primary-rgb), 0.12)' }}
+            >
+              <motion.div
+                className="absolute top-0 left-0 h-full w-1/3"
+                style={{
+                  background: 'linear-gradient(90deg, transparent, rgb(var(--brand-primary-rgb)), transparent)',
+                }}
+                animate={{ x: ['-100%', '300%'] }}
+                transition={{ duration: 2.4, ease: 'easeInOut', repeat: Infinity }}
               />
-              <p
-                className="text-[12px] uppercase tracking-[0.22em] italic"
-                style={{ color: 'var(--brand-text-muted)' }}
-              >
-                synthesising across your data…
-              </p>
-              <p
-                className="text-[10px] tracking-[0.16em] uppercase mt-2 opacity-60"
-                style={{ color: 'var(--brand-text-muted)' }}
-              >
-                this can take ~30 seconds
-              </p>
             </div>
+
+            {/* Cross-fade the staged copy as elapsed time crosses each
+                threshold. The list of stages is defined alongside the
+                component so it's easy to tune. */}
+            <div className="relative h-6 mb-2 w-full max-w-xs">
+              <AnimatePresence mode="wait">
+                <motion.p
+                  key={loadingStage}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                  className="absolute inset-0 text-[12px] uppercase tracking-[0.22em] italic"
+                  style={{ color: 'var(--brand-text-muted)' }}
+                >
+                  {LOADING_STAGES[loadingStage]?.line ?? LOADING_STAGES[0].line}…
+                </motion.p>
+              </AnimatePresence>
+            </div>
+
+            <p
+              className="text-[10px] tracking-[0.16em] uppercase mt-1 opacity-50"
+              style={{ color: 'var(--brand-text-muted)' }}
+            >
+              ~30 seconds — synthesis is deep
+            </p>
           </div>
         )}
 

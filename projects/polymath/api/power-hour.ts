@@ -286,13 +286,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(200).json({ tasks: cachedTasks, cached: true })
         }
 
-        // 1b. Rate limiting: Check if we can regenerate this project
-        if (targetProject && !canRegenerateProject(targetProject)) {
-            console.log('[power-hour] Rate limited - regenerated too recently')
-            // Return empty or old cache with warning
+        // 1b. Rate limiting: only enforce when an explicit refresh was
+        // requested. A plain "start session" with no cache should always
+        // generate — surfacing a 429 with nothing usable means the user
+        // can't start their session at all, which is worse than the cost
+        // of a re-generation. The in-memory throttle only protects against
+        // duplicate work, so when no cache exists the throttle has nothing
+        // to protect.
+        if (isRefresh && targetProject && !canRegenerateProject(targetProject)) {
+            console.log('[power-hour] Refresh rate-limited - regenerated too recently')
             return res.status(429).json({
-                error: 'Power Hour for this project was regenerated recently. Please wait before refreshing again.',
-                cached: false
+                error: 'Just regenerated — try again in a minute.',
+                cached: false,
             })
         }
 
