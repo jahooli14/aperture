@@ -9,8 +9,6 @@
  *   5. What You're Consuming — active list items (compact)
  *   6. Thought of the Day — resurfaced memory quote
  *   7. Bedtime floating icon — appears after 9:30pm
- *
- * Witness-mode "noticed" surface lives behind a flag (useSelfModelFlag).
  */
 
 import React, { useEffect, useState } from 'react'
@@ -32,8 +30,6 @@ import { ThisWeekIdeas } from '../components/home/ThisWeekIdeas'
 import { UnshapedNudgeBar } from '../components/home/UnshapedNudgeBar'
 import { ThoughtOfTheDay } from '../components/home/ThoughtOfTheDay'
 import { BedtimeFloatingIcon } from '../components/home/BedtimeFloatingIcon'
-import { NoticingHome } from '../components/home/NoticingHome'
-import { useSelfModelFlag } from '../lib/useSelfModelFlag'
 import { UnauthHome } from '../components/onboarding/UnauthHome'
 import { AlertCircle, ArrowRight, Film, Music, Monitor, Book, MapPin, Gamepad2, Calendar, FileText, Quote, Box } from 'lucide-react'
 
@@ -121,7 +117,6 @@ export function HomePage() {
   const [createProjectOpen, setCreateProjectOpen] = useState(false)
   const [seedConversation, setSeedConversation] = useState<{ title: string; description: string } | undefined>()
   const [shapingProjectId, setShapingProjectId] = useState<string | null>(null)
-  const selfModelEnabled = useSelfModelFlag()
 
   const shapingProject = shapingProjectId
     ? useProjectStore.getState().allProjects.find(p => p.id === shapingProjectId) || null
@@ -197,12 +192,6 @@ export function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
           <YourHourHeader />
-
-          {selfModelEnabled && (
-            <div className="mb-8">
-              <NoticingHome />
-            </div>
-          )}
 
           {/* Keep Going */}
           <div className="mb-8">
