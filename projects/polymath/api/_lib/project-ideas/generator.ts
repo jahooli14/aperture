@@ -36,30 +36,36 @@ const MIN_SIGNALS = 8
 
 export async function generateProjectIdeas(gathered: GatherResult): Promise<GenerationResult> {
   if (gathered.total_signal_count < MIN_SIGNALS) {
+    console.log(`[project-ideas] insufficient_data: ${gathered.total_signal_count} signals (min ${MIN_SIGNALS})`)
     return { ideas: [], reason: 'insufficient_data', attempts: 0 }
   }
 
   const prompt = buildPrompt(gathered)
+  console.log(`[project-ideas] gather: ${gathered.total_signal_count} signals; prompt: ${prompt.length} chars`)
 
+  const t0 = Date.now()
   let raw: string
   try {
     raw = await generateText(prompt, {
-      model: MODELS.PRO,
+      model: MODELS.FLASH_CHAT,
       maxTokens: 8000,
       temperature: 0.85,
       responseFormat: 'json',
     })
   } catch (err) {
-    console.error('[project-ideas] Pro generation failed:', err)
+    console.error(`[project-ideas] Flash call threw after ${Date.now() - t0}ms:`, err)
     return { ideas: [], reason: 'parse_failure', attempts: 1 }
   }
+  console.log(`[project-ideas] Flash responded in ${Date.now() - t0}ms (${raw.length} chars)`)
 
   const ideas = parseAndValidate(raw, gathered)
   if (ideas.length === 0) {
-    console.warn('[project-ideas] Pro returned no valid ideas after parse')
+    // Log a preview so the next failure is debuggable from Vercel logs.
+    console.warn(`[project-ideas] no valid ideas after parse. raw preview: ${raw.slice(0, 800)}…`)
     return { ideas: [], reason: 'parse_failure', attempts: 1 }
   }
 
+  console.log(`[project-ideas] produced ${ideas.length} valid ideas`)
   return { ideas, attempts: 1 }
 }
 
@@ -271,7 +277,10 @@ function parseAndValidate(raw: string, gathered: GatherResult): ProjectIdea[] {
         excerpt: excerptOut,
       })
     }
-    if (evidence.length < 3) continue
+    // Be lenient (≥2) — better to ship a slightly thin idea than 0 ideas
+    // because of strict validation. The UI labels "from N signals" so
+    // small N is visible and self-correcting.
+    if (evidence.length < 2) continue
 
     out.push({
       rank: typeof item.rank === 'number' ? item.rank : nextRank,
