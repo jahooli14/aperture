@@ -48,7 +48,11 @@ export async function generateProjectIdeas(gathered: GatherResult): Promise<Gene
   try {
     raw = await generateText(prompt, {
       model: MODELS.FLASH_CHAT,
-      maxTokens: 8000,
+      // Flash is cheap; give the 3-phase prompt enough headroom that 15
+      // drafts + 15 reviews + 3 full ideas all fit comfortably. Earlier
+      // 8000-token budget was running out before the `ideas` array even
+      // started, leaving us with parseable drafts but no actual output.
+      maxTokens: 32000,
       temperature: 0.85,
       responseFormat: 'json',
     })
@@ -61,7 +65,13 @@ export async function generateProjectIdeas(gathered: GatherResult): Promise<Gene
   const ideas = parseAndValidate(raw, gathered)
   if (ideas.length === 0) {
     // Log a preview so the next failure is debuggable from Vercel logs.
-    console.warn(`[project-ideas] no valid ideas after parse. raw preview: ${raw.slice(0, 800)}…`)
+    // Long preview so we can see whether the JSON truncated, the ideas
+    // array was empty, or every idea got dropped by validation. Log in
+    // chunks because Vercel truncates very long single log lines.
+    console.warn(`[project-ideas] no valid ideas after parse. raw length: ${raw.length}`)
+    for (let i = 0; i < raw.length; i += 1500) {
+      console.warn(`[project-ideas] raw[${i}..]: ${raw.slice(i, i + 1500)}`)
+    }
     return { ideas: [], reason: 'parse_failure', attempts: 1 }
   }
 
@@ -184,7 +194,7 @@ For each of the 3 final ideas, output:
 
 ══════ HARD CONSTRAINTS ══════
 - Imperative verbs are FINE. Time estimates are FINE. Concrete artefact nouns are FINE (zine, walk, interview, shop, device, prototype, exhibition, etc.).
-- Every idea must cite at least 3 different evidence items, ideally spanning at least 2 different kinds.
+- Every idea must cite at least 2 different evidence items.
 - excerpt fields will be substring-checked against the real source text. If you can't quote verbatim, put a short label there and we'll fill it in.
 - If you genuinely cannot find 3 grounded ideas that pass cliché-check, return fewer (1 or 2). Padding is worse than silence.
 
