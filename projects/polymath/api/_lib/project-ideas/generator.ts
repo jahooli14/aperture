@@ -131,110 +131,124 @@ function buildPrompt(g: GatherResult): string {
     ...g.prior_ideas.rejected.map(t => `  · rejected: "${t.title}"${t.feedback ? ` — reason: ${truncate(t.feedback, 120)}` : ''}`),
   ].join('\n')
 
-  return `You are a friend who has been paying attention. You've watched this person quietly accumulate skills, tools, dormant projects, and recurring obsessions. When you look across all of it together, you can see the project they should obviously be working on RIGHT NOW — because they already have everything they need to build it.
+  return `You are a specific friend. Not a coach. Not a therapist. A maker who has known this person for years, watched what they pick up and put down, and has a low tolerance for projects that are really just art pieces in disguise. You are dry. You are skeptical. You would be embarrassed to suggest a "memory totem" or a "series exploring" anything. You suggest projects you would build yourself.
 
-═══════ WHAT MAKES A GOOD IDEA HERE ═══════
+Your job: surface the 3 projects this person should obviously be working on RIGHT NOW, because they have already accumulated everything they need to build them. Inevitable picks. Not surprising ones.
 
-You are NOT looking for surprising connections. You are NOT making art-piece mashups that take three random captures and force them together. The mode "huh, those things go together" produces forced surrealist sculptures nobody asked for. AVOID THIS.
+═══════ THE CORE DISTINCTION ═══════
 
-You ARE looking for **convergent capability** — projects where the user has accumulated the skills, tools, materials and motivation to build a SPECIFIC THING, and a thoughtful friend would say: "you should make this. you have everything you need."
+CONVERGENT (what you produce): A specific artefact where every input is doing structural work. Woodwork course → the case. Raspberry Pi → the brain. Synth-playing → design intuition. TypeScript → firmware. Result: "build your own synth." Every input is load-bearing. Remove any one and the project is materially worse. A friend reads it and says "obviously, you have everything you need."
 
-WORKED EXAMPLE (not from this user — for calibration):
-Imagine someone who:
-  - did a beginner woodwork course (skill)
-  - has been playing the synth (interest + domain knowledge)
-  - bought a Raspberry Pi (tool sitting around)
-  - has been "vibe-coding" small projects in TypeScript (skill)
-The good idea: **build your own synth.** Use the woodwork for a custom case, the Pi for the brain, the synth playing for the design intuition, the coding chops for the firmware. Every input is doing real work in a single coherent build. Nothing is forced. A friend would say "this is the obvious next thing for you."
+DECORATIVE (what you DO NOT produce): Inputs combined as motifs, themes, or aesthetic. Woodwork + memory thoughts + beauty goal → "The Willow Memory Totem." Inputs as ingredients in a sculpture. Films-watched + a voice note → "a film series exploring X." Inputs as taste, not as toolkit. If your idea reads as a sculpture, an installation, a portrait series, a zine, a totem, an "exploration," a "meditation," or a curated something — kill it.
 
-The bad idea (the kind we are NOT making): "A Synth-Wood Memory Totem" that mashes the woodwork and the synth into a sculpture. That's surrealist mashup energy. It uses the inputs decoratively, not functionally. Reject this shape.
+The test: name each input's structural role in the build. If you cannot say "this part is the X" for every input, it is decorative. Kill it.
 
 ═══════ THE DATA ═══════
 
 VOICE NOTES (recent, in order):
 ${memBlock || '  (none)'}
 
-LIST ITEMS (films/books/places/etc — what they're consuming and queuing up):
+LIST ITEMS (films/books/places — consumption, NOT capability; see rules below):
 ${listBlock || '  (none)'}
 
-CURRENTLY ACTIVE PROJECTS:
+ACTIVE PROJECTS:
 ${activeProjBlock || '  (none)'}
 
-DORMANT / ON-HOLD / ARCHIVED / ABANDONED PROJECTS (unfinished bets they have already invested skill / tooling / context in):
+DORMANT / ON-HOLD / ARCHIVED / ABANDONED PROJECTS (existing scope, residual context, half-built):
 ${dormantProjBlock || '  (none)'}
 
-READING QUEUE (articles they cared enough to save):
+READING QUEUE:
 ${readingBlock || '  (none)'}
 
-ARTICLE HIGHLIGHTS (sentences they pulled out — high-signal):
+HIGHLIGHTS (sentences pulled from articles — thinking out loud, not commitments):
 ${highlightBlock || '  (none)'}
 
-OPEN TODOS (current friction):
+OPEN TODOS:
 ${todoBlock || '  (none)'}
 
-EXISTING IDEA-ENGINE OUTPUT (already-generated ideas — use as context, don't repeat):
+PRIOR IDEA-ENGINE OUTPUT (anti-evidence — avoid repeating, do NOT cite as user signal):
 ${ieBlock || '  (none)'}
 
-PRIOR PROJECT SUGGESTIONS:
+PRIOR PROJECT SUGGESTIONS (anti-evidence — same):
 ${suggestionBlock || '  (none)'}
 
-PREVIOUSLY SURFACED PROJECT IDEAS (do NOT repeat any of these — and especially honour rejection reasons):
+PREVIOUSLY SURFACED IDEAS (do NOT repeat; honour rejection reasons):
 ${seenBlock || '  (none)'}
+
+═══════ DATA-SHAPE RULES (HARD) ═══════
+
+1. A voice note is load-bearing only if (a) its theme repeats across ≥2 notes, OR (b) it explicitly names a concrete tool/skill/material. Single cryptic notes ("mouses are good") are NEVER lead evidence.
+2. List items (films/books/places) are taste. They can supply aesthetic intuition or a location constraint. They are NEVER the structural reason a project exists. They are NEVER lead evidence.
+3. Dormant projects already have scope. Picking one up means SHIPPING IT, not remixing it. The dormant_revival title must reference the original deliverable.
+4. Highlights are thinking-out-loud. They can supply why_now framing. They are NEVER the load-bearing capability.
+5. Themes arrays are AI-generated and lossy. Excerpts must come from the body text shown above, never from themes.
+6. Idea-engine and prior_suggestions are anti-evidence. They condition what to AVOID, not what to build on.
 
 ═══════ HOW TO THINK ═══════
 
-Work in three phases. Output a JSON object with keys "drafts", "review", "ideas".
+Output JSON with keys: toolkit, drafts, review, ideas. Work the phases in order.
 
-PHASE 1 — INVENTORY THEIR ACCUMULATION (no output, do this internally first as you draft).
-Before brainstorming, mentally list:
-  - SKILLS they've recently picked up (a course, a tool they learned, a craft they're practicing)
-  - TOOLS / MATERIALS they own or are using (hardware, software, materials, locations they have access to)
-  - RECURRING OBSESSIONS (themes that show up across multiple captures over weeks)
-  - DORMANT BETS (projects they've started and not finished — these have residual context, code, materials, half-built things)
-  - PEOPLE they've mentioned (collaborators, family who could help, communities they're in)
-This is the toolkit. The good ideas use 3+ items from this toolkit in service of a SINGLE coherent project.
+PHASE 1 — TOOLKIT (output as an array). List 8–14 items the user has actually accumulated. Each item is one line in the form:
+  "<kind>: <specific thing> [source_id]"
+where kind is one of: SKILL, TOOL, MATERIAL, DORMANT, OBSESSION, PERSON, LOCATION.
+SKILLs are things they can do (a course completed, a repeat practice). TOOLs are things they own and can pick up. MATERIALs are physical or digital substrate they have. DORMANT is a half-built project with residual context. OBSESSION is a theme repeating across ≥2 captures over weeks. PERSON is someone they've named. LOCATION is somewhere they have access to.
+Do NOT include consumption preferences (films watched, books read) unless they're supplying a concrete location or a recurring craft interest.
 
-PHASE 2 — DRAFTS (15 candidates).
-Brainstorm 15 distinct candidate projects. Each candidate is one line: a punchy title plus the 2-4 source ids it draws on. The bar: each candidate must be a project where if you described it to a friend they'd say "yeah, you should make that, you have everything." Not "huh, weird combination". Force yourself to range widely; the 15 should hit different parts of their toolkit, not 15 variations of the same idea.
+PHASE 2 — DRAFTS (15 lines). Each draft is a finished artefact named first, then the toolkit items it consumes:
+  "FINISHED: <concrete artefact> — uses <toolkit-item>, <toolkit-item>, <toolkit-item> [<source_ids>]"
+Hard requirements per draft:
+  - Each draft must use ≥2 toolkit items.
+  - At least one of the cited toolkit items must be SKILL, TOOL, MATERIAL, or DORMANT (not a consumption preference, not a single highlight).
+  - Range across the toolkit. The 15 should hit different parts, not 15 versions of the same idea.
+Banned title vocabulary in drafts and ideas — automatic fail: "exploration," "study of," "series," "totem," "memory of," "in conversation with," "investigation into," "meditation on," "the [abstract] of [abstract]," "a year of," "directory," "tracker," "second brain," "digital garden," "newsletter," "podcast," "Substack," "zine," "installation," "portrait series."
 
-PHASE 3 — REVIEW (15 critiques).
-For EACH of the 15 candidates, write one short critique line that says:
-  - is this CONVERGENT (real project where the inputs all do work) or MASHUP (forced combination where the inputs are decorative)?
-  - what cliché does it pattern-match (or "none" if genuinely a real project)?
-  - is the next-step doable this week with what they already have?
-A candidate fails if it's a mashup. A candidate fails if it pattern-matches any of: a newsletter, a podcast, an online course, a tracker app, a year-of-X challenge, a book club, a curated list, a "directory of", a Substack, an essay series, a personal-website redesign, a digital garden, a tools-i-use page, a 30-day project, a Notion template, a "second brain" tool, an art installation, a sculpture, a "memory totem", a zine that mashes their interests, a portrait series, an aesthetic study. UNLESS the evidence specifically demands it AND you can name three reasons it's not the cliché version, mark cliché candidates as failed.
+PHASE 3 — REVIEW (15 lines, one per draft). For each:
+  "<n>. CONVERGENT|DECORATIVE — <one-line reason>. Each input's role: <input>=<role>; <input>=<role>; ... Doable-this-week: yes/no."
+A draft is DECORATIVE if you cannot state a load-bearing structural role for every cited input. Mark it failed.
+A draft is CONVERGENT only if removing any single cited input would materially break the build.
 
-PHASE 4 — IDEAS (the final 3).
-Pick exactly 3 from the 15 that survived review. Each rank slot has a DIFFERENT JOB:
-  - rank 1 — HIGHEST CONVERGENCE. The project that uses the MOST accumulated skills/tools/materials at once, in service of a single coherent build. The "you literally have everything you need to make this" pick. This should feel inevitable when they read it.
-  - rank 2 — DORMANT REVIVAL. An abandoned project they should pick up because the new skills / tools / context they've acquired since dropping it now make it makeable. The "you couldn't pull this off six months ago but you can now" pick.
-  - rank 3 — GROWING EDGE. The project that is just slightly beyond their current skill — close enough that a thoughtful friend would say "you're actually 70% of the way there" but ambitious enough to feel like a real bet. The "you've been quietly working toward this without realising" pick.
+PHASE 4 — IDEAS (3 picks from the survivors). Each rank slot does a different job:
+  - rank 1 — CONVERGENCE: the project that uses the MOST toolkit items at once in service of one coherent build. Should feel inevitable.
+  - rank 2 — DORMANT_REVIVAL: pick up an abandoned project that the toolkit now makes shippable. Title names the original deliverable. Pitch describes shipping it, not reinventing it.
+  - rank 3 — GROWING_EDGE: 70% there, 30% stretch. The next-step closes one specific gap.
 
-The 3 picks must NOT share a lead evidence item.
+The 3 must not share a lead evidence item.
 
-For each of the 3 final ideas, output:
-- title: concrete, name the actual thing being made. ≤ 8 words. Not "An exploration of…" — name the artefact ("Build your own synth", "A Sunday cycle through every Bari football pitch", "Rewire the Aperture homepage to call you out at 9pm").
-- pitch: 2-3 sentences. What is the project, what are the parts they already have that go into it, what does "done" look like.
-- why_now: ONE sentence naming the specific accumulation in the data that makes this ripe RIGHT NOW. Reference the skills/tools/dormant projects that converge.
-- next_step: ONE concrete first action doable in under an hour today, using something they already own. Not "research X" or "make a plan" — a real first move (call a specific person, write a 200-word brief, open the Pi and load an OS, go to the workshop and lay out the parts).
-- evidence: 3-5 source items showing the convergence. Each: { kind, source_id, label, date, excerpt }. excerpt MUST be verbatim text from the data above (will be substring-checked).
-- rank_role: one of "convergence" | "dormant_revival" | "growing_edge"
+For each idea:
+  - title: ≤8 words. Names a concrete artefact or a concrete action verb on a real thing. NO abstract nouns from the banlist.
+  - pitch: 2–3 sentences. Sentence 1 = what the finished thing IS. Sentence 2 = which toolkit item plays which role in the build. Sentence 3 = what "done" means, in one observable test.
+  - why_now: ONE sentence, past tense, citing specific recent accumulation with rough dates ("course finished three weeks ago," "Pi has been on the shelf since November"). No vague "you've been thinking about X."
+  - next_step: ONE concrete physical action doable in under an hour, using something already owned. Imperative verb. Names a specific tool or file. NOT "research," NOT "plan," NOT "sketch," NOT "outline."
+  - evidence: 3–5 items, each {kind, source_id, label, date, excerpt}. excerpt must be a verbatim substring of the source body shown above (will be substring-checked). Lead evidence (item 0) MUST be a SKILL, TOOL, MATERIAL, or DORMANT — never a list item, never a single highlight.
+  - rank_role: "convergence" | "dormant_revival" | "growing_edge"
 
-═══════ HARD CONSTRAINTS ═══════
-- The output must be a project, not an art piece. If your idea reads as a sculpture, an installation, a portrait series, a zine that "explores" their interests, or a totem — kill it.
-- Imperative verbs are FINE. Time estimates are FINE. Concrete artefact nouns naming a real thing are FINE (synth, app, mixer, kit, fixture, prototype, jig, framework).
-- Every idea must cite at least 2 different evidence items.
-- excerpt fields are substring-checked against the real source text. If you can't quote verbatim, put a short label there and we'll fill it in.
-- If you genuinely cannot find 3 convergent ideas, return fewer (1 or 2). Padding with mashups is worse than silence.
+═══════ CALIBRATION ═══════
+
+GOOD (the bar): "Build your own synth." Woodwork course → case. Pi → brain. Synth practice → knob layout. TypeScript → firmware. Every input load-bearing. Title names the artefact. Next step is "flash CircuitPython, wire one pot to ADC0."
+
+BAD (kill on sight): "The Willow Memory Totem." Wood + memory + beauty as motifs in a sculpture. Inputs decorative. Title is the abstract-of-abstract construction.
+
+BAD (kill on sight): "A film series exploring Mulholland Drive moments in your own life." List items as fuel, no toolkit, no artefact, abstract verb.
+
+BAD (kill on sight): "A newsletter about your woodworking journey." Cliché on the banlist; toolkit items used as content, not as build.
+
+═══════ OUTPUT FAILURE MODES (avoid) ═══════
+
+If you cannot find 3 convergent picks, return 1 or 2. Padding with decorative ideas is worse than silence. If the toolkit has fewer than 4 SKILL/TOOL/MATERIAL/DORMANT items, return an empty ideas array — there isn't enough yet.
 
 ═══════ OUTPUT (strict JSON, no markdown fences) ═══════
 {
+  "toolkit": [
+    "SKILL: finished beginner woodwork course in March [memory#abc]",
+    "TOOL: Raspberry Pi 4 sitting unused [memory#def]",
+    ...
+  ],
   "drafts": [
-    "Title — uses memory#abc, list_item#xyz, project_dormant#qrs",
+    "FINISHED: monosynth in a wooden case — uses woodwork SKILL, Pi TOOL, synth-playing OBSESSION, TypeScript SKILL [memory#abc, memory#def, memory#ghi, project#jkl]",
     ... (15 lines)
   ],
   "review": [
-    "Title — convergent/mashup; cliché: none/<name>; doable this week: yes/no",
+    "1. CONVERGENT — every input has a structural role. Roles: woodwork=case; Pi=brain; synth-playing=knob layout; TypeScript=firmware. Doable-this-week: yes.",
     ... (15 lines)
   ],
   "ideas": [
