@@ -56,6 +56,10 @@ interface GenerateResponse {
   signal_count?: number
   attempts?: number
   took_ms?: number
+  // Cooldown response shape (HTTP 429 — the apiClient surfaces this as
+  // an error, but we also defensively check the parsed body).
+  retry_after_ms?: number
+  message?: string
 }
 
 const KIND_LABEL: Record<string, string> = {
@@ -108,24 +112,44 @@ export function ProjectIdeasHome() {
 
   useEffect(() => { void load() }, [load])
 
+  // Reset the evidence drawer whenever the active idea changes — without
+  // this, switching slides while evidence is open animates two layouts at
+  // once and looks janky on slow devices (notably Capacitor Android).
+  useEffect(() => { setShowEvidence(false) }, [activeIdx])
+
   const generate = useCallback(async () => {
     if (generating) return
     setGenerating(true)
     setError(null)
     haptic.medium()
     try {
-      const res = await api.post('utilities?resource=generate-project-ideas', {}) as GenerateResponse
+      // Pro synthesis call routinely runs ~30-50s. apiClient default is
+      // 30s; bump to 80s so the browser doesn't abort while the server
+      // is still finishing.
+      const res = await api.post(
+        'utilities?resource=generate-project-ideas',
+        {},
+        { timeout: 80_000 },
+      ) as GenerateResponse
       if (!res.ideas || res.ideas.length === 0) {
         if (res.reason === 'insufficient_data') {
-          setError('Not enough captured yet. Add a few voice notes or list items and try again.')
+          const have = typeof res.signal_count === 'number' ? res.signal_count : 0
+          setError(`You have ${have} captured signal${have === 1 ? '' : 's'} — the synthesiser needs at least 8 to find patterns. Add a few voice notes or list items and try again.`)
         } else {
-          setError('Nothing strong came back. Try again in a moment.')
+          setError('The synthesiser didn\'t find anything strong. Try again in a moment.')
         }
         return
       }
       await load()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Generation failed')
+      // The apiClient throws ApiError with .status === 429 on cooldown.
+      const e = err as { status?: number; message?: string; details?: { retry_after_ms?: number; message?: string } }
+      if (e?.status === 429) {
+        const retryS = Math.ceil((e.details?.retry_after_ms ?? 60_000) / 1000)
+        setError(e.details?.message ?? `Just generated — try again in ~${retryS}s.`)
+      } else {
+        setError(err instanceof Error ? err.message : 'Generation failed')
+      }
     } finally {
       setGenerating(false)
     }
@@ -351,7 +375,7 @@ export function ProjectIdeasHome() {
                       transition={{ duration: 0.3 }}
                       className="mt-4 space-y-2 overflow-hidden"
                     >
-                      {active.evidence.map((e, i) => (
+                      {(active.evidence ?? []).map((e, i) => (
                         <li
                           key={`${e.source_id}-${i}`}
                           className="text-[12px] leading-snug"

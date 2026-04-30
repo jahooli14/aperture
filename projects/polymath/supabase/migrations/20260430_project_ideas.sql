@@ -12,10 +12,13 @@
 -- pipeline ran into. The user can also manually trigger a fresh batch.
 --
 -- status flow:
---   pending   — generated, not yet seen / acted on
---   saved     — user kept this idea on the radar
---   rejected  — user said "not for me" (feeds ie_rejection_patterns)
---   built     — user shaped it into a real project
+--   pending     — generated, not yet seen / acted on
+--   saved       — user kept this idea on the radar
+--   rejected    — user said "not for me" (feedback the next batch)
+--   built       — user shaped it into a real project
+--   superseded  — pre-empted by a fresher batch before the user acted on
+--                 it. distinct from "rejected" so the next prompt doesn't
+--                 see a never-seen idea as "they hated this".
 create table if not exists project_ideas (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -27,7 +30,7 @@ create table if not exists project_ideas (
   next_step text not null,
   evidence jsonb not null default '[]'::jsonb,
   status text not null default 'pending'
-    check (status in ('pending', 'saved', 'rejected', 'built')),
+    check (status in ('pending', 'saved', 'rejected', 'built', 'superseded')),
   user_feedback text,
   generated_at timestamptz not null default now(),
   acted_on_at timestamptz

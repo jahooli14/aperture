@@ -39,7 +39,6 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       .select('id, title, body, themes, memory_type, created_at')
       .eq('user_id', userId)
       .gte('created_at', anchorSince)
-      .not('body', 'is', null)
       .order('created_at', { ascending: false })
       .limit(60),
     supabase
@@ -47,7 +46,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       .select('id, content, status, created_at, list_id, lists(title, type)')
       .eq('user_id', userId)
       .gte('created_at', anchorSince)
-      .in('status', ['active', 'queued', 'completed'])
+      .in('status', ['pending', 'active', 'completed'])
       .order('created_at', { ascending: false })
       .limit(80),
     supabase
@@ -61,7 +60,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       .from('projects')
       .select('id, title, description, status, updated_at')
       .eq('user_id', userId)
-      .in('status', ['paused', 'dormant', 'graveyard'])
+      .in('status', ['dormant', 'on-hold', 'archived', 'abandoned'])
       .order('updated_at', { ascending: false })
       .limit(15),
     supabase
@@ -84,19 +83,19 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       .from('project_suggestions')
       .select('id, title, status')
       .eq('user_id', userId)
-      .in('status', ['pending', 'rejected'])
+      .in('status', ['pending', 'dismissed', 'meh'])
       .order('created_at', { ascending: false })
       .limit(20),
     supabase
       .from('ie_ideas')
       .select('id, title, description, status, rejection_reason')
       .eq('user_id', userId)
-      .in('status', ['approved', 'pending', 'pending_review'])
+      .in('status', ['approved', 'pending', 'spark'])
       .order('created_at', { ascending: false })
       .limit(15),
     supabase
       .from('project_ideas')
-      .select('title, status')
+      .select('title, status, user_feedback')
       .eq('user_id', userId)
       .in('status', ['saved', 'rejected', 'built'])
       .order('generated_at', { ascending: false })
@@ -196,15 +195,19 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
     rejection_reason: i.rejection_reason as string | null,
   }))
 
-  const prior_idea_titles = {
-    saved: [] as string[],
-    rejected: [] as string[],
-    built: [] as string[],
+  const prior_ideas: GatherResult['prior_ideas'] = {
+    saved: [],
+    rejected: [],
+    built: [],
   }
-  for (const row of (priorIdeasRes.data ?? []) as Array<{ title: string; status: string }>) {
-    if (row.status === 'saved') prior_idea_titles.saved.push(row.title)
-    else if (row.status === 'rejected') prior_idea_titles.rejected.push(row.title)
-    else if (row.status === 'built') prior_idea_titles.built.push(row.title)
+  // Limit each bucket to 20 so a long history of rejections doesn't crowd
+  // out the saved/built signal in the prompt context.
+  const PER_BUCKET = 20
+  for (const row of (priorIdeasRes.data ?? []) as Array<{ title: string; status: string; user_feedback: string | null }>) {
+    const entry = { title: row.title, feedback: row.user_feedback }
+    if (row.status === 'saved' && prior_ideas.saved.length < PER_BUCKET) prior_ideas.saved.push(entry)
+    else if (row.status === 'rejected' && prior_ideas.rejected.length < PER_BUCKET) prior_ideas.rejected.push(entry)
+    else if (row.status === 'built' && prior_ideas.built.length < PER_BUCKET) prior_ideas.built.push(entry)
   }
 
   const total_signal_count =
@@ -226,7 +229,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
     todos,
     prior_suggestions,
     ie_ideas,
-    prior_idea_titles,
+    prior_ideas,
     total_signal_count,
   }
 }

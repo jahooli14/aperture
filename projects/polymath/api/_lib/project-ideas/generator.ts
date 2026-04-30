@@ -1,16 +1,31 @@
 /**
  * Generator — synthesises 3 ranked project ideas from a GatherResult.
  *
- * One LLM call, JSON-mode response. The prompt is the heart of this surface
- * and is deliberately doing the *opposite* of the noticing pipeline: it
- * names projects, includes concrete next steps, and isn't afraid of
- * imperative verbs. The user wants ideas to act on, not literary witness.
+ * Single Gemini Pro call (deeper reasoning than Flash for cross-domain
+ * synthesis), JSON-mode response. Pro is slower but the cost of a bland
+ * homepage is the user not trusting the surface — much more expensive
+ * than $0.20/run.
  *
- * Each idea is grounded in real captures (3-5 evidence items) so the user
- * can verify the system isn't fabricating connections. Evidence is matched
- * to the gathered data by source-id; if the LLM invents an id, that
- * evidence is dropped silently — the idea still ships if it has at least
- * 2 surviving evidence rows.
+ * Time budget on a 60s Vercel function: ~5s gather + ~40-50s Pro call +
+ * ~3s insert. No retry loop — a retry would push us past the ceiling and
+ * Pro at temperature 0.85 doesn't need it. Truncated JSON gets a salvage
+ * pass before we give up.
+ *
+ * Quality moves baked in (research-driven):
+ *   - Enumerate 15-20 candidate seeds first, then critique each, then
+ *     select 3. Single biggest evidence-backed lever for non-obvious
+ *     output (Wharton paper on AI idea diversity).
+ *   - Anti-pattern banlist on modal-mediocre tech-Twitter side projects
+ *     (newsletter, podcast, course, tracker app, "directory of", etc.).
+ *     Forces the model to NAME the cliché before allowing the candidate.
+ *   - Each rank slot has a different JOB: rank-1 is evidence-strongest,
+ *     rank-2 is highest cross-domain distance, rank-3 is highest novelty
+ *     vs prior surfaced ideas. So #2 and #3 aren't "slightly worse #1s".
+ *   - Rejection *reasons* (not just titles) are surfaced to the prompt
+ *     so the next batch is conditioned on why prior ideas missed.
+ *   - Evidence excerpts are verified server-side to substring-match the
+ *     real source body; LLM-fabricated quotes are replaced with the
+ *     actual text. This is the trust premise of the surface.
  */
 
 import { generateText } from '../gemini-chat.js'
@@ -18,7 +33,6 @@ import { MODELS } from '../models.js'
 import type { GatherResult, GenerationResult, IdeaEvidence, ProjectIdea } from './types.js'
 
 const MIN_SIGNALS = 8
-const MAX_RETRIES = 2
 
 export async function generateProjectIdeas(gathered: GatherResult): Promise<GenerationResult> {
   if (gathered.total_signal_count < MIN_SIGNALS) {
@@ -27,27 +41,26 @@ export async function generateProjectIdeas(gathered: GatherResult): Promise<Gene
 
   const prompt = buildPrompt(gathered)
 
-  let attempts = 0
-  let lastError: unknown = null
-  for (let i = 0; i <= MAX_RETRIES; i++) {
-    attempts++
-    try {
-      const raw = await generateText(prompt, {
-        model: MODELS.FLASH_CHAT,
-        maxTokens: 3500,
-        temperature: 0.85,
-        responseFormat: 'json',
-      })
-      const parsed = parseAndValidate(raw, gathered)
-      if (parsed.length > 0) return { ideas: parsed, attempts }
-    } catch (err) {
-      lastError = err
-      console.warn(`[project-ideas] generation attempt ${attempts} failed:`, err)
-    }
+  let raw: string
+  try {
+    raw = await generateText(prompt, {
+      model: MODELS.PRO,
+      maxTokens: 8000,
+      temperature: 0.85,
+      responseFormat: 'json',
+    })
+  } catch (err) {
+    console.error('[project-ideas] Pro generation failed:', err)
+    return { ideas: [], reason: 'parse_failure', attempts: 1 }
   }
 
-  console.error('[project-ideas] all attempts failed:', lastError)
-  return { ideas: [], reason: 'parse_failure', attempts }
+  const ideas = parseAndValidate(raw, gathered)
+  if (ideas.length === 0) {
+    console.warn('[project-ideas] Pro returned no valid ideas after parse')
+    return { ideas: [], reason: 'parse_failure', attempts: 1 }
+  }
+
+  return { ideas, attempts: 1 }
 }
 
 function buildPrompt(g: GatherResult): string {
@@ -93,15 +106,13 @@ function buildPrompt(g: GatherResult): string {
     `  suggestion#${s.id} [${s.status}] "${s.title}"`
   ).join('\n')
 
-  const seenTitles = [
-    ...g.prior_idea_titles.saved.map(t => `  · saved: "${t}"`),
-    ...g.prior_idea_titles.rejected.map(t => `  · rejected: "${t}"`),
-    ...g.prior_idea_titles.built.map(t => `  · built: "${t}"`),
-  ].slice(0, 30).join('\n')
+  const seenBlock = [
+    ...g.prior_ideas.built.map(t => `  · BUILT: "${t.title}"${t.feedback ? ` — note: ${truncate(t.feedback, 120)}` : ''}`),
+    ...g.prior_ideas.saved.map(t => `  · saved: "${t.title}"${t.feedback ? ` — note: ${truncate(t.feedback, 120)}` : ''}`),
+    ...g.prior_ideas.rejected.map(t => `  · rejected: "${t.title}"${t.feedback ? ` — reason: ${truncate(t.feedback, 120)}` : ''}`),
+  ].join('\n')
 
-  return `You are surfacing project ideas for a polymath who captures voice notes, list items, articles, and projects across many domains. The system has gathered everything they've recently touched. Your job: read across all of it and propose THREE distinct project ideas they should be working on — ideas they probably haven't had themselves, that only this specific person could uniquely make.
-
-Each idea must be grounded in real evidence from the data below (cite specific source ids), have a concrete first step, and earn its place in the top 3 by being non-obvious. Do not propose ideas that are restatements of what they're already doing, or that they have already considered (see "previously surfaced ideas" — never repeat those).
+  return `You are a curator with taste — a friend who has watched this person capture and abandon many things, and is allergic to the obvious side-project clichés. You are looking at the data below and your job is to surface THREE project ideas that this specific person should be working on but probably hasn't thought of themselves. Three ideas only they could uniquely make, with evidence in their own captures.
 
 ══════ THE DATA ══════
 
@@ -114,7 +125,7 @@ ${listBlock || '  (none)'}
 CURRENTLY ACTIVE PROJECTS:
 ${activeProjBlock || '  (none)'}
 
-DORMANT / PAUSED / GRAVEYARD PROJECTS (these are unfinished bets — fertile ground for revival or remix):
+DORMANT / ON-HOLD / ARCHIVED / ABANDONED PROJECTS (unfinished bets — fertile ground for revival or remix):
 ${dormantProjBlock || '  (none)'}
 
 READING QUEUE (articles they cared enough to save):
@@ -132,38 +143,59 @@ ${ieBlock || '  (none)'}
 PRIOR PROJECT SUGGESTIONS:
 ${suggestionBlock || '  (none)'}
 
-PREVIOUSLY SURFACED PROJECT IDEAS (do not repeat any of these):
-${seenTitles || '  (none)'}
+PREVIOUSLY SURFACED PROJECT IDEAS (do NOT repeat any of these — and especially honour rejection reasons):
+${seenBlock || '  (none)'}
 
-══════ YOUR TASK ══════
+══════ HOW TO THINK ══════
 
-Generate exactly 3 project ideas, ranked 1-3 by how strongly the evidence supports them and how surprised the user might be that this idea exists in their data.
+Work in three phases. Output a JSON object with keys "drafts", "review", "ideas".
 
-For each idea, output:
-- title: punchy, ≤ 8 words. Concrete, not abstract. ("A field guide to disused cinemas in your borough" beats "A photography project")
-- pitch: 2-3 sentences explaining what the project is. Specific scope. Implies what "done" might look like.
-- why_now: ONE sentence naming the specific pattern in the data that makes this idea ripe right now. Reference what they captured, not generic statements about their interests.
-- next_step: ONE concrete first action they could do today or this week. Not "research X" or "make a plan" — a real first move (a phone call, a draft, a walk, a list of N specific things, an email to a specific kind of person).
-- evidence: an array of 3-5 source items from the data above. Each item: { kind, source_id, label, date, excerpt }
-   - kind ∈ ["memory", "list_item", "project", "project_dormant", "reading", "highlight", "todo", "suggestion", "idea_engine"]
-   - source_id MUST match one of the ids you saw above (the bit after #)
-   - label: a short human label ("voice note", "film list item", "dormant project: X", "highlight from Y")
-   - date: the date shown above for that item
-   - excerpt: the actual content text from the data (≤ 180 chars), verbatim where possible
+PHASE 1 — DRAFTS (15 candidates).
+Brainstorm 15 distinct candidate ideas. Each candidate is one line: a punchy title plus the 2-3 source ids it draws on. Lean into cross-domain intersections — the interesting ideas live where two unrelated captures meet (a voice note about X plus a film queued plus a dormant project about Y produces an idea none alone would suggest). Force yourself to range widely; don't just list 15 variations of the strongest signal. Repetition or near-duplicates within the 15 wastes your own budget.
 
-RULES:
-- Lean into cross-domain intersections. The interesting ideas live where two unrelated captures meet — a voice note about X plus a film they queued plus a dormant project about Y produces an idea none of those alone would suggest.
-- A dormant project is a clue, not a constraint. The new idea can pick up its thread, remix it, or use its leftovers — but should not just re-propose finishing it as-is.
-- The next_step must be doable in under an hour with no special equipment. If you can't picture them physically doing it, rewrite it.
-- Every idea must cite at least 3 different evidence items, ideally spanning at least 2 different kinds (e.g. memory + list_item, not 3 memories).
-- Imperative verbs are FINE. Time estimates are FINE. Concrete artefact nouns ("zine", "newsletter", "playlist", "walk", "interview", "shop", "device") are FINE.
-- If you genuinely cannot find 3 grounded ideas, return fewer (1 or 2). Do not pad with weak ideas.
+PHASE 2 — REVIEW (15 critiques).
+For EACH of the 15 candidates, write one short critique line that says:
+  - what cliché it pattern-matches (or "none" if genuinely original), AND
+  - whether the evidence actually supports it (not just "they like X" — does the evidence point at THIS specific project?), AND
+  - one sentence on why it would or would not surprise the user.
+A candidate fails the cliché check if it pattern-matches any of: a newsletter, a podcast, an online course, a tracker app, a year-of-X challenge, a book club, a curated list, a "directory of", a Substack, an essay series, a personal-website redesign, a digital garden, a tools-i-use page, a 30-day project, a Notion template, a "second brain" tool. UNLESS the evidence specifically demands it AND you can name three reasons it's not the cliché version, mark cliché candidates as failed.
 
-OUTPUT FORMAT (strict JSON, no markdown):
+PHASE 3 — IDEAS (the final 3).
+Pick exactly 3 from the 15. Each rank slot has a DIFFERENT JOB:
+  - rank 1 — EVIDENCE-STRONGEST. The idea where the evidence in their own data is the most undeniable. The "you'll agree this is in your data" pick. Most concrete.
+  - rank 2 — HIGHEST CROSS-DOMAIN DISTANCE. The idea drawn from the most unrelated captures (a film + a voice note + a dormant project from different worlds). The "huh, those things go together" pick.
+  - rank 3 — HIGHEST NOVELTY VS PRIOR. The idea that is most unlike anything in PREVIOUSLY SURFACED PROJECT IDEAS or the IDEA-ENGINE OUTPUT. The "where did that come from" pick.
+
+The 3 picks must NOT share a lead evidence item, and must NOT both pattern-match the same artefact noun. If your initial 3 violate this, swap.
+
+For each of the 3 final ideas, output:
+- title: punchy, ≤ 8 words. Concrete, not abstract.
+- pitch: 2-3 sentences. Specific scope; implies what "done" looks like.
+- why_now: ONE sentence naming the exact pattern in the data that makes this ripe RIGHT NOW. Reference what they captured.
+- next_step: ONE concrete first action doable in under an hour today. Not "research X" or "make a plan" — a real first move (a phone call to a specific kind of person, a 200-word draft, a 30-minute walk to a specific place, a list of N specific things).
+- evidence: 3-5 source items. Each: { kind, source_id, label, date, excerpt }. excerpt MUST be verbatim text from the data above (will be checked).
+- rank_role: one of "evidence_strongest" | "cross_domain" | "novelty"
+
+══════ HARD CONSTRAINTS ══════
+- Imperative verbs are FINE. Time estimates are FINE. Concrete artefact nouns are FINE (zine, walk, interview, shop, device, prototype, exhibition, etc.).
+- Every idea must cite at least 3 different evidence items, ideally spanning at least 2 different kinds.
+- excerpt fields will be substring-checked against the real source text. If you can't quote verbatim, put a short label there and we'll fill it in.
+- If you genuinely cannot find 3 grounded ideas that pass cliché-check, return fewer (1 or 2). Padding is worse than silence.
+
+══════ OUTPUT (strict JSON, no markdown fences) ══════
 {
+  "drafts": [
+    "Title — uses memory#abc, list_item#xyz, project_dormant#qrs",
+    ... (15 lines)
+  ],
+  "review": [
+    "Title — cliché: none/<name>; evidence: yes/no because ...; surprise: ...",
+    ... (15 lines)
+  ],
   "ideas": [
     {
       "rank": 1,
+      "rank_role": "evidence_strongest",
       "title": "...",
       "pitch": "...",
       "why_now": "...",
@@ -171,13 +203,16 @@ OUTPUT FORMAT (strict JSON, no markdown):
       "evidence": [
         { "kind": "memory", "source_id": "...", "label": "...", "date": "YYYY-MM-DD", "excerpt": "..." }
       ]
-    }
+    },
+    { "rank": 2, "rank_role": "cross_domain", ... },
+    { "rank": 3, "rank_role": "novelty", ... }
   ]
 }`
 }
 
 interface RawIdea {
   rank?: number
+  rank_role?: string
   title?: string
   pitch?: string
   why_now?: string
@@ -198,40 +233,45 @@ const VALID_KINDS = new Set([
 ])
 
 function parseAndValidate(raw: string, gathered: GatherResult): ProjectIdea[] {
-  let payload: { ideas?: RawIdea[] }
-  try {
-    payload = JSON.parse(raw)
-  } catch {
-    // Sometimes the model wraps JSON in a fenced block despite the
-    // response_mime_type. Strip and retry once.
-    const stripped = raw.trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '')
-    payload = JSON.parse(stripped)
-  }
-  if (!payload?.ideas || !Array.isArray(payload.ideas)) return []
+  const payload = robustJsonParse(raw)
+  if (!payload || typeof payload !== 'object') return []
+  const ideasRaw = (payload as { ideas?: RawIdea[] }).ideas
+  if (!Array.isArray(ideasRaw)) return []
 
-  const knownIds = collectKnownIds(gathered)
+  // Build lookup tables of real source content for excerpt verification.
+  // The validator replaces fabricated excerpts with the real text rather
+  // than dropping the evidence — preserves the citation, kills the lie.
+  const sourceLookup = buildSourceLookup(gathered)
 
   const out: ProjectIdea[] = []
   let nextRank = 1
-  for (const item of payload.ideas) {
+  const usedLeadEvidence = new Set<string>()
+
+  for (const item of ideasRaw) {
     if (!item.title || !item.pitch || !item.next_step || !item.why_now) continue
     if (!Array.isArray(item.evidence)) continue
 
     const evidence: IdeaEvidence[] = []
+    const seenSources = new Set<string>()
     for (const e of item.evidence) {
       if (!e.kind || !e.source_id || !VALID_KINDS.has(e.kind)) continue
-      // Drop fabricated ids — only keep evidence whose source_id matches
-      // something we actually showed the model.
-      if (!knownIds.has(e.source_id)) continue
+      const real = sourceLookup.get(e.source_id)
+      if (!real) continue // fabricated id
+      if (seenSources.has(e.source_id)) continue // dedupe within an idea
+      seenSources.add(e.source_id)
+
+      const labelOut = (e.label ?? '').slice(0, 120) || real.label
+      const dateOut = real.date || (e.date ?? '').slice(0, 32)
+      const excerptOut = verifyOrReplaceExcerpt(e.excerpt ?? '', real.body)
       evidence.push({
         kind: e.kind as IdeaEvidence['kind'],
         source_id: e.source_id,
-        label: (e.label ?? '').slice(0, 120) || labelForKind(e.kind),
-        date: (e.date ?? '').slice(0, 32),
-        excerpt: (e.excerpt ?? '').slice(0, 220),
+        label: labelOut,
+        date: dateOut,
+        excerpt: excerptOut,
       })
     }
-    if (evidence.length < 2) continue
+    if (evidence.length < 3) continue
 
     out.push({
       rank: typeof item.rank === 'number' ? item.rank : nextRank,
@@ -245,38 +285,100 @@ function parseAndValidate(raw: string, gathered: GatherResult): ProjectIdea[] {
     if (out.length >= 3) break
   }
 
-  // Sort by rank then renumber 1..N to keep ranks contiguous.
-  out.sort((a, b) => a.rank - b.rank)
-  return out.map((idea, i) => ({ ...idea, rank: i + 1 }))
-}
-
-function collectKnownIds(g: GatherResult): Set<string> {
-  const ids = new Set<string>()
-  for (const m of g.memories) ids.add(m.id)
-  for (const li of g.list_items) ids.add(li.id)
-  for (const p of g.active_projects) ids.add(p.id)
-  for (const p of g.dormant_projects) ids.add(p.id)
-  for (const r of g.reading) ids.add(r.id)
-  for (const h of g.highlights) ids.add(h.id)
-  for (const t of g.todos) ids.add(t.id)
-  for (const s of g.prior_suggestions) ids.add(s.id)
-  for (const i of g.ie_ideas) ids.add(i.id)
-  return ids
-}
-
-function labelForKind(kind: string): string {
-  switch (kind) {
-    case 'memory': return 'voice note'
-    case 'list_item': return 'list item'
-    case 'project': return 'project'
-    case 'project_dormant': return 'dormant project'
-    case 'reading': return 'article'
-    case 'highlight': return 'highlight'
-    case 'todo': return 'todo'
-    case 'suggestion': return 'suggestion'
-    case 'idea_engine': return 'idea-engine entry'
-    default: return kind
+  // Forced diversity: if two finalists share their lead evidence, demote
+  // the later one. Cheap last-line defence beyond the prompt's own rule.
+  const filtered: ProjectIdea[] = []
+  for (const idea of out.sort((a, b) => a.rank - b.rank)) {
+    const lead = idea.evidence[0]?.source_id
+    if (lead && usedLeadEvidence.has(lead)) continue
+    if (lead) usedLeadEvidence.add(lead)
+    filtered.push(idea)
   }
+  return filtered.map((idea, i) => ({ ...idea, rank: i + 1 }))
+}
+
+interface SourceRow {
+  body: string
+  date: string
+  label: string
+}
+
+function buildSourceLookup(g: GatherResult): Map<string, SourceRow> {
+  const m = new Map<string, SourceRow>()
+  for (const r of g.memories) {
+    m.set(r.id, { body: `${r.title ?? ''} ${r.body}`.trim(), date: isoDate(r.created_at), label: 'voice note' })
+  }
+  for (const li of g.list_items) {
+    m.set(li.id, { body: li.content, date: isoDate(li.created_at), label: li.list_title ? `${li.list_type} list — ${li.list_title}` : `${li.list_type} list` })
+  }
+  for (const p of g.active_projects) {
+    m.set(p.id, { body: `${p.title} ${p.description ?? ''}`.trim(), date: isoDate(p.updated_at), label: `project: ${p.title}` })
+  }
+  for (const p of g.dormant_projects) {
+    m.set(p.id, { body: `${p.title} ${p.description ?? ''}`.trim(), date: isoDate(p.updated_at), label: `dormant project: ${p.title}` })
+  }
+  for (const r of g.reading) {
+    m.set(r.id, { body: `${r.title ?? ''} ${r.excerpt ?? ''}`.trim(), date: isoDate(r.created_at), label: r.title ? `article: ${r.title}` : 'article' })
+  }
+  for (const h of g.highlights) {
+    m.set(h.id, { body: h.quote, date: isoDate(h.created_at), label: h.article_title ? `highlight from ${h.article_title}` : 'highlight' })
+  }
+  for (const t of g.todos) {
+    m.set(t.id, { body: `${t.text} ${t.notes ?? ''}`.trim(), date: isoDate(t.created_at), label: 'todo' })
+  }
+  for (const s of g.prior_suggestions) {
+    m.set(s.id, { body: s.title, date: '', label: `suggestion: ${s.title}` })
+  }
+  for (const i of g.ie_ideas) {
+    m.set(i.id, { body: `${i.title} ${i.description}`.trim(), date: '', label: `idea-engine: ${i.title}` })
+  }
+  return m
+}
+
+/**
+ * If the LLM-supplied excerpt is a verbatim substring of the real source
+ * body (whitespace-normalised), keep it. Otherwise fall back to the real
+ * body, trimmed — the citation should never let the model put words in
+ * the user's mouth.
+ */
+function verifyOrReplaceExcerpt(claimed: string, body: string): string {
+  const normalisedBody = body.replace(/\s+/g, ' ').trim()
+  const normalisedClaim = claimed.replace(/\s+/g, ' ').trim()
+  if (normalisedClaim && normalisedClaim.length >= 8 && normalisedBody.toLowerCase().includes(normalisedClaim.toLowerCase())) {
+    return normalisedClaim.slice(0, 220)
+  }
+  return truncate(normalisedBody, 220)
+}
+
+/**
+ * Robust JSON parse with three salvage passes — Pro at 8000 tokens
+ * shouldn't truncate often, but when it does we'd rather ship 2 ideas
+ * than 0.
+ */
+function robustJsonParse(raw: string): unknown {
+  const trimmed = raw.trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '')
+  // Pass 1: full parse
+  try { return JSON.parse(trimmed) } catch { /* fall through */ }
+  // Pass 2: find the last balanced `}` and try parsing through there
+  const lastBrace = trimmed.lastIndexOf('}')
+  if (lastBrace > 0) {
+    try { return JSON.parse(trimmed.slice(0, lastBrace + 1)) } catch { /* fall through */ }
+  }
+  // Pass 3: extract just the "ideas" array if we can locate a clean
+  // closing `]` after `"ideas":` — covers truncation in the trailing
+  // metadata after the array.
+  const ideasIdx = trimmed.indexOf('"ideas"')
+  if (ideasIdx >= 0) {
+    const arrStart = trimmed.indexOf('[', ideasIdx)
+    const arrEnd = trimmed.lastIndexOf(']')
+    if (arrStart > 0 && arrEnd > arrStart) {
+      try {
+        const arr = JSON.parse(trimmed.slice(arrStart, arrEnd + 1))
+        return { ideas: arr }
+      } catch { /* fall through */ }
+    }
+  }
+  return null
 }
 
 function isoDate(s: string): string {

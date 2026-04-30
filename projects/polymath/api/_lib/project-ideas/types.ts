@@ -54,7 +54,11 @@ export interface GatherResult {
   todos: Array<{ id: string; text: string; notes: string | null; tags: string[]; created_at: string }>
   prior_suggestions: Array<{ id: string; title: string; status: string }>
   ie_ideas: Array<{ id: string; title: string; description: string; status: string; rejection_reason: string | null }>
-  prior_idea_titles: { saved: string[]; rejected: string[]; built: string[] }
+  prior_ideas: {
+    saved: Array<{ title: string; feedback: string | null }>
+    rejected: Array<{ title: string; feedback: string | null }>
+    built: Array<{ title: string; feedback: string | null }>
+  }
   total_signal_count: number
 }
 

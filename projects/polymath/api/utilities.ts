@@ -1328,32 +1328,38 @@ async function handleProjectIdeasGet(req: VercelRequest, res: VercelResponse) {
     if (!userId) return res.status(401).json({ error: 'Sign in to read your ideas' })
 
     const supabase = getSupabaseClient()
-    const { data, error } = await supabase
-      .from('project_ideas')
-      .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, status, user_feedback, generated_at, acted_on_at')
-      .eq('user_id', userId)
-      .in('status', ['pending', 'saved', 'built'])
-      .order('generated_at', { ascending: false })
-      .order('rank', { ascending: true })
-      .limit(15)
+    const [activeRes, anyRes] = await Promise.all([
+      supabase
+        .from('project_ideas')
+        .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, status, user_feedback, generated_at, acted_on_at')
+        .eq('user_id', userId)
+        .in('status', ['pending', 'saved', 'built'])
+        .order('generated_at', { ascending: false })
+        .order('rank', { ascending: true })
+        .limit(15),
+      supabase
+        .from('project_ideas')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId),
+    ])
 
-    if (error) {
-      console.error('[project-ideas] read failed:', error)
-      return res.status(500).json({ error: error.message })
+    if (activeRes.error) {
+      console.error('[project-ideas] read failed:', activeRes.error)
+      return res.status(500).json({ error: activeRes.error.message })
     }
 
-    // Group into batches and return only the latest non-empty batch's ideas
-    // (plus any saved/built items from older batches the user might still
-    // want to see). Simpler: return latest batch only; saved-ideas list is
-    // its own (future) page.
-    const rows = data ?? []
+    // Latest batch only — older saved/built items belong on a future
+    // "your ideas" page, not the homepage carousel.
+    const rows = activeRes.data ?? []
     const latestBatchId = rows[0]?.batch_id ?? null
     const latest = latestBatchId ? rows.filter(r => r.batch_id === latestBatchId) : []
 
     return res.status(200).json({
       ideas: latest,
       generated_at: latest[0]?.generated_at ?? null,
-      has_any: rows.length > 0,
+      // True if the user has EVER had a batch (including all-rejected).
+      // Drives the empty-state copy on the frontend.
+      has_any: (anyRes.count ?? 0) > 0,
     })
   } catch (err) {
     console.error('[project-ideas] error:', err)
@@ -1377,10 +1383,10 @@ async function handleProjectIdeasFeedback(req: VercelRequest, res: VercelRespons
     }
 
     const supabase = getSupabaseClient()
-    const update: Record<string, unknown> = {
-      status,
-      acted_on_at: status === 'pending' ? null : new Date().toISOString(),
-    }
+    const update: Record<string, unknown> = { status }
+    // Stamp acted_on_at on first transition out of pending; never reset it
+    // to null on revert (so analytics always know an idea was touched).
+    if (status !== 'pending') update.acted_on_at = new Date().toISOString()
     if (typeof feedback === 'string') update.user_feedback = feedback.slice(0, 1000)
     else if (feedback === null) update.user_feedback = null
 
@@ -1402,28 +1408,58 @@ async function handleProjectIdeasFeedback(req: VercelRequest, res: VercelRespons
   }
 }
 
+// Cooldown between manual regenerations. The Pro synthesis call costs
+// ~$0.20 and a frustrated user can otherwise hammer it. Cron path is
+// exempt — it can only fire once per scheduled run anyway.
+const GENERATION_COOLDOWN_MS = 60_000
+
 async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelResponse) {
   const started = Date.now()
   try {
-    // Two auth paths: signed-in user (manual regenerate from the UI) or
-    // bearer token from the GitHub Actions cron. Cron is single-tenant for
-    // now — uses IDEA_ENGINE_USER_ID like the rest of the polymath cron
-    // surface so we don't have to pick a user out of the DB.
-    let userId: string | null = await getUserId(req)
+    // Detect the cron bearer FIRST so we don't run the Supabase auth path
+    // on a token that obviously isn't a user JWT (which would log a
+    // confusing "Failed to verify token" line every cron run).
+    const auth = (req.headers['authorization'] || req.headers['Authorization' as 'authorization']) as string | undefined
+    const cronSecret = process.env.IDEA_ENGINE_SECRET
+    const isCronBearer = typeof auth === 'string' && !!cronSecret && auth === `Bearer ${cronSecret}`
+
+    let userId: string | null = null
     let viaCron = false
-    if (!userId) {
-      const auth = req.headers['authorization'] || req.headers['Authorization' as 'authorization']
-      const expected = process.env.IDEA_ENGINE_SECRET
-      if (typeof auth === 'string' && expected && auth === `Bearer ${expected}`) {
-        const cronUserId = process.env.IDEA_ENGINE_USER_ID
-        if (!cronUserId) return res.status(500).json({ error: 'IDEA_ENGINE_USER_ID not configured' })
-        userId = cronUserId
-        viaCron = true
-      }
+    if (isCronBearer) {
+      const cronUserId = process.env.IDEA_ENGINE_USER_ID
+      if (!cronUserId) return res.status(500).json({ error: 'IDEA_ENGINE_USER_ID not configured' })
+      userId = cronUserId
+      viaCron = true
+    } else {
+      userId = await getUserId(req)
     }
     if (!userId) return res.status(401).json({ error: 'Sign in to generate ideas' })
 
     const supabase = getSupabaseClient()
+
+    // Cooldown check — only on manual user-triggered runs. Reads the
+    // newest pending row's generated_at; if too recent, return 429 with
+    // the existing batch so the UI can hand back what's already there.
+    if (!viaCron) {
+      const { data: recent } = await supabase
+        .from('project_ideas')
+        .select('generated_at')
+        .eq('user_id', userId)
+        .eq('status', 'pending')
+        .order('generated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (recent?.generated_at) {
+        const ageMs = Date.now() - new Date(recent.generated_at).getTime()
+        if (ageMs < GENERATION_COOLDOWN_MS) {
+          return res.status(429).json({
+            error: 'cooldown',
+            retry_after_ms: GENERATION_COOLDOWN_MS - ageMs,
+            message: 'A fresh batch was just generated — try again in a minute.',
+          })
+        }
+      }
+    }
 
     const { gatherForIdeas } = await import('./_lib/project-ideas/gather.js')
     const gathered = await gatherForIdeas(supabase, userId)
@@ -1445,16 +1481,18 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
         ideas: [],
         reason: result.reason ?? 'no_ideas',
         attempts: result.attempts,
+        signal_count: gathered.total_signal_count,
         took_ms: Date.now() - started,
       })
     }
 
-    // Mark every prior pending idea from earlier batches as superseded so
-    // the homepage only shows the newest batch. Saved / built ideas are
-    // left intact.
+    // Mark every prior pending idea from earlier batches as 'superseded'
+    // — distinct from 'rejected' so the next prompt doesn't see a never-
+    // -seen idea as "the user hated this." Saved / built ideas are left
+    // intact.
     await supabase
       .from('project_ideas')
-      .update({ status: 'rejected', acted_on_at: new Date().toISOString() })
+      .update({ status: 'superseded' })
       .eq('user_id', userId)
       .eq('status', 'pending')
 
@@ -1476,7 +1514,7 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
     const { data: inserted, error: insertErr } = await supabase
       .from('project_ideas')
       .insert(rows)
-      .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, status, generated_at')
+      .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, status, user_feedback, generated_at, acted_on_at')
 
     if (insertErr) {
       console.error('[generate-project-ideas] insert failed:', insertErr)

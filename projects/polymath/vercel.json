@@ -45,7 +45,7 @@
       "maxDuration": 60
     },
     "api/utilities.ts": {
-      "maxDuration": 60
+      "maxDuration": 90
     }
   },
   "crons": [
