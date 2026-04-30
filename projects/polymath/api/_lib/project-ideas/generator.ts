@@ -18,9 +18,12 @@
  *   - Anti-pattern banlist on modal-mediocre tech-Twitter side projects
  *     (newsletter, podcast, course, tracker app, "directory of", etc.).
  *     Forces the model to NAME the cliché before allowing the candidate.
- *   - Each rank slot has a different JOB: rank-1 is evidence-strongest,
- *     rank-2 is highest cross-domain distance, rank-3 is highest novelty
- *     vs prior surfaced ideas. So #2 and #3 aren't "slightly worse #1s".
+ *   - Each rank slot has a different JOB: rank-1 is highest convergence
+ *     (uses the most accumulated skills/tools at once), rank-2 is dormant
+ *     revival (something they couldn't make six months ago), rank-3 is
+ *     growing edge (the next stretch). The reframe from "cross-domain
+ *     distance" was deliberate — that prompt produced forced surrealist
+ *     mashups, not real projects.
  *   - Rejection *reasons* (not just titles) are surfaced to the prompt
  *     so the next batch is conditioned on why prior ideas missed.
  *   - Evidence excerpts are verified server-side to substring-match the
@@ -128,9 +131,25 @@ function buildPrompt(g: GatherResult): string {
     ...g.prior_ideas.rejected.map(t => `  · rejected: "${t.title}"${t.feedback ? ` — reason: ${truncate(t.feedback, 120)}` : ''}`),
   ].join('\n')
 
-  return `You are a curator with taste — a friend who has watched this person capture and abandon many things, and is allergic to the obvious side-project clichés. You are looking at the data below and your job is to surface THREE project ideas that this specific person should be working on but probably hasn't thought of themselves. Three ideas only they could uniquely make, with evidence in their own captures.
+  return `You are a friend who has been paying attention. You've watched this person quietly accumulate skills, tools, dormant projects, and recurring obsessions. When you look across all of it together, you can see the project they should obviously be working on RIGHT NOW — because they already have everything they need to build it.
 
-══════ THE DATA ══════
+═══════ WHAT MAKES A GOOD IDEA HERE ═══════
+
+You are NOT looking for surprising connections. You are NOT making art-piece mashups that take three random captures and force them together. The mode "huh, those things go together" produces forced surrealist sculptures nobody asked for. AVOID THIS.
+
+You ARE looking for **convergent capability** — projects where the user has accumulated the skills, tools, materials and motivation to build a SPECIFIC THING, and a thoughtful friend would say: "you should make this. you have everything you need."
+
+WORKED EXAMPLE (not from this user — for calibration):
+Imagine someone who:
+  - did a beginner woodwork course (skill)
+  - has been playing the synth (interest + domain knowledge)
+  - bought a Raspberry Pi (tool sitting around)
+  - has been "vibe-coding" small projects in TypeScript (skill)
+The good idea: **build your own synth.** Use the woodwork for a custom case, the Pi for the brain, the synth playing for the design intuition, the coding chops for the firmware. Every input is doing real work in a single coherent build. Nothing is forced. A friend would say "this is the obvious next thing for you."
+
+The bad idea (the kind we are NOT making): "A Synth-Wood Memory Totem" that mashes the woodwork and the synth into a sculpture. That's surrealist mashup energy. It uses the inputs decoratively, not functionally. Reject this shape.
+
+═══════ THE DATA ═══════
 
 VOICE NOTES (recent, in order):
 ${memBlock || '  (none)'}
@@ -141,7 +160,7 @@ ${listBlock || '  (none)'}
 CURRENTLY ACTIVE PROJECTS:
 ${activeProjBlock || '  (none)'}
 
-DORMANT / ON-HOLD / ARCHIVED / ABANDONED PROJECTS (unfinished bets — fertile ground for revival or remix):
+DORMANT / ON-HOLD / ARCHIVED / ABANDONED PROJECTS (unfinished bets they have already invested skill / tooling / context in):
 ${dormantProjBlock || '  (none)'}
 
 READING QUEUE (articles they cared enough to save):
@@ -162,56 +181,66 @@ ${suggestionBlock || '  (none)'}
 PREVIOUSLY SURFACED PROJECT IDEAS (do NOT repeat any of these — and especially honour rejection reasons):
 ${seenBlock || '  (none)'}
 
-══════ HOW TO THINK ══════
+═══════ HOW TO THINK ═══════
 
 Work in three phases. Output a JSON object with keys "drafts", "review", "ideas".
 
-PHASE 1 — DRAFTS (15 candidates).
-Brainstorm 15 distinct candidate ideas. Each candidate is one line: a punchy title plus the 2-3 source ids it draws on. Lean into cross-domain intersections — the interesting ideas live where two unrelated captures meet (a voice note about X plus a film queued plus a dormant project about Y produces an idea none alone would suggest). Force yourself to range widely; don't just list 15 variations of the strongest signal. Repetition or near-duplicates within the 15 wastes your own budget.
+PHASE 1 — INVENTORY THEIR ACCUMULATION (no output, do this internally first as you draft).
+Before brainstorming, mentally list:
+  - SKILLS they've recently picked up (a course, a tool they learned, a craft they're practicing)
+  - TOOLS / MATERIALS they own or are using (hardware, software, materials, locations they have access to)
+  - RECURRING OBSESSIONS (themes that show up across multiple captures over weeks)
+  - DORMANT BETS (projects they've started and not finished — these have residual context, code, materials, half-built things)
+  - PEOPLE they've mentioned (collaborators, family who could help, communities they're in)
+This is the toolkit. The good ideas use 3+ items from this toolkit in service of a SINGLE coherent project.
 
-PHASE 2 — REVIEW (15 critiques).
+PHASE 2 — DRAFTS (15 candidates).
+Brainstorm 15 distinct candidate projects. Each candidate is one line: a punchy title plus the 2-4 source ids it draws on. The bar: each candidate must be a project where if you described it to a friend they'd say "yeah, you should make that, you have everything." Not "huh, weird combination". Force yourself to range widely; the 15 should hit different parts of their toolkit, not 15 variations of the same idea.
+
+PHASE 3 — REVIEW (15 critiques).
 For EACH of the 15 candidates, write one short critique line that says:
-  - what cliché it pattern-matches (or "none" if genuinely original), AND
-  - whether the evidence actually supports it (not just "they like X" — does the evidence point at THIS specific project?), AND
-  - one sentence on why it would or would not surprise the user.
-A candidate fails the cliché check if it pattern-matches any of: a newsletter, a podcast, an online course, a tracker app, a year-of-X challenge, a book club, a curated list, a "directory of", a Substack, an essay series, a personal-website redesign, a digital garden, a tools-i-use page, a 30-day project, a Notion template, a "second brain" tool. UNLESS the evidence specifically demands it AND you can name three reasons it's not the cliché version, mark cliché candidates as failed.
+  - is this CONVERGENT (real project where the inputs all do work) or MASHUP (forced combination where the inputs are decorative)?
+  - what cliché does it pattern-match (or "none" if genuinely a real project)?
+  - is the next-step doable this week with what they already have?
+A candidate fails if it's a mashup. A candidate fails if it pattern-matches any of: a newsletter, a podcast, an online course, a tracker app, a year-of-X challenge, a book club, a curated list, a "directory of", a Substack, an essay series, a personal-website redesign, a digital garden, a tools-i-use page, a 30-day project, a Notion template, a "second brain" tool, an art installation, a sculpture, a "memory totem", a zine that mashes their interests, a portrait series, an aesthetic study. UNLESS the evidence specifically demands it AND you can name three reasons it's not the cliché version, mark cliché candidates as failed.
 
-PHASE 3 — IDEAS (the final 3).
-Pick exactly 3 from the 15. Each rank slot has a DIFFERENT JOB:
-  - rank 1 — EVIDENCE-STRONGEST. The idea where the evidence in their own data is the most undeniable. The "you'll agree this is in your data" pick. Most concrete.
-  - rank 2 — HIGHEST CROSS-DOMAIN DISTANCE. The idea drawn from the most unrelated captures (a film + a voice note + a dormant project from different worlds). The "huh, those things go together" pick.
-  - rank 3 — HIGHEST NOVELTY VS PRIOR. The idea that is most unlike anything in PREVIOUSLY SURFACED PROJECT IDEAS or the IDEA-ENGINE OUTPUT. The "where did that come from" pick.
+PHASE 4 — IDEAS (the final 3).
+Pick exactly 3 from the 15 that survived review. Each rank slot has a DIFFERENT JOB:
+  - rank 1 — HIGHEST CONVERGENCE. The project that uses the MOST accumulated skills/tools/materials at once, in service of a single coherent build. The "you literally have everything you need to make this" pick. This should feel inevitable when they read it.
+  - rank 2 — DORMANT REVIVAL. An abandoned project they should pick up because the new skills / tools / context they've acquired since dropping it now make it makeable. The "you couldn't pull this off six months ago but you can now" pick.
+  - rank 3 — GROWING EDGE. The project that is just slightly beyond their current skill — close enough that a thoughtful friend would say "you're actually 70% of the way there" but ambitious enough to feel like a real bet. The "you've been quietly working toward this without realising" pick.
 
-The 3 picks must NOT share a lead evidence item, and must NOT both pattern-match the same artefact noun. If your initial 3 violate this, swap.
+The 3 picks must NOT share a lead evidence item.
 
 For each of the 3 final ideas, output:
-- title: punchy, ≤ 8 words. Concrete, not abstract.
-- pitch: 2-3 sentences. Specific scope; implies what "done" looks like.
-- why_now: ONE sentence naming the exact pattern in the data that makes this ripe RIGHT NOW. Reference what they captured.
-- next_step: ONE concrete first action doable in under an hour today. Not "research X" or "make a plan" — a real first move (a phone call to a specific kind of person, a 200-word draft, a 30-minute walk to a specific place, a list of N specific things).
-- evidence: 3-5 source items. Each: { kind, source_id, label, date, excerpt }. excerpt MUST be verbatim text from the data above (will be checked).
-- rank_role: one of "evidence_strongest" | "cross_domain" | "novelty"
+- title: concrete, name the actual thing being made. ≤ 8 words. Not "An exploration of…" — name the artefact ("Build your own synth", "A Sunday cycle through every Bari football pitch", "Rewire the Aperture homepage to call you out at 9pm").
+- pitch: 2-3 sentences. What is the project, what are the parts they already have that go into it, what does "done" look like.
+- why_now: ONE sentence naming the specific accumulation in the data that makes this ripe RIGHT NOW. Reference the skills/tools/dormant projects that converge.
+- next_step: ONE concrete first action doable in under an hour today, using something they already own. Not "research X" or "make a plan" — a real first move (call a specific person, write a 200-word brief, open the Pi and load an OS, go to the workshop and lay out the parts).
+- evidence: 3-5 source items showing the convergence. Each: { kind, source_id, label, date, excerpt }. excerpt MUST be verbatim text from the data above (will be substring-checked).
+- rank_role: one of "convergence" | "dormant_revival" | "growing_edge"
 
-══════ HARD CONSTRAINTS ══════
-- Imperative verbs are FINE. Time estimates are FINE. Concrete artefact nouns are FINE (zine, walk, interview, shop, device, prototype, exhibition, etc.).
+═══════ HARD CONSTRAINTS ═══════
+- The output must be a project, not an art piece. If your idea reads as a sculpture, an installation, a portrait series, a zine that "explores" their interests, or a totem — kill it.
+- Imperative verbs are FINE. Time estimates are FINE. Concrete artefact nouns naming a real thing are FINE (synth, app, mixer, kit, fixture, prototype, jig, framework).
 - Every idea must cite at least 2 different evidence items.
-- excerpt fields will be substring-checked against the real source text. If you can't quote verbatim, put a short label there and we'll fill it in.
-- If you genuinely cannot find 3 grounded ideas that pass cliché-check, return fewer (1 or 2). Padding is worse than silence.
+- excerpt fields are substring-checked against the real source text. If you can't quote verbatim, put a short label there and we'll fill it in.
+- If you genuinely cannot find 3 convergent ideas, return fewer (1 or 2). Padding with mashups is worse than silence.
 
-══════ OUTPUT (strict JSON, no markdown fences) ══════
+═══════ OUTPUT (strict JSON, no markdown fences) ═══════
 {
   "drafts": [
     "Title — uses memory#abc, list_item#xyz, project_dormant#qrs",
     ... (15 lines)
   ],
   "review": [
-    "Title — cliché: none/<name>; evidence: yes/no because ...; surprise: ...",
+    "Title — convergent/mashup; cliché: none/<name>; doable this week: yes/no",
     ... (15 lines)
   ],
   "ideas": [
     {
       "rank": 1,
-      "rank_role": "evidence_strongest",
+      "rank_role": "convergence",
       "title": "...",
       "pitch": "...",
       "why_now": "...",
@@ -220,8 +249,8 @@ For each of the 3 final ideas, output:
         { "kind": "memory", "source_id": "...", "label": "...", "date": "YYYY-MM-DD", "excerpt": "..." }
       ]
     },
-    { "rank": 2, "rank_role": "cross_domain", ... },
-    { "rank": 3, "rank_role": "novelty", ... }
+    { "rank": 2, "rank_role": "dormant_revival", ... },
+    { "rank": 3, "rank_role": "growing_edge", ... }
   ]
 }`
 }
