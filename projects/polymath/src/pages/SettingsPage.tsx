@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { Settings, Palette, Check, Bug, ToggleRight, ToggleLeft, Zap, RefreshCw, Search, Type, Bell, GitBranch, RotateCcw } from 'lucide-react'
+import { Settings, Palette, Check, Bug, ToggleRight, ToggleLeft, Zap, RefreshCw, Search, Type, Bell, GitBranch, RotateCcw, Sparkles } from 'lucide-react'
+import { useSelfModelFlag, setSelfModelFlag } from '../lib/useSelfModelFlag'
 import { api } from '../lib/apiClient'
 import { useThemeStore } from '../stores/useThemeStore'
 import { getAvailableColors, getColorPreview } from '../lib/theme'
@@ -24,6 +25,7 @@ const fontSizeOptions = [
 export function SettingsPage() {
   const navigate = useNavigate()
   const { accentColor, intensity, fontSize, showBugTracker, showRegenerateInsights, setAccentColor, setIntensity, setFontSize, setShowBugTracker, setShowRegenerateInsights } = useThemeStore()
+  const selfModelEnabled = useSelfModelFlag()
   const { addToast } = useToast()
   const [regenerating, setRegenerating] = useState(false)
   const [allowHandoff, setAllowHandoff] = useState(false)
@@ -504,6 +506,36 @@ export function SettingsPage() {
                 </div>
                 <div>
                   {showRegenerateInsights ? (
+                    <ToggleRight className="w-6 h-6" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
+                  ) : (
+                    <ToggleLeft className="w-6 h-6" style={{ color: 'var(--brand-text-muted)' }} />
+                  )}
+                </div>
+              </button>
+
+              {/* Self-model homepage — experimental A/B */}
+              <button
+                onClick={() => setSelfModelFlag(!selfModelEnabled)}
+                className="w-full flex items-center gap-4 p-4 rounded-xl backdrop-blur-xl transition-all text-left border hover:bg-[var(--glass-surface)]"
+                style={{
+                  background: 'var(--glass-surface)',
+                  borderColor: 'var(--glass-surface)',
+                }}
+              >
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'rgba(var(--brand-primary-rgb), 0.15)' }}>
+                  <Sparkles className="w-5 h-5" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold premium-text-platinum text-sm">
+                    "Noticed" homepage surface (experimental)
+                  </h3>
+                  <p style={{ color: 'var(--brand-text-secondary)', fontSize: '0.8rem' }}>
+                    A quiet witness panel at the top of home — two or three short sentences holding the through-line of what you've been capturing. No CTAs.
+                  </p>
+                </div>
+                <div>
+                  {selfModelEnabled ? (
                     <ToggleRight className="w-6 h-6" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
                   ) : (
                     <ToggleLeft className="w-6 h-6" style={{ color: 'var(--brand-text-muted)' }} />
