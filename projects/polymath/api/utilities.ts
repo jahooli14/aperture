@@ -13,9 +13,9 @@
  *   POST ?resource=onboarding-token         — Mint an ephemeral Live API token for the browser
  *   POST ?resource=onboarding-segment       — Re-read the full voice chat and cut it into coherent memory chunks
  *   POST ?resource=reset-onboarding         — Wipe all onboarding-origin artifacts so the user can redo it
- *   POST ?resource=noticing                  — Generate a witness-mode noticing (3-agent pipeline)
- *   POST ?resource=noticing-save             — Save / unsave a served noticing
- *   GET  ?resource=noticing-thread           — List the user's saved noticings
+ *   GET  ?resource=project-ideas             — Latest batch of generated project ideas
+ *   POST ?resource=project-ideas-feedback    — Mark an idea saved/rejected/built
+ *   POST ?resource=generate-project-ideas    — Generate a fresh batch (cron + manual)
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
@@ -91,16 +91,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return handleSessionBrief(req, res)
   }
 
-  if (req.method === 'POST' && resource === 'noticing') {
-    return handleNoticing(req, res)
+  if (req.method === 'GET' && resource === 'project-ideas') {
+    return handleProjectIdeasGet(req, res)
   }
 
-  if (req.method === 'POST' && resource === 'noticing-save') {
-    return handleNoticingSave(req, res)
+  if (req.method === 'POST' && resource === 'project-ideas-feedback') {
+    return handleProjectIdeasFeedback(req, res)
   }
 
-  if (req.method === 'GET' && resource === 'noticing-thread') {
-    return handleNoticingThread(req, res)
+  if (req.method === 'POST' && resource === 'generate-project-ideas') {
+    return handleGenerateProjectIdeas(req, res)
   }
 
   return res.status(404).json({ error: 'Not found' })
@@ -1315,232 +1315,196 @@ Return JSON only:
 }
 
 
-// ── Noticing — witness-mode home surface ─────────────────────────────────
-// Three-agent pipeline (Historian → Noticer → Writer) with deterministic
-// forbidden-shapes filter. The output is a "noticing" — 2–3 short sentences
-// that hold the user's through-line. No CTAs, no time estimates, no artefact
-// nouns. Silence is an acceptable output.
-//
-//   POST ?resource=noticing
-//     body: { mode?: 'fresh' | 'resume', critique?: string, exclude_keys?: string[] }
-//     - 'resume' (default) returns the most recent served noticing if it's
-//       under 18h old; the screen should feel inhabited, not empty.
-//     - 'fresh' forces a new generation, excluding the most recent served
-//       noticing's source keys.
-//     - 'critique' is user pushback ("doesn't read true"); regenerates with
-//       different evidence.
-//
-//   POST ?resource=noticing-save  body: { id, saved }
-//   GET  ?resource=noticing-thread
-//
-// The full design is in docs/architecture (or the redesign branch's commit
-// message); this file is the route layer. The agent prompts live in
-// api/_lib/noticing/.
+// ── Project Ideas — homepage headline surface ─────────────────────────────
+// Cron-driven generator that produces a weekly batch of 3 ranked project
+// ideas synthesised from everything the user has captured. Homepage GET is
+// a fast DB read; POST generate-project-ideas runs the full pipeline (~30s)
+// and is callable by the user manually or by cron with the bearer token
+// IDEA_ENGINE_SECRET. Feedback writes status changes for each idea.
 
-const RESUME_WINDOW_HOURS = 18
-
-type NoticingShape = 'observation' | 'commission'
-
-interface StoredNoticing {
-  id: string
-  user_id: string
-  lines: string[]
-  shape: NoticingShape
-  source_keys: string[]
-  source_meta: Array<{ kind: string; source_id: string; label: string; date: string; excerpt?: string }>
-  saved: boolean
-  served_at: string
-  saved_at: string | null
-}
-
-async function handleNoticing(req: VercelRequest, res: VercelResponse) {
-  const started = Date.now()
+async function handleProjectIdeasGet(req: VercelRequest, res: VercelResponse) {
   try {
     const userId = await getUserId(req)
-    if (!userId) return res.status(401).json({ error: 'Sign in to read your noticing' })
-
-    const body = (req.body ?? {}) as {
-      mode?: 'fresh' | 'resume'
-      critique?: string
-      exclude_keys?: string[]
-    }
-    const mode = body.mode ?? 'resume'
-    const critique = typeof body.critique === 'string' && body.critique.trim().length > 0
-      ? body.critique.trim()
-      : undefined
+    if (!userId) return res.status(401).json({ error: 'Sign in to read your ideas' })
 
     const supabase = getSupabaseClient()
+    const { data, error } = await supabase
+      .from('project_ideas')
+      .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, status, user_feedback, generated_at, acted_on_at')
+      .eq('user_id', userId)
+      .in('status', ['pending', 'saved', 'built'])
+      .order('generated_at', { ascending: false })
+      .order('rank', { ascending: true })
+      .limit(15)
 
-    // Resume: hand back the most recent served noticing if it's young enough
-    // and the user didn't ask for fresh. Re-reading is a feature.
-    if (mode === 'resume' && !critique) {
-      const recent = await readMostRecentNoticing(supabase, userId)
-      if (recent && noticingAgeHours(recent) < RESUME_WINDOW_HOURS) {
-        return res.status(200).json({
-          noticing: serialiseNoticing(recent),
-          resumed: true,
-          took_ms: Date.now() - started,
-        })
-      }
+    if (error) {
+      console.error('[project-ideas] read failed:', error)
+      return res.status(500).json({ error: error.message })
     }
 
-    // Build the exclude set: anything the client passed plus, if mode=fresh,
-    // the most recent served noticing's source keys (so refresh actually
-    // moves the read).
-    const excludeKeys = new Set<string>(Array.isArray(body.exclude_keys) ? body.exclude_keys : [])
-    if (mode === 'fresh') {
-      const recent = await readMostRecentNoticing(supabase, userId)
-      if (recent) recent.source_keys.forEach(k => excludeKeys.add(k))
-    }
-
-    const { orchestrate } = await import('./_lib/noticing/orchestrator.js')
-    const result = await orchestrate({ supabase, userId, excludeKeys, critique })
-
-    if (!result.noticing) {
-      // Soft-fail: if there's a stored noticing, hand that back rather than
-      // showing the user an empty surface.
-      const recent = await readMostRecentNoticing(supabase, userId)
-      if (recent) {
-        return res.status(200).json({
-          noticing: serialiseNoticing(recent),
-          resumed: true,
-          reason: result.reason,
-          sources_seen: result.sources_seen,
-          took_ms: Date.now() - started,
-        })
-      }
-      return res.status(200).json({
-        noticing: null,
-        reason: result.reason,
-        sources_seen: result.sources_seen,
-        took_ms: Date.now() - started,
-      })
-    }
-
-    // Persist the served noticing — the saved-thread view reads from this
-    // table, and the resume window depends on having served_at recorded.
-    const insertRow = {
-      user_id: userId,
-      lines: result.noticing.lines,
-      shape: result.noticing.shape,
-      source_keys: result.noticing.sources.map(s => `${s.kind}:${s.source_id}`),
-      source_meta: result.noticing.sources,
-      saved: false,
-      served_at: result.noticing.served_at,
-    }
-
-    const { data: inserted, error: insertErr } = await supabase
-      .from('noticings')
-      .insert(insertRow)
-      .select('id, user_id, lines, shape, source_keys, source_meta, saved, served_at, saved_at')
-      .single()
-
-    if (insertErr || !inserted) {
-      console.error('[noticing] insert failed:', insertErr)
-      // Still return the noticing — the user-facing payload doesn't depend on
-      // persistence. Save just won't work for this one.
-      return res.status(200).json({
-        noticing: { ...result.noticing, id: null, saved: false },
-        sources_seen: result.sources_seen,
-        attempts: result.attempts,
-        took_ms: Date.now() - started,
-      })
-    }
+    // Group into batches and return only the latest non-empty batch's ideas
+    // (plus any saved/built items from older batches the user might still
+    // want to see). Simpler: return latest batch only; saved-ideas list is
+    // its own (future) page.
+    const rows = data ?? []
+    const latestBatchId = rows[0]?.batch_id ?? null
+    const latest = latestBatchId ? rows.filter(r => r.batch_id === latestBatchId) : []
 
     return res.status(200).json({
-      noticing: serialiseNoticing(inserted as StoredNoticing),
-      sources_seen: result.sources_seen,
-      attempts: result.attempts,
-      took_ms: Date.now() - started,
+      ideas: latest,
+      generated_at: latest[0]?.generated_at ?? null,
+      has_any: rows.length > 0,
     })
   } catch (err) {
-    console.error('[noticing] error:', err)
+    console.error('[project-ideas] error:', err)
     return res.status(500).json({ error: err instanceof Error ? err.message : 'Unknown error' })
   }
 }
 
-async function handleNoticingSave(req: VercelRequest, res: VercelResponse) {
+async function handleProjectIdeasFeedback(req: VercelRequest, res: VercelResponse) {
   try {
     const userId = await getUserId(req)
-    if (!userId) return res.status(401).json({ error: 'Sign in to save a noticing' })
+    if (!userId) return res.status(401).json({ error: 'Sign in to give feedback' })
 
-    const { id, saved } = (req.body ?? {}) as { id?: string; saved?: boolean }
-    if (typeof id !== 'string' || !id) return res.status(400).json({ error: 'id required' })
-    if (typeof saved !== 'boolean') return res.status(400).json({ error: 'saved must be boolean' })
+    const { id, status, feedback } = (req.body ?? {}) as {
+      id?: string
+      status?: 'saved' | 'rejected' | 'built' | 'pending'
+      feedback?: string | null
+    }
+    if (!id || typeof id !== 'string') return res.status(400).json({ error: 'id required' })
+    if (!status || !['saved', 'rejected', 'built', 'pending'].includes(status)) {
+      return res.status(400).json({ error: 'status must be one of saved|rejected|built|pending' })
+    }
 
     const supabase = getSupabaseClient()
+    const update: Record<string, unknown> = {
+      status,
+      acted_on_at: status === 'pending' ? null : new Date().toISOString(),
+    }
+    if (typeof feedback === 'string') update.user_feedback = feedback.slice(0, 1000)
+    else if (feedback === null) update.user_feedback = null
+
     const { error } = await supabase
-      .from('noticings')
-      .update({ saved, saved_at: saved ? new Date().toISOString() : null })
+      .from('project_ideas')
+      .update(update)
       .eq('id', id)
       .eq('user_id', userId)
 
     if (error) {
-      console.error('[noticing-save] update failed:', error)
+      console.error('[project-ideas-feedback] update failed:', error)
       return res.status(500).json({ error: error.message })
     }
 
     return res.status(200).json({ ok: true })
   } catch (err) {
-    console.error('[noticing-save] error:', err)
+    console.error('[project-ideas-feedback] error:', err)
     return res.status(500).json({ error: err instanceof Error ? err.message : 'Unknown error' })
   }
 }
 
-async function handleNoticingThread(req: VercelRequest, res: VercelResponse) {
+async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelResponse) {
+  const started = Date.now()
   try {
-    const userId = await getUserId(req)
-    if (!userId) return res.status(401).json({ error: 'Sign in to read your thread' })
+    // Two auth paths: signed-in user (manual regenerate from the UI) or
+    // bearer token from the GitHub Actions cron. Cron is single-tenant for
+    // now — uses IDEA_ENGINE_USER_ID like the rest of the polymath cron
+    // surface so we don't have to pick a user out of the DB.
+    let userId: string | null = await getUserId(req)
+    let viaCron = false
+    if (!userId) {
+      const auth = req.headers['authorization'] || req.headers['Authorization' as 'authorization']
+      const expected = process.env.IDEA_ENGINE_SECRET
+      if (typeof auth === 'string' && expected && auth === `Bearer ${expected}`) {
+        const cronUserId = process.env.IDEA_ENGINE_USER_ID
+        if (!cronUserId) return res.status(500).json({ error: 'IDEA_ENGINE_USER_ID not configured' })
+        userId = cronUserId
+        viaCron = true
+      }
+    }
+    if (!userId) return res.status(401).json({ error: 'Sign in to generate ideas' })
 
     const supabase = getSupabaseClient()
-    const { data, error } = await supabase
-      .from('noticings')
-      .select('id, lines, shape, source_keys, source_meta, saved, served_at, saved_at')
-      .eq('user_id', userId)
-      .eq('saved', true)
-      .order('saved_at', { ascending: false })
-      .limit(50)
 
-    if (error) {
-      console.error('[noticing-thread] query failed:', error)
-      return res.status(500).json({ error: error.message })
+    const { gatherForIdeas } = await import('./_lib/project-ideas/gather.js')
+    const gathered = await gatherForIdeas(supabase, userId)
+
+    if (gathered.total_signal_count < 8) {
+      return res.status(200).json({
+        ideas: [],
+        reason: 'insufficient_data',
+        signal_count: gathered.total_signal_count,
+        took_ms: Date.now() - started,
+      })
+    }
+
+    const { generateProjectIdeas } = await import('./_lib/project-ideas/generator.js')
+    const result = await generateProjectIdeas(gathered)
+
+    if (!result.ideas.length) {
+      return res.status(200).json({
+        ideas: [],
+        reason: result.reason ?? 'no_ideas',
+        attempts: result.attempts,
+        took_ms: Date.now() - started,
+      })
+    }
+
+    // Mark every prior pending idea from earlier batches as superseded so
+    // the homepage only shows the newest batch. Saved / built ideas are
+    // left intact.
+    await supabase
+      .from('project_ideas')
+      .update({ status: 'rejected', acted_on_at: new Date().toISOString() })
+      .eq('user_id', userId)
+      .eq('status', 'pending')
+
+    const batchId = randomUuid()
+    const generated_at = new Date().toISOString()
+    const rows = result.ideas.map(idea => ({
+      user_id: userId,
+      batch_id: batchId,
+      rank: idea.rank,
+      title: idea.title,
+      pitch: idea.pitch,
+      why_now: idea.why_now,
+      next_step: idea.next_step,
+      evidence: idea.evidence,
+      status: 'pending' as const,
+      generated_at,
+    }))
+
+    const { data: inserted, error: insertErr } = await supabase
+      .from('project_ideas')
+      .insert(rows)
+      .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, status, generated_at')
+
+    if (insertErr) {
+      console.error('[generate-project-ideas] insert failed:', insertErr)
+      return res.status(500).json({ error: insertErr.message })
     }
 
     return res.status(200).json({
-      items: (data ?? []).map(row => serialiseNoticing(row as StoredNoticing)),
+      ideas: inserted ?? [],
+      batch_id: batchId,
+      generated_at,
+      attempts: result.attempts,
+      via: viaCron ? 'cron' : 'user',
+      took_ms: Date.now() - started,
     })
   } catch (err) {
-    console.error('[noticing-thread] error:', err)
+    console.error('[generate-project-ideas] error:', err)
     return res.status(500).json({ error: err instanceof Error ? err.message : 'Unknown error' })
   }
 }
 
-async function readMostRecentNoticing(
-  supabase: ReturnType<typeof getSupabaseClient>,
-  userId: string,
-): Promise<StoredNoticing | null> {
-  const { data } = await supabase
-    .from('noticings')
-    .select('id, user_id, lines, shape, source_keys, source_meta, saved, served_at, saved_at')
-    .eq('user_id', userId)
-    .order('served_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-  return (data as StoredNoticing | null) ?? null
-}
-
-function noticingAgeHours(n: StoredNoticing): number {
-  return (Date.now() - new Date(n.served_at).getTime()) / (60 * 60 * 1000)
-}
-
-function serialiseNoticing(n: StoredNoticing) {
-  return {
-    id: n.id,
-    lines: n.lines,
-    shape: n.shape,
-    sources: n.source_meta,
-    saved: n.saved,
-    served_at: n.served_at,
-    saved_at: n.saved_at,
-  }
+function randomUuid(): string {
+  // crypto.randomUUID is available on Node 19+; Vercel uses Node 20.
+  const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto
+  if (c?.randomUUID) return c.randomUUID()
+  // Extremely defensive fallback — should not be reached in production.
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, ch => {
+    const r = (Math.random() * 16) | 0
+    const v = ch === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
 }

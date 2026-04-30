@@ -3,14 +3,13 @@
  *
  * Structure (top to bottom):
  *   1. YourHourHeader — Brand + duration toggle + search
- *   2. Keep Going carousel — Focused projects with "Start session"
- *   3. This Week — unified 5-card idea deck (mashups, insights, sparks, drawer)
- *   4. Unshaped nudge bar — Projects needing shaping
- *   5. What You're Consuming — active list items (compact)
- *   6. Thought of the Day — resurfaced memory quote
- *   7. Bedtime floating icon — appears after 9:30pm
- *
- * Witness-mode "noticed" surface lives behind a flag (useSelfModelFlag).
+ *   2. ProjectIdeasHome — 3 ranked project ideas drawn from across your data
+ *   3. Keep Going carousel — Focused projects with "Start session"
+ *   4. This Week — unified 5-card idea deck (mashups, insights, sparks, drawer)
+ *   5. Unshaped nudge bar — Projects needing shaping
+ *   6. What You're Consuming — active list items (compact)
+ *   7. Thought of the Day — resurfaced memory quote
+ *   8. Bedtime floating icon — appears after 9:30pm
  */
 
 import React, { useEffect, useState } from 'react'
@@ -32,8 +31,7 @@ import { ThisWeekIdeas } from '../components/home/ThisWeekIdeas'
 import { UnshapedNudgeBar } from '../components/home/UnshapedNudgeBar'
 import { ThoughtOfTheDay } from '../components/home/ThoughtOfTheDay'
 import { BedtimeFloatingIcon } from '../components/home/BedtimeFloatingIcon'
-import { NoticingHome } from '../components/home/NoticingHome'
-import { useSelfModelFlag } from '../lib/useSelfModelFlag'
+import { ProjectIdeasHome } from '../components/home/ProjectIdeasHome'
 import { UnauthHome } from '../components/onboarding/UnauthHome'
 import { AlertCircle, ArrowRight, Film, Music, Monitor, Book, MapPin, Gamepad2, Calendar, FileText, Quote, Box } from 'lucide-react'
 
@@ -121,7 +119,6 @@ export function HomePage() {
   const [createProjectOpen, setCreateProjectOpen] = useState(false)
   const [seedConversation, setSeedConversation] = useState<{ title: string; description: string } | undefined>()
   const [shapingProjectId, setShapingProjectId] = useState<string | null>(null)
-  const selfModelEnabled = useSelfModelFlag()
 
   const shapingProject = shapingProjectId
     ? useProjectStore.getState().allProjects.find(p => p.id === shapingProjectId) || null
@@ -198,11 +195,10 @@ export function HomePage() {
 
           <YourHourHeader />
 
-          {selfModelEnabled && (
-            <div className="mb-8">
-              <NoticingHome />
-            </div>
-          )}
+          {/* Project ideas — the headline surface, drawn from across your data */}
+          <div className="mb-8">
+            <ProjectIdeasHome />
+          </div>
 
           {/* Keep Going */}
           <div className="mb-8">
