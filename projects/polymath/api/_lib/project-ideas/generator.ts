@@ -271,17 +271,25 @@ function parseAndValidate(raw: string, gathered: GatherResult): ProjectIdea[] {
     const seenSources = new Set<string>()
     for (const e of item.evidence) {
       if (!e.kind || !e.source_id || !VALID_KINDS.has(e.kind)) continue
-      const real = sourceLookup.get(e.source_id)
+      // The prompt formats ids as `kind#uuid` so the model can keep types
+      // and ids together visually. The model echoes that format back in
+      // the source_id field, but our lookup is keyed on the bare uuid.
+      // Accept either form so a `memory#9a2d…` and `9a2d…` both resolve.
+      const rawId = e.source_id
+      const bareId = rawId.includes('#') ? rawId.split('#').slice(-1)[0] : rawId
+      const real = sourceLookup.get(bareId)
       if (!real) continue // fabricated id
-      if (seenSources.has(e.source_id)) continue // dedupe within an idea
-      seenSources.add(e.source_id)
+      if (seenSources.has(bareId)) continue // dedupe within an idea
+      seenSources.add(bareId)
 
       const labelOut = (e.label ?? '').slice(0, 120) || real.label
       const dateOut = real.date || (e.date ?? '').slice(0, 32)
       const excerptOut = verifyOrReplaceExcerpt(e.excerpt ?? '', real.body)
       evidence.push({
         kind: e.kind as IdeaEvidence['kind'],
-        source_id: e.source_id,
+        // Persist the bare uuid — the UI never shows source_id, but
+        // storing the canonical form keeps later joins / debugging sane.
+        source_id: bareId,
         label: labelOut,
         date: dateOut,
         excerpt: excerptOut,
