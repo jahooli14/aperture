@@ -354,19 +354,34 @@ function parseAndValidate(raw: string, gathered: GatherResult): ProjectIdea[] {
         : (typeof e.kind === 'string' ? e.kind.toLowerCase() : '')
       if (!VALID_KINDS.has(kind)) continue
 
-      const real = sourceLookup.get(bareId)
+      // The model often truncates UUIDs to ~8 chars in its output (likely
+      // imitating short-hash style from in-prompt examples). Accept any
+      // prefix match — at 6+ chars UUIDs are unique within one user's
+      // gather (~100 rows). Resolve to the full id for canonical storage.
+      let resolvedId = bareId
+      let real = sourceLookup.get(bareId)
+      if (!real && bareId.length >= 6 && bareId.length < 36) {
+        for (const key of sourceLookup.keys()) {
+          if (key.startsWith(bareId)) {
+            resolvedId = key
+            real = sourceLookup.get(key)
+            break
+          }
+        }
+      }
       if (!real) continue // fabricated id
-      if (seenSources.has(bareId)) continue // dedupe within an idea
-      seenSources.add(bareId)
+      if (seenSources.has(resolvedId)) continue // dedupe within an idea
+      seenSources.add(resolvedId)
 
       const labelOut = (e.label ?? '').slice(0, 120) || real.label
       const dateOut = real.date || (e.date ?? '').slice(0, 32)
       const excerptOut = verifyOrReplaceExcerpt(e.excerpt ?? '', real.body)
       evidence.push({
         kind: kind as IdeaEvidence['kind'],
-        // Persist the bare uuid — the UI never shows source_id, but
-        // storing the canonical form keeps later joins / debugging sane.
-        source_id: bareId,
+        // Persist the canonical full uuid (resolvedId) — the UI never
+        // shows source_id, but storing the full form keeps later joins
+        // / debugging sane regardless of how the model truncated.
+        source_id: resolvedId,
         label: labelOut,
         date: dateOut,
         excerpt: excerptOut,
