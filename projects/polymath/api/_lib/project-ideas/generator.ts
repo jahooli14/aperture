@@ -18,9 +18,12 @@
  *   - Anti-pattern banlist on modal-mediocre tech-Twitter side projects
  *     (newsletter, podcast, course, tracker app, "directory of", etc.).
  *     Forces the model to NAME the cliché before allowing the candidate.
- *   - Each rank slot has a different JOB: rank-1 is evidence-strongest,
- *     rank-2 is highest cross-domain distance, rank-3 is highest novelty
- *     vs prior surfaced ideas. So #2 and #3 aren't "slightly worse #1s".
+ *   - Each rank slot has a different JOB: rank-1 is highest convergence
+ *     (uses the most accumulated skills/tools at once), rank-2 is dormant
+ *     revival (something they couldn't make six months ago), rank-3 is
+ *     growing edge (the next stretch). The reframe from "cross-domain
+ *     distance" was deliberate — that prompt produced forced surrealist
+ *     mashups, not real projects.
  *   - Rejection *reasons* (not just titles) are surfaced to the prompt
  *     so the next batch is conditioned on why prior ideas missed.
  *   - Evidence excerpts are verified server-side to substring-match the
@@ -128,90 +131,130 @@ function buildPrompt(g: GatherResult): string {
     ...g.prior_ideas.rejected.map(t => `  · rejected: "${t.title}"${t.feedback ? ` — reason: ${truncate(t.feedback, 120)}` : ''}`),
   ].join('\n')
 
-  return `You are a curator with taste — a friend who has watched this person capture and abandon many things, and is allergic to the obvious side-project clichés. You are looking at the data below and your job is to surface THREE project ideas that this specific person should be working on but probably hasn't thought of themselves. Three ideas only they could uniquely make, with evidence in their own captures.
+  return `You are a specific friend. Not a coach. Not a therapist. A maker who has known this person for years, watched what they pick up and put down, and has a low tolerance for projects that are really just art pieces in disguise. You are dry. You are skeptical. You would be embarrassed to suggest a "memory totem" or a "series exploring" anything. You suggest projects you would build yourself.
 
-══════ THE DATA ══════
+Your job: surface the 3 projects this person should obviously be working on RIGHT NOW, because they have already accumulated everything they need to build them. Inevitable picks. Not surprising ones.
+
+═══════ THE CORE DISTINCTION ═══════
+
+CONVERGENT (what you produce): A specific artefact where every input is doing structural work. Woodwork course → the case. Raspberry Pi → the brain. Synth-playing → design intuition. TypeScript → firmware. Result: "build your own synth." Every input is load-bearing. Remove any one and the project is materially worse. A friend reads it and says "obviously, you have everything you need."
+
+DECORATIVE (what you DO NOT produce): Inputs combined as motifs, themes, or aesthetic. Woodwork + memory thoughts + beauty goal → "The Willow Memory Totem." Inputs as ingredients in a sculpture. Films-watched + a voice note → "a film series exploring X." Inputs as taste, not as toolkit. If your idea reads as a sculpture, an installation, a portrait series, a zine, a totem, an "exploration," a "meditation," or a curated something — kill it.
+
+The test: name each input's structural role in the build. If you cannot say "this part is the X" for every input, it is decorative. Kill it.
+
+═══════ THE DATA ═══════
 
 VOICE NOTES (recent, in order):
 ${memBlock || '  (none)'}
 
-LIST ITEMS (films/books/places/etc — what they're consuming and queuing up):
+LIST ITEMS (films/books/places — consumption, NOT capability; see rules below):
 ${listBlock || '  (none)'}
 
-CURRENTLY ACTIVE PROJECTS:
+ACTIVE PROJECTS:
 ${activeProjBlock || '  (none)'}
 
-DORMANT / ON-HOLD / ARCHIVED / ABANDONED PROJECTS (unfinished bets — fertile ground for revival or remix):
+DORMANT / ON-HOLD / ARCHIVED / ABANDONED PROJECTS (existing scope, residual context, half-built):
 ${dormantProjBlock || '  (none)'}
 
-READING QUEUE (articles they cared enough to save):
+READING QUEUE:
 ${readingBlock || '  (none)'}
 
-ARTICLE HIGHLIGHTS (sentences they pulled out — high-signal):
+HIGHLIGHTS (sentences pulled from articles — thinking out loud, not commitments):
 ${highlightBlock || '  (none)'}
 
-OPEN TODOS (current friction):
+OPEN TODOS:
 ${todoBlock || '  (none)'}
 
-EXISTING IDEA-ENGINE OUTPUT (already-generated ideas — use as context, don't repeat):
+PRIOR IDEA-ENGINE OUTPUT (anti-evidence — avoid repeating, do NOT cite as user signal):
 ${ieBlock || '  (none)'}
 
-PRIOR PROJECT SUGGESTIONS:
+PRIOR PROJECT SUGGESTIONS (anti-evidence — same):
 ${suggestionBlock || '  (none)'}
 
-PREVIOUSLY SURFACED PROJECT IDEAS (do NOT repeat any of these — and especially honour rejection reasons):
+PREVIOUSLY SURFACED IDEAS (do NOT repeat; honour rejection reasons):
 ${seenBlock || '  (none)'}
 
-══════ HOW TO THINK ══════
+═══════ DATA-SHAPE RULES (HARD) ═══════
 
-Work in three phases. Output a JSON object with keys "drafts", "review", "ideas".
+1. A voice note is load-bearing only if (a) its theme repeats across ≥2 notes, OR (b) it explicitly names a concrete tool/skill/material. Single cryptic notes ("mouses are good") are NEVER lead evidence.
+2. List items (films/books/places) are taste. They can supply aesthetic intuition or a location constraint. They are NEVER the structural reason a project exists. They are NEVER lead evidence.
+3. Dormant projects already have scope. Picking one up means SHIPPING IT, not remixing it. The dormant_revival title must reference the original deliverable.
+4. Highlights are thinking-out-loud. They can supply why_now framing. They are NEVER the load-bearing capability.
+5. Themes arrays are AI-generated and lossy. Excerpts must come from the body text shown above, never from themes.
+6. Idea-engine and prior_suggestions are anti-evidence. They condition what to AVOID, not what to build on.
 
-PHASE 1 — DRAFTS (15 candidates).
-Brainstorm 15 distinct candidate ideas. Each candidate is one line: a punchy title plus the 2-3 source ids it draws on. Lean into cross-domain intersections — the interesting ideas live where two unrelated captures meet (a voice note about X plus a film queued plus a dormant project about Y produces an idea none alone would suggest). Force yourself to range widely; don't just list 15 variations of the strongest signal. Repetition or near-duplicates within the 15 wastes your own budget.
+═══════ HOW TO THINK ═══════
 
-PHASE 2 — REVIEW (15 critiques).
-For EACH of the 15 candidates, write one short critique line that says:
-  - what cliché it pattern-matches (or "none" if genuinely original), AND
-  - whether the evidence actually supports it (not just "they like X" — does the evidence point at THIS specific project?), AND
-  - one sentence on why it would or would not surprise the user.
-A candidate fails the cliché check if it pattern-matches any of: a newsletter, a podcast, an online course, a tracker app, a year-of-X challenge, a book club, a curated list, a "directory of", a Substack, an essay series, a personal-website redesign, a digital garden, a tools-i-use page, a 30-day project, a Notion template, a "second brain" tool. UNLESS the evidence specifically demands it AND you can name three reasons it's not the cliché version, mark cliché candidates as failed.
+Output JSON with keys: toolkit, drafts, review, ideas. Work the phases in order.
 
-PHASE 3 — IDEAS (the final 3).
-Pick exactly 3 from the 15. Each rank slot has a DIFFERENT JOB:
-  - rank 1 — EVIDENCE-STRONGEST. The idea where the evidence in their own data is the most undeniable. The "you'll agree this is in your data" pick. Most concrete.
-  - rank 2 — HIGHEST CROSS-DOMAIN DISTANCE. The idea drawn from the most unrelated captures (a film + a voice note + a dormant project from different worlds). The "huh, those things go together" pick.
-  - rank 3 — HIGHEST NOVELTY VS PRIOR. The idea that is most unlike anything in PREVIOUSLY SURFACED PROJECT IDEAS or the IDEA-ENGINE OUTPUT. The "where did that come from" pick.
+PHASE 1 — TOOLKIT (output as an array). List 8–14 items the user has actually accumulated. Each item is one line in the form:
+  "<kind>: <specific thing> [source_id]"
+where kind is one of: SKILL, TOOL, MATERIAL, DORMANT, OBSESSION, PERSON, LOCATION.
+SKILLs are things they can do (a course completed, a repeat practice). TOOLs are things they own and can pick up. MATERIALs are physical or digital substrate they have. DORMANT is a half-built project with residual context. OBSESSION is a theme repeating across ≥2 captures over weeks. PERSON is someone they've named. LOCATION is somewhere they have access to.
+Do NOT include consumption preferences (films watched, books read) unless they're supplying a concrete location or a recurring craft interest.
 
-The 3 picks must NOT share a lead evidence item, and must NOT both pattern-match the same artefact noun. If your initial 3 violate this, swap.
+PHASE 2 — DRAFTS (15 lines). Each draft is a finished artefact named first, then the toolkit items it consumes:
+  "FINISHED: <concrete artefact> — uses <toolkit-item>, <toolkit-item>, <toolkit-item> [<source_ids>]"
+Hard requirements per draft:
+  - Each draft must use ≥2 toolkit items.
+  - At least one of the cited toolkit items must be SKILL, TOOL, MATERIAL, or DORMANT (not a consumption preference, not a single highlight).
+  - Range across the toolkit. The 15 should hit different parts, not 15 versions of the same idea.
+Banned title vocabulary in drafts and ideas — automatic fail: "exploration," "study of," "series," "totem," "memory of," "in conversation with," "investigation into," "meditation on," "the [abstract] of [abstract]," "a year of," "directory," "tracker," "second brain," "digital garden," "newsletter," "podcast," "Substack," "zine," "installation," "portrait series."
 
-For each of the 3 final ideas, output:
-- title: punchy, ≤ 8 words. Concrete, not abstract.
-- pitch: 2-3 sentences. Specific scope; implies what "done" looks like.
-- why_now: ONE sentence naming the exact pattern in the data that makes this ripe RIGHT NOW. Reference what they captured.
-- next_step: ONE concrete first action doable in under an hour today. Not "research X" or "make a plan" — a real first move (a phone call to a specific kind of person, a 200-word draft, a 30-minute walk to a specific place, a list of N specific things).
-- evidence: 3-5 source items. Each: { kind, source_id, label, date, excerpt }. excerpt MUST be verbatim text from the data above (will be checked).
-- rank_role: one of "evidence_strongest" | "cross_domain" | "novelty"
+PHASE 3 — REVIEW (15 lines, one per draft). For each:
+  "<n>. CONVERGENT|DECORATIVE — <one-line reason>. Each input's role: <input>=<role>; <input>=<role>; ... Doable-this-week: yes/no."
+A draft is DECORATIVE if you cannot state a load-bearing structural role for every cited input. Mark it failed.
+A draft is CONVERGENT only if removing any single cited input would materially break the build.
 
-══════ HARD CONSTRAINTS ══════
-- Imperative verbs are FINE. Time estimates are FINE. Concrete artefact nouns are FINE (zine, walk, interview, shop, device, prototype, exhibition, etc.).
-- Every idea must cite at least 2 different evidence items.
-- excerpt fields will be substring-checked against the real source text. If you can't quote verbatim, put a short label there and we'll fill it in.
-- If you genuinely cannot find 3 grounded ideas that pass cliché-check, return fewer (1 or 2). Padding is worse than silence.
+PHASE 4 — IDEAS (3 picks from the survivors). Each rank slot does a different job:
+  - rank 1 — CONVERGENCE: the project that uses the MOST toolkit items at once in service of one coherent build. Should feel inevitable.
+  - rank 2 — DORMANT_REVIVAL: pick up an abandoned project that the toolkit now makes shippable. Title names the original deliverable. Pitch describes shipping it, not reinventing it.
+  - rank 3 — GROWING_EDGE: 70% there, 30% stretch. The next-step closes one specific gap.
 
-══════ OUTPUT (strict JSON, no markdown fences) ══════
+The 3 must not share a lead evidence item.
+
+For each idea:
+  - title: ≤8 words. Names a concrete artefact or a concrete action verb on a real thing. NO abstract nouns from the banlist.
+  - pitch: 2–3 sentences. Sentence 1 = what the finished thing IS. Sentence 2 = which toolkit item plays which role in the build. Sentence 3 = what "done" means, in one observable test.
+  - why_now: ONE sentence, past tense, citing specific recent accumulation with rough dates ("course finished three weeks ago," "Pi has been on the shelf since November"). No vague "you've been thinking about X."
+  - next_step: ONE concrete physical action doable in under an hour, using something already owned. Imperative verb. Names a specific tool or file. NOT "research," NOT "plan," NOT "sketch," NOT "outline."
+  - evidence: 3–5 items, each {kind, source_id, label, date, excerpt}. excerpt must be a verbatim substring of the source body shown above (will be substring-checked). Lead evidence (item 0) MUST be a SKILL, TOOL, MATERIAL, or DORMANT — never a list item, never a single highlight.
+  - rank_role: "convergence" | "dormant_revival" | "growing_edge"
+
+═══════ CALIBRATION ═══════
+
+GOOD (the bar): "Build your own synth." Woodwork course → case. Pi → brain. Synth practice → knob layout. TypeScript → firmware. Every input load-bearing. Title names the artefact. Next step is "flash CircuitPython, wire one pot to ADC0."
+
+BAD (kill on sight): "The Willow Memory Totem." Wood + memory + beauty as motifs in a sculpture. Inputs decorative. Title is the abstract-of-abstract construction.
+
+BAD (kill on sight): "A film series exploring Mulholland Drive moments in your own life." List items as fuel, no toolkit, no artefact, abstract verb.
+
+BAD (kill on sight): "A newsletter about your woodworking journey." Cliché on the banlist; toolkit items used as content, not as build.
+
+═══════ OUTPUT FAILURE MODES (avoid) ═══════
+
+If you cannot find 3 convergent picks, return 1 or 2. Padding with decorative ideas is worse than silence. If the toolkit has fewer than 4 SKILL/TOOL/MATERIAL/DORMANT items, return an empty ideas array — there isn't enough yet.
+
+═══════ OUTPUT (strict JSON, no markdown fences) ═══════
 {
+  "toolkit": [
+    "SKILL: finished beginner woodwork course in March [memory#abc]",
+    "TOOL: Raspberry Pi 4 sitting unused [memory#def]",
+    ...
+  ],
   "drafts": [
-    "Title — uses memory#abc, list_item#xyz, project_dormant#qrs",
+    "FINISHED: monosynth in a wooden case — uses woodwork SKILL, Pi TOOL, synth-playing OBSESSION, TypeScript SKILL [memory#abc, memory#def, memory#ghi, project#jkl]",
     ... (15 lines)
   ],
   "review": [
-    "Title — cliché: none/<name>; evidence: yes/no because ...; surprise: ...",
+    "1. CONVERGENT — every input has a structural role. Roles: woodwork=case; Pi=brain; synth-playing=knob layout; TypeScript=firmware. Doable-this-week: yes.",
     ... (15 lines)
   ],
   "ideas": [
     {
       "rank": 1,
-      "rank_role": "evidence_strongest",
+      "rank_role": "convergence",
       "title": "...",
       "pitch": "...",
       "why_now": "...",
@@ -220,8 +263,8 @@ For each of the 3 final ideas, output:
         { "kind": "memory", "source_id": "...", "label": "...", "date": "YYYY-MM-DD", "excerpt": "..." }
       ]
     },
-    { "rank": 2, "rank_role": "cross_domain", ... },
-    { "rank": 3, "rank_role": "novelty", ... }
+    { "rank": 2, "rank_role": "dormant_revival", ... },
+    { "rank": 3, "rank_role": "growing_edge", ... }
   ]
 }`
 }
@@ -271,17 +314,25 @@ function parseAndValidate(raw: string, gathered: GatherResult): ProjectIdea[] {
     const seenSources = new Set<string>()
     for (const e of item.evidence) {
       if (!e.kind || !e.source_id || !VALID_KINDS.has(e.kind)) continue
-      const real = sourceLookup.get(e.source_id)
+      // The prompt formats ids as `kind#uuid` so the model can keep types
+      // and ids together visually. The model echoes that format back in
+      // the source_id field, but our lookup is keyed on the bare uuid.
+      // Accept either form so a `memory#9a2d…` and `9a2d…` both resolve.
+      const rawId = e.source_id
+      const bareId = rawId.includes('#') ? rawId.split('#').slice(-1)[0] : rawId
+      const real = sourceLookup.get(bareId)
       if (!real) continue // fabricated id
-      if (seenSources.has(e.source_id)) continue // dedupe within an idea
-      seenSources.add(e.source_id)
+      if (seenSources.has(bareId)) continue // dedupe within an idea
+      seenSources.add(bareId)
 
       const labelOut = (e.label ?? '').slice(0, 120) || real.label
       const dateOut = real.date || (e.date ?? '').slice(0, 32)
       const excerptOut = verifyOrReplaceExcerpt(e.excerpt ?? '', real.body)
       evidence.push({
         kind: e.kind as IdeaEvidence['kind'],
-        source_id: e.source_id,
+        // Persist the bare uuid — the UI never shows source_id, but
+        // storing the canonical form keeps later joins / debugging sane.
+        source_id: bareId,
         label: labelOut,
         date: dateOut,
         excerpt: excerptOut,
