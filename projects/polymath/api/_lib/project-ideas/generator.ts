@@ -194,16 +194,16 @@ where kind is one of: SKILL, TOOL, MATERIAL, DORMANT, OBSESSION, PERSON, LOCATIO
 SKILLs are things they can do (a course completed, a repeat practice). TOOLs are things they own and can pick up. MATERIALs are physical or digital substrate they have. DORMANT is a half-built project with residual context. OBSESSION is a theme repeating across ≥2 captures over weeks. PERSON is someone they've named. LOCATION is somewhere they have access to.
 Do NOT include consumption preferences (films watched, books read) unless they're supplying a concrete location or a recurring craft interest.
 
-PHASE 2 — DRAFTS (15 lines). Each draft is a finished artefact named first, then the toolkit items it consumes:
+PHASE 2 — DRAFTS (10 lines). Each draft is a finished artefact named first, then the toolkit items it consumes:
   "FINISHED: <concrete artefact> — uses <toolkit-item>, <toolkit-item>, <toolkit-item> [<source_ids>]"
 Hard requirements per draft:
   - Each draft must use ≥2 toolkit items.
   - At least one of the cited toolkit items must be SKILL, TOOL, MATERIAL, or DORMANT (not a consumption preference, not a single highlight).
-  - Range across the toolkit. The 15 should hit different parts, not 15 versions of the same idea.
+  - Range across the toolkit. The 10 should hit different parts, not 10 versions of the same idea.
 Banned title vocabulary in drafts and ideas — automatic fail: "exploration," "study of," "series," "totem," "memory of," "in conversation with," "investigation into," "meditation on," "the [abstract] of [abstract]," "a year of," "directory," "tracker," "second brain," "digital garden," "newsletter," "podcast," "Substack," "zine," "installation," "portrait series."
 
-PHASE 3 — REVIEW (15 lines, one per draft). For each:
-  "<n>. CONVERGENT|DECORATIVE — <one-line reason>. Each input's role: <input>=<role>; <input>=<role>; ... Doable-this-week: yes/no."
+PHASE 3 — REVIEW (10 lines, one per draft, terse). For each:
+  "<n>. CONVERGENT|DECORATIVE — <≤15 words>. Doable: yes/no."
 A draft is DECORATIVE if you cannot state a load-bearing structural role for every cited input. Mark it failed.
 A draft is CONVERGENT only if removing any single cited input would materially break the build.
 
@@ -245,11 +245,11 @@ If you cannot find 3 convergent picks, return 1 or 2. Padding with decorative id
   ],
   "drafts": [
     "FINISHED: monosynth in a wooden case — uses woodwork SKILL, Pi TOOL, synth-playing OBSESSION, TypeScript SKILL [memory#abc, memory#def, memory#ghi, project#jkl]",
-    ... (15 lines)
+    ... (10 lines)
   ],
   "review": [
-    "1. CONVERGENT — every input has a structural role. Roles: woodwork=case; Pi=brain; synth-playing=knob layout; TypeScript=firmware. Doable-this-week: yes.",
-    ... (15 lines)
+    "1. CONVERGENT — every input load-bearing. Doable: yes.",
+    ... (10 lines)
   ],
   "ideas": [
     {
@@ -313,13 +313,29 @@ function parseAndValidate(raw: string, gathered: GatherResult): ProjectIdea[] {
     const evidence: IdeaEvidence[] = []
     const seenSources = new Set<string>()
     for (const e of item.evidence) {
-      if (!e.kind || !e.source_id || !VALID_KINDS.has(e.kind)) continue
+      if (!e.source_id) continue
       // The prompt formats ids as `kind#uuid` so the model can keep types
-      // and ids together visually. The model echoes that format back in
-      // the source_id field, but our lookup is keyed on the bare uuid.
-      // Accept either form so a `memory#9a2d…` and `9a2d…` both resolve.
+      // and ids together visually. Two reasons we trust the prefix over
+      // the model-supplied `kind` field:
+      //   1. Models echo the prefix back in source_id reliably.
+      //   2. Models conflate the evidence-kind set (memory/list_item/...)
+      //      with the toolkit-kind set (SKILL/TOOL/MATERIAL/DORMANT) and
+      //      put the wrong word in the kind field, dropping every item.
+      // So: extract kind from prefix if present; fall back to the model
+      // field only when there's no prefix.
       const rawId = e.source_id
-      const bareId = rawId.includes('#') ? rawId.split('#').slice(-1)[0] : rawId
+      const hashIdx = rawId.indexOf('#')
+      let kindFromPrefix: string | undefined
+      let bareId = rawId
+      if (hashIdx > 0) {
+        kindFromPrefix = rawId.slice(0, hashIdx).toLowerCase()
+        bareId = rawId.slice(hashIdx + 1)
+      }
+      const kind = kindFromPrefix && VALID_KINDS.has(kindFromPrefix)
+        ? kindFromPrefix
+        : (typeof e.kind === 'string' ? e.kind.toLowerCase() : '')
+      if (!VALID_KINDS.has(kind)) continue
+
       const real = sourceLookup.get(bareId)
       if (!real) continue // fabricated id
       if (seenSources.has(bareId)) continue // dedupe within an idea
@@ -329,7 +345,7 @@ function parseAndValidate(raw: string, gathered: GatherResult): ProjectIdea[] {
       const dateOut = real.date || (e.date ?? '').slice(0, 32)
       const excerptOut = verifyOrReplaceExcerpt(e.excerpt ?? '', real.body)
       evidence.push({
-        kind: e.kind as IdeaEvidence['kind'],
+        kind: kind as IdeaEvidence['kind'],
         // Persist the bare uuid — the UI never shows source_id, but
         // storing the canonical form keeps later joins / debugging sane.
         source_id: bareId,
