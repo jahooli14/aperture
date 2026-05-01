@@ -1,34 +1,44 @@
 /**
  * Generator — synthesises 3 ranked project ideas from a GatherResult.
  *
- * Single Gemini Pro call (deeper reasoning than Flash for cross-domain
- * synthesis), JSON-mode response. Pro is slower but the cost of a bland
- * homepage is the user not trusting the surface — much more expensive
- * than $0.20/run.
+ * Single Gemini Flash call, JSON-mode response, 32k output tokens. Flash
+ * is cheap enough that we throw budget at the structured prompt rather
+ * than try to compress it. Time budget on a 60s Vercel function: ~5s
+ * gather + ~30-50s Flash call + ~3s insert.
  *
- * Time budget on a 60s Vercel function: ~5s gather + ~40-50s Pro call +
- * ~3s insert. No retry loop — a retry would push us past the ceiling and
- * Pro at temperature 0.85 doesn't need it. Truncated JSON gets a salvage
- * pass before we give up.
- *
- * Quality moves baked in (research-driven):
- *   - Enumerate 15-20 candidate seeds first, then critique each, then
- *     select 3. Single biggest evidence-backed lever for non-obvious
- *     output (Wharton paper on AI idea diversity).
- *   - Anti-pattern banlist on modal-mediocre tech-Twitter side projects
- *     (newsletter, podcast, course, tracker app, "directory of", etc.).
- *     Forces the model to NAME the cliché before allowing the candidate.
- *   - Each rank slot has a different JOB: rank-1 is highest convergence
- *     (uses the most accumulated skills/tools at once), rank-2 is dormant
- *     revival (something they couldn't make six months ago), rank-3 is
- *     growing edge (the next stretch). The reframe from "cross-domain
- *     distance" was deliberate — that prompt produced forced surrealist
- *     mashups, not real projects.
- *   - Rejection *reasons* (not just titles) are surfaced to the prompt
- *     so the next batch is conditioned on why prior ideas missed.
- *   - Evidence excerpts are verified server-side to substring-match the
- *     real source body; LLM-fabricated quotes are replaced with the
- *     actual text. This is the trust premise of the surface.
+ * Quality moves baked in (research-driven, then iterated against real
+ * outputs that were "wooden box for tech thing" twice in a row):
+ *   - Visible TOOLKIT phase. The model enumerates SKILLs/TOOLs/MATERIALs
+ *     /DORMANT/OBSESSION/PERSON/LOCATION items WITH a SUBSTRATE tag for
+ *     each MATERIAL/TOOL — this is the anti-hallucination check (a model
+ *     that has to write "Aperture API: HTTPS endpoint, NOT hardware" up
+ *     front can't later put a Vercel app inside a willow box).
+ *   - Anti-collapse rule: if any single toolkit item leads >3 of the 10
+ *     drafts, the model strikes those drafts and re-drafts from underused
+ *     parts of the toolkit. The 10 drafts must collectively lead with ≥6
+ *     distinct toolkit items spanning 4 clusters (physical-build, software,
+ *     creative, revival). This is the single biggest lever — the model
+ *     was finding one convergence and writing 10 variations of it.
+ *   - Cluster diversity in PHASE 4: the 3 final picks must lead from 3
+ *     different clusters and collectively cite ≥6 distinct toolkit items.
+ *     No two picks may share more than ONE toolkit item total.
+ *   - Anti-pattern banlist (newsletter/podcast/totem/installation/etc.).
+ *   - Each rank slot has a different JOB:
+ *       rank 1 INEVITABLE BUILD (most toolkit items at once)
+ *       rank 2 SHIP THE DORMANT (revive an abandoned project the new
+ *         toolkit makes shippable)
+ *       rank 3 STRETCH FROM THE EDGE (70% there, 30% stretch, leading
+ *         from a recent acceleration)
+ *   - why_now must name an *acceleration in the last 30 days*, not a
+ *     static fact about a course finished two months ago.
+ *   - next_step must be a build-START (cut, drill, flash, commit, drive,
+ *     phone). Banned: measure, research, plan, sketch, outline.
+ *   - Evidence excerpts are verified server-side against the real source
+ *     body; fabricated quotes are replaced with actual text.
+ *   - Diversity filter at parse time: drops a later idea if it shares ≥2
+ *     evidence rows with any kept idea (not just the lead row, which the
+ *     model can dodge by picking different starting rows for the same
+ *     convergence).
  */
 
 import { generateText } from '../gemini-chat.js'
@@ -194,12 +204,17 @@ where kind is one of: SKILL, TOOL, MATERIAL, DORMANT, OBSESSION, PERSON, LOCATIO
 SKILLs are things they can do (a course completed, a repeat practice). TOOLs are things they own and can pick up. MATERIALs are physical or digital substrate they have. DORMANT is a half-built project with residual context. OBSESSION is a theme repeating across ≥2 captures over weeks. PERSON is someone they've named. LOCATION is somewhere they have access to.
 Do NOT include consumption preferences (films watched, books read) unless they're supplying a concrete location or a recurring craft interest.
 
+For each MATERIAL and TOOL line, append a parenthetical SUBSTRATE tag naming what the thing physically or digitally IS in the world, so later phases cannot drift into hallucination:
+  "MATERIAL: Aperture voice-to-text API [memory#52a8] (substrate: HTTPS endpoint hosted on Vercel, accessed via fetch from a browser or Node script — NOT a local server, NOT hardware)"
+  "MATERIAL: willow tree stump [memory#9a2d] (substrate: ~40cm hardwood log at dad's house, cuttable on a bandsaw, dries over months)"
+If you cannot write a SUBSTRATE line for an item, drop it from the toolkit. Vague substrate = decorative use risk.
+
 PHASE 2 — DRAFTS (10 lines). Each draft is a finished artefact named first, then the toolkit items it consumes:
   "FINISHED: <concrete artefact> — uses <toolkit-item>, <toolkit-item>, <toolkit-item> [<source_ids>]"
 Hard requirements per draft:
   - Each draft must use ≥2 toolkit items.
   - At least one of the cited toolkit items must be SKILL, TOOL, MATERIAL, or DORMANT (not a consumption preference, not a single highlight).
-  - Range across the toolkit. The 10 should hit different parts, not 10 versions of the same idea.
+  - Range across the toolkit. After writing your 10 drafts, look at which toolkit item appears as the LEAD (first-cited) item in each. If any single toolkit item leads more than 3 of the 10 drafts, you have collapsed onto one convergence point — strike those drafts and re-draft from underused parts of the toolkit. The 10 drafts must collectively LEAD with at least 6 distinct toolkit items. Aim for at least 2 drafts each from these clusters: (a) physical-build (SKILL/MATERIAL/TOOL with a tangible artefact), (b) software/data (digital MATERIAL, code SKILL, API), (c) creative/cultural (OBSESSION, PERSON, music/voice MATERIAL), (d) revival (DORMANT). If a cluster is empty in your toolkit, say so explicitly in a draft line ("no software-cluster draft — toolkit lacks code SKILLs").
 Banned title vocabulary in drafts and ideas — automatic fail: "exploration," "study of," "series," "totem," "memory of," "in conversation with," "investigation into," "meditation on," "the [abstract] of [abstract]," "a year of," "directory," "tracker," "second brain," "digital garden," "newsletter," "podcast," "Substack," "zine," "installation," "portrait series."
 
 PHASE 3 — REVIEW (10 lines, one per draft, terse). For each:
@@ -207,18 +222,22 @@ PHASE 3 — REVIEW (10 lines, one per draft, terse). For each:
 A draft is DECORATIVE if you cannot state a load-bearing structural role for every cited input. Mark it failed.
 A draft is CONVERGENT only if removing any single cited input would materially break the build.
 
-PHASE 4 — IDEAS (3 picks from the survivors). Each rank slot does a different job:
-  - rank 1 — CONVERGENCE: the project that uses the MOST toolkit items at once in service of one coherent build. Should feel inevitable.
-  - rank 2 — DORMANT_REVIVAL: pick up an abandoned project that the toolkit now makes shippable. Title names the original deliverable. Pitch describes shipping it, not reinventing it.
-  - rank 3 — GROWING_EDGE: 70% there, 30% stretch. The next-step closes one specific gap.
+PHASE 4 — IDEAS (3 picks from the survivors). The 3 picks together must demonstrate that this person's accumulation is wide, not narrow. Hard rules:
 
-The 3 must not share a lead evidence item.
+  - The 3 picks must collectively cite at least 6 distinct toolkit items across all evidence (not 3 ideas all rotating around the same convergence).
+  - The 3 picks must lead with toolkit items from 3 different clusters among {physical-build, software/data, creative/cultural, revival}. If your toolkit only supports 2 clusters, return 2 ideas — not 3 versions of the same cluster.
+  - No two picks may share their lead toolkit item, and no two picks may share more than ONE toolkit item total. If two picks both use the same SKILL + the same MATERIAL, they are the same idea wearing different hats — drop one.
+
+Each rank slot does a different job:
+  - rank 1 — INEVITABLE BUILD: the project that uses the MOST toolkit items at once, leading with a physical-build cluster item if available. Should feel obvious.
+  - rank 2 — SHIP THE DORMANT: pick up an abandoned project that the toolkit now makes shippable. Title names the original deliverable. Pitch describes shipping it, not reinventing it. Lead from the dormant item.
+  - rank 3 — STRETCH FROM THE EDGE: 70% there, 30% stretch. Lead from a creative/cultural or software cluster item the user has been *accelerating* on in the last 30 days.
 
 For each idea:
   - title: ≤8 words. Names a concrete artefact or a concrete action verb on a real thing. NO abstract nouns from the banlist.
-  - pitch: 2–3 sentences. Sentence 1 = what the finished thing IS. Sentence 2 = which toolkit item plays which role in the build. Sentence 3 = what "done" means, in one observable test.
-  - why_now: ONE sentence, past tense, citing specific recent accumulation with rough dates ("course finished three weeks ago," "Pi has been on the shelf since November"). No vague "you've been thinking about X."
-  - next_step: ONE concrete physical action doable in under an hour, using something already owned. Imperative verb. Names a specific tool or file. NOT "research," NOT "plan," NOT "sketch," NOT "outline."
+  - pitch: 2–3 sentences. Sentence 1 = the SURPRISE — what becomes possible because of *this specific* convergence ("you can build a synth that nobody else can build, because the case is willow you milled and the firmware is your own TypeScript"). NOT "this is a wooden case for X." Sentence 2 = which toolkit item plays which structural role. Sentence 3 = what "done" means, in one observable test.
+  - why_now: ONE sentence describing what *accelerated in the last 30 days* that makes today the moment. The accelerant must be a recent capture (voice note, highlight, finished course, recent purchase, recent dormant edit) within ~30 days. NOT "you finished X two months ago" — that's a static fact, not an acceleration. The shape is "<recent thing> means <older accumulation> can finally land." If nothing accelerated in the last 30 days, this isn't ripe — drop the idea.
+  - next_step: ONE physical action that STARTS the build, not one that plans it. Doable in under an hour with something already owned. Must be one of: (a) a code commit / file creation against a named path, (b) a tool action against a named workpiece (cut, drill, solder, flash, wire), (c) a physical visit (drive to dad's, pick up the stump), (d) a phone call or message to a named person. Banned: "measure," "research," "plan," "sketch," "outline," "open settings," "map a shortcut," "decide," "list." If the only first action you can name is admin, the idea isn't ripe — drop it.
   - evidence: 3–5 items, each {kind, source_id, label, date, excerpt}. excerpt must be a verbatim substring of the source body shown above (will be substring-checked). Lead evidence (item 0) MUST be a SKILL, TOOL, MATERIAL, or DORMANT — never a list item, never a single highlight.
   - rank_role: "convergence" | "dormant_revival" | "growing_edge"
 
@@ -304,7 +323,6 @@ function parseAndValidate(raw: string, gathered: GatherResult): ProjectIdea[] {
 
   const out: ProjectIdea[] = []
   let nextRank = 1
-  const usedLeadEvidence = new Set<string>()
 
   for (const item of ideasRaw) {
     if (!item.title || !item.pitch || !item.next_step || !item.why_now) continue
@@ -371,16 +389,32 @@ function parseAndValidate(raw: string, gathered: GatherResult): ProjectIdea[] {
     if (out.length >= 3) break
   }
 
-  // Forced diversity: if two finalists share their lead evidence, demote
-  // the later one. Cheap last-line defence beyond the prompt's own rule.
+  // Forced diversity: drop a later idea if it shares ≥2 evidence rows
+  // with any already-kept idea. The previous "lead row only" check was
+  // too loose — the model would put up two ideas with different leads
+  // that still collapsed onto the same convergence (two variants of
+  // "wooden box for tech thing" leading from the woodwork memory and
+  // from the Aperture API memory respectively). Sharing 1 row is fine
+  // (one source can legitimately support multiple builds); ≥2 means
+  // same convergence.
   const filtered: ProjectIdea[] = []
   for (const idea of out.sort((a, b) => a.rank - b.rank)) {
-    const lead = idea.evidence[0]?.source_id
-    if (lead && usedLeadEvidence.has(lead)) continue
-    if (lead) usedLeadEvidence.add(lead)
+    const ids = new Set(idea.evidence.map(e => e.source_id))
+    const collides = filtered.some(kept => {
+      const overlap = kept.evidence.filter(e => ids.has(e.source_id)).length
+      return overlap >= 2
+    })
+    if (collides) {
+      console.log(`[project-ideas] dropped idea "${idea.title}" — ≥2 evidence overlap with earlier pick`)
+      continue
+    }
     filtered.push(idea)
   }
-  return filtered.map((idea, i) => ({ ...idea, rank: i + 1 }))
+  const final = filtered.map((idea, i) => ({ ...idea, rank: i + 1 }))
+  if (final.length < 3) {
+    console.log(`[project-ideas] only ${final.length} idea(s) shipped — model returned ${ideasRaw.length}, validator/filter dropped ${ideasRaw.length - final.length}`)
+  }
+  return final
 }
 
 interface SourceRow {
