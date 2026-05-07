@@ -1505,7 +1505,11 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
 
     const tLlmStart = Date.now()
     const { generateProjectIdeas } = await import('./_lib/project-ideas/generator.js')
-    const result = await generateProjectIdeas(gathered)
+    // Manual user-triggered runs ask for "force" — if the strict frame
+    // returns nothing, fall back to a permissive single-idea prompt so
+    // the user who clicked the button is never left with silence. The
+    // cron path stays strict; cron is allowed to return empty.
+    const result = await generateProjectIdeas(gathered, { force: !viaCron })
     console.log(`[generate-project-ideas] generation finished in ${Date.now() - tLlmStart}ms: ${result.ideas.length} ideas, reason=${result.reason ?? 'ok'}`)
 
     if (!result.ideas.length) {

@@ -313,13 +313,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ memory: data })
     }
 
-    // GET: List all memories (default)
+    // GET: List all memories (default). Explicit range — Supabase
+    // project-level db-default-max-rows can silently cap PostgREST
+    // queries (mobile builds were capping at 25 thoughts because of
+    // this); .range(0, 9999) overrides the default and returns up to
+    // 10k rows in one go.
     if (req.method === 'GET') {
       const { data: memories, error } = await supabase
         .from('memories')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
+        .range(0, 9999)
 
       if (error) {
         console.error('[memories] GET error:', error)
@@ -329,6 +334,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         })
       }
 
+      console.log(`[memories] GET returning ${(memories ?? []).length} memories`)
       return res.status(200).json({ memories })
     }
 
