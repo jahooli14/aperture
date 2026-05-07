@@ -568,6 +568,14 @@ function getMetaLine(item: ListItem, listType: string): string[] {
 // Standard item card
 // ============================================================================
 
+const ITEM_REACTIONS = [
+    { id: 'sparked', emoji: '⚡', label: 'inspired me' },
+    { id: 'off', emoji: '✕', label: 'not for me' },
+    { id: 'make', emoji: '💡', label: 'want to make' },
+] as const
+
+type ItemReaction = typeof ITEM_REACTIONS[number]['id']
+
 const StandardItemCard = memo(({
     item,
     listType,
@@ -576,6 +584,7 @@ const StandardItemCard = memo(({
     onDelete,
     onStatusChange,
     onRate,
+    onReact,
     onMarkDone,
     rgb,
     hasThought,
@@ -590,6 +599,7 @@ const StandardItemCard = memo(({
     onDelete: (id: string, listId: string) => void
     onStatusChange?: (id: string, status: 'active' | 'completed' | 'pending') => void
     onRate: (id: string, rating: number) => void
+    onReact?: (id: string, reaction: ItemReaction | null) => void
     onMarkDone: (item: ListItem) => void
     rgb: string
     hasThought?: boolean
@@ -747,6 +757,30 @@ const StandardItemCard = memo(({
                             >
                                 Details →
                             </a>
+                        )}
+                        {/* Reaction row — identity signal */}
+                        {onReact && (
+                            <div className="flex items-center gap-1 pt-1 border-t border-white/10">
+                                {ITEM_REACTIONS.map(r => {
+                                    const active = item.metadata?.reaction === r.id
+                                    return (
+                                        <button
+                                            key={r.id}
+                                            onClick={e => { e.stopPropagation(); onReact(item.id, active ? null : r.id) }}
+                                            className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] transition-all"
+                                            style={{
+                                                background: active ? 'rgba(var(--brand-primary-rgb),0.15)' : 'transparent',
+                                                border: active ? '1px solid rgba(var(--brand-primary-rgb),0.35)' : '1px solid rgba(255,255,255,0.08)',
+                                                color: active ? 'rgb(var(--brand-primary-rgb))' : 'var(--brand-text-muted)',
+                                                opacity: item.metadata?.reaction && !active ? 0.35 : 0.8,
+                                            }}
+                                        >
+                                            <span>{r.emoji}</span>
+                                            <span className="hidden sm:inline">{r.label}</span>
+                                        </button>
+                                    )
+                                })}
+                            </div>
                         )}
                     </div>
                 )}
@@ -913,6 +947,7 @@ function MasonryListGrid({
     onDelete,
     onStatusChange,
     onRate,
+    onReact,
     onMarkDone,
     rgb,
     thoughtCapturedIds,
@@ -926,6 +961,7 @@ function MasonryListGrid({
     onDelete: (id: string, listId: string) => void
     onStatusChange?: (id: string, status: 'active' | 'completed' | 'pending') => void
     onRate: (id: string, rating: number) => void
+    onReact?: (id: string, reaction: ItemReaction | null) => void
     onMarkDone: (item: ListItem) => void
     rgb: string
     thoughtCapturedIds?: Set<string>
@@ -966,6 +1002,7 @@ function MasonryListGrid({
                             onDelete={onDelete}
                             onStatusChange={onStatusChange}
                             onRate={onRate}
+                            onReact={onReact}
                             onMarkDone={onMarkDone}
                             rgb={rgb}
                             hasThought={thoughtCapturedIds?.has(item.id)}
@@ -1414,6 +1451,13 @@ export default function ListDetailPage() {
         await updateListItemMetadata(itemId, { ...item.metadata, user_rating: rating })
     }, [displayItems, updateListItemMetadata])
 
+    // React to an item — stores in metadata.reaction
+    const handleReact = useCallback(async (itemId: string, reaction: ItemReaction | null) => {
+        const item = displayItems.find(i => i.id === itemId)
+        if (!item) return
+        await updateListItemMetadata(itemId, { ...item.metadata, reaction: reaction ?? undefined })
+    }, [displayItems, updateListItemMetadata])
+
     // Rate from celebration
     const handleCelebrationRate = useCallback(async (rating: number) => {
         if (!celebrationItem) return
@@ -1715,6 +1759,7 @@ export default function ListDetailPage() {
                                 onDelete={handleDeleteItem}
                                 onStatusChange={handleStatusChange}
                                 onRate={handleRate}
+                                onReact={handleReact}
                                 onMarkDone={handleMarkDone}
                                 rgb={rgb}
                                 thoughtCapturedIds={thoughtCapturedIds}
@@ -1773,6 +1818,7 @@ export default function ListDetailPage() {
                                                     onDelete={handleDeleteItem}
                                                     onStatusChange={handleStatusChange}
                                                     onRate={handleRate}
+                                                    onReact={handleReact}
                                                     onMarkDone={handleMarkDone}
                                                     rgb={rgb}
                                                     thoughtCapturedIds={thoughtCapturedIds}

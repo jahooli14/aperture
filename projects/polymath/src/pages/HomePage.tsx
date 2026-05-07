@@ -21,7 +21,6 @@ import { motion } from 'framer-motion'
 import { useProjectStore } from '../stores/useProjectStore'
 import { useSuggestionStore } from '../stores/useSuggestionStore'
 import { useMemoryStore } from '../stores/useMemoryStore'
-import { useListStore } from '../stores/useListStore'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { useJourneyStore } from '../stores/useJourneyStore'
 import { useAuthContext } from '../contexts/AuthContext'
@@ -41,36 +40,27 @@ const LIST_TYPE_ICONS: Record<string, React.ElementType> = {
 }
 
 function NowConsumingWidget() {
-  const lists = useListStore(s => s.lists)
-  const fetchLists = useListStore(s => s.fetchLists)
   const [activeItems, setActiveItems] = useState<{ listId: string; listTitle: string; listType: string; itemId: string; itemContent: string }[]>([])
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    if (lists.length === 0) fetchLists()
-  }, [lists.length, fetchLists])
-
-  useEffect(() => {
-    if (lists.length === 0) return
     const fetchActiveItems = async () => {
-      const results: typeof activeItems = []
-      for (const list of lists.slice(0, 10)) {
-        try {
-          const res = await fetch(`/api/lists?scope=items&listId=${list.id}&limit=10`)
-          if (!res.ok) continue
-          const items = await res.json()
-          for (const item of items) {
-            if (item.status === 'active') {
-              results.push({ listId: list.id, listTitle: list.title, listType: list.type, itemId: item.id, itemContent: item.content })
-            }
-          }
-        } catch {}
-      }
-      setActiveItems(results)
+      try {
+        const res = await fetch('/api/lists?scope=items&resource=active-items&limit=4')
+        if (!res.ok) return
+        const rows = await res.json()
+        setActiveItems(rows.map((r: any) => ({
+          listId: r.list_id,
+          listTitle: r.list?.title ?? '',
+          listType: r.list?.type ?? 'generic',
+          itemId: r.id,
+          itemContent: r.content,
+        })))
+      } catch {}
       setLoaded(true)
     }
     fetchActiveItems()
-  }, [lists])
+  }, [])
 
   if (!loaded || activeItems.length === 0) return null
 

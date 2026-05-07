@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { CheckCircle2, ArrowRight, Bookmark, ThumbsDown, Minus, ThumbsUp, Smile, Flame } from 'lucide-react'
+import { CheckCircle2, ArrowRight, Bookmark, ThumbsDown, Minus, ThumbsUp, Smile, Flame, Mic } from 'lucide-react'
 import { useFocusStore } from '../../stores/useFocusStore'
 import { useProjectStore } from '../../stores/useProjectStore'
+import { VoiceInput } from '../VoiceInput'
 
 const REFLECTION_RATINGS = [
   { icon: ThumbsDown, label: 'Frustrating', value: 1 },
@@ -17,6 +18,8 @@ export function FocusSummary() {
     const { updateProject } = useProjectStore()
     const [nextStep, setNextStep] = useState('')
     const [rating, setRating] = useState<number | null>(null)
+    const [showVoiceCapture, setShowVoiceCapture] = useState(false)
+    const [sessionNoteRecorded, setSessionNoteRecorded] = useState(false)
 
     const completedTasks = tasks.filter(t => t.completed)
     const skippedTasks = tasks.filter(t => !t.completed)
@@ -111,6 +114,49 @@ export function FocusSummary() {
                         </ul>
                     </div>
                 )}
+
+                {/* Post-session voice capture — captures what happened + what's next */}
+                <div className="mb-6">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--brand-text-muted)] mb-3 flex items-center gap-2">
+                        <Mic className="h-3 w-3" />
+                        What did you do? What's next?
+                    </h3>
+                    {sessionNoteRecorded ? (
+                        <p className="text-xs text-[var(--brand-text-muted)] italic opacity-60">
+                            Captured. ✓
+                        </p>
+                    ) : showVoiceCapture ? (
+                        <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+                            <VoiceInput
+                                onTranscript={(transcript) => {
+                                    if (transcript.trim() && projectId) {
+                                        fetch('/api/memories?capture=true', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                                transcript,
+                                                source_reference: { type: 'project', id: projectId },
+                                                context: 'post_session',
+                                            }),
+                                        }).catch(() => {/* silent */})
+                                    }
+                                    setSessionNoteRecorded(true)
+                                    setShowVoiceCapture(false)
+                                }}
+                                maxDuration={30}
+                                autoStart
+                            />
+                        </div>
+                    ) : (
+                        <button
+                            onClick={() => setShowVoiceCapture(true)}
+                            className="flex items-center gap-2 text-xs text-[var(--brand-text-muted)] opacity-50 hover:opacity-90 transition-opacity"
+                        >
+                            <Mic className="h-3.5 w-3.5" />
+                            <span>30-second voice note</span>
+                        </button>
+                    )}
+                </div>
 
                 {/* Bookmark / Next Step */}
                 <div className="mb-8">

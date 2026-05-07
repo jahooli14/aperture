@@ -18,8 +18,9 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { BookmarkPlus, BookmarkCheck, X, Hammer, RotateCw } from 'lucide-react'
+import { BookmarkPlus, BookmarkCheck, X, Hammer, RefreshCw } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
 import { api } from '../../lib/apiClient'
 
@@ -56,10 +57,36 @@ interface GenerateResponse {
   signal_count?: number
   attempts?: number
   took_ms?: number
-  // Cooldown response shape (HTTP 429 — the apiClient surfaces this as
-  // an error, but we also defensively check the parsed body).
   retry_after_ms?: number
   message?: string
+}
+
+type IdeaMode = 'new_idea' | 'forgotten' | 'reshape' | 'extend'
+
+// Derive the mode from evidence — no DB column needed.
+// project_dormant evidence = something was abandoned; check recency to split
+// forgotten (3-16 wks) from reshape (4+ months). Active project evidence = extend.
+// Anything else = new idea coalescing.
+function deriveMode(idea: ProjectIdea): IdeaMode {
+  const kinds = (idea.evidence ?? []).map(e => e.kind)
+  if (kinds.includes('project_dormant')) {
+    // Try to determine dormancy depth from the evidence date
+    const dormantEvidence = idea.evidence.find(e => e.kind === 'project_dormant')
+    if (dormantEvidence?.date) {
+      const weeks = (Date.now() - new Date(dormantEvidence.date).getTime()) / (7 * 24 * 3600 * 1000)
+      return weeks >= 16 ? 'reshape' : 'forgotten'
+    }
+    return 'forgotten'
+  }
+  if (kinds.includes('project')) return 'extend'
+  return 'new_idea'
+}
+
+const MODE_LABEL: Record<IdeaMode, string> = {
+  new_idea: 'something you\'ve been circling',
+  forgotten: 'you left this unfinished',
+  reshape: 'time to see this differently',
+  extend: 'a new direction for something you\'re building',
 }
 
 const KIND_LABEL: Record<string, string> = {
@@ -98,9 +125,12 @@ const LOADING_STAGES: Array<{ at_ms: number; line: string }> = [
 ]
 
 export function ProjectIdeasHome() {
+  const navigate = useNavigate()
   const [ideas, setIdeas] = useState<ProjectIdea[]>([])
   const [generatedAt, setGeneratedAt] = useState<string | null>(null)
   const [hasAny, setHasAny] = useState(false)
+  const [lastIdea, setLastIdea] = useState<ProjectIdea | null>(null)
+  const [insufficientSignals, setInsufficientSignals] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -112,10 +142,9 @@ export function ProjectIdeasHome() {
     setError(null)
     try {
       const res = await api.get('utilities?resource=project-ideas') as ProjectIdeasResponse
-      // The Moment is a single hero card — even if the server returns
-      // multiple ideas (legacy from the old 3-card carousel), only the
-      // top-ranked one shows here.
-      setIdeas((res.ideas ?? []).slice(0, 1))
+      const active = (res.ideas ?? []).slice(0, 1)
+      setIdeas(active)
+      if (active[0]) setLastIdea(active[0])
       setGeneratedAt(res.generated_at)
       setHasAny(res.has_any)
     } catch (err) {
@@ -171,15 +200,13 @@ export function ProjectIdeasHome() {
       if (!res.ideas || res.ideas.length === 0) {
         if (res.reason === 'insufficient_data') {
           const have = typeof res.signal_count === 'number' ? res.signal_count : 0
-          setError(`You have ${have} captured signal${have === 1 ? '' : 's'} — the synthesiser needs at least 8 to find patterns. Add a few voice notes or list items and try again.`)
+          setInsufficientSignals(have)
         } else {
-          // The new "missing piece" frame is built to return nothing on
-          // weeks where no recent capture genuinely unblocks an existing
-          // project. This is correct, not a failure — surface it that way.
-          setError('Nothing ripe this week. The system only surfaces ideas where a recent capture genuinely unblocks an existing project — keep capturing and check back in a few days.')
+          setError('Nothing ripe this week. Keep capturing and check back in a few days.')
         }
         return
       }
+      setInsufficientSignals(null)
       await load()
     } catch (err) {
       // The apiClient throws ApiError with .status === 429 on cooldown.
@@ -202,9 +229,17 @@ export function ProjectIdeasHome() {
     try {
       await api.post('utilities?resource=project-ideas-feedback', { id: idea.id, status })
       if (status === 'rejected') {
-        // Single-card surface: dismissing hides the moment until the
-        // user regenerates or a new one fires.
         setIdeas([])
+      } else if (status === 'built') {
+        // Navigate to a pre-filled new project page so the user can
+        // immediately start building what they just committed to.
+        const params = new URLSearchParams({
+          title: idea.title,
+          description: idea.pitch,
+          first_task: idea.next_step,
+          from_idea: idea.id,
+        })
+        navigate(`/projects?create=1&${params.toString()}`)
       } else {
         setIdeas(prev => prev.map(i => i.id === idea.id ? { ...i, status } : i))
       }
@@ -213,10 +248,15 @@ export function ProjectIdeasHome() {
     } finally {
       setPendingFeedback(null)
     }
-  }, [pendingFeedback])
+  }, [pendingFeedback, navigate])
 
   const active = ideas[0] ?? null
   const evidenceCount = useMemo(() => active?.evidence?.length ?? 0, [active])
+  const mode = useMemo(() => active ? deriveMode(active) : null, [active])
+  const firstExcerpt = useMemo(() => {
+    const e = active?.evidence?.find(ev => ev.excerpt?.trim())
+    return e ? { excerpt: e.excerpt, label: KIND_LABEL[e.kind] ?? e.kind } : null
+  }, [active])
 
   return (
     <section className="relative">
@@ -225,7 +265,7 @@ export function ProjectIdeasHome() {
           className="text-[10px] uppercase tracking-[0.32em] italic"
           style={{ color: 'var(--brand-text-muted)', fontWeight: 400 }}
         >
-          ideas for you
+          {mode ? MODE_LABEL[mode] : 'ideas for you'}
         </h2>
         <div className="flex items-center gap-3">
           {generatedAt && (
@@ -241,12 +281,12 @@ export function ProjectIdeasHome() {
               type="button"
               onClick={generate}
               disabled={generating}
-              className="inline-flex items-center gap-1 text-[10px] tracking-[0.18em] uppercase opacity-50 hover:opacity-90 transition-opacity disabled:opacity-30"
-              style={{ color: 'var(--brand-text-muted)' }}
-              title="Refresh deck"
+              className="inline-flex items-center gap-1.5 text-[10px] tracking-[0.18em] uppercase opacity-60 hover:opacity-100 transition-opacity disabled:opacity-30 px-2 py-1 rounded-md"
+              style={{ color: 'var(--brand-text-muted)', border: '1px solid rgba(255,255,255,0.08)' }}
               aria-busy={generating}
             >
-              <RotateCw className={`h-3 w-3 ${generating ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-3 w-3 ${generating ? 'animate-spin' : ''}`} />
+              <span>try another</span>
             </button>
           )}
         </div>
@@ -267,26 +307,52 @@ export function ProjectIdeasHome() {
         )}
 
         {!loading && !ideas.length && !generating && (
-          <div className="flex items-center gap-3 px-2">
-            <button
-              type="button"
-              onClick={generate}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full transition-all flex-shrink-0"
-              style={{
-                background: 'rgba(var(--brand-primary-rgb), 0.15)',
-                color: 'rgb(var(--brand-primary-rgb))',
-                border: '1px solid rgba(var(--brand-primary-rgb), 0.4)',
-              }}
-            >
-              <span className="text-sm tracking-wide">show me ideas</span>
-            </button>
-            {error ? (
-              <p className="text-[11px] italic flex-1 min-w-0" style={{ color: 'var(--brand-text-secondary)' }}>{error}</p>
-            ) : (
-              <p className="text-[11px] italic flex-1 min-w-0 opacity-60" style={{ color: 'var(--brand-text-muted)' }}>
-                {hasAny ? 'cleared the deck — pull a fresh one' : 'pull a project from across your captures'}
-              </p>
+          <div className="flex flex-col gap-4 px-2">
+            {/* Show the last seen idea dimmed — gives context instead of a blank */}
+            {lastIdea && (
+              <div className="opacity-30 pointer-events-none select-none mb-2">
+                <h3
+                  className="text-[18px] leading-tight mb-2"
+                  style={{
+                    color: 'var(--brand-text-primary)',
+                    fontFamily: 'Georgia, "Iowan Old Style", "Times New Roman", serif',
+                    fontWeight: 500,
+                  }}
+                >
+                  {lastIdea.title}
+                </h3>
+                <p className="text-[13px] italic" style={{ color: 'var(--brand-text-secondary)' }}>
+                  {lastIdea.why_now}
+                </p>
+              </div>
             )}
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={generate}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full transition-all flex-shrink-0"
+                style={{
+                  background: 'rgba(var(--brand-primary-rgb), 0.15)',
+                  color: 'rgb(var(--brand-primary-rgb))',
+                  border: '1px solid rgba(var(--brand-primary-rgb), 0.4)',
+                }}
+              >
+                <span className="text-sm tracking-wide">
+                  {lastIdea ? 'try another' : 'show me ideas'}
+                </span>
+              </button>
+              {insufficientSignals !== null ? (
+                <p className="text-[11px] italic flex-1 min-w-0" style={{ color: 'var(--brand-text-secondary)' }}>
+                  {insufficientSignals} signal{insufficientSignals === 1 ? '' : 's'} captured — needs 8 to find patterns
+                </p>
+              ) : error ? (
+                <p className="text-[11px] italic flex-1 min-w-0" style={{ color: 'var(--brand-text-secondary)' }}>{error}</p>
+              ) : (
+                <p className="text-[11px] italic flex-1 min-w-0 opacity-60" style={{ color: 'var(--brand-text-muted)' }}>
+                  {hasAny ? 'cleared the deck — pull a fresh one' : 'pull a project from across your captures'}
+                </p>
+              )}
+            </div>
           </div>
         )}
 
@@ -387,6 +453,20 @@ export function ProjectIdeasHome() {
                   {active.why_now}
                 </div>
 
+                {/* Always-visible first evidence excerpt — answers "where did this come from?" */}
+                {firstExcerpt && (
+                  <div
+                    className="text-[12px] leading-snug mb-5 pl-3 italic"
+                    style={{
+                      color: 'var(--brand-text-muted)',
+                      borderLeft: '2px solid rgba(var(--brand-primary-rgb), 0.25)',
+                    }}
+                  >
+                    <span className="opacity-50 not-italic mr-1.5">{firstExcerpt.label} —</span>
+                    "{firstExcerpt.excerpt}"
+                  </div>
+                )}
+
                 <div
                   className="rounded-xl p-4 mb-5"
                   style={{
@@ -408,14 +488,16 @@ export function ProjectIdeasHome() {
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setShowEvidence(s => !s)}
-                  className="text-[10px] tracking-[0.22em] uppercase opacity-50 hover:opacity-90 transition-opacity"
-                  style={{ color: 'var(--brand-text-muted)' }}
-                >
-                  {showEvidence ? 'hide receipts' : `from ${evidenceCount} signals in your data`}
-                </button>
+                {evidenceCount > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowEvidence(s => !s)}
+                    className="text-[10px] tracking-[0.22em] uppercase opacity-50 hover:opacity-90 transition-opacity"
+                    style={{ color: 'var(--brand-text-muted)' }}
+                  >
+                    {showEvidence ? 'hide receipts' : `see all ${evidenceCount} signals`}
+                  </button>
+                )}
 
                 <AnimatePresence>
                   {showEvidence && (

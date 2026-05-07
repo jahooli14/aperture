@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Clock, ExternalLink, Archive, Trash2, WifiOff, Link2, Copy, Share2, Edit, Download, CheckCircle, MoreVertical, Loader2 } from 'lucide-react'
+import { Clock, ExternalLink, Archive, Trash2, WifiOff, Link2, Copy, Share2, Edit, Download, CheckCircle, MoreVertical, Loader2, Zap, X, Lightbulb } from 'lucide-react'
 import { format } from 'date-fns'
 import type { Article } from '../../types/reading'
 import { useReadingStore } from '../../stores/useReadingStore'
@@ -22,7 +22,7 @@ interface ArticleCardProps {
 }
 
 export const ArticleCard = React.memo(function ArticleCard({ article, onClick }: ArticleCardProps) {
-  const { updateArticleStatus, deleteArticle } = useReadingStore()
+  const { updateArticleStatus, deleteArticle, updateArticle } = useReadingStore()
   const { addToast } = useToast()
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
   const [isMetadataCached, setIsMetadataCached] = useState(false)
@@ -34,6 +34,19 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
 
   const { isCached: isArticleFullyCached } = useOfflineArticle()
   const { is_rotting } = article
+
+  // Reactions stored as tags with prefix "reaction:" — zero schema changes needed.
+  const REACTION_TAG_PREFIX = 'reaction:'
+  const currentReaction = (article.tags ?? []).find(t => t.startsWith(REACTION_TAG_PREFIX))?.slice(REACTION_TAG_PREFIX.length) as 'sparked' | 'off' | 'make' | undefined
+
+  const handleReaction = useCallback(async (reaction: 'sparked' | 'off' | 'make') => {
+    haptic.light()
+    const baseTags = (article.tags ?? []).filter(t => !t.startsWith(REACTION_TAG_PREFIX))
+    const next = currentReaction === reaction ? baseTags : [...baseTags, `${REACTION_TAG_PREFIX}${reaction}`]
+    try {
+      await updateArticle(article.id, { tags: next })
+    } catch { /* silent */ }
+  }, [article.id, article.tags, currentReaction, updateArticle])
 
   // No more redundant cleaning needed as it's done on backend
   const excerpt = article.excerpt || ''
@@ -272,8 +285,33 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
           </div>
         )}
 
+        {/* Reaction strip — identity signal: inspired me / not for me / made me want to make */}
+        <div className="flex items-center gap-1 mt-2 pb-1">
+          {([
+            { id: 'sparked', icon: Zap, label: 'sparked me' },
+            { id: 'off', icon: X, label: 'not for me' },
+            { id: 'make', icon: Lightbulb, label: 'want to make' },
+          ] as const).map(({ id, icon: Icon, label }) => (
+            <button
+              key={id}
+              onClick={(e) => { e.stopPropagation(); handleReaction(id) }}
+              className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] transition-all"
+              style={{
+                color: currentReaction === id ? 'rgb(var(--brand-primary-rgb))' : 'var(--brand-text-muted)',
+                background: currentReaction === id ? 'rgba(var(--brand-primary-rgb), 0.12)' : 'transparent',
+                border: currentReaction === id ? '1px solid rgba(var(--brand-primary-rgb), 0.3)' : '1px solid transparent',
+                opacity: currentReaction && currentReaction !== id ? 0.35 : 0.7,
+              }}
+              title={label}
+            >
+              <Icon className="h-3 w-3" />
+              <span className="hidden sm:inline">{label}</span>
+            </button>
+          ))}
+        </div>
+
         {/* Action strip — always visible on mobile */}
-        <div className="flex items-center gap-1 mt-3 pt-3 border-t border-white/10">
+        <div className="flex items-center gap-1 mt-1 pt-3 border-t border-white/10">
           <button
             onClick={(e) => { e.stopPropagation(); setShowConnectionsDialog(true) }}
             className="flex items-center gap-1.5 px-2.5 min-h-[36px] text-[11px] font-bold uppercase tracking-widest rounded-lg active:bg-[rgba(255,255,255,0.08)] transition-colors text-[var(--brand-text-secondary)]"

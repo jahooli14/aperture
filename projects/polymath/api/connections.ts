@@ -307,7 +307,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ? allContextItems.map(i => `- ${i.slice(0, 200)}`).join('\n')
           : '(no related items found in knowledge lake)'
 
-        const analysisPrompt = `You've read all of someone's notes, saved articles, and projects. Your job is to connect things they haven't connected yet — not summarize. Be specific, not impressive.
+        const analysisPrompt = `You've read all of someone's notes, saved articles, and projects. Connect things they haven't connected yet. Be specific. Don't summarize.
+
+Plain English rules — this is a friend talking, not a consultant:
+- Real words people say. No "leveraging," "unlocking," "soundscapes," "narrative substrate."
+- One idea per sentence. Short sentences.
+- Concrete nouns. "Logic Pro trial expired" beats "your reliance on the 90-day trial."
+- If you can't say it plainly, stay silent.
+BAD: "Your multifaceted engagement with constraint-based creation unlocks transformative potential."
+GOOD: "You keep coming back to limits as a creative tool. This project fits that."
 
 FOCUS ITEM:
 ${truncatedSource}
@@ -315,18 +323,17 @@ ${truncatedSource}
 KNOWLEDGE LAKE — ${allContextItems.length} items from their entire corpus (thoughts, articles, projects, lists):
 ${contextBlock}
 
-${allContextItems.length === 0 ? 'NOTE: This is a fresh item with no prior context yet — analyze it on its own merits and suggest what territory it opens up.\n\n' : ''}
-Output ONLY valid JSON with exactly these 4 keys:
+${allContextItems.length === 0 ? 'NOTE: Fresh item, no prior context yet. Analyze it on its own merits.\n\n' : ''}Output ONLY valid JSON with exactly these 4 keys:
 
-1. "summary": One razor-sharp sentence. Not what the item says — what it MEANS in the context of everything else. What is this person actually working on, thinking about, or moving toward?
+1. "summary": One sentence. Not what the item says — what it means given everything else. What is this person actually working on or moving toward?
 
-2. "patterns": Array of 2-3 non-obvious patterns. Each must name SPECIFIC items from the lake and explain the connection. Don't say "both relate to X" — say WHY these two things appearing together in the same mind is surprising and what it reveals.
+2. "patterns": Array of 2-3 patterns. Each one names specific items from the lake and says WHY the connection matters. Not "both relate to X" — say what it reveals that they couldn't see without all the data in front of them.
 
-3. "insight": The "Aha!" that would make this person stop and say "I hadn't seen it that way." What does the corpus reveal about this item that the person couldn't see without having everything in front of them? Reference specific items. Be bold. Be specific.
+3. "insight": One sentence. The thing that would make them stop and say "I hadn't seen it that way." Bold. Specific. Reference real titles.
 
-4. "suggestion": One concrete, actionable next step. Not "explore more" — name exactly what they should make, write, build, or decide based on what you see in their corpus. Reference specific items and why.
+4. "suggestion": One concrete next step. Name exactly what to make, write, build, or decide. Reference specific items. Not "explore more."
 
-Rules: Name actual titles. No generic observations. No hedging. Write like someone who has read every note they've ever taken and has something urgent to say.`
+Name actual titles. No hedging. No corporate-coach voice.`
 
         let responseText = ''
         try {

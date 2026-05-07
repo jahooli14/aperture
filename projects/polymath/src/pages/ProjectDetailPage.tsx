@@ -37,6 +37,55 @@ interface ProjectNote {
   image_urls?: string[]
 }
 
+function BlockerField({ blocker, onSave }: { blocker?: string; onSave: (text: string) => Promise<void> }) {
+  const [editing, setEditing] = useState(false)
+  const [text, setText] = useState(blocker ?? '')
+  const [saving, setSaving] = useState(false)
+
+  const handleSave = async () => {
+    setSaving(true)
+    try { await onSave(text) } finally { setSaving(false); setEditing(false) }
+  }
+
+  return (
+    <div className="p-4 sm:p-5 rounded-2xl" style={{ background: 'rgba(245,158,11,0.04)', border: '1px solid rgba(245,158,11,0.14)' }}>
+      <span className="text-[11px] font-medium tracking-wide block mb-2 lowercase" style={{ color: 'rgba(245,158,11,0.7)' }}>
+        what stopped you here?
+      </span>
+      {editing ? (
+        <div className="space-y-2">
+          <textarea
+            autoFocus
+            value={text}
+            onChange={e => setText(e.target.value)}
+            placeholder="One sentence — what's blocking this?"
+            className="w-full bg-black/30 rounded-xl p-3 text-[14px] resize-none focus:outline-none text-[var(--brand-text-primary)] border border-white/[0.08] focus:border-white/[0.15]"
+            rows={2}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSave() }
+              if (e.key === 'Escape') { setText(blocker ?? ''); setEditing(false) }
+            }}
+          />
+          <div className="flex gap-2 justify-end">
+            <button onClick={() => { setText(blocker ?? ''); setEditing(false) }} className="px-3 py-1.5 text-[11px] font-medium rounded-lg hover:bg-white/[0.05] transition-colors" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>Cancel</button>
+            <button onClick={handleSave} disabled={saving} className="px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all" style={{ background: 'rgba(245,158,11,0.12)', color: 'rgba(245,158,11,0.9)' }}>
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <p
+          className="text-[14px] leading-relaxed cursor-pointer hover:opacity-80 transition-opacity"
+          style={{ color: 'var(--brand-text-primary)', opacity: blocker ? 0.7 : 0.3 }}
+          onClick={() => setEditing(true)}
+        >
+          {blocker || 'Tap to add a blocker note'}
+        </p>
+      )}
+    </div>
+  )
+}
+
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -764,6 +813,28 @@ export function ProjectDetailPage() {
                   )}
                 </div>
               </div>
+
+              {/* Blocker field — shown when project has gone quiet for 3+ weeks.
+                  Captures WHY work paused; powers the long-dormant reshape in The Moment. */}
+              {(() => {
+                const dormancyDays = project.last_active
+                  ? Math.floor((Date.now() - new Date(project.last_active).getTime()) / 86_400_000)
+                  : null
+                const isDormant = dormancyDays !== null && dormancyDays >= 21
+                const existingBlocker = project.metadata?.blocker as string | undefined
+                if (!isDormant && !existingBlocker) return null
+                return (
+                  <BlockerField
+                    key={project.id}
+                    blocker={existingBlocker}
+                    onSave={async (text) => {
+                      await updateProject(project.id, {
+                        metadata: { ...project.metadata, blocker: text || undefined }
+                      })
+                    }}
+                  />
+                )
+              })()}
 
               {/* Guide */}
               {project && (

@@ -197,6 +197,22 @@ async function handleListItems(req: VercelRequest, res: VercelResponse) {
     const { listId, id, resource } = req.query
 
     try {
+        // GET /api/lists?scope=items&resource=active-items&limit=N
+        // Returns up to N active items across ALL lists in one query.
+        // Used by NowConsumingWidget to avoid N serial fetches.
+        if (req.method === 'GET' && resource === 'active-items') {
+            const limit = req.query.limit ? parseInt(req.query.limit as string) : 4
+            const { data, error } = await supabase
+                .from('list_items')
+                .select('id, content, status, list_id, list:lists!inner(id, title, type)')
+                .eq('user_id', userId)
+                .eq('status', 'active')
+                .order('updated_at', { ascending: false })
+                .limit(limit)
+            if (error) throw error
+            return res.status(200).json(data ?? [])
+        }
+
         // GET /api/lists?scope=items&resource=favourites
         // Returns items with user_rating >= 4 across all the user's lists,
         // joined with the parent list's type + title so the client can group

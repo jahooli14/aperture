@@ -179,16 +179,33 @@ export function KeepGoingCarousel() {
   const pitch = plan?.task_description || current?.metadata?.session_pitch
   const nextStep = headline || current?.metadata?.tasks?.find((t: any) => !t.done)?.text || 'Continue where you left off'
 
+  // Dormancy signal — drives border/label tint. Thresholds: >7d amber, >28d red.
+  const dormancyDays = current
+    ? Math.floor((Date.now() - new Date(current.last_active || current.updated_at || 0).getTime()) / 86_400_000)
+    : 0
+  const dormancyColor = dormancyDays >= 28
+    ? 'rgba(239,68,68,0.55)'
+    : dormancyDays >= 7
+    ? 'rgba(245,158,11,0.55)'
+    : null
+  const dormancyLabel = dormancyDays >= 28
+    ? 'slipping away'
+    : dormancyDays >= 7
+    ? 'going quiet'
+    : null
+
   return (
     <div>
       <h2 className="section-header">keep <span>going</span></h2>
       <div
-        className="rounded-2xl p-5 flex flex-col overflow-hidden relative"
+        className="rounded-2xl p-5 flex flex-col overflow-hidden relative transition-all duration-700"
         style={{
           background: 'linear-gradient(135deg, rgba(56,189,248,0.06) 0%, rgba(15,24,41,0.5) 60%)',
           backdropFilter: 'blur(16px)',
-          border: '1px solid rgba(56,189,248,0.15)',
-          boxShadow: '0 0 30px rgba(56,189,248,0.05), 0 4px 16px rgba(0,0,0,0.4)',
+          border: `1px solid ${dormancyColor ?? 'rgba(56,189,248,0.15)'}`,
+          boxShadow: dormancyColor
+            ? `0 0 24px ${dormancyColor.replace('0.55', '0.08')}, 0 4px 16px rgba(0,0,0,0.4)`
+            : '0 0 30px rgba(56,189,248,0.05), 0 4px 16px rgba(0,0,0,0.4)',
           minHeight: '280px',
         }}
       >
@@ -230,10 +247,23 @@ export function KeepGoingCarousel() {
             >
               <div className="h-1 rounded-full mb-4 opacity-60" style={{ background: theme.text }} />
 
-              <h3 className="text-lg font-bold text-[var(--brand-text-primary)] leading-tight mb-1 aperture-header line-clamp-2">
-                {current.title}
-              </h3>
-              <p className="text-[11px] text-[var(--brand-text-secondary)] opacity-40 mb-3">
+              <div className="flex items-start justify-between gap-2 mb-1">
+                <h3 className="text-lg font-bold text-[var(--brand-text-primary)] leading-tight aperture-header line-clamp-2 flex-1">
+                  {current.title}
+                </h3>
+                {dormancyLabel && (
+                  <span
+                    className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5"
+                    style={{ color: dormancyColor ?? undefined, border: `1px solid ${dormancyColor}`, background: 'rgba(0,0,0,0.3)' }}
+                  >
+                    {dormancyLabel}
+                  </span>
+                )}
+              </div>
+              <p
+                className="text-[11px] mb-3"
+                style={{ color: dormancyColor ?? 'var(--brand-text-secondary)', opacity: dormancyColor ? 0.8 : 0.4 }}
+              >
                 {formatRelativeTime(current.last_active || current.updated_at)}
               </p>
 
