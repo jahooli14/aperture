@@ -15,10 +15,9 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { ArrowUp, Plus, Check, X, Target, Trash2, Pencil, RotateCcw } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../../lib/supabase'
-import type { Project } from '../../types'
+import type { Project, ChatTurn } from '../../types'
 import type { Task } from './TaskList'
 import { useProjectStore } from '../../stores/useProjectStore'
-import type { ChatTurn } from '../../types'
 
 const MAX_PERSISTED_TURNS = 40
 

@@ -4,7 +4,7 @@
  * from observations — not from a list of nouns.
  */
 
-declare var process: any;
+declare const process: { env: Record<string, string | undefined> };
 
 import { getSupabaseClient } from './supabase.js'
 import { GoogleGenerativeAI } from '@google/generative-ai'

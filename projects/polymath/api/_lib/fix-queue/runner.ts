@@ -5,8 +5,7 @@
  */
 
 import { Resend } from 'resend'
-import type { FixAction, FixDraft, WeatherEmailAction } from './types.js'
-import { getMissingRequirements } from './types.js'
+import { getMissingRequirements, type FixAction, type FixDraft, type WeatherEmailAction } from './types.js'
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY
 const FROM_EMAIL = 'Fix Queue <onboarding@resend.dev>'

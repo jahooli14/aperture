@@ -6,7 +6,7 @@
  * into a "chapter" of their intellectual life.
  */
 
-declare var process: any;
+declare const process: { env: Record<string, string | undefined> };
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getSupabaseClient } from './supabase.js'

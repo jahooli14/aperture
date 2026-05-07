@@ -30,8 +30,7 @@ import { ItemInsightStrip } from '../components/ItemInsightStrip'
 import { VoiceInput } from '../components/VoiceInput'
 import { OptimizedImage } from '../components/ui/optimized-image'
 import { ArticleCard } from '../components/reading/ArticleCard'
-import type { ListItem, ListType, ListSettings } from '../types'
-import { listHasStatus } from '../types'
+import { listHasStatus, type ListItem, type ListType, type ListSettings } from '../types'
 import { useToast } from '../components/ui/toast'
 import { BottomSheet, BottomSheetContent, BottomSheetHeader, BottomSheetTitle } from '../components/ui/bottom-sheet'
 import { ListIcon, ListColor } from '../lib/listTheme'
@@ -596,6 +595,7 @@ const StandardItemCard = memo(({
     hasThought?: boolean
     hasStatus?: boolean
     coverOverride?: string
+    dragHandleProps?: Record<string, unknown>
 }) => {
     const hasImage = coverOverride || item.metadata?.image
     const imageUrl = coverOverride || item.metadata?.image

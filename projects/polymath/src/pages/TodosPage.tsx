@@ -233,7 +233,7 @@ export function TodosPage() {
       duration: 5000,
       action: {
         label: 'Undo',
-        onClick: () => { addTodo(todo.text) },
+        onClick: () => { addTodo({ text: todo.text }) },
       },
     })
   }

@@ -29,9 +29,8 @@ import { useListStore } from '../stores/useListStore'
 import { FocusableList, FocusableItem } from '../components/FocusableList'
 import { PullToRefresh } from '../components/PullToRefresh'
 import { SubtleBackground } from '../components/SubtleBackground'
-import type { ArticleStatus } from '../types/reading'
+import type { ArticleStatus, Article } from '../types/reading'
 import type { RSSFeedItem as RSSItem } from '../types/rss'
-import type { Article } from '../types/reading'
 
 // Lazy load heavy dialog components to reduce initial bundle size
 const ProcessingDebugPanel = lazy(lazyRetry(() => import('../components/reading/ProcessingDebugPanel').then(m => ({ default: m.ProcessingDebugPanel }))))
