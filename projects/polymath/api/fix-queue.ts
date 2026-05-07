@@ -2,8 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { supabase, isSupabaseConfigured } from './_lib/idea-engine-v2/supabase.js'
 import { draftFix } from './_lib/fix-queue/drafter.js'
 import { executeFix } from './_lib/fix-queue/runner.js'
-import type { FixDraft, FixStatus } from './_lib/fix-queue/types.js'
-import { getMissingRequirements } from './_lib/fix-queue/types.js'
+import { getMissingRequirements, type FixDraft, type FixStatus } from './_lib/fix-queue/types.js'
 
 const USER_ID = process.env.IDEA_ENGINE_USER_ID
 

@@ -132,8 +132,9 @@ function CompletedProjectsTimeline({ projects, onNavigate }: { projects: Project
 }
 
 export function ProjectsPage() {
+  // Auth gate stays in this thin wrapper; the inner component runs all
+  // hooks unconditionally so rules-of-hooks holds.
   const { isAuthenticated, loading: authLoading } = useAuthContext()
-
   if (!authLoading && !isAuthenticated) {
     return (
       <div style={{ backgroundColor: 'var(--brand-bg)' }} className="min-h-screen pt-12">
@@ -141,7 +142,10 @@ export function ProjectsPage() {
       </div>
     )
   }
+  return <ProjectsPageInner />
+}
 
+function ProjectsPageInner() {
   const navigate = useNavigate()
   const {
     projects: allProjects,

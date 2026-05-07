@@ -6,8 +6,7 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { MODELS } from '../idea-engine-v2/models.js'
-import type { FixDraft } from './types.js'
-import { getRequirementsForDraft, getMissingRequirements } from './types.js'
+import { getRequirementsForDraft, getMissingRequirements, type FixDraft } from './types.js'
 import { FixDraftResponse, tryValidate } from '../schemas.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')

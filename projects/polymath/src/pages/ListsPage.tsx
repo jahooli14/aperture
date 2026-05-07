@@ -30,8 +30,9 @@ const EXAMPLE_COLLECTIONS = [
 ]
 
 export default function ListsPage() {
+    // Thin auth gate. Inner component runs all hooks unconditionally so
+    // rules-of-hooks holds.
     const { isAuthenticated, loading: authLoading } = useAuthContext()
-
     if (!authLoading && !isAuthenticated) {
       return (
         <div style={{ backgroundColor: 'var(--brand-bg)' }} className="min-h-screen pt-12">
@@ -39,7 +40,10 @@ export default function ListsPage() {
         </div>
       )
     }
+    return <ListsPageInner />
+}
 
+function ListsPageInner() {
     const navigate = useNavigate()
     const { lists, fetchLists, reorderLists, loading } = useListStore()
     const [createOpen, setCreateOpen] = useState(false)

@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Layers, Clock } from 'lucide-react'
+import { Layers, Clock, Code, PenTool, Terminal, Lightbulb, Globe, Music, Video, BookOpen, Dribbble, Atom, Cpu } from 'lucide-react'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useNavigate } from 'react-router-dom'
 import { ReviewDeck } from '../projects/ReviewDeck'
 import { getTheme } from '../../lib/projectTheme'
-import { Code, PenTool, Terminal, Lightbulb, Globe, Music, Video, BookOpen, Dribbble, Atom, Cpu } from 'lucide-react'
 
 const getProjectIcon = (type: string) => {
     const t = type?.toLowerCase().trim() || ''

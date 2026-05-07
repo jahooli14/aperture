@@ -90,8 +90,10 @@ function MasonryGrid({
 }
 
 export function MemoriesPage() {
+  // Thin auth gate — keeps rules-of-hooks happy by fully short-circuiting
+  // BEFORE the inner component (and all its hooks) ever mounts. The inner
+  // component then runs without conditional hook calls.
   const { isAuthenticated, loading: authLoading } = useAuthContext()
-
   if (!authLoading && !isAuthenticated) {
     return (
       <div style={{ backgroundColor: 'var(--brand-bg)' }} className="min-h-screen pt-12">
@@ -99,7 +101,10 @@ export function MemoriesPage() {
       </div>
     )
   }
+  return <MemoriesPageInner />
+}
 
+function MemoriesPageInner() {
   const navigate = useNavigate()
   const location = useLocation()
   const { memories, fetchMemories, loading, error, deleteMemory, clearError } = useMemoryStore()
