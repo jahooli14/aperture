@@ -61,16 +61,18 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
         background: `linear-gradient(165deg, rgba(${theme.rgb}, 0.18) 0%, rgba(${theme.rgb}, 0.06) 45%, rgba(15, 24, 41, 0.75) 100%)`
       }}
     >
-      {/* Header */}
-      <div className="flex items-start justify-between gap-2 mb-3">
-        <h4 className={`text-[var(--brand-text-primary)] font-bold leading-tight aperture-header break-words ${prominent ? 'text-base sm:text-lg' : 'text-[15px]'}`}
+      {/* Header — title shrinks first, icon cluster stays compact so it
+          can't overflow narrow masonry columns. min-w-0 is what lets
+          the h4 actually shrink past its intrinsic width inside flex. */}
+      <div className="flex items-start justify-between gap-1.5 mb-3">
+        <h4 className={`min-w-0 flex-1 text-[var(--brand-text-primary)] font-bold leading-tight aperture-header break-words ${prominent ? 'text-base sm:text-lg' : 'text-[15px]'}`}
           style={{ textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
           {project.title}
         </h4>
-        <div className="flex items-center gap-1 flex-shrink-0">
+        <div className="flex items-center gap-0.5 flex-shrink-0 -mr-1">
           <button
             onClick={handleAnalyze}
-            className="h-9 w-9 rounded-full flex items-center justify-center transition-colors hover:bg-white/10"
+            className="h-8 w-8 rounded-full flex items-center justify-center transition-colors hover:bg-white/10"
             title="AI Analysis"
           >
             <span className="block w-2 h-2 rounded-full" style={{ backgroundColor: theme.textColor, opacity: 0.75 }} />
@@ -81,11 +83,11 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
               e.stopPropagation()
               setPriority(project.id)
             }}
-            className="h-9 w-9 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
+            className="h-8 w-8 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
             title={project.is_priority ? 'Remove priority' : 'Set as priority'}
           >
             <Star
-              className="h-[18px] w-[18px]"
+              className="h-4 w-4"
               style={{
                 color: project.is_priority ? 'var(--brand-primary)' : 'rgba(255,255,255,0.35)',
                 fill: project.is_priority ? 'var(--brand-primary)' : 'none'

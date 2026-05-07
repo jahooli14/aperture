@@ -511,28 +511,32 @@ function MemoriesPageInner() {
     setVisibleCount(PAGE_SIZE)
   }, [view, searchQuery, activeTags])
 
-  // Sentinel below the grid: when it enters view, grow the window by
-  // one page. Uses a callback ref so the observer attaches the moment
-  // the sentinel mounts (it renders conditionally on
-  // visibleCount < displayMemories.length, so a useEffect with a deps
-  // array would miss the first mount on initial load — Capacitor
-  // Android PWA was not loading more thoughts on scroll for that reason).
-  const observerRef = useRef<IntersectionObserver | null>(null)
-  const sentinelRef = useCallback((node: HTMLDivElement | null) => {
-    if (observerRef.current) {
-      observerRef.current.disconnect()
-      observerRef.current = null
-    }
-    if (!node) return
-    observerRef.current = new IntersectionObserver(entries => {
-      if (entries.some(e => e.isIntersecting)) {
+  // Window-scroll-based progressive loading. Capacitor / Android WebView
+  // had IntersectionObserver inconsistencies (sometimes the sentinel
+  // never reported as intersecting), so we just listen for scroll on
+  // the document and grow the window when we're near the bottom. Works
+  // identically across desktop, mobile, and Capacitor.
+  const visibleCountRef = useRef(visibleCount)
+  visibleCountRef.current = visibleCount
+  const totalCountRef = useRef(0)
+  useEffect(() => {
+    const checkAndLoad = () => {
+      if (visibleCountRef.current >= totalCountRef.current) return
+      const nearBottom =
+        window.innerHeight + window.scrollY >= document.body.offsetHeight - 800
+      if (nearBottom) {
         setVisibleCount(c => c + PAGE_SIZE)
       }
-    }, { rootMargin: '600px' })
-    observerRef.current.observe(node)
-  }, [])
-  useEffect(() => {
-    return () => { observerRef.current?.disconnect() }
+    }
+    window.addEventListener('scroll', checkAndLoad, { passive: true })
+    window.addEventListener('resize', checkAndLoad)
+    // Initial check — if the page is short enough that the bottom is
+    // already in view, load more immediately.
+    checkAndLoad()
+    return () => {
+      window.removeEventListener('scroll', checkAndLoad)
+      window.removeEventListener('resize', checkAndLoad)
+    }
   }, [])
 
   // Memoize displayMemories to prevent recalculation on every render
@@ -563,6 +567,11 @@ function MemoriesPageInner() {
       return dateB - dateA
     })
   }, [baseMemories, searchQuery, activeTags])
+
+  // Keep the scroll listener's notion of total in sync without forcing
+  // it to depend on displayMemories (would re-create the listener every
+  // time the list changed). Set on every render — cheap.
+  totalCountRef.current = displayMemories.length
 
   // Pinned thoughts  shown as a horizontal row above the main grid
   const pinnedMemories = useMemo(() => {
@@ -1122,13 +1131,14 @@ function MemoriesPageInner() {
 
                   <MasonryGrid memories={displayMemories.slice(0, visibleCount)} onEdit={handleOpenDetail} onDelete={handleDelete} />
                   {visibleCount < displayMemories.length && (
-                    <div ref={sentinelRef} className="flex flex-col items-center justify-center gap-2 py-6">
+                    <div className="flex flex-col items-center justify-center gap-2 py-6">
                       <span className="text-xs opacity-50" style={{ color: 'var(--brand-text-muted)' }}>
-                        loading more…
+                        showing {visibleCount} of {displayMemories.length}
                       </span>
-                      {/* Manual fallback if the IntersectionObserver
-                          doesn't fire (some Capacitor / WebView builds
-                          don't observe through certain scroll containers). */}
+                      {/* Manual button fallback. The window-scroll listener
+                          handles auto-loading; this is for users who'd rather
+                          tap, or for cases where the scroll listener somehow
+                          doesn't fire. */}
                       <button
                         type="button"
                         onClick={() => setVisibleCount(c => c + PAGE_SIZE)}

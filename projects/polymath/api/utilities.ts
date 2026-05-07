@@ -1328,7 +1328,7 @@ async function handleProjectIdeasGet(req: VercelRequest, res: VercelResponse) {
     if (!userId) return res.status(401).json({ error: 'Sign in to read your ideas' })
 
     const supabase = getSupabaseClient()
-    const [activeRes, anyRes] = await Promise.all([
+    const [activeRes, anyRes, projectsRes] = await Promise.all([
       supabase
         .from('project_ideas')
         .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, status, user_feedback, generated_at, acted_on_at')
@@ -1341,6 +1341,15 @@ async function handleProjectIdeasGet(req: VercelRequest, res: VercelResponse) {
         .from('project_ideas')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', userId),
+      // Active projects are Keep Going's job, not Ideas For You's.
+      // Hide any cached idea whose evidence cites an active project so
+      // older "Finish X" / "Polish X mix" ideas auto-disappear without
+      // requiring the user to regenerate.
+      supabase
+        .from('projects')
+        .select('id, title')
+        .eq('user_id', userId)
+        .in('status', ['active', 'upcoming']),
     ])
 
     if (activeRes.error) {
@@ -1348,17 +1357,35 @@ async function handleProjectIdeasGet(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: activeRes.error.message })
     }
 
-    // Latest batch only — older saved/built items belong on a future
-    // "your ideas" page, not the homepage carousel.
     const rows = activeRes.data ?? []
     const latestBatchId = rows[0]?.batch_id ?? null
     const latest = latestBatchId ? rows.filter(r => r.batch_id === latestBatchId) : []
 
+    // Suppress any idea whose evidence touches an active project. Keep
+    // Going already surfaces those — re-advertising them as "ideas" is
+    // duplication. Catches cached pre-fix ideas as well as anything new
+    // that slipped past the generator's validator.
+    const activeProjectIds = new Set((projectsRes.data ?? []).map((p: any) => p.id as string))
+    const activeProjectTitles = (projectsRes.data ?? [])
+      .map((p: any) => (p.title as string | null) ?? '')
+      .filter(t => t.trim().length > 0)
+      .map(t => t.toLowerCase())
+    const filtered = latest.filter((idea: any) => {
+      const evidence = Array.isArray(idea.evidence) ? idea.evidence : []
+      const citesActive = evidence.some((e: any) => activeProjectIds.has(e?.source_id))
+      if (citesActive) return false
+      // Belt-and-braces: also filter out title-mentions of active project
+      // titles even if the evidence array doesn't cite the project id —
+      // catches cases where the model invented a "finish/polish/master X"
+      // idea about an active project but cited memories instead.
+      const title = String(idea.title ?? '').toLowerCase()
+      if (activeProjectTitles.some(pt => title.includes(pt))) return false
+      return true
+    })
+
     return res.status(200).json({
-      ideas: latest,
-      generated_at: latest[0]?.generated_at ?? null,
-      // True if the user has EVER had a batch (including all-rejected).
-      // Drives the empty-state copy on the frontend.
+      ideas: filtered,
+      generated_at: filtered[0]?.generated_at ?? null,
       has_any: (anyRes.count ?? 0) > 0,
     })
   } catch (err) {
