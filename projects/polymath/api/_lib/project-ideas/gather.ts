@@ -51,7 +51,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       .limit(80),
     supabase
       .from('projects')
-      .select('id, title, description, status, metadata, updated_at')
+      .select('id, title, description, status, metadata, is_priority, updated_at')
       .eq('user_id', userId)
       .in('status', ['active', 'upcoming'])
       .order('updated_at', { ascending: false })
@@ -142,6 +142,10 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
     status: p.status as string,
     tags: Array.isArray(p.metadata?.tags) ? (p.metadata.tags as string[]) : [],
     updated_at: (p.updated_at as string) ?? '',
+    // True iff this project is in the user's focus tier (Keep Going on
+    // home shows these). The Moment must NOT propose "finish/ship X"
+    // ideas for these — that's exactly Keep Going's job.
+    in_focus: !!p.is_priority,
   }))
 
   const dormant_projects = (dormantProjectsRes.data ?? []).map((p: any) => ({
