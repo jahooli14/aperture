@@ -8,13 +8,13 @@ export const MODELS = {
   GENERATE: 'gemini-3.1-flash-lite-preview',
 
   // Pre-filter: Better quality for scoring ideas
-  FILTER: 'gemini-3-flash-preview',
+  FILTER: 'gemini-2.5-flash',
 
   // Review: High quality for final verdicts
   REVIEW: 'gemini-3.1-pro-preview',
 
   // Summarize: Good enough for feedback compression
-  SUMMARIZE: 'gemini-3-flash-preview',
+  SUMMARIZE: 'gemini-2.5-flash',
 
   // Embedding: For deduplication vectors
   EMBEDDING: 'gemini-embedding-001',
