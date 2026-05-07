@@ -129,7 +129,6 @@ function MemoriesPageInner() {
   // hit of rendering hundreds of memory cards up-front.
   const PAGE_SIZE = 30
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
-  const loadMoreRef = useRef<HTMLDivElement | null>(null)
 
   // Always pass a live copy from the store so pin/unpin state stays fresh in the modal
   const liveSelectedMemory = useMemo(
@@ -512,19 +511,29 @@ function MemoriesPageInner() {
     setVisibleCount(PAGE_SIZE)
   }, [view, searchQuery, activeTags])
 
-  // Watch a sentinel below the grid; when it enters view, grow the
-  // visible count by one page. Cheap and works with the masonry layout.
-  useEffect(() => {
-    const node = loadMoreRef.current
+  // Sentinel below the grid: when it enters view, grow the window by
+  // one page. Uses a callback ref so the observer attaches the moment
+  // the sentinel mounts (it renders conditionally on
+  // visibleCount < displayMemories.length, so a useEffect with a deps
+  // array would miss the first mount on initial load — Capacitor
+  // Android PWA was not loading more thoughts on scroll for that reason).
+  const observerRef = useRef<IntersectionObserver | null>(null)
+  const sentinelRef = useCallback((node: HTMLDivElement | null) => {
+    if (observerRef.current) {
+      observerRef.current.disconnect()
+      observerRef.current = null
+    }
     if (!node) return
-    const obs = new IntersectionObserver(entries => {
+    observerRef.current = new IntersectionObserver(entries => {
       if (entries.some(e => e.isIntersecting)) {
         setVisibleCount(c => c + PAGE_SIZE)
       }
-    }, { rootMargin: '400px' })
-    obs.observe(node)
-    return () => obs.disconnect()
-  }, [view])
+    }, { rootMargin: '600px' })
+    observerRef.current.observe(node)
+  }, [])
+  useEffect(() => {
+    return () => { observerRef.current?.disconnect() }
+  }, [])
 
   // Memoize displayMemories to prevent recalculation on every render
   const baseMemories = useMemo(() => {
@@ -1113,8 +1122,21 @@ function MemoriesPageInner() {
 
                   <MasonryGrid memories={displayMemories.slice(0, visibleCount)} onEdit={handleOpenDetail} onDelete={handleDelete} />
                   {visibleCount < displayMemories.length && (
-                    <div ref={loadMoreRef} className="h-16 flex items-center justify-center text-xs opacity-50" style={{ color: 'var(--brand-text-muted)' }}>
-                      loading more…
+                    <div ref={sentinelRef} className="flex flex-col items-center justify-center gap-2 py-6">
+                      <span className="text-xs opacity-50" style={{ color: 'var(--brand-text-muted)' }}>
+                        loading more…
+                      </span>
+                      {/* Manual fallback if the IntersectionObserver
+                          doesn't fire (some Capacitor / WebView builds
+                          don't observe through certain scroll containers). */}
+                      <button
+                        type="button"
+                        onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
+                        className="text-[10px] tracking-[0.2em] uppercase opacity-60 hover:opacity-100 transition-opacity px-3 py-1.5 rounded-full border"
+                        style={{ color: 'var(--brand-text-secondary)', borderColor: 'var(--glass-surface)' }}
+                      >
+                        load more
+                      </button>
                     </div>
                   )}
                 </>
