@@ -107,7 +107,16 @@ function buildPrompt(g: GatherResult): string {
     ).join('\n')}`
   ).join('\n')
 
-  const activeProjBlock = g.active_projects.map(p =>
+  // Split active projects: those in the user's focus tier (Keep Going
+  // already shows these on the home) are off-limits for "finish/ship X"
+  // ideas. Other active projects are eligible — but only via Mode 3
+  // (Extend with a NEW direction), never "finish it."
+  const focusProjects = g.active_projects.filter(p => p.in_focus)
+  const otherActiveProjects = g.active_projects.filter(p => !p.in_focus)
+  const focusProjBlock = focusProjects.map(p =>
+    `  project#${p.id} [IN FOCUS — Keep Going already showing this] "${p.title}"${p.description ? `\n    ${truncate(p.description, 200)}` : ''}`
+  ).join('\n')
+  const activeProjBlock = otherActiveProjects.map(p =>
     `  project#${p.id} [${p.status}] "${p.title}"${p.description ? `\n    ${truncate(p.description, 240)}` : ''}${p.tags.length ? `\n    tags: ${p.tags.slice(0, 6).join(', ')}` : ''}`
   ).join('\n')
 
@@ -173,6 +182,8 @@ ANTI-EXAMPLE 2 (rejected): "Catch-22 logic-filter for Aperture." Aperture is a r
 
 ANTI-EXAMPLE 3 (rejected): "Paradox-indexed memory palace." A memory palace project is real. A note about Catch-22 is real. But "indexing the memory palace by paradoxes" isn't unblocking the project — the missing piece for a 198-country memory palace is content for the rooms, not a meta-organisational scheme. The match is invented to wedge two real things together.
 
+ANTI-EXAMPLE 4 (rejected): "Finish the Graham song" / "Ship Aperture" / "Complete the bedside table" — when the project is already CURRENTLY IN FOCUS. The home already has a Keep Going card prompting them to start a session on this. Repeating it as an "idea" is duplication. If you can't think of a genuinely NEW direction or extension for an in-focus project that isn't "finish it", drop the idea. Words like "Finish", "Ship", "Complete", "Wrap up" against an in-focus project are an automatic kill.
+
 ═══════ THE DATA ═══════
 
 VOICE NOTES (recent, in order):
@@ -181,7 +192,10 @@ ${memBlock || '  (none)'}
 LIST ITEMS (films/books/places — consumption, NOT capability; never lead evidence):
 ${listBlock || '  (none)'}
 
-ACTIVE PROJECTS:
+CURRENTLY IN FOCUS (Keep Going on the home is already showing these — do NOT propose "finish/ship/complete X" for these. They are NOT project-centres for you):
+${focusProjBlock || '  (none)'}
+
+OTHER ACTIVE PROJECTS (eligible only for Mode 3 EXTEND with a genuinely NEW direction — not "finish it"):
 ${activeProjBlock || '  (none)'}
 
 DORMANT / ON-HOLD / ARCHIVED / ABANDONED PROJECTS (existing scope, residual context, half-built):
@@ -415,9 +429,22 @@ function parseAndValidate(raw: string, gathered: GatherResult): ProjectIdea[] {
   // from the Aperture API memory respectively). Sharing 1 row is fine
   // (one source can legitimately support multiple builds); ≥2 means
   // same convergence.
+  // Drop "finish/ship X" titles when the cited project is currently in
+  // focus — Keep Going is already showing it. Belt-and-braces against
+  // the prompt rule.
+  const focusIds = new Set(gathered.active_projects.filter(p => p.in_focus).map(p => p.id))
+  const FINISH_RE = /^\s*(finish(ing)?|ship(ping)?|complete(\s+the)?|wrap\s*up|polish(\s+the)?)\b/i
+
   const filtered: ProjectIdea[] = []
   for (const idea of out.sort((a, b) => a.rank - b.rank)) {
-    const ids = new Set(idea.evidence.map(e => e.source_id))
+    const cited = idea.evidence.map(e => e.source_id)
+    const citesFocus = cited.some(id => focusIds.has(id))
+    if (citesFocus && FINISH_RE.test(idea.title)) {
+      console.log(`[project-ideas] dropped idea "${idea.title}" — "finish/ship X" against in-focus project (Keep Going dup)`)
+      continue
+    }
+
+    const ids = new Set(cited)
     const collides = filtered.some(kept => {
       const overlap = kept.evidence.filter(e => ids.has(e.source_id)).length
       return overlap >= 2
