@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Brain, Calendar, Edit, Trash2, Copy, Share2, Link2, Plus, Pin, CheckSquare, Square } from 'lucide-react'
+import { X, Calendar, Edit, Trash2, Copy, Share2, Link2, Plus, Pin, CheckSquare, Square } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { MarkdownRenderer } from '../ui/MarkdownRenderer'
 import { format } from 'date-fns'
@@ -15,7 +15,6 @@ import { SmartActionDot } from '../SmartActionDot'
 import { CACHE_TTL } from '../../lib/cacheConfig'
 
 import { useContextEngineStore } from '../../stores/useContextEngineStore'
-import type { InsightResult } from '../../../api/memories'
 
 interface MemoryDetailModalProps {
   memory: Memory | null
@@ -37,18 +36,7 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
 const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
   const [bridgesFetched, setBridgesFetched] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [insight, setInsight] = useState<InsightResult | null>(null);
-
-  // Fetch contextual insight when modal opens
-  useEffect(() => {
-    if (!memory || !isOpen) { setInsight(null); return }
-    if (memory.id.startsWith('temp_')) return
-
-    fetch(`/api/memories?action=insight&id=${memory.id}&type=thought`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data) setInsight(data) })
-      .catch(() => {})
-  }, [memory?.id, isOpen])
+  // (insight fetch + banner removed — see render comment below)
 
   // Module-level cache to prevent refetching bridges
   const bridgesCache = useMemo(() => new Map<string, { bridges: BridgeWithMemories[]; timestamp: number }>(), []);
@@ -262,25 +250,11 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
                 </button>
               </div>
 
-              {/* AI Insight Banner */}
-              {insight && (
-                <div
-                  className="flex items-start gap-2.5 mb-4 px-3.5 py-3 rounded-xl"
-                  style={{
-                    background: 'rgba(var(--brand-primary-rgb),0.1)',
-                    border: '1px solid rgba(var(--brand-primary-rgb),0.25)',
-                  }}
-                >
-                  <Brain className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--brand-primary)' }} />
-                  <div className="flex-1 min-w-0">
-                    <MarkdownRenderer
-                      content={insight.insight}
-                      className="text-[13px] leading-relaxed"
-                      style={{ color: 'var(--brand-text-secondary)' }}
-                    />
-                  </div>
-                </div>
-              )}
+              {/* AI Insight banner removed — the placeholder copy
+                  ("No connections yet — this thought is still finding
+                  its place") added clutter on most thoughts and the
+                  signal value was low. Connections still run in the
+                  background mesh and feed downstream surfaces. */}
 
               <div className="mb-6">
                 {memory.checklist_items && memory.checklist_items.length > 0 ? (

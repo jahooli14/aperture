@@ -47,49 +47,66 @@ import type { GatherResult, GenerationResult, IdeaEvidence, ProjectIdea } from '
 
 const MIN_SIGNALS = 8
 
-export async function generateProjectIdeas(gathered: GatherResult): Promise<GenerationResult> {
+export interface GenerateOptions {
+  /** force=true relaxes the strict missing-piece frame and asks for one
+   *  good idea drawn from anything in the corpus. Used by the manual
+   *  "show me ideas" button — the user explicitly asked, so silence is
+   *  not an acceptable reply. The cron path stays strict. */
+  force?: boolean
+}
+
+export async function generateProjectIdeas(
+  gathered: GatherResult,
+  opts: GenerateOptions = {},
+): Promise<GenerationResult> {
   if (gathered.total_signal_count < MIN_SIGNALS) {
     console.log(`[project-ideas] insufficient_data: ${gathered.total_signal_count} signals (min ${MIN_SIGNALS})`)
     return { ideas: [], reason: 'insufficient_data', attempts: 0 }
   }
 
-  const prompt = buildPrompt(gathered)
-  console.log(`[project-ideas] gather: ${gathered.total_signal_count} signals; prompt: ${prompt.length} chars`)
+  // First pass: strict frame. If the user manually triggered (force),
+  // and the strict pass returns empty, fall back to a permissive pass.
+  const ideas = await runOnce(gathered, false)
+  if (ideas.length > 0) return { ideas, attempts: 1 }
+
+  if (opts.force) {
+    console.log(`[project-ideas] strict pass returned 0; force=true, falling back to permissive prompt`)
+    const fallback = await runOnce(gathered, true)
+    if (fallback.length > 0) return { ideas: fallback, attempts: 2 }
+  }
+
+  return { ideas: [], reason: 'parse_failure', attempts: opts.force ? 2 : 1 }
+}
+
+async function runOnce(gathered: GatherResult, permissive: boolean): Promise<ProjectIdea[]> {
+  const prompt = permissive ? buildPermissivePrompt(gathered) : buildPrompt(gathered)
+  console.log(`[project-ideas] gather: ${gathered.total_signal_count} signals; prompt: ${prompt.length} chars; mode=${permissive ? 'permissive' : 'strict'}`)
 
   const t0 = Date.now()
   let raw: string
   try {
     raw = await generateText(prompt, {
       model: MODELS.FLASH_CHAT,
-      // Flash is cheap; give the 3-phase prompt enough headroom that 15
-      // drafts + 15 reviews + 3 full ideas all fit comfortably. Earlier
-      // 8000-token budget was running out before the `ideas` array even
-      // started, leaving us with parseable drafts but no actual output.
       maxTokens: 32000,
       temperature: 0.85,
       responseFormat: 'json',
     })
   } catch (err) {
     console.error(`[project-ideas] Flash call threw after ${Date.now() - t0}ms:`, err)
-    return { ideas: [], reason: 'parse_failure', attempts: 1 }
+    return []
   }
   console.log(`[project-ideas] Flash responded in ${Date.now() - t0}ms (${raw.length} chars)`)
-
   const ideas = parseAndValidate(raw, gathered)
   if (ideas.length === 0) {
-    // Log a preview so the next failure is debuggable from Vercel logs.
-    // Long preview so we can see whether the JSON truncated, the ideas
-    // array was empty, or every idea got dropped by validation. Log in
-    // chunks because Vercel truncates very long single log lines.
+    // Log a chunked preview so failures are debuggable from Vercel logs.
     console.warn(`[project-ideas] no valid ideas after parse. raw length: ${raw.length}`)
     for (let i = 0; i < raw.length; i += 1500) {
       console.warn(`[project-ideas] raw[${i}..]: ${raw.slice(i, i + 1500)}`)
     }
-    return { ideas: [], reason: 'parse_failure', attempts: 1 }
+  } else {
+    console.log(`[project-ideas] produced ${ideas.length} valid ideas`)
   }
-
-  console.log(`[project-ideas] produced ${ideas.length} valid ideas`)
-  return { ideas, attempts: 1 }
+  return ideas
 }
 
 function buildPrompt(g: GatherResult): string {
@@ -293,6 +310,93 @@ Returning fewer than 3 ideas is the EXPECTED outcome most weeks. Returning 0 is 
       "next_step": "...",
       "evidence": [
         { "kind": "project_dormant", "source_id": "...", "label": "...", "date": "YYYY-MM-DD", "excerpt": "..." }
+      ]
+    }
+  ]
+}`
+}
+
+/**
+ * Permissive prompt — the fallback for manual "show me ideas" when the
+ * strict missing-piece pass returns nothing. Lower bar: produce ONE
+ * grounded idea drawn from the corpus, even if no recent capture has
+ * unblocked it. Still respects the active-project rule (never "finish
+ * X" for active) and the no-list-as-lead-evidence rule.
+ *
+ * Used only when the user explicitly clicks the "show me ideas" button
+ * and we'd otherwise be silent. The cron path stays strict.
+ */
+function buildPermissivePrompt(g: GatherResult): string {
+  const memBlock = g.memories.slice(0, 35).map(m =>
+    `  memory#${m.id} (${isoDate(m.created_at)}) "${truncate(m.body, 220)}"`,
+  ).join('\n')
+
+  const dormantBlock = g.dormant_projects.map(p =>
+    `  project_dormant#${p.id} [${p.status}] "${p.title}"${p.description ? ` — ${truncate(p.description, 180)}` : ''}`,
+  ).join('\n')
+
+  const activeBlock = g.active_projects.map(p =>
+    `  project#${p.id} "${p.title}"`,
+  ).join('\n')
+
+  const readingBlock = g.reading.slice(0, 12).map(r =>
+    `  reading#${r.id} "${r.title ?? '(untitled)'}"${r.excerpt ? ` — ${truncate(r.excerpt, 140)}` : ''}`,
+  ).join('\n')
+
+  const highlightBlock = g.highlights.slice(0, 10).map(h =>
+    `  highlight#${h.id} "${truncate(h.quote, 180)}"`,
+  ).join('\n')
+
+  const seenBlock = [
+    ...g.prior_ideas.built.map(t => `  · BUILT: "${t.title}"`),
+    ...g.prior_ideas.saved.map(t => `  · saved: "${t.title}"`),
+    ...g.prior_ideas.rejected.map(t => `  · rejected: "${t.title}"`),
+  ].join('\n')
+
+  return `You are a friend looking through someone's recent thoughts and projects, asked directly: "give me one project idea I should think about." Don't be silent — they asked. But don't fake it either: ground the idea in real captures.
+
+Plain English. No "leveraging," "synergies," "soundscapes," "narrative substrate," or scare-quoted invented phrases. Talk like a friend.
+
+═══════ HARD RULES ═══════
+1. Output exactly ONE idea (the rank-1 slot).
+2. NEVER propose "finish / ship / complete / wrap up / polish / continue" for any active project. Active projects are already on the user's plate. Active project ids are listed below — don't write a continuation idea for them.
+3. The idea must cite at least 2 evidence items from the data below. Lead evidence must be a memory, dormant project, or highlight — never a list item.
+4. Title ≤ 6 words. No abstract nouns: no "exploration", "study", "series", "totem", "memory of", "in conversation with", "meditation on".
+5. The next_step must be a real first action (cut, drill, flash, commit a named file, drive somewhere, phone someone). NOT "research", "plan", "sketch", "outline".
+6. Do not repeat any title in PREVIOUSLY SURFACED IDEAS.
+
+═══════ DATA ═══════
+
+VOICE NOTES:
+${memBlock || '  (none)'}
+
+DORMANT / ON-HOLD / ARCHIVED PROJECTS (preferred ground for an idea):
+${dormantBlock || '  (none)'}
+
+ACTIVE PROJECTS (forbidden as continuation; only mention if a NEW direction emerges):
+${activeBlock || '  (none)'}
+
+READING:
+${readingBlock || '  (none)'}
+
+HIGHLIGHTS:
+${highlightBlock || '  (none)'}
+
+PREVIOUSLY SURFACED (do not repeat):
+${seenBlock || '  (none)'}
+
+═══════ OUTPUT (strict JSON, no markdown fences) ═══════
+{
+  "ideas": [
+    {
+      "rank": 1,
+      "rank_role": "convergence",
+      "title": "...",
+      "pitch": "2-3 sentences. What the project is, what's already in their data that supports it, what done looks like.",
+      "why_now": "ONE sentence pointing at why this is worth thinking about today.",
+      "next_step": "ONE physical action, doable in under an hour with what they already own.",
+      "evidence": [
+        { "kind": "memory", "source_id": "...", "label": "...", "date": "YYYY-MM-DD", "excerpt": "..." }
       ]
     }
   ]

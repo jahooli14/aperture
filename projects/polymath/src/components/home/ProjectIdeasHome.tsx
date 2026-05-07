@@ -252,9 +252,11 @@ export function ProjectIdeasHome() {
         </div>
       </div>
 
-      <div className="relative px-2 sm:px-6 py-8 sm:py-10 min-h-[260px]">
+      {/* Container collapses tightly when empty — only the generating
+          and active-card states need real vertical space. */}
+      <div className={`relative px-2 sm:px-6 ${ideas.length || generating || loading ? 'py-8 sm:py-10 min-h-[260px]' : 'py-3'}`}>
         {loading && (
-          <div className="flex items-center justify-center py-10">
+          <div className="flex items-center justify-center py-6">
             <span
               className="text-[11px] uppercase tracking-[0.28em] italic"
               style={{ color: 'var(--brand-text-muted)' }}
@@ -265,19 +267,11 @@ export function ProjectIdeasHome() {
         )}
 
         {!loading && !ideas.length && !generating && (
-          <div className="text-center max-w-md mx-auto py-6">
-            <p
-              className="leading-relaxed italic mb-6"
-              style={{ color: 'var(--brand-text-muted)', fontSize: '14px' }}
-            >
-              {hasAny
-                ? 'You\'ve cleared the deck. Generate a fresh batch when you\'re ready.'
-                : 'No ideas yet. The system reads across your captures, dormant projects, and reading queue, then proposes three projects only you could make.'}
-            </p>
+          <div className="flex items-center gap-3 px-2">
             <button
               type="button"
               onClick={generate}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full transition-all"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full transition-all flex-shrink-0"
               style={{
                 background: 'rgba(var(--brand-primary-rgb), 0.15)',
                 color: 'rgb(var(--brand-primary-rgb))',
@@ -286,8 +280,12 @@ export function ProjectIdeasHome() {
             >
               <span className="text-sm tracking-wide">show me ideas</span>
             </button>
-            {error && (
-              <p className="text-xs mt-4 italic" style={{ color: 'var(--brand-text-secondary)' }}>{error}</p>
+            {error ? (
+              <p className="text-[11px] italic flex-1 min-w-0" style={{ color: 'var(--brand-text-secondary)' }}>{error}</p>
+            ) : (
+              <p className="text-[11px] italic flex-1 min-w-0 opacity-60" style={{ color: 'var(--brand-text-muted)' }}>
+                {hasAny ? 'cleared the deck — pull a fresh one' : 'pull a project from across your captures'}
+              </p>
             )}
           </div>
         )}
