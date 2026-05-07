@@ -4,7 +4,6 @@ import { X, Wind, Zap } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
 import { celebrate } from '../../utils/celebrations'
 import { useDriftStore } from '../../stores/useDriftStore'
-import { useToast } from '../ui/toast'
 
 interface DriftModeProps {
   prompts: any[]
@@ -20,7 +19,6 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
   const [showFlash, setShowFlash] = useState(false)
   const [driftTextIndex, setDriftTextIndex] = useState(0)
 
-  const { addToast } = useToast()
 
   // Motion tracking refs
   const lastAccel = useRef<{ x: number, y: number, z: number } | null>(null)

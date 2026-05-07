@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { X, Lightbulb, BookOpen, Layers, Brain, Link as LinkIcon, Loader2, TrendingUp, RefreshCw, HelpCircle, Shuffle, Database, GitBranch, Zap } from 'lucide-react'
+import { X, Lightbulb, BookOpen, Layers, Brain, Loader2, TrendingUp, RefreshCw, HelpCircle, Shuffle, Database, GitBranch, Zap } from 'lucide-react'
 import { useContextEngineStore, ContextItem } from '../../stores/useContextEngineStore'
 import { useToast } from '../ui/toast'
 
@@ -26,7 +26,6 @@ export function ContextSidebar() {
         sidebarOpen,
         toggleSidebar,
         activeContext,
-        relatedItems,
         loading,
         fetchRelatedContext
     } = useContextEngineStore()

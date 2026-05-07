@@ -1,7 +1,7 @@
 import React, { useState, memo, useCallback, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { Edit, Trash2, Copy, Share2, Pin, Sprout, Film, Book, Music, MapPin, Gamepad2, Monitor, FileText, Box, CheckSquare, Square, Link2 } from 'lucide-react'
+import { Edit, Trash2, Copy, Share2, Pin, Sprout, Film, Book, Music, MapPin, Gamepad2, Monitor, FileText, Box, CheckSquare, Square } from 'lucide-react'
 import type { Memory, BridgeWithMemories, ChecklistItem } from '../types'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useToast } from './ui/toast'
