@@ -284,7 +284,11 @@ function MemoriesPageInner() {
     }
   }, [])
 
-  // Fetch data on mount and when navigating back to this page (like HomePage)
+  // Fetch data on mount and when navigating back to this page (like HomePage).
+  // Force-refresh on mount: the 5-min in-memory cache + Dexie offline cache
+  // were keeping stale snapshots alive (a 25-row cap from a prior backend
+  // limit was sticking around). The thoughts page is the canonical view of
+  // the corpus, so always fetch fresh on entry.
   useEffect(() => {
     const loadData = async () => {
       clearError()
@@ -292,10 +296,10 @@ function MemoriesPageInner() {
       if (view === 'resurfacing') {
         await fetchResurfacing()
       } else if (view === 'themes') {
-        await loadMemories()
+        await loadMemories(true)
         await fetchThemeClusters()
       } else {
-        await loadMemories()
+        await loadMemories(true)
         fetchOnboardingPrompts() // Load suggested follow-up prompts
       }
     }
