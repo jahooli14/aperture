@@ -65,7 +65,7 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
           can't overflow narrow masonry columns. min-w-0 is what lets
           the h4 actually shrink past its intrinsic width inside flex. */}
       <div className="flex items-start justify-between gap-1.5 mb-3">
-        <h4 className={`min-w-0 flex-1 text-[var(--brand-text-primary)] font-bold leading-tight aperture-header break-words ${prominent ? 'text-base sm:text-lg' : 'text-[15px]'}`}
+        <h4 className={`min-w-0 flex-1 text-[var(--brand-text-primary)] font-bold leading-tight aperture-header line-clamp-3 break-normal ${prominent ? 'text-base sm:text-lg' : 'text-[13px]'}`}
           style={{ textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
           {project.title}
         </h4>

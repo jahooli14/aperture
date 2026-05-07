@@ -149,7 +149,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
           {project.is_priority && (
             <Star className="h-3 w-3 mt-1 flex-shrink-0 fill-current" style={{ color: 'var(--brand-primary)' }} />
           )}
-          <h4 className="font-bold leading-tight aperture-header text-[var(--brand-text-primary)]" style={{ fontSize: prominent ? '1.125rem' : '0.875rem' }}>
+          <h4 className="font-bold leading-tight aperture-header text-[var(--brand-text-primary)] line-clamp-3 break-normal" style={{ fontSize: prominent ? '1.125rem' : '0.875rem' }}>
             {project.title}
           </h4>
         </div>
