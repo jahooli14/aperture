@@ -119,6 +119,13 @@ export function MemoriesPage() {
   const [selectedMemoryForModal, setSelectedMemoryForModal] = useState<Memory | null>(null) // State for the detail modal
   const [showDetailModal, setShowDetailModal] = useState(false) // State to open/close the detail modal
 
+  // Progressive scroll-load. Render the first PAGE_SIZE thoughts; as the
+  // user scrolls near the bottom, grow the visible window. Avoids the
+  // hit of rendering hundreds of memory cards up-front.
+  const PAGE_SIZE = 30
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+  const loadMoreRef = useRef<HTMLDivElement | null>(null)
+
   // Always pass a live copy from the store so pin/unpin state stays fresh in the modal
   const liveSelectedMemory = useMemo(
     () => selectedMemoryForModal
@@ -495,6 +502,25 @@ export function MemoriesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [memories.length]) // Only recompute when memories count changes
 
+  // Reset the progressive window when filters change.
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE)
+  }, [view, searchQuery, activeTags])
+
+  // Watch a sentinel below the grid; when it enters view, grow the
+  // visible count by one page. Cheap and works with the masonry layout.
+  useEffect(() => {
+    const node = loadMoreRef.current
+    if (!node) return
+    const obs = new IntersectionObserver(entries => {
+      if (entries.some(e => e.isIntersecting)) {
+        setVisibleCount(c => c + PAGE_SIZE)
+      }
+    }, { rootMargin: '400px' })
+    obs.observe(node)
+    return () => obs.disconnect()
+  }, [view])
+
   // Memoize displayMemories to prevent recalculation on every render
   const baseMemories = useMemo(() => {
     return view === 'resurfacing' ? resurfacing : memories
@@ -602,7 +628,7 @@ export function MemoriesPage() {
             {/* View Toggle */}
             <PremiumTabs
               tabs={[
-                { id: 'recent', label: `Recent (${memories.length})` },
+                { id: 'recent', label: `Thoughts (${memories.length})` },
                 { id: 'themes', label: 'Themes' },
                 { id: 'resurfacing', label: `Resurface (${resurfacing.length})` },
               ]}
@@ -624,7 +650,7 @@ export function MemoriesPage() {
             <div className="mb-6 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <h2 className="text-xl font-black uppercase tracking-tight text-[var(--brand-text-primary)]">
-                  {view === 'recent' ? 'Recent' : view === 'themes' ? 'By Theme' : 'Worth revisiting'}
+                  {view === 'recent' ? 'Thoughts' : view === 'themes' ? 'By Theme' : 'Worth revisiting'}
                 </h2>
               </div>
             </div>
@@ -1080,7 +1106,12 @@ export function MemoriesPage() {
                     </div>
                   )}
 
-                  <MasonryGrid memories={displayMemories} onEdit={handleOpenDetail} onDelete={handleDelete} />
+                  <MasonryGrid memories={displayMemories.slice(0, visibleCount)} onEdit={handleOpenDetail} onDelete={handleDelete} />
+                  {visibleCount < displayMemories.length && (
+                    <div ref={loadMoreRef} className="h-16 flex items-center justify-center text-xs opacity-50" style={{ color: 'var(--brand-text-muted)' }}>
+                      loading more…
+                    </div>
+                  )}
                 </>
               )}
 

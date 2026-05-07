@@ -1,11 +1,9 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Mic, X, Wind, Zap, Square, Loader2 } from 'lucide-react'
+import { X, Wind, Zap } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
 import { celebrate } from '../../utils/celebrations'
-import { useMediaRecorderVoice } from '../../hooks/useMediaRecorderVoice'
-import { useMemoryStore } from '../../stores/useMemoryStore'
-import { useToast } from '../ui/toast'
+import { useDriftStore } from '../../stores/useDriftStore'
 
 interface DriftModeProps {
   prompts: any[]
@@ -18,12 +16,9 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
   const [currentPromptIndex, setCurrentPromptIndex] = useState(0)
   const [motionPermission, setMotionPermission] = useState<PermissionState>('prompt')
   const [progress, setProgress] = useState(0) // Stability progress (0-100)
-  const [capturedInsightsCount, setCapturedInsightsCount] = useState(0)
   const [showFlash, setShowFlash] = useState(false)
   const [driftTextIndex, setDriftTextIndex] = useState(0)
 
-  const { createMemory } = useMemoryStore()
-  const { addToast } = useToast()
 
   // Motion tracking refs
   const lastAccel = useRef<{ x: number, y: number, z: number } | null>(null)
@@ -214,47 +209,28 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
     setIsJolt(false)
   }
 
-  const handleTranscript = async (text: string) => {
-    if (!text.trim()) return
-
-    try {
-      await createMemory({
-        body: text,
-        title: 'Drift Insight',
-        memory_type: 'insight'
-      })
-
-      setCapturedInsightsCount(prev => prev + 1)
-      addToast({
-        title: 'Insight Captured',
-        description: 'Saved to your thoughts',
-        variant: 'success'
-      })
-
-      haptic.success()
-
-      // After success, we could either drift again or show small celebration
-      // Let's stay in awakened so they can choose to drift again or end
-    } catch (error) {
-      console.error('Failed to save drift insight:', error)
-      addToast({
-        title: 'Failed to save',
-        variant: 'destructive'
-      })
-    }
-  }
-
-  const {
-    isRecording,
-    isProcessing,
-    toggleRecording
-  } = useMediaRecorderVoice({
-    onTranscript: handleTranscript,
-    maxDuration: 60, // Allow 1 minute for insights
-    autoSubmit: true
-  })
+  // Voice capture happens through the global FAB. When the awakened
+  // stage is showing, we publish the active drift question to a small
+  // store that FloatingNav reads on transcript — the captured thought
+  // is then wrapped with the drift context before being saved.
+  const setActiveDrift = useDriftStore((s) => s.setActive)
+  const clearActiveDrift = useDriftStore((s) => s.clear)
 
   const currentPrompt = prompts[currentPromptIndex]
+
+  useEffect(() => {
+    if (stage === 'awakened' && currentPrompt) {
+      setActiveDrift({
+        prompt: currentPrompt.prompt,
+        metaphor: currentPrompt.metaphor ?? null,
+        context: currentPrompt.context ?? null,
+        mode,
+      })
+    } else {
+      clearActiveDrift()
+    }
+    return () => { clearActiveDrift() }
+  }, [stage, currentPrompt, mode, setActiveDrift, clearActiveDrift])
 
   // Build the sequence of texts to show during drifting — context, then metaphor,
   // then the prompt itself. De-duplicated so we never show the same line twice.
@@ -476,13 +452,11 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif text-[var(--brand-text-secondary)] leading-tight">
                 {currentPrompt.prompt}
               </h1>
-              {currentPrompt.metaphor && currentPrompt.context && (
-                <p className="mt-6 text-lg sm:text-xl italic text-[var(--brand-text-muted)] font-serif">
-                  "{currentPrompt.metaphor}"
-                </p>
-              )}
             </div>
 
+            {/* Capture happens via the global FAB; the floating-nav handler */}
+            {/* reads useDriftStore and wraps the transcript with this drift's */}
+            {/* prompt before saving, so the thought lands as a coherent reply. */}
             <div className="flex items-center justify-center gap-4 mt-12">
               <button
                 onClick={resetDrift}
@@ -497,24 +471,6 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
                 className="px-6 py-4 rounded-full bg-[var(--glass-surface)] text-[var(--brand-text-secondary)] hover:bg-[rgba(255,255,255,0.1)] transition-all border border-[var(--glass-surface)]"
               >
                 End Session
-              </button>
-
-              {/* Voice Capture */}
-              <button
-                onClick={toggleRecording}
-                disabled={isProcessing}
-                className={`p-4 rounded-full transition-all ${isRecording
-                  ? 'bg-brand-primary/20 text-brand-text-secondary animate-pulse border border-red-500/30'
-                  : 'bg-[var(--glass-surface)] text-[var(--brand-text-secondary)] hover:bg-[rgba(255,255,255,0.1)] border border-[var(--glass-surface)]'
-                  }`}
-              >
-                {isProcessing ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : isRecording ? (
-                  <Square className="h-5 w-5 fill-current" />
-                ) : (
-                  <Mic className="h-5 w-5" />
-                )}
               </button>
             </div>
           </motion.div>
@@ -538,11 +494,6 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
             </div>
 
             <div className="space-y-4 mb-8">
-              <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--glass-surface)] border border-[var(--glass-surface)]">
-                <span className="text-[var(--brand-text-secondary)]">Insights Captured</span>
-                <span className="text-2xl font-bold text-brand-primary">{capturedInsightsCount}</span>
-              </div>
-
               {currentPrompt && (currentPrompt.context || currentPrompt.metaphor) && (
                 <div className="p-4 rounded-xl bg-brand-primary/5 border border-brand-primary/10 text-left">
                   <p className="text-xs uppercase tracking-widest text-brand-primary font-bold mb-2">

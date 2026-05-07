@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { X, Lightbulb, BookOpen, Layers, Brain, Link as LinkIcon, Loader2, TrendingUp, RefreshCw, HelpCircle, Shuffle, Database, GitBranch, Zap } from 'lucide-react'
+import { X, Lightbulb, BookOpen, Layers, Brain, Loader2, TrendingUp, RefreshCw, HelpCircle, Shuffle, Database, GitBranch, Zap } from 'lucide-react'
 import { useContextEngineStore, ContextItem } from '../../stores/useContextEngineStore'
 import { useToast } from '../ui/toast'
 
@@ -26,7 +26,6 @@ export function ContextSidebar() {
         sidebarOpen,
         toggleSidebar,
         activeContext,
-        relatedItems,
         loading,
         fetchRelatedContext
     } = useContextEngineStore()
@@ -412,62 +411,10 @@ export function ContextSidebar() {
                                 </div>
                             )}
 
-                            {/* Related Items Section */}
-                            {loading ? (
-                                <div className="flex flex-col items-center justify-center py-12 text-[var(--brand-text-secondary)]">
-                                    <Loader2 className="h-8 w-8 animate-spin mb-3 text-brand-primary" />
-                                    <p className="text-sm">Analyzing context...</p>
-                                </div>
-                            ) : relatedItems.length === 0 ? (
-                                <div className="text-center py-12 text-[var(--brand-text-muted)]">
-                                    <p>No direct connections found.</p>
-                                    <p className="text-xs mt-2">Try exploring other areas to build connections.</p>
-                                </div>
-                            ) : (
-                                relatedItems.map((item) => {
-                                    const Icon = getIcon(item.type)
-                                    return (
-                                        <motion.div
-                                            key={`${item.type}-${item.id}`}
-                                            layout
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            className="group relative bg-[var(--glass-surface)] hover:bg-[rgba(255,255,255,0.1)] rounded-xl p-3 cursor-pointer transition-all border border-transparent hover:border-brand-primary/30"
-                                            onClick={() => handleItemClick(item)}
-                                        >
-                                            <div className="flex items-start gap-3">
-                                                <div className={`p-2 rounded-lg bg-black/20 ${item.type === 'project' ? 'text-brand-primary' :
-                                                    item.type === 'memory' ? 'text-brand-text-secondary' :
-                                                        'text-brand-text-secondary'
-                                                    }`}>
-                                                    <Icon className="h-4 w-4" />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <h3 className="text-sm font-medium text-gray-200 leading-tight mb-1 group-hover:text-[var(--brand-text-primary)] transition-colors">
-                                                        {item.title}
-                                                    </h3>
-                                                    {item.matchReason && (
-                                                        <p className="text-xs text-[var(--brand-text-muted)] line-clamp-2">
-                                                            {item.matchReason}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* Hover Actions */}
-                                            <div className="absolute right-2 top-2 opacity-60 flex gap-1">
-                                                <button
-                                                    onClick={(e) => handleLinkItem(e, item)}
-                                                    className="p-1.5 bg-brand-primary/20 hover:bg-brand-primary text-brand-primary hover:text-[var(--brand-text-primary)] rounded-lg transition-colors"
-                                                    title="Link to current context"
-                                                >
-                                                    <LinkIcon className="h-3 w-3" />
-                                                </button>
-                                            </div>
-                                        </motion.div>
-                                    )
-                                })
-                            )}
+                            {/* Connections display intentionally removed — */}
+                            {/* the connection mesh runs in the background and feeds */}
+                            {/* downstream surfaces (project ideas, themes), but the */}
+                            {/* per-item count cluttered the UI without earning it. */}
                         </div>
                     </motion.div>
                 </>

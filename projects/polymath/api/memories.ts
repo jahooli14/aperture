@@ -8,6 +8,7 @@ import fs from 'fs'
 import { generateEmbedding, cosineSimilarity } from './_lib/gemini-embeddings.js'
 import { processMemory } from './_lib/process-memory.js'
 import { generateText } from './_lib/gemini-chat.js'
+import { tidyThought } from './_lib/tidy-thought.js'
 import { getCachedInsights } from './_lib/project-genesis.js'
 import { generateCognitiveReplay } from './_lib/cognitive-replay.js'
 import { MODELS } from './_lib/models.js'
@@ -131,6 +132,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         req.body = JSON.parse(Buffer.concat(chunks).toString())
       }
       return await handleProcess(req, res)
+    }
+
+    // POST: Backfill tidy-thought across all of the user's voice-captured
+    // memories. One-shot — runs the same filler-strip the capture path does.
+    if (req.method === 'POST' && action === 'backfill-tidy') {
+      return await handleBackfillTidy(req, res)
+    }
+
+    // POST: Rescan tags across all of the user's memories. One Gemini
+    // call that takes the user's full corpus + their existing tag
+    // vocabulary, then assigns up to 5 tags per memory. Custom tags the
+    // user added stay; the AI's draw becomes part of the vocabulary for
+    // the next rescan.
+    if (req.method === 'POST' && action === 'rescan-tags') {
+      return await handleRescanTags(req, res)
     }
 
     // ── Auth required for all remaining endpoints ──
@@ -842,9 +858,10 @@ Remember: BE CREATIVE. SUMMARIZE. DO NOT COPY THE BEGINNING OF THE TEXT.`
   // Always create memory with raw transcript
   try {
     const now = new Date().toISOString()
-    // Voice → raw transcript (light cleanup happens in background processMemory)
-    // Text → original body preserved exactly as typed (AI only generates the title)
-    const memoryBody = text
+    // Voice → strip filler words ("um", "uh") at capture time so the saved
+    //   thought reads cleanly. orig_transcript still gets the raw text.
+    // Text → original body preserved exactly as typed (no filler stripping).
+    const memoryBody = isManualEntry ? text : tidyThought(text)
 
     // Generate unique ID with timestamp + random component to prevent collisions on retry
     const uniqueId = isManualEntry
@@ -2357,4 +2374,178 @@ Return ONLY this JSON, no markdown:
     console.error('[handleSeeds] Error:', err)
     return res.json({ seeds: [] })
   }
+}
+
+// ── Backfill tidy-thought across the user's voice-captured memories ──
+//
+// Walks every memory that originated from a voice capture (orig_transcript
+// is non-null), runs tidyThought on the body, and writes the result back
+// when it changed. Manual entries (orig_transcript IS NULL) are skipped —
+// typed text was never going to have ums in the first place.
+//
+// This is a one-shot the user runs once after the tidy pipeline ships. The
+// raw orig_transcript stays untouched so we can re-run with a different
+// filler set later.
+async function handleBackfillTidy(req: any, res: any) {
+  const userId = await getUserId(req)
+  if (!userId) return res.status(401).json({ error: 'Sign in' })
+  const supabase = getSupabaseClient()
+
+  const { data, error } = await supabase
+    .from('memories')
+    .select('id, body, orig_transcript')
+    .eq('user_id', userId)
+    .not('orig_transcript', 'is', null)
+    .limit(2000)
+
+  if (error) {
+    console.error('[backfill-tidy] read failed:', error)
+    return res.status(500).json({ error: error.message })
+  }
+
+  let updated = 0
+  let unchanged = 0
+  for (const row of (data ?? []) as Array<{ id: string; body: string | null; orig_transcript: string | null }>) {
+    const original = row.body ?? ''
+    const tidied = tidyThought(original)
+    if (tidied && tidied !== original) {
+      const { error: updErr } = await supabase
+        .from('memories')
+        .update({ body: tidied })
+        .eq('id', row.id)
+        .eq('user_id', userId)
+      if (updErr) {
+        console.error(`[backfill-tidy] update failed for ${row.id}:`, updErr)
+        continue
+      }
+      updated++
+    } else {
+      unchanged++
+    }
+  }
+
+  console.log(`[backfill-tidy] done — updated ${updated}, unchanged ${unchanged}`)
+  return res.status(200).json({ updated, unchanged, total: (data ?? []).length })
+}
+
+// ── Rescan tags across the user's whole corpus ──
+//
+// One Flash call. We pass the full set of memory ids + truncated bodies
+// + the user's existing tag vocabulary. Gemini assigns up to 5 tags per
+// memory, drawn from the vocabulary by default but free to introduce a
+// new tag when the body really demands it. We then merge into each
+// memory.tags so:
+//   - tags the AI assigned this run are present
+//   - tags the user manually added survive (we union with current tags)
+//   - system markers like 'onboarding' / 'live-hybrid' survive
+//
+// Up to 250 memories per invocation — should comfortably fit in the
+// 60s budget at one batched call. Beyond that, the user can re-run.
+async function handleRescanTags(req: any, res: any) {
+  const userId = await getUserId(req)
+  if (!userId) return res.status(401).json({ error: 'Sign in' })
+  const supabase = getSupabaseClient()
+
+  const { data, error } = await supabase
+    .from('memories')
+    .select('id, title, body, tags')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(250)
+
+  if (error) {
+    console.error('[rescan-tags] read failed:', error)
+    return res.status(500).json({ error: error.message })
+  }
+  const rows = (data ?? []) as Array<{ id: string; title: string | null; body: string | null; tags: string[] | null }>
+  if (rows.length === 0) return res.status(200).json({ updated: 0, total: 0 })
+
+  // Build the user's tag vocabulary from the corpus.
+  const vocab = new Set<string>()
+  for (const r of rows) for (const t of (r.tags ?? [])) vocab.add(t)
+  const vocabList = Array.from(vocab).filter(t => t !== 'onboarding' && t !== 'live-hybrid')
+
+  const items = rows.map(r => ({
+    id: r.id,
+    title: (r.title ?? '').slice(0, 80),
+    body: (r.body ?? '').replace(/\s+/g, ' ').trim().slice(0, 280),
+  }))
+
+  const prompt = `You are a tag librarian. You will see a list of voice notes from one person + their current tag vocabulary. For each note, assign UP TO 5 tags that genuinely apply. Plain English, lowercase, single words or 2-word kebab-case.
+
+Rules:
+- Prefer tags from the user's existing vocabulary when they fit. This keeps the system stable.
+- Add a new tag ONLY when no existing tag captures the topic AND the topic recurs (≥2 notes).
+- 5 tags max per note. Better fewer real tags than padded ones.
+- Tags are about *topic / theme / domain*, not feeling. "philosophy" yes, "thoughtful" no.
+- Avoid generic words: "thought", "note", "idea", "voice", "musing", "reflection", "interesting".
+- Plain English. No invented phrases.
+
+USER VOCABULARY (existing tags — prefer these):
+${vocabList.length ? vocabList.map(v => `  - ${v}`).join('\n') : '  (none yet — you can introduce 5-10 broad tags drawn from the notes below)'}
+
+NOTES:
+${items.map(it => `  [${it.id}] ${it.title} — ${it.body}`).join('\n')}
+
+Output strict JSON:
+{ "assignments": [ { "id": "...", "tags": ["a","b","c"] } ] }
+One entry per note shown. Do not omit any.`
+
+  let raw: string
+  try {
+    raw = await generateText(prompt, {
+      model: MODELS.FLASH_CHAT,
+      maxTokens: 16000,
+      temperature: 0.3,
+      responseFormat: 'json',
+    })
+  } catch (err) {
+    console.error('[rescan-tags] LLM call failed:', err)
+    return res.status(500).json({ error: 'Tag rescan failed' })
+  }
+
+  let parsed: { assignments?: Array<{ id?: string; tags?: string[] }> }
+  try {
+    const clean = raw.trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '')
+    parsed = JSON.parse(clean)
+  } catch {
+    console.error('[rescan-tags] parse failed; raw preview:', raw.slice(0, 600))
+    return res.status(500).json({ error: 'Could not parse tag results' })
+  }
+
+  let updated = 0
+  for (const a of parsed.assignments ?? []) {
+    if (!a.id || !Array.isArray(a.tags)) continue
+    const row = rows.find(r => r.id === a.id)
+    if (!row) continue
+
+    // Merge: keep system markers + any tag the user manually added that
+    // the AI missed. Cap at 8 total to avoid runaway accumulation.
+    const aiTags = a.tags
+      .filter(t => typeof t === 'string')
+      .map(t => t.trim().toLowerCase())
+      .filter(t => t.length > 0 && t.length <= 32)
+      .slice(0, 5)
+    const systemMarkers = (row.tags ?? []).filter(t => t === 'onboarding' || t === 'live-hybrid')
+    const merged = Array.from(new Set([...systemMarkers, ...aiTags])).slice(0, 8)
+
+    // Skip writes that wouldn't change anything.
+    const before = (row.tags ?? []).slice().sort().join('|')
+    const after = merged.slice().sort().join('|')
+    if (before === after) continue
+
+    const { error: upErr } = await supabase
+      .from('memories')
+      .update({ tags: merged })
+      .eq('id', row.id)
+      .eq('user_id', userId)
+    if (upErr) {
+      console.error(`[rescan-tags] update failed for ${row.id}:`, upErr)
+      continue
+    }
+    updated++
+  }
+
+  console.log(`[rescan-tags] done — updated ${updated} of ${rows.length}`)
+  return res.status(200).json({ updated, total: rows.length, vocabulary_size: vocabList.length })
 }
