@@ -148,6 +148,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return await handleRescanTags(req, res)
     }
 
+    // GET: Tag vocabulary — distinct tags across the user's memories
+    // with counts. Powers the autocomplete in the per-memory tag editor.
+    if (req.method === 'GET' && action === 'tag-vocab') {
+      return await handleTagVocab(req, res)
+    }
+
+    // POST: Update tags on a single memory.
+    if (req.method === 'POST' && action === 'update-tags') {
+      if (!req.body && req.headers['content-type']?.includes('application/json')) {
+        const chunks = []
+        for await (const chunk of req) chunks.push(chunk)
+        req.body = JSON.parse(Buffer.concat(chunks).toString())
+      }
+      return await handleUpdateTags(req, res)
+    }
+
     // ── Auth required for all remaining endpoints ──
     const userId = await getUserId(req)
     if (!userId) {
@@ -2553,4 +2569,92 @@ One entry per note shown. Do not omit any.`
 
   console.log(`[rescan-tags] done — updated ${updated} of ${rows.length}`)
   return res.status(200).json({ updated, total: rows.length, vocabulary_size: vocabList.length })
+}
+
+// ── Tag vocabulary ──
+//
+// Returns the distinct tags across this user's memories, sorted by use
+// count descending. Fuels the autocomplete in the per-memory tag editor:
+// the user sees their existing vocabulary first, can pick from it, and
+// only types when no existing tag fits.
+async function handleTagVocab(req: any, res: any) {
+  const userId = await getUserId(req)
+  if (!userId) return res.status(401).json({ error: 'Sign in' })
+  const supabase = getSupabaseClient()
+
+  const { data, error } = await supabase
+    .from('memories')
+    .select('tags')
+    .eq('user_id', userId)
+    .range(0, 4999)
+
+  if (error) {
+    console.error('[tag-vocab] read failed:', error)
+    return res.status(500).json({ error: error.message })
+  }
+
+  const counts = new Map<string, number>()
+  for (const row of (data ?? []) as Array<{ tags: string[] | null }>) {
+    for (const t of row.tags ?? []) {
+      const norm = (t || '').trim().toLowerCase()
+      if (!norm) continue
+      counts.set(norm, (counts.get(norm) ?? 0) + 1)
+    }
+  }
+  const vocab = Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([tag, count]) => ({ tag, count }))
+
+  return res.status(200).json({ vocabulary: vocab })
+}
+
+// ── Update tags on one memory ──
+//
+// Replaces a memory's tags with the supplied array. System markers
+// ('onboarding', 'live-hybrid') are preserved automatically so the user
+// can't accidentally strip them by editing the visible tag list.
+async function handleUpdateTags(req: any, res: any) {
+  const userId = await getUserId(req)
+  if (!userId) return res.status(401).json({ error: 'Sign in' })
+
+  const { id, tags } = (req.body ?? {}) as { id?: string; tags?: unknown }
+  if (!id || typeof id !== 'string') return res.status(400).json({ error: 'id required' })
+  if (!Array.isArray(tags)) return res.status(400).json({ error: 'tags must be an array' })
+
+  const cleaned = (tags as unknown[])
+    .map(t => (typeof t === 'string' ? t.trim().toLowerCase() : ''))
+    .filter(t => t.length > 0 && t.length <= 32)
+    // Dedupe while preserving order.
+    .filter((t, i, arr) => arr.indexOf(t) === i)
+    .slice(0, 12)
+
+  const supabase = getSupabaseClient()
+  const { data: existing, error: readErr } = await supabase
+    .from('memories')
+    .select('tags')
+    .eq('id', id)
+    .eq('user_id', userId)
+    .single()
+
+  if (readErr || !existing) {
+    console.error('[update-tags] memory not found:', readErr)
+    return res.status(404).json({ error: 'Memory not found' })
+  }
+
+  // Preserve system markers regardless of what the client sent.
+  const systemMarkers = (existing.tags ?? []).filter((t: string) => t === 'onboarding' || t === 'live-hybrid')
+  const merged = Array.from(new Set([...systemMarkers, ...cleaned])).slice(0, 12)
+
+  const { error: updErr } = await supabase
+    .from('memories')
+    .update({ tags: merged })
+    .eq('id', id)
+    .eq('user_id', userId)
+
+  if (updErr) {
+    console.error('[update-tags] update failed:', updErr)
+    return res.status(500).json({ error: updErr.message })
+  }
+
+  return res.status(200).json({ tags: merged })
 }

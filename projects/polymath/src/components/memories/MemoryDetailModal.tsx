@@ -10,6 +10,7 @@ import { useToast } from '../ui/toast'
 import { useConfirmDialog } from '../ui/confirm-dialog'
 import { haptic } from '../../utils/haptics'
 import { EditMemoryDialog } from './EditMemoryDialog'
+import { TagEditor } from './TagEditor'
 import { GlassCard } from '../ui/GlassCard'
 import { SmartActionDot } from '../SmartActionDot'
 import { CACHE_TTL } from '../../lib/cacheConfig'
@@ -306,23 +307,7 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
                 )}
               </div>
 
-              {memory.tags && memory.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-6">
-                  {memory.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-3 py-1 text-xs font-medium rounded-full"
-                      style={{
-                        // Understated Slate/Gray styling
-                        backgroundColor: 'rgba(148, 163, 184, 0.1)', // Slate-400 at 10% opacity
-                        color: "var(--brand-text-secondary)" // Slate-400
-                      }}
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
+              <TagEditor memoryId={memory.id} initialTags={memory.tags ?? []} />
 
               {/* Connected Thoughts (Bridges) */}
               {bridges.length > 0 && (
