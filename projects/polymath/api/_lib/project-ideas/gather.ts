@@ -102,8 +102,19 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       .limit(60),
   ])
 
+  // Drop short cryptic voice notes ("mouses are good") before they reach
+  // the prompt. The model treats anything in the prompt as load-bearing
+  // and will invent project shapes to use them. The bar: ≥80 chars AND
+  // ≥10 words. A real load-bearing note describes a thing; a phrase
+  // doesn't. (Bed by 10, Sonically Sound etc. survive as PROJECTS via
+  // the projects table — losing a 3-word voice note doesn't lose them.)
   const memories = (memoriesRes.data ?? [])
-    .filter((m: any) => m.body && m.body.trim().length >= 20)
+    .filter((m: any) => {
+      const body = (m.body ?? '').trim()
+      if (body.length < 80) return false
+      const wordCount = body.split(/\s+/).filter(Boolean).length
+      return wordCount >= 10
+    })
     .map((m: any) => ({
       id: m.id as string,
       title: m.title as string | null,

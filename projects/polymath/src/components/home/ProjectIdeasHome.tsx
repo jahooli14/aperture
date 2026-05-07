@@ -172,7 +172,10 @@ export function ProjectIdeasHome() {
           const have = typeof res.signal_count === 'number' ? res.signal_count : 0
           setError(`You have ${have} captured signal${have === 1 ? '' : 's'} — the synthesiser needs at least 8 to find patterns. Add a few voice notes or list items and try again.`)
         } else {
-          setError('The synthesiser didn\'t find anything strong. Try again in a moment.')
+          // The new "missing piece" frame is built to return nothing on
+          // weeks where no recent capture genuinely unblocks an existing
+          // project. This is correct, not a failure — surface it that way.
+          setError('Nothing ripe this week. The system only surfaces ideas where a recent capture genuinely unblocks an existing project — keep capturing and check back in a few days.')
         }
         return
       }
