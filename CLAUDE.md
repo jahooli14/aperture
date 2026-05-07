@@ -25,7 +25,22 @@ This file is the **single source of truth** for working on this repo. If somethi
 
 > **Sonically Sound** ships from outside this repo.
 
-## Polymath: product model
+## Plain English (mantra — applies everywhere)
+
+This applies to everything Polymath produces or surfaces: AI prompts, AI-generated copy, UI strings, error messages, settings labels, empty states, push notifications, anywhere words appear.
+
+**Rules:**
+- Real words people say. No "leveraging," "synergies," "soundscapes," "unlocking momentum," "psychological defenses," "feature-rich," "narrative substrate."
+- No invented hyphenated jargon in scare-quotes ("friction-over-function," "blind-edit," "high-impact transition"). If a term needs scare-quotes to be understood, rewrite it.
+- No analyst voice. The app is not consulting at the user. It's a friend who's paying attention.
+- One idea per sentence. Long, hedged, multi-clause analysis is the failure mode (see the Context Engine sidebar — pretentious in exactly this way).
+- Concrete nouns over abstract ones. "Logic Pro trial expired" beats "your reliance on the 90-day trial of Logic Pro acted as an artificial deadline."
+- Imperative verbs are fine. Time estimates are fine. Don't hedge.
+- If you can't say it plainly, you don't understand it well enough to surface it. Stay silent.
+
+When you write or modify any prompt that asks the model for output, repeat the plain-English rule inside the prompt with a short anti-example. The default Gemini Flash voice drifts to corporate-coach unless told otherwise.
+
+
 
 Polymath is a **creative harness**. The user opens it with willpower to spend on creative work; the app's job is to direct that willpower productively — name a project worth starting, resurface the right forgotten one, or extend an existing one in a specific direction. It is not a "knowledge graph" or a "second brain" in the Mem.ai / Roam sense. It is goal-directed.
 
@@ -39,6 +54,7 @@ Polymath is a **creative harness**. The user opens it with willpower to spend on
 
 - **Todos / Fix Queue / AudioPen** — historical or unused. Code may still exist for these. Don't reference them as live features. If asked to extend them, ask first.
 - **Idea Engine emails** — separate Python project, not a Polymath surface.
+- **Context Engine sidebar** (`src/components/context/ContextSidebar.tsx`) — exists, surfaces an "AI Analysis" panel from many pages, but the output is the exact pretentious-coach voice the plain-English mantra forbids. **Needs review and rewrite of its prompt** before extending. Owner forgot it existed.
 
 ### Project = creative goal with a defined output
 

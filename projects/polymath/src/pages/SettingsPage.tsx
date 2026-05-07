@@ -26,6 +26,8 @@ export function SettingsPage() {
   const { accentColor, intensity, fontSize, showBugTracker, showRegenerateInsights, setAccentColor, setIntensity, setFontSize, setShowBugTracker, setShowRegenerateInsights } = useThemeStore()
   const { addToast } = useToast()
   const [regenerating, setRegenerating] = useState(false)
+  const [tidying, setTidying] = useState(false)
+  const [rescanningTags, setRescanningTags] = useState(false)
   const [allowHandoff, setAllowHandoff] = useState(false)
   const [resetConfirm, setResetConfirm] = useState(false)
   const [resetting, setResetting] = useState(false)
@@ -109,6 +111,55 @@ export function SettingsPage() {
       })
     } finally {
       setRegenerating(false)
+    }
+  }
+
+  const handleTidyThoughts = async () => {
+    setTidying(true)
+    try {
+      const res = await api.post('memories?action=backfill-tidy', {}, { timeout: 120_000 }) as { updated?: number; unchanged?: number; total?: number }
+      const updated = res.updated ?? 0
+      const total = res.total ?? 0
+      addToast({
+        title: 'Old thoughts tidied',
+        description: updated > 0
+          ? `Cleaned up ${updated} of ${total} voice notes.`
+          : 'Nothing needed cleaning.',
+        variant: 'success',
+      })
+    } catch {
+      addToast({
+        title: 'Tidy failed',
+        description: 'Try again in a moment.',
+        variant: 'destructive',
+      })
+    } finally {
+      setTidying(false)
+    }
+  }
+
+  const handleRescanTags = async () => {
+    setRescanningTags(true)
+    try {
+      const res = await api.post('memories?action=rescan-tags', {}, { timeout: 90_000 }) as { updated?: number; total?: number; vocabulary_size?: number }
+      const updated = res.updated ?? 0
+      const total = res.total ?? 0
+      const vocab = res.vocabulary_size ?? 0
+      addToast({
+        title: 'Tags refreshed',
+        description: total > 0
+          ? `Updated ${updated} of ${total} thoughts. Vocabulary is ${vocab} tags strong.`
+          : 'No thoughts to scan yet.',
+        variant: 'success',
+      })
+    } catch {
+      addToast({
+        title: 'Rescan failed',
+        description: 'Try again in a moment.',
+        variant: 'destructive',
+      })
+    } finally {
+      setRescanningTags(false)
     }
   }
 
@@ -562,6 +613,58 @@ export function SettingsPage() {
                   </h3>
                   <p style={{ color: 'var(--brand-text-secondary)', fontSize: '0.8rem' }}>
                     Re-scan everything to find new links between your ideas
+                  </p>
+                </div>
+              </button>
+
+              {/* Tidy old thoughts — strip ums and uhs from existing voice notes */}
+              <button
+                onClick={handleTidyThoughts}
+                disabled={tidying}
+                className="w-full flex items-center gap-4 p-4 rounded-xl backdrop-blur-xl transition-all text-left group hover:bg-brand-primary/5 hover:border-brand-primary/20 border"
+                style={{
+                  background: 'rgba(var(--brand-primary-rgb), 0.05)',
+                  borderColor: 'rgba(var(--brand-primary-rgb), 0.15)'
+                }}
+              >
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{
+                  background: 'rgba(var(--brand-primary-rgb), 0.15)'
+                }}>
+                  <RefreshCw className={`w-5 h-5 ${tidying ? 'animate-spin' : ''}`} style={{ color: "var(--brand-primary)" }} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold premium-text-platinum text-sm">
+                    Tidy old thoughts
+                  </h3>
+                  <p style={{ color: 'var(--brand-text-secondary)', fontSize: '0.8rem' }}>
+                    Strip ums and uhs from voice notes you captured before this update.
+                  </p>
+                </div>
+              </button>
+
+              {/* Rescan tags — re-run AI tag assignment across the corpus
+                  using the user's current tag vocabulary. Tags stay current
+                  as the vocabulary grows. */}
+              <button
+                onClick={handleRescanTags}
+                disabled={rescanningTags}
+                className="w-full flex items-center gap-4 p-4 rounded-xl backdrop-blur-xl transition-all text-left group hover:bg-brand-primary/5 hover:border-brand-primary/20 border"
+                style={{
+                  background: 'rgba(var(--brand-primary-rgb), 0.05)',
+                  borderColor: 'rgba(var(--brand-primary-rgb), 0.15)'
+                }}
+              >
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{
+                  background: 'rgba(var(--brand-primary-rgb), 0.15)'
+                }}>
+                  <RefreshCw className={`w-5 h-5 ${rescanningTags ? 'animate-spin' : ''}`} style={{ color: "var(--brand-primary)" }} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold premium-text-platinum text-sm">
+                    Rescan tags
+                  </h3>
+                  <p style={{ color: 'var(--brand-text-secondary)', fontSize: '0.8rem' }}>
+                    Re-tag every thought using your current vocabulary, so old notes pick up tags you've added since.
                   </p>
                 </div>
               </button>

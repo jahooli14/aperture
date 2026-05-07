@@ -93,7 +93,11 @@ export async function processMemory(memoryId: string): Promise<void> {
         memory_type: metadata.memory_type,
         entities: metadata.entities,
         themes: metadata.themes,
-        tags: metadata.tags || [], // Use raw tags from Gemini (skip normalization bottleneck)
+        // Merge — keep system markers (e.g. 'onboarding', 'live-hybrid')
+        // and any user-added tags; layer the AI's freshly-extracted tags
+        // on top. Without this, processing wipes onboarding markers and
+        // any custom tag the user added.
+        tags: Array.from(new Set([...(memory.tags || []), ...(metadata.tags || [])])),
         emotional_tone: metadata.emotional_tone,
         triage: metadata.triage,
         embedding,

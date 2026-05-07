@@ -19,7 +19,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { BookmarkPlus, BookmarkCheck, X, ChevronLeft, ChevronRight, Hammer, RotateCw } from 'lucide-react'
+import { BookmarkPlus, BookmarkCheck, X, Hammer, RotateCw } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
 import { api } from '../../lib/apiClient'
 
@@ -104,7 +104,6 @@ export function ProjectIdeasHome() {
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [activeIdx, setActiveIdx] = useState(0)
   const [showEvidence, setShowEvidence] = useState(false)
   const [pendingFeedback, setPendingFeedback] = useState<string | null>(null)
   const [loadingStage, setLoadingStage] = useState(0)
@@ -113,10 +112,12 @@ export function ProjectIdeasHome() {
     setError(null)
     try {
       const res = await api.get('utilities?resource=project-ideas') as ProjectIdeasResponse
-      setIdeas(res.ideas ?? [])
+      // The Moment is a single hero card — even if the server returns
+      // multiple ideas (legacy from the old 3-card carousel), only the
+      // top-ranked one shows here.
+      setIdeas((res.ideas ?? []).slice(0, 1))
       setGeneratedAt(res.generated_at)
       setHasAny(res.has_any)
-      setActiveIdx(0)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load ideas')
     } finally {
@@ -151,7 +152,7 @@ export function ProjectIdeasHome() {
   // Reset the evidence drawer whenever the active idea changes — without
   // this, switching slides while evidence is open animates two layouts at
   // once and looks janky on slow devices (notably Capacitor Android).
-  useEffect(() => { setShowEvidence(false) }, [activeIdx])
+  useEffect(() => { setShowEvidence(false) }, [ideas])
 
   const generate = useCallback(async () => {
     if (generating) return
@@ -201,12 +202,9 @@ export function ProjectIdeasHome() {
     try {
       await api.post('utilities?resource=project-ideas-feedback', { id: idea.id, status })
       if (status === 'rejected') {
-        // Drop locally and advance the carousel.
-        setIdeas(prev => {
-          const next = prev.filter(i => i.id !== idea.id)
-          if (activeIdx >= next.length && next.length > 0) setActiveIdx(next.length - 1)
-          return next
-        })
+        // Single-card surface: dismissing hides the moment until the
+        // user regenerates or a new one fires.
+        setIdeas([])
       } else {
         setIdeas(prev => prev.map(i => i.id === idea.id ? { ...i, status } : i))
       }
@@ -215,10 +213,9 @@ export function ProjectIdeasHome() {
     } finally {
       setPendingFeedback(null)
     }
-  }, [activeIdx, pendingFeedback])
+  }, [pendingFeedback])
 
-  const active = ideas[activeIdx] ?? null
-  const total = ideas.length
+  const active = ideas[0] ?? null
   const evidenceCount = useMemo(() => active?.evidence?.length ?? 0, [active])
 
   return (
@@ -352,22 +349,16 @@ export function ProjectIdeasHome() {
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.35, ease: 'easeOut' }}
               >
-                <div className="flex items-baseline justify-between mb-4">
-                  <span
-                    className="text-[10px] tracking-[0.32em] uppercase opacity-60"
-                    style={{ color: 'var(--brand-text-muted)' }}
-                  >
-                    idea {active.rank} of {total}
-                  </span>
-                  {active.status !== 'pending' && (
+                {active.status !== 'pending' && (
+                  <div className="mb-4 flex justify-end">
                     <span
                       className="text-[10px] tracking-[0.22em] uppercase"
                       style={{ color: 'rgb(var(--brand-primary-rgb))' }}
                     >
                       {active.status}
                     </span>
-                  )}
-                </div>
+                  </div>
+                )}
 
                 <h3
                   className="text-[22px] sm:text-[26px] leading-tight mb-4"
@@ -460,31 +451,7 @@ export function ProjectIdeasHome() {
                   )}
                 </AnimatePresence>
 
-                <div className="mt-7 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setActiveIdx(i => Math.max(0, i - 1))}
-                      disabled={activeIdx === 0}
-                      className="h-9 w-9 rounded-full flex items-center justify-center transition-opacity disabled:opacity-20 hover:bg-[var(--glass-surface)]"
-                      style={{ color: 'var(--brand-text-muted)' }}
-                      aria-label="Previous idea"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveIdx(i => Math.min(total - 1, i + 1))}
-                      disabled={activeIdx >= total - 1}
-                      className="h-9 w-9 rounded-full flex items-center justify-center transition-opacity disabled:opacity-20 hover:bg-[var(--glass-surface)]"
-                      style={{ color: 'var(--brand-text-muted)' }}
-                      aria-label="Next idea"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  </div>
-
-                  <div className="flex items-center gap-2">
+                <div className="mt-7 flex items-center justify-end gap-2">
                     <button
                       type="button"
                       onClick={() => sendFeedback(active, 'rejected')}
@@ -524,7 +491,6 @@ export function ProjectIdeasHome() {
                       <Hammer className="h-3.5 w-3.5" />
                       <span>{active.status === 'built' ? 'building' : 'building it'}</span>
                     </button>
-                  </div>
                 </div>
 
                 {error && (

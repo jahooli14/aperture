@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Brain, Users, Hash, Heart, Link2, X } from 'lucide-react'
+import { Brain, Users, Hash, Heart, X } from 'lucide-react'
 import { useJourneyStore } from '../../stores/useJourneyStore'
 
 interface ExtractionDetail {
@@ -51,7 +51,7 @@ export function ExtractionSummary() {
               <div className="flex items-center gap-1.5">
                 <Brain className="w-3.5 h-3.5 text-brand-primary" />
                 <span className="text-xs text-brand-primary font-medium">
-                  {extraction.connections > 0 ? 'Connected' : 'Understood'}
+                  Understood
                 </span>
               </div>
               <div className="h-3 w-px bg-[rgba(255,255,255,0.1)]" />
@@ -74,12 +74,6 @@ export function ExtractionSummary() {
                     {extraction.tone}
                   </span>
                 )}
-                {extraction.connections > 0 && (
-                  <span className="flex items-center gap-1">
-                    <Link2 className="w-3 h-3" />
-                    {extraction.connections} link{extraction.connections > 1 ? 's' : ''}
-                  </span>
-                )}
               </div>
               {/* Dismiss button */}
               <button
@@ -91,16 +85,6 @@ export function ExtractionSummary() {
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
-
-            {/* Row 1.5: flywheel feedback — shown when connections found */}
-            {extraction.connections > 0 && !extraction.bridgeInsight && onboardingCompletedAt && (
-              <>
-                <div className="h-px bg-[rgba(255,255,255,0.07)] my-2.5" />
-                <p className="text-[10px] leading-relaxed" style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}>
-                  {extraction.connections} new {extraction.connections === 1 ? 'connection' : 'connections'} to your existing thoughts. Your suggestions are getting sharper.
-                </p>
-              </>
-            )}
 
             {/* Row 2: thought bridge — shown only when present */}
             {extraction.bridgeInsight && (

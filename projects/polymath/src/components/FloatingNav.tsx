@@ -11,6 +11,7 @@ import { VoiceFAB } from './VoiceFAB'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useKeyboardVisible } from '../hooks/useKeyboardVisible'
 import { useMemoryStore } from '../stores/useMemoryStore'
+import { useDriftStore, wrapWithDriftContext } from '../stores/useDriftStore'
 import type { Memory } from '../types'
 import { useOfflineSync } from '../hooks/useOfflineSync'
 import { useToast } from './ui/toast'
@@ -159,8 +160,14 @@ export function FloatingNav() {
     return initials || <User className="h-3.5 w-3.5" />
   }
 
-  const handleVoiceTranscript = async (text: string) => {
-    if (!text) return
+  const handleVoiceTranscript = async (rawText: string) => {
+    if (!rawText) return
+
+    // If a Drift session is active, wrap the transcript so the saved
+    // thought lands as a coherent reply to the drift question rather
+    // than a free-floating note.
+    const drift = useDriftStore.getState().active
+    const text = wrapWithDriftContext(rawText, drift)
 
     // IMMEDIATELY show optimistic memory
     const tempId = addOptimisticMemory(text)

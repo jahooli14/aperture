@@ -437,20 +437,6 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
               {displayDate}
             </span>
 
-            {/* Connection hint — shown when entities suggest bridges exist */}
-            {memory.entities && (
-              (memory.entities.people?.length || 0) +
-              (memory.entities.topics?.length || 0) +
-              (memory.entities.places?.length || 0)
-            ) > 0 && (
-              <span
-                className="inline-flex items-center gap-0.5"
-                style={{ color: 'rgba(var(--brand-primary-rgb),0.7)' }}
-                title="Has connections"
-              >
-                <Link2 className="w-3 h-3" />
-              </span>
-            )}
           </div>
 
           <div className="flex items-center gap-1.5 flex-shrink-0">

@@ -1,15 +1,18 @@
 /**
- * Home Page — Polymath: Your Hour
+ * Home Page — the creative harness.
  *
- * Structure (top to bottom):
- *   1. YourHourHeader — Brand + duration toggle + search
- *   2. ProjectIdeasHome — 3 ranked project ideas drawn from across your data
- *   3. Keep Going carousel — Focused projects with "Start session"
- *   4. This Week — unified 5-card idea deck (mashups, insights, sparks, drawer)
- *   5. Unshaped nudge bar — Projects needing shaping
- *   6. What You're Consuming — active list items (compact)
- *   7. Thought of the Day — resurfaced memory quote
- *   8. Bedtime floating icon — appears after 9:30pm
+ * Stack (top to bottom):
+ *   1. YourHourHeader — brand + duration toggle + search
+ *   2. ProjectIdeasHome — The Moment: single hero card directing creative
+ *      willpower (new idea coalescing / forgotten project / extend an active)
+ *   3. KeepGoingCarousel — focus mode for active projects
+ *   4. NowConsumingWidget — compact strip of active list items
+ *   5. ThoughtOfTheDay — resurfaced memory quote
+ *   6. BedtimeFloatingIcon — after 9:30pm
+ *
+ * Deprecated and removed: This Week (mashups), Unshaped Nudge Bar, Try
+ * Something New. Their jobs map into The Moment's modes (Mode 3 Extend,
+ * Mode 1 Coalescing, Mode 2 Forgotten).
  */
 
 import React, { useEffect, useState } from 'react'
@@ -23,12 +26,8 @@ import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { useJourneyStore } from '../stores/useJourneyStore'
 import { useAuthContext } from '../contexts/AuthContext'
 import { SubtleBackground } from '../components/SubtleBackground'
-import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
-import { ShapingModal } from '../components/projects/ShapingModal'
 import { YourHourHeader } from '../components/home/YourHourHeader'
 import { KeepGoingCarousel } from '../components/home/KeepGoingCarousel'
-import { ThisWeekIdeas } from '../components/home/ThisWeekIdeas'
-import { UnshapedNudgeBar } from '../components/home/UnshapedNudgeBar'
 import { ThoughtOfTheDay } from '../components/home/ThoughtOfTheDay'
 import { BedtimeFloatingIcon } from '../components/home/BedtimeFloatingIcon'
 import { ProjectIdeasHome } from '../components/home/ProjectIdeasHome'
@@ -116,13 +115,6 @@ export function HomePage() {
   const startSession = useJourneyStore(s => s.startSession)
 
   const [error, setError] = useState<string | null>(null)
-  const [createProjectOpen, setCreateProjectOpen] = useState(false)
-  const [seedConversation, setSeedConversation] = useState<{ title: string; description: string } | undefined>()
-  const [shapingProjectId, setShapingProjectId] = useState<string | null>(null)
-
-  const shapingProject = shapingProjectId
-    ? useProjectStore.getState().allProjects.find(p => p.id === shapingProjectId) || null
-    : null
 
   useEffect(() => {
     if (!isAuthenticated) return
@@ -147,15 +139,6 @@ export function HomePage() {
     }
     loadData()
   }, [isAuthenticated])
-
-  const handleShapeIdea = (idea: { title: string; description: string }) => {
-    setSeedConversation({ title: idea.title, description: idea.description })
-    setCreateProjectOpen(true)
-  }
-
-  const handleShapeProject = (projectId: string) => {
-    setShapingProjectId(projectId)
-  }
 
   // Show landing page for unauthenticated users instead of empty black screen
   if (!isAuthenticated) {
@@ -195,24 +178,14 @@ export function HomePage() {
 
           <YourHourHeader />
 
-          {/* Project ideas — the headline surface, drawn from across your data */}
+          {/* The Moment — single hero card, the headline of the home flow */}
           <div className="mb-8">
             <ProjectIdeasHome />
           </div>
 
-          {/* Keep Going */}
+          {/* Keep Going — focus mode for active projects */}
           <div className="mb-8">
             <KeepGoingCarousel />
-          </div>
-
-          {/* This Week — unified idea deck */}
-          <div className="mb-8">
-            <ThisWeekIdeas onShapeSuggestion={handleShapeIdea} />
-          </div>
-
-          {/* Unshaped nudge */}
-          <div className="mb-8">
-            <UnshapedNudgeBar onShapeProject={handleShapeProject} />
           </div>
 
           {/* What you're consuming */}
@@ -226,25 +199,6 @@ export function HomePage() {
 
       {/* Bedtime floating icon — appears after 9:30pm */}
       <BedtimeFloatingIcon />
-
-      {/* Shaping modal for existing unshaped projects */}
-      {shapingProject && (
-        <ShapingModal
-          project={shapingProject}
-          isOpen={!!shapingProjectId}
-          onClose={() => setShapingProjectId(null)}
-        />
-      )}
-
-      {/* Create/Shape project dialog */}
-      <CreateProjectDialog
-        isOpen={createProjectOpen}
-        onOpenChange={setCreateProjectOpen}
-        hideTrigger
-        seedConversation={seedConversation ? [
-          { role: 'model' as const, content: `Let's shape this idea: "${seedConversation.title}". ${seedConversation.description}\n\nTell me more — what excites you about this?` }
-        ] : undefined}
-      />
     </motion.div>
   )
 }
