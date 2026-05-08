@@ -467,13 +467,6 @@ const QuoteCard = memo(({
                                 }}>
                                 {item.content}
                             </p>
-                            <button
-                                onClick={(e) => { e.stopPropagation(); setIsEditingQuote(true) }}
-                                className="absolute -top-1 -right-1 p-1.5 rounded-xl bg-[var(--glass-surface)] opacity-0 group-hover/quote:opacity-40 active:opacity-100 transition-all active:scale-95"
-                                aria-label="Edit quote"
-                            >
-                                <Pencil className="h-3 w-3 text-[var(--brand-text-primary)]/50" />
-                            </button>
                         </div>
                     )}
 
@@ -510,6 +503,7 @@ const QuoteCard = memo(({
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setIsEditingAuthor(true) }}
                                     className="p-1.5 rounded-xl bg-[var(--glass-surface)] active:bg-[rgba(255,255,255,0.1)] opacity-40 active:opacity-100 transition-all active:scale-95"
+                                    aria-label="Edit author"
                                 >
                                     <Pencil className="h-3 w-3 text-[var(--brand-text-primary)]/50" />
                                 </button>
@@ -525,7 +519,7 @@ const QuoteCard = memo(({
                             exit={{ opacity: 0, height: 0 }}
                             className="mt-8 pt-6 border-t border-[var(--glass-surface-hover)] space-y-4"
                         >
-                            {item.metadata.description && (
+                            {item.metadata.description && item.metadata.description !== item.content && (
                                 <p className="text-base text-zinc-300/90 leading-relaxed italic">{item.metadata.description}</p>
                             )}
                             {item.metadata.tags && item.metadata.tags.length > 0 && (
@@ -552,6 +546,17 @@ const QuoteCard = memo(({
 
                 {/* Actions row */}
                 <div className="absolute top-6 right-6 flex items-center gap-2">
+                    {/* Edit quote */}
+                    {!isEditingQuote && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); setIsEditingQuote(true) }}
+                            className="p-2.5 rounded-xl bg-zinc-900/50 backdrop-blur-sm border border-[var(--glass-surface-hover)] active:bg-[rgba(255,255,255,0.1)] text-brand-text-muted active:text-[var(--brand-text-primary)] opacity-50 transition-all active:scale-95"
+                            aria-label="Edit quote"
+                        >
+                            <Pencil className="h-4 w-4" />
+                        </button>
+                    )}
+
                     {/* Copy button */}
                     <button
                         onClick={(e) => { e.stopPropagation(); onCopy(item.content) }}

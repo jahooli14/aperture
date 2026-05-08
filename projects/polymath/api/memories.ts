@@ -329,29 +329,56 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ memory: data })
     }
 
-    // GET: List all memories (default). Explicit range — Supabase
-    // project-level db-default-max-rows can silently cap PostgREST
-    // queries (mobile builds were capping at 25 thoughts because of
-    // this); .range(0, 9999) overrides the default and returns up to
-    // 10k rows in one go.
+    // GET: List all memories.
+    // PostgREST max_rows (set in Supabase Project Settings → API) is a hard cap
+    // that newer PostgREST versions do NOT let the Range header override. We work
+    // around it by: (1) getting the true total via a COUNT HEAD request (unaffected
+    // by max_rows), then (2) looping with incrementing offsets until we have all rows.
     if (req.method === 'GET') {
-      const { data: memories, error } = await supabase
+      // Step 1: Get the real total — COUNT is not subject to max_rows
+      const { count: totalCount, error: countError } = await supabase
         .from('memories')
-        .select('*')
+        .select('*', { count: 'exact', head: true })
         .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .range(0, 9999)
 
-      if (error) {
-        console.error('[memories] GET error:', error)
-        return res.status(500).json({
-          error: 'Failed to fetch memories',
-          details: error.message
-        })
+      if (countError) {
+        console.error('[memories] GET count error:', countError)
+        return res.status(500).json({ error: 'Failed to count memories', details: countError.message })
       }
 
-      console.log(`[memories] GET returning ${(memories ?? []).length} memories`)
-      return res.status(200).json({ memories })
+      console.log(`[memories] GET total in DB: ${totalCount}`)
+
+      // Step 2: Batch-fetch until we have everything
+      const allMemories: any[] = []
+      const BATCH = 1000 // request 1000 per call; max_rows may cap lower — that's fine
+
+      while (allMemories.length < (totalCount ?? 0)) {
+        const from = allMemories.length
+        const { data: batch, error: batchError } = await supabase
+          .from('memories')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .range(from, from + BATCH - 1)
+
+        if (batchError) {
+          console.error(`[memories] GET batch error at offset ${from}:`, batchError)
+          return res.status(500).json({ error: 'Failed to fetch memories', details: batchError.message })
+        }
+
+        if (!batch || batch.length === 0) break // safety: stop if DB returns nothing
+
+        allMemories.push(...batch)
+        console.log(`[memories] GET fetched ${allMemories.length}/${totalCount}`)
+
+        if (allMemories.length >= 5000) {
+          console.warn('[memories] GET: hit 5000-row safety cap')
+          break
+        }
+      }
+
+      console.log(`[memories] GET returning ${allMemories.length} memories`)
+      return res.status(200).json({ memories: allMemories })
     }
 
     // DELETE: Delete memory
