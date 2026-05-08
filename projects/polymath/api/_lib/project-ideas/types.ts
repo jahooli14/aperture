@@ -26,6 +26,19 @@ export interface IdeaEvidence {
   excerpt: string
 }
 
+export type CentreKind = 'project_dormant' | 'project_active' | 'memory'
+export type ArrivalKind = 'memory' | 'reading' | 'highlight' | 'todo'
+
+/** The deterministic pick that drove a generated idea. The picker chooses it
+ *  in code from structured rows; the LLM only writes the idea up. Stored on
+ *  project_ideas so the next batch can enforce a cooldown. */
+export interface SeedPair {
+  centre_kind: CentreKind
+  centre_id: string
+  arrival_kind: ArrivalKind
+  arrival_id: string
+}
+
 export interface ProjectIdea {
   rank: number
   title: string
@@ -33,6 +46,7 @@ export interface ProjectIdea {
   why_now: string
   next_step: string
   evidence: IdeaEvidence[]
+  seed_pair?: SeedPair
 }
 
 export interface StoredProjectIdea extends ProjectIdea {
@@ -59,6 +73,9 @@ export interface GatherResult {
     rejected: Array<{ title: string; feedback: string | null }>
     built: Array<{ title: string; feedback: string | null }>
   }
+  /** Seed pairs used in recent batches (within the cooldown window).
+   *  Drives the picker's "don't reuse this convergence" filter. */
+  recent_seed_pairs: Array<{ centre_id: string; arrival_id: string; used_at: string; status: string }>
   total_signal_count: number
 }
 

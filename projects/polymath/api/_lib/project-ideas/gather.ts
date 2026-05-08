@@ -16,12 +16,18 @@ import type { GatherResult } from './types.js'
 
 const RECENT_DAYS = 120
 const ANCHOR_DAYS = 365
+/** Cooldown window for seed pairs. A (centre × arrival) convergence can't
+ *  fire again for this many weeks once it's been surfaced. 12 weeks lines
+ *  up with the long-dormant reshape cadence in CLAUDE.md and is long
+ *  enough that a re-fired pair feels genuinely fresh. */
+const SEED_PAIR_COOLDOWN_DAYS = 12 * 7
 
 type Supabase = ReturnType<typeof getSupabaseClient>
 
 export async function gatherForIdeas(supabase: Supabase, userId: string): Promise<GatherResult> {
   const recentSince = new Date(Date.now() - RECENT_DAYS * 86_400_000).toISOString()
   const anchorSince = new Date(Date.now() - ANCHOR_DAYS * 86_400_000).toISOString()
+  const cooldownSince = new Date(Date.now() - SEED_PAIR_COOLDOWN_DAYS * 86_400_000).toISOString()
 
   const [
     memoriesRes,
@@ -33,6 +39,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
     suggestionsRes,
     ieIdeasRes,
     priorIdeasRes,
+    recentSeedPairsRes,
   ] = await Promise.all([
     supabase
       .from('memories')
@@ -100,6 +107,20 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       .in('status', ['saved', 'rejected', 'built'])
       .order('generated_at', { ascending: false })
       .limit(60),
+    // Seed pairs used recently — drives the picker's cooldown filter so
+    // the same (centre × arrival) convergence can't re-surface for weeks.
+    // We honour every status except 'rejected' (rejected = user said no,
+    // so the convergence is dead, not on cooldown — handled separately
+    // via the title block in prior_ideas).
+    supabase
+      .from('project_ideas')
+      .select('seed_pair, status, generated_at')
+      .eq('user_id', userId)
+      .not('seed_pair', 'is', null)
+      .neq('status', 'rejected')
+      .gte('generated_at', cooldownSince)
+      .order('generated_at', { ascending: false })
+      .limit(120),
   ])
 
   // Drop short cryptic voice notes ("mouses are good") before they reach
@@ -221,6 +242,18 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
     else if (row.status === 'built' && prior_ideas.built.length < PER_BUCKET) prior_ideas.built.push(entry)
   }
 
+  const recent_seed_pairs: GatherResult['recent_seed_pairs'] = []
+  for (const row of (recentSeedPairsRes.data ?? []) as Array<{ seed_pair: { centre_id?: string; arrival_id?: string } | null; status: string; generated_at: string }>) {
+    const sp = row.seed_pair
+    if (!sp || !sp.centre_id || !sp.arrival_id) continue
+    recent_seed_pairs.push({
+      centre_id: sp.centre_id,
+      arrival_id: sp.arrival_id,
+      used_at: row.generated_at,
+      status: row.status,
+    })
+  }
+
   const total_signal_count =
     memories.length +
     list_items.length +
@@ -241,6 +274,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
     prior_suggestions,
     ie_ideas,
     prior_ideas,
+    recent_seed_pairs,
     total_signal_count,
   }
 }

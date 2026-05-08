@@ -1,57 +1,38 @@
 /**
- * Generator — synthesises 3 ranked project ideas from a GatherResult.
+ * Generator — writes up 0–3 project ideas from seed pairs the picker has
+ * already chosen.
  *
- * Single Gemini Flash call, JSON-mode response, 32k output tokens. Flash
- * is cheap enough that we throw budget at the structured prompt rather
- * than try to compress it. Time budget on a 60s Vercel function: ~5s
- * gather + ~30-50s Flash call + ~3s insert.
+ * Architectural split (the fix for "two runs gave the same idea twice"):
+ *   1. seed-picker enumerates and scores (centre × arrival) pairs in code,
+ *      enforcing a 12-week cooldown so the same convergence can't re-fire.
+ *   2. THIS module gives the LLM those locked pairs and asks only "is this
+ *      a real missing-piece match? if yes, write the idea; if no, null."
+ *   3. Picking moved out of the LLM means same-corpus runs no longer
+ *      collapse onto the same convergence — different pairs per batch.
  *
- * Quality moves baked in (research-driven, then iterated against real
- * outputs that were "wooden box for tech thing" twice in a row):
- *   - Visible TOOLKIT phase. The model enumerates SKILLs/TOOLs/MATERIALs
- *     /DORMANT/OBSESSION/PERSON/LOCATION items WITH a SUBSTRATE tag for
- *     each MATERIAL/TOOL — this is the anti-hallucination check (a model
- *     that has to write "Aperture API: HTTPS endpoint, NOT hardware" up
- *     front can't later put a Vercel app inside a willow box).
- *   - Anti-collapse rule: if any single toolkit item leads >3 of the 10
- *     drafts, the model strikes those drafts and re-drafts from underused
- *     parts of the toolkit. The 10 drafts must collectively lead with ≥6
- *     distinct toolkit items spanning 4 clusters (physical-build, software,
- *     creative, revival). This is the single biggest lever — the model
- *     was finding one convergence and writing 10 variations of it.
- *   - Cluster diversity in PHASE 4: the 3 final picks must lead from 3
- *     different clusters and collectively cite ≥6 distinct toolkit items.
- *     No two picks may share more than ONE toolkit item total.
- *   - Anti-pattern banlist (newsletter/podcast/totem/installation/etc.).
- *   - Each rank slot has a different JOB:
- *       rank 1 INEVITABLE BUILD (most toolkit items at once)
- *       rank 2 SHIP THE DORMANT (revive an abandoned project the new
- *         toolkit makes shippable)
- *       rank 3 STRETCH FROM THE EDGE (70% there, 30% stretch, leading
- *         from a recent acceleration)
- *   - why_now must name an *acceleration in the last 30 days*, not a
- *     static fact about a course finished two months ago.
- *   - next_step must be a build-START (cut, drill, flash, commit, drive,
- *     phone). Banned: measure, research, plan, sketch, outline.
- *   - Evidence excerpts are verified server-side against the real source
- *     body; fabricated quotes are replaced with actual text.
- *   - Diversity filter at parse time: drops a later idea if it shares ≥2
- *     evidence rows with any kept idea (not just the lead row, which the
- *     model can dodge by picking different starting rows for the same
- *     convergence).
+ * The LLM still does the things only it can do: voice, framing, calibrating
+ * whether a forced wedge ("Catch-22 logic-filter for Aperture") should be
+ * killed. Server-side evidence verification stays — the model can't put
+ * fabricated quotes in the user's mouth.
+ *
+ * Permissive fallback: when the picker returns 0 candidates (no recent
+ * arrivals or no centres) AND the user explicitly clicked "show me ideas",
+ * fall back to the old single-idea permissive prompt so the button isn't
+ * dead. Cron stays strict — silence is acceptable on cron.
  */
 
 import { generateText } from '../gemini-chat.js'
 import { MODELS } from '../models.js'
+import { pickSeedPairs, type SeedCandidate } from './seed-picker.js'
 import type { GatherResult, GenerationResult, IdeaEvidence, ProjectIdea } from './types.js'
 
 const MIN_SIGNALS = 8
 
 export interface GenerateOptions {
-  /** force=true relaxes the strict missing-piece frame and asks for one
-   *  good idea drawn from anything in the corpus. Used by the manual
-   *  "show me ideas" button — the user explicitly asked, so silence is
-   *  not an acceptable reply. The cron path stays strict. */
+  /** force=true falls back to the permissive prompt when the seed-pair
+   *  pass returns nothing. Used by the manual "show me ideas" button —
+   *  the user explicitly asked, so silence is not an acceptable reply.
+   *  The cron path stays strict and is allowed to return empty. */
   force?: boolean
 }
 
@@ -64,30 +45,33 @@ export async function generateProjectIdeas(
     return { ideas: [], reason: 'insufficient_data', attempts: 0 }
   }
 
-  // First pass: strict frame. If the user manually triggered (force),
-  // and the strict pass returns empty, fall back to a permissive pass.
-  const ideas = await runOnce(gathered, false)
-  if (ideas.length > 0) return { ideas, attempts: 1 }
+  const seeds = pickSeedPairs(gathered, { count: 3 })
+  console.log(`[project-ideas] seed picker chose ${seeds.length} pair(s)${seeds.length ? `: ${seeds.map(s => `${s.centre.kind}#${s.centre.id.slice(0, 8)}×${s.arrival.kind}#${s.arrival.id.slice(0, 8)} (score=${s.score.toFixed(2)}, overlap=${s.topical_overlap.toFixed(2)})`).join('; ')}` : ''}`)
+
+  if (seeds.length > 0) {
+    const ideas = await runLockedPairs(gathered, seeds)
+    if (ideas.length > 0) return { ideas, attempts: 1 }
+  }
 
   if (opts.force) {
-    console.log(`[project-ideas] strict pass returned 0; force=true, falling back to permissive prompt`)
-    const fallback = await runOnce(gathered, true)
+    console.log(`[project-ideas] seed-pair pass produced 0; force=true, falling back to permissive`)
+    const fallback = await runPermissive(gathered)
     if (fallback.length > 0) return { ideas: fallback, attempts: 2 }
   }
 
   return { ideas: [], reason: 'parse_failure', attempts: opts.force ? 2 : 1 }
 }
 
-async function runOnce(gathered: GatherResult, permissive: boolean): Promise<ProjectIdea[]> {
-  const prompt = permissive ? buildPermissivePrompt(gathered) : buildPrompt(gathered)
-  console.log(`[project-ideas] gather: ${gathered.total_signal_count} signals; prompt: ${prompt.length} chars; mode=${permissive ? 'permissive' : 'strict'}`)
+async function runLockedPairs(gathered: GatherResult, seeds: SeedCandidate[]): Promise<ProjectIdea[]> {
+  const prompt = buildLockedPrompt(gathered, seeds)
+  console.log(`[project-ideas] locked-pairs prompt: ${prompt.length} chars; pairs=${seeds.length}`)
 
   const t0 = Date.now()
   let raw: string
   try {
     raw = await generateText(prompt, {
       model: MODELS.FLASH_CHAT,
-      maxTokens: 32000,
+      maxTokens: 16000,
       temperature: 0.85,
       responseFormat: 'json',
     })
@@ -96,9 +80,9 @@ async function runOnce(gathered: GatherResult, permissive: boolean): Promise<Pro
     return []
   }
   console.log(`[project-ideas] Flash responded in ${Date.now() - t0}ms (${raw.length} chars)`)
-  const ideas = parseAndValidate(raw, gathered)
+
+  const ideas = parseLockedSlots(raw, gathered, seeds)
   if (ideas.length === 0) {
-    // Log a chunked preview so failures are debuggable from Vercel logs.
     console.warn(`[project-ideas] no valid ideas after parse. raw length: ${raw.length}`)
     for (let i = 0; i < raw.length; i += 1500) {
       console.warn(`[project-ideas] raw[${i}..]: ${raw.slice(i, i + 1500)}`)
@@ -109,53 +93,52 @@ async function runOnce(gathered: GatherResult, permissive: boolean): Promise<Pro
   return ideas
 }
 
-function buildPrompt(g: GatherResult): string {
-  const memBlock = g.memories.slice(0, 35).map(m => {
-    const date = isoDate(m.created_at)
-    const themeStr = m.themes.length ? ` · themes: ${m.themes.slice(0, 4).join(', ')}` : ''
-    const typeStr = m.memory_type ? ` [${m.memory_type}]` : ''
-    return `  memory#${m.id} (${date})${typeStr}${themeStr}\n    "${truncate(m.body, 280)}"`
-  }).join('\n')
+async function runPermissive(gathered: GatherResult): Promise<ProjectIdea[]> {
+  const prompt = buildPermissivePrompt(gathered)
+  console.log(`[project-ideas] permissive prompt: ${prompt.length} chars`)
 
+  const t0 = Date.now()
+  let raw: string
+  try {
+    raw = await generateText(prompt, {
+      model: MODELS.FLASH_CHAT,
+      maxTokens: 8000,
+      temperature: 0.85,
+      responseFormat: 'json',
+    })
+  } catch (err) {
+    console.error(`[project-ideas] permissive Flash call threw after ${Date.now() - t0}ms:`, err)
+    return []
+  }
+  console.log(`[project-ideas] permissive Flash responded in ${Date.now() - t0}ms (${raw.length} chars)`)
+  return parsePermissive(raw, gathered)
+}
+
+function buildLockedPrompt(g: GatherResult, seeds: SeedCandidate[]): string {
+  const lockedBlock = seeds.map((s, i) => {
+    const centreLine = `  CENTRE: ${s.centre.kind}#${s.centre.id} — "${s.centre.title}" (last touched ${isoDate(s.centre.last_touched)})${s.centre.description ? `\n    desc: ${truncate(s.centre.description, 200)}` : ''}`
+    const arrivalLine = `  ARRIVAL: ${s.arrival.kind}#${s.arrival.id} (${isoDate(s.arrival.date)}) — "${truncate(s.arrival.excerpt, 240)}"`
+    return `PAIR ${i + 1}:\n${centreLine}\n${arrivalLine}`
+  }).join('\n\n')
+
+  // Active projects are listed compactly so the model can refuse "finish X"
+  // framing against them. Any active project is already on Keep Going, so
+  // proposing a continuation as an idea is duplication.
+  const activeProjBlock = g.active_projects.slice(0, 12).map(p =>
+    `  project#${p.id} [${p.status}] "${p.title}"`
+  ).join('\n')
+
+  // List items by type — taste / identity signal only. Compact form.
   const listsByType = groupBy(g.list_items, li => li.list_type)
   const listBlock = Array.from(listsByType.entries()).map(([type, items]) =>
-    `  ${type} (${items.length}):\n${items.slice(0, 12).map(li =>
-      `    list_item#${li.id} (${isoDate(li.created_at)}, ${li.status}) — ${truncate(li.content, 140)}`
-    ).join('\n')}`
+    `  ${type}: ${items.slice(0, 6).map(li => truncate(li.content, 60)).join('; ')}`
   ).join('\n')
 
-  // Active projects are presented as a single block. Any active project
-  // is currently in the user's working set (Keep Going on the home
-  // surfaces them), so "finish / ship / complete X" framing is always
-  // duplication. Active projects are eligible ONLY for Mode 3 EXTEND
-  // with a genuinely NEW direction. Dormant is the only place "pick it
-  // up" framing belongs.
-  const activeProjBlock = g.active_projects.map(p =>
-    `  project#${p.id} [${p.status}] "${p.title}"${p.description ? `\n    ${truncate(p.description, 240)}` : ''}${p.tags.length ? `\n    tags: ${p.tags.slice(0, 6).join(', ')}` : ''}`
-  ).join('\n')
-
-  const dormantProjBlock = g.dormant_projects.map(p =>
-    `  project_dormant#${p.id} [${p.status}, last touched ${isoDate(p.updated_at)}] "${p.title}"${p.description ? `\n    ${truncate(p.description, 200)}` : ''}`
-  ).join('\n')
-
-  const readingBlock = g.reading.map(r =>
-    `  reading#${r.id} (${isoDate(r.created_at)}) "${r.title ?? '(untitled)'}"${r.source ? ` · ${r.source}` : ''}${r.excerpt ? `\n    ${truncate(r.excerpt, 200)}` : ''}`
-  ).join('\n')
-
-  const highlightBlock = g.highlights.map(h =>
-    `  highlight#${h.id} (${isoDate(h.created_at)}, from "${h.article_title ?? 'article'}") — "${truncate(h.quote, 220)}"`
-  ).join('\n')
-
-  const todoBlock = g.todos.map(t =>
-    `  todo#${t.id} (${isoDate(t.created_at)}) — ${truncate(t.text, 180)}${t.notes ? ` :: ${truncate(t.notes, 120)}` : ''}`
-  ).join('\n')
-
-  const ieBlock = g.ie_ideas.slice(0, 10).map(i =>
-    `  idea_engine#${i.id} [${i.status}] "${i.title}" — ${truncate(i.description, 160)}`
-  ).join('\n')
-
-  const suggestionBlock = g.prior_suggestions.slice(0, 10).map(s =>
-    `  suggestion#${s.id} [${s.status}] "${s.title}"`
+  // Recent voice notes (≤30d) so the model can pick a real why_now phrase
+  // beyond the locked arrival when relevant.
+  const recentMems = g.memories.filter(m => isWithinDays(m.created_at, 30)).slice(0, 8)
+  const recentMemBlock = recentMems.map(m =>
+    `  memory#${m.id} (${isoDate(m.created_at)}) — "${truncate(m.body, 200)}"`
   ).join('\n')
 
   const seenBlock = [
@@ -164,9 +147,13 @@ function buildPrompt(g: GatherResult): string {
     ...g.prior_ideas.rejected.map(t => `  · rejected: "${t.title}"${t.feedback ? ` — reason: ${truncate(t.feedback, 120)}` : ''}`),
   ].join('\n')
 
+  const slotShape = seeds.map((_s, i) =>
+    `    { "pair_index": ${i}, "idea": <idea-object> | null, "skip_reason": "<one short sentence; only when idea is null>" }`,
+  ).join(',\n')
+
   return `You are a friend who's been paying attention. Not a coach. Not a therapist. A maker who would actually build the thing themselves. You write in plain English the way a friend talks. You'd rather say nothing than say something that doesn't ring true.
 
-Your job: find a project whose missing piece just arrived. Most weeks, nothing is ripe. That's fine. Stay quiet rather than make something up.
+Your job today is NOT to find ideas — the system has already proposed candidate (centre × arrival) pairs below. Your job is to verify each pair and either WRITE the idea or NULL the slot. Most pairs may be null. The user prefers silence over decorative output.
 
 ═══════ HOW TO WRITE ═══════
 
@@ -176,144 +163,80 @@ NEVER invent a hyphenated phrase in scare-quotes ("friction-over-function," "bli
 NEVER explain to the user what they "are doing" in coach-voice ("You are shifting from a consumer to a producer of..."). Just say what you'd say to a friend.
 ONE idea per sentence. If a sentence has three clauses, it's wrong.
 Concrete nouns. "Logic Pro trial expired" beats "your reliance on the 90-day trial of Logic Pro acted as an artificial deadline."
-If you can't say it plainly, you don't see the picture clearly enough — drop the idea.
+If you can't say it plainly, you don't see the picture clearly enough — null the slot.
 
-═══════ THE FRAME (READ TWICE) ═══════
+═══════ THE TEST ═══════
 
-A good pick has TWO halves and they must BOTH be real:
+A pair is real ONLY when both halves are real:
 
-  HALF A — A PROJECT-CENTRE that already exists in the data: a thing the user has been quietly building toward for weeks or months, with an artefact-shaped centre. You can name what the finished thing IS in one sentence. This is usually a dormant project, an active project, or a recurring obsession with a clear artefact behind it.
+  HALF A — The CENTRE is a project-centre that already exists in the data: artefact-shaped, the user has been quietly building toward it. You can name what the finished thing IS in one sentence.
 
-  HALF B — A RECENT ARRIVAL (last ~30 days) that supplies the SPECIFIC missing piece the project-centre was waiting for. Not "thematically related." Not "could be combined with." The missing piece. The thing without which the project couldn't ship.
+  HALF B — The ARRIVAL is a recent capture that supplies the SPECIFIC missing piece the centre was waiting for. Not "thematically related." Not "could be combined with." The missing piece. The thing without which the project couldn't ship.
 
-If you can't name BOTH halves cleanly, there is no idea here. Don't write one.
+If the centre isn't a real artefact-shaped project, or if the arrival is just a stylistic preference / consumption signal / coincidence, NULL THE SLOT. Do not wedge a real centre and a real arrival into a pretend match.
 
-WORKED EXAMPLE: dormant Raspberry Pi project + accumulated synth-playing intuition = a synth project, 80% formed. RECENT ARRIVAL: woodwork course finished three weeks ago = supplies the case-making skill that was the missing piece. Now possible. Title: "Build your synth." This is the bar.
+WORKED EXAMPLE: CENTRE = dormant Raspberry Pi project. ARRIVAL = woodwork course finished three weeks ago. The case was the missing piece. Title: "Build your synth." This is the bar.
 
-ANTI-EXAMPLE 1 (rejected): "Wooden mouse-dock." There is no project-centre. "Computer mouse" is a peripheral the user already owns; it isn't an artefact-shaped centre that something could be missing FROM. The voice note "mouses are good" is not an arrival that supplies anything to a real project. This is the model inventing a project to give recent captures a home. Do not do this.
+ANTI-EXAMPLE 1: "Wooden mouse-dock." No real centre — "computer mouse" is a peripheral. NULL.
+ANTI-EXAMPLE 2: "Catch-22 logic-filter for Aperture." Real centre, fake arrival match — Aperture isn't waiting on paradox detection. NULL.
+ANTI-EXAMPLE 3: "Paradox-indexed memory palace." Real centre, fake arrival match — paradoxes don't unblock 198 country mappings. NULL.
+ANTI-EXAMPLE 4: "Finish the Graham song" / "Ship Aperture" against an ACTIVE PROJECT. Already on Keep Going. Words like "Finish", "Ship", "Complete", "Wrap up", "Polish", "Continue" against any active project are an automatic NULL. The only valid active-project idea is a genuinely NEW direction.
 
-ANTI-EXAMPLE 2 (rejected): "Catch-22 logic-filter for Aperture." Aperture is a real project-centre. But "Catch-22 is your favourite book" is not a recent arrival that supplies a missing piece — it's a stylistic preference. Aperture is not waiting on a paradox-detection feature; nothing about Aperture's design demands one. This is a clever pretend-match. Do not do this.
+═══════ LOCKED PAIRS — verify each, write or null ═══════
 
-ANTI-EXAMPLE 3 (rejected): "Paradox-indexed memory palace." A memory palace project is real. A note about Catch-22 is real. But "indexing the memory palace by paradoxes" isn't unblocking the project — the missing piece for a 198-country memory palace is content for the rooms, not a meta-organisational scheme. The match is invented to wedge two real things together.
+${lockedBlock}
 
-ANTI-EXAMPLE 4 (rejected): "Finish the Graham song" / "Ship Aperture" / "Complete the bedside table" — when the project is in the ACTIVE PROJECTS list. The home already has a Keep Going card prompting them to start a session on these. Re-surfacing them as an "idea" is duplication. If you can't think of a genuinely new direction or extension for an active project that isn't "finish it", drop the idea entirely. Words like "Finish", "Ship", "Complete", "Wrap up", "Polish", "Continue" against any active project are an automatic kill.
+═══════ CONTEXT FOR VERIFICATION + FRAMING ═══════
 
-═══════ THE DATA ═══════
-
-VOICE NOTES (recent, in order):
-${memBlock || '  (none)'}
-
-LIST ITEMS (films/books/places — consumption, NOT capability; never lead evidence):
-${listBlock || '  (none)'}
-
-ACTIVE PROJECTS (already on the user's working set — Keep Going surfaces these on the home. Eligible ONLY for Mode 3 EXTEND with a genuinely new direction. NEVER propose "finish / ship / complete / wrap up / polish / continue X" for any of these — that's duplication of Keep Going):
+ACTIVE PROJECTS (NEVER propose "finish / ship / complete / wrap up / polish / continue X" for any of these — Keep Going already surfaces them):
 ${activeProjBlock || '  (none)'}
 
-DORMANT / ON-HOLD / ARCHIVED / ABANDONED PROJECTS (existing scope, residual context, half-built):
-${dormantProjBlock || '  (none)'}
+LIST ITEMS (films/books/places — taste / identity signal; NEVER lead evidence):
+${listBlock || '  (none)'}
 
-READING QUEUE:
-${readingBlock || '  (none)'}
+RECENT VOICE NOTES (last 30 days — for why_now phrasing):
+${recentMemBlock || '  (none)'}
 
-HIGHLIGHTS (sentences pulled from articles — thinking out loud, not commitments):
-${highlightBlock || '  (none)'}
-
-OPEN TODOS:
-${todoBlock || '  (none)'}
-
-PRIOR IDEA-ENGINE OUTPUT (anti-evidence — avoid repeating, do NOT cite as user signal):
-${ieBlock || '  (none)'}
-
-PRIOR PROJECT SUGGESTIONS (anti-evidence — same):
-${suggestionBlock || '  (none)'}
-
-PREVIOUSLY SURFACED IDEAS (do NOT repeat; honour rejection reasons):
+PREVIOUSLY SURFACED IDEAS (do NOT repeat any title; honour rejection reasons):
 ${seenBlock || '  (none)'}
 
-═══════ DATA-SHAPE RULES (HARD) ═══════
+═══════ FOR EACH WRITTEN IDEA ═══════
 
-1. List items (films/books/places) are taste. They are NEVER lead evidence and almost never project-centres.
-2. Highlights are thinking-out-loud. They can supply why_now framing. They are NEVER load-bearing.
-3. Themes arrays are AI-generated and lossy. Excerpts must come from body text shown above.
-4. Idea-engine and prior_suggestions are anti-evidence — what to avoid, not what to build on.
-5. Single voice notes that don't tie to a recurring obsession or a named tool/skill cannot be the missing piece. The bar for a "missing piece" is high — it should be something you'd describe to a friend without prompting ("I just finished a woodwork course").
-
-═══════ HOW TO THINK ═══════
-
-Output JSON with keys: centres, arrivals, matches, ideas. Work them in order.
-
-PHASE 1 — CENTRES (3–8 lines).
-List the things in the data with an artefact-shaped centre. For each, name the finished thing and what it's been waiting for. Most candidates are dormant projects, active projects with named deliverables, or repeated obsessions with clear physical artefacts (e.g. someone who keeps mentioning the same instrument they want to make). Skip captures that are abstract themes or consumption preferences.
-Format:
-  "CENTRE: <one-sentence description of the finished thing> [<source_id>] (status: <how formed today>; missing: <what's been blocking it>)"
-If there are no real centres, output an empty array — and the rest of the output will also be empty. Don't fake centres to give the model something to do.
-
-PHASE 2 — ARRIVALS (3–10 lines, captures from the LAST 30 DAYS only).
-List recent captures (memories, finished courses, recent purchases, dormant project edits, project notes). For each, name what it supplies in concrete terms.
-Format:
-  "ARRIVAL: <what arrived> [<source_id>] (date: YYYY-MM-DD; supplies: <capability/material/context>)"
-Older context is fine in CENTRES; ARRIVALS must be ≤30 days old. If there are no real arrivals, the rest of the output is empty.
-
-PHASE 3 — MATCHES (one line per CENTRE). For each centre, write one of:
-  "<centre title>: <arrival id> — <how it supplies the missing piece>"
-  OR
-  "<centre title>: NO MATCH — nothing in arrivals supplies the missing piece"
-Most centres will have NO MATCH. That is correct and expected. If you find yourself stretching to make a match, write NO MATCH and move on. Forced matches are exactly how this surface produced "wooden mouse-dock" and "Catch-22 logic-filter" — those were fake matches that violated the frame.
-
-PHASE 4 — IDEAS (0–3 picks, one per real match from PHASE 3).
-Only write ideas where MATCH was real. Do not write 3 ideas to fill a quota. If there is 1 real match, return 1 idea. If 0, return ideas: []. The system is BUILT to return nothing on weeks where nothing is ripe. The user prefers silence over decorative output.
-
-For each idea:
-  - title: ≤6 words. Names the artefact or the action ("Build your synth"; "Ship Aperture's homepage"; "Wire the bird cam"). NO abstract nouns: no "exploration," "study," "series," "totem," "memory of," "in conversation with," "investigation into," "meditation on," "the [abstract] of [abstract]," "directory," "tracker," "second brain," "digital garden," "newsletter," "podcast," "Substack," "zine," "installation," "portrait series."
-  - pitch: 2–3 sentences. Sentence 1 = name the project that pre-existed AND the missing piece that just arrived ("The Pi-and-synth-playing project has been waiting for a case; the woodwork course that finished three weeks ago is the case-making skill"). Sentence 2 = which toolkit item plays which role. Sentence 3 = what done looks like, in one observable test.
-  - why_now: ONE sentence. What arrived in the last 30 days that turns "someday" into "now." If you can't point to something specific that arrived recently, this isn't ripe — drop the idea.
-  - next_step: ONE physical action that STARTS the build. Cut, drill, flash, commit (with named file path AND named first content), drive, phone. NOT "create a file" without naming what's in it. NOT "research," "plan," "sketch," "outline," "open settings," "decide," "list," "measure." If the only first action you can name is admin, the idea wasn't actually unblocked — drop it.
-  - evidence: 2–5 items, each {kind, source_id, label, date, excerpt}. excerpt must be a verbatim substring of the source body shown above (will be substring-checked). Lead evidence (item 0) is the project-centre. Item 1 should be the recent arrival.
+  - title: ≤6 words. Names the artefact or the action ("Build your synth"; "Ship Aperture's homepage"; "Wire the bird cam"). NO abstract nouns: no "exploration," "study," "series," "totem," "memory of," "in conversation with," "investigation into," "meditation on," "directory," "tracker," "second brain," "digital garden," "newsletter," "podcast," "Substack," "zine," "installation," "portrait series."
+  - pitch: 2–3 sentences. Sentence 1 = name the centre AND the missing piece the arrival supplies. Sentence 2 = which toolkit item plays which role. Sentence 3 = what done looks like, in one observable test.
+  - why_now: ONE sentence. What arrived recently that turns "someday" into "now." If you can't point to something specific, NULL the slot.
+  - next_step: ONE physical action that STARTS the build. Cut, drill, flash, commit (with named file path AND named first content), drive, phone. NOT "research," "plan," "sketch," "outline," "open settings," "decide," "list," "measure." If the only first action is admin, the idea wasn't actually unblocked — NULL.
+  - evidence: 2–5 items, each {kind, source_id, label, date, excerpt}. excerpt must be a verbatim substring of the source content shown in the locked pair (will be substring-checked). LEAD evidence (item 0) is the centre from the locked pair. Item 1 is the arrival from the locked pair. The remaining slots can cite related captures from the context blocks.
   - rank_role: one of "convergence" | "dormant_revival" | "growing_edge" — best-effort, not strict.
-
-═══════ CALIBRATION ═══════
-
-GOOD: "Build your synth." CENTRE = dormant Pi + accumulated synth-playing (artefact: a custom synth). ARRIVAL = woodwork course finished three weeks ago (supplies: case-making skill). MATCH = real; the case was the missing piece. Title names the artefact in 3 words. Next step is "flash CircuitPython on the Pi tonight, wire one pot to ADC0."
-
-BAD: "Wooden mouse-dock." NO real centre. "Computer mouse" isn't a project. The voice note "mouses are good" is not an arrival that supplies anything. The model invented a centre to use a recent capture. Kill.
-
-BAD: "Catch-22 logic-filter for Aperture." Real centre (Aperture). Fake arrival match — "Catch-22 is your favourite book" is not a missing-piece-supplier; Aperture is not waiting on paradox detection. Kill.
-
-BAD: "Paradox-indexed memory palace." Real centre (memory palace). Fake arrival match — a paradox note doesn't unblock 198 country mappings; the actual missing piece is content. Kill.
-
-═══════ OUTPUT FAILURE MODES ═══════
-
-Returning fewer than 3 ideas is the EXPECTED outcome most weeks. Returning 0 is correct when nothing arrived that completed a real project. Forcing 3 ideas to "look good" produces the fake matches above. Don't do it.
 
 ═══════ OUTPUT (strict JSON, no markdown fences) ═══════
 {
-  "centres": [
-    "CENTRE: A custom monosynth built around the Pi [project_dormant#abc] (status: Pi purchased Nov, synth-playing intuition formed; missing: case-making and design)",
-    ...
-  ],
-  "arrivals": [
-    "ARRIVAL: Finished beginner woodwork course [memory#def] (date: 2026-04-10; supplies: hand-tool joinery and case-making skill)",
-    ...
-  ],
-  "matches": [
-    "Custom monosynth: memory#def — woodwork course supplies the case-making skill the synth project was waiting for",
-    "World memory palace: NO MATCH — nothing in arrivals supplies the missing 198 country mappings",
-    ...
-  ],
-  "ideas": [
-    {
-      "rank": 1,
-      "rank_role": "convergence",
-      "title": "Build your synth",
-      "pitch": "...",
-      "why_now": "...",
-      "next_step": "...",
-      "evidence": [
-        { "kind": "project_dormant", "source_id": "...", "label": "...", "date": "YYYY-MM-DD", "excerpt": "..." }
-      ]
-    }
+  "slots": [
+${slotShape}
   ]
-}`
+}
+
+Each slot's idea-object shape (when not null):
+{
+  "rank": 1,
+  "rank_role": "convergence",
+  "title": "...",
+  "pitch": "...",
+  "why_now": "...",
+  "next_step": "...",
+  "evidence": [
+    { "kind": "project_dormant", "source_id": "...", "label": "...", "date": "YYYY-MM-DD", "excerpt": "..." }
+  ]
+}
+
+If a pair is genuinely a forced wedge, set "idea": null and write a one-sentence skip_reason. Returning 3 nulls is correct when no pair holds up.`
+}
+
+function isWithinDays(dateStr: string, days: number): boolean {
+  if (!dateStr) return false
+  const t = new Date(dateStr).getTime()
+  if (Number.isNaN(t)) return false
+  return Date.now() - t <= days * 86_400_000
 }
 
 /**
@@ -425,140 +348,169 @@ const VALID_KINDS = new Set([
   'idea_engine',
 ])
 
-function parseAndValidate(raw: string, gathered: GatherResult): ProjectIdea[] {
+/** Per-idea validation. Returns the idea on success, null when the model
+ *  fabricated evidence ids, omitted required fields, or undershot the ≥2
+ *  evidence floor. Caller chooses what to do with rank / dedup / seed_pair. */
+function validateRawIdea(item: RawIdea, sourceLookup: Map<string, SourceRow>): ProjectIdea | null {
+  if (!item.title || !item.pitch || !item.next_step || !item.why_now) return null
+  if (!Array.isArray(item.evidence)) return null
+
+  const evidence: IdeaEvidence[] = []
+  const seenSources = new Set<string>()
+  for (const e of item.evidence) {
+    if (!e.source_id) continue
+    // The prompt formats ids as `kind#uuid` so the model can keep types
+    // and ids together visually. Two reasons we trust the prefix over
+    // the model-supplied `kind` field:
+    //   1. Models echo the prefix back in source_id reliably.
+    //   2. Models conflate the evidence-kind set (memory/list_item/...)
+    //      with the toolkit-kind set (SKILL/TOOL/MATERIAL/DORMANT) and
+    //      put the wrong word in the kind field, dropping every item.
+    // So: extract kind from prefix if present; fall back to the model
+    // field only when there's no prefix.
+    const rawId = e.source_id
+    const hashIdx = rawId.indexOf('#')
+    let kindFromPrefix: string | undefined
+    let bareId = rawId
+    if (hashIdx > 0) {
+      kindFromPrefix = rawId.slice(0, hashIdx).toLowerCase()
+      bareId = rawId.slice(hashIdx + 1)
+    }
+    const kind = kindFromPrefix && VALID_KINDS.has(kindFromPrefix)
+      ? kindFromPrefix
+      : (typeof e.kind === 'string' ? e.kind.toLowerCase() : '')
+    if (!VALID_KINDS.has(kind)) continue
+
+    // The model often truncates UUIDs to ~8 chars in its output (likely
+    // imitating short-hash style from in-prompt examples). Accept any
+    // prefix match — at 6+ chars UUIDs are unique within one user's
+    // gather (~100 rows). Resolve to the full id for canonical storage.
+    let resolvedId = bareId
+    let real = sourceLookup.get(bareId)
+    if (!real && bareId.length >= 6 && bareId.length < 36) {
+      for (const key of sourceLookup.keys()) {
+        if (key.startsWith(bareId)) {
+          resolvedId = key
+          real = sourceLookup.get(key)
+          break
+        }
+      }
+    }
+    if (!real) continue // fabricated id
+    if (seenSources.has(resolvedId)) continue // dedupe within an idea
+    seenSources.add(resolvedId)
+
+    const labelOut = (e.label ?? '').slice(0, 120) || real.label
+    const dateOut = real.date || (e.date ?? '').slice(0, 32)
+    const excerptOut = verifyOrReplaceExcerpt(e.excerpt ?? '', real.body)
+    evidence.push({
+      kind: kind as IdeaEvidence['kind'],
+      // Persist the canonical full uuid (resolvedId) — the UI never
+      // shows source_id, but storing the full form keeps later joins
+      // / debugging sane regardless of how the model truncated.
+      source_id: resolvedId,
+      label: labelOut,
+      date: dateOut,
+      excerpt: excerptOut,
+    })
+  }
+  // Be lenient (≥2) — better to ship a slightly thin idea than 0 ideas
+  // because of strict validation. The UI labels "from N signals" so
+  // small N is visible and self-correcting.
+  if (evidence.length < 2) return null
+
+  return {
+    rank: typeof item.rank === 'number' ? item.rank : 1,
+    title: item.title.trim().slice(0, 140),
+    pitch: item.pitch.trim().slice(0, 800),
+    why_now: item.why_now.trim().slice(0, 400),
+    next_step: item.next_step.trim().slice(0, 400),
+    evidence,
+  }
+}
+
+interface RawSlot {
+  pair_index?: number
+  idea?: RawIdea | null
+  skip_reason?: string
+}
+
+/** Locked-pairs response: `{ slots: [{ pair_index, idea | null, skip_reason }] }`.
+ *  Each kept idea gets the seed_pair attached from the matching seed candidate
+ *  so the next batch can enforce cooldown. */
+function parseLockedSlots(raw: string, gathered: GatherResult, seeds: SeedCandidate[]): ProjectIdea[] {
+  const payload = robustJsonParse(raw)
+  if (!payload || typeof payload !== 'object') return []
+  const slots = (payload as { slots?: RawSlot[] }).slots
+  if (!Array.isArray(slots)) return []
+
+  const sourceLookup = buildSourceLookup(gathered)
+  const activeIds = new Set(gathered.active_projects.map(p => p.id))
+  const FINISH_RE = /^\s*(finish(ing)?|ship(ping)?|complete(\s+the)?|wrap\s*up|polish(\s+the)?|continue(\s+the)?)\b/i
+
+  const out: ProjectIdea[] = []
+  let nullCount = 0
+  let invalidCount = 0
+  for (const slot of slots) {
+    if (!slot || typeof slot !== 'object') continue
+    if (!slot.idea) {
+      nullCount++
+      if (slot.skip_reason) console.log(`[project-ideas] slot ${slot.pair_index ?? '?'} skipped: ${truncate(slot.skip_reason, 200)}`)
+      continue
+    }
+    const seed = typeof slot.pair_index === 'number' ? seeds[slot.pair_index] : undefined
+    if (!seed) {
+      console.warn(`[project-ideas] slot has invalid pair_index=${slot.pair_index}`)
+      invalidCount++
+      continue
+    }
+    const idea = validateRawIdea(slot.idea, sourceLookup)
+    if (!idea) {
+      invalidCount++
+      continue
+    }
+    if (FINISH_RE.test(idea.title) && idea.evidence.some(e => activeIds.has(e.source_id))) {
+      console.log(`[project-ideas] dropped idea "${idea.title}" — "finish/ship X" against active project (Keep Going dup)`)
+      invalidCount++
+      continue
+    }
+    out.push({ ...idea, seed_pair: seed.pair })
+  }
+
+  // Cross-batch cooldown is handled by the picker. Within-batch evidence
+  // overlap can't happen any more — the picker already chose distinct
+  // centres — but we still rank-renumber from the kept order.
+  const final = out.map((idea, i) => ({ ...idea, rank: i + 1 }))
+  console.log(`[project-ideas] locked-pair parse: ${final.length} kept, ${nullCount} null, ${invalidCount} invalid (of ${slots.length} slots)`)
+  return final
+}
+
+/** Permissive single-idea response: `{ ideas: [...] }`. No seed_pair attached
+ *  — this path runs when the picker found no candidates, so the cooldown
+ *  filter has nothing to track. The active-project / "finish X" filter
+ *  still applies. */
+function parsePermissive(raw: string, gathered: GatherResult): ProjectIdea[] {
   const payload = robustJsonParse(raw)
   if (!payload || typeof payload !== 'object') return []
   const ideasRaw = (payload as { ideas?: RawIdea[] }).ideas
   if (!Array.isArray(ideasRaw)) return []
 
-  // Build lookup tables of real source content for excerpt verification.
-  // The validator replaces fabricated excerpts with the real text rather
-  // than dropping the evidence — preserves the citation, kills the lie.
   const sourceLookup = buildSourceLookup(gathered)
-
-  const out: ProjectIdea[] = []
-  let nextRank = 1
-
-  for (const item of ideasRaw) {
-    if (!item.title || !item.pitch || !item.next_step || !item.why_now) continue
-    if (!Array.isArray(item.evidence)) continue
-
-    const evidence: IdeaEvidence[] = []
-    const seenSources = new Set<string>()
-    for (const e of item.evidence) {
-      if (!e.source_id) continue
-      // The prompt formats ids as `kind#uuid` so the model can keep types
-      // and ids together visually. Two reasons we trust the prefix over
-      // the model-supplied `kind` field:
-      //   1. Models echo the prefix back in source_id reliably.
-      //   2. Models conflate the evidence-kind set (memory/list_item/...)
-      //      with the toolkit-kind set (SKILL/TOOL/MATERIAL/DORMANT) and
-      //      put the wrong word in the kind field, dropping every item.
-      // So: extract kind from prefix if present; fall back to the model
-      // field only when there's no prefix.
-      const rawId = e.source_id
-      const hashIdx = rawId.indexOf('#')
-      let kindFromPrefix: string | undefined
-      let bareId = rawId
-      if (hashIdx > 0) {
-        kindFromPrefix = rawId.slice(0, hashIdx).toLowerCase()
-        bareId = rawId.slice(hashIdx + 1)
-      }
-      const kind = kindFromPrefix && VALID_KINDS.has(kindFromPrefix)
-        ? kindFromPrefix
-        : (typeof e.kind === 'string' ? e.kind.toLowerCase() : '')
-      if (!VALID_KINDS.has(kind)) continue
-
-      // The model often truncates UUIDs to ~8 chars in its output (likely
-      // imitating short-hash style from in-prompt examples). Accept any
-      // prefix match — at 6+ chars UUIDs are unique within one user's
-      // gather (~100 rows). Resolve to the full id for canonical storage.
-      let resolvedId = bareId
-      let real = sourceLookup.get(bareId)
-      if (!real && bareId.length >= 6 && bareId.length < 36) {
-        for (const key of sourceLookup.keys()) {
-          if (key.startsWith(bareId)) {
-            resolvedId = key
-            real = sourceLookup.get(key)
-            break
-          }
-        }
-      }
-      if (!real) continue // fabricated id
-      if (seenSources.has(resolvedId)) continue // dedupe within an idea
-      seenSources.add(resolvedId)
-
-      const labelOut = (e.label ?? '').slice(0, 120) || real.label
-      const dateOut = real.date || (e.date ?? '').slice(0, 32)
-      const excerptOut = verifyOrReplaceExcerpt(e.excerpt ?? '', real.body)
-      evidence.push({
-        kind: kind as IdeaEvidence['kind'],
-        // Persist the canonical full uuid (resolvedId) — the UI never
-        // shows source_id, but storing the full form keeps later joins
-        // / debugging sane regardless of how the model truncated.
-        source_id: resolvedId,
-        label: labelOut,
-        date: dateOut,
-        excerpt: excerptOut,
-      })
-    }
-    // Be lenient (≥2) — better to ship a slightly thin idea than 0 ideas
-    // because of strict validation. The UI labels "from N signals" so
-    // small N is visible and self-correcting.
-    if (evidence.length < 2) continue
-
-    out.push({
-      rank: typeof item.rank === 'number' ? item.rank : nextRank,
-      title: item.title.trim().slice(0, 140),
-      pitch: item.pitch.trim().slice(0, 800),
-      why_now: item.why_now.trim().slice(0, 400),
-      next_step: item.next_step.trim().slice(0, 400),
-      evidence,
-    })
-    nextRank++
-    if (out.length >= 3) break
-  }
-
-  // Forced diversity: drop a later idea if it shares ≥2 evidence rows
-  // with any already-kept idea. The previous "lead row only" check was
-  // too loose — the model would put up two ideas with different leads
-  // that still collapsed onto the same convergence (two variants of
-  // "wooden box for tech thing" leading from the woodwork memory and
-  // from the Aperture API memory respectively). Sharing 1 row is fine
-  // (one source can legitimately support multiple builds); ≥2 means
-  // same convergence.
-  // Drop "finish/ship X" titles whenever they cite an ACTIVE project.
-  // Keep Going on the home already surfaces every active project, so
-  // re-advertising it as an idea-card is duplication regardless of
-  // whether the project is is_priority or just recently-touched.
   const activeIds = new Set(gathered.active_projects.map(p => p.id))
   const FINISH_RE = /^\s*(finish(ing)?|ship(ping)?|complete(\s+the)?|wrap\s*up|polish(\s+the)?|continue(\s+the)?)\b/i
 
-  const filtered: ProjectIdea[] = []
-  for (const idea of out.sort((a, b) => a.rank - b.rank)) {
-    const cited = idea.evidence.map(e => e.source_id)
-    const citesActive = cited.some(id => activeIds.has(id))
-    if (citesActive && FINISH_RE.test(idea.title)) {
+  const out: ProjectIdea[] = []
+  for (const item of ideasRaw) {
+    const idea = validateRawIdea(item, sourceLookup)
+    if (!idea) continue
+    if (FINISH_RE.test(idea.title) && idea.evidence.some(e => activeIds.has(e.source_id))) {
       console.log(`[project-ideas] dropped idea "${idea.title}" — "finish/ship X" against active project (Keep Going dup)`)
       continue
     }
-
-    const ids = new Set(cited)
-    const collides = filtered.some(kept => {
-      const overlap = kept.evidence.filter(e => ids.has(e.source_id)).length
-      return overlap >= 2
-    })
-    if (collides) {
-      console.log(`[project-ideas] dropped idea "${idea.title}" — ≥2 evidence overlap with earlier pick`)
-      continue
-    }
-    filtered.push(idea)
+    out.push(idea)
+    if (out.length >= 1) break
   }
-  const final = filtered.map((idea, i) => ({ ...idea, rank: i + 1 }))
-  if (final.length < 3) {
-    console.log(`[project-ideas] only ${final.length} idea(s) shipped — model returned ${ideasRaw.length}, validator/filter dropped ${ideasRaw.length - final.length}`)
-  }
-  return final
+  return out.map((idea, i) => ({ ...idea, rank: i + 1 }))
 }
 
 interface SourceRow {
