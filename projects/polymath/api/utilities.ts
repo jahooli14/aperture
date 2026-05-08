@@ -1543,6 +1543,10 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
       why_now: idea.why_now,
       next_step: idea.next_step,
       evidence: idea.evidence,
+      // seed_pair is omitted (and stored as NULL) when the permissive
+      // fallback fired — that path doesn't pick from a structured pair,
+      // so the cooldown filter has nothing useful to track on those rows.
+      seed_pair: idea.seed_pair ?? null,
       status: 'pending' as const,
       generated_at,
     }))
@@ -1550,7 +1554,7 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
     const { data: inserted, error: insertErr } = await supabase
       .from('project_ideas')
       .insert(rows)
-      .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, status, user_feedback, generated_at, acted_on_at')
+      .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, seed_pair, status, user_feedback, generated_at, acted_on_at')
 
     if (insertErr) {
       console.error('[generate-project-ideas] insert failed:', insertErr)
