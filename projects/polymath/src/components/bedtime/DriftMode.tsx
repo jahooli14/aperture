@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Wind, Zap } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
@@ -17,7 +17,6 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
   const [motionPermission, setMotionPermission] = useState<PermissionState>('prompt')
   const [progress, setProgress] = useState(0) // Stability progress (0-100)
   const [showFlash, setShowFlash] = useState(false)
-  const [driftTextIndex, setDriftTextIndex] = useState(0)
 
 
   // Motion tracking refs
@@ -25,7 +24,6 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
   const stillnessStart = useRef<number>(Date.now())
   const hasDrifted = useRef(false)
   const stageRef = useRef<'settling' | 'drifting' | 'awakened' | 'ending'>('settling')
-  const [isJolt, setIsJolt] = useState(false)
   const motionListenerActive = useRef(false)
 
   // Sync ref with state immediately
@@ -112,10 +110,8 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
         console.log('[Drift] WAKE EVENT DETECTED! Delta:', delta)
 
         if (delta > JOLT_THRESHOLD) {
-          setIsJolt(true)
           haptic.heavy()
         } else {
-          setIsJolt(false)
           haptic.medium()
         }
 
@@ -206,7 +202,6 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
     setStage('settling')
     hasDrifted.current = false
     stillnessStart.current = Date.now()
-    setIsJolt(false)
   }
 
   // Voice capture happens through the global FAB. When the awakened
@@ -232,42 +227,9 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
     return () => { clearActiveDrift() }
   }, [stage, currentPrompt, mode, setActiveDrift, clearActiveDrift])
 
-  // Build the sequence of texts to show during drifting — context, then metaphor,
-  // then the prompt itself. De-duplicated so we never show the same line twice.
-  const driftTexts = useMemo(() => {
-    if (!currentPrompt) return [] as Array<{ label: string; text: string }>
-    const seq: Array<{ label: string; text: string }> = []
-    const seen = new Set<string>()
-    const push = (label: string, text: string | undefined) => {
-      if (!text) return
-      const trimmed = text.trim()
-      if (!trimmed || seen.has(trimmed)) return
-      seen.add(trimmed)
-      seq.push({ label, text: trimmed })
-    }
-    const holdLabel = mode === 'sleep' ? 'Hold this thought...' : 'Let this dissolve...'
-    push(holdLabel, currentPrompt.context)
-    push('Feel this image...', currentPrompt.metaphor)
-    push('Sit with this question...', currentPrompt.prompt)
-    return seq
-  }, [currentPrompt, mode])
-
-  // Reset the drift text cursor each time we (re-)enter the drifting stage
-  useEffect(() => {
-    if (stage === 'drifting') setDriftTextIndex(0)
-  }, [stage])
-
-  // Advance through drift texts while in the drifting stage. Each text is held
-  // visible for ~5s so there's comfortable time to read it; the last text stays
-  // visible until motion (or tap) wakes the user.
-  useEffect(() => {
-    if (stage !== 'drifting') return
-    if (driftTextIndex >= driftTexts.length - 1) return
-    const timer = setTimeout(() => {
-      setDriftTextIndex(i => i + 1)
-    }, 5500)
-    return () => clearTimeout(timer)
-  }, [stage, driftTextIndex, driftTexts.length])
+  // One seed thought to hold during the drift. The prompt itself stays
+  // hidden until wake — that's the related question they answer afterwards.
+  const driftSeed = currentPrompt?.context?.trim() || currentPrompt?.metaphor?.trim() || null
 
   return (
     <div className="fixed inset-0 z-50 bg-[#0F1829] text-[var(--brand-text-primary)] flex flex-col items-center justify-center overflow-hidden">
@@ -377,27 +339,22 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
               }
             }}
           >
-            {/* Drift topics — cycle through context → metaphor → prompt, each held
-                fully visible long enough to read before the next fades in. */}
-            <AnimatePresence mode="wait">
-              {driftTexts[driftTextIndex] && (
-                <motion.div
-                  key={`drift-text-${driftTextIndex}`}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 1.2, ease: 'easeInOut' }}
-                  className="text-center px-8 max-w-md relative z-10"
-                >
-                  <p className="text-xs uppercase tracking-widest text-brand-primary/70 font-bold mb-3">
-                    {driftTexts[driftTextIndex].label}
-                  </p>
-                  <p className="text-lg font-serif italic text-white/85 leading-relaxed">
-                    {driftTexts[driftTextIndex].text}
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {driftSeed && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 1.2, ease: 'easeInOut' }}
+                className="text-center px-8 max-w-md relative z-10"
+              >
+                <p className="text-xs uppercase tracking-widest text-brand-primary/70 font-bold mb-3">
+                  {mode === 'sleep' ? 'Hold this thought' : 'Sit with this'}
+                </p>
+                <p className="text-lg font-serif italic text-white/85 leading-relaxed">
+                  {driftSeed}
+                </p>
+              </motion.div>
+            )}
             <div className="absolute w-3 h-3 rounded-full bg-brand-primary/50 animate-ping" />
             {/* Show hint if no motion detected after entering drift */}
             {!motionEventsReceived.current && (
@@ -423,32 +380,9 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
             className="text-center px-8 max-w-lg relative"
           >
             <div className="mb-8">
-              {isJolt && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.5 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="mb-4 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-primary/20 border border-brand-primary/50 text-brand-primary text-sm font-bold uppercase tracking-widest shadow-[0_0_20px_rgba(var(--brand-primary-rgb),0.3)]"
-                >
-                  <Zap className="h-4 w-4 fill-current" />
-                  Jolt Detected
-                </motion.div>
-              )}
-              <span className="inline-block px-3 py-1 rounded-full border border-[var(--glass-surface-hover)] text-xs font-medium tracking-widest uppercase text-[var(--brand-text-secondary)] mb-4">
-                {mode === 'sleep' ? 'Hypnagogic Insight' : 'Logic Breaker'}
-              </span>
-
-              {/* Drift topic — resurface the seed thought */}
-              {(currentPrompt.context || currentPrompt.metaphor) && (
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.3, duration: 0.8 }}
-                  className="text-sm italic text-brand-primary/70 font-serif mb-4"
-                >
-                  {currentPrompt.context || currentPrompt.metaphor}
-                </motion.p>
-              )}
-
+              <p className="text-xs uppercase tracking-widest text-brand-primary/70 font-bold mb-4">
+                Now answer this
+              </p>
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif text-[var(--brand-text-secondary)] leading-tight">
                 {currentPrompt.prompt}
               </h1>
