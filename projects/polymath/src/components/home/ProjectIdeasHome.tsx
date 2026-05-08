@@ -253,24 +253,20 @@ export function ProjectIdeasHome() {
   const active = ideas[0] ?? null
   const evidenceCount = useMemo(() => active?.evidence?.length ?? 0, [active])
   const mode = useMemo(() => active ? deriveMode(active) : null, [active])
-  const firstExcerpt = useMemo(() => {
-    const e = active?.evidence?.find(ev => ev.excerpt?.trim())
-    return e ? { excerpt: e.excerpt, label: KIND_LABEL[e.kind] ?? e.kind } : null
-  }, [active])
 
   return (
     <section className="relative">
-      <div className="flex items-center justify-between mb-6 px-1">
+      <div className="max-w-xl mx-auto flex items-center justify-between mb-6 px-1">
         <h2
-          className="text-[10px] uppercase tracking-[0.32em] italic"
-          style={{ color: 'var(--brand-text-muted)', fontWeight: 400 }}
+          className="text-[10px] uppercase tracking-[0.28em]"
+          style={{ color: 'var(--brand-text-muted)', fontWeight: 500 }}
         >
           {mode ? MODE_LABEL[mode] : 'ideas for you'}
         </h2>
         <div className="flex items-center gap-3">
           {generatedAt && (
             <span
-              className="text-[10px] tracking-[0.18em] uppercase opacity-50"
+              className="text-[10px] tracking-[0.22em] uppercase opacity-50"
               style={{ color: 'var(--brand-text-muted)' }}
             >
               {relativeAge(generatedAt)}
@@ -281,8 +277,8 @@ export function ProjectIdeasHome() {
               type="button"
               onClick={generate}
               disabled={generating}
-              className="inline-flex items-center gap-1.5 text-[10px] tracking-[0.18em] uppercase opacity-60 hover:opacity-100 transition-opacity disabled:opacity-30 px-2 py-1 rounded-md"
-              style={{ color: 'var(--brand-text-muted)', border: '1px solid rgba(255,255,255,0.08)' }}
+              className="inline-flex items-center gap-1.5 text-[10px] tracking-[0.22em] uppercase opacity-60 hover:opacity-100 transition-opacity disabled:opacity-30"
+              style={{ color: 'var(--brand-text-muted)' }}
               aria-busy={generating}
             >
               <RefreshCw className={`h-3 w-3 ${generating ? 'animate-spin' : ''}`} />
@@ -312,16 +308,23 @@ export function ProjectIdeasHome() {
             {lastIdea && (
               <div className="opacity-30 pointer-events-none select-none mb-2">
                 <h3
-                  className="text-[18px] leading-tight mb-2"
+                  className="text-[20px] leading-[1.15] mb-2"
                   style={{
                     color: 'var(--brand-text-primary)',
-                    fontFamily: 'Georgia, "Iowan Old Style", "Times New Roman", serif',
+                    fontFamily: 'var(--brand-font-serif)',
                     fontWeight: 500,
+                    letterSpacing: '-0.018em',
                   }}
                 >
                   {lastIdea.title}
                 </h3>
-                <p className="text-[13px] italic" style={{ color: 'var(--brand-text-secondary)' }}>
+                <p
+                  className="text-[13px] italic leading-[1.6]"
+                  style={{
+                    color: 'var(--brand-text-secondary)',
+                    fontFamily: 'var(--brand-font-serif)',
+                  }}
+                >
                   {lastIdea.why_now}
                 </p>
               </div>
@@ -404,99 +407,130 @@ export function ProjectIdeasHome() {
         )}
 
         {!loading && !generating && active && (
-          <div className="max-w-xl mx-auto">
+          <div className="max-w-2xl mx-auto">
             <AnimatePresence mode="wait">
               <motion.article
                 key={active.id}
-                initial={{ opacity: 0, y: 8 }}
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.35, ease: 'easeOut' }}
+                transition={{ duration: 0.45, ease: 'easeOut' }}
+                className="relative"
               >
+                {/* Atmospheric glow behind the title — gives the page a centre of gravity */}
+                <div
+                  aria-hidden
+                  className="absolute -top-4 left-1/2 -translate-x-1/2 w-[85%] h-40 pointer-events-none"
+                  style={{
+                    background: 'radial-gradient(ellipse at center top, rgba(var(--brand-primary-rgb), 0.14) 0%, transparent 65%)',
+                    filter: 'blur(24px)',
+                  }}
+                />
+
                 {active.status !== 'pending' && (
-                  <div className="mb-4 flex justify-end">
+                  <div className="relative mb-5 flex justify-end">
                     <span
-                      className="text-[10px] tracking-[0.22em] uppercase"
+                      className="text-[10px] tracking-[0.28em] uppercase font-medium"
                       style={{ color: 'rgb(var(--brand-primary-rgb))' }}
                     >
-                      {active.status}
+                      · {active.status} ·
                     </span>
                   </div>
                 )}
 
+                {/* Title — light serif, generous size, the unmistakable hero */}
                 <h3
-                  className="text-[22px] sm:text-[26px] leading-tight mb-4"
+                  className="relative text-[28px] sm:text-[38px] leading-[1.08] mb-7"
                   style={{
                     color: 'var(--brand-text-primary)',
-                    fontFamily: 'Georgia, "Iowan Old Style", "Times New Roman", serif',
+                    fontFamily: 'var(--brand-font-serif)',
                     fontWeight: 500,
+                    letterSpacing: '-0.018em',
                   }}
                 >
                   {active.title}
                 </h3>
 
+                {/* Pitch — serif body, comfortable reading */}
                 <p
-                  className="text-[15px] sm:text-[16px] leading-[1.6] mb-5"
+                  className="relative text-[15.5px] sm:text-[17px] leading-[1.7] mb-9"
                   style={{
                     color: 'var(--brand-text-primary)',
-                    fontFamily: 'Georgia, "Iowan Old Style", "Times New Roman", serif',
+                    fontFamily: 'var(--brand-font-serif)',
+                    fontWeight: 400,
+                    opacity: 0.94,
                   }}
                 >
                   {active.pitch}
                 </p>
 
-                <div
-                  className="text-[13px] leading-snug mb-5 italic"
-                  style={{ color: 'var(--brand-text-secondary)' }}
-                >
-                  <span className="opacity-60 mr-1.5">why now —</span>
-                  {active.why_now}
-                </div>
-
-                {/* Always-visible first evidence excerpt — answers "where did this come from?" */}
-                {firstExcerpt && (
-                  <div
-                    className="text-[12px] leading-snug mb-5 pl-3 italic"
-                    style={{
-                      color: 'var(--brand-text-muted)',
-                      borderLeft: '2px solid rgba(var(--brand-primary-rgb), 0.25)',
-                    }}
-                  >
-                    <span className="opacity-50 not-italic mr-1.5">{firstExcerpt.label} —</span>
-                    "{firstExcerpt.excerpt}"
-                  </div>
-                )}
-
-                <div
-                  className="rounded-xl p-4 mb-5"
+                {/* why_now — pull-quote with brand accent bar */}
+                <figure
+                  className="relative pl-5 sm:pl-6 mb-10"
                   style={{
-                    background: 'var(--glass-surface)',
-                    border: '1px solid rgba(var(--brand-primary-rgb), 0.18)',
+                    borderLeft: '2px solid rgba(var(--brand-primary-rgb), 0.45)',
                   }}
                 >
-                  <div
-                    className="text-[10px] tracking-[0.22em] uppercase opacity-70 mb-1.5"
-                    style={{ color: 'rgb(var(--brand-primary-rgb))' }}
+                  <figcaption
+                    className="text-[10px] uppercase tracking-[0.26em] mb-2 font-medium"
+                    style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.75 }}
                   >
-                    next step
+                    why now
+                  </figcaption>
+                  <blockquote
+                    className="text-[14.5px] sm:text-[16px] leading-[1.65] italic"
+                    style={{
+                      color: 'var(--brand-text-secondary)',
+                      fontFamily: 'var(--brand-font-serif)',
+                    }}
+                  >
+                    {active.why_now}
+                  </blockquote>
+                </figure>
+
+                {/* Next step — flanking hairlines + label, no boxy panel */}
+                <div className="relative mb-9">
+                  <div className="flex items-center gap-3 mb-3">
+                    <span
+                      className="h-px flex-1"
+                      style={{ background: 'linear-gradient(to right, transparent, rgba(var(--brand-primary-rgb), 0.4))' }}
+                    />
+                    <span
+                      className="text-[10px] uppercase tracking-[0.32em] font-semibold"
+                      style={{ color: 'rgb(var(--brand-primary-rgb))' }}
+                    >
+                      what's next
+                    </span>
+                    <span
+                      className="h-px flex-1"
+                      style={{ background: 'linear-gradient(to left, transparent, rgba(var(--brand-primary-rgb), 0.4))' }}
+                    />
                   </div>
-                  <div
-                    className="text-[14px] leading-snug"
-                    style={{ color: 'var(--brand-text-primary)' }}
+                  <p
+                    className="text-[16px] sm:text-[18px] leading-[1.5] text-center"
+                    style={{
+                      color: 'var(--brand-text-primary)',
+                      fontFamily: 'var(--brand-font-serif)',
+                      fontWeight: 500,
+                    }}
                   >
                     {active.next_step}
-                  </div>
+                  </p>
                 </div>
 
-                {evidenceCount > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => setShowEvidence(s => !s)}
-                    className="text-[10px] tracking-[0.22em] uppercase opacity-50 hover:opacity-90 transition-opacity"
-                    style={{ color: 'var(--brand-text-muted)' }}
-                  >
-                    {showEvidence ? 'hide receipts' : `see all ${evidenceCount} signals`}
-                  </button>
+                {evidenceCount > 0 && (
+                  <div className="relative flex justify-center mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowEvidence(s => !s)}
+                      className="text-[10px] tracking-[0.28em] uppercase opacity-50 hover:opacity-90 transition-opacity"
+                      style={{ color: 'var(--brand-text-muted)' }}
+                    >
+                      {showEvidence
+                        ? '— hide signals —'
+                        : `— ${evidenceCount === 1 ? 'see the signal' : `see all ${evidenceCount} signals`} —`}
+                    </button>
+                  </div>
                 )}
 
                 <AnimatePresence>
@@ -506,23 +540,23 @@ export function ProjectIdeasHome() {
                       animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
                       transition={{ duration: 0.3 }}
-                      className="mt-4 space-y-2 overflow-hidden"
+                      className="relative mt-5 space-y-3 overflow-hidden"
                     >
                       {(active.evidence ?? []).map((e, i) => (
                         <li
                           key={`${e.source_id}-${i}`}
-                          className="text-[12px] leading-snug"
+                          className="text-[12.5px] leading-[1.55]"
                           style={{ color: 'var(--brand-text-muted)' }}
                         >
-                          <span className="opacity-60 italic">
+                          <span className="block text-[9.5px] uppercase tracking-[0.24em] opacity-70 mb-0.5">
                             {KIND_LABEL[e.kind] ?? e.kind} · {e.label}{e.date ? ` · ${e.date}` : ''}
                           </span>
                           {e.excerpt && (
                             <span
-                              className="block opacity-80 mt-0.5"
-                              style={{ fontStyle: 'italic' }}
+                              className="block italic opacity-85"
+                              style={{ fontFamily: 'var(--brand-font-serif)' }}
                             >
-                              "{e.excerpt}"
+                              “{e.excerpt}”
                             </span>
                           )}
                         </li>
@@ -531,50 +565,54 @@ export function ProjectIdeasHome() {
                   )}
                 </AnimatePresence>
 
-                <div className="mt-7 flex items-center justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => sendFeedback(active, 'rejected')}
-                      disabled={pendingFeedback === active.id}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] tracking-wide transition-opacity opacity-50 hover:opacity-100 disabled:opacity-30"
-                      style={{ color: 'var(--brand-text-muted)' }}
-                      title="Not for me"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                      <span>not for me</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => sendFeedback(active, active.status === 'saved' ? 'pending' : 'saved')}
-                      disabled={pendingFeedback === active.id}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] tracking-wide transition-all"
-                      style={{
-                        color: active.status === 'saved' ? 'rgb(var(--brand-primary-rgb))' : 'var(--brand-text-muted)',
-                        background: active.status === 'saved' ? 'rgba(var(--brand-primary-rgb), 0.12)' : 'transparent',
-                      }}
-                      title={active.status === 'saved' ? 'Unsave' : 'Save for later'}
-                    >
-                      {active.status === 'saved' ? <BookmarkCheck className="h-3.5 w-3.5" /> : <BookmarkPlus className="h-3.5 w-3.5" />}
-                      <span>{active.status === 'saved' ? 'saved' : 'save'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => sendFeedback(active, 'built')}
-                      disabled={pendingFeedback === active.id || active.status === 'built'}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] tracking-wide transition-all"
-                      style={{
-                        color: active.status === 'built' ? 'rgb(var(--brand-primary-rgb))' : 'var(--brand-text-muted)',
-                        background: active.status === 'built' ? 'rgba(var(--brand-primary-rgb), 0.12)' : 'transparent',
-                      }}
-                      title="I'm building it"
-                    >
-                      <Hammer className="h-3.5 w-3.5" />
-                      <span>{active.status === 'built' ? 'building' : 'building it'}</span>
-                    </button>
+                {/* Action row — minimalist, separated by hairline */}
+                <div
+                  className="relative mt-10 pt-5 flex items-center justify-end gap-1"
+                  style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => sendFeedback(active, 'rejected')}
+                    disabled={pendingFeedback === active.id}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] tracking-wide transition-opacity opacity-50 hover:opacity-100 disabled:opacity-30"
+                    style={{ color: 'var(--brand-text-muted)' }}
+                    title="Not for me"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    <span>not for me</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => sendFeedback(active, active.status === 'saved' ? 'pending' : 'saved')}
+                    disabled={pendingFeedback === active.id}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] tracking-wide transition-all"
+                    style={{
+                      color: active.status === 'saved' ? 'rgb(var(--brand-primary-rgb))' : 'var(--brand-text-muted)',
+                      background: active.status === 'saved' ? 'rgba(var(--brand-primary-rgb), 0.12)' : 'transparent',
+                    }}
+                    title={active.status === 'saved' ? 'Unsave' : 'Save for later'}
+                  >
+                    {active.status === 'saved' ? <BookmarkCheck className="h-3.5 w-3.5" /> : <BookmarkPlus className="h-3.5 w-3.5" />}
+                    <span>{active.status === 'saved' ? 'saved' : 'save'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => sendFeedback(active, 'built')}
+                    disabled={pendingFeedback === active.id || active.status === 'built'}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] tracking-wide transition-all"
+                    style={{
+                      color: active.status === 'built' ? 'rgb(var(--brand-primary-rgb))' : 'var(--brand-text-muted)',
+                      background: active.status === 'built' ? 'rgba(var(--brand-primary-rgb), 0.12)' : 'transparent',
+                    }}
+                    title="I'm building it"
+                  >
+                    <Hammer className="h-3.5 w-3.5" />
+                    <span>{active.status === 'built' ? 'building' : 'building it'}</span>
+                  </button>
                 </div>
 
                 {error && (
-                  <p className="text-xs mt-4 italic text-center" style={{ color: 'var(--brand-text-secondary)' }}>{error}</p>
+                  <p className="relative text-xs mt-4 italic text-center" style={{ color: 'var(--brand-text-secondary)' }}>{error}</p>
                 )}
               </motion.article>
             </AnimatePresence>
