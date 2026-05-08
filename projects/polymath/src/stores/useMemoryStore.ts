@@ -72,6 +72,8 @@ async function pollProcessing(memoryId: string) {
                 tone: processed.emotional_tone || null,
                 connections: 0,
                 bridgeInsight: processed.triage?.bridge_insight || null,
+                triageCategory: processed.triage?.category || null,
+                suggestedProjectId: processed.triage?.project_id || null,
               }
             }))
 

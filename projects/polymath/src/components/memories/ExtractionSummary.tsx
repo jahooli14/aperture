@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Brain, Users, Hash, Heart, X } from 'lucide-react'
+import { Brain, Users, Hash, Heart, X, Lightbulb } from 'lucide-react'
 import { useJourneyStore } from '../../stores/useJourneyStore'
+import { useProjectStore } from '../../stores/useProjectStore'
 
 interface ExtractionDetail {
   memoryId: string
@@ -11,12 +13,16 @@ interface ExtractionDetail {
   tone: string | null
   connections: number
   bridgeInsight: string | null
+  triageCategory: string | null
+  suggestedProjectId: string | null
 }
 
 export function ExtractionSummary() {
+  const navigate = useNavigate()
   const [extraction, setExtraction] = useState<ExtractionDetail | null>(null)
   const [visible, setVisible] = useState(false)
   const { incrementDataPoints, onboardingCompletedAt } = useJourneyStore()
+  const allProjects = useProjectStore(s => s.allProjects)
 
   useEffect(() => {
     const handleExtraction = (e: CustomEvent<ExtractionDetail>) => {
@@ -101,6 +107,33 @@ export function ExtractionSummary() {
                   >
                     {extraction.bridgeInsight}
                   </p>
+                </div>
+              </>
+            )}
+
+            {/* Row 3: intent routing — shown when triage says this is a project idea */}
+            {extraction.triageCategory === 'new_project_idea' && (
+              <>
+                <div className="h-px bg-[rgba(255,255,255,0.07)] my-2.5" />
+                <div className="w-full text-left flex items-center gap-2 flex-wrap">
+                  <Lightbulb className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
+                  <span className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>Sounds like a project —</span>
+                  {extraction.suggestedProjectId && allProjects.find(p => p.id === extraction.suggestedProjectId) && (
+                    <button
+                      onClick={() => { setVisible(false); navigate(`/projects/${extraction.suggestedProjectId}`) }}
+                      className="text-xs font-bold underline"
+                      style={{ color: 'rgb(var(--brand-primary-rgb))' }}
+                    >
+                      add to {allProjects.find(p => p.id === extraction.suggestedProjectId)?.title}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => { setVisible(false); navigate('/projects?create=1') }}
+                    className="text-xs font-bold underline"
+                    style={{ color: 'rgb(var(--brand-primary-rgb))' }}
+                  >
+                    start something new
+                  </button>
                 </div>
               </>
             )}
