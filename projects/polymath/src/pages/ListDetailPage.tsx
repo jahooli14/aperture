@@ -341,7 +341,10 @@ const QuoteCard = memo(({
 }) => {
     const [isEditingAuthor, setIsEditingAuthor] = useState(false)
     const [authorValue, setAuthorValue] = useState(item.metadata?.specs?.Author || 'Me')
+    const [isEditingQuote, setIsEditingQuote] = useState(false)
+    const [quoteValue, setQuoteValue] = useState(item.content)
     const updateListItemMetadata = useListStore(state => state.updateListItemMetadata)
+    const updateListItemContent = useListStore(state => state.updateListItemContent)
 
     const variant = useMemo(() => getVariant(item.id), [item.id])
     const isShort = item.content.length < 80
@@ -361,6 +364,20 @@ const QuoteCard = memo(({
             await updateListItemMetadata(item.id, updatedMetadata)
         }
         setIsEditingAuthor(false)
+    }
+
+    const handleSaveQuote = async (e?: React.MouseEvent | React.KeyboardEvent) => {
+        e?.stopPropagation()
+        const trimmed = quoteValue.trim()
+        if (trimmed && trimmed !== item.content) {
+            await updateListItemContent(item.id, trimmed)
+        }
+        setIsEditingQuote(false)
+    }
+
+    const handleCancelQuote = () => {
+        setQuoteValue(item.content)
+        setIsEditingQuote(false)
     }
 
     const bgClasses: Record<number, string> = {
@@ -405,13 +422,60 @@ const QuoteCard = memo(({
 
                 {/* The Quote */}
                 <div className="relative z-10 pt-4 sm:pt-6">
-                    <p className={`${isShort ? 'text-3xl sm:text-4xl md:text-5xl' : isMedium ? 'text-2xl sm:text-3xl md:text-4xl' : 'text-xl sm:text-2xl md:text-3xl'} text-[var(--brand-text-primary)]/95 leading-relaxed tracking-wide ${variant === 0 ? 'font-light' : variant === 1 ? 'font-normal' : variant === 2 ? 'font-light italic' : variant === 3 ? 'font-medium' : 'font-light'}`}
-                        style={{
-                            fontFamily: variant === 0 ? 'Georgia, serif' : variant === 1 ? 'Palatino, serif' : variant === 2 ? 'Garamond, serif' : variant === 3 ? 'Times New Roman, serif' : 'Georgia, serif',
-                            textShadow: `0 2px 10px rgba(${colors.rgb}, 0.1)`
-                        }}>
-                        {item.content}
-                    </p>
+                    {isEditingQuote ? (
+                        <div onClick={(e) => e.stopPropagation()} className="mb-2">
+                            <textarea
+                                value={quoteValue}
+                                onChange={(e) => setQuoteValue(e.target.value)}
+                                className="w-full rounded-2xl px-4 py-3 text-xl text-[var(--brand-text-primary)]/90 focus:outline-none appearance-none resize-none leading-relaxed"
+                                style={{
+                                    backgroundColor: 'rgba(255,255,255,0.07)',
+                                    boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.15)',
+                                    fontFamily: variant === 0 ? 'Georgia, serif' : variant === 1 ? 'Palatino, serif' : variant === 2 ? 'Garamond, serif' : variant === 3 ? 'Times New Roman, serif' : 'Georgia, serif',
+                                    minHeight: '80px',
+                                }}
+                                rows={3}
+                                autoFocus
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSaveQuote(e as any)
+                                    else if (e.key === 'Escape') handleCancelQuote()
+                                }}
+                            />
+                            <div className="flex gap-2 mt-2">
+                                <button
+                                    onClick={handleSaveQuote}
+                                    className="px-3 py-1.5 rounded-xl text-xs font-bold text-black transition-all"
+                                    style={{ background: `rgba(${colors.rgb}, 0.9)` }}
+                                >
+                                    Save
+                                </button>
+                                <button
+                                    onClick={handleCancelQuote}
+                                    className="px-3 py-1.5 rounded-xl text-xs text-[var(--brand-text-secondary)] opacity-60 hover:opacity-100 transition-all"
+                                    style={{ background: 'rgba(255,255,255,0.07)' }}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="group/quote relative">
+                            <p className={`${isShort ? 'text-3xl sm:text-4xl md:text-5xl' : isMedium ? 'text-2xl sm:text-3xl md:text-4xl' : 'text-xl sm:text-2xl md:text-3xl'} text-[var(--brand-text-primary)]/95 leading-relaxed tracking-wide ${variant === 0 ? 'font-light' : variant === 1 ? 'font-normal' : variant === 2 ? 'font-light italic' : variant === 3 ? 'font-medium' : 'font-light'}`}
+                                style={{
+                                    fontFamily: variant === 0 ? 'Georgia, serif' : variant === 1 ? 'Palatino, serif' : variant === 2 ? 'Garamond, serif' : variant === 3 ? 'Times New Roman, serif' : 'Georgia, serif',
+                                    textShadow: `0 2px 10px rgba(${colors.rgb}, 0.1)`
+                                }}>
+                                {item.content}
+                            </p>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); setIsEditingQuote(true) }}
+                                className="absolute -top-1 -right-1 p-1.5 rounded-xl bg-[var(--glass-surface)] opacity-0 group-hover/quote:opacity-40 active:opacity-100 transition-all active:scale-95"
+                                aria-label="Edit quote"
+                            >
+                                <Pencil className="h-3 w-3 text-[var(--brand-text-primary)]/50" />
+                            </button>
+                        </div>
+                    )}
 
                     {/* Author attribution */}
                     <div className="mt-6 flex items-center gap-2 group/author">

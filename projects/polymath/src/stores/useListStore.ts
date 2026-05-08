@@ -24,6 +24,7 @@ interface ListStore {
     deleteListItem: (itemId: string, listId: string) => Promise<void>
     updateListItemStatus: (itemId: string, status: ListItem['status']) => Promise<void>
     updateListItemMetadata: (itemId: string, metadata: any) => Promise<void>
+    updateListItemContent: (itemId: string, content: string) => Promise<void>
     updateList: (listId: string, updates: { title?: string; description?: string }) => Promise<void>
     updateListSettings: (listId: string, settings: ListSettings) => Promise<void>
     deleteList: (listId: string) => Promise<void>
@@ -576,6 +577,58 @@ export const useListStore = create<ListStore>()(
                     })
                 } catch (error) {
                     console.error('[ListStore] Failed to update metadata:', error)
+                    throw error
+                }
+            },
+
+            updateListItemContent: async (itemId, content) => {
+                const { isOnline } = useOfflineStore.getState()
+
+                set(state => {
+                    const patch = (items: ListItem[]) =>
+                        items.map(i => i.id === itemId ? { ...i, content } : i)
+                    const nextMap: Record<string, ListItem[]> = { ...state.itemsByListId }
+                    for (const listId of Object.keys(nextMap)) {
+                        if (nextMap[listId].some(i => i.id === itemId)) {
+                            nextMap[listId] = patch(nextMap[listId])
+                        }
+                    }
+                    return {
+                        currentListItems: patch(state.currentListItems),
+                        itemsByListId: nextMap,
+                    }
+                })
+
+                if (!isOnline) {
+                    await queueOperation('update_list_item', { id: itemId, content })
+                    await useOfflineStore.getState().updateQueueSize()
+                    return
+                }
+
+                try {
+                    const response = await fetch(`/api/lists?scope=items&id=${itemId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ content })
+                    })
+                    if (!response.ok) throw new Error('Failed to update item content')
+                    const updatedItem = await response.json()
+                    set(state => {
+                        const replace = (items: ListItem[]) =>
+                            items.map(i => i.id === itemId ? updatedItem : i)
+                        const nextMap: Record<string, ListItem[]> = { ...state.itemsByListId }
+                        for (const listId of Object.keys(nextMap)) {
+                            if (nextMap[listId].some(i => i.id === itemId)) {
+                                nextMap[listId] = replace(nextMap[listId])
+                            }
+                        }
+                        return {
+                            currentListItems: replace(state.currentListItems),
+                            itemsByListId: nextMap,
+                        }
+                    })
+                } catch (error) {
+                    console.error('[ListStore] Failed to update content:', error)
                     throw error
                 }
             },
