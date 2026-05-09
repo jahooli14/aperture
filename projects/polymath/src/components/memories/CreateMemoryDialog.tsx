@@ -522,7 +522,7 @@ export function CreateMemoryDialog({
 
           addToast({
             title: milestoneMessage || 'Note saved',
-            description: newCount === 1 ? 'Keep going.' : 'You\'re building an incredible knowledge base',
+            description: newCount === 1 ? 'Keep going.' : `That's ${newCount}. Keep going.`,
             variant: 'success',
           })
         } else if (!isOnline) {

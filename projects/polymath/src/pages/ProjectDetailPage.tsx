@@ -50,7 +50,7 @@ function BlockerField({ blocker, onSave }: { blocker?: string; onSave: (text: st
   return (
     <div className="p-4 sm:p-5 rounded-2xl" style={{ background: 'rgba(245,158,11,0.04)', border: '1px solid rgba(245,158,11,0.14)' }}>
       <span className="text-[11px] font-medium tracking-wide block mb-2 lowercase" style={{ color: 'rgba(245,158,11,0.7)' }}>
-        what stopped you here?
+        what's in the way?
       </span>
       {editing ? (
         <div className="space-y-2">
@@ -79,7 +79,7 @@ function BlockerField({ blocker, onSave }: { blocker?: string; onSave: (text: st
           style={{ color: 'var(--brand-text-primary)', opacity: blocker ? 0.7 : 0.3 }}
           onClick={() => setEditing(true)}
         >
-          {blocker || 'Tap to add a blocker note'}
+          {blocker || 'Tap if something paused this.'}
         </p>
       )}
     </div>
@@ -814,27 +814,38 @@ export function ProjectDetailPage() {
                 </div>
               </div>
 
-              {/* Blocker field — shown when project has gone quiet for 3+ weeks.
-                  Captures WHY work paused; powers the long-dormant reshape in The Moment. */}
-              {(() => {
-                const dormancyDays = project.last_active
-                  ? Math.floor((Date.now() - new Date(project.last_active).getTime()) / 86_400_000)
-                  : null
-                const isDormant = dormancyDays !== null && dormancyDays >= 21
-                const existingBlocker = project.metadata?.blocker as string | undefined
-                if (!isDormant && !existingBlocker) return null
-                return (
-                  <BlockerField
-                    key={project.id}
-                    blocker={existingBlocker}
-                    onSave={async (text) => {
-                      await updateProject(project.id, {
-                        metadata: { ...project.metadata, blocker: text || undefined }
-                      })
-                    }}
-                  />
-                )
-              })()}
+              {/* "A new angle" — the Mode 2b reshape, generated nightly for dormant
+                  projects from post-original signals. Only shows when there's a real
+                  evolved framing AND the project hasn't been opened recently. */}
+              {project.metadata?.evolved_description && project.status === 'dormant' && (
+                <div className="p-4 sm:p-5 rounded-2xl" style={{ background: 'rgba(var(--brand-primary-rgb),0.04)', border: '1px solid rgba(var(--brand-primary-rgb),0.14)' }}>
+                  <span className="text-[11px] font-medium tracking-wide block mb-2 lowercase" style={{ color: 'rgba(var(--brand-primary-rgb),0.7)' }}>
+                    a new angle
+                  </span>
+                  <p className="text-[15px] leading-relaxed italic" style={{ color: 'var(--brand-text-primary)', fontFamily: 'var(--brand-font-serif)' }}>
+                    {project.metadata.evolved_description as string}
+                  </p>
+                  {project.heat_reason && (
+                    <p className="mt-2 text-[12px] leading-relaxed" style={{ color: 'var(--brand-text-secondary)', opacity: 0.7 }}>
+                      {project.heat_reason}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Blocker field — always available on non-completed projects so the user
+                  can capture WHY work paused at the moment it pauses. Powers Mode 2b reshape. */}
+              {project.status !== 'completed' && project.status !== 'graveyard' && (
+                <BlockerField
+                  key={project.id}
+                  blocker={project.metadata?.blocker as string | undefined}
+                  onSave={async (text) => {
+                    await updateProject(project.id, {
+                      metadata: { ...project.metadata, blocker: text || undefined }
+                    })
+                  }}
+                />
+              )}
 
               {/* Guide */}
               {project && (

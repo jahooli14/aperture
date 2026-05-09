@@ -86,8 +86,8 @@ export function ContextSidebar() {
             } else {
                 console.error('Failed to fetch analysis: Response not OK', response.status)
                 addToast({
-                    title: 'Analysis failed',
-                    description: `API responded with status: ${response.status}`,
+                    title: 'Couldn\'t pull this together',
+                    description: 'Try again in a minute.',
                     variant: 'destructive'
                 })
                 setAnalysisData(null) // Clear analysis data on non-OK response
@@ -95,8 +95,8 @@ export function ContextSidebar() {
         } catch (error) {
             console.error('Failed to fetch analysis:', error)
             addToast({
-                title: 'Analysis failed',
-                description: 'Could not connect to analysis service.',
+                title: 'Couldn\'t pull this together',
+                description: 'Check your connection.',
                 variant: 'destructive'
             })
             setAnalysisData(null) // Clear analysis data on fetch error
@@ -144,7 +144,7 @@ export function ContextSidebar() {
                     target_type: item.type,
                     target_id: item.id,
                     connection_type: 'manual_context_link',
-                    reasoning: 'Linked via Context Engine'
+                    reasoning: 'Linked via connections'
                 })
             })
 
@@ -202,7 +202,7 @@ export function ContextSidebar() {
                         <div className="p-3 sm:p-4 border-b border-white/10 flex items-center justify-between gap-3">
                             <div className="flex items-center gap-2 min-w-0 flex-1">
                                 <Lightbulb className="h-5 w-5 text-brand-primary flex-shrink-0" />
-                                <h2 className="font-bold text-[var(--brand-text-primary)] truncate">Context Engine</h2>
+                                <h2 className="font-bold text-[var(--brand-text-primary)] truncate">What connects here</h2>
                             </div>
                             <button
                                 onClick={() => toggleSidebar(false)}
@@ -214,9 +214,6 @@ export function ContextSidebar() {
 
                         {/* Active Context Indicator */}
                         <div className="px-4 py-3 bg-[var(--glass-surface)] border-b border-[var(--glass-surface)]">
-                            <p className="text-xs font-medium text-brand-primary mb-1 uppercase tracking-wider">
-                                Current Focus
-                            </p>
                             <p className="text-sm text-[var(--brand-text-primary)] font-medium truncate">
                                 {activeContext.title || 'Exploring...'}
                             </p>
@@ -234,7 +231,7 @@ export function ContextSidebar() {
                                         <div className="flex items-center gap-2">
                                             <Lightbulb className="h-4 w-4 text-brand-primary" />
                                             <span className="text-xs font-semibold text-brand-primary uppercase tracking-wider">
-                                                AI Analysis
+                                                What this means
                                             </span>
                                             {analysisData?.lakeItemCount != null && analysisData.lakeItemCount > 0 && (
                                                 <div className="flex items-center gap-1" title={`Looked at ${analysisData.lakeItemCount} of your notes and articles`}>
@@ -312,19 +309,15 @@ export function ContextSidebar() {
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-2">
                                         <p className="text-xs font-semibold text-[var(--brand-text-secondary)] uppercase tracking-wider">
-                                            Knowledge Actions
+                                            Try
                                         </p>
-                                        <div className="flex items-center gap-1 ml-auto opacity-50">
-                                            <Database className="h-3 w-3 text-brand-primary" />
-                                            <span className="text-[10px] text-brand-primary font-medium">lake-aware</span>
-                                        </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-2">
                                         {([
-                                            { id: 'chase-thread', label: 'Chase Thread', icon: GitBranch, color: 'text-brand-primary', hint: 'follow the idea' },
-                                            { id: 'find-gaps', label: 'Find Gaps', icon: HelpCircle, color: 'text-brand-primary', hint: 'blind spots' },
-                                            { id: 'provoke', label: 'Provoke', icon: Zap, color: 'text-brand-primary', hint: 'challenge me' },
-                                            { id: 'connect-dots', label: 'Reveal Pattern', icon: Shuffle, color: 'text-brand-primary', hint: 'full corpus' },
+                                            { id: 'chase-thread', label: 'Pull on this thread', icon: GitBranch, color: 'text-brand-primary', hint: 'where does it lead' },
+                                            { id: 'find-gaps', label: 'What\'s missing', icon: HelpCircle, color: 'text-brand-primary', hint: 'blind spots' },
+                                            { id: 'provoke', label: 'Push back', icon: Zap, color: 'text-brand-primary', hint: 'challenge me' },
+                                            { id: 'connect-dots', label: 'Find the pattern', icon: Shuffle, color: 'text-brand-primary', hint: 'across everything' },
                                         ] as const).map(({ id, label, icon: Icon, color, hint }) => (
                                             <button
                                                 key={id}

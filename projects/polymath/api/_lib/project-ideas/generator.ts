@@ -129,9 +129,35 @@ function buildLockedPrompt(g: GatherResult, seeds: SeedCandidate[]): string {
   ).join('\n')
 
   // List items by type — taste / identity signal only. Compact form.
-  const listsByType = groupBy(g.list_items, li => li.list_type)
+  // Items the user reacted to (sparked, want to make) carry more weight
+  // than unreacted items, and items they marked "off" are filtered out.
+  const reactionWeight = (r: 'sparked' | 'off' | 'make' | null | undefined): number => {
+    if (r === 'make') return 3
+    if (r === 'sparked') return 2
+    if (r === 'off') return -1
+    return 1
+  }
+  const listsByType = groupBy(
+    g.list_items
+      .filter((li: any) => li.reaction !== 'off')
+      .sort((a: any, b: any) => reactionWeight(b.reaction) - reactionWeight(a.reaction)),
+    li => li.list_type,
+  )
   const listBlock = Array.from(listsByType.entries()).map(([type, items]) =>
-    `  ${type}: ${items.slice(0, 6).map(li => truncate(li.content, 60)).join('; ')}`
+    `  ${type}: ${items.slice(0, 6).map((li: any) => {
+      const tag = li.reaction === 'make' ? ' [WANT TO MAKE]'
+        : li.reaction === 'sparked' ? ' [SPARKED]'
+        : (typeof li.user_rating === 'number' && li.user_rating >= 4) ? ` [${li.user_rating}★]`
+        : ''
+      return `${truncate(li.content, 60)}${tag}`
+    }).join('; ')}`
+  ).join('\n')
+
+  // High-signal items the user explicitly reacted to. The model should
+  // weight these as identity input above unreacted items.
+  const reactedItems = g.list_items.filter((li: any) => li.reaction === 'make' || li.reaction === 'sparked').slice(0, 8)
+  const reactedBlock = reactedItems.map((li: any) =>
+    `  · ${li.list_type}: "${truncate(li.content, 80)}" — they said: ${li.reaction === 'make' ? 'want to make' : 'sparked me'}`
   ).join('\n')
 
   // Recent voice notes (≤30d) so the model can pick a real why_now phrase
@@ -193,6 +219,9 @@ ${activeProjBlock || '  (none)'}
 
 LIST ITEMS (films/books/places — taste / identity signal; NEVER lead evidence):
 ${listBlock || '  (none)'}
+
+ITEMS THE USER EXPLICITLY REACTED TO (these are identity signals — carry more weight than unreacted items):
+${reactedBlock || '  (none yet)'}
 
 RECENT VOICE NOTES (last 30 days — for why_now phrasing):
 ${recentMemBlock || '  (none)'}

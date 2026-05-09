@@ -28,12 +28,12 @@ export async function identifyRottingProjects(userId: string): Promise<any[]> {
 }
 
 export async function generateZebraReport(project: any): Promise<string> {
-  const prompt = `This project is being shelved. Write a quick honest summary (under 150 words): what worked, what stalled, and what parts are worth saving for later.
-  
+  const prompt = `This project is being shelved. Write a one-paragraph honest summary (under 150 words): what worked, what stalled, what parts are worth saving for later.
+
   Project Title: "${project.title}"
   Project Description: "${project.description || 'No description provided.'}"
-  
-  Format: Bold, bulleted, high-impact.`
+
+  Plain English. Real words a friend would say. One paragraph. No bullets. No "high-impact," "leveraged," "synergies." BAD: "This bold, multifaceted exploration unlocked considerable creative momentum." GOOD: "The first three weeks went well. You bought the equipment. Once Logic Pro's trial expired you stopped opening it."`
 
   try {
     const report = await generateText(prompt, { temperature: 0.7, maxTokens: 500 })
@@ -106,13 +106,17 @@ export async function pickSynthesisResurfaceCandidate(userId: string): Promise<a
 
 /**
  * Reshape dormant non-focused projects.
- * Instead of nagging the user, the engine quietly evolves dormant project
- * descriptions to stay relevant, then surfaces them in "Try Something New".
+ *
+ * Mode 2b in product terms: "you started this when you were a different
+ * person — here's the version that fits who you are now." The reshape
+ * uses post-original signals (thoughts captured since the project went
+ * quiet, recently completed projects, list items the user reacted to)
+ * to ground the new framing in who the user has become since.
  */
 export async function reshapeDormantProjects(userId: string): Promise<number> {
   const { data: projects, error } = await supabase
     .from('projects')
-    .select('id, title, description, metadata, last_active, status, is_priority, heat_score, heat_reason')
+    .select('id, title, description, metadata, last_active, status, is_priority, heat_score, heat_reason, created_at')
     .eq('user_id', userId)
     .in('status', ['dormant', 'on-hold', 'upcoming'])
     .eq('is_priority', false)
@@ -135,17 +139,80 @@ export async function reshapeDormantProjects(userId: string): Promise<number> {
   let reshaped = 0
   for (const project of candidates.slice(0, 3)) {
     try {
-      const prompt = `This is a dormant creative project that someone started but hasn't touched in a while. Your job is to reimagine it — same core idea, but evolved. Make it feel fresh, not stale.
+      // Post-original signals: who has the user become since this project
+      // went quiet? We use last_active (or created_at as a fallback) as
+      // the cutoff and pull the strongest signals from after that point.
+      const since = project.last_active || project.created_at || new Date(Date.now() - 365 * 86_400_000).toISOString()
 
-Project: "${project.title}"
-Description: "${project.description || 'No description'}"
+      const [recentThoughtsRes, completedProjectsRes, sparkedItemsRes] = await Promise.all([
+        supabase
+          .from('memories')
+          .select('title, body, themes, created_at')
+          .eq('user_id', userId)
+          .gte('created_at', since)
+          .order('created_at', { ascending: false })
+          .limit(15),
+        supabase
+          .from('projects')
+          .select('title, description, updated_at')
+          .eq('user_id', userId)
+          .eq('status', 'completed')
+          .gte('updated_at', since)
+          .order('updated_at', { ascending: false })
+          .limit(8),
+        supabase
+          .from('list_items')
+          .select('content, metadata, lists(type)')
+          .eq('user_id', userId)
+          .gte('created_at', since)
+          .in('metadata->>reaction', ['sparked', 'make'])
+          .order('created_at', { ascending: false })
+          .limit(10),
+      ])
 
-Write a 1-sentence evolved description that:
-- Keeps the core essence but reframes it in a way that feels new
-- Suggests a different angle or approach they might not have considered
-- Makes the user think "oh, I could do THAT instead"
+      const recentThoughts = (recentThoughtsRes.data ?? [])
+        .map((m: any) => `- "${(m.title || '').trim()}": ${(m.body || '').trim().slice(0, 200)}`)
+        .filter((s: string) => s.length > 6)
+        .join('\n')
 
-Also write a heat_reason — a 1-sentence explanation of why this is worth revisiting now.
+      const completedProjects = (completedProjectsRes.data ?? [])
+        .map((p: any) => `- ${p.title}${p.description ? ` — ${p.description.slice(0, 120)}` : ''}`)
+        .join('\n')
+
+      const sparkedItems = (sparkedItemsRes.data ?? [])
+        .map((li: any) => {
+          const reaction = li.metadata?.reaction === 'make' ? 'wants to make' : 'sparked them'
+          const type = li.lists?.type || 'item'
+          return `- ${type}: "${(li.content || '').trim().slice(0, 120)}" (${reaction})`
+        })
+        .join('\n')
+
+      const dormancyDays = Math.floor((Date.now() - new Date(project.last_active || project.created_at || Date.now()).getTime()) / 86_400_000)
+      const storedBlocker = (project.metadata as any)?.blocker as string | undefined
+      const blockerLine = storedBlocker
+        ? `\nBlocker captured at the moment of pause: "${storedBlocker}"`
+        : ''
+
+      const prompt = `A dormant creative project. The user started it ${dormancyDays} days ago and hasn't touched it in a while. Honor what they originally meant — then offer a version that fits who they've become since.
+
+ORIGINAL PROJECT:
+Title: "${project.title}"
+Description: "${project.description || 'No description'}"${blockerLine}
+
+WHO THEY'VE BECOME SINCE (use this — these are the signals that should reshape the project):
+${recentThoughts ? `\nRecent thoughts:\n${recentThoughts}` : ''}
+${completedProjects ? `\nProjects they finished since:\n${completedProjects}` : ''}
+${sparkedItems ? `\nFilms/books/places they reacted to:\n${sparkedItems}` : ''}
+${!recentThoughts && !completedProjects && !sparkedItems ? '\n(no recent signal — keep the reshape close to the original)' : ''}
+
+WRITE:
+- evolved_description: ONE sentence (max 18 words). Same core idea, reframed for who they are now. Reference at least one specific thing from the post-original signals if any are present. Don't say "evolved" or "reimagined." Just say what it is.
+- heat_reason: ONE sentence (max 12 words). What recent signal makes this worth revisiting RIGHT NOW. Name the specific item.
+
+PLAIN ENGLISH RULES:
+- Real words a friend would say. NO "leveraging," "reimagined," "evolved," "unlocked," "synergies," "explore," "journey," "essence."
+- Don't write a tagline. Write what the project would actually become.
+- BAD: "An evolved exploration of constraint that unlocks your authentic creative voice." GOOD: "A 30-day album recorded only on the train, after the woodworking course taught you what scarcity feels like."
 
 Return JSON only:
 {
@@ -153,17 +220,22 @@ Return JSON only:
   "heat_reason": "..."
 }`
 
-      const raw = await generateText(prompt, { temperature: 0.85, maxTokens: 200 })
+      const raw = await generateText(prompt, { temperature: 0.85, maxTokens: 280 })
       const parsed = JSON.parse(raw)
+
+      // If the model produced nothing concrete, write null fields rather
+      // than vague filler — silence beats "Reshaped — worth another look."
+      const evolvedDescription = (parsed.evolved_description || '').trim() || null
+      const heatReason = (parsed.heat_reason || '').trim() || null
 
       await supabase
         .from('projects')
         .update({
           heat_score: Math.max(project.heat_score || 0, 5),
-          heat_reason: parsed.heat_reason || 'Reshaped — worth another look',
+          heat_reason: heatReason,
           metadata: {
             ...project.metadata,
-            evolved_description: parsed.evolved_description,
+            evolved_description: evolvedDescription,
             last_reshaped: new Date().toISOString(),
           },
         })

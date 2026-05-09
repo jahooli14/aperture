@@ -196,11 +196,23 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
                 <X className="h-5 w-5" />
               </button>
 
-              <div className="flex items-start justify-between gap-3 mb-5 pr-14">
+              <div className="flex items-start justify-between gap-3 mb-2 pr-14">
                 <h2 className="text-xl sm:text-2xl font-bold text-[var(--brand-text-primary)] leading-tight flex-1 min-w-0 break-words">
                   {memory.title}
                 </h2>
               </div>
+
+              {memory.triage?.bridge_insight && (
+                <p
+                  className="mb-5 text-sm italic leading-relaxed pr-2"
+                  style={{
+                    color: 'var(--brand-text-secondary)',
+                    fontFamily: 'var(--brand-font-serif)',
+                  }}
+                >
+                  {memory.triage.bridge_insight}
+                </p>
+              )}
 
               <div className="flex items-center gap-1 mb-4">
                 {/* AI Analysis Dot */}

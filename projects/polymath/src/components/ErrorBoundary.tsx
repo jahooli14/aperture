@@ -95,11 +95,11 @@ export class ErrorBoundary extends Component<Props, State> {
               className="mb-6 text-sm"
               style={{ color: "var(--brand-primary)" }}
             >
-              We've encountered an unexpected error. Please refresh the page to continue.
+              Something broke. Refresh to get back.
             </p>
 
-            {/* Always show error details for debugging */}
-            {this.state.error && (
+            {/* Show error details only in development */}
+            {import.meta.env.DEV && this.state.error && (
               <div className="mb-6 text-left">
                 <h3 className="text-sm font-bold mb-2" style={{ color: "var(--brand-primary)" }}>
                   Error Details:

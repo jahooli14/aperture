@@ -20,7 +20,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { BookmarkPlus, BookmarkCheck, X, Hammer, RefreshCw } from 'lucide-react'
+import { BookmarkPlus, BookmarkCheck, X, Hammer, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
 import { api } from '../../lib/apiClient'
 
@@ -84,7 +84,7 @@ function deriveMode(idea: ProjectIdea): IdeaMode {
 
 const MODE_LABEL: Record<IdeaMode, string> = {
   new_idea: 'something you\'ve been circling',
-  forgotten: 'you left this unfinished',
+  forgotten: 'you set this down a while ago',
   reshape: 'time to see this differently',
   extend: 'a new direction for something you\'re building',
 }
@@ -98,7 +98,7 @@ const KIND_LABEL: Record<string, string> = {
   highlight: 'highlight',
   todo: 'todo',
   suggestion: 'idea',
-  idea_engine: 'idea-engine',
+  idea_engine: 'frontier idea',
 }
 
 function relativeAge(iso: string | null): string {
@@ -137,13 +137,15 @@ export function ProjectIdeasHome() {
   const [showEvidence, setShowEvidence] = useState(false)
   const [pendingFeedback, setPendingFeedback] = useState<string | null>(null)
   const [loadingStage, setLoadingStage] = useState(0)
+  const [activeIndex, setActiveIndex] = useState(0)
 
   const load = useCallback(async () => {
     setError(null)
     try {
       const res = await api.get('utilities?resource=project-ideas') as ProjectIdeasResponse
-      const active = (res.ideas ?? []).slice(0, 1)
+      const active = (res.ideas ?? []).slice(0, 3)
       setIdeas(active)
+      setActiveIndex(0)
       if (active[0]) setLastIdea(active[0])
       setGeneratedAt(res.generated_at)
       setHasAny(res.has_any)
@@ -229,7 +231,13 @@ export function ProjectIdeasHome() {
     try {
       await api.post('utilities?resource=project-ideas-feedback', { id: idea.id, status })
       if (status === 'rejected') {
-        setIdeas([])
+        // Advance to the next idea in the local array if any remain.
+        // Clearing the deck only triggers when the user dismisses the last idea.
+        setIdeas(prev => {
+          const next = prev.filter(i => i.id !== idea.id)
+          return next
+        })
+        setActiveIndex(0)
       } else if (status === 'built') {
         // Navigate to a pre-filled new project page so the user can
         // immediately start building what they just committed to.
@@ -250,9 +258,17 @@ export function ProjectIdeasHome() {
     }
   }, [pendingFeedback, navigate])
 
-  const active = ideas[0] ?? null
+  const active = ideas[activeIndex] ?? null
   const evidenceCount = useMemo(() => active?.evidence?.length ?? 0, [active])
   const mode = useMemo(() => active ? deriveMode(active) : null, [active])
+  const goPrev = useCallback(() => {
+    haptic.light()
+    setActiveIndex(i => Math.max(0, i - 1))
+  }, [])
+  const goNext = useCallback(() => {
+    haptic.light()
+    setActiveIndex(i => Math.min(ideas.length - 1, i + 1))
+  }, [ideas.length])
 
   return (
     <section className="relative">
@@ -264,6 +280,36 @@ export function ProjectIdeasHome() {
           {mode ? MODE_LABEL[mode] : 'ideas for you'}
         </h2>
         <div className="flex items-center gap-3">
+          {ideas.length > 1 && (
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={goPrev}
+                disabled={activeIndex === 0}
+                className="h-7 w-7 flex items-center justify-center rounded-full hover:bg-white/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                style={{ color: 'var(--brand-text-muted)' }}
+                aria-label="Previous idea"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span
+                className="text-[10px] tracking-[0.22em] uppercase opacity-60 tabular-nums"
+                style={{ color: 'var(--brand-text-muted)' }}
+              >
+                {activeIndex + 1} / {ideas.length}
+              </span>
+              <button
+                type="button"
+                onClick={goNext}
+                disabled={activeIndex >= ideas.length - 1}
+                className="h-7 w-7 flex items-center justify-center rounded-full hover:bg-white/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                style={{ color: 'var(--brand-text-muted)' }}
+                aria-label="Next idea"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
           {generatedAt && (
             <span
               className="text-[10px] tracking-[0.22em] uppercase opacity-50"
@@ -401,7 +447,7 @@ export function ProjectIdeasHome() {
               className="text-[10px] tracking-[0.16em] uppercase mt-1 opacity-50"
               style={{ color: 'var(--brand-text-muted)' }}
             >
-              ~30 seconds — synthesis is deep
+              About 30 seconds.
             </p>
           </div>
         )}

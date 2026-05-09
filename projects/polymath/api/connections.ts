@@ -555,9 +555,11 @@ ${contextBlock}
 Give them ONE next action that is:
 - Specific enough to start today (not "explore more" — name exactly what)
 - Grounded in their corpus (reference 2-3 specific items that make this the obvious move)
-- The highest-leverage thing: where theory meets practice, where a recurring thought can become something real
+- The thing most likely to actually move something
 
-Tell them exactly: WHAT to do, WHY this specific moment calls for it (based on their corpus), and WHAT it will unlock. Reference actual titles. Be concrete. Be urgent.`
+Tell them exactly: what to do, why this moment calls for it (based on their corpus), and what it changes. Reference actual titles.
+
+Plain English only. Real words a friend would say. No "leveraging," "unlocking," "high-impact," "synergies." BAD: "This will unlock your highest-leverage creative momentum." GOOD: "Open the Logic Pro session you started in March and bounce one rough mix tonight."`
             break
 
           case 'connect-dots':
@@ -573,9 +575,9 @@ Find the single most surprising, non-obvious connection between this item and th
 
 1. Name the hidden through-line in one sharp, specific sentence — not "they're interested in X" but the precise way X appears in THIS person's mind.
 2. Show the evidence: trace the pattern through 3 specific items, noting exactly how the idea mutates or deepens each time. Quote or closely paraphrase the specific items.
-3. Why does this synthesis matter? What does it reveal that they couldn't see from inside any single item? What does it change about how they should think about this?
+3. Why does this synthesis matter? What does it reveal that they couldn't see from inside any single item?
 
-Make it feel like a revelation. They should read this and think: "I didn't know I was thinking about that."`
+Plain English only. Real words a friend would say. No "leveraging," "unlocking," "synergies." Name what you see in one sharp sentence. Show it in the items. Stop. BAD: "Your multifaceted journey toward creative actualization." GOOD: "Every note about waking up early ends up about your dad."`
             break
 
           case 'chase-thread':
@@ -593,7 +595,7 @@ Find the single most compelling recurring thread — the idea this person keeps 
 2. Track it through at least 3 specific items in the lake, showing exactly how the idea evolves: where it starts hesitant, where it gets confident, where it contradicts itself, where it resurfaces in a new domain.
 3. Where is this thread leading? What's the natural culmination of this preoccupation — the project, idea, or decision that would represent arriving where they've been heading?
 
-Write like a biographer who has found the hidden theme of someone's intellectual life.`
+Plain English only. Write like a friend who just spotted something you hadn't. Three sentences max. Name the items. No "leveraging," "unlocking," "synergies." BAD: "A biographer would note your evolving relationship with constraint." GOOD: "You keep writing about Logic Pro trial expiring. The May note about a 30-day deadline album says it most directly."`
             break
 
           case 'provoke':

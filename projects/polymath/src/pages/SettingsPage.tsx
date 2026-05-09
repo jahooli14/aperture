@@ -99,7 +99,7 @@ export function SettingsPage() {
 
       const result = await response.json()
       addToast({
-        title: 'Connections Regenerated',
+        title: 'Connections rebuilt',
         description: result.message,
         variant: 'success'
       })
@@ -148,7 +148,7 @@ export function SettingsPage() {
       addToast({
         title: 'Tags refreshed',
         description: total > 0
-          ? `Updated ${updated} of ${total} thoughts. Vocabulary is ${vocab} tags strong.`
+          ? `Updated ${updated} of ${total} thoughts. ${vocab} tags total.`
           : 'No thoughts to scan yet.',
         variant: 'success',
       })
@@ -334,7 +334,7 @@ export function SettingsPage() {
                   <button
                     onClick={() => toggleBedtime(!bedtimeEnabled)}
                     className="relative h-7 w-12 rounded-full transition-all flex-shrink-0"
-                    style={{ background: bedtimeEnabled ? 'rgba(52,211,153,0.8)' : 'var(--glass-surface-hover)' }}
+                    style={{ background: bedtimeEnabled ? 'rgba(var(--brand-primary-rgb), 0.65)' : 'var(--glass-surface-hover)' }}
                   >
                     <div className="absolute top-1 h-5 w-5 rounded-full bg-white transition-all" style={{ left: bedtimeEnabled ? '26px' : '4px' }} />
                   </button>
@@ -381,7 +381,7 @@ export function SettingsPage() {
                   <button
                     onClick={() => toggleMorning(!morningEnabled)}
                     className="relative h-7 w-12 rounded-full transition-all flex-shrink-0"
-                    style={{ background: morningEnabled ? 'rgba(52,211,153,0.8)' : 'var(--glass-surface-hover)' }}
+                    style={{ background: morningEnabled ? 'rgba(var(--brand-primary-rgb), 0.65)' : 'var(--glass-surface-hover)' }}
                   >
                     <div className="absolute top-1 h-5 w-5 rounded-full bg-white transition-all" style={{ left: morningEnabled ? '26px' : '4px' }} />
                   </button>
@@ -427,7 +427,7 @@ export function SettingsPage() {
                 <button
                   onClick={() => toggleTodoNotifications(!todoTimeNotificationsEnabled)}
                   className="relative h-7 w-12 rounded-full transition-all flex-shrink-0"
-                  style={{ background: todoTimeNotificationsEnabled ? 'rgba(52,211,153,0.8)' : 'var(--glass-surface-hover)' }}
+                  style={{ background: todoTimeNotificationsEnabled ? 'rgba(var(--brand-primary-rgb), 0.65)' : 'var(--glass-surface-hover)' }}
                 >
                   <div className="absolute top-1 h-5 w-5 rounded-full bg-white transition-all" style={{ left: todoTimeNotificationsEnabled ? '26px' : '4px' }} />
                 </button>
@@ -443,7 +443,7 @@ export function SettingsPage() {
                   <button
                     onClick={() => toggleOverdueReminder(!overdueReminderEnabled)}
                     className="relative h-7 w-12 rounded-full transition-all flex-shrink-0"
-                    style={{ background: overdueReminderEnabled ? 'rgba(52,211,153,0.8)' : 'var(--glass-surface-hover)' }}
+                    style={{ background: overdueReminderEnabled ? 'rgba(var(--brand-primary-rgb), 0.65)' : 'var(--glass-surface-hover)' }}
                   >
                     <div className="absolute top-1 h-5 w-5 rounded-full bg-white transition-all" style={{ left: overdueReminderEnabled ? '26px' : '4px' }} />
                   </button>
@@ -577,10 +577,10 @@ export function SettingsPage() {
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold premium-text-platinum text-sm">
-                    Allow handoff mutations
+                    Hand off stuck projects
                   </h3>
                   <p style={{ color: 'var(--brand-text-secondary)', fontSize: '0.8rem' }}>
-                    Let the weekly digest propose handing a dormant project to someone else.
+                    The weekly digest can suggest giving a dormant project to someone else.
                   </p>
                 </div>
                 <div>

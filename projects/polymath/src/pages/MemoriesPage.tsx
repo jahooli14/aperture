@@ -11,7 +11,6 @@ import { SignInNudge } from '../components/SignInNudge'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOnboardingStore } from '../stores/useOnboardingStore'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
-import { useOfflineSync } from '../hooks/useOfflineSync'
 import { MemoryCard } from '../components/MemoryCard'
 import { CreateMemoryDialog } from '../components/memories/CreateMemoryDialog'
 import { SuggestedPrompts } from '../components/onboarding/SuggestedPrompts'
@@ -116,7 +115,6 @@ function MemoriesPageInner() {
     setContext('page', 'memories', 'Thoughts')
   }, [])
   const { isOnline } = useOnlineStatus()
-  const { addOfflineCapture } = useOfflineSync()
   const [resurfacing, setResurfacing] = useState<Memory[]>([])
   const [view, setView] = useState<'recent' | 'themes' | 'resurfacing'>('recent')
   const [loadingResurfacing, setLoadingResurfacing] = useState(false)
@@ -224,9 +222,6 @@ function MemoriesPageInner() {
       return params
     })
   }
-  const [processingVoiceNote, setProcessingVoiceNote] = useState(false)
-  const [newlyCreatedMemoryId, setNewlyCreatedMemoryId] = useState<string | null>(null)
-
   // Theme clustering state
   const [clusters, setClusters] = useState<ThemeCluster[]>([])
   const [selectedCluster, setSelectedCluster] = useState<ThemeCluster | null>(null)
@@ -372,125 +367,6 @@ function MemoriesPageInner() {
     await loadMemories(true)
   }, [loadMemories])
 
-  const handleVoiceCapture = async (transcript: string) => {
-    if (!transcript) {
-      console.warn('[handleVoiceCapture] No transcript provided')
-      return
-    }
-
-    console.log('[handleVoiceCapture] Starting voice capture, transcript length:', transcript.length)
-
-    // Set processing state - but DON'T force view changes
-    // User should be free to navigate while processing happens in background
-    setProcessingVoiceNote(true)
-    setNewlyCreatedMemoryId(null)
-
-    try {
-      // Always attempt API call first - don't trust navigator.onLine
-      // Only save offline if API actually fails with a network error
-      console.log('[handleVoiceCapture] Attempting to send to API')
-
-      // Show reassuring toast that data is saved
-      addToast({
-        title: ' Voice note saved',
-        description: 'AI is processing your transcript (may take up to 30s)...',
-        variant: 'success',
-      })
-
-      // Send to memories API for parsing
-      const response = await fetch('/api/memories?capture=true', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transcript })
-      })
-
-      console.log('[handleVoiceCapture] API response status:', response.status, response.statusText)
-
-      if (!response.ok) {
-        const contentType = response.headers.get('content-type')
-        let errorDetails = `Status: ${response.status}`
-
-        try {
-          const errorText = await response.text()
-          errorDetails += `, Response: ${errorText.substring(0, 200)}`
-        } catch (e) {
-          errorDetails += ', Could not read error response'
-        }
-
-        console.error('[handleVoiceCapture] API error:', errorDetails)
-
-        if (contentType?.includes('text/html')) {
-          throw new Error('Memories API not available. Queuing for offline sync.')
-        }
-        throw new Error(`Failed to save memory: ${response.statusText}. ${errorDetails}`)
-      }
-
-      const data = await response.json()
-      const createdMemory = data.memory
-      console.log('[handleVoiceCapture]  Memory created:', createdMemory)
-
-      // Store the ID of the newly created memory
-      if (createdMemory?.id) {
-        setNewlyCreatedMemoryId(createdMemory.id)
-      }
-
-      console.log('[handleVoiceCapture] Fetching memories list')
-      // Refresh memories list (user can navigate away, this just updates the data)
-      await loadMemories(true) // Force refresh to get the new memory
-      console.log('[handleVoiceCapture] Memories fetched successfully')
-
-      // Show success toast with the title - they can click to go to memories if they want
-      addToast({
-        title: ' Thought captured!',
-        description: createdMemory?.title || 'Your voice note is ready',
-        variant: 'success',
-      })
-
-      // Store the ID for highlighting (will only show if user is on memories page)
-      // Clear the highlight after 8 seconds
-      setTimeout(() => {
-        setNewlyCreatedMemoryId(null)
-      }, 8000)
-
-    } catch (error) {
-      console.error('[handleVoiceCapture]  ERROR:', error)
-      console.error('[handleVoiceCapture] Error details:', {
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      })
-
-      // Show prominent error toast
-      addToast({
-        title: ' Voice capture failed',
-        description: error instanceof Error ? error.message : 'Unknown error occurred',
-        variant: 'destructive',
-      })
-
-      // Fallback to offline queue if API fails
-      try {
-        console.log('[handleVoiceCapture] Attempting offline queue fallback')
-        await addOfflineCapture(transcript)
-        addToast({
-          title: 'Queued for offline sync',
-          description: 'Will process when API is available',
-          variant: 'default',
-        })
-        console.log('[handleVoiceCapture]  Queued for offline sync')
-        await loadMemories(true)
-      } catch (offlineError) {
-        console.error('[handleVoiceCapture]  Offline queue also failed:', offlineError)
-        addToast({
-          title: ' Complete failure',
-          description: 'Could not save or queue your voice note. Please try again.',
-          variant: 'destructive',
-        })
-      }
-    } finally {
-      console.log('[handleVoiceCapture] Cleaning up, setting processingVoiceNote to false')
-      setProcessingVoiceNote(false)
-    }
-  }
-
   // All unique tags from all memories
   const allTags = useMemo(() => {
     const tagSet = new Set<string>()
@@ -596,7 +472,7 @@ function MemoriesPageInner() {
               <h1 className="text-[2rem] sm:text-4xl leading-[0.95] font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
                 your <span className="page-accent">thoughts</span>
               </h1>
-              <p className="section-subtitle mt-1.5 text-sm sm:text-base">Everything you've captured, all in one place.</p>
+              <p className="section-subtitle mt-1.5 text-sm sm:text-base">{memories.length} thought{memories.length !== 1 ? 's' : ''}.</p>
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
               {view !== 'resurfacing' && <CreateMemoryDialog />}
@@ -771,23 +647,6 @@ function MemoriesPageInner() {
 
             {/* Inner Content */}
             <div>
-              {/* Demo Data Context Banner - Only show on "Recent" view with demo data */}
-              {view === 'recent' && memories.length > 0 && memories.some(m => m.audiopen_id?.startsWith('demo-')) && (
-                <div className="mb-6 p-4 rounded-lg" style={{ background: 'var(--brand-glass-bg)', border: '1px solid rgba(var(--brand-primary-rgb),0.25)', borderLeft: '4px solid rgba(var(--brand-primary-rgb),0.6)', boxShadow: '0 4px 16px rgba(0,0,0,0.6)' }}>
-                  <h3 className="font-black text-xs uppercase tracking-widest mb-2 flex items-center gap-2" style={{ color: "var(--brand-primary)" }}>
-                    <Brain className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
-                    Demo Thoughts  Cross-Domain Examples
-                  </h3>
-                  <p className="text-xs leading-relaxed mb-2" style={{ color: "var(--brand-primary)" }}>
-                    These 8 thoughts demonstrate <strong>diverse interests</strong>: React development, woodworking, parenting, photography, ML, meditation, cooking, and design.
-                    Notice how they span <strong>technical skills AND hobbies</strong>  this helps us spot interesting connections.
-                  </p>
-                  <p className="text-xs" style={{ color: "var(--brand-primary)" }}>
-                     <strong>Tip:</strong> Real-world usage works best with 510 thoughts covering both your professional expertise and personal interests.
-                  </p>
-                </div>
-              )}
-
               {/* Resurfacing Info Banner */}
               {view === 'resurfacing' && resurfacing.length > 0 && (
                 <div className="mb-6 p-4 rounded-lg" style={{ background: 'var(--brand-glass-bg)', border: '1px solid rgba(var(--brand-primary-rgb),0.25)', borderLeft: '4px solid rgba(var(--brand-primary-rgb),0.5)', boxShadow: '0 4px 16px rgba(0,0,0,0.6)' }}>
@@ -795,8 +654,7 @@ function MemoriesPageInner() {
                     Up for review
                   </h3>
                   <p className="text-xs leading-relaxed" style={{ color: "var(--brand-primary)" }}>
-                    These thoughts are ready for review based on spaced repetition.
-                    Reviewing strengthens your memory and extends the next review interval.
+                    Older thoughts worth a second look. Mark them reviewed when you're done.
                   </p>
                 </div>
               )}
@@ -814,32 +672,6 @@ function MemoriesPageInner() {
               {view === 'recent' && (
                 <>
                   <SuggestedPrompts />
-
-                  {/* Voice Note Processing Banner */}
-                  {processingVoiceNote && (
-                    <div className="mb-6 p-4 rounded-lg animate-pulse" style={{ background: 'var(--brand-glass-bg)', border: '1px solid rgba(var(--brand-primary-rgb),0.3)', boxShadow: '0 0 20px rgba(var(--brand-primary-rgb),0.1)' }}>
-                      <div className="flex items-center gap-4">
-                        <div className="inline-block h-8 w-8 animate-spin rounded-lg border-4 border-solid" style={{ borderColor: 'var(--brand-primary)', borderRightColor: 'transparent' }}></div>
-                        <div className="flex-1">
-                          <h3 className="font-black text-sm uppercase tracking-widest mb-1" style={{ color: "var(--brand-primary)" }}>
-                             Voice note saved  AI processing...
-                          </h3>
-                          <p className="text-xs" style={{ color: "var(--brand-primary)" }}>
-                            Your recording is safe. Creating a formatted thought from your transcript (this may take up to 30 seconds)
-                          </p>
-                          <div className="mt-3 flex items-center gap-2">
-                            <div className="h-[5px] flex-1" style={{ backgroundColor: 'var(--glass-surface-hover)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                              <div className="h-full animate-pulse" style={{
-                                backgroundColor: 'var(--brand-primary)',
-                                width: '60%',
-                              }}></div>
-                            </div>
-                            <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: "var(--brand-primary)" }}>Processing...</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
 
                   {/* Loading State - Show skeleton loaders like HomePage */}
                   {isLoading && memories.length === 0 && (

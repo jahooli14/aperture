@@ -43,7 +43,7 @@ export function useBedtimeNotifications() {
 
                     toSchedule.push({
                         title: "Bedtime Ideas ",
-                        body: "Your nightly prompts are ready. Tap to reflect.",
+                        body: "End your day with a thought. Tap to capture.",
                         id: 930,
                         schedule: {
                             at: scheduledTime,
@@ -73,7 +73,7 @@ export function useBedtimeNotifications() {
 
                     toSchedule.push({
                         title: "Plan your day",
-                        body: "What are you getting done today? Tap to set your intentions.",
+                        body: "What's getting done today? Tap to pick one thing.",
                         id: 840,
                         schedule: {
                             at: morningTime,

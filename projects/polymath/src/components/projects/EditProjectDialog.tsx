@@ -109,7 +109,7 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
 
                     {/* Classification */}
                     <div className="space-y-2">
-                        <Label className="text-xs font-medium tracking-wide text-[var(--brand-text-secondary)]">classification</Label>
+                        <Label className="text-xs font-medium tracking-wide text-[var(--brand-text-secondary)]">type</Label>
                         <div className="flex flex-wrap gap-2">
                             {PROJECT_TYPES.map((cat) => (
                                 <button

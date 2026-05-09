@@ -4,15 +4,6 @@ export type MemoryType = 'foundational' | 'event' | 'insight' | 'quick-note'
 
 export type BridgeType = 'entity_match' | 'semantic_similarity' | 'temporal_proximity'
 
-export interface AudiopenWebhook {
-  id: string
-  title: string
-  body: string
-  orig_transcript: string
-  tags: string // Comma-separated
-  date_created: string // ISO date string
-}
-
 export interface Entities {
   people: string[]
   places: string[]
@@ -28,6 +19,8 @@ export interface TriageInfo {
   severity?: 'critical' | 'annoying' | 'minor'
   automatable?: boolean
   fix_hint?: string
+  /** A one-sentence connection to an active project, generated at capture time. */
+  bridge_insight?: string
 }
 
 export interface SourceReference {

@@ -438,7 +438,7 @@ RAW VOICE NOTE:
 
 CRITICAL TITLE RULES:
 1. summary_title MUST be a SUMMARY - NEVER copy the input verbatim
-2. Transform casual speech into a polished, descriptive title (5-10 words max)
+2. Title in plain words, like how the user would describe it to a friend (5-10 words max). No "polish," no "exploration," no "journey," no "insights." Just what it's about.
 3. Remove filler words like "still", "just", "I was thinking", "you know"
 4. Capture the ESSENCE of the thought, not the exact words
 5. NEVER start with "I", "still", "just", "maybe", "thinking about"
