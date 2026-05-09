@@ -15,7 +15,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '../../lib/utils'
 import { MarkdownRenderer } from '../ui/MarkdownRenderer'
 import { handleInputFocus } from '../../utils/keyboard'
-import { useTodoStore, selectByProject } from '../../stores/useTodoStore'
 import { useConfirmDialog } from '../ui/confirm-dialog'
 import type { Task } from './TaskList'
 
@@ -506,9 +505,6 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
         </div>
       )}
 
-      {/* Linked Todos */}
-      {projectId && <LinkedTodos projectId={projectId} />}
-
       {/* Empty State */}
       {!hasAnyTasks && (
         <div className="text-center py-10">
@@ -521,60 +517,3 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
   )
 }
 
-/**
- * Linked Todos — shows todos linked to this project from the todo store.
- */
-function LinkedTodos({ projectId }: { projectId: string }) {
-  const todos = useTodoStore(state => state.todos)
-  const toggleTodo = useTodoStore(state => state.toggleTodo)
-  const fetchTodos = useTodoStore(state => state.fetchTodos)
-  const linkedTodos = selectByProject(todos, projectId)
-
-  useEffect(() => {
-    if (todos.length === 0) fetchTodos()
-  }, [todos.length, fetchTodos])
-
-  if (linkedTodos.length === 0) return null
-
-  const activeTodos = linkedTodos.filter(t => !t.done)
-  const doneTodos = linkedTodos.filter(t => t.done)
-
-  return (
-    <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-      <div className="flex items-center gap-2 mb-3 px-3">
-        <span className="text-[11px] font-medium" style={{ color: 'var(--brand-text-secondary)', opacity: 0.25 }}>
-          Linked Todos
-        </span>
-        <span className="text-[10px] px-1.5 py-0.5 rounded-md" style={{ background: 'rgba(var(--brand-primary-rgb),0.06)', color: 'var(--brand-text-secondary)', opacity: 0.3 }}>
-          {activeTodos.length}
-        </span>
-      </div>
-      <div className="space-y-0.5 px-3">
-        {activeTodos.map(todo => (
-          <div key={todo.id} className="flex items-center gap-2.5 py-2 rounded-xl hover:bg-white/[0.02] transition-colors px-2">
-            <button
-              onClick={() => toggleTodo(todo.id)}
-              className="flex-shrink-0 h-4 w-4 rounded-md flex items-center justify-center transition-all"
-              style={{ border: '1.5px solid rgba(255,255,255,0.12)', background: 'transparent' }}
-            >
-              {todo.done && <Check className="h-2.5 w-2.5 text-brand-text-primary" />}
-            </button>
-            <span className="text-[13px]" style={{ color: 'var(--brand-text-primary)', opacity: 0.6 }}>
-              {todo.text}
-            </span>
-            {todo.source_memory_id && (
-              <span className="text-[9px] px-1.5 py-0.5 rounded-md ml-auto" style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--brand-text-secondary)', opacity: 0.2 }}>
-                from thought
-              </span>
-            )}
-          </div>
-        ))}
-        {doneTodos.length > 0 && (
-          <p className="text-[10px] pt-1 px-2" style={{ color: 'var(--brand-text-secondary)', opacity: 0.15 }}>
-            {doneTodos.length} completed
-          </p>
-        )}
-      </div>
-    </div>
-  )
-}

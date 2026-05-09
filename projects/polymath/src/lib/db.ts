@@ -107,41 +107,6 @@ export interface CachedListCoverImage {
   cached_at: string
 }
 
-// Cached Todo interfaces
-export interface CachedTodoArea {
-  id: string
-  user_id: string
-  name: string
-  icon?: string
-  color?: string
-  sort_order: number
-  created_at: string
-  updated_at: string
-  cached_at: string
-}
-
-export interface CachedTodo {
-  id: string
-  user_id: string
-  text: string
-  notes?: string
-  done: boolean
-  deleted_at?: string
-  scheduled_date?: string  // YYYY-MM-DD
-  deadline_date?: string   // YYYY-MM-DD
-  area_id?: string
-  project_id?: string
-  tags: string[]
-  priority: number         // 0=none, 1=low, 2=medium, 3=high
-  estimated_minutes?: number
-  source_memory_id?: string
-  sort_order: number
-  created_at: string
-  updated_at: string
-  completed_at?: string
-  cached_at: string
-}
-
 export class RosetteDatabase extends Dexie {
   // Reading Tables
   articles!: Table<CachedArticle, string>
@@ -167,10 +132,6 @@ export class RosetteDatabase extends Dexie {
 
   // Operations table (for future offline queue consolidation)
   operations!: Table<any, number>
-
-  // Todos (Things 3-inspired task management)
-  todos!: Table<CachedTodo, string>
-  todoAreas!: Table<CachedTodoArea, string>
 
   constructor() {
     super('RosetteDB')
@@ -250,7 +211,7 @@ export class RosetteDatabase extends Dexie {
       operations: '++id, type, table, timestamp'
     })
 
-    // Version 6: Add todos tables (Things 3-inspired task management)
+    // Version 6: Add todos tables (Things 3-inspired task management — retired in v7)
     this.version(6).stores({
       articles: 'id, user_id, status, created_at, last_synced, offline_available',
       images: '++id, article_id, url, cached_at',
@@ -267,6 +228,13 @@ export class RosetteDatabase extends Dexie {
       operations: '++id, type, table, timestamp',
       todos: 'id, user_id, done, scheduled_date, deadline_date, area_id, priority, cached_at',
       todoAreas: 'id, user_id, sort_order, cached_at'
+    })
+
+    // Version 7: Drop the standalone todos surface — feature retired.
+    // Setting a table to null tells Dexie to drop it from the live schema.
+    this.version(7).stores({
+      todos: null,
+      todoAreas: null,
     })
 
   }
@@ -533,40 +501,6 @@ export class RosetteDatabase extends Dexie {
     await this.listCoverImages.bulkPut(cachedCovers)
   }
 
-  // --- Todo Cache Methods ---
-
-  async cacheTodos(todos: any[]): Promise<void> {
-    const cached: CachedTodo[] = todos.map(t => ({
-      ...t,
-      tags: t.tags ?? [],
-      cached_at: new Date().toISOString()
-    }))
-    await this.todos.bulkPut(cached)
-  }
-
-  async getCachedTodos(): Promise<CachedTodo[]> {
-    return await this.todos.filter(t => !t.deleted_at).toArray()
-  }
-
-  async upsertTodo(todo: CachedTodo): Promise<void> {
-    await this.todos.put({ ...todo, cached_at: new Date().toISOString() })
-  }
-
-  async deleteTodoFromCache(id: string): Promise<void> {
-    await this.todos.delete(id)
-  }
-
-  async cacheTodoAreas(areas: any[]): Promise<void> {
-    const cached: CachedTodoArea[] = areas.map(a => ({
-      ...a,
-      cached_at: new Date().toISOString()
-    }))
-    await this.todoAreas.bulkPut(cached)
-  }
-
-  async getCachedTodoAreas(): Promise<CachedTodoArea[]> {
-    return await this.todoAreas.orderBy('sort_order').toArray()
-  }
 }
 
 // Export singleton instance

@@ -12,7 +12,7 @@ export interface Entities {
 }
 
 export interface TriageInfo {
-  category: 'task_update' | 'new_thought' | 'reading_lead' | 'new_project_idea' | 'action_item' | 'todo_new' | 'list_item' | 'annoyance'
+  category: 'task_update' | 'new_thought' | 'reading_lead' | 'new_project_idea' | 'list_item' | 'annoyance'
   project_id?: string
   confidence: number
   suggested_todo_text?: string

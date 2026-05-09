@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowDown, Zap, GitBranch, CornerDownRight, CheckSquare, X, Pin, Plus } from 'lucide-react'
+import { ArrowDown, Zap, GitBranch, CornerDownRight, CheckSquare, X, Pin } from 'lucide-react'
 import type { SteeringMove, SteeringResult } from '../../../api/memories'
-import { useTodoStore } from '../../stores/useTodoStore'
 import { useMemoryStore } from '../../stores/useMemoryStore'
 import { useToast } from '../ui/toast'
 import { haptic } from '../../utils/haptics'
@@ -53,7 +52,6 @@ export function SteeringCard() {
   const [visible, setVisible] = useState(false)
   const [sourceMemoryId, setSourceMemoryId] = useState<string | null>(null)
 
-  const addTodo = useTodoStore((state) => state.addTodo)
   const pinMemory = useMemoryStore((state) => state.pinMemory)
   const { addToast } = useToast()
 
@@ -73,21 +71,6 @@ export function SteeringCard() {
     setVisible(false)
   }
 
-  const handleCreateTodo = useCallback(async () => {
-    if (!steering) return
-    await addTodo({
-      text: steering.message,
-      source_memory_id: sourceMemoryId ?? undefined,
-      tags: ['from-steering'],
-    })
-    haptic.success()
-    addToast({
-      title: 'Todo created',
-      description: 'Action item added to inbox',
-      variant: 'success',
-    })
-  }, [steering, sourceMemoryId, addTodo, addToast])
-
   const handlePinThought = useCallback(async () => {
     if (!sourceMemoryId) return
     await pinMemory(sourceMemoryId)
@@ -102,7 +85,6 @@ export function SteeringCard() {
   if (!steering) return null
 
   const config = MOVE_CONFIG[steering.move]
-  const showCreateTodo = steering.move === 'COMMIT'
   const showPinThought = (steering.move === 'DEEPEN' || steering.move === 'SURFACE') && sourceMemoryId
 
   return (
@@ -149,27 +131,17 @@ export function SteeringCard() {
               </p>
             )}
 
-            {/* Action buttons  contextual to the steering move */}
-            {(showCreateTodo || showPinThought) && (
+            {/* Action button — only Pin Thought remains; Create Todo
+                was retired with the standalone todos surface. */}
+            {showPinThought && (
               <div className="flex items-center gap-2 mt-2.5 pt-2 border-t border-brand-border">
-                {showCreateTodo && (
-                  <button
-                    onClick={handleCreateTodo}
-                    className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-lg transition-colors hover:bg-brand-primary/15 text-brand-primary/80 hover:text-brand-primary"
-                  >
-                    <Plus className="w-3 h-3" />
-                    Create Todo
-                  </button>
-                )}
-                {showPinThought && (
-                  <button
-                    onClick={handlePinThought}
-                    className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-lg transition-colors hover:bg-brand-primary/15 text-brand-primary/80 hover:text-brand-primary"
-                  >
-                    <Pin className="w-3 h-3" />
-                    Pin Thought
-                  </button>
-                )}
+                <button
+                  onClick={handlePinThought}
+                  className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-lg transition-colors hover:bg-brand-primary/15 text-brand-primary/80 hover:text-brand-primary"
+                >
+                  <Pin className="w-3 h-3" />
+                  Pin Thought
+                </button>
               </div>
             )}
           </div>

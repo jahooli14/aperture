@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Brain, Users, Hash, Heart, X, Lightbulb, ListTodo, BookOpen, ListPlus, Wrench, ArrowRight } from 'lucide-react'
+import { Brain, Users, Hash, Heart, X, Lightbulb, BookOpen, ListPlus, Wrench, ArrowRight } from 'lucide-react'
 import { useJourneyStore } from '../../stores/useJourneyStore'
 import { useProjectStore } from '../../stores/useProjectStore'
 
@@ -150,23 +150,6 @@ export function ExtractionSummary() {
                     style={{ color: 'rgb(var(--brand-primary-rgb))' }}
                   >
                     {allProjects.find(p => p.id === extraction.suggestedProjectId)?.title}
-                  </button>
-                </div>
-              </>
-            )}
-
-            {(extraction.triageCategory === 'todo_new' || extraction.triageCategory === 'action_item') && (
-              <>
-                <div className="h-px bg-[rgba(255,255,255,0.07)] my-2.5" />
-                <div className="w-full text-left flex items-center gap-2 flex-wrap">
-                  <ListTodo className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
-                  <span className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>Saved as a todo.</span>
-                  <button
-                    onClick={() => { setVisible(false); navigate('/todos') }}
-                    className="text-xs font-bold underline"
-                    style={{ color: 'rgb(var(--brand-primary-rgb))' }}
-                  >
-                    open
                   </button>
                 </div>
               </>

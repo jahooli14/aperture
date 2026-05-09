@@ -22,8 +22,6 @@ import { CreateProjectDialog } from './projects/CreateProjectDialog'
 import { AddItemToListDialog } from './lists/AddItemToListDialog'
 import { SaveArticleDialog } from './reading/SaveArticleDialog'
 import { CreateMenuModal } from './CreateMenuModal'
-import { TodoInput } from './todos/TodoInput'
-import { useTodoStore } from '../stores/useTodoStore'
 import { AnimatePresence, motion } from 'framer-motion'
 
 interface VoiceFABProps {
@@ -105,12 +103,10 @@ export function VoiceFAB({
 }: VoiceFABProps) {
   const [isVoiceOpen, setIsVoiceOpen] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [showTodoQuickAdd, setShowTodoQuickAdd] = useState(false)
   const [showProjectDialog, setShowProjectDialog] = useState(false)
   const [showThoughtDialog, setShowThoughtDialog] = useState(false)
   const [showListDialog, setShowListDialog] = useState(false)
   const [showArticleDialog, setShowArticleDialog] = useState(false)
-  const { addTodo, areas } = useTodoStore()
 
   const [shouldStopRecording, setShouldStopRecording] = useState(false)
   const [isLongPressRecording, setIsLongPressRecording] = useState(false)
@@ -357,56 +353,6 @@ export function VoiceFAB({
       />
       <AddItemToListDialog isOpen={showListDialog} onOpenChange={setShowListDialog} />
       <SaveArticleDialog isOpen={showArticleDialog} onOpenChange={setShowArticleDialog} />
-
-      {/* Todo quick-add modal */}
-      {createPortal(
-        <AnimatePresence>
-          {showTodoQuickAdd && (
-            <div className="fixed inset-0 z-[21000] flex items-end">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                onClick={() => setShowTodoQuickAdd(false)}
-              />
-              <motion.div
-                initial={{ y: 80, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: 80, opacity: 0 }}
-                transition={{ type: 'spring', damping: 28, stiffness: 380 }}
-                className="relative w-full z-10 px-4 pb-8 pt-4"
-                style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 16px) + 2rem)' }}
-              >
-                <div className="max-w-2xl mx-auto">
-                  <p className="text-xs font-medium text-[var(--brand-text-primary)]/30 uppercase tracking-widest mb-2 px-1">Quick task</p>
-                  <TodoInput
-                    autoFocus
-                    onAdd={(parsed) => {
-                      const area = parsed.areaName
-                        ? areas.find(a => a.name.toLowerCase() === parsed.areaName!.toLowerCase())
-                        : undefined
-                      addTodo({
-                        text: parsed.text,
-                        priority: parsed.priority,
-                        tags: [...parsed.tags, ...(parsed.isSomeday ? ['someday'] : [])],
-                        scheduled_date: parsed.scheduledDate,
-                        scheduled_time: parsed.scheduledTime,
-                        deadline_date: parsed.deadlineDate,
-                        estimated_minutes: parsed.estimatedMinutes,
-                        area_id: area?.id,
-                      })
-                      haptic.light()
-                      setShowTodoQuickAdd(false)
-                    }}
-                  />
-                </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>,
-        document.body
-      )}
     </>
   )
 }

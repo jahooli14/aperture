@@ -84,7 +84,7 @@ export function useBedtimeNotifications() {
                         attachments: [],
                         actionTypeId: '',
                         extra: {
-                            path: '/todos'
+                            path: '/projects'
                         }
                     })
                     console.log('[Notifications] Morning planning notification scheduled for', morningTime)

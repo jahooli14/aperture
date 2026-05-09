@@ -3,7 +3,7 @@
  * generator. Where the noticing pipeline reads 3 tables, this reads ~9 so
  * the generator can ground a project idea in any signal the user has
  * captured: voice notes, list items (films/books/places/etc.), reading
- * highlights, todos, prior project suggestions, idea-engine output,
+ * highlights, prior project suggestions, idea-engine output,
  * dormant projects.
  *
  * All queries are user-scoped and row-capped. Older signals matter — a
@@ -35,7 +35,6 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
     activeProjectsRes,
     dormantProjectsRes,
     readingRes,
-    todosRes,
     suggestionsRes,
     ieIdeasRes,
     priorIdeasRes,
@@ -74,15 +73,6 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       .from('reading_queue')
       .select('id, title, excerpt, source, created_at, status')
       .eq('user_id', userId)
-      .gte('created_at', recentSince)
-      .order('created_at', { ascending: false })
-      .limit(20),
-    supabase
-      .from('todos')
-      .select('id, text, notes, tags, created_at')
-      .eq('user_id', userId)
-      .eq('done', false)
-      .is('deleted_at', null)
       .gte('created_at', recentSince)
       .order('created_at', { ascending: false })
       .limit(20),
@@ -205,16 +195,6 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       }))
   }
 
-  const todos = (todosRes.data ?? [])
-    .filter((t: any) => t.text && (t.text as string).trim().length >= 4)
-    .map((t: any) => ({
-      id: t.id as string,
-      text: (t.text as string).trim(),
-      notes: t.notes as string | null,
-      tags: Array.isArray(t.tags) ? (t.tags as string[]) : [],
-      created_at: t.created_at as string,
-    }))
-
   const prior_suggestions = (suggestionsRes.data ?? []).map((s: any) => ({
     id: s.id as string,
     title: s.title as string,
@@ -262,8 +242,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
     active_projects.length +
     dormant_projects.length +
     reading.length +
-    highlights.length +
-    todos.length
+    highlights.length
 
   return {
     memories,
@@ -272,7 +251,6 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
     dormant_projects,
     reading,
     highlights,
-    todos,
     prior_suggestions,
     ie_ideas,
     prior_ideas,

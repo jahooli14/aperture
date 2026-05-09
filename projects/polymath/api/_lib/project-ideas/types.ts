@@ -14,7 +14,6 @@ export type EvidenceKind =
   | 'project_dormant'
   | 'reading'
   | 'highlight'
-  | 'todo'
   | 'suggestion'
   | 'idea_engine'
 
@@ -27,7 +26,7 @@ export interface IdeaEvidence {
 }
 
 export type CentreKind = 'project_dormant' | 'project_active' | 'memory'
-export type ArrivalKind = 'memory' | 'reading' | 'highlight' | 'todo'
+export type ArrivalKind = 'memory' | 'reading' | 'highlight'
 
 /** The deterministic pick that drove a generated idea. The picker chooses it
  *  in code from structured rows; the LLM only writes the idea up. Stored on
@@ -60,12 +59,11 @@ export interface StoredProjectIdea extends ProjectIdea {
 
 export interface GatherResult {
   memories: Array<{ id: string; title: string | null; body: string; themes: string[]; memory_type: string | null; created_at: string }>
-  list_items: Array<{ id: string; content: string; list_type: string; list_title: string | null; status: string; created_at: string }>
+  list_items: Array<{ id: string; content: string; list_type: string; list_title: string | null; status: string; created_at: string; reaction: 'sparked' | 'off' | 'make' | null; user_rating: number | null }>
   active_projects: Array<{ id: string; title: string; description: string | null; status: string; tags: string[]; updated_at: string }>
   dormant_projects: Array<{ id: string; title: string; description: string | null; status: string; updated_at: string }>
   reading: Array<{ id: string; title: string | null; excerpt: string | null; source: string | null; created_at: string }>
   highlights: Array<{ id: string; quote: string; article_title: string | null; created_at: string }>
-  todos: Array<{ id: string; text: string; notes: string | null; tags: string[]; created_at: string }>
   prior_suggestions: Array<{ id: string; title: string; status: string }>
   ie_ideas: Array<{ id: string; title: string; description: string; status: string; rejection_reason: string | null }>
   prior_ideas: {

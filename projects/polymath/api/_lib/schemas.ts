@@ -28,8 +28,6 @@ const triageCategory = z.enum([
   'new_thought',
   'reading_lead',
   'new_project_idea',
-  'action_item',
-  'todo_new',
   'list_item',
   'annoyance',
 ])

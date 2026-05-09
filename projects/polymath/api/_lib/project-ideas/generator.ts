@@ -372,7 +372,6 @@ const VALID_KINDS = new Set([
   'project_dormant',
   'reading',
   'highlight',
-  'todo',
   'suggestion',
   'idea_engine',
 ])
@@ -567,9 +566,6 @@ function buildSourceLookup(g: GatherResult): Map<string, SourceRow> {
   }
   for (const h of g.highlights) {
     m.set(h.id, { body: h.quote, date: isoDate(h.created_at), label: h.article_title ? `highlight from ${h.article_title}` : 'highlight' })
-  }
-  for (const t of g.todos) {
-    m.set(t.id, { body: `${t.text} ${t.notes ?? ''}`.trim(), date: isoDate(t.created_at), label: 'todo' })
   }
   for (const s of g.prior_suggestions) {
     m.set(s.id, { body: s.title, date: '', label: `suggestion: ${s.title}` })

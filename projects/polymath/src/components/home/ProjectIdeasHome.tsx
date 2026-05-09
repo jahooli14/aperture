@@ -100,7 +100,6 @@ const KIND_LABEL: Record<string, string> = {
   project_dormant: 'dormant project',
   reading: 'article',
   highlight: 'highlight',
-  todo: 'todo',
   suggestion: 'idea',
   idea_engine: 'frontier idea',
 }
