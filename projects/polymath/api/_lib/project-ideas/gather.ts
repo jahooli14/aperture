@@ -50,7 +50,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       .limit(60),
     supabase
       .from('list_items')
-      .select('id, content, status, created_at, list_id, lists(title, type)')
+      .select('id, content, status, created_at, list_id, metadata, user_rating, lists(title, type)')
       .eq('user_id', userId)
       .gte('created_at', anchorSince)
       .in('status', ['pending', 'active', 'completed'])
@@ -154,6 +154,8 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       list_title: (li.lists?.title as string | null) ?? null,
       status: li.status as string,
       created_at: li.created_at as string,
+      reaction: (li.metadata?.reaction as 'sparked' | 'off' | 'make' | undefined) ?? null,
+      user_rating: typeof li.user_rating === 'number' ? li.user_rating : null,
     }))
 
   const active_projects = (activeProjectsRes.data ?? []).map((p: any) => ({

@@ -21,12 +21,12 @@ const isRecentlyUpdated = (list: List) => {
 
 // Inspirational empty state example collections
 const EXAMPLE_COLLECTIONS = [
-    { type: 'film' as ListType, label: 'Films to Watch', desc: 'Your personal cinema queue' },
-    { type: 'book' as ListType, label: 'Reading List', desc: 'Books to devour this year' },
+    { type: 'film' as ListType, label: 'Films', desc: 'Films you want to watch' },
+    { type: 'book' as ListType, label: 'Books', desc: 'Books you\'re drawn to' },
     { type: 'music' as ListType, label: 'Albums', desc: 'Music that moves you' },
-    { type: 'place' as ListType, label: 'Places to Visit', desc: 'Your world-shaped bucket list' },
-    { type: 'quote' as ListType, label: 'Phrases', desc: 'Words that live rent-free' },
-    { type: 'game' as ListType, label: 'Games', desc: 'Adventures waiting to be had' },
+    { type: 'place' as ListType, label: 'Places', desc: 'Places you want to go' },
+    { type: 'quote' as ListType, label: 'Phrases', desc: 'Lines worth keeping' },
+    { type: 'game' as ListType, label: 'Games', desc: 'Games you\'re planning to play' },
 ]
 
 export default function ListsPage() {
@@ -236,7 +236,7 @@ function ListsPageInner() {
                     <h1 className="text-[2rem] sm:text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] leading-[0.95]">
                         your <span className="page-accent">collections</span>
                     </h1>
-                    <p className="section-subtitle mt-1 text-sm sm:text-base">The stuff you love, curated.</p>
+                    <p className="section-subtitle mt-1 text-sm sm:text-base">Films, books, places, and the rest.</p>
                 </div>
                 <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                     <button
@@ -298,9 +298,9 @@ function ListsPageInner() {
                             style={{ boxShadow: 'inset 0 0 0 1px rgba(56,189,248,0.15)' }}>
                             <ListOrdered className="h-8 w-8 text-brand-primary" />
                         </div>
-                        <h3 className="text-xl font-black uppercase tracking-tight text-[var(--brand-text-primary)] mb-2">Start a collection</h3>
+                        <h3 className="text-xl font-black uppercase tracking-tight text-[var(--brand-text-primary)] mb-2">Add a list</h3>
                         <p className="text-sm text-brand-text-muted mb-8 max-w-xs mx-auto leading-relaxed">
-                            Every great collection starts with one item. What are you keeping track of?
+                            Films, books, places, music. What are you into right now?
                         </p>
                         <Button
                             onClick={() => setCreateOpen(true)}

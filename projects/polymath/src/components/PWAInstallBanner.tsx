@@ -88,7 +88,7 @@ export function PWAInstallBanner() {
                 Install Aperture
               </h3>
               <p className="text-sm leading-relaxed" style={{ color: "var(--brand-primary)" }}>
-                Install on your device for a faster, app-like experience with offline support
+                Add to your home screen. Works offline, loads faster.
               </p>
             </div>
           </div>

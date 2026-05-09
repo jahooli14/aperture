@@ -146,7 +146,7 @@ export function DrawerDigestSheet() {
               </div>
 
               <p className="text-[13px] text-[var(--brand-text-secondary)] leading-relaxed mb-5 italic">
-                A handful of dormant projects stirred this week. Here's what each could become, with the evidence that surfaced them.
+                A few projects in your drawer warmed up. Here's what moved them, and one direction each could go.
               </p>
 
               <div className="space-y-4">

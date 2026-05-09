@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Brain, Users, Hash, Heart, X, Lightbulb } from 'lucide-react'
+import { Brain, Users, Hash, Heart, X, Lightbulb, ListTodo, BookOpen, ListPlus, Wrench, ArrowRight } from 'lucide-react'
 import { useJourneyStore } from '../../stores/useJourneyStore'
 import { useProjectStore } from '../../stores/useProjectStore'
 
@@ -111,7 +111,7 @@ export function ExtractionSummary() {
               </>
             )}
 
-            {/* Row 3: intent routing — shown when triage says this is a project idea */}
+            {/* Row 3: intent routing — show what the harness did with the thought */}
             {extraction.triageCategory === 'new_project_idea' && (
               <>
                 <div className="h-px bg-[rgba(255,255,255,0.07)] my-2.5" />
@@ -134,6 +134,84 @@ export function ExtractionSummary() {
                   >
                     start something new
                   </button>
+                </div>
+              </>
+            )}
+
+            {extraction.triageCategory === 'task_update' && extraction.suggestedProjectId && allProjects.find(p => p.id === extraction.suggestedProjectId) && (
+              <>
+                <div className="h-px bg-[rgba(255,255,255,0.07)] my-2.5" />
+                <div className="w-full text-left flex items-center gap-2 flex-wrap">
+                  <ArrowRight className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
+                  <span className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>Added to</span>
+                  <button
+                    onClick={() => { setVisible(false); navigate(`/projects/${extraction.suggestedProjectId}`) }}
+                    className="text-xs font-bold underline"
+                    style={{ color: 'rgb(var(--brand-primary-rgb))' }}
+                  >
+                    {allProjects.find(p => p.id === extraction.suggestedProjectId)?.title}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {(extraction.triageCategory === 'todo_new' || extraction.triageCategory === 'action_item') && (
+              <>
+                <div className="h-px bg-[rgba(255,255,255,0.07)] my-2.5" />
+                <div className="w-full text-left flex items-center gap-2 flex-wrap">
+                  <ListTodo className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
+                  <span className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>Saved as a todo.</span>
+                  <button
+                    onClick={() => { setVisible(false); navigate('/todos') }}
+                    className="text-xs font-bold underline"
+                    style={{ color: 'rgb(var(--brand-primary-rgb))' }}
+                  >
+                    open
+                  </button>
+                </div>
+              </>
+            )}
+
+            {extraction.triageCategory === 'list_item' && (
+              <>
+                <div className="h-px bg-[rgba(255,255,255,0.07)] my-2.5" />
+                <div className="w-full text-left flex items-center gap-2 flex-wrap">
+                  <ListPlus className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
+                  <span className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>Added to a list.</span>
+                  <button
+                    onClick={() => { setVisible(false); navigate('/lists') }}
+                    className="text-xs font-bold underline"
+                    style={{ color: 'rgb(var(--brand-primary-rgb))' }}
+                  >
+                    see lists
+                  </button>
+                </div>
+              </>
+            )}
+
+            {extraction.triageCategory === 'reading_lead' && (
+              <>
+                <div className="h-px bg-[rgba(255,255,255,0.07)] my-2.5" />
+                <div className="w-full text-left flex items-center gap-2 flex-wrap">
+                  <BookOpen className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
+                  <span className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>Added to your reading queue.</span>
+                  <button
+                    onClick={() => { setVisible(false); navigate('/reading') }}
+                    className="text-xs font-bold underline"
+                    style={{ color: 'rgb(var(--brand-primary-rgb))' }}
+                  >
+                    open
+                  </button>
+                </div>
+              </>
+            )}
+
+            {extraction.triageCategory === 'annoyance' && (
+              <>
+                <div className="h-px bg-[rgba(255,255,255,0.07)] my-2.5" />
+                <div className="w-full text-left flex items-center gap-2 flex-wrap">
+                  <Wrench className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
+                  <span className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>Logged a frustration.</span>
                 </div>
               </>
             )}

@@ -83,7 +83,7 @@ export function OfflineIndicator() {
         <div className="flex items-center gap-2 px-4 py-2 bg-brand-primary text-[var(--brand-text-primary)] rounded-lg shadow-lg">
           <Upload className="h-5 w-5 animate-pulse" />
           <span className="font-medium">
-            Syncing {queueSize} {queueSize === 1 ? 'operation' : 'operations'}...
+            Saving {queueSize} {queueSize === 1 ? 'note' : 'notes'}...
           </span>
         </div>
       </div>
@@ -105,7 +105,7 @@ export function OfflineIndicator() {
     }
 
     const handleClear = async () => {
-      if (confirm(`Clear all ${queueSize} pending operations? This cannot be undone.`)) {
+      if (confirm(`Clear all ${queueSize} pending notes? This cannot be undone.`)) {
         setIsExpanded(false)
         await clearQueue()
         await updateQueueSize()
@@ -122,7 +122,7 @@ export function OfflineIndicator() {
           >
             <CloudOff className="h-5 w-5 flex-shrink-0" />
             <span className="font-medium">
-              {queueSize} {queueSize === 1 ? 'operation' : 'operations'} waiting to sync
+              {queueSize} {queueSize === 1 ? 'note' : 'notes'} waiting to save
             </span>
             <X className="h-4 w-4 ml-auto flex-shrink-0 opacity-60" />
           </button>

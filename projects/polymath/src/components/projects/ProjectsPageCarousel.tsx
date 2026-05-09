@@ -73,7 +73,7 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
           <button
             onClick={handleAnalyze}
             className="h-7 w-7 rounded-full flex items-center justify-center transition-colors hover:bg-white/10"
-            title="AI Analysis"
+            title="What connects here"
           >
             <span className="block w-2 h-2 rounded-full" style={{ backgroundColor: theme.textColor, opacity: 0.75 }} />
           </button>
@@ -97,7 +97,7 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
         </div>
       </div>
 
-      {/* Next Action or Description (show one, not both) */}
+      {/* Next Action, "a new angle" (Mode 2b reshape), or Description — show ONE */}
       {nextTask ? (
         <div
           className="rounded-lg p-3 mb-3 flex items-start gap-2 transition-colors min-w-0"
@@ -114,6 +114,13 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
               {nextTask.text}
             </p>
           </div>
+        </div>
+      ) : project.status === 'dormant' && project.metadata?.evolved_description ? (
+        <div className="mb-3">
+          <p className={`text-[var(--brand-text-primary)] italic aperture-body line-clamp-3 ${prominent ? 'text-[13px]' : 'text-xs'}`}>
+            <span className="not-italic font-bold uppercase tracking-widest text-[9px] mr-1.5" style={{ color: theme.textColor, opacity: 0.85 }}>now:</span>
+            {project.metadata.evolved_description as string}
+          </p>
         </div>
       ) : project.description ? (
         <p className={`text-[var(--brand-text-secondary)] mb-3 italic aperture-body line-clamp-3 ${prominent ? 'text-[13px]' : 'text-xs'}`}>

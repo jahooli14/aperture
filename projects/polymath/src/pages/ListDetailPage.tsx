@@ -638,7 +638,7 @@ function getMetaLine(item: ListItem, listType: string): string[] {
 // ============================================================================
 
 const ITEM_REACTIONS = [
-    { id: 'sparked', emoji: '⚡', label: 'inspired me' },
+    { id: 'sparked', emoji: '⚡', label: 'sparked me' },
     { id: 'off', emoji: '✕', label: 'not for me' },
     { id: 'make', emoji: '💡', label: 'want to make' },
 ] as const
@@ -827,30 +827,34 @@ const StandardItemCard = memo(({
                                 Details →
                             </a>
                         )}
-                        {/* Reaction row — identity signal */}
-                        {onReact && (
-                            <div className="flex items-center gap-1 pt-1 border-t border-white/10">
-                                {ITEM_REACTIONS.map(r => {
-                                    const active = item.metadata?.reaction === r.id
-                                    return (
-                                        <button
-                                            key={r.id}
-                                            onClick={e => { e.stopPropagation(); onReact(item.id, active ? null : r.id) }}
-                                            className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] transition-all"
-                                            style={{
-                                                background: active ? 'rgba(var(--brand-primary-rgb),0.15)' : 'transparent',
-                                                border: active ? '1px solid rgba(var(--brand-primary-rgb),0.35)' : '1px solid rgba(255,255,255,0.08)',
-                                                color: active ? 'rgb(var(--brand-primary-rgb))' : 'var(--brand-text-muted)',
-                                                opacity: item.metadata?.reaction && !active ? 0.35 : 0.8,
-                                            }}
-                                        >
-                                            <span>{r.emoji}</span>
-                                            <span className="hidden sm:inline">{r.label}</span>
-                                        </button>
-                                    )
-                                })}
-                            </div>
-                        )}
+                    </div>
+                )}
+
+                {/* Reaction row — identity signal, always visible (one tap, no expand needed) */}
+                {onReact && (
+                    <div className="flex items-center gap-1 pt-1.5 mt-1.5 border-t border-white/10">
+                        {ITEM_REACTIONS.map(r => {
+                            const active = item.metadata?.reaction === r.id
+                            return (
+                                <button
+                                    key={r.id}
+                                    onClick={e => { e.stopPropagation(); onReact(item.id, active ? null : r.id) }}
+                                    className="flex items-center justify-center gap-1 h-7 min-w-[28px] px-2 rounded-full text-[10px] transition-all"
+                                    style={{
+                                        background: active ? 'rgba(var(--brand-primary-rgb),0.15)' : 'rgba(0,0,0,0.4)',
+                                        border: active ? '1px solid rgba(var(--brand-primary-rgb),0.35)' : '1px solid rgba(255,255,255,0.08)',
+                                        color: active ? 'rgb(var(--brand-primary-rgb))' : 'var(--brand-text-muted)',
+                                        opacity: item.metadata?.reaction && !active ? 0.4 : 0.85,
+                                    }}
+                                    title={r.label}
+                                    aria-label={r.label}
+                                    aria-pressed={active}
+                                >
+                                    <span>{r.emoji}</span>
+                                    {active && <span className="hidden sm:inline">{r.label}</span>}
+                                </button>
+                            )
+                        })}
                     </div>
                 )}
 
@@ -1769,10 +1773,18 @@ export default function ListDetailPage() {
                 ) : filteredItems.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-40 text-zinc-600">
                         <p className="text-brand-text-muted font-medium text-lg mb-1">
-                            {searchQuery.trim() ? 'No matches.' : 'Nothing in here yet.'}
+                            {searchQuery.trim() ? 'No matches.' : 'Add the first one.'}
                         </p>
                         {!searchQuery.trim() && (
-                            <p className="text-sm text-brand-text-muted opacity-60">Start adding things above.</p>
+                            <p className="text-sm text-brand-text-muted opacity-60">{
+                                list.type === 'film' ? 'A film you want to watch.' :
+                                list.type === 'book' ? 'A book you\'re curious about.' :
+                                list.type === 'place' ? 'Anywhere you want to go.' :
+                                list.type === 'music' ? 'An album worth a listen.' :
+                                list.type === 'game' ? 'A game on your radar.' :
+                                list.type === 'quote' ? 'A line worth keeping.' :
+                                'Use the input above.'
+                            }</p>
                         )}
                     </div>
                 ) : list.type === 'quote' ? (
