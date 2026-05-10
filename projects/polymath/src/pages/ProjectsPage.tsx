@@ -323,27 +323,19 @@ function ProjectsPageInner() {
 
           {/* Controls */}
           <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pb-6 pt-2">
-            {/* Outer Card Structure */}
-            <div className="p-4 sm:p-6 rounded-2xl mb-6 relative overflow-hidden premium-glass shadow-2xl" style={{
-              background: 'var(--brand-glass-bg)',
-              border: '1px solid var(--glass-surface-hover)',
-            }}>
+            {/* Open spread */}
+            <div className="mb-6">
               <div>
                 {/* Search Box */}
                 <div className="mb-6">
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "var(--brand-primary)" }} />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 opacity-60" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
                     <input
                       type="text"
-                      placeholder="Search projects..."
+                      placeholder="Search projects…"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 rounded-lg border-2 transition-all focus:outline-none"
-                      style={{
-                        backgroundColor: 'var(--glass-surface)',
-                        borderColor: searchQuery ? 'var(--brand-primary)' : 'rgba(255, 255, 255, 0.1)',
-                        color: 'var(--brand-text-primary)'
-                      }}
+                      className="soft-input pl-11"
                     />
                   </div>
                   {debouncedSearchQuery && (

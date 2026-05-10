@@ -77,6 +77,18 @@
   color: var(--hero-color);
 }
 
+/* Section title — serif h2/h3 used inside pages for sub-section labels
+   (search results count, modal titles, "Tonight's prompts ready", etc).
+   Smaller and tighter than a page-hero, but still editorial. */
+.section-title {
+  font-family: var(--brand-font-serif);
+  font-weight: 500 !important;
+  font-size: 20px !important;
+  letter-spacing: -0.018em !important;
+  line-height: 1.25 !important;
+  color: var(--brand-text-primary);
+}
+
 /* Eyebrow — hairline rule + uppercase tracked label. Use *under* a
    .page-hero. Single component bundle: `.page-eyebrow` is the wrapper
    (flex, gap), and the rule is drawn as a ::before. */

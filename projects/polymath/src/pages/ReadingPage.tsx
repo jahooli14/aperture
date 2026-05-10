@@ -944,16 +944,13 @@ export function ReadingPage() {
           )}
         </AnimatePresence>
 
-        {/* Content - Outer Card Structure */}
+        {/* Open spread — content breathes on the page background */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 pt-2" style={{ marginTop: continueReadingArticles.length > 0 && activeTab !== 'reading' ? '0' : (processingArticles.size > 0 ? `${processingArticles.size * 72}px` : '0') }}>
-          <div className="p-6 rounded-2xl mb-6 relative overflow-hidden premium-glass shadow-2xl" style={{
-            background: 'var(--brand-glass-bg)',
-            border: '1px solid var(--glass-surface-hover)',
-          }}>
+          <div className="mb-6">
             {/* Title Section */}
             <div className="mb-6 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <h2 className="text-xl font-black uppercase tracking-tight text-[var(--brand-text-primary)]">
+                <h2 className="section-title">
                   {activeTab === 'updates' ? 'News feeds' :
                    activeTab === 'archived' ? 'Archive' :
                    activeTab === 'reading' ? 'In progress' :

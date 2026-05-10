@@ -411,8 +411,8 @@ export function SearchPage() {
                 border: '1px solid var(--glass-surface-hover)',
                 boxShadow: '4px 4px 0 rgba(0,0,0,0.5)'
               }}>
-                <h2 className="text-xl font-semibold mb-2 premium-text-platinum">
-                  {results.total} {results.total === 1 ? 'result' : 'results'} for "{results.query}"
+                <h2 className="section-title mb-2">
+                  {results.total} {results.total === 1 ? 'result' : 'results'} for &ldquo;{results.query}&rdquo;
                 </h2>
                 <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm" style={{ color: "var(--brand-primary)" }}>
                   <span>{results.breakdown.memories} memories</span>

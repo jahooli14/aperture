@@ -307,12 +307,12 @@ export function VoiceFAB({
                   </div>
                   <div className="flex items-center justify-between gap-3 px-5 sm:px-8 py-5 sm:py-8">
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-xl sm:text-2xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] flex items-center gap-2">
+                      <h3 className="page-hero-sm flex items-center gap-2" style={{ fontSize: 'clamp(1.4rem, 4vw, 1.65rem)' }}>
                         <Mic className="h-5 w-5 sm:h-6 sm:w-6 text-brand-primary flex-shrink-0" />
-                        <span className="truncate">Voice Capture</span>
+                        <span className="truncate">Capture a thought.</span>
                       </h3>
-                      <p className="text-xs sm:text-sm text-brand-text-muted mt-1 font-medium">
-                        {isOnline ? 'Transcribing in real-time' : 'Offline mode  will sync later'}
+                      <p className="meta-serif mt-1">
+                        {isOnline ? 'Transcribing in real-time' : 'Offline — will sync later'}
                       </p>
                     </div>
                     <button
