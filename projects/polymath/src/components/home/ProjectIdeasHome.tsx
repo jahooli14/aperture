@@ -49,7 +49,17 @@ interface ProjectIdea {
    *  non-empty `pattern` and the card leads with it as the hero block. */
   mode?: 'crossover' | 'read'
   pattern?: string | null
+  /** Read-only: model's honest 0–100 self-score on the pattern. The home
+   *  auto-surfaces the prominent teaser only when this is >= 70; below
+   *  that the idea sits in the queue and the user has to reach for the
+   *  button. NULL on crossover (no threshold gate). */
+  confidence?: number | null
 }
+
+/** Minimum confidence for the prominent home teaser to fire. Below this,
+ *  the surface stays as the small "suggest a project" button — the user
+ *  asks if they want one. The wow has to be earned every time. */
+const TEASER_CONFIDENCE_THRESHOLD = 70
 
 interface ProjectIdeasResponse {
   ideas: ProjectIdea[]
@@ -295,21 +305,21 @@ export function ProjectIdeasHome() {
     await generate()
   }, [generating, ideas.length, generate])
 
-  // The button label + glyph depend on whether anything's queued. With a
-  // queued idea, the eyebrow uses that idea's mode visual so the button
-  // hints at what's behind it (a pattern read vs. a crossover).
-  const buttonState = (() => {
-    if (ideas.length > 0) {
-      const queued = ideas[0]
-      const queuedMode = deriveMode(queued)
-      const visual = MODE_VISUAL[queuedMode]
-      return {
-        glyph: visual.glyph,
-        accentRgb: visual.accentRgb,
-        label: ideas.length > 1 ? `unlock — ${ideas.length} waiting` : 'unlock',
-      }
-    }
-    return { glyph: '✦', accentRgb: '252, 211, 77', label: 'suggest a project' }
+  // Surface state. Two paths into the expanded card:
+  //   1. The earned teaser. Only fires when a Read idea sits in the queue
+  //      with confidence >= TEASER_CONFIDENCE_THRESHOLD. The teaser is a
+  //      single italic line that says "there's something I want to show
+  //      you" — the wow only appears when the system has earned the click.
+  //   2. The escape hatch button. Always available below the teaser (or
+  //      on its own when nothing's earned). Click → expand the queued
+  //      idea if there is one, or generate fresh in ~10s.
+  // The user-explicit click NEVER respects the threshold — that's just
+  // the auto-surface gate. If the user asks for an idea, we produce one.
+  const earnedTeaser = (() => {
+    const queued = ideas.find(i => i.mode === 'read' && (i.confidence ?? 0) >= TEASER_CONFIDENCE_THRESHOLD)
+    if (!queued) return null
+    const visual = MODE_VISUAL.read
+    return { idea: queued, glyph: visual.glyph, accentRgb: visual.accentRgb }
   })()
 
   return (
@@ -329,31 +339,66 @@ export function ProjectIdeasHome() {
           </div>
         )}
 
-        {/* Collapsed state — quiet button. The user only ever sees an idea
-            because they asked for one. Two flavours: "unlock" when the cron
-            has pre-baked one (instant), "suggest" when the queue is empty
-            (~10s). */}
+        {/* Collapsed state. Two cohabiting surfaces:
+            • Earned teaser — when a high-confidence Read sits in the queue,
+              the home shows a single italic line inviting the click. The
+              pattern itself stays hidden until they tap; the line only
+              promises that something is there.
+            • Escape-hatch button — always present below. The user can ask
+              for an idea even when the system hasn't earned the teaser.
+              On a sparse / low-quality day, the button is the only surface.
+            Both routes end in the same expanded card. */}
         {!loading && !expanded && !generating && (
-          <div className="flex flex-col items-center gap-3">
+          <div className="flex flex-col items-center gap-5 py-2">
+            {earnedTeaser && (
+              <button
+                type="button"
+                onClick={() => { haptic.medium(); setExpanded(true); setActiveIndex(ideas.findIndex(i => i.id === earnedTeaser.idea.id)) }}
+                className="group flex items-center gap-3 px-2 py-3 rounded-lg transition-all max-w-xl"
+                style={{ color: 'var(--brand-text-primary)' }}
+              >
+                <span
+                  aria-hidden
+                  className="text-[20px] leading-none flex-shrink-0 transition-transform group-hover:scale-110"
+                  style={{
+                    color: `rgb(${earnedTeaser.accentRgb})`,
+                    fontFamily: 'var(--brand-font-serif)',
+                    textShadow: `0 0 14px rgba(${earnedTeaser.accentRgb}, 0.45)`,
+                  }}
+                >
+                  {earnedTeaser.glyph}
+                </span>
+                <span
+                  className="text-[16px] sm:text-[18px] italic leading-[1.35] text-left"
+                  style={{
+                    color: 'var(--brand-text-primary)',
+                    fontFamily: 'var(--brand-font-serif)',
+                    opacity: 0.92,
+                  }}
+                >
+                  there's something i want to show you
+                </span>
+              </button>
+            )}
             <button
               type="button"
               onClick={reveal}
-              className="group inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full transition-all"
+              className="group inline-flex items-center gap-2.5 px-4 py-2 rounded-full transition-all"
               style={{
-                background: `rgba(${buttonState.accentRgb}, 0.10)`,
-                color: `rgb(${buttonState.accentRgb})`,
-                border: `1px solid rgba(${buttonState.accentRgb}, 0.32)`,
+                background: 'rgba(var(--brand-primary-rgb), 0.08)',
+                color: 'var(--brand-text-secondary)',
+                border: '1px solid rgba(var(--brand-primary-rgb), 0.18)',
               }}
             >
               <span
                 aria-hidden
-                className="text-[14px] leading-none transition-transform group-hover:scale-110"
+                className="text-[12px] leading-none opacity-80"
                 style={{ fontFamily: 'var(--brand-font-serif)' }}
               >
-                {buttonState.glyph}
+                ✦
               </span>
-              <span className="text-[12.5px] tracking-wide font-medium">
-                {buttonState.label}
+              <span className="text-[11.5px] tracking-wide">
+                suggest a project
               </span>
             </button>
             {insufficientSignals !== null ? (

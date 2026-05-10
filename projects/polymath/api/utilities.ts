@@ -1331,7 +1331,7 @@ async function handleProjectIdeasGet(req: VercelRequest, res: VercelResponse) {
     const [activeRes, anyRes, projectsRes] = await Promise.all([
       supabase
         .from('project_ideas')
-        .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, status, user_feedback, generated_at, acted_on_at, mode, pattern')
+        .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, status, user_feedback, generated_at, acted_on_at, mode, pattern, confidence')
         .eq('user_id', userId)
         .in('status', ['pending', 'saved', 'built'])
         .order('generated_at', { ascending: false })
@@ -1485,7 +1485,7 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
     if (!viaCron) {
       const { data: queued } = await supabase
         .from('project_ideas')
-        .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, mode, pattern, seed_pair, status, user_feedback, generated_at, acted_on_at')
+        .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, mode, pattern, confidence, seed_pair, status, user_feedback, generated_at, acted_on_at')
         .eq('user_id', userId)
         .eq('status', 'pending')
         .order('generated_at', { ascending: false })
@@ -1595,6 +1595,10 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
       // pattern as the leading hero block.
       mode: idea.mode ?? 'crossover',
       pattern: idea.pattern ?? null,
+      // Confidence (0–100) is the model's honest self-score on Read — the
+      // home auto-surface threshold is 70. Crossover rows are NULL; the UI
+      // doesn't gate them behind a threshold (they show via the button).
+      confidence: idea.confidence ?? null,
       status: 'pending' as const,
       generated_at,
     }))

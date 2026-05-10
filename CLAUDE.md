@@ -171,9 +171,9 @@ One workflow dispatches every Vercel cron endpoint. Branches on `github.event.sc
 |----------|-----------|
 | `*/30 * * * *` | `idea-engine?action=generate`, `fix-queue?action=run-fixes` |
 | `0 */6 * * *` | `fix-queue?action=draft-pending`, `projects?resource=recompute-heat` |
-| `0 8 * * *` | `projects?resource=evolve` |
+| `0 8 * * *` | `projects?resource=evolve`, `utilities?resource=generate-project-ideas` |
 | `0 9 * * *` | `idea-engine?action=review` then `idea-engine?action=send-digest` (sequential) |
-| `0 8 * * 0` | `projects?resource=generate-digest`, `utilities?resource=generate-project-ideas` |
+| `0 8 * * 0` | `projects?resource=generate-digest` |
 
 > The `idea-engine?action=*` and `fix-queue?action=*` rows belong to the standalone Idea Engine project and the Fix Queue feature respectively. Both flagged for review (see Projects table). The `projects?resource=*` rows and `utilities?resource=generate-project-ideas` are part of Polymath proper.
 

@@ -56,6 +56,12 @@ export interface ProjectIdea {
    *  user's frame — "you almost-start music projects four times a year and
    *  stall at format." NULL on crossover rows. */
   pattern?: string | null
+  /** Read mode only: 0–100 self-score from the model on how strongly the
+   *  pattern lands. The home only auto-surfaces the prominent "there's
+   *  something to show you" teaser when this is >= 70; below that, the
+   *  idea sits in the queue and is reached for via the button. NULL on
+   *  crossover rows (those don't gate behind a threshold). */
+  confidence?: number | null
 }
 
 export interface StoredProjectIdea extends ProjectIdea {

@@ -62,6 +62,11 @@ export async function generateProjectIdeas(
     // seed only, not all three). Same model (Flash) for quality; the
     // speed win is doing less work. The cron-baked queue still has the
     // full Read + 3-pair output in it; this is the empty-queue fallback.
+    //
+    // The user explicitly asked for an idea — silence is not acceptable.
+    // We try locked-pairs (top seed), fall back to permissive, and retry
+    // permissive once if the first attempt parses to zero. Two LLM calls
+    // worst case, almost always one.
     console.log('[project-ideas] fast path: crossover-only, top seed only')
     const topSeed = seeds.slice(0, 1)
     const ideas = topSeed.length > 0
@@ -71,10 +76,14 @@ export async function generateProjectIdeas(
       return { ideas: ideas.map(i => ({ ...i, mode: 'crossover' as const })), attempts: 1 }
     }
     if (opts.force) {
-      const fallback = await runPermissive(gathered, { fast: true })
+      let fallback = await runPermissive(gathered, { fast: true })
+      if (fallback.length === 0) {
+        console.log('[project-ideas] permissive returned 0 — retrying once')
+        fallback = await runPermissive(gathered, { fast: true })
+      }
       if (fallback.length > 0) return { ideas: fallback, attempts: 2 }
     }
-    return { ideas: [], reason: 'parse_failure', attempts: opts.force ? 2 : 1 }
+    return { ideas: [], reason: 'parse_failure', attempts: opts.force ? 3 : 1 }
   }
 
   // Read and crossover run in parallel — the wow shape and the convergence
@@ -607,10 +616,20 @@ When the pattern is real, the idea object is:
   "next_step": "ONE physical action they can do today (cut, drill, flash, commit a named file with named first content, drive, phone). NOT 'research,' 'plan,' 'sketch,' 'outline,' 'decide.'",
   "evidence": [
     { "kind": "memory|project_dormant|project|reading|highlight|list_item", "source_id": "...", "label": "...", "date": "YYYY-MM-DD", "excerpt": "verbatim substring of the source body shown above" }
-  ]
+  ],
+  "confidence": <integer 0–100, see below>
 }
 
 Evidence rules: 3–6 items. Each excerpt MUST be a verbatim substring of a body shown above (will be substring-checked; fabrications are dropped). Together the evidence proves the pattern.
+
+CONFIDENCE — be honest. This number gates whether the home page surfaces the pattern as the prominent "there's something I want to show you" teaser, or just stores it in the queue for a button click. Calibrate to:
+
+  90–100 — the pattern is undeniable, the project is the right one, the evidence is rock-solid. The user will say "huh, that's me" instantly.
+  70–89  — solid pattern, solid project. Worth surfacing as the teaser.
+  50–69  — real but not the wow. Better to sit in the queue than lead.
+  0–49   — weak. Either return null with a skip_reason, or write the idea but mark it low so it doesn't lead.
+
+Honest 60s are more useful than dishonest 80s. Inflated confidence is the failure mode.
 
 If no real pattern is visible, return: { "idea": null, "skip_reason": "..." } and we'll lean on crossover. Silence is honest.`
 }
@@ -841,11 +860,25 @@ function parseRead(raw: string, gathered: GatherResult): ProjectIdea[] {
     console.log(`[project-ideas] read dropped "${base.title}" — "finish/ship X" against active project`)
     return []
   }
-  return [{ ...base, mode: 'read', pattern: item.pattern.trim().slice(0, 280) }]
+  // Confidence is honest-self-score 0–100 from the model. Clamp + default
+  // to 50 (below threshold) when missing or invalid — better to under-show
+  // than over-promise. The home auto-surfaces only when confidence >= 70.
+  let confidence = 50
+  if (typeof item.confidence === 'number' && Number.isFinite(item.confidence)) {
+    confidence = Math.max(0, Math.min(100, Math.round(item.confidence)))
+  }
+  console.log(`[project-ideas] read produced "${base.title}" — confidence=${confidence}`)
+  return [{
+    ...base,
+    mode: 'read',
+    pattern: item.pattern.trim().slice(0, 280),
+    confidence,
+  }]
 }
 
 interface RawReadIdea extends RawIdea {
   pattern?: string
+  confidence?: number
 }
 
 const CENTRE_KINDS: ReadonlySet<CentreKind> = new Set(['project_dormant', 'project_active', 'memory'])
