@@ -62,34 +62,19 @@ export default function DrawerPage() {
       <SubtleBackground />
       <div className="min-h-screen">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8 sm:pt-10 pb-24">
-          <div className="mb-6 flex items-center gap-3">
-            <div className="h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: 'var(--glass-surface)', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <Archive className="h-5 w-5" style={{ color: 'var(--brand-primary)' }} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h1 className="text-[1.75rem] sm:text-3xl leading-[0.95] font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
-                the <span className="text-brand-primary">drawer</span>
-              </h1>
-              <p className="text-[11px] font-bold uppercase tracking-widest text-[var(--brand-text-muted)] mt-1">
-                {drawerProjects.length} resting · {warmedCount} warming
-              </p>
-            </div>
+          <div className="mb-7">
+            <h1 className="page-hero-sm">The drawer.</h1>
+            <div className="page-eyebrow">{drawerProjects.length} resting · {warmedCount} warming</div>
           </div>
 
           <div className="relative mb-6">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'var(--brand-primary)' }} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 opacity-60" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
             <input
               type="text"
-              placeholder="Rummage..."
+              placeholder="Rummage…"
               value={query}
               onChange={e => setQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg border-2 transition-all focus:outline-none"
-              style={{
-                backgroundColor: 'var(--glass-surface)',
-                borderColor: query ? 'var(--brand-primary)' : 'rgba(255,255,255,0.1)',
-                color: 'var(--brand-text-primary)',
-              }}
+              className="soft-input pl-11"
             />
           </div>
 

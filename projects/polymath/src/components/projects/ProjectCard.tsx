@@ -255,9 +255,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
                         {project.type}
                       </span>
                     )}
-                    <h3 className="text-xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] leading-none mt-0.5">
-                      {project.title}
-                    </h3>
+                    <h3 className="section-title mt-1">{project.title}</h3>
                   </div>
                   <button
                     onClick={() => setShowContextMenu(false)}

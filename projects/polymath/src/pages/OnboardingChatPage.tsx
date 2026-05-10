@@ -684,8 +684,15 @@ export function OnboardingChatPage() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="text-[2.1rem] sm:text-[2.6rem] font-semibold leading-[1.08] tracking-tight mb-5"
-            style={{ color: 'var(--brand-text-primary)' }}
+            className="mb-5"
+            style={{
+              fontFamily: 'var(--brand-font-serif)',
+              fontWeight: 500,
+              fontSize: 'clamp(2.1rem, 6vw, 2.6rem)',
+              lineHeight: 1.05,
+              letterSpacing: '-0.022em',
+              color: 'var(--brand-text-primary)',
+            }}
           >
             A project you'd never have<br className="hidden sm:block" /> thought of yourself.
           </motion.h1>
@@ -694,8 +701,14 @@ export function OnboardingChatPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.55 }}
-            className="text-base sm:text-lg leading-relaxed mb-7 max-w-md mx-auto"
-            style={{ color: 'var(--brand-text-secondary)' }}
+            className="mb-7 max-w-md mx-auto italic"
+            style={{
+              fontFamily: 'var(--brand-font-serif)',
+              fontSize: '17px',
+              lineHeight: 1.55,
+              color: 'var(--brand-text-secondary)',
+              opacity: 0.85,
+            }}
           >
             Talk for three minutes. Aperture listens for the threads between the things you mention — and surfaces something to build that genuinely surprises you.
           </motion.p>
@@ -831,8 +844,15 @@ export function OnboardingChatPage() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.35 }}
-            className="text-[1.75rem] sm:text-4xl font-semibold leading-[1.1] mb-4"
-            style={{ color: 'var(--brand-text-primary)' }}
+            className="mb-4"
+            style={{
+              fontFamily: 'var(--brand-font-serif)',
+              fontWeight: 500,
+              fontSize: 'clamp(1.75rem, 5vw, 2.25rem)',
+              lineHeight: 1.1,
+              letterSpacing: '-0.022em',
+              color: 'var(--brand-text-primary)',
+            }}
           >
             The hidden depth of your curiosity.
           </motion.h1>
@@ -841,8 +861,13 @@ export function OnboardingChatPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.6 }}
-            className="text-base mb-10"
-            style={{ color: 'var(--brand-text-secondary)' }}
+            className="mb-10 italic"
+            style={{
+              fontFamily: 'var(--brand-font-serif)',
+              fontSize: '15.5px',
+              color: 'var(--brand-text-secondary)',
+              opacity: 0.85,
+            }}
           >
             A few minutes of talking. Aperture maps the connections.
           </motion.p>

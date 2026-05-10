@@ -139,13 +139,9 @@ export function ProjectCompletionModal({ project, sparkedByMemories, isOpen, onC
                       <Check className="h-8 w-8" style={{ color: 'rgb(var(--color-accent-light-rgb))' }} />
                     </div>
 
-                    <p className="text-[10px] font-black uppercase tracking-[0.3em] mb-2" style={{ color: 'rgb(var(--color-accent-light-rgb))' }}>
-                      You built this
-                    </p>
-                    <h2 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] mb-2">
-                      {project.title}
-                    </h2>
-                    <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>
+                    <span className="meta-caps mb-2 block">You built this</span>
+                    <h2 className="page-hero-sm mb-2">{project.title}</h2>
+                    <p className="meta-serif">
                       {duration} in the making
                     </p>
 
@@ -184,13 +180,9 @@ export function ProjectCompletionModal({ project, sparkedByMemories, isOpen, onC
                 ) : (
                   <motion.div key="reflection" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="relative z-10 text-center">
                     <Brain className="h-10 w-10 mb-4 mx-auto" style={{ color: 'rgb(var(--color-accent-light-rgb))' }} />
-                    <p className="text-[10px] font-black uppercase tracking-[0.3em] mb-2" style={{ color: 'rgb(var(--color-accent-light-rgb))' }}>
-                      What did you learn?
-                    </p>
-                    <h2 className="text-lg font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] mb-1">
-                      {project.title}
-                    </h2>
-                    <p className="text-xs mb-5" style={{ color: 'var(--brand-text-secondary)' }}>
+                    <span className="meta-caps mb-2 block">What did you learn?</span>
+                    <h2 className="section-title mb-1">{project.title}</h2>
+                    <p className="meta-serif mb-5">
                       Capture a reflection while it's fresh
                     </p>
                     <textarea

@@ -252,27 +252,45 @@ export function BedtimePage() {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <SubtleBackground />
+      {/* Deep night wash — bedtime page should *look* like night.
+          Indigo gradient, no daytime cyan orbs. Replaces SubtleBackground. */}
+      <div
+        aria-hidden
+        className="fixed inset-0 pointer-events-none -z-10"
+        style={{
+          background:
+            'radial-gradient(ellipse 100% 60% at 50% 0%, rgba(56, 28, 135, 0.32), transparent 60%), radial-gradient(ellipse 80% 50% at 70% 100%, rgba(15, 24, 41, 0.6), transparent 70%), linear-gradient(180deg, #0a0820 0%, #0a0e18 100%)',
+        }}
+      />
 
-      {/* Fixed Header */}
+      {/* Fixed Header — softer, less daylight */}
       <div
         className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md"
         style={{
-          backgroundColor: 'rgba(15, 24, 41, 0.85)',
+          backgroundColor: 'rgba(10, 8, 32, 0.7)',
           paddingTop: 'env(safe-area-inset-top)',
-          borderBottom: '1px solid rgba(255,255,255,0.06)'
+          borderBottom: '1px solid rgba(255,255,255,0.04)'
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
-              <Moon className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0" style={{ color: "var(--brand-primary)" }} />
-              <h1 className="text-lg sm:text-xl font-bold premium-text-platinum truncate">
-                Bedtime Ideas
+              <Moon className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0 opacity-80" style={{ color: '#c7b8ff' }} />
+              <h1
+                className="truncate"
+                style={{
+                  fontFamily: 'var(--brand-font-serif)',
+                  fontWeight: 500,
+                  fontSize: '1.15rem',
+                  letterSpacing: '-0.018em',
+                  color: 'rgba(255, 255, 255, 0.92)',
+                }}
+              >
+                Bedtime
               </h1>
             </div>
-            <button className="h-11 w-11 flex items-center justify-center rounded-xl bg-[var(--glass-surface)] border border-white/10 hover:bg-[rgba(255,255,255,0.1)] transition-colors flex-shrink-0">
-              <Search className="h-5 w-5" style={{ color: "var(--brand-primary)" }} />
+            <button className="h-11 w-11 flex items-center justify-center rounded-full hover:bg-white/[0.06] transition-colors flex-shrink-0" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
+              <Search className="h-4 w-4 opacity-70" />
             </button>
           </div>
         </div>
@@ -280,30 +298,65 @@ export function BedtimePage() {
 
       {/* Main Content */}
       <div className="pb-24 px-4 relative" style={{ paddingTop: 'calc(6rem + env(safe-area-inset-top))' }}>
-        {/* Ambient starfield background */}
-        <div className="fixed inset-0 pointer-events-none opacity-30">
-          <div className="absolute top-10 left-10 w-1 h-1 rounded-full bg-white animate-pulse" />
-          <div className="absolute top-20 right-20 w-1 h-1 rounded-full bg-white animate-pulse" style={{ animationDelay: '1s' }} />
-          <div className="absolute top-40 left-1/4 w-1 h-1 rounded-full bg-white animate-pulse" style={{ animationDelay: '2s' }} />
-          <div className="absolute bottom-40 right-1/3 w-1 h-1 rounded-full bg-white animate-pulse" style={{ animationDelay: '1.5s' }} />
+        {/* Starfield — twinkling pinpricks of light */}
+        <div className="fixed inset-0 pointer-events-none opacity-50">
+          {[
+            { top: '8%',  left: '12%', delay: 0 },
+            { top: '18%', left: '78%', delay: 1.4 },
+            { top: '32%', left: '24%', delay: 2.8 },
+            { top: '46%', left: '68%', delay: 0.7 },
+            { top: '58%', left: '14%', delay: 2.1 },
+            { top: '70%', left: '82%', delay: 3.4 },
+            { top: '82%', left: '38%', delay: 1.0 },
+            { top: '12%', left: '52%', delay: 4.0 },
+            { top: '38%', left: '88%', delay: 2.4 },
+            { top: '64%', left: '46%', delay: 5.2 },
+          ].map((s, i) => (
+            <div
+              key={i}
+              className="absolute h-[2px] w-[2px] rounded-full bg-white animate-pulse"
+              style={{
+                top: s.top,
+                left: s.left,
+                animationDelay: `${s.delay}s`,
+                animationDuration: '4s',
+                boxShadow: '0 0 4px rgba(255,255,255,0.5)',
+              }}
+            />
+          ))}
         </div>
 
         {/* Header Info */}
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: showWelcome ? 1 : 0, y: showWelcome ? 0 : -20 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
+          initial={{ opacity: 0, y: -12 }}
+          animate={{ opacity: showWelcome ? 1 : 0, y: showWelcome ? 0 : -12 }}
+          transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
           className="max-w-2xl mx-auto mb-8 relative z-10"
         >
-          <div className="flex items-center gap-4 mb-4">
-            <div>
-              <h2 className="premium-text-platinum text-2xl font-bold">
-                Thoughts Before Bed
-              </h2>
-              <p className="text-sm mt-1" style={{ color: "var(--brand-primary)" }}>
-                Let your mind wander into tomorrow's inspiration
-              </p>
-            </div>
+          <div className="mb-5">
+            <h2
+              style={{
+                fontFamily: 'var(--brand-font-serif)',
+                fontWeight: 500,
+                fontSize: 'clamp(2rem, 5.5vw, 2.5rem)',
+                letterSpacing: '-0.022em',
+                lineHeight: 1.1,
+                color: 'rgba(255, 255, 255, 0.95)',
+              }}
+            >
+              Thoughts before bed.
+            </h2>
+            <p
+              className="mt-3 italic"
+              style={{
+                fontFamily: 'var(--brand-font-serif)',
+                fontSize: '15px',
+                color: 'rgba(199, 184, 255, 0.75)',
+                fontWeight: 400,
+              }}
+            >
+              Let your mind wander into tomorrow's inspiration.
+            </p>
           </div>
 
           {/* Time indicator */}

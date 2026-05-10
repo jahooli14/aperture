@@ -330,11 +330,10 @@ export function ProjectsPageCarousel({
               </div>
             </div>
 
-            <h3 className="text-[1.75rem] sm:text-2xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] leading-[1] mb-3">
-              Nothing in motion<br />
-              <span className="text-brand-primary">yet.</span>
+            <h3 className="page-hero-sm mb-3" style={{ fontSize: 'clamp(1.5rem, 4vw, 1.75rem)' }}>
+              Nothing in motion yet.
             </h3>
-            <p className="text-sm text-[var(--brand-text-secondary)] leading-relaxed mb-6">
+            <p className="meta-serif mb-6">
               Projects grow from your thoughts. Capture something with the mic, then turn it into a project.
             </p>
           </div>

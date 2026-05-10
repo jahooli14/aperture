@@ -156,9 +156,9 @@ export function CognitiveReplayPage() {
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 relative z-10">
         {/* Header */}
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-[1.75rem] sm:text-3xl font-bold premium-text-platinum tracking-tight leading-[1]">Cognitive Replay</h1>
-          <p className="text-[var(--brand-text-secondary)] text-sm mt-1.5">Reconstruct what you were thinking</p>
+        <div className="mb-7 sm:mb-9">
+          <h1 className="page-hero-sm">Cognitive replay.</h1>
+          <div className="page-eyebrow">Reconstruct what you were thinking</div>
         </div>
 
         {isOffline && (

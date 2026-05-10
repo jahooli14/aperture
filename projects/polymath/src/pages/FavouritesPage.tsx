@@ -199,12 +199,8 @@ export default function FavouritesPage() {
                     )}
                 </div>
 
-                <h1 className="text-3xl font-bold text-[var(--brand-text-primary)] mb-1 uppercase tracking-tight italic">
-                    your top-rated
-                </h1>
-                <p className="text-brand-text-muted text-sm">
-                    Items you've rated four stars or higher across every collection.
-                </p>
+                <h1 className="page-hero-sm">Your top-rated.</h1>
+                <div className="page-eyebrow">Four stars &amp; up, across every collection</div>
             </div>
 
             <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-48 max-w-5xl">

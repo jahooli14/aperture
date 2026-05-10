@@ -743,12 +743,10 @@ export function ReadingPage() {
     <>
       <SubtleBackground />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 sm:pt-10 pb-4 flex flex-col gap-4">
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex items-end justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <h1 className="text-[2rem] sm:text-4xl leading-[0.95] font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
-                your <span className="page-accent">reading</span>
-              </h1>
-              <p className="section-subtitle mt-1.5 text-sm sm:text-base">Deep dives and quick catches.</p>
+              <h1 className="page-hero">Your reading.</h1>
+              <div className="page-eyebrow">Deep dives &amp; quick catches</div>
             </div>
             <button
               onClick={() => navigate('/search')}
@@ -946,16 +944,13 @@ export function ReadingPage() {
           )}
         </AnimatePresence>
 
-        {/* Content - Outer Card Structure */}
+        {/* Open spread — content breathes on the page background */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 pt-2" style={{ marginTop: continueReadingArticles.length > 0 && activeTab !== 'reading' ? '0' : (processingArticles.size > 0 ? `${processingArticles.size * 72}px` : '0') }}>
-          <div className="p-6 rounded-2xl mb-6 relative overflow-hidden premium-glass shadow-2xl" style={{
-            background: 'var(--brand-glass-bg)',
-            border: '1px solid var(--glass-surface-hover)',
-          }}>
+          <div className="mb-6">
             {/* Title Section */}
             <div className="mb-6 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <h2 className="text-xl font-black uppercase tracking-tight text-[var(--brand-text-primary)]">
+                <h2 className="section-title">
                   {activeTab === 'updates' ? 'News feeds' :
                    activeTab === 'archived' ? 'Archive' :
                    activeTab === 'reading' ? 'In progress' :

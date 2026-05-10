@@ -200,16 +200,16 @@ export function KeepGoingCarousel() {
       <div
         className="rounded-2xl p-5 flex flex-col overflow-hidden relative transition-all duration-700"
         style={{
-          background: 'linear-gradient(135deg, rgba(56,189,248,0.06) 0%, rgba(15,24,41,0.5) 60%)',
-          backdropFilter: 'blur(16px)',
-          border: `1px solid ${dormancyColor ?? 'rgba(56,189,248,0.15)'}`,
+          background: 'linear-gradient(135deg, rgba(56,189,248,0.07) 0%, rgba(15,24,41,0.55) 70%)',
+          backdropFilter: 'blur(18px)',
+          border: `1px solid ${dormancyColor ?? 'rgba(56,189,248,0.16)'}`,
           boxShadow: dormancyColor
-            ? `0 0 24px ${dormancyColor.replace('0.55', '0.08')}, 0 4px 16px rgba(0,0,0,0.4)`
-            : '0 0 30px rgba(56,189,248,0.05), 0 4px 16px rgba(0,0,0,0.4)',
+            ? `0 0 28px ${dormancyColor.replace('0.55', '0.08')}, 0 6px 22px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)`
+            : '0 0 32px -10px rgba(56,189,248,0.14), 0 6px 22px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)',
           minHeight: '280px',
         }}
       >
-        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(56,189,248,0.4), transparent)' }} />
+        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(56,189,248,0.45), transparent)' }} />
 
         {/* Nav dots */}
         {total > 1 && (

@@ -17,7 +17,6 @@ import { SuggestedPrompts } from '../components/onboarding/SuggestedPrompts'
 import { ThemeClusterCard } from '../components/memories/ThemeClusterCard'
 import { Button } from '../components/ui/button'
 import { useToast } from '../components/ui/toast'
-import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { PremiumTabs } from '../components/ui/premium-tabs'
 import { SkeletonCard } from '../components/ui/skeleton-card'
 import { Brain, Zap, ArrowLeft, CloudOff, Search, X, Tag, Pin, Wind, Moon } from 'lucide-react'
@@ -109,11 +108,6 @@ function MemoriesPageInner() {
   const { memories, fetchMemories, loading, error, deleteMemory, clearError } = useMemoryStore()
   const { fetchPrompts: fetchOnboardingPrompts } = useOnboardingStore()
   const { addToast } = useToast()
-  const { setContext } = useContextEngineStore()
-
-  useEffect(() => {
-    setContext('page', 'memories', 'Thoughts')
-  }, [])
   const { isOnline } = useOnlineStatus()
   const [resurfacing, setResurfacing] = useState<Memory[]>([])
   const [view, setView] = useState<'recent' | 'themes' | 'resurfacing'>('recent')
@@ -465,24 +459,27 @@ function MemoriesPageInner() {
   return (
     <>
       <SubtleBackground />
-      {/* Header */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 sm:pt-10 pb-4 flex flex-col gap-2">
-          <div className="mb-5 flex items-start justify-between gap-3">
+      {/* Editorial header — Day One language. Serif title, hairline rule,
+          quiet count. Tools sit beside the title, not above it. */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-10 sm:pt-12 pb-2 flex flex-col gap-3">
+          <div className="mb-4 flex items-end justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <h1 className="text-[2rem] sm:text-4xl leading-[0.95] font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
-                your <span className="page-accent">thoughts</span>
-              </h1>
-              <p className="section-subtitle mt-1.5 text-sm sm:text-base">{memories.length} thought{memories.length !== 1 ? 's' : ''}.</p>
+              <h1 className="page-hero">Your thoughts.</h1>
+              <div className="page-eyebrow">{memories.length} captured</div>
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
               {view !== 'resurfacing' && <CreateMemoryDialog />}
               <button
                 onClick={() => navigate('/search')}
-                className="h-11 w-11 rounded-xl flex items-center justify-center transition-all bg-[var(--glass-surface)] border border-white/10"
-                style={{ color: "var(--brand-primary)" }}
+                className="h-10 w-10 rounded-full flex items-center justify-center transition-all hover:scale-105"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.12), rgba(var(--brand-primary-rgb),0.04))',
+                  border: '1px solid rgba(var(--brand-primary-rgb),0.22)',
+                  color: 'rgb(var(--brand-primary-rgb))',
+                }}
                 title="Search everything"
               >
-                <Search className="h-5 w-5" />
+                <Search className="h-4 w-4" />
               </button>
             </div>
           </div>
@@ -544,64 +541,43 @@ function MemoriesPageInner() {
 
       <div className="pb-32 relative z-10" style={{ isolation: 'isolate' }}>
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pb-6 pt-2">
-          {/* Outer Card Structure */}
-          <div className="p-3 sm:p-6 rounded-2xl mb-6 w-full max-w-full relative premium-glass shadow-2xl" style={{
-            background: 'var(--brand-glass-bg)',
-            border: '1px solid var(--glass-surface-hover)',
-          }}>
-            {/* Title Section */}
-            <div className="mb-6 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <h2 className="text-xl font-black uppercase tracking-tight text-[var(--brand-text-primary)]">
-                  {view === 'recent' ? 'Thoughts' : view === 'themes' ? 'By Theme' : 'Worth revisiting'}
-                </h2>
-              </div>
-            </div>
+          {/* Open spread — no nested shadow box. Memories breathe on the
+              page background. Day One scrapbook feel, not "premium card." */}
+          <div className="mb-6 w-full max-w-full">
 
-            {/* Search Bar  shown on recent and themes views */}
+            {/* Search — Dia central input, soft and quiet */}
             {(view === 'recent' || view === 'themes') && (
-              <div className="mb-4 space-y-3">
-                {/* Search input */}
+              <div className="mb-5 space-y-3">
                 <div className="relative">
                   <Search
-                    className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none"
-                    style={{ color: "var(--brand-primary)" }}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none opacity-60"
+                    style={{ color: 'rgb(var(--brand-primary-rgb))' }}
                   />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    placeholder="Search thoughts..."
-                    className="w-full pl-9 pr-9 py-2.5 rounded-lg text-sm outline-none transition-all"
-                    style={{
-                      background: 'var(--brand-glass-bg)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      color: "var(--brand-text-secondary)",
-                      caretColor: 'var(--brand-primary)',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.6)',
-                    }}
-                    onFocus={e => { e.currentTarget.style.borderColor = 'rgba(var(--brand-primary-rgb),0.5)' }}
-                    onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
+                    placeholder="Search your thoughts…"
+                    className="soft-input pl-11 pr-10"
                   />
                   {searchQuery && (
                     <button
                       onClick={() => setSearchQuery('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.1)]"
-                      style={{ color: "var(--brand-primary)" }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 h-7 w-7 flex items-center justify-center rounded-full transition-colors hover:bg-white/[0.04]"
+                      style={{ color: 'var(--brand-text-muted)' }}
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-3.5 w-3.5" />
                     </button>
                   )}
                 </div>
 
-                {/* Result count */}
                 {isFiltered && (
-                  <p className="text-xs" style={{ color: "var(--brand-primary)" }}>
-                    {displayMemories.length} of {memories.length} thought{memories.length !== 1 ? 's' : ''}
+                  <p className="text-[10px] uppercase tracking-[0.28em] opacity-70" style={{ color: 'rgb(var(--brand-primary-rgb))' }}>
+                    {displayMemories.length} of {memories.length}
                   </p>
                 )}
 
-                {/* Tag pills  horizontal scroll */}
+                {/* Tag pills — refined, no shadows or bold caps */}
                 {allTags.length > 0 && (
                   <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
                     {allTags.map(tag => {
@@ -612,12 +588,11 @@ function MemoriesPageInner() {
                           onClick={() => setActiveTags(prev =>
                             isActive ? prev.filter(t => t !== tag) : [...prev, tag]
                           )}
-                          className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide transition-all min-h-[36px]"
+                          className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] tracking-wide transition-all min-h-[34px]"
                           style={{
-                            background: isActive ? 'rgba(var(--brand-primary-rgb),0.2)' : 'var(--glass-surface)',
-                            border: isActive ? '1.5px solid rgba(var(--brand-primary-rgb),0.55)' : '1.5px solid rgba(255,255,255,0.12)',
-                            color: isActive ? 'rgb(var(--brand-primary-rgb))' : 'var(--brand-text-secondary)',
-                            boxShadow: isActive ? '0 0 12px rgba(var(--brand-primary-rgb),0.18)' : '0 2px 8px rgba(0,0,0,0.4)',
+                            background: isActive ? 'rgba(var(--brand-primary-rgb),0.14)' : 'rgba(255,255,255,0.03)',
+                            border: isActive ? '1px solid rgba(var(--brand-primary-rgb),0.4)' : '1px solid rgba(255,255,255,0.06)',
+                            color: isActive ? 'rgb(var(--brand-primary-rgb))' : 'var(--brand-text-muted)',
                           }}
                         >
                           <Tag className="h-3 w-3" />
@@ -628,12 +603,11 @@ function MemoriesPageInner() {
                     {activeTags.length > 0 && (
                       <button
                         onClick={() => setActiveTags([])}
-                        className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide transition-all min-h-[36px]"
+                        className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] tracking-wide transition-all min-h-[34px] opacity-70 hover:opacity-100"
                         style={{
-                          background: 'rgba(239,68,68,0.12)',
-                          border: '1.5px solid rgba(239,68,68,0.35)',
-                          color: '#fca5a5',
-                          boxShadow: '0 0 12px rgba(239,68,68,0.12)',
+                          background: 'rgba(255,255,255,0.03)',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          color: 'var(--brand-text-muted)',
                         }}
                       >
                         <X className="h-3 w-3" />
@@ -647,14 +621,12 @@ function MemoriesPageInner() {
 
             {/* Inner Content */}
             <div>
-              {/* Resurfacing Info Banner */}
+              {/* On This Day — Day One-style resurfacing eyebrow */}
               {view === 'resurfacing' && resurfacing.length > 0 && (
-                <div className="mb-6 p-4 rounded-lg" style={{ background: 'var(--brand-glass-bg)', border: '1px solid rgba(var(--brand-primary-rgb),0.25)', borderLeft: '4px solid rgba(var(--brand-primary-rgb),0.5)', boxShadow: '0 4px 16px rgba(0,0,0,0.6)' }}>
-                  <h3 className="font-black text-xs uppercase tracking-widest mb-2" style={{ color: "var(--brand-primary)" }}>
-                    Up for review
-                  </h3>
-                  <p className="text-xs leading-relaxed" style={{ color: "var(--brand-primary)" }}>
-                    Older thoughts worth a second look. Mark them reviewed when you're done.
+                <div className="mb-8">
+                  <div className="page-eyebrow mt-0 mb-2">Worth a second look</div>
+                  <p className="meta-serif">
+                    Older thoughts surfacing again. Mark them reviewed when you're done.
                   </p>
                 </div>
               )}
@@ -726,11 +698,8 @@ function MemoriesPageInner() {
                         </div>
                       </div>
 
-                      <h3 className="text-3xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] leading-none mb-3">
-                        Every great idea<br />
-                        <span className="text-brand-primary">starts here.</span>
-                      </h3>
-                      <p className="text-sm text-[var(--brand-text-muted)] leading-relaxed mb-8">
+                      <h3 className="page-hero-sm mb-3">Every great idea starts here.</h3>
+                      <p className="meta-serif mb-8">
                         Tap the mic below, say something interesting — and watch it become part of your universe.
                       </p>
 

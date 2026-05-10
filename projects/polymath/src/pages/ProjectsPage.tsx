@@ -52,12 +52,8 @@ function CompletedProjectsTimeline({ projects, onNavigate }: { projects: Project
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 pb-32">
       <div className="mb-8">
-        <p className="text-[10px] font-black uppercase tracking-[0.3em]" style={{ color: 'var(--brand-text-secondary)' }}>
-          {sorted.length} project{sorted.length !== 1 ? 's' : ''} finished
-        </p>
-        <h2 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
-          What you've <span className="text-[rgb(var(--color-accent-light-rgb))]">built</span>
-        </h2>
+        <h2 className="page-hero-sm">What you’ve built.</h2>
+        <div className="page-eyebrow">{sorted.length} finished</div>
       </div>
 
       <div className="relative">
@@ -275,13 +271,14 @@ function ProjectsPageInner() {
                   <ArrowLeft className="h-5 w-5" />
                 </button>
               )}
-              <h1 className="text-[2rem] sm:text-4xl leading-[0.95] font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] break-words">
-                {showCompleted ? (
-                  <>what you've <span className="text-brand-primary">built</span></>
-                ) : (
-                  <>your <span className="text-brand-primary">projects</span></>
-                )}
-              </h1>
+              <div className="min-w-0">
+                <h1 className="page-hero break-words">
+                  {showCompleted ? 'What you’ve built.' : 'Your projects.'}
+                </h1>
+                <div className="page-eyebrow">
+                  {showCompleted ? 'Archive' : 'In progress'}
+                </div>
+              </div>
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
               {!showCompleted && (
@@ -326,27 +323,19 @@ function ProjectsPageInner() {
 
           {/* Controls */}
           <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pb-6 pt-2">
-            {/* Outer Card Structure */}
-            <div className="p-4 sm:p-6 rounded-2xl mb-6 relative overflow-hidden premium-glass shadow-2xl" style={{
-              background: 'var(--brand-glass-bg)',
-              border: '1px solid var(--glass-surface-hover)',
-            }}>
+            {/* Open spread */}
+            <div className="mb-6">
               <div>
                 {/* Search Box */}
                 <div className="mb-6">
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "var(--brand-primary)" }} />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 opacity-60" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
                     <input
                       type="text"
-                      placeholder="Search projects..."
+                      placeholder="Search projects…"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 rounded-lg border-2 transition-all focus:outline-none"
-                      style={{
-                        backgroundColor: 'var(--glass-surface)',
-                        borderColor: searchQuery ? 'var(--brand-primary)' : 'rgba(255, 255, 255, 0.1)',
-                        color: 'var(--brand-text-primary)'
-                      }}
+                      className="soft-input pl-11"
                     />
                   </div>
                   {debouncedSearchQuery && (
