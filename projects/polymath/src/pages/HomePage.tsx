@@ -3,16 +3,19 @@
  *
  * Stack (top to bottom):
  *   1. YourHourHeader — brand + duration toggle + search
- *   2. ProjectIdeasHome — The Moment: single hero card directing creative
- *      willpower (new idea coalescing / forgotten project / extend an active)
- *   3. KeepGoingCarousel — focus mode for active projects
+ *   2. KeepGoingCarousel — focus mode for active projects (the hero)
+ *   3. ProjectIdeasHome — quiet button. Expands to a full idea card when
+ *      the user wants something new. Two states: an "unlock" prompt when a
+ *      pre-baked idea is waiting (instant reveal), or "suggest a project"
+ *      when the queue is empty (generates one on demand, fast model).
  *   4. NowConsumingWidget — compact strip of active list items
  *   5. ThoughtOfTheDay — resurfaced memory quote
  *   6. BedtimeFloatingIcon — after 9:30pm
  *
- * Deprecated and removed: This Week (mashups), Unshaped Nudge Bar, Try
- * Something New. Their jobs map into The Moment's modes (Mode 3 Extend,
- * Mode 1 Coalescing, Mode 2 Forgotten).
+ * The Moment used to live above Keep Going as a hero card. Moved below
+ * because Keep Going IS the main loop — the user opens the app to do the
+ * thing they're already on, not to be handed a new thing. The new thing
+ * is opt-in via the button.
  */
 
 import React, { useEffect, useState } from 'react'
@@ -225,14 +228,17 @@ export function HomePage() {
             <YourHourHeader />
           </motion.div>
 
-          {/* The Moment — single hero card, the headline of the home flow */}
+          {/* Keep Going — the main loop. Active projects, focus mode. */}
           <motion.div className="mb-10" {...stackTransition(1)}>
-            <ProjectIdeasHome />
+            <KeepGoingCarousel />
           </motion.div>
 
-          {/* Keep Going — focus mode for active projects */}
+          {/* Project ideas — quiet button until clicked. Reveals a pre-baked
+              idea instantly when the queue has one, or generates on demand
+              when it doesn't. Opt-in: only fires when the user wants something
+              new. Expands to a full hero card while the user is reviewing. */}
           <motion.div className="mb-10" {...stackTransition(2)}>
-            <KeepGoingCarousel />
+            <ProjectIdeasHome />
           </motion.div>
 
           {/* What you're consuming */}

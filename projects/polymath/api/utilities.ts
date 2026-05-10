@@ -1478,15 +1478,40 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
 
     const supabase = getSupabaseClient()
 
+    // User-triggered short-circuit: if there's already a pending idea
+    // sitting in the queue (cron-baked or otherwise), return it instantly
+    // and skip the LLM call entirely. This is the new on-demand flow —
+    // most user clicks should hit this path and feel instant.
+    if (!viaCron) {
+      const { data: queued } = await supabase
+        .from('project_ideas')
+        .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, mode, pattern, seed_pair, status, user_feedback, generated_at, acted_on_at')
+        .eq('user_id', userId)
+        .eq('status', 'pending')
+        .order('generated_at', { ascending: false })
+        .order('rank', { ascending: true })
+        .limit(3)
+      if (queued && queued.length > 0) {
+        return res.status(200).json({
+          ideas: queued,
+          batch_id: queued[0].batch_id,
+          generated_at: queued[0].generated_at,
+          via: 'queue',
+          took_ms: Date.now() - started,
+        })
+      }
+    }
+
     // Cooldown check — only on manual user-triggered runs. Reads the
-    // newest pending row's generated_at; if too recent, return 429 with
-    // the existing batch so the UI can hand back what's already there.
+    // newest non-pending row's generated_at; if too recent we throttle.
+    // (Pending rows are now handled by the short-circuit above, so the
+    // cooldown only matters when the queue is empty AND the user clicks
+    // again right after their previous on-demand generation.)
     if (!viaCron) {
       const { data: recent } = await supabase
         .from('project_ideas')
         .select('generated_at')
         .eq('user_id', userId)
-        .eq('status', 'pending')
         .order('generated_at', { ascending: false })
         .limit(1)
         .maybeSingle()
@@ -1496,7 +1521,7 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
           return res.status(429).json({
             error: 'cooldown',
             retry_after_ms: GENERATION_COOLDOWN_MS - ageMs,
-            message: 'A fresh batch was just generated — try again in a minute.',
+            message: 'Just generated — try again in a minute.',
           })
         }
       }
@@ -1519,11 +1544,14 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
 
     const tLlmStart = Date.now()
     const { generateProjectIdeas } = await import('./_lib/project-ideas/generator.js')
-    // Manual user-triggered runs ask for "force" — if the strict frame
-    // returns nothing, fall back to a permissive single-idea prompt so
-    // the user who clicked the button is never left with silence. The
-    // cron path stays strict; cron is allowed to return empty.
-    const result = await generateProjectIdeas(gathered, { force: !viaCron })
+    // User-triggered runs go through the FAST path: crossover-only on
+    // Flash-Lite, ~5–10s. The cron path keeps the full pipeline (Read +
+    // crossover, full Flash) — cron pre-bakes the wow ideas that user
+    // clicks unlock instantly via the queue short-circuit above.
+    const result = await generateProjectIdeas(gathered, {
+      force: !viaCron,
+      fast: !viaCron,
+    })
     console.log(`[generate-project-ideas] generation finished in ${Date.now() - tLlmStart}ms: ${result.ideas.length} ideas, reason=${result.reason ?? 'ok'}`)
 
     if (!result.ideas.length) {

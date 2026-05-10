@@ -37,6 +37,12 @@ export interface GenerateOptions {
    *  the user explicitly asked, so silence is not an acceptable reply.
    *  The cron path stays strict and is allowed to return empty. */
   force?: boolean
+  /** fast=true is the on-demand user path: skip Read (the slow
+   *  reasoning-heavy mode), and ask Flash for ONE idea instead of three.
+   *  Stays on FLASH_CHAT for quality — the speed win is from less work,
+   *  not a smaller model. Lands in ~10s instead of ~30s. Cron keeps the
+   *  full pipeline because cron has no user waiting. */
+  fast?: boolean
 }
 
 export async function generateProjectIdeas(
@@ -50,6 +56,26 @@ export async function generateProjectIdeas(
 
   const seeds = pickSeedPairs(gathered, { count: 3 })
   console.log(`[project-ideas] seed picker chose ${seeds.length} pair(s)${seeds.length ? `: ${seeds.map(s => `${s.centre.kind}#${s.centre.id.slice(0, 8)}×${s.arrival.kind}#${s.arrival.id.slice(0, 8)} (score=${s.score.toFixed(2)}, overlap=${s.topical_overlap.toFixed(2)})`).join('; ')}` : ''}`)
+
+  if (opts.fast) {
+    // Fast path — user is waiting. One mode (crossover), one idea (top
+    // seed only, not all three). Same model (Flash) for quality; the
+    // speed win is doing less work. The cron-baked queue still has the
+    // full Read + 3-pair output in it; this is the empty-queue fallback.
+    console.log('[project-ideas] fast path: crossover-only, top seed only')
+    const topSeed = seeds.slice(0, 1)
+    const ideas = topSeed.length > 0
+      ? await runLockedPairs(gathered, topSeed, { fast: true })
+      : []
+    if (ideas.length > 0) {
+      return { ideas: ideas.map(i => ({ ...i, mode: 'crossover' as const })), attempts: 1 }
+    }
+    if (opts.force) {
+      const fallback = await runPermissive(gathered, { fast: true })
+      if (fallback.length > 0) return { ideas: fallback, attempts: 2 }
+    }
+    return { ideas: [], reason: 'parse_failure', attempts: opts.force ? 2 : 1 }
+  }
 
   // Read and crossover run in parallel — the wow shape and the convergence
   // shape compete for the hero slot. Read returns 0 or 1; crossover returns
@@ -84,16 +110,18 @@ function mergeIdeas(readIdeas: ProjectIdea[], crossoverIdeas: ProjectIdea[]): Pr
   return out.map((idea, i) => ({ ...idea, rank: i + 1 }))
 }
 
-async function runLockedPairs(gathered: GatherResult, seeds: SeedCandidate[]): Promise<ProjectIdea[]> {
+async function runLockedPairs(gathered: GatherResult, seeds: SeedCandidate[], opts: { fast?: boolean } = {}): Promise<ProjectIdea[]> {
   const prompt = buildLockedPrompt(gathered, seeds)
-  console.log(`[project-ideas] locked-pairs prompt: ${prompt.length} chars; pairs=${seeds.length}`)
+  console.log(`[project-ideas] locked-pairs prompt: ${prompt.length} chars; pairs=${seeds.length}; fast=${!!opts.fast}`)
 
   const t0 = Date.now()
   let raw: string
   try {
     raw = await generateText(prompt, {
       model: MODELS.FLASH_CHAT,
-      maxTokens: 16000,
+      // Fast path asks for one slot only, so output is ~1/3 the length
+      // and Flash returns much sooner. maxTokens shrinks accordingly.
+      maxTokens: opts.fast ? 5000 : 16000,
       temperature: 0.85,
       responseFormat: 'json',
     })
@@ -115,16 +143,16 @@ async function runLockedPairs(gathered: GatherResult, seeds: SeedCandidate[]): P
   return ideas
 }
 
-async function runPermissive(gathered: GatherResult): Promise<ProjectIdea[]> {
+async function runPermissive(gathered: GatherResult, opts: { fast?: boolean } = {}): Promise<ProjectIdea[]> {
   const prompt = buildPermissivePrompt(gathered)
-  console.log(`[project-ideas] permissive prompt: ${prompt.length} chars`)
+  console.log(`[project-ideas] permissive prompt: ${prompt.length} chars; fast=${!!opts.fast}`)
 
   const t0 = Date.now()
   let raw: string
   try {
     raw = await generateText(prompt, {
       model: MODELS.FLASH_CHAT,
-      maxTokens: 8000,
+      maxTokens: opts.fast ? 3500 : 8000,
       temperature: 0.85,
       responseFormat: 'json',
     })
