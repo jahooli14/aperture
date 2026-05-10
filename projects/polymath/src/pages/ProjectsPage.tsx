@@ -52,12 +52,8 @@ function CompletedProjectsTimeline({ projects, onNavigate }: { projects: Project
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 pb-32">
       <div className="mb-8">
-        <p className="text-[10px] font-black uppercase tracking-[0.3em]" style={{ color: 'var(--brand-text-secondary)' }}>
-          {sorted.length} project{sorted.length !== 1 ? 's' : ''} finished
-        </p>
-        <h2 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
-          What you've <span className="text-[rgb(var(--color-accent-light-rgb))]">built</span>
-        </h2>
+        <h2 className="page-hero-sm">What you’ve built.</h2>
+        <div className="page-eyebrow">{sorted.length} finished</div>
       </div>
 
       <div className="relative">
@@ -275,13 +271,14 @@ function ProjectsPageInner() {
                   <ArrowLeft className="h-5 w-5" />
                 </button>
               )}
-              <h1 className="text-[2rem] sm:text-4xl leading-[0.95] font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] break-words">
-                {showCompleted ? (
-                  <>what you've <span className="text-brand-primary">built</span></>
-                ) : (
-                  <>your <span className="text-brand-primary">projects</span></>
-                )}
-              </h1>
+              <div className="min-w-0">
+                <h1 className="page-hero break-words">
+                  {showCompleted ? 'What you’ve built.' : 'Your projects.'}
+                </h1>
+                <div className="page-eyebrow">
+                  {showCompleted ? 'Archive' : 'In progress'}
+                </div>
+              </div>
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
               {!showCompleted && (

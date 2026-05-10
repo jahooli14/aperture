@@ -1,7 +1,32 @@
 /**
  * Unified Aperture Modern Theme
  * Bridges the gap between Premium Dark (Glassy/Deep) and Zebra (Bold/High Contrast)
- */
+ *
+ * ─── Design rules (codified) ─────────────────────────────────────────
+ *
+ * 1. CYAN-ONLY CHROME. The brand is cyan (--brand-primary). Every UI
+ *    surface (cards, borders, buttons, glows, dividers) uses cyan or
+ *    neutral white. The ONE exception is The Moment hero card on the
+ *    home page, which uses mode-specific accents (amber / slate /
+ *    violet / cyan) per mode. Don't sprinkle violet, gold, pink, etc.
+ *    elsewhere — it dilutes the hero.
+ *
+ * 2. EDITORIAL TYPE PAIR. Two fonts, two jobs:
+ *      • --brand-font-serif (Playfair) for CONTENT — titles, body
+ *        copy, quotes, project pitches, memories, reading.
+ *      • --brand-font-header / --brand-font-body (Outfit / Inter) for
+ *        UI CHROME — section headers, buttons, chips, metadata.
+ *    Don't use serif for buttons or sans for body content.
+ *
+ * 3. ONE MOTION CONFIG. All framer-motion usages should pull from
+ *    src/lib/motion.ts (spring.gentle / spring.snap / ease.editorial).
+ *    Custom transitions create incoherence.
+ *
+ * 4. THE MOMENT OWNS THE LOUD. Supporting cards stay quiet so the
+ *    hero card on home reads as the headline. Everywhere else: refined
+ *    glass, hairline rules, restrained type.
+ *
+ * ──────────────────────────────────────────────────────────────────── */
 
 :root {
     /* Brand Core */

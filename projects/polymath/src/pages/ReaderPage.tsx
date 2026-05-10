@@ -6,8 +6,7 @@
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, ExternalLink, Archive, Loader2, Highlighter, Clock, Type, Wifi, WifiOff, Mic, X } from 'lucide-react'
-import { format } from 'date-fns'
+import { ArrowLeft, ExternalLink, Archive, Loader2, Highlighter, Clock, Type, Mic, X } from 'lucide-react'
 import DOMPurify from 'dompurify'
 import { useReadingStore } from '../stores/useReadingStore'
 import { useArticle } from '../hooks/useArticle'
@@ -17,9 +16,8 @@ import { useOfflineArticle } from '../hooks/useOfflineArticle'
 import { useReadingProgress } from '../hooks/useReadingProgress'
 import { ArticleCompletionDialog } from '../components/reading/ArticleCompletionDialog'
 import { VoiceInput } from '../components/VoiceInput'
-import { useContextEngineStore } from '../stores/useContextEngineStore'
-import { ItemInsightStrip } from '../components/ItemInsightStrip'
-import { supabase } from '../lib/supabase'
+import { DateRule } from '../components/ui/DateRule'
+import { spring, ease } from '../lib/motion'
 
 export function ReaderPage() {
   const { id } = useParams<{ id: string }>()
@@ -47,7 +45,6 @@ export function ReaderPage() {
   const { addToast } = useToast()
   const { caching, downloadForOffline, isCached, getCachedImages } = useOfflineArticle()
   const { progress, restoreProgress } = useReadingProgress(id || '')
-  const { setContext, clearContext } = useContextEngineStore()
 
   const [selectedText, setSelectedText] = useState('')
   const [showHighlightMenu, setShowHighlightMenu] = useState(false)
@@ -104,9 +101,6 @@ export function ReaderPage() {
   useEffect(() => {
     if (!id) return
     checkOfflineStatus()
-    return () => {
-      clearContext()
-    }
   }, [id])
 
   // Clean up blob URLs to prevent memory leaks
@@ -118,12 +112,6 @@ export function ReaderPage() {
       })
     }
   }, [cachedImageUrls])
-
-  useEffect(() => {
-    if (article) {
-      setContext('article', article.id, article.title ?? undefined, { url: article.url })
-    }
-  }, [article, setContext])
 
   // Handle polling for unprocessed articles
   useEffect(() => {
@@ -336,20 +324,23 @@ export function ReaderPage() {
     }
   }
 
+  // Reading sizes — leaning Dia / Day One. Serif body, generous leading.
+  // Compact for dense / journalistic, comfortable default, spacious for
+  // long-form essays.
   const fontSizeSettings = {
     compact: {
-      article: 'text-[17px] leading-[1.65]',
-      title: 'text-3xl sm:text-4xl',
+      article: 'text-[17px] leading-[1.7]',
+      title: 'text-[32px] sm:text-[38px]',
       meta: 'text-sm'
     },
     comfortable: {
-      article: 'text-[19px] leading-[1.75]',
-      title: 'text-4xl sm:text-5xl',
+      article: 'text-[19px] leading-[1.8]',
+      title: 'text-[38px] sm:text-[46px]',
       meta: 'text-sm'
     },
     spacious: {
-      article: 'text-[21px] leading-[1.85]',
-      title: 'text-5xl sm:text-6xl',
+      article: 'text-[21px] leading-[1.9]',
+      title: 'text-[44px] sm:text-[54px]',
       meta: 'text-base'
     }
   }
@@ -418,239 +409,262 @@ export function ReaderPage() {
   const settings = fontSizeSettings[fontSize]
 
   return (
-    <div className="min-h-screen bg-[#0a0a0b] text-[#e1e1e3] selection:bg-brand-primary/30 selection:text-brand-primary relative overflow-x-hidden">
-      {/* Subtle Stylish Character: Background Glows */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <motion.div
-          animate={{
-            x: [0, 40, 0],
-            y: [0, -30, 0],
-            scale: [1, 1.1, 1],
-            opacity: [0.15, 0.25, 0.15]
-          }}
-          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] rounded-full"
-          style={{
-            background: 'radial-gradient(circle, rgba(var(--brand-primary-rgb), 0.15) 0%, rgba(var(--brand-primary-rgb), 0) 70%)',
-            filter: 'blur(100px)',
-          }}
-        />
-        <motion.div
-          animate={{
-            x: [0, -50, 0],
-            y: [0, 60, 0],
-            scale: [1, 1.2, 1],
-            opacity: [0.1, 0.2, 0.1]
-          }}
-          transition={{ duration: 20, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-          className="absolute top-[20%] -right-[15%] w-[80vw] h-[80vw] rounded-full"
-          style={{
-            background: 'radial-gradient(circle, rgba(var(--brand-primary-rgb), 0.1) 0%, rgba(var(--brand-primary-rgb), 0) 70%)',
-            filter: 'blur(120px)',
-          }}
-        />
-        <motion.div
-          animate={{
-            x: [0, 30, 0],
-            y: [0, 20, 0],
-            scale: [0.8, 1, 0.8],
-            opacity: [0.05, 0.15, 0.05]
-          }}
-          transition={{ duration: 18, repeat: Infinity, ease: "easeInOut", delay: 5 }}
-          className="absolute bottom-[-10%] left-[20%] w-[60vw] h-[60vw] rounded-full"
-          style={{
-            background: 'radial-gradient(circle, rgba(var(--brand-primary-rgb), 0.08) 0%, rgba(var(--brand-primary-rgb), 0) 70%)',
-            filter: 'blur(80px)',
-          }}
-        />
-      </div>
+    <div
+      className="min-h-screen relative overflow-x-hidden"
+      style={{
+        background: '#0b1018',
+        color: '#e1e1e3',
+      }}
+    >
+      {/* Single, calm wash. Reading is sacred — no parallax orbs. */}
+      <div
+        className="fixed inset-0 pointer-events-none z-0"
+        style={{
+          background:
+            'radial-gradient(ellipse 80% 40% at 50% 0%, rgba(var(--brand-primary-rgb), 0.06), transparent 70%)',
+        }}
+      />
 
       <div className="relative z-10">
         <style>{`
         .reader-content {
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-          color: #d1d1d6;
+          font-family: var(--brand-font-serif);
+          color: rgba(245, 245, 247, 0.92);
+          font-weight: 400;
+          letter-spacing: -0.003em;
         }
         .reader-content h1, .reader-content h2, .reader-content h3 {
-          color: #f2f2f7;
-          font-weight: 700;
+          color: #f5f5f7;
+          font-family: var(--brand-font-serif);
+          font-weight: 600;
           margin-top: 2.5rem;
-          margin-bottom: 1.25rem;
-          line-height: 1.3;
+          margin-bottom: 1.1rem;
+          line-height: 1.25;
+          letter-spacing: -0.018em;
         }
+        .reader-content h2 { font-size: 1.5em; }
+        .reader-content h3 { font-size: 1.2em; }
         .reader-content p {
-          margin-bottom: 1.5rem;
+          margin-bottom: 1.4rem;
         }
         .reader-content blockquote {
-          border-left: 3px solid rgb(var(--brand-primary-rgb));
-          padding: 0.5rem 0 0.5rem 1.5rem;
+          border-left: 2px solid rgba(var(--brand-primary-rgb), 0.6);
+          padding: 0.4rem 0 0.4rem 1.4rem;
           margin: 2rem 0;
           font-style: italic;
-          color: #a1a1aa;
-          background: rgba(var(--brand-primary-rgb), 0.05);
-          border-radius: 0 0.5rem 0.5rem 0;
+          color: rgba(255, 255, 255, 0.7);
+          font-family: var(--brand-font-serif);
         }
         .reader-content pre {
-          background: #161618;
-          padding: 1.5rem;
+          background: rgba(255, 255, 255, 0.04);
+          padding: 1.25rem;
           border-radius: 0.75rem;
           overflow-x: auto;
-          margin: 2rem 0;
-          border: 1px solid var(--glass-surface);
+          margin: 1.75rem 0;
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
         }
         .reader-content code {
-          font-family: 'JetBrains Mono', monospace;
-          font-size: 0.9em;
-          background: var(--glass-surface);
-          padding: 0.2rem 0.4rem;
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 0.88em;
+          background: rgba(255, 255, 255, 0.05);
+          padding: 0.15rem 0.4rem;
           border-radius: 0.25rem;
         }
+        .reader-content pre code { background: transparent; padding: 0; }
         .reader-content img {
-          border-radius: 1rem;
-          margin: 3rem auto;
-          box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+          border-radius: 0.5rem;
+          margin: 2.25rem auto;
+          box-shadow: 0 12px 28px -10px rgba(0,0,0,0.6);
+          max-width: 100%;
         }
         .reader-content a {
           color: rgb(var(--brand-primary-rgb));
           text-decoration: underline;
+          text-decoration-thickness: 1px;
           text-underline-offset: 4px;
-          transition: color 0.2s;
+          transition: opacity 0.2s;
         }
-        .reader-content a:hover {
-          color: rgb(var(--color-accent-light-rgb));
-        }
+        .reader-content a:hover { opacity: 0.7; }
         .reader-content ul, .reader-content ol {
-          margin: 1.5rem 0;
-          padding-left: 1.5rem;
+          margin: 1.4rem 0;
+          padding-left: 1.4rem;
         }
-        .reader-content li {
-          margin-bottom: 0.75rem;
+        .reader-content li { margin-bottom: 0.55rem; }
+        .reader-content hr {
+          border: none;
+          height: 1px;
+          background: rgba(255, 255, 255, 0.08);
+          margin: 2.5rem auto;
+          width: 30%;
         }
       `}</style>
 
-        {/* Premium Sticky Toolbar */}
+        {/* Soft sticky toolbar — Dia-leaning. Refined glass, no heavy shadow. */}
         <motion.nav
-          initial={{ y: -100 }}
-          animate={{ y: hideUI ? -100 : 0 }}
-          className="fixed top-0 left-0 right-0 z-50 px-4 py-3"
+          initial={{ y: -80 }}
+          animate={{ y: hideUI ? -80 : 0 }}
+          transition={spring.gentle}
+          className="fixed top-0 left-0 right-0 z-50 px-4 pt-3"
         >
-          <div className="max-w-3xl mx-auto flex items-center justify-between px-4 py-2 bg-[#1c1c1e]/80 backdrop-blur-xl border border-[var(--glass-surface)] rounded-2xl shadow-2xl">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate(-1)}
-                className="p-2 hover:bg-[var(--glass-surface)] rounded-xl transition-colors"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </button>
-              <div className="h-4 w-px bg-[rgba(255,255,255,0.1)]" />
-              <div className="flex items-center gap-2 text-xs font-medium text-brand-text-muted">
-                {isOfflineCached ? (
-                  <span className="flex items-center gap-1 text-brand-text-secondary">
-                    <Wifi className="h-3 w-3" /> Available Offline
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1">
-                    <Loader2 className="h-3 w-3 animate-spin" /> Syncing...
-                  </span>
-                )}
-              </div>
-            </div>
+          <div
+            className="max-w-2xl mx-auto flex items-center justify-between px-3 py-2 rounded-full"
+            style={{
+              background: 'rgba(11, 16, 24, 0.72)',
+              backdropFilter: 'blur(18px)',
+              WebkitBackdropFilter: 'blur(18px)',
+              border: '1px solid rgba(255, 255, 255, 0.06)',
+            }}
+          >
+            <button
+              onClick={() => navigate(-1)}
+              className="h-9 w-9 rounded-full flex items-center justify-center hover:bg-white/[0.04] transition-colors"
+              aria-label="Back"
+            >
+              <ArrowLeft className="h-4 w-4 opacity-80" />
+            </button>
 
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setIsHighlighterMode(!isHighlighterMode)}
-                className={`p-2 rounded-xl transition-all ${isHighlighterMode ? 'bg-brand-primary text-[var(--brand-text-primary)]' : 'hover:bg-[var(--glass-surface)] text-brand-text-muted'}`}
-                title="Highlighter Mode"
+                className="h-9 w-9 rounded-full flex items-center justify-center transition-all"
+                style={{
+                  background: isHighlighterMode ? 'rgba(var(--brand-primary-rgb), 0.18)' : 'transparent',
+                  color: isHighlighterMode ? 'rgb(var(--brand-primary-rgb))' : 'rgba(255,255,255,0.7)',
+                }}
+                title="Highlight"
               >
-                <Highlighter className="h-5 w-5" />
+                <Highlighter className="h-4 w-4" />
               </button>
 
-              <div className="flex bg-[var(--glass-surface)] rounded-xl p-1 mx-1">
+              <div className="flex items-center mx-1">
                 {(['compact', 'comfortable', 'spacious'] as const).map((size) => (
                   <button
                     key={size}
                     onClick={() => setFontSize(size)}
-                    className={`px-3 py-1 rounded-lg text-xs transition-all ${fontSize === size ? 'bg-[rgba(255,255,255,0.1)] text-[var(--brand-text-primary)] shadow-lg' : 'text-brand-text-muted hover:text-zinc-300'}`}
+                    className="h-9 w-7 rounded-full flex items-center justify-center transition-all"
+                    style={{
+                      color: fontSize === size ? 'rgb(var(--brand-primary-rgb))' : 'rgba(255,255,255,0.45)',
+                    }}
+                    aria-label={`Font ${size}`}
                   >
-                    <Type className={size === 'compact' ? 'h-3 w-3' : size === 'comfortable' ? 'h-4 w-4' : 'h-5 w-5'} />
+                    <Type className={size === 'compact' ? 'h-[11px] w-[11px]' : size === 'comfortable' ? 'h-[13px] w-[13px]' : 'h-4 w-4'} />
                   </button>
                 ))}
               </div>
 
               <button
                 onClick={handleArchive}
-                className="p-2 hover:bg-[var(--glass-surface)] rounded-xl text-brand-text-muted hover:text-[var(--brand-text-primary)] transition-colors"
+                className="h-9 w-9 rounded-full flex items-center justify-center hover:bg-white/[0.04] transition-colors"
                 title="Archive"
               >
-                <Archive className="h-5 w-5" />
+                <Archive className="h-4 w-4 opacity-70" />
               </button>
 
               <a
                 href={article.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-2 hover:bg-[var(--glass-surface)] rounded-xl text-brand-text-muted hover:text-[var(--brand-text-primary)] transition-colors"
+                className="h-9 w-9 rounded-full flex items-center justify-center hover:bg-white/[0.04] transition-colors"
+                title="Open original"
               >
-                <ExternalLink className="h-5 w-5" />
+                <ExternalLink className="h-4 w-4 opacity-70" />
               </a>
             </div>
           </div>
 
-          {/* Reading Progress Line */}
-          <div className="max-w-3xl mx-auto mt-2 h-1 bg-[var(--glass-surface)] rounded-full overflow-hidden">
+          {/* Reading Progress — single hairline */}
+          <div
+            className="max-w-2xl mx-auto mt-2 h-px overflow-hidden"
+            style={{ background: 'rgba(255,255,255,0.05)' }}
+          >
             <motion.div
-              className="h-full bg-brand-primary shadow-[0_0_10px_rgba(var(--brand-primary-rgb),0.5)]"
+              className="h-full"
+              style={{
+                background: 'linear-gradient(90deg, rgba(var(--brand-primary-rgb),0.4), rgb(var(--brand-primary-rgb)))',
+              }}
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
+              transition={ease.quick}
             />
           </div>
+
+          {/* Offline indicator — quietly tucked below */}
+          {!isOfflineCached && (
+            <div className="max-w-2xl mx-auto mt-2 flex justify-center">
+              <span className="text-[10px] uppercase tracking-[0.28em] flex items-center gap-1.5 opacity-50">
+                <Loader2 className="h-3 w-3 animate-spin" /> caching for offline
+              </span>
+            </div>
+          )}
         </motion.nav>
 
-        {/* Article Content */}
-        <main className="max-w-2xl mx-auto px-4 sm:px-6 pt-28 sm:pt-32 pb-24">
-          <header className="mb-16">
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`font-bold tracking-tight text-[#f2f2f7] mb-6 ${settings.title}`}
-              style={{ lineHeight: 1.1 }}
+        {/* Article — serif body, magazine-grade hierarchy */}
+        <main className="max-w-2xl mx-auto px-5 sm:px-6 pt-28 sm:pt-32 pb-24">
+          <motion.header
+            className="mb-14"
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={ease.editorial}
+          >
+            {/* Source masthead — small caps, hairline rule */}
+            {(article.source || article.author) && (
+              <div className="flex items-center gap-3 mb-6">
+                <span
+                  className="text-[10px] uppercase tracking-[0.32em] font-semibold"
+                  style={{ color: 'rgba(var(--brand-primary-rgb), 0.7)' }}
+                >
+                  {article.source || article.author}
+                </span>
+                <span
+                  className="h-px flex-1 max-w-24"
+                  style={{ background: 'linear-gradient(to right, rgba(var(--brand-primary-rgb), 0.45), transparent)' }}
+                  aria-hidden
+                />
+              </div>
+            )}
+
+            <h1
+              className={`mb-7 ${settings.title}`}
+              style={{
+                fontFamily: 'var(--brand-font-serif)',
+                fontWeight: 600,
+                lineHeight: 1.08,
+                letterSpacing: '-0.022em',
+                color: '#f5f5f7',
+              }}
             >
               {article.title}
-            </motion.h1>
+            </h1>
 
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className={`flex flex-wrap items-center gap-4 text-brand-text-muted ${settings.meta}`}
-            >
-              {article.author && (
-                <span className="text-zinc-300 font-medium">{article.author}</span>
-              )}
-              {article.source && <span>{article.source}</span>}
-              {article.published_date && (
-                <span>{format(new Date(article.published_date), 'MMM d, yyyy')}</span>
-              )}
-              {article.read_time_minutes && (
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3.5 w-3.5" /> {article.read_time_minutes} min read
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+              {article.author && article.source && (
+                <span className="text-[13px] italic" style={{ fontFamily: 'var(--brand-font-serif)', color: 'rgba(255,255,255,0.7)' }}>
+                  by {article.author}
                 </span>
               )}
-            </motion.div>
-          </header>
+              {article.published_date && (
+                <DateRule date={article.published_date} variant="full" ruleSide="none" />
+              )}
+              {article.read_time_minutes && (
+                <span
+                  className="text-[10px] uppercase tracking-[0.32em] font-semibold flex items-center gap-1.5"
+                  style={{ color: 'rgba(255,255,255,0.4)' }}
+                >
+                  <Clock className="h-3 w-3" /> {article.read_time_minutes} min
+                </span>
+              )}
+            </div>
+          </motion.header>
 
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
+            transition={{ duration: 0.5, delay: 0.15 }}
             className={`reader-content ${settings.article}`}
             onMouseUp={handleTextSelection}
             dangerouslySetInnerHTML={{ __html: processedContent || (article.content ? article.content : '<p class="text-brand-text-muted italic">No content available for this article. <a href="' + article.url + '" target="_blank" class="text-[var(--brand-primary)] underline">View Original</a></p>') }}
           />
-
-          <div className="mt-20 pt-12 border-t border-[var(--glass-surface)]">
-            <ItemInsightStrip title={article.title ?? ''} itemId={article.id} itemType="article" />
-          </div>
         </main>
 
         {/* Highlight Menu */}
@@ -751,13 +765,11 @@ export function ReaderPage() {
                   </div>
                   <div className="flex items-center justify-between px-8 py-8">
                     <div>
-                      <h3 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] flex items-center gap-2">
-                        <Mic className="h-6 w-6 text-brand-primary" />
-                        Capture Thought
+                      <h3 className="page-hero-sm flex items-center gap-2" style={{ fontSize: 'clamp(1.5rem, 4vw, 1.75rem)' }}>
+                        <Mic className="h-5 w-5 text-brand-primary" />
+                        Capture a thought
                       </h3>
-                      <p className="text-sm text-brand-text-muted mt-1 font-medium line-clamp-1">
-                        {article.title}
-                      </p>
+                      <p className="meta-serif mt-1 line-clamp-1">{article.title}</p>
                     </div>
                     <button
                       onClick={() => setShowVoiceNote(false)}

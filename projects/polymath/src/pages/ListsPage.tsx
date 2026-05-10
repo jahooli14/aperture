@@ -232,11 +232,9 @@ function ListsPageInner() {
     return (
         <div className="min-h-screen pb-32 pt-8 sm:pt-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto aperture-shelf overflow-hidden">
             <div className="flex items-start justify-between gap-3 mb-6 sm:mb-8">
-                <div className="flex flex-col gap-1.5 min-w-0 flex-1">
-                    <h1 className="text-[2rem] sm:text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] leading-[0.95]">
-                        your <span className="page-accent">collections</span>
-                    </h1>
-                    <p className="section-subtitle mt-1 text-sm sm:text-base">Films, books, places, and the rest.</p>
+                <div className="flex flex-col gap-1 min-w-0 flex-1">
+                    <h1 className="page-hero">Your collections.</h1>
+                    <div className="page-eyebrow">Films · books · places · &amp; the rest</div>
                 </div>
                 <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                     <button

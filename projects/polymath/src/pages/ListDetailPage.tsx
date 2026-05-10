@@ -1186,7 +1186,7 @@ function ArticleListMode({ list, navigate }: ArticleListModeProps) {
                 </div>
 
                 <div className="flex items-center justify-between mb-2">
-                    <h1 className="text-3xl font-bold text-[var(--brand-text-primary)] uppercase tracking-tight italic">{list.title}</h1>
+                    <h1 className="page-hero-sm">{list.title}</h1>
                     <button
                         onClick={() => fetchArticles(undefined, true)}
                         className="h-9 w-9 rounded-full flex items-center justify-center transition-all text-brand-text-muted hover:text-[var(--brand-text-primary)]"
@@ -1599,7 +1599,7 @@ export default function ListDetailPage() {
                 </div>
 
                 <div className="flex items-start justify-between gap-3">
-                    <h1 className="text-[1.75rem] sm:text-3xl font-bold text-[var(--brand-text-primary)] mb-1 uppercase tracking-tight italic leading-[1] flex-1 min-w-0 break-words">{list.title}</h1>
+                    <h1 className="page-hero-sm mb-1 flex-1 min-w-0 break-words">{list.title}</h1>
                     <div className="flex items-center gap-1.5 flex-shrink-0">
                         {/* Sort picker */}
                         <div className="relative">

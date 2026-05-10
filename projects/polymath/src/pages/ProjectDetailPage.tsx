@@ -47,9 +47,18 @@ function BlockerField({ blocker, onSave }: { blocker?: string; onSave: (text: st
     try { await onSave(text) } finally { setSaving(false); setEditing(false) }
   }
 
+  // Post-it: shared styling lives in design-tokens.css (.post-it).
   return (
-    <div className="p-4 sm:p-5 rounded-2xl" style={{ background: 'rgba(245,158,11,0.04)', border: '1px solid rgba(245,158,11,0.14)' }}>
-      <span className="text-[11px] font-medium tracking-wide block mb-2 lowercase" style={{ color: 'rgba(245,158,11,0.7)' }}>
+    <div className="post-it">
+      <span
+        className="block mb-2 italic"
+        style={{
+          fontFamily: 'var(--brand-font-serif)',
+          fontSize: '11px',
+          color: 'rgba(252,211,77,0.75)',
+          letterSpacing: '0.02em',
+        }}
+      >
         what's in the way?
       </span>
       {editing ? (
@@ -58,8 +67,15 @@ function BlockerField({ blocker, onSave }: { blocker?: string; onSave: (text: st
             autoFocus
             value={text}
             onChange={e => setText(e.target.value)}
-            placeholder="One sentence — what's blocking this?"
-            className="w-full bg-black/30 rounded-xl p-3 text-[14px] resize-none focus:outline-none text-[var(--brand-text-primary)] border border-white/[0.08] focus:border-white/[0.15]"
+            placeholder="One sentence."
+            className="w-full bg-black/20 rounded-xl p-3 resize-none focus:outline-none border"
+            style={{
+              fontFamily: 'var(--brand-font-serif)',
+              fontSize: '15px',
+              lineHeight: 1.55,
+              color: 'var(--brand-text-primary)',
+              borderColor: 'rgba(252,211,77,0.18)',
+            }}
             rows={2}
             onKeyDown={e => {
               if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSave() }
@@ -67,16 +83,34 @@ function BlockerField({ blocker, onSave }: { blocker?: string; onSave: (text: st
             }}
           />
           <div className="flex gap-2 justify-end">
-            <button onClick={() => { setText(blocker ?? ''); setEditing(false) }} className="px-3 py-1.5 text-[11px] font-medium rounded-lg hover:bg-white/[0.05] transition-colors" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>Cancel</button>
-            <button onClick={handleSave} disabled={saving} className="px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all" style={{ background: 'rgba(245,158,11,0.12)', color: 'rgba(245,158,11,0.9)' }}>
+            <button
+              onClick={() => { setText(blocker ?? ''); setEditing(false) }}
+              className="px-3 py-1.5 text-[11px] rounded-full hover:bg-white/[0.05] transition-colors italic"
+              style={{ fontFamily: 'var(--brand-font-serif)', color: 'var(--brand-text-secondary)', opacity: 0.6 }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-3.5 py-1.5 text-[11px] font-medium rounded-full transition-all"
+              style={{ background: 'rgba(252,211,77,0.16)', color: 'rgba(252,211,77,0.95)', border: '1px solid rgba(252,211,77,0.3)' }}
+            >
               {saving ? 'Saving…' : 'Save'}
             </button>
           </div>
         </div>
       ) : (
         <p
-          className="text-[14px] leading-relaxed cursor-pointer hover:opacity-80 transition-opacity"
-          style={{ color: 'var(--brand-text-primary)', opacity: blocker ? 0.7 : 0.3 }}
+          className="cursor-pointer hover:opacity-95 transition-opacity"
+          style={{
+            fontFamily: 'var(--brand-font-serif)',
+            fontStyle: blocker ? 'normal' : 'italic',
+            fontSize: '15.5px',
+            lineHeight: 1.55,
+            color: 'var(--brand-text-primary)',
+            opacity: blocker ? 0.92 : 0.45,
+          }}
           onClick={() => setEditing(true)}
         >
           {blocker || 'Tap if something paused this.'}
@@ -689,10 +723,16 @@ export function ProjectDetailPage() {
 
         <LineageBreadcrumb project={project} />
 
-        {/* Title */}
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--brand-text-primary)] leading-[0.95] mb-4">
-          {project.title}
-        </h1>
+        {/* Day One-style project hero — chapter-cover, not CRM record */}
+        <h1 className="page-hero mb-4">{project.title}</h1>
+        <div
+          aria-hidden
+          className="h-[2px] w-12 mb-6 rounded-full"
+          style={{
+            background: `linear-gradient(to right, rgb(var(--brand-primary-rgb)), rgba(var(--brand-primary-rgb), 0.15))`,
+            boxShadow: `0 0 12px rgba(var(--brand-primary-rgb), 0.35)`,
+          }}
+        />
 
         {/* Meta row — status + type as inline chips */}
         <div className="flex flex-wrap items-center gap-2 mb-8 relative">

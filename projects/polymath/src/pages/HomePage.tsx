@@ -31,6 +31,7 @@ import { ThoughtOfTheDay } from '../components/home/ThoughtOfTheDay'
 import { BedtimeFloatingIcon } from '../components/home/BedtimeFloatingIcon'
 import { ProjectIdeasHome } from '../components/home/ProjectIdeasHome'
 import { UnauthHome } from '../components/onboarding/UnauthHome'
+import { ease, stagger } from '../lib/motion'
 import { AlertCircle, ArrowRight, Film, Music, Monitor, Book, MapPin, Gamepad2, Calendar, FileText, Quote, Box } from 'lucide-react'
 
 const LIST_TYPE_ICONS: Record<string, React.ElementType> = {
@@ -200,11 +201,12 @@ export function HomePage() {
   }
 
   // Stagger sections in as the page mounts so the home doesn't snap into
-  // existence — gives a small sense of the surface assembling itself.
-  const stackTransition = (delay: number) => ({
+  // existence. Uses the shared editorial ease so every page entrance
+  // feels like the same hand dealt them.
+  const stackTransition = (i: number) => ({
     initial: { opacity: 0, y: 14 },
     animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] as const, delay },
+    transition: { ...ease.editorial, delay: 0.04 + i * stagger.list },
   })
 
   return (
@@ -219,27 +221,27 @@ export function HomePage() {
       <div className="min-h-screen pb-24 pt-6 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-          <motion.div {...stackTransition(0.02)}>
+          <motion.div {...stackTransition(0)}>
             <YourHourHeader />
           </motion.div>
 
           {/* The Moment — single hero card, the headline of the home flow */}
-          <motion.div className="mb-10" {...stackTransition(0.08)}>
+          <motion.div className="mb-10" {...stackTransition(1)}>
             <ProjectIdeasHome />
           </motion.div>
 
           {/* Keep Going — focus mode for active projects */}
-          <motion.div className="mb-10" {...stackTransition(0.16)}>
+          <motion.div className="mb-10" {...stackTransition(2)}>
             <KeepGoingCarousel />
           </motion.div>
 
           {/* What you're consuming */}
-          <motion.div {...stackTransition(0.22)}>
+          <motion.div {...stackTransition(3)}>
             <NowConsumingWidget />
           </motion.div>
 
           {/* Thought of the day */}
-          <motion.div {...stackTransition(0.28)}>
+          <motion.div {...stackTransition(4)}>
             <ThoughtOfTheDay />
           </motion.div>
 

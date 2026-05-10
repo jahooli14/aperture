@@ -179,8 +179,11 @@ export function SettingsPage() {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <h1 className="text-[1.75rem] sm:text-4xl leading-[0.95] font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)] truncate">
-              your <span className="page-accent">settings</span>
+            <h1
+              className="page-hero-sm truncate"
+              style={{ fontSize: 'clamp(1.5rem, 4.5vw, 1.875rem)' }}
+            >
+              Settings.
             </h1>
           </div>
           <button

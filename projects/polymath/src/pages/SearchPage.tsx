@@ -309,26 +309,20 @@ export function SearchPage() {
       {/* Subtle Background Effect */}
       <SubtleBackground />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-6">
-          <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
-            your <span className="page-accent">stuff</span>
-          </h1>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mt-1">Search memories, projects, and articles.</p>
-        </div>
-
+        {/* Dia-leaning search — single big soft input, page is mostly air */}
         <div className="min-h-screen pb-24">
-          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-16 sm:pt-24">
 
-          {/* Search Input */}
-          <div className="p-3 sm:p-4 rounded-2xl mb-6 relative overflow-hidden premium-glass shadow-2xl" style={{
-            background: 'var(--brand-glass-bg)',
-            border: '1px solid var(--glass-surface-hover)',
-          }}>
-            <form onSubmit={handleTextSearch} className="flex gap-2">
+            <h1 className="page-hero-sm text-center mb-2">What are you looking for?</h1>
+            <p className="meta-serif text-center mb-10">
+              Memories, projects, articles — anything you've kept.
+            </p>
+
+            <form onSubmit={handleTextSearch} className="flex gap-2 mb-6">
               <div className="flex-1 relative">
                 <Search
-                  className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5"
-                  style={{ color: "var(--brand-primary)" }}
+                  className="absolute left-5 top-1/2 transform -translate-y-1/2 h-5 w-5 opacity-60"
+                  style={{ color: 'rgb(var(--brand-primary-rgb))' }}
                 />
                 <input
                   type="text"
@@ -336,24 +330,19 @@ export function SearchPage() {
                   onChange={handleQueryChange}
                   onFocus={(e) => { setSearchFocused(true); handleInputFocus(e) }}
                   onBlur={() => setSearchFocused(false)}
-                  placeholder="Search everything..."
-                  className="w-full h-12 pl-12 pr-4 rounded-lg border-2 text-base focus:outline-none transition-all duration-200"
-                  style={{
-                    background: 'var(--glass-surface)',
-                    borderColor: searchFocused ? 'rgba(var(--brand-primary-rgb), 0.6)' : 'rgba(var(--brand-primary-rgb), 0.4)',
-                    color: 'var(--brand-text-primary)',
-                  }}
+                  placeholder="Search…"
+                  className="soft-input soft-input-lg pl-14 pr-5 h-14"
                 />
               </div>
-              {/* Voice search button */}
+              {/* Voice search button — quiet round affordance */}
               <button
                 type="button"
                 onClick={() => setShowVoiceSearch(v => !v)}
-                className="h-12 w-12 flex-shrink-0 rounded-lg flex items-center justify-center transition-all active:scale-95"
+                className="h-14 w-14 flex-shrink-0 rounded-2xl flex items-center justify-center transition-all active:scale-95"
                 style={{
-                  background: showVoiceSearch ? 'rgba(var(--brand-primary-rgb),0.2)' : 'var(--glass-surface)',
-                  border: `1px solid ${showVoiceSearch ? 'rgba(var(--brand-primary-rgb),0.4)' : 'rgba(var(--brand-primary-rgb),0.2)'}`,
-                  color: showVoiceSearch ? 'var(--brand-primary)' : 'var(--brand-text-muted)',
+                  background: showVoiceSearch ? 'rgba(var(--brand-primary-rgb),0.14)' : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${showVoiceSearch ? 'rgba(var(--brand-primary-rgb),0.4)' : 'rgba(255,255,255,0.06)'}`,
+                  color: showVoiceSearch ? 'rgb(var(--brand-primary-rgb))' : 'var(--brand-text-muted)',
                 }}
                 aria-label="Voice search"
               >
@@ -399,7 +388,6 @@ export function SearchPage() {
                 Smart
               </button>
             </div>
-          </div>
 
           {/* Results */}
           {loading && (

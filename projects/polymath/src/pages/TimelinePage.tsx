@@ -109,12 +109,8 @@ export function TimelinePage() {
       <SubtleBackground />
       {/* Header */}
       <div className="max-w-6xl mx-auto px-4 mb-8 sm:mb-12">
-        <div>
-          <h1 className="text-[2rem] sm:text-4xl leading-[0.95] font-black italic uppercase tracking-tighter text-[var(--brand-text-primary)]">
-            your <span className="page-accent">timeline</span>
-          </h1>
-          <p className="section-subtitle mt-1.5 text-sm sm:text-base">When you do your best thinking</p>
-        </div>
+        <h1 className="page-hero">Your timeline.</h1>
+        <div className="page-eyebrow">When you do your best thinking</div>
       </div>
 
       <div className="max-w-6xl mx-auto px-4 space-y-6 pb-24">

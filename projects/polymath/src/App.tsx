@@ -28,6 +28,7 @@ import { dataSynchronizer } from './lib/sync/DataSynchronizer'
 import { useOfflineStore } from './stores/useOfflineStore'
 import './App.css'
 import './styles/theme.css'
+import './styles/design-tokens.css'
 import { lazyRetry } from './lib/lazyRetry'
 
 // Lazy load pages with retry logic for chunk loading failures after deployments
