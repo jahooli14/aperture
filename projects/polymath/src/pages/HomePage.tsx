@@ -39,6 +39,22 @@ const LIST_TYPE_ICONS: Record<string, React.ElementType> = {
   software: Monitor, generic: Box,
 }
 
+// Per-list-type accent colour (rgb triple) — paints the icon halo so the
+// strip reads as a constellation of distinct items, not a uniform list.
+const LIST_TYPE_ACCENT: Record<string, string> = {
+  film: '236, 72, 153',     // pink
+  music: '239, 68, 68',     // red
+  tech: '59, 130, 246',     // blue
+  book: '252, 211, 77',     // amber
+  place: '16, 185, 129',    // emerald
+  game: '167, 139, 250',    // violet
+  event: '56, 189, 248',    // cyan
+  quote: '156, 163, 175',   // slate
+  article: '6, 182, 212',   // teal
+  software: '59, 130, 246', // blue
+  generic: '156, 163, 175', // slate
+}
+
 function NowConsumingWidget() {
   const [activeItems, setActiveItems] = useState<{ listId: string; listTitle: string; listType: string; itemId: string; itemContent: string }[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -67,25 +83,62 @@ function NowConsumingWidget() {
   const shown = activeItems.slice(0, 4)
 
   return (
-    <section className="pb-6">
+    <section className="pb-8">
       <h2 className="section-header">what you're <span>consuming</span></h2>
-      <div className="flex flex-col gap-1 p-3 rounded-2xl neon-card">
-        {shown.map((item) => {
+      <div
+        className="relative flex flex-col gap-1 p-3 rounded-2xl overflow-hidden"
+        style={{
+          background: 'linear-gradient(135deg, rgba(255,255,255,0.04), rgba(15,24,41,0.5))',
+          backdropFilter: 'blur(14px)',
+          border: '1px solid rgba(var(--brand-primary-rgb),0.16)',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.25), 0 0 32px rgba(var(--brand-primary-rgb),0.06), inset 0 1px 0 rgba(255,255,255,0.04)',
+        }}
+      >
+        <div
+          aria-hidden
+          className="absolute top-0 left-0 right-0 h-px"
+          style={{ background: 'linear-gradient(90deg, transparent, rgba(var(--brand-primary-rgb),0.5), transparent)' }}
+        />
+        {shown.map((item, i) => {
           const Icon = LIST_TYPE_ICONS[item.listType] || Box
+          const accent = LIST_TYPE_ACCENT[item.listType] || LIST_TYPE_ACCENT.generic
           return (
             <Link
               key={item.itemId}
               to={`/lists/${item.listId}`}
-              className="flex items-center gap-3 p-3 rounded-xl transition-all hover:bg-[rgba(245,158,11,0.06)] min-h-[56px]"
+              className="group relative flex items-center gap-3 p-3 rounded-xl transition-all min-h-[58px] overflow-hidden"
+              style={{
+                animation: `pageEnter 0.45s cubic-bezier(0.4,0,0.2,1) ${i * 60}ms both`,
+              }}
             >
-              <div className="h-9 w-9 rounded-lg flex items-center justify-center bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] flex-shrink-0">
-                <Icon className="h-4 w-4 text-[var(--brand-primary)]" />
+              {/* Hover wash, scoped to this row, tinted by item type */}
+              <span
+                aria-hidden
+                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl"
+                style={{
+                  background: `linear-gradient(90deg, rgba(${accent}, 0.10), rgba(${accent}, 0.02) 70%, transparent)`,
+                }}
+              />
+              <div
+                className="relative h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105"
+                style={{
+                  background: `linear-gradient(135deg, rgba(${accent},0.18), rgba(${accent},0.04))`,
+                  border: `1px solid rgba(${accent}, 0.3)`,
+                  boxShadow: `0 0 16px -6px rgba(${accent}, 0.5), inset 0 1px 0 rgba(255,255,255,0.06)`,
+                }}
+              >
+                <Icon className="h-4 w-4" style={{ color: `rgb(${accent})` }} />
               </div>
-              <div className="flex-1 min-w-0">
+              <div className="relative flex-1 min-w-0">
                 <p className="text-sm font-medium text-[var(--brand-text-primary)] truncate">{item.itemContent}</p>
-                <p className="text-xs text-[var(--brand-text-muted)] truncate">{item.listTitle}</p>
+                <p
+                  className="text-[11px] truncate uppercase tracking-[0.18em] mt-0.5"
+                  style={{ color: `rgba(${accent}, 0.75)` }}
+                >
+                  {item.listTitle}
+                </p>
               </div>
-              <ArrowRight className="h-4 w-4 text-[var(--brand-text-muted)] flex-shrink-0" />
+              <ArrowRight className="relative h-4 w-4 text-[var(--brand-text-muted)] flex-shrink-0 transition-transform group-hover:translate-x-0.5" />
             </Link>
           )
         })}
@@ -154,35 +207,49 @@ export function HomePage() {
     )
   }
 
+  // Stagger sections in as the page mounts so the home doesn't snap into
+  // existence — gives a small sense of the surface assembling itself.
+  const stackTransition = (delay: number) => ({
+    initial: { opacity: 0, y: 14 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] as const, delay },
+  })
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.1 }}
+      transition={{ duration: 0.2 }}
     >
       <SubtleBackground />
 
-      <div className="min-h-screen pb-24 pt-6">
+      <div className="min-h-screen pb-24 pt-6 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-          <YourHourHeader />
+          <motion.div {...stackTransition(0.02)}>
+            <YourHourHeader />
+          </motion.div>
 
           {/* The Moment — single hero card, the headline of the home flow */}
-          <div className="mb-8">
+          <motion.div className="mb-10" {...stackTransition(0.08)}>
             <ProjectIdeasHome />
-          </div>
+          </motion.div>
 
           {/* Keep Going — focus mode for active projects */}
-          <div className="mb-8">
+          <motion.div className="mb-10" {...stackTransition(0.16)}>
             <KeepGoingCarousel />
-          </div>
+          </motion.div>
 
           {/* What you're consuming */}
-          <NowConsumingWidget />
+          <motion.div {...stackTransition(0.22)}>
+            <NowConsumingWidget />
+          </motion.div>
 
           {/* Thought of the day */}
-          <ThoughtOfTheDay />
+          <motion.div {...stackTransition(0.28)}>
+            <ThoughtOfTheDay />
+          </motion.div>
 
         </div>
       </div>

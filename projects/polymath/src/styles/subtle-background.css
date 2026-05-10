@@ -1,6 +1,7 @@
 /**
- * Subtle Background
- * Elegant animated gradient orbs for a premium feel
+ * Atmospheric Background
+ * Layered aurora orbs, soft mesh gradient, and a film-grain texture
+ * for a cinematic, museum-grade feel.
  */
 
 .subtle-background {
@@ -11,43 +12,89 @@
   z-index: 0;
 }
 
+/* Bottom mesh — a gentle vignette / colour wash that grounds the page */
+.subtle-background::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 50% 110%, rgba(var(--brand-primary-rgb), 0.08), transparent 70%),
+    radial-gradient(ellipse 80% 50% at 0% 0%, rgba(167, 139, 250, 0.05), transparent 60%),
+    radial-gradient(ellipse 70% 50% at 100% 30%, rgba(56, 189, 248, 0.04), transparent 65%);
+  opacity: 1;
+}
+
+/* Subtle film grain — applied via SVG noise so it scales without artefacts */
+.subtle-background::after {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.6'/></svg>");
+  background-size: 220px 220px;
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+  animation: grain-shift 8s steps(6) infinite;
+}
+
 .gradient-orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.15;
+  filter: blur(90px);
+  opacity: 0.18;
   animation: float 30s ease-in-out infinite;
   will-change: transform;
 }
 
 .orb-1 {
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, rgba(var(--brand-primary-rgb), 0.4), transparent 70%);
-  top: -10%;
+  width: 560px;
+  height: 560px;
+  background: radial-gradient(circle, rgba(var(--brand-primary-rgb), 0.55), transparent 70%);
+  top: -12%;
   right: -10%;
-  animation-duration: 25s;
+  animation-duration: 28s;
 }
 
 .orb-2 {
-  width: 400px;
-  height: 400px;
-  background: radial-gradient(circle, rgba(var(--color-accent-dark-rgb), 0.3), transparent 70%);
-  bottom: -5%;
-  left: -5%;
-  animation-duration: 30s;
+  width: 460px;
+  height: 460px;
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.4), transparent 70%);
+  bottom: -8%;
+  left: -6%;
+  animation-duration: 34s;
   animation-delay: -10s;
 }
 
 .orb-3 {
-  width: 450px;
-  height: 450px;
-  background: radial-gradient(circle, rgba(var(--brand-primary-rgb), 0.25), transparent 70%);
+  width: 520px;
+  height: 520px;
+  background: radial-gradient(circle, rgba(var(--brand-primary-rgb), 0.32), transparent 70%);
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  animation-duration: 35s;
+  animation-duration: 40s;
   animation-delay: -20s;
+}
+
+/* Aurora ribbon — a slow-moving wide gradient sash that drifts behind content. */
+.subtle-background .aurora {
+  position: absolute;
+  top: 20%;
+  left: -20%;
+  right: -20%;
+  height: 360px;
+  background: linear-gradient(
+    100deg,
+    transparent 10%,
+    rgba(56, 189, 248, 0.10) 35%,
+    rgba(167, 139, 250, 0.08) 55%,
+    rgba(252, 211, 77, 0.05) 75%,
+    transparent 95%
+  );
+  filter: blur(60px);
+  transform: skewY(-6deg);
+  opacity: 0.7;
+  animation: aurora-drift 45s ease-in-out infinite;
+  will-change: transform;
 }
 
 @keyframes float {
@@ -55,16 +102,38 @@
     transform: translate(0, 0) scale(1);
   }
   33% {
-    transform: translate(30px, -30px) scale(1.05);
+    transform: translate(40px, -30px) scale(1.06);
   }
   66% {
-    transform: translate(-20px, 20px) scale(0.95);
+    transform: translate(-25px, 25px) scale(0.94);
   }
+}
+
+@keyframes aurora-drift {
+  0%, 100% {
+    transform: translateX(-4%) skewY(-6deg);
+    opacity: 0.55;
+  }
+  50% {
+    transform: translateX(6%) skewY(-4deg);
+    opacity: 0.85;
+  }
+}
+
+@keyframes grain-shift {
+  0%   { transform: translate(0, 0); }
+  20%  { transform: translate(-6%, 4%); }
+  40%  { transform: translate(4%, -6%); }
+  60%  { transform: translate(-3%, -3%); }
+  80%  { transform: translate(3%, 5%); }
+  100% { transform: translate(0, 0); }
 }
 
 /* Reduce motion for accessibility */
 @media (prefers-reduced-motion: reduce) {
-  .gradient-orb {
+  .gradient-orb,
+  .subtle-background .aurora,
+  .subtle-background::after {
     animation: none;
   }
 }

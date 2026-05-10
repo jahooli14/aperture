@@ -1,5 +1,5 @@
 /**
- * ThoughtOfTheDay — Resurfaced memory as a quote card.
+ * ThoughtOfTheDay — Resurfaced memory as an editorial pull-quote.
  *
  * Rotates daily by seeding into the candidate list with the current day-of-year,
  * so the same user sees a different thought each day.
@@ -37,24 +37,69 @@ export function ThoughtOfTheDay() {
     <section className="pb-6">
       <h2 className="section-header">thought of the <span>day</span></h2>
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="p-6 relative overflow-hidden rounded-2xl"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.55, ease: 'easeOut' }}
+        className="relative overflow-hidden rounded-2xl"
         style={{
-          background: 'linear-gradient(145deg, rgba(var(--brand-primary-rgb),0.08) 0%, rgba(15,24,41,0.6) 50%, rgba(var(--brand-primary-rgb),0.04) 100%)',
-          border: '1px solid rgba(var(--brand-primary-rgb),0.12)',
-          boxShadow: '0 0 40px rgba(var(--brand-primary-rgb),0.04), 0 4px 16px rgba(0,0,0,0.5)',
+          background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.10) 0%, rgba(15,24,41,0.7) 45%, rgba(167,139,250,0.06) 100%)',
+          border: '1px solid rgba(var(--brand-primary-rgb),0.16)',
+          boxShadow: '0 0 60px -10px rgba(var(--brand-primary-rgb),0.18), 0 8px 32px -12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)',
         }}
       >
-        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(var(--brand-primary-rgb),0.3), transparent)' }} />
-        <div className="relative z-10">
-          <p className="mb-3 leading-relaxed text-base italic aperture-body" style={{ color: 'var(--brand-text-primary)', fontWeight: 500 }}>
-            &ldquo;{card.body}&rdquo;
+        {/* Top hairline glow */}
+        <div
+          aria-hidden
+          className="absolute top-0 left-0 right-0 h-px"
+          style={{ background: 'linear-gradient(90deg, transparent, rgba(var(--brand-primary-rgb),0.55), transparent)' }}
+        />
+
+        {/* Decorative giant quotation glyph in corner */}
+        <span
+          aria-hidden
+          className="absolute -top-6 -left-3 text-[160px] leading-none select-none pointer-events-none"
+          style={{
+            color: 'rgba(var(--brand-primary-rgb), 0.13)',
+            fontFamily: 'Georgia, "Times New Roman", serif',
+            fontWeight: 700,
+            textShadow: '0 0 30px rgba(var(--brand-primary-rgb), 0.18)',
+          }}
+        >
+          “
+        </span>
+
+        {/* Soft radial accent in the bottom-right */}
+        <div
+          aria-hidden
+          className="absolute -bottom-10 -right-10 h-44 w-44 pointer-events-none"
+          style={{
+            background: 'radial-gradient(circle, rgba(167,139,250,0.18), transparent 70%)',
+            filter: 'blur(28px)',
+          }}
+        />
+
+        <div className="relative z-10 p-7 sm:p-8 pl-12 sm:pl-14">
+          <p
+            className="mb-5 leading-[1.55] text-[16.5px] sm:text-[19px] italic"
+            style={{
+              color: 'var(--brand-text-primary)',
+              fontFamily: 'var(--brand-font-serif)',
+              fontWeight: 400,
+              opacity: 0.96,
+            }}
+          >
+            {card.body}
           </p>
-          <div className="flex items-center gap-2 text-xs aperture-body" style={{ color: 'rgba(var(--brand-primary-rgb),0.5)' }}>
-            <span className="inline-block h-1 w-1 rounded-full" style={{ backgroundColor: 'rgba(var(--brand-primary-rgb),0.4)' }} />
-            <span>
+          <div className="flex items-center gap-3">
+            <span
+              className="h-px w-10"
+              aria-hidden
+              style={{ background: 'linear-gradient(to right, rgba(var(--brand-primary-rgb),0.5), transparent)' }}
+            />
+            <span
+              className="text-[10px] uppercase tracking-[0.32em] font-semibold"
+              style={{ color: 'rgba(var(--brand-primary-rgb),0.7)' }}
+            >
               {new Date(card.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </span>
           </div>

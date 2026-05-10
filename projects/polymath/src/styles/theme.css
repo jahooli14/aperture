@@ -103,20 +103,38 @@
 
 /* Two-Part Header Variant */
 .section-header {
+    position: relative;
     font-size: 1.875rem;
     line-height: 2.25rem;
     font-weight: 800;
     color: white;
     letter-spacing: -0.04em;
     font-family: var(--brand-font-header);
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
     text-shadow: 0 0 40px rgba(255,255,255,0.06);
+    display: flex;
+    align-items: baseline;
+    gap: 0.65rem;
+}
+
+.section-header::before {
+    content: '';
+    width: 22px;
+    height: 2px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, rgb(var(--brand-primary-rgb)), rgba(var(--brand-primary-rgb), 0));
+    box-shadow: 0 0 12px rgba(var(--brand-primary-rgb), 0.6);
+    transform: translateY(-0.45em);
+    flex-shrink: 0;
 }
 
 .section-header span {
-    color: var(--brand-primary);
-    opacity: 0.8;
-    text-shadow: 0 0 20px rgba(var(--brand-primary-rgb), 0.4);
+    background: linear-gradient(135deg, rgb(var(--brand-primary-rgb)), rgba(167, 139, 250, 0.9));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    text-shadow: 0 0 24px rgba(var(--brand-primary-rgb), 0.35);
 }
 
 /* The "Shelf" Separator */
