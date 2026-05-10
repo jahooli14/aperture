@@ -1331,7 +1331,7 @@ async function handleProjectIdeasGet(req: VercelRequest, res: VercelResponse) {
     const [activeRes, anyRes, projectsRes] = await Promise.all([
       supabase
         .from('project_ideas')
-        .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, status, user_feedback, generated_at, acted_on_at')
+        .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, status, user_feedback, generated_at, acted_on_at, mode, pattern, confidence')
         .eq('user_id', userId)
         .in('status', ['pending', 'saved', 'built'])
         .order('generated_at', { ascending: false })
@@ -1365,21 +1365,35 @@ async function handleProjectIdeasGet(req: VercelRequest, res: VercelResponse) {
     // Going already surfaces those — re-advertising them as "ideas" is
     // duplication. Catches cached pre-fix ideas as well as anything new
     // that slipped past the generator's validator.
+    //
+    // Read mode is exempt from the cites-active-project check: Read uses
+    // the WHOLE graveyard as evidence, including active projects, because
+    // the pattern often shows up across all states. The generator already
+    // drops "finish / ship X" titles in parseRead, and the title-mentions
+    // guard below still applies.
     const activeProjectIds = new Set((projectsRes.data ?? []).map((p: any) => p.id as string))
     const activeProjectTitles = (projectsRes.data ?? [])
       .map((p: any) => (p.title as string | null) ?? '')
       .filter(t => t.trim().length > 0)
       .map(t => t.toLowerCase())
+    const FINISH_RE = /^\s*(finish(ing)?|ship(ping)?|complete(\s+the)?|wrap\s*up|polish(\s+the)?|continue(\s+the)?)\b/i
     const filtered = latest.filter((idea: any) => {
+      const isRead = idea.mode === 'read'
       const evidence = Array.isArray(idea.evidence) ? idea.evidence : []
-      const citesActive = evidence.some((e: any) => activeProjectIds.has(e?.source_id))
-      if (citesActive) return false
-      // Belt-and-braces: also filter out title-mentions of active project
-      // titles even if the evidence array doesn't cite the project id —
-      // catches cases where the model invented a "finish/polish/master X"
-      // idea about an active project but cited memories instead.
+      if (!isRead) {
+        const citesActive = evidence.some((e: any) => activeProjectIds.has(e?.source_id))
+        if (citesActive) return false
+      }
       const title = String(idea.title ?? '').toLowerCase()
-      if (activeProjectTitles.some(pt => title.includes(pt))) return false
+      // For Read, only block titles that BOTH mention an active project name
+      // AND start with a finish/ship verb — Read is allowed to extend an
+      // active project in a new direction; it just can't propose finishing
+      // one. Crossover keeps the stricter "any title mention" guard.
+      if (isRead) {
+        if (FINISH_RE.test(title) && activeProjectTitles.some(pt => title.includes(pt))) return false
+      } else {
+        if (activeProjectTitles.some(pt => title.includes(pt))) return false
+      }
       return true
     })
 
@@ -1464,15 +1478,40 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
 
     const supabase = getSupabaseClient()
 
+    // User-triggered short-circuit: if there's already a pending idea
+    // sitting in the queue (cron-baked or otherwise), return it instantly
+    // and skip the LLM call entirely. This is the new on-demand flow —
+    // most user clicks should hit this path and feel instant.
+    if (!viaCron) {
+      const { data: queued } = await supabase
+        .from('project_ideas')
+        .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, mode, pattern, confidence, seed_pair, status, user_feedback, generated_at, acted_on_at')
+        .eq('user_id', userId)
+        .eq('status', 'pending')
+        .order('generated_at', { ascending: false })
+        .order('rank', { ascending: true })
+        .limit(3)
+      if (queued && queued.length > 0) {
+        return res.status(200).json({
+          ideas: queued,
+          batch_id: queued[0].batch_id,
+          generated_at: queued[0].generated_at,
+          via: 'queue',
+          took_ms: Date.now() - started,
+        })
+      }
+    }
+
     // Cooldown check — only on manual user-triggered runs. Reads the
-    // newest pending row's generated_at; if too recent, return 429 with
-    // the existing batch so the UI can hand back what's already there.
+    // newest non-pending row's generated_at; if too recent we throttle.
+    // (Pending rows are now handled by the short-circuit above, so the
+    // cooldown only matters when the queue is empty AND the user clicks
+    // again right after their previous on-demand generation.)
     if (!viaCron) {
       const { data: recent } = await supabase
         .from('project_ideas')
         .select('generated_at')
         .eq('user_id', userId)
-        .eq('status', 'pending')
         .order('generated_at', { ascending: false })
         .limit(1)
         .maybeSingle()
@@ -1482,7 +1521,7 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
           return res.status(429).json({
             error: 'cooldown',
             retry_after_ms: GENERATION_COOLDOWN_MS - ageMs,
-            message: 'A fresh batch was just generated — try again in a minute.',
+            message: 'Just generated — try again in a minute.',
           })
         }
       }
@@ -1505,11 +1544,14 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
 
     const tLlmStart = Date.now()
     const { generateProjectIdeas } = await import('./_lib/project-ideas/generator.js')
-    // Manual user-triggered runs ask for "force" — if the strict frame
-    // returns nothing, fall back to a permissive single-idea prompt so
-    // the user who clicked the button is never left with silence. The
-    // cron path stays strict; cron is allowed to return empty.
-    const result = await generateProjectIdeas(gathered, { force: !viaCron })
+    // User-triggered runs go through the FAST path: crossover-only on
+    // Flash-Lite, ~5–10s. The cron path keeps the full pipeline (Read +
+    // crossover, full Flash) — cron pre-bakes the wow ideas that user
+    // clicks unlock instantly via the queue short-circuit above.
+    const result = await generateProjectIdeas(gathered, {
+      force: !viaCron,
+      fast: !viaCron,
+    })
     console.log(`[generate-project-ideas] generation finished in ${Date.now() - tLlmStart}ms: ${result.ideas.length} ideas, reason=${result.reason ?? 'ok'}`)
 
     if (!result.ideas.length) {
@@ -1547,6 +1589,16 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
       // fallback fired — that path doesn't pick from a structured pair,
       // so the cooldown filter has nothing useful to track on those rows.
       seed_pair: idea.seed_pair ?? null,
+      // Read rows carry mode='read' + a non-null pattern. Crossover and
+      // permissive both store mode='crossover' (the column default) and
+      // pattern=null. The UI branches on `mode` to render Read with the
+      // pattern as the leading hero block.
+      mode: idea.mode ?? 'crossover',
+      pattern: idea.pattern ?? null,
+      // Confidence (0–100) is the model's honest self-score on Read — the
+      // home auto-surface threshold is 70. Crossover rows are NULL; the UI
+      // doesn't gate them behind a threshold (they show via the button).
+      confidence: idea.confidence ?? null,
       status: 'pending' as const,
       generated_at,
     }))
@@ -1554,7 +1606,7 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
     const { data: inserted, error: insertErr } = await supabase
       .from('project_ideas')
       .insert(rows)
-      .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, seed_pair, status, user_feedback, generated_at, acted_on_at')
+      .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, seed_pair, mode, pattern, status, user_feedback, generated_at, acted_on_at')
 
     if (insertErr) {
       console.error('[generate-project-ideas] insert failed:', insertErr)

@@ -38,6 +38,8 @@ export interface SeedPair {
   arrival_id: string
 }
 
+export type IdeaMode = 'crossover' | 'read'
+
 export interface ProjectIdea {
   rank: number
   title: string
@@ -46,6 +48,20 @@ export interface ProjectIdea {
   next_step: string
   evidence: IdeaEvidence[]
   seed_pair?: SeedPair
+  /** 'crossover' for locked-pairs / permissive output (the default).
+   *  'read' for the longitudinal pattern reader — the row also carries a
+   *  non-null `pattern` and the UI renders it as the hero block. */
+  mode?: IdeaMode
+  /** The through-line sentence for Read mode. The pattern itself, in the
+   *  user's frame — "you almost-start music projects four times a year and
+   *  stall at format." NULL on crossover rows. */
+  pattern?: string | null
+  /** Read mode only: 0–100 self-score from the model on how strongly the
+   *  pattern lands. The home only auto-surfaces the prominent "there's
+   *  something to show you" teaser when this is >= 70; below that, the
+   *  idea sits in the queue and is reached for via the button. NULL on
+   *  crossover rows (those don't gate behind a threshold). */
+  confidence?: number | null
 }
 
 export interface StoredProjectIdea extends ProjectIdea {
@@ -74,6 +90,16 @@ export interface GatherResult {
   /** Seed pairs used in recent batches (within the cooldown window).
    *  Drives the picker's "don't reuse this convergence" filter. */
   recent_seed_pairs: Array<{ centre_id: string; arrival_id: string; used_at: string; status: string }>
+  /** Titles from very recent (pending or superseded) batches — typically the
+   *  one we just overwrote when the user clicked "try another". Fed into the
+   *  prompt's do-not-repeat block so the model doesn't re-emit the title it
+   *  wrote sixty seconds ago. Permissive rows show up here too even though
+   *  they have no seed_pair, which closes the permissive-cooldown gap. */
+  recent_titles: Array<{ title: string; used_at: string }>
+  /** Centres used in the last short window (still pending or just superseded).
+   *  The picker treats these as deprioritised so a back-to-back regen can't
+   *  pick the same centre × a different arrival and produce a reword. */
+  recent_centre_ids: string[]
   total_signal_count: number
 }
 

@@ -97,9 +97,15 @@ jobs:
             hit "/api/projects?resource=recompute-heat" &
           fi
 
-          # ── 08:00 UTC daily: Polymath evolve ──────────────────────────
+          # ── 08:00 UTC daily: Polymath evolve + project ideas ─────────
+          # Project ideas runs daily (was Sunday-only) so the queue stays
+          # stocked with cron-baked Read ideas. The home auto-surface
+          # gates on confidence >= 70, so daily generation gives the
+          # "there's something to show you" teaser a real chance to fire
+          # most days instead of just after Sunday's run.
           if [ "$SCHEDULE" = "0 8 * * *" ] || [ "$FORCE" = "true" ]; then
             hit "/api/projects?resource=evolve" &
+            hit "/api/utilities?resource=generate-project-ideas" &
           fi
 
           # ── 09:00 UTC daily: Idea Engine review + email digest ────────
@@ -110,10 +116,9 @@ jobs:
             hit "/api/idea-engine?action=send-digest"
           fi
 
-          # ── Sunday 08:00 UTC: Polymath drawer digest + project ideas ──
+          # ── Sunday 08:00 UTC: Polymath drawer digest ─────────────────
           if [ "$SCHEDULE" = "0 8 * * 0" ] || [ "$FORCE" = "true" ]; then
             hit "/api/projects?resource=generate-digest" &
-            hit "/api/utilities?resource=generate-project-ideas" &
           fi
 
           wait

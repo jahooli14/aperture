@@ -22,12 +22,24 @@ const ANCHOR_DAYS = 365
  *  enough that a re-fired pair feels genuinely fresh. */
 const SEED_PAIR_COOLDOWN_DAYS = 12 * 7
 
+/** Window for "you just showed this" — pending + superseded rows from the
+ *  last 14 days. The model sees these titles in the do-not-repeat block so
+ *  back-to-back regens don't keep re-emitting the same title. */
+const RECENT_TITLE_DAYS = 14
+
+/** Centre debounce window. Any centre used in the last 24h (pending or
+ *  superseded) is deprioritised by the picker so the next regen doesn't
+ *  immediately reach for the same dormant project with a different arrival. */
+const RECENT_CENTRE_DAYS = 1
+
 type Supabase = ReturnType<typeof getSupabaseClient>
 
 export async function gatherForIdeas(supabase: Supabase, userId: string): Promise<GatherResult> {
   const recentSince = new Date(Date.now() - RECENT_DAYS * 86_400_000).toISOString()
   const anchorSince = new Date(Date.now() - ANCHOR_DAYS * 86_400_000).toISOString()
   const cooldownSince = new Date(Date.now() - SEED_PAIR_COOLDOWN_DAYS * 86_400_000).toISOString()
+  const recentTitleSince = new Date(Date.now() - RECENT_TITLE_DAYS * 86_400_000).toISOString()
+  const recentCentreSince = new Date(Date.now() - RECENT_CENTRE_DAYS * 86_400_000).toISOString()
 
   const [
     memoriesRes,
@@ -97,16 +109,19 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       .in('status', ['saved', 'rejected', 'built'])
       .order('generated_at', { ascending: false })
       .limit(60),
-    // Seed pairs used recently — drives the picker's cooldown filter so
-    // the same (centre × arrival) convergence can't re-surface for weeks.
-    // We honour every status except 'rejected' (rejected = user said no,
-    // so the convergence is dead, not on cooldown — handled separately
-    // via the title block in prior_ideas).
+    // Recent batches — drives three signals at once:
+    //   1. recent_seed_pairs (cooldown set for the picker)
+    //   2. recent_titles (do-not-repeat block in the prompt — catches the
+    //      regen-shows-same-idea case AND permissive rows, which have a
+    //      null seed_pair and otherwise wouldn't be debounced anywhere)
+    //   3. recent_centre_ids (centre debounce in the picker)
+    // Rejected rows are still excluded — they're already represented in
+    // prior_ideas.rejected with the user's reason, and a rejection means
+    // the convergence is dead, not on cooldown.
     supabase
       .from('project_ideas')
-      .select('seed_pair, status, generated_at')
+      .select('title, seed_pair, status, generated_at')
       .eq('user_id', userId)
-      .not('seed_pair', 'is', null)
       .neq('status', 'rejected')
       .gte('generated_at', cooldownSince)
       .order('generated_at', { ascending: false })
@@ -225,16 +240,30 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
   }
 
   const recent_seed_pairs: GatherResult['recent_seed_pairs'] = []
-  for (const row of (recentSeedPairsRes.data ?? []) as Array<{ seed_pair: { centre_id?: string; arrival_id?: string } | null; status: string; generated_at: string }>) {
+  const recent_titles: GatherResult['recent_titles'] = []
+  const recentCentreSet = new Set<string>()
+  for (const row of (recentSeedPairsRes.data ?? []) as Array<{ title: string | null; seed_pair: { centre_id?: string; arrival_id?: string } | null; status: string; generated_at: string }>) {
     const sp = row.seed_pair
-    if (!sp || !sp.centre_id || !sp.arrival_id) continue
-    recent_seed_pairs.push({
-      centre_id: sp.centre_id,
-      arrival_id: sp.arrival_id,
-      used_at: row.generated_at,
-      status: row.status,
-    })
+    if (sp && sp.centre_id && sp.arrival_id) {
+      recent_seed_pairs.push({
+        centre_id: sp.centre_id,
+        arrival_id: sp.arrival_id,
+        used_at: row.generated_at,
+        status: row.status,
+      })
+      if (row.generated_at >= recentCentreSince && (row.status === 'pending' || row.status === 'superseded')) {
+        recentCentreSet.add(sp.centre_id)
+      }
+    }
+    if (
+      row.title &&
+      row.generated_at >= recentTitleSince &&
+      (row.status === 'pending' || row.status === 'superseded')
+    ) {
+      recent_titles.push({ title: row.title, used_at: row.generated_at })
+    }
   }
+  const recent_centre_ids = Array.from(recentCentreSet)
 
   const total_signal_count =
     memories.length +
@@ -255,6 +284,8 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
     ie_ideas,
     prior_ideas,
     recent_seed_pairs,
+    recent_titles,
+    recent_centre_ids,
     total_signal_count,
   }
 }

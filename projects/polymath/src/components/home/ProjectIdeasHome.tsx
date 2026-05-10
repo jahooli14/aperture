@@ -1,26 +1,27 @@
 /**
- * ProjectIdeasHome — the home headline surface.
+ * ProjectIdeasHome — opt-in suggestion button, with a full card on expand.
  *
- * Replaces the witness-mode "noticing" panel with a concrete, opinionated
- * thing: 3 ranked project ideas drawn from across the user's data, each
- * with evidence receipts and a doable next step. Generation runs on a
- * weekly cron — this component just reads the latest batch from the API.
+ * Lives below Keep Going on the homepage. Default state is a quiet button —
+ * the user only ever sees an idea if they ask for one. Two button labels
+ * depending on whether the system has a pre-baked idea waiting:
  *
- * Behaviour:
- *   - Empty state (no batch yet) shows a one-tap "show me ideas" button
- *     that triggers a fresh generation. Up to ~30s — we show progress copy.
- *   - Each idea has save / dismiss / "I built it" actions. Feedback writes
- *     status back to project_ideas; rejected ideas vanish from the deck.
- *   - The deck shows up to 3 ideas, swipeable on mobile via simple
- *     prev/next chevrons. No autoplay carousel. Idea 1 is the strongest.
- *   - "Refresh deck" regenerates on demand — confirms first because it
- *     replaces the current batch.
+ *   - "unlock" (instant) — cron has pre-baked an idea (Read or crossover at
+ *     full quality) and it's sitting unviewed in the queue. Clicking expands
+ *     it inline; no LLM call.
+ *   - "suggest a project" (~10s) — queue is empty. Clicking generates one
+ *     fresh on demand using the FAST path (Flash-Lite, crossover-only). The
+ *     wow ideas (Read mode) only come from the cron-baked queue; on-demand
+ *     prioritises speed over depth.
+ *
+ * After the user acts on an idea (save / dismiss / build), the card collapses
+ * back to the button. If more pre-baked ideas remain, the button stays in
+ * "unlock" state. If the queue is now empty, it switches to "suggest."
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { BookmarkPlus, BookmarkCheck, X, Hammer, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react'
+import { BookmarkPlus, BookmarkCheck, X, Hammer } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
 import { api } from '../../lib/apiClient'
 
@@ -43,7 +44,22 @@ interface ProjectIdea {
   evidence: IdeaEvidence[]
   status: 'pending' | 'saved' | 'rejected' | 'built'
   generated_at: string
+  /** 'crossover' for the locked-pairs / permissive paths (the default).
+   *  'read' for the longitudinal pattern reader — the row also carries a
+   *  non-empty `pattern` and the card leads with it as the hero block. */
+  mode?: 'crossover' | 'read'
+  pattern?: string | null
+  /** Read-only: model's honest 0–100 self-score on the pattern. The home
+   *  auto-surfaces the prominent teaser only when this is >= 70; below
+   *  that the idea sits in the queue and the user has to reach for the
+   *  button. NULL on crossover (no threshold gate). */
+  confidence?: number | null
 }
+
+/** Minimum confidence for the prominent home teaser to fire. Below this,
+ *  the surface stays as the small "suggest a project" button — the user
+ *  asks if they want one. The wow has to be earned every time. */
+const TEASER_CONFIDENCE_THRESHOLD = 70
 
 interface ProjectIdeasResponse {
   ideas: ProjectIdea[]
@@ -61,13 +77,14 @@ interface GenerateResponse {
   message?: string
 }
 
-type IdeaMode = 'new_idea' | 'forgotten' | 'reshape' | 'extend'
+type IdeaMode = 'read' | 'new_idea' | 'forgotten' | 'reshape' | 'extend'
 
-// Derive the mode from evidence — no DB column needed.
-// project_dormant evidence = something was abandoned; check recency to split
-// forgotten (3-16 wks) from reshape (4+ months). Active project evidence = extend.
-// Anything else = new idea coalescing.
+// Derive the visual mode. The DB-backed `mode='read'` always wins — Read
+// is the longitudinal pattern reader and gets its own treatment regardless
+// of evidence shape. Falling through to evidence-based derivation gives
+// crossover its mode-specific glyph as before.
 function deriveMode(idea: ProjectIdea): IdeaMode {
+  if (idea.mode === 'read') return 'read'
   const kinds = (idea.evidence ?? []).map(e => e.kind)
   if (kinds.includes('project_dormant')) {
     // Try to determine dormancy depth from the evidence date
@@ -86,11 +103,15 @@ function deriveMode(idea: ProjectIdea): IdeaMode {
 // the harness, not a generic note. The glyphs are typographic ornaments
 // (fleurons, dingbats); the accents are non-brand colours so the card
 // feels distinct from the rest of the cyan UI without breaking the system.
+//
+// Read uses warm rose — distinct from the other modes (which trend cool),
+// and signals "this is the wow line" before the user reads anything.
 const MODE_VISUAL: Record<IdeaMode, { glyph: string; accentRgb: string; eyebrow: string }> = {
-  new_idea: { glyph: '✦', accentRgb: '252, 211, 77',  eyebrow: 'a new idea taking shape' },   // amber
-  forgotten: { glyph: '❋', accentRgb: '148, 163, 184', eyebrow: 'you set this down' },         // slate
-  reshape:   { glyph: '◈', accentRgb: '167, 139, 250', eyebrow: 'a new angle' },               // violet
-  extend:    { glyph: '→', accentRgb: '56, 189, 248',  eyebrow: 'pick this up' },              // cyan
+  read:      { glyph: '◉', accentRgb: '244, 114, 182', eyebrow: 'what i see across your work' }, // rose
+  new_idea:  { glyph: '✦', accentRgb: '252, 211, 77',  eyebrow: 'a new idea taking shape' },     // amber
+  forgotten: { glyph: '❋', accentRgb: '148, 163, 184', eyebrow: 'you set this down' },           // slate
+  reshape:   { glyph: '◈', accentRgb: '167, 139, 250', eyebrow: 'a new angle' },                 // violet
+  extend:    { glyph: '→', accentRgb: '56, 189, 248',  eyebrow: 'pick this up' },                // cyan
 }
 
 const KIND_LABEL: Record<string, string> = {
@@ -104,35 +125,19 @@ const KIND_LABEL: Record<string, string> = {
   idea_engine: 'frontier idea',
 }
 
-function relativeAge(iso: string | null): string {
-  if (!iso) return ''
-  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000)
-  if (days <= 0) return 'today'
-  if (days === 1) return 'yesterday'
-  if (days < 7) return `${days} days ago`
-  if (days < 14) return 'last week'
-  return `${Math.floor(days / 7)} weeks ago`
-}
-
-// Staged loading copy for the ~30s synthesis window. The thresholds add
-// up to ~40s so a slightly slow Flash call doesn't hit the last stage
-// suspiciously early. Each stage names what the model is roughly doing
-// at that point so the wait feels intentional, not broken.
+// Staged loading copy for the on-demand fast path (~5–10s). The thresholds
+// stretch beyond 10s so a slow tail doesn't hit the last stage suspiciously
+// early. Each stage names what the model is roughly doing.
 const LOADING_STAGES: Array<{ at_ms: number; line: string }> = [
   { at_ms: 0,      line: 'reading your captures' },
-  { at_ms: 6_000,  line: 'connecting voice notes to lists' },
-  { at_ms: 12_000, line: 'looking at dormant projects' },
-  { at_ms: 18_000, line: 'drafting candidate projects' },
-  { at_ms: 26_000, line: 'critiquing for clichés' },
-  { at_ms: 34_000, line: 'picking the strongest three' },
+  { at_ms: 3_000,  line: 'pairing what you started with what you kept' },
+  { at_ms: 7_000,  line: 'picking the one that fits today' },
+  { at_ms: 12_000, line: 'almost there' },
 ]
 
 export function ProjectIdeasHome() {
   const navigate = useNavigate()
   const [ideas, setIdeas] = useState<ProjectIdea[]>([])
-  const [generatedAt, setGeneratedAt] = useState<string | null>(null)
-  const [hasAny, setHasAny] = useState(false)
-  const [lastIdea, setLastIdea] = useState<ProjectIdea | null>(null)
   const [insufficientSignals, setInsufficientSignals] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
@@ -141,6 +146,11 @@ export function ProjectIdeasHome() {
   const [pendingFeedback, setPendingFeedback] = useState<string | null>(null)
   const [loadingStage, setLoadingStage] = useState(0)
   const [activeIndex, setActiveIndex] = useState(0)
+  // Default state is collapsed — the surface is a quiet button. The user
+  // expands it explicitly by clicking "unlock" or "suggest a project."
+  // Each save / dismiss / build collapses back so the user always lands
+  // on the choice "do I want another?" rather than a chained reveal.
+  const [expanded, setExpanded] = useState(false)
 
   const load = useCallback(async () => {
     setError(null)
@@ -149,9 +159,6 @@ export function ProjectIdeasHome() {
       const active = (res.ideas ?? []).slice(0, 3)
       setIdeas(active)
       setActiveIndex(0)
-      if (active[0]) setLastIdea(active[0])
-      setGeneratedAt(res.generated_at)
-      setHasAny(res.has_any)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load ideas')
     } finally {
@@ -194,25 +201,28 @@ export function ProjectIdeasHome() {
     setError(null)
     haptic.medium()
     try {
-      // Pro synthesis call routinely runs ~30-50s. apiClient default is
-      // 30s; bump to 80s so the browser doesn't abort while the server
-      // is still finishing.
+      // Server short-circuits to the queue when one exists (instant); only
+      // hits the LLM when the queue is empty. Fast path is ~10s; allow 40s
+      // so a slightly slow tail doesn't abort.
       const res = await api.post(
         'utilities?resource=generate-project-ideas',
         {},
-        { timeout: 80_000 },
+        { timeout: 40_000 },
       ) as GenerateResponse
       if (!res.ideas || res.ideas.length === 0) {
         if (res.reason === 'insufficient_data') {
           const have = typeof res.signal_count === 'number' ? res.signal_count : 0
           setInsufficientSignals(have)
         } else {
-          setError('Nothing ripe this week. Keep capturing and check back in a few days.')
+          setError('Nothing ripe right now. Capture a thought and try again.')
         }
         return
       }
       setInsufficientSignals(null)
       await load()
+      // Expand the card now that we have something to show.
+      setExpanded(true)
+      setActiveIndex(0)
     } catch (err) {
       // The apiClient throws ApiError with .status === 429 on cooldown.
       const e = err as { status?: number; message?: string; details?: { retry_after_ms?: number; message?: string } }
@@ -234,25 +244,38 @@ export function ProjectIdeasHome() {
     try {
       await api.post('utilities?resource=project-ideas-feedback', { id: idea.id, status })
       if (status === 'rejected') {
-        // Advance to the next idea in the local array if any remain.
-        // Clearing the deck only triggers when the user dismisses the last idea.
-        setIdeas(prev => {
-          const next = prev.filter(i => i.id !== idea.id)
-          return next
-        })
+        // Drop the rejected idea from the local deck and collapse back to
+        // the button. If the queue still has more, the button will show
+        // "unlock" again; if not, it'll show "suggest a project."
+        setIdeas(prev => prev.filter(i => i.id !== idea.id))
         setActiveIndex(0)
+        setExpanded(false)
+        setShowEvidence(false)
       } else if (status === 'built') {
         // Navigate to a pre-filled new project page so the user can
-        // immediately start building what they just committed to.
+        // immediately start building what they just committed to. For
+        // Read, lead the description with the pattern — that's the line
+        // worth keeping in the project's own context as a reminder of
+        // why this one is the right one.
+        const description = idea.mode === 'read' && idea.pattern
+          ? `${idea.pattern}\n\n${idea.pitch}`
+          : idea.pitch
         const params = new URLSearchParams({
           title: idea.title,
-          description: idea.pitch,
+          description,
           first_task: idea.next_step,
           from_idea: idea.id,
         })
         navigate(`/projects?create=1&${params.toString()}`)
       } else {
         setIdeas(prev => prev.map(i => i.id === idea.id ? { ...i, status } : i))
+        // Save (or any non-destructive status change) collapses the card.
+        // The user has decided what to do with this one — we get out of
+        // the way and let them return to Keep Going.
+        if (status === 'saved') {
+          setExpanded(false)
+          setShowEvidence(false)
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save feedback')
@@ -264,141 +287,127 @@ export function ProjectIdeasHome() {
   const active = ideas[activeIndex] ?? null
   const evidenceCount = useMemo(() => active?.evidence?.length ?? 0, [active])
   const mode = useMemo(() => active ? deriveMode(active) : null, [active])
-  const goPrev = useCallback(() => {
-    haptic.light()
-    setActiveIndex(i => Math.max(0, i - 1))
-  }, [])
-  const goNext = useCallback(() => {
-    haptic.light()
-    setActiveIndex(i => Math.min(ideas.length - 1, i + 1))
-  }, [ideas.length])
+
+  // Click handler for the collapsed button. Either reveals a queued idea
+  // (instant, no API call) or kicks off generation (~10s) when the queue
+  // is empty. The post above already short-circuits on the server when a
+  // pending row exists, so calling generate() always does the right thing
+  // — but we can avoid even the round-trip when the deck is already
+  // populated client-side.
+  const reveal = useCallback(async () => {
+    if (generating) return
+    haptic.medium()
+    if (ideas.length > 0) {
+      setExpanded(true)
+      setActiveIndex(0)
+      return
+    }
+    await generate()
+  }, [generating, ideas.length, generate])
+
+  // Surface state. Two paths into the expanded card:
+  //   1. The earned teaser. Only fires when a Read idea sits in the queue
+  //      with confidence >= TEASER_CONFIDENCE_THRESHOLD. The teaser is a
+  //      single italic line that says "there's something I want to show
+  //      you" — the wow only appears when the system has earned the click.
+  //   2. The escape hatch button. Always available below the teaser (or
+  //      on its own when nothing's earned). Click → expand the queued
+  //      idea if there is one, or generate fresh in ~10s.
+  // The user-explicit click NEVER respects the threshold — that's just
+  // the auto-surface gate. If the user asks for an idea, we produce one.
+  const earnedTeaser = (() => {
+    const queued = ideas.find(i => i.mode === 'read' && (i.confidence ?? 0) >= TEASER_CONFIDENCE_THRESHOLD)
+    if (!queued) return null
+    const visual = MODE_VISUAL.read
+    return { idea: queued, glyph: visual.glyph, accentRgb: visual.accentRgb }
+  })()
 
   return (
     <section className="relative">
-      <div className="max-w-2xl mx-auto flex items-center justify-end gap-3 mb-4 px-1 min-h-[28px]">
-        <div className="flex items-center gap-3">
-          {ideas.length > 1 && (
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={goPrev}
-                disabled={activeIndex === 0}
-                className="h-7 w-7 flex items-center justify-center rounded-full hover:bg-white/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                style={{ color: 'var(--brand-text-muted)' }}
-                aria-label="Previous idea"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <span
-                className="text-[10px] tracking-[0.22em] uppercase opacity-60 tabular-nums"
-                style={{ color: 'var(--brand-text-muted)' }}
-              >
-                {activeIndex + 1} / {ideas.length}
-              </span>
-              <button
-                type="button"
-                onClick={goNext}
-                disabled={activeIndex >= ideas.length - 1}
-                className="h-7 w-7 flex items-center justify-center rounded-full hover:bg-white/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                style={{ color: 'var(--brand-text-muted)' }}
-                aria-label="Next idea"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-          {generatedAt && (
-            <span
-              className="text-[10px] tracking-[0.22em] uppercase opacity-50"
-              style={{ color: 'var(--brand-text-muted)' }}
-            >
-              {relativeAge(generatedAt)}
-            </span>
-          )}
-          {ideas.length > 0 && (
-            <button
-              type="button"
-              onClick={generate}
-              disabled={generating}
-              className="inline-flex items-center gap-1.5 text-[10px] tracking-[0.22em] uppercase opacity-60 hover:opacity-100 transition-opacity disabled:opacity-30"
-              style={{ color: 'var(--brand-text-muted)' }}
-              aria-busy={generating}
-            >
-              <RefreshCw className={`h-3 w-3 ${generating ? 'animate-spin' : ''}`} />
-              <span>try another</span>
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Container collapses tightly when empty — only the generating
-          and active-card states need real vertical space. */}
-      <div className={`relative px-2 sm:px-6 ${ideas.length || generating || loading ? 'py-8 sm:py-10 min-h-[260px]' : 'py-3'}`}>
+      {/* Container collapses tight when the user hasn't asked for an idea
+          yet — the surface is a button, not a hero. Expands when an idea
+          is being viewed or generated. */}
+      <div className={`relative px-2 sm:px-6 ${expanded || generating ? 'py-8 sm:py-10 min-h-[260px]' : 'py-3'}`}>
         {loading && (
-          <div className="flex items-center justify-center py-6">
+          <div className="flex items-center justify-center py-3">
             <span
-              className="text-[11px] uppercase tracking-[0.28em] italic"
+              className="text-[10px] uppercase tracking-[0.28em] italic opacity-50"
               style={{ color: 'var(--brand-text-muted)' }}
             >
-              reading your data…
+              checking your queue…
             </span>
           </div>
         )}
 
-        {!loading && !ideas.length && !generating && (
-          <div className="flex flex-col gap-4 px-2">
-            {/* Show the last seen idea dimmed — gives context instead of a blank */}
-            {lastIdea && (
-              <div className="opacity-30 pointer-events-none select-none mb-2">
-                <h3
-                  className="text-[20px] leading-[1.15] mb-2"
+        {/* Collapsed state. Two cohabiting surfaces:
+            • Earned teaser — when a high-confidence Read sits in the queue,
+              the home shows a single italic line inviting the click. The
+              pattern itself stays hidden until they tap; the line only
+              promises that something is there.
+            • Escape-hatch button — always present below. The user can ask
+              for an idea even when the system hasn't earned the teaser.
+              On a sparse / low-quality day, the button is the only surface.
+            Both routes end in the same expanded card. */}
+        {!loading && !expanded && !generating && (
+          <div className="flex flex-col items-center gap-5 py-2">
+            {earnedTeaser && (
+              <button
+                type="button"
+                onClick={() => { haptic.medium(); setExpanded(true); setActiveIndex(ideas.findIndex(i => i.id === earnedTeaser.idea.id)) }}
+                className="group flex items-center gap-3 px-2 py-3 rounded-lg transition-all max-w-xl"
+                style={{ color: 'var(--brand-text-primary)' }}
+              >
+                <span
+                  aria-hidden
+                  className="text-[20px] leading-none flex-shrink-0 transition-transform group-hover:scale-110"
+                  style={{
+                    color: `rgb(${earnedTeaser.accentRgb})`,
+                    fontFamily: 'var(--brand-font-serif)',
+                    textShadow: `0 0 14px rgba(${earnedTeaser.accentRgb}, 0.45)`,
+                  }}
+                >
+                  {earnedTeaser.glyph}
+                </span>
+                <span
+                  className="text-[16px] sm:text-[18px] italic leading-[1.35] text-left"
                   style={{
                     color: 'var(--brand-text-primary)',
                     fontFamily: 'var(--brand-font-serif)',
-                    fontWeight: 500,
-                    letterSpacing: '-0.018em',
+                    opacity: 0.92,
                   }}
                 >
-                  {lastIdea.title}
-                </h3>
-                <p
-                  className="text-[13px] italic leading-[1.6]"
-                  style={{
-                    color: 'var(--brand-text-secondary)',
-                    fontFamily: 'var(--brand-font-serif)',
-                  }}
-                >
-                  {lastIdea.why_now}
-                </p>
-              </div>
-            )}
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={generate}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full transition-all flex-shrink-0"
-                style={{
-                  background: 'rgba(var(--brand-primary-rgb), 0.15)',
-                  color: 'rgb(var(--brand-primary-rgb))',
-                  border: '1px solid rgba(var(--brand-primary-rgb), 0.4)',
-                }}
-              >
-                <span className="text-sm tracking-wide">
-                  {lastIdea ? 'try another' : 'show me ideas'}
+                  there's something i want to show you
                 </span>
               </button>
-              {insufficientSignals !== null ? (
-                <p className="text-[11px] italic flex-1 min-w-0" style={{ color: 'var(--brand-text-secondary)' }}>
-                  {insufficientSignals} signal{insufficientSignals === 1 ? '' : 's'} captured — needs 8 to find patterns
-                </p>
-              ) : error ? (
-                <p className="text-[11px] italic flex-1 min-w-0" style={{ color: 'var(--brand-text-secondary)' }}>{error}</p>
-              ) : (
-                <p className="text-[11px] italic flex-1 min-w-0 opacity-60" style={{ color: 'var(--brand-text-muted)' }}>
-                  {hasAny ? 'cleared the deck — pull a fresh one' : 'pull a project from across your captures'}
-                </p>
-              )}
-            </div>
+            )}
+            <button
+              type="button"
+              onClick={reveal}
+              className="group inline-flex items-center gap-2.5 px-4 py-2 rounded-full transition-all"
+              style={{
+                background: 'rgba(var(--brand-primary-rgb), 0.08)',
+                color: 'var(--brand-text-secondary)',
+                border: '1px solid rgba(var(--brand-primary-rgb), 0.18)',
+              }}
+            >
+              <span
+                aria-hidden
+                className="text-[12px] leading-none opacity-80"
+                style={{ fontFamily: 'var(--brand-font-serif)' }}
+              >
+                ✦
+              </span>
+              <span className="text-[11.5px] tracking-wide">
+                suggest a project
+              </span>
+            </button>
+            {insufficientSignals !== null ? (
+              <p className="text-[11px] italic opacity-70" style={{ color: 'var(--brand-text-secondary)' }}>
+                {insufficientSignals} signal{insufficientSignals === 1 ? '' : 's'} captured — needs 8 to find patterns
+              </p>
+            ) : error ? (
+              <p className="text-[11px] italic opacity-70" style={{ color: 'var(--brand-text-secondary)' }}>{error}</p>
+            ) : null}
           </div>
         )}
 
@@ -449,7 +458,7 @@ export function ProjectIdeasHome() {
           </div>
         )}
 
-        {!loading && !generating && active && (() => {
+        {!loading && !generating && expanded && active && (() => {
           // Mode-specific visual identity. Falls back to brand cyan if mode
           // can't be derived (rare — only on legacy ideas without evidence).
           const visual = mode ? MODE_VISUAL[mode] : { glyph: '✦', accentRgb: 'var(--brand-primary-rgb)', eyebrow: 'for you' }
@@ -525,10 +534,38 @@ export function ProjectIdeasHome() {
                   )}
                 </div>
 
+                {/* Read mode — the pattern is the hero. Render it first, large
+                    serif, italic, mode-tinted. The project title sits below
+                    as the consequence. The wow lands in the pattern; the
+                    title is just the natural "so do this." */}
+                {mode === 'read' && active.pattern && (
+                  <>
+                    <p
+                      className="relative text-[26px] sm:text-[36px] leading-[1.18] italic mb-6"
+                      style={{
+                        color: 'var(--brand-text-primary)',
+                        fontFamily: 'var(--brand-font-serif)',
+                        fontWeight: 400,
+                        letterSpacing: '-0.018em',
+                      }}
+                    >
+                      {active.pattern}
+                    </p>
+                    <span
+                      className="block text-[10px] uppercase tracking-[0.32em] mb-2 font-semibold"
+                      style={{ color: `rgb(${accent})`, opacity: 0.85 }}
+                    >
+                      the project this points to
+                    </span>
+                  </>
+                )}
+
                 {/* Title — generous serif, with a mode-tinted underline that
-                    acts as a printer's slug rule. */}
+                    acts as a printer's slug rule. In Read mode the title is
+                    a sub-headline (the consequence of the pattern above), so
+                    it gets a slightly smaller treatment. */}
                 <h3
-                  className="relative text-[30px] sm:text-[42px] leading-[1.05] mb-3"
+                  className={`relative leading-[1.05] mb-3 ${mode === 'read' ? 'text-[22px] sm:text-[28px]' : 'text-[30px] sm:text-[42px]'}`}
                   style={{
                     color: 'var(--brand-text-primary)',
                     fontFamily: 'var(--brand-font-serif)',
