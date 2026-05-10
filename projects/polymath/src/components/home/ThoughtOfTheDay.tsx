@@ -42,16 +42,16 @@ export function ThoughtOfTheDay() {
         transition={{ duration: 0.55, ease: 'easeOut' }}
         className="relative overflow-hidden rounded-2xl"
         style={{
-          background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.10) 0%, rgba(15,24,41,0.7) 45%, rgba(167,139,250,0.06) 100%)',
-          border: '1px solid rgba(var(--brand-primary-rgb),0.16)',
-          boxShadow: '0 0 60px -10px rgba(var(--brand-primary-rgb),0.18), 0 8px 32px -12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)',
+          background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.08) 0%, rgba(15,24,41,0.65) 60%)',
+          border: '1px solid rgba(var(--brand-primary-rgb),0.14)',
+          boxShadow: '0 0 48px -14px rgba(var(--brand-primary-rgb),0.14), 0 8px 28px -12px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.04)',
         }}
       >
         {/* Top hairline glow */}
         <div
           aria-hidden
           className="absolute top-0 left-0 right-0 h-px"
-          style={{ background: 'linear-gradient(90deg, transparent, rgba(var(--brand-primary-rgb),0.55), transparent)' }}
+          style={{ background: 'linear-gradient(90deg, transparent, rgba(var(--brand-primary-rgb),0.45), transparent)' }}
         />
 
         {/* Decorative giant quotation glyph in corner */}
@@ -59,24 +59,13 @@ export function ThoughtOfTheDay() {
           aria-hidden
           className="absolute -top-6 -left-3 text-[160px] leading-none select-none pointer-events-none"
           style={{
-            color: 'rgba(var(--brand-primary-rgb), 0.13)',
+            color: 'rgba(var(--brand-primary-rgb), 0.11)',
             fontFamily: 'Georgia, "Times New Roman", serif',
             fontWeight: 700,
-            textShadow: '0 0 30px rgba(var(--brand-primary-rgb), 0.18)',
           }}
         >
           “
         </span>
-
-        {/* Soft radial accent in the bottom-right */}
-        <div
-          aria-hidden
-          className="absolute -bottom-10 -right-10 h-44 w-44 pointer-events-none"
-          style={{
-            background: 'radial-gradient(circle, rgba(167,139,250,0.18), transparent 70%)',
-            filter: 'blur(28px)',
-          }}
-        />
 
         <div className="relative z-10 p-7 sm:p-8 pl-12 sm:pl-14">
           <p

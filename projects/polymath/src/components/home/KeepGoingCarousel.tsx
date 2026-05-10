@@ -200,25 +200,16 @@ export function KeepGoingCarousel() {
       <div
         className="rounded-2xl p-5 flex flex-col overflow-hidden relative transition-all duration-700"
         style={{
-          background: 'linear-gradient(135deg, rgba(56,189,248,0.08) 0%, rgba(15,24,41,0.55) 55%, rgba(167,139,250,0.06) 100%)',
+          background: 'linear-gradient(135deg, rgba(56,189,248,0.07) 0%, rgba(15,24,41,0.55) 70%)',
           backdropFilter: 'blur(18px)',
-          border: `1px solid ${dormancyColor ?? 'rgba(56,189,248,0.18)'}`,
+          border: `1px solid ${dormancyColor ?? 'rgba(56,189,248,0.16)'}`,
           boxShadow: dormancyColor
-            ? `0 0 32px ${dormancyColor.replace('0.55', '0.1')}, 0 8px 28px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04)`
-            : '0 0 40px -8px rgba(56,189,248,0.18), 0 8px 28px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04)',
+            ? `0 0 28px ${dormancyColor.replace('0.55', '0.08')}, 0 6px 22px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)`
+            : '0 0 32px -10px rgba(56,189,248,0.14), 0 6px 22px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)',
           minHeight: '280px',
         }}
       >
-        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(56,189,248,0.55), transparent)' }} />
-        {/* Soft accent glow tucked behind the card */}
-        <div
-          aria-hidden
-          className="absolute -bottom-12 -right-12 h-44 w-44 pointer-events-none"
-          style={{
-            background: 'radial-gradient(circle, rgba(167,139,250,0.18), transparent 70%)',
-            filter: 'blur(28px)',
-          }}
-        />
+        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(56,189,248,0.45), transparent)' }} />
 
         {/* Nav dots */}
         {total > 1 && (

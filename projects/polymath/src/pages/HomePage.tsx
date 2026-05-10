@@ -86,59 +86,51 @@ function NowConsumingWidget() {
     <section className="pb-8">
       <h2 className="section-header">what you're <span>consuming</span></h2>
       <div
-        className="relative flex flex-col gap-1 p-3 rounded-2xl overflow-hidden"
+        className="relative flex flex-col rounded-2xl overflow-hidden"
         style={{
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.04), rgba(15,24,41,0.5))',
+          background: 'linear-gradient(135deg, rgba(255,255,255,0.035), rgba(15,24,41,0.45))',
           backdropFilter: 'blur(14px)',
-          border: '1px solid rgba(var(--brand-primary-rgb),0.16)',
-          boxShadow: '0 4px 24px rgba(0,0,0,0.25), 0 0 32px rgba(var(--brand-primary-rgb),0.06), inset 0 1px 0 rgba(255,255,255,0.04)',
+          border: '1px solid rgba(255,255,255,0.06)',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.03)',
         }}
       >
-        <div
-          aria-hidden
-          className="absolute top-0 left-0 right-0 h-px"
-          style={{ background: 'linear-gradient(90deg, transparent, rgba(var(--brand-primary-rgb),0.5), transparent)' }}
-        />
         {shown.map((item, i) => {
           const Icon = LIST_TYPE_ICONS[item.listType] || Box
           const accent = LIST_TYPE_ACCENT[item.listType] || LIST_TYPE_ACCENT.generic
+          const isLast = i === shown.length - 1
           return (
             <Link
               key={item.itemId}
               to={`/lists/${item.listId}`}
-              className="group relative flex items-center gap-3 p-3 rounded-xl transition-all min-h-[58px] overflow-hidden"
+              className="group relative flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-white/[0.025] min-h-[60px]"
               style={{
+                borderBottom: isLast ? 'none' : '1px solid rgba(255,255,255,0.04)',
                 animation: `pageEnter 0.45s cubic-bezier(0.4,0,0.2,1) ${i * 60}ms both`,
               }}
             >
-              {/* Hover wash, scoped to this row, tinted by item type */}
-              <span
-                aria-hidden
-                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl"
-                style={{
-                  background: `linear-gradient(90deg, rgba(${accent}, 0.10), rgba(${accent}, 0.02) 70%, transparent)`,
-                }}
-              />
               <div
-                className="relative h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105"
+                className="relative h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0"
                 style={{
-                  background: `linear-gradient(135deg, rgba(${accent},0.18), rgba(${accent},0.04))`,
-                  border: `1px solid rgba(${accent}, 0.3)`,
-                  boxShadow: `0 0 16px -6px rgba(${accent}, 0.5), inset 0 1px 0 rgba(255,255,255,0.06)`,
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.06)',
                 }}
               >
-                <Icon className="h-4 w-4" style={{ color: `rgb(${accent})` }} />
+                <Icon className="h-4 w-4 text-[var(--brand-text-secondary)] opacity-80" />
+                {/* Type accent — single dot, the only colour cue per row */}
+                <span
+                  aria-hidden
+                  className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full"
+                  style={{
+                    background: `rgb(${accent})`,
+                    boxShadow: `0 0 6px rgba(${accent}, 0.7)`,
+                  }}
+                />
               </div>
-              <div className="relative flex-1 min-w-0">
+              <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-[var(--brand-text-primary)] truncate">{item.itemContent}</p>
-                <p
-                  className="text-[11px] truncate uppercase tracking-[0.18em] mt-0.5"
-                  style={{ color: `rgba(${accent}, 0.75)` }}
-                >
-                  {item.listTitle}
-                </p>
+                <p className="text-[11px] text-[var(--brand-text-muted)] truncate mt-0.5">{item.listTitle}</p>
               </div>
-              <ArrowRight className="relative h-4 w-4 text-[var(--brand-text-muted)] flex-shrink-0 transition-transform group-hover:translate-x-0.5" />
+              <ArrowRight className="h-4 w-4 text-[var(--brand-text-muted)] opacity-40 flex-shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:opacity-70" />
             </Link>
           )
         })}

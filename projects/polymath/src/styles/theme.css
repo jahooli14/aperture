@@ -101,40 +101,34 @@
     font-family: var(--brand-font-body);
 }
 
-/* Two-Part Header Variant */
+/* Section header — quiet, editorial. Secondary surfaces label themselves
+   here; The Moment hero owns the loud type. Hairline rule + subtle
+   accent on the highlight word. No gradient text, no glow. */
 .section-header {
     position: relative;
-    font-size: 1.875rem;
-    line-height: 2.25rem;
-    font-weight: 800;
-    color: white;
-    letter-spacing: -0.04em;
+    font-size: 1.5rem !important;
+    line-height: 1.2 !important;
+    font-weight: 700 !important;
+    color: rgba(255, 255, 255, 0.92);
+    letter-spacing: -0.03em !important;
     font-family: var(--brand-font-header);
-    margin-bottom: 1.5rem;
-    text-shadow: 0 0 40px rgba(255,255,255,0.06);
+    margin-bottom: 1.25rem;
     display: flex;
-    align-items: baseline;
-    gap: 0.65rem;
+    align-items: center;
+    gap: 0.55rem;
 }
 
 .section-header::before {
     content: '';
-    width: 22px;
-    height: 2px;
-    border-radius: 2px;
-    background: linear-gradient(90deg, rgb(var(--brand-primary-rgb)), rgba(var(--brand-primary-rgb), 0));
-    box-shadow: 0 0 12px rgba(var(--brand-primary-rgb), 0.6);
-    transform: translateY(-0.45em);
+    width: 14px;
+    height: 1px;
+    background: rgba(var(--brand-primary-rgb), 0.55);
     flex-shrink: 0;
 }
 
 .section-header span {
-    background: linear-gradient(135deg, rgb(var(--brand-primary-rgb)), rgba(167, 139, 250, 0.9));
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    color: transparent;
-    text-shadow: 0 0 24px rgba(var(--brand-primary-rgb), 0.35);
+    color: rgb(var(--brand-primary-rgb));
+    opacity: 0.85;
 }
 
 /* The "Shelf" Separator */
