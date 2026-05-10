@@ -43,6 +43,11 @@ interface ProjectIdea {
   evidence: IdeaEvidence[]
   status: 'pending' | 'saved' | 'rejected' | 'built'
   generated_at: string
+  /** 'crossover' for the locked-pairs / permissive paths (the default).
+   *  'read' for the longitudinal pattern reader — the row also carries a
+   *  non-empty `pattern` and the card leads with it as the hero block. */
+  mode?: 'crossover' | 'read'
+  pattern?: string | null
 }
 
 interface ProjectIdeasResponse {
@@ -61,13 +66,14 @@ interface GenerateResponse {
   message?: string
 }
 
-type IdeaMode = 'new_idea' | 'forgotten' | 'reshape' | 'extend'
+type IdeaMode = 'read' | 'new_idea' | 'forgotten' | 'reshape' | 'extend'
 
-// Derive the mode from evidence — no DB column needed.
-// project_dormant evidence = something was abandoned; check recency to split
-// forgotten (3-16 wks) from reshape (4+ months). Active project evidence = extend.
-// Anything else = new idea coalescing.
+// Derive the visual mode. The DB-backed `mode='read'` always wins — Read
+// is the longitudinal pattern reader and gets its own treatment regardless
+// of evidence shape. Falling through to evidence-based derivation gives
+// crossover its mode-specific glyph as before.
 function deriveMode(idea: ProjectIdea): IdeaMode {
+  if (idea.mode === 'read') return 'read'
   const kinds = (idea.evidence ?? []).map(e => e.kind)
   if (kinds.includes('project_dormant')) {
     // Try to determine dormancy depth from the evidence date
@@ -86,11 +92,15 @@ function deriveMode(idea: ProjectIdea): IdeaMode {
 // the harness, not a generic note. The glyphs are typographic ornaments
 // (fleurons, dingbats); the accents are non-brand colours so the card
 // feels distinct from the rest of the cyan UI without breaking the system.
+//
+// Read uses warm rose — distinct from the other modes (which trend cool),
+// and signals "this is the wow line" before the user reads anything.
 const MODE_VISUAL: Record<IdeaMode, { glyph: string; accentRgb: string; eyebrow: string }> = {
-  new_idea: { glyph: '✦', accentRgb: '252, 211, 77',  eyebrow: 'a new idea taking shape' },   // amber
-  forgotten: { glyph: '❋', accentRgb: '148, 163, 184', eyebrow: 'you set this down' },         // slate
-  reshape:   { glyph: '◈', accentRgb: '167, 139, 250', eyebrow: 'a new angle' },               // violet
-  extend:    { glyph: '→', accentRgb: '56, 189, 248',  eyebrow: 'pick this up' },              // cyan
+  read:      { glyph: '◉', accentRgb: '244, 114, 182', eyebrow: 'what i see across your work' }, // rose
+  new_idea:  { glyph: '✦', accentRgb: '252, 211, 77',  eyebrow: 'a new idea taking shape' },     // amber
+  forgotten: { glyph: '❋', accentRgb: '148, 163, 184', eyebrow: 'you set this down' },           // slate
+  reshape:   { glyph: '◈', accentRgb: '167, 139, 250', eyebrow: 'a new angle' },                 // violet
+  extend:    { glyph: '→', accentRgb: '56, 189, 248',  eyebrow: 'pick this up' },                // cyan
 }
 
 const KIND_LABEL: Record<string, string> = {
@@ -243,10 +253,16 @@ export function ProjectIdeasHome() {
         setActiveIndex(0)
       } else if (status === 'built') {
         // Navigate to a pre-filled new project page so the user can
-        // immediately start building what they just committed to.
+        // immediately start building what they just committed to. For
+        // Read, lead the description with the pattern — that's the line
+        // worth keeping in the project's own context as a reminder of
+        // why this one is the right one.
+        const description = idea.mode === 'read' && idea.pattern
+          ? `${idea.pattern}\n\n${idea.pitch}`
+          : idea.pitch
         const params = new URLSearchParams({
           title: idea.title,
-          description: idea.pitch,
+          description,
           first_task: idea.next_step,
           from_idea: idea.id,
         })
@@ -347,29 +363,47 @@ export function ProjectIdeasHome() {
 
         {!loading && !ideas.length && !generating && (
           <div className="flex flex-col gap-4 px-2">
-            {/* Show the last seen idea dimmed — gives context instead of a blank */}
+            {/* Show the last seen idea dimmed — gives context instead of a blank.
+                Read mode previews the pattern (the wow line); crossover previews
+                title + why_now as before. */}
             {lastIdea && (
               <div className="opacity-30 pointer-events-none select-none mb-2">
-                <h3
-                  className="text-[20px] leading-[1.15] mb-2"
-                  style={{
-                    color: 'var(--brand-text-primary)',
-                    fontFamily: 'var(--brand-font-serif)',
-                    fontWeight: 500,
-                    letterSpacing: '-0.018em',
-                  }}
-                >
-                  {lastIdea.title}
-                </h3>
-                <p
-                  className="text-[13px] italic leading-[1.6]"
-                  style={{
-                    color: 'var(--brand-text-secondary)',
-                    fontFamily: 'var(--brand-font-serif)',
-                  }}
-                >
-                  {lastIdea.why_now}
-                </p>
+                {lastIdea.mode === 'read' && lastIdea.pattern ? (
+                  <p
+                    className="text-[18px] italic leading-[1.25]"
+                    style={{
+                      color: 'var(--brand-text-primary)',
+                      fontFamily: 'var(--brand-font-serif)',
+                      fontWeight: 400,
+                      letterSpacing: '-0.018em',
+                    }}
+                  >
+                    {lastIdea.pattern}
+                  </p>
+                ) : (
+                  <>
+                    <h3
+                      className="text-[20px] leading-[1.15] mb-2"
+                      style={{
+                        color: 'var(--brand-text-primary)',
+                        fontFamily: 'var(--brand-font-serif)',
+                        fontWeight: 500,
+                        letterSpacing: '-0.018em',
+                      }}
+                    >
+                      {lastIdea.title}
+                    </h3>
+                    <p
+                      className="text-[13px] italic leading-[1.6]"
+                      style={{
+                        color: 'var(--brand-text-secondary)',
+                        fontFamily: 'var(--brand-font-serif)',
+                      }}
+                    >
+                      {lastIdea.why_now}
+                    </p>
+                  </>
+                )}
               </div>
             )}
             <div className="flex items-center gap-3">
@@ -525,10 +559,38 @@ export function ProjectIdeasHome() {
                   )}
                 </div>
 
+                {/* Read mode — the pattern is the hero. Render it first, large
+                    serif, italic, mode-tinted. The project title sits below
+                    as the consequence. The wow lands in the pattern; the
+                    title is just the natural "so do this." */}
+                {mode === 'read' && active.pattern && (
+                  <>
+                    <p
+                      className="relative text-[26px] sm:text-[36px] leading-[1.18] italic mb-6"
+                      style={{
+                        color: 'var(--brand-text-primary)',
+                        fontFamily: 'var(--brand-font-serif)',
+                        fontWeight: 400,
+                        letterSpacing: '-0.018em',
+                      }}
+                    >
+                      {active.pattern}
+                    </p>
+                    <span
+                      className="block text-[10px] uppercase tracking-[0.32em] mb-2 font-semibold"
+                      style={{ color: `rgb(${accent})`, opacity: 0.85 }}
+                    >
+                      the project this points to
+                    </span>
+                  </>
+                )}
+
                 {/* Title — generous serif, with a mode-tinted underline that
-                    acts as a printer's slug rule. */}
+                    acts as a printer's slug rule. In Read mode the title is
+                    a sub-headline (the consequence of the pattern above), so
+                    it gets a slightly smaller treatment. */}
                 <h3
-                  className="relative text-[30px] sm:text-[42px] leading-[1.05] mb-3"
+                  className={`relative leading-[1.05] mb-3 ${mode === 'read' ? 'text-[22px] sm:text-[28px]' : 'text-[30px] sm:text-[42px]'}`}
                   style={{
                     color: 'var(--brand-text-primary)',
                     fontFamily: 'var(--brand-font-serif)',

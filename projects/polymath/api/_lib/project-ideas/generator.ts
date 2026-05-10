@@ -1,24 +1,27 @@
 /**
- * Generator — writes up 0–3 project ideas from seed pairs the picker has
- * already chosen.
+ * Generator — writes up to 3 project ideas from two cooperating modes.
  *
- * Architectural split (the fix for "two runs gave the same idea twice"):
- *   1. seed-picker enumerates and scores (centre × arrival) pairs in code,
- *      enforcing a 12-week cooldown so the same convergence can't re-fire.
- *   2. THIS module gives the LLM those locked pairs and asks only "is this
- *      a real missing-piece match? if yes, write the idea; if no, null."
- *   3. Picking moved out of the LLM means same-corpus runs no longer
- *      collapse onto the same convergence — different pairs per batch.
+ *   READ MODE (the hero). Looks at the user's whole creative life — every
+ *   project state with feedback, voice notes back ~24 months, lists with
+ *   reactions, reading + highlights, prior idea outcomes — and names the
+ *   through-line nobody (including the user) has said out loud. Then names
+ *   the project that breaks or extends it. The wow is the audacity of the
+ *   read; the project is the consequence. Returns 0 or 1 idea.
  *
- * The LLM still does the things only it can do: voice, framing, calibrating
- * whether a forced wedge ("Catch-22 logic-filter for Aperture") should be
- * killed. Server-side evidence verification stays — the model can't put
- * fabricated quotes in the user's mouth.
+ *   CROSSOVER MODE (the original). The seed-picker chooses (centre × arrival)
+ *   pairs in code; the LLM verifies each pair and either writes the idea or
+ *   nulls the slot. Locked pairs prevent same-corpus runs collapsing onto
+ *   the same convergence. Returns up to 3 ideas.
  *
- * Permissive fallback: when the picker returns 0 candidates (no recent
- * arrivals or no centres) AND the user explicitly clicked "show me ideas",
- * fall back to the old single-idea permissive prompt so the button isn't
- * dead. Cron stays strict — silence is acceptable on cron.
+ * Both modes run in parallel and the results merge: when Read fires it takes
+ * the hero slot (rank 1) and crossover ideas slide to ranks 2/3. When Read
+ * stays silent, crossover carries the surface as before. The UI checks
+ * `mode` per row and renders Read with a leading pattern block.
+ *
+ * Permissive fallback: when crossover's locked-pair pass returns nothing AND
+ * the user explicitly clicked "show me ideas", fall back to a permissive
+ * single-idea prompt so the button is never dead. Cron stays strict —
+ * silence is acceptable on cron.
  */
 
 import { generateText } from '../gemini-chat.js'
@@ -48,18 +51,37 @@ export async function generateProjectIdeas(
   const seeds = pickSeedPairs(gathered, { count: 3 })
   console.log(`[project-ideas] seed picker chose ${seeds.length} pair(s)${seeds.length ? `: ${seeds.map(s => `${s.centre.kind}#${s.centre.id.slice(0, 8)}×${s.arrival.kind}#${s.arrival.id.slice(0, 8)} (score=${s.score.toFixed(2)}, overlap=${s.topical_overlap.toFixed(2)})`).join('; ')}` : ''}`)
 
-  if (seeds.length > 0) {
-    const ideas = await runLockedPairs(gathered, seeds)
-    if (ideas.length > 0) return { ideas, attempts: 1 }
-  }
+  // Read and crossover run in parallel — the wow shape and the convergence
+  // shape compete for the hero slot. Read returns 0 or 1; crossover returns
+  // 0–3. When Read fires it takes rank 1 and crossover slides behind it.
+  const [readIdeas, crossoverIdeas] = await Promise.all([
+    runRead(gathered),
+    seeds.length > 0 ? runLockedPairs(gathered, seeds) : Promise.resolve([] as ProjectIdea[]),
+  ])
+
+  const merged = mergeIdeas(readIdeas, crossoverIdeas)
+  if (merged.length > 0) return { ideas: merged, attempts: 1 }
 
   if (opts.force) {
-    console.log(`[project-ideas] seed-pair pass produced 0; force=true, falling back to permissive`)
+    console.log(`[project-ideas] read+crossover produced 0; force=true, falling back to permissive`)
     const fallback = await runPermissive(gathered)
     if (fallback.length > 0) return { ideas: fallback, attempts: 2 }
   }
 
   return { ideas: [], reason: 'parse_failure', attempts: opts.force ? 2 : 1 }
+}
+
+/** Merge Read (0 or 1) and crossover (0–3) into a single ranked deck capped
+ *  at 3. Read takes rank 1 when it fires; crossover fills the rest. When
+ *  Read stays silent, crossover carries the deck as before. */
+function mergeIdeas(readIdeas: ProjectIdea[], crossoverIdeas: ProjectIdea[]): ProjectIdea[] {
+  const out: ProjectIdea[] = []
+  if (readIdeas.length > 0) out.push({ ...readIdeas[0], mode: 'read' })
+  for (const idea of crossoverIdeas) {
+    if (out.length >= 3) break
+    out.push({ ...idea, mode: 'crossover' })
+  }
+  return out.map((idea, i) => ({ ...idea, rank: i + 1 }))
 }
 
 async function runLockedPairs(gathered: GatherResult, seeds: SeedCandidate[]): Promise<ProjectIdea[]> {
@@ -112,6 +134,34 @@ async function runPermissive(gathered: GatherResult): Promise<ProjectIdea[]> {
   }
   console.log(`[project-ideas] permissive Flash responded in ${Date.now() - t0}ms (${raw.length} chars)`)
   return parsePermissive(raw, gathered)
+}
+
+/** Read mode — looks at the user's whole creative life and names the
+ *  through-line the user hasn't said out loud yet, then names the project
+ *  that breaks or extends it. Returns 0 (silent — no real pattern visible)
+ *  or 1 idea. The bar is "would the user say 'huh, that's me' before they
+ *  say anything else." */
+async function runRead(gathered: GatherResult): Promise<ProjectIdea[]> {
+  const prompt = buildReadPrompt(gathered)
+  console.log(`[project-ideas] read prompt: ${prompt.length} chars`)
+
+  const t0 = Date.now()
+  let raw: string
+  try {
+    raw = await generateText(prompt, {
+      model: MODELS.FLASH_CHAT,
+      maxTokens: 8000,
+      // Slightly lower than crossover (0.85) — Read has to commit to one
+      // pattern claim and one project; we want it deliberate, not breezy.
+      temperature: 0.7,
+      responseFormat: 'json',
+    })
+  } catch (err) {
+    console.error(`[project-ideas] read Flash call threw after ${Date.now() - t0}ms:`, err)
+    return []
+  }
+  console.log(`[project-ideas] read Flash responded in ${Date.now() - t0}ms (${raw.length} chars)`)
+  return parseRead(raw, gathered)
 }
 
 function buildLockedPrompt(g: GatherResult, seeds: SeedCandidate[]): string {
@@ -375,6 +425,176 @@ ${justShownBlock || '  (none)'}
 }`
 }
 
+/**
+ * Read prompt — the longitudinal pattern reader. Hands the model the user's
+ * whole creative life and asks for one sentence about what it sees, then
+ * the project that consequence demands. The pattern is the wow; the project
+ * is the consequence. The model is instructed to stay silent (`idea: null`)
+ * unless it can name a real recurring shape, not a single-capture vibe.
+ */
+function buildReadPrompt(g: GatherResult): string {
+  // PROJECT GRAVEYARD — every state, with the user's framing intact. This
+  // is what no other tool sees: started / shipped / abandoned, with the
+  // user's words still attached. The pattern hides in the deltas between
+  // these states (started but never finished; shape that always stalls).
+  const activeProjBlock = g.active_projects.slice(0, 15).map(p =>
+    `  project_active#${p.id} "${p.title}" — last touched ${isoDate(p.updated_at)}${p.description ? `; ${truncate(p.description, 160)}` : ''}`
+  ).join('\n')
+  const dormantProjBlock = g.dormant_projects.slice(0, 15).map(p =>
+    `  project_dormant#${p.id} [${p.status}] "${p.title}" — last touched ${isoDate(p.updated_at)}${p.description ? `; ${truncate(p.description, 160)}` : ''}`
+  ).join('\n')
+
+  // PRIOR IDEA OUTCOMES — what the system has already proposed and what the
+  // user did with each. Built / saved / rejected outcomes are the strongest
+  // taste signal we have. Rejection reasons name what the user is sick of.
+  const priorBuilt = g.prior_ideas.built.map(t => `  · BUILT: "${t.title}"${t.feedback ? ` — ${truncate(t.feedback, 140)}` : ''}`).join('\n')
+  const priorSaved = g.prior_ideas.saved.map(t => `  · saved: "${t.title}"${t.feedback ? ` — ${truncate(t.feedback, 140)}` : ''}`).join('\n')
+  const priorRejected = g.prior_ideas.rejected.map(t => `  · rejected: "${t.title}"${t.feedback ? ` — reason: ${truncate(t.feedback, 140)}` : ''}`).join('\n')
+
+  // VOICE NOTES — the raw thought-stream. Group by quarter so the model can
+  // see drift over time without us having to label it. Older notes matter
+  // more here than in crossover; the pattern needs longitudinal range.
+  const memoriesByQuarter = groupBy(
+    [...g.memories].sort((a, b) => (a.created_at < b.created_at ? -1 : 1)),
+    m => quarterKey(m.created_at),
+  )
+  const memBlock = Array.from(memoriesByQuarter.entries())
+    .map(([q, items]) => {
+      const lines = items.slice(0, 12).map(m =>
+        `    memory#${m.id} (${isoDate(m.created_at)}) — "${truncate(m.body, 220)}"`
+      ).join('\n')
+      return `  ${q}:\n${lines}`
+    })
+    .join('\n')
+
+  // LISTS WITH REACTIONS — taste / identity signal. Reactions are the
+  // strongest thing here: "want to make" + "sparked" point at a shape the
+  // user is trying to be. "off" items rule out shapes they're not.
+  const reactedItems = g.list_items.filter((li) => li.reaction === 'make' || li.reaction === 'sparked').slice(0, 12)
+  const reactedBlock = reactedItems.map((li) =>
+    `  · ${li.list_type}: "${truncate(li.content, 90)}" — ${li.reaction === 'make' ? 'WANTS TO MAKE' : 'sparked'}`
+  ).join('\n')
+  const offItems = g.list_items.filter((li) => li.reaction === 'off').slice(0, 8)
+  const offBlock = offItems.map((li) =>
+    `  · ${li.list_type}: "${truncate(li.content, 90)}"`
+  ).join('\n')
+
+  // READING + HIGHLIGHTS — what they're consuming alongside making. The
+  // highlight is the strongest signal: they actively flagged this sentence.
+  const readingBlock = g.reading.slice(0, 12).map(r =>
+    `  reading#${r.id} (${isoDate(r.created_at)}) "${r.title ?? '(untitled)'}"${r.excerpt ? ` — ${truncate(r.excerpt, 160)}` : ''}`
+  ).join('\n')
+  const highlightBlock = g.highlights.slice(0, 10).map(h =>
+    `  highlight#${h.id} (${isoDate(h.created_at)}) "${truncate(h.quote, 200)}"${h.article_title ? ` — from ${h.article_title}` : ''}`
+  ).join('\n')
+
+  const justShownBlock = (g.recent_titles ?? [])
+    .slice(0, 12)
+    .map(t => `  · "${t.title}"`)
+    .join('\n')
+
+  return `You are a friend who has been quietly watching this person try to make things for years. You've heard every voice note. You've seen every project they started and dropped. You've watched what they read, what they bookmark, what they react to. They don't know you've been paying this much attention.
+
+Today they opened the app. Your one job: name the through-line nobody — including them — has said out loud. Then name the project that comes from it.
+
+This is not a "give me an idea" exercise. It's a "tell me what you see" exercise. The wow is when they read your one sentence and say "huh. that's me." The project is just the natural consequence.
+
+═══════ HOW TO WRITE ═══════
+
+Plain English. The way a friend talks, not how a product writes.
+NEVER use: "leveraging," "synergies," "soundscapes," "narrative substrate," "feature-rich," "psychological defenses," "high-impact transition," "creative momentum," "experiential."
+NEVER invent a hyphenated phrase in scare-quotes ("friction-over-function"). If the term needs scare-quotes to be understood, rewrite it.
+NEVER explain to the user what they "are doing" in coach voice. Show them what you see, the way a friend would: short, specific, grounded in the data they recognise.
+ONE idea per sentence. Three clauses = wrong.
+Concrete. "You start music projects every spring and never finish one" beats "you have a recurring affinity for sonic ideation."
+
+═══════ THE BAR ═══════
+
+Pattern must be REAL. It must be visible across at least 3 separate captures or projects in the data below — not pulled from one voice note. Real shapes:
+
+  - A repeating MOVE: "you almost-start music projects four times a year and stall at format."
+  - A repeating BLOCK: "every project you've abandoned was bigger than three weekends."
+  - A repeating TASTE: "everything you keep is small, physical, made by one person, and resists being sold."
+  - A drift in IDENTITY: "you used to read about systems; this year you read about hands."
+  - A circle: "you've named [thing] in three different ways across two years and never started it."
+
+If you cannot point at the specific captures that prove the pattern, OUTPUT NULL. There is no consolation prize. A weak pattern read is worse than silence — it makes the whole surface untrustworthy.
+
+═══════ THE PROJECT ═══════
+
+Once the pattern is real, name the ONE project that is the consequence of it:
+
+  - Breaks the block (if the pattern is a recurring failure shape)
+  - Honours the taste (if the pattern is a fingerprint)
+  - Makes the next-self real (if the pattern is a drift)
+  - Names the unnamed circle (if the pattern is a recurring near-start)
+
+The project must be specific, artefact-shaped, and small enough that the first move can happen today. ≤6 words for the title. NO abstract nouns: no "exploration," "study," "series," "directory," "newsletter," "podcast," "zine," "investigation," "meditation on," "in conversation with."
+
+═══════ ACTIVE PROJECTS (already on Keep Going — never propose "finish / ship / complete / continue X" against any of these) ═══════
+${activeProjBlock || '  (none)'}
+
+═══════ DORMANT / ON-HOLD / ARCHIVED PROJECTS ═══════
+${dormantProjBlock || '  (none)'}
+
+═══════ PRIOR IDEAS — BUILT (the strongest taste signal: they actually made this) ═══════
+${priorBuilt || '  (none yet — pattern reads should treat this as itself a signal)'}
+
+═══════ PRIOR IDEAS — SAVED (kept on the radar, not built) ═══════
+${priorSaved || '  (none)'}
+
+═══════ PRIOR IDEAS — REJECTED (with reasons — these tell you what they're sick of) ═══════
+${priorRejected || '  (none)'}
+
+═══════ VOICE NOTES BY QUARTER (oldest first — drift over time matters here) ═══════
+${memBlock || '  (none)'}
+
+═══════ THINGS THEY EXPLICITLY WANT TO MAKE OR FELT SPARKED BY ═══════
+${reactedBlock || '  (none yet)'}
+
+═══════ THINGS THEY MARKED AS "OFF" (anti-taste — never centre an idea on these) ═══════
+${offBlock || '  (none)'}
+
+═══════ READING ═══════
+${readingBlock || '  (none)'}
+
+═══════ HIGHLIGHTS (sentences they actively flagged) ═══════
+${highlightBlock || '  (none)'}
+
+═══════ JUST SHOWN — titles already on screen or just regenerated away from. NEVER emit any of these or a near-paraphrase ═══════
+${justShownBlock || '  (none)'}
+
+═══════ OUTPUT (strict JSON, no markdown fences) ═══════
+{
+  "idea": <object> | null,
+  "skip_reason": "<one short sentence; only when idea is null>"
+}
+
+When the pattern is real, the idea object is:
+{
+  "pattern": "ONE sentence in the user's frame, naming the through-line. ≤24 words. The wow line — what makes them say 'huh, that's me.' Concrete, not abstract.",
+  "title": "≤6 words. The project the pattern points to. Names the artefact or the action.",
+  "pitch": "2 sentences. Sentence 1 = how the project breaks / honours / completes the pattern. Sentence 2 = what done looks like, in one observable test.",
+  "why_now": "ONE sentence. The single most recent capture or completed project that proves the pattern is current, not historical.",
+  "next_step": "ONE physical action they can do today (cut, drill, flash, commit a named file with named first content, drive, phone). NOT 'research,' 'plan,' 'sketch,' 'outline,' 'decide.'",
+  "evidence": [
+    { "kind": "memory|project_dormant|project|reading|highlight|list_item", "source_id": "...", "label": "...", "date": "YYYY-MM-DD", "excerpt": "verbatim substring of the source body shown above" }
+  ]
+}
+
+Evidence rules: 3–6 items. Each excerpt MUST be a verbatim substring of a body shown above (will be substring-checked; fabrications are dropped). Together the evidence proves the pattern.
+
+If no real pattern is visible, return: { "idea": null, "skip_reason": "..." } and we'll lean on crossover. Silence is honest.`
+}
+
+function quarterKey(dateStr: string): string {
+  if (!dateStr) return 'undated'
+  const d = new Date(dateStr)
+  if (Number.isNaN(d.getTime())) return 'undated'
+  const q = Math.floor(d.getUTCMonth() / 3) + 1
+  return `${d.getUTCFullYear()} Q${q}`
+}
+
 interface RawIdea {
   rank?: number
   rank_role?: string
@@ -562,6 +782,42 @@ function parsePermissive(raw: string, gathered: GatherResult): ProjectIdea[] {
     if (out.length >= 1) break
   }
   return out.map((idea, i) => ({ ...idea, rank: i + 1 }))
+}
+
+/** Read-mode response: `{ idea: <obj> | null, skip_reason }`. Returns 0 or 1
+ *  validated idea. The pattern field is required and non-empty when idea is
+ *  present — that's the wow. Evidence is verified the same way as crossover.
+ *  The active-project / "finish X" filter still applies. */
+function parseRead(raw: string, gathered: GatherResult): ProjectIdea[] {
+  const payload = robustJsonParse(raw)
+  if (!payload || typeof payload !== 'object') return []
+  const root = payload as { idea?: RawReadIdea | null; skip_reason?: string }
+  if (!root.idea) {
+    if (root.skip_reason) console.log(`[project-ideas] read skipped: ${truncate(root.skip_reason, 200)}`)
+    return []
+  }
+  const item = root.idea
+  if (!item.pattern || typeof item.pattern !== 'string' || item.pattern.trim().length < 12) {
+    console.warn('[project-ideas] read dropped — pattern missing or too short')
+    return []
+  }
+  const sourceLookup = buildSourceLookup(gathered)
+  const base = validateRawIdea(item, sourceLookup)
+  if (!base) {
+    console.warn('[project-ideas] read dropped — failed base validation')
+    return []
+  }
+  const activeIds = new Set(gathered.active_projects.map(p => p.id))
+  const FINISH_RE = /^\s*(finish(ing)?|ship(ping)?|complete(\s+the)?|wrap\s*up|polish(\s+the)?|continue(\s+the)?)\b/i
+  if (FINISH_RE.test(base.title) && base.evidence.some(e => activeIds.has(e.source_id))) {
+    console.log(`[project-ideas] read dropped "${base.title}" — "finish/ship X" against active project`)
+    return []
+  }
+  return [{ ...base, mode: 'read', pattern: item.pattern.trim().slice(0, 280) }]
+}
+
+interface RawReadIdea extends RawIdea {
+  pattern?: string
 }
 
 const CENTRE_KINDS: ReadonlySet<CentreKind> = new Set(['project_dormant', 'project_active', 'memory'])

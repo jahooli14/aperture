@@ -38,6 +38,8 @@ export interface SeedPair {
   arrival_id: string
 }
 
+export type IdeaMode = 'crossover' | 'read'
+
 export interface ProjectIdea {
   rank: number
   title: string
@@ -46,6 +48,14 @@ export interface ProjectIdea {
   next_step: string
   evidence: IdeaEvidence[]
   seed_pair?: SeedPair
+  /** 'crossover' for locked-pairs / permissive output (the default).
+   *  'read' for the longitudinal pattern reader — the row also carries a
+   *  non-null `pattern` and the UI renders it as the hero block. */
+  mode?: IdeaMode
+  /** The through-line sentence for Read mode. The pattern itself, in the
+   *  user's frame — "you almost-start music projects four times a year and
+   *  stall at format." NULL on crossover rows. */
+  pattern?: string | null
 }
 
 export interface StoredProjectIdea extends ProjectIdea {

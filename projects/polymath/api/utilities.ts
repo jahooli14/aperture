@@ -1331,7 +1331,7 @@ async function handleProjectIdeasGet(req: VercelRequest, res: VercelResponse) {
     const [activeRes, anyRes, projectsRes] = await Promise.all([
       supabase
         .from('project_ideas')
-        .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, status, user_feedback, generated_at, acted_on_at')
+        .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, status, user_feedback, generated_at, acted_on_at, mode, pattern')
         .eq('user_id', userId)
         .in('status', ['pending', 'saved', 'built'])
         .order('generated_at', { ascending: false })
@@ -1365,21 +1365,35 @@ async function handleProjectIdeasGet(req: VercelRequest, res: VercelResponse) {
     // Going already surfaces those — re-advertising them as "ideas" is
     // duplication. Catches cached pre-fix ideas as well as anything new
     // that slipped past the generator's validator.
+    //
+    // Read mode is exempt from the cites-active-project check: Read uses
+    // the WHOLE graveyard as evidence, including active projects, because
+    // the pattern often shows up across all states. The generator already
+    // drops "finish / ship X" titles in parseRead, and the title-mentions
+    // guard below still applies.
     const activeProjectIds = new Set((projectsRes.data ?? []).map((p: any) => p.id as string))
     const activeProjectTitles = (projectsRes.data ?? [])
       .map((p: any) => (p.title as string | null) ?? '')
       .filter(t => t.trim().length > 0)
       .map(t => t.toLowerCase())
+    const FINISH_RE = /^\s*(finish(ing)?|ship(ping)?|complete(\s+the)?|wrap\s*up|polish(\s+the)?|continue(\s+the)?)\b/i
     const filtered = latest.filter((idea: any) => {
+      const isRead = idea.mode === 'read'
       const evidence = Array.isArray(idea.evidence) ? idea.evidence : []
-      const citesActive = evidence.some((e: any) => activeProjectIds.has(e?.source_id))
-      if (citesActive) return false
-      // Belt-and-braces: also filter out title-mentions of active project
-      // titles even if the evidence array doesn't cite the project id —
-      // catches cases where the model invented a "finish/polish/master X"
-      // idea about an active project but cited memories instead.
+      if (!isRead) {
+        const citesActive = evidence.some((e: any) => activeProjectIds.has(e?.source_id))
+        if (citesActive) return false
+      }
       const title = String(idea.title ?? '').toLowerCase()
-      if (activeProjectTitles.some(pt => title.includes(pt))) return false
+      // For Read, only block titles that BOTH mention an active project name
+      // AND start with a finish/ship verb — Read is allowed to extend an
+      // active project in a new direction; it just can't propose finishing
+      // one. Crossover keeps the stricter "any title mention" guard.
+      if (isRead) {
+        if (FINISH_RE.test(title) && activeProjectTitles.some(pt => title.includes(pt))) return false
+      } else {
+        if (activeProjectTitles.some(pt => title.includes(pt))) return false
+      }
       return true
     })
 
@@ -1547,6 +1561,12 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
       // fallback fired — that path doesn't pick from a structured pair,
       // so the cooldown filter has nothing useful to track on those rows.
       seed_pair: idea.seed_pair ?? null,
+      // Read rows carry mode='read' + a non-null pattern. Crossover and
+      // permissive both store mode='crossover' (the column default) and
+      // pattern=null. The UI branches on `mode` to render Read with the
+      // pattern as the leading hero block.
+      mode: idea.mode ?? 'crossover',
+      pattern: idea.pattern ?? null,
       status: 'pending' as const,
       generated_at,
     }))
@@ -1554,7 +1574,7 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
     const { data: inserted, error: insertErr } = await supabase
       .from('project_ideas')
       .insert(rows)
-      .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, seed_pair, status, user_feedback, generated_at, acted_on_at')
+      .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, seed_pair, mode, pattern, status, user_feedback, generated_at, acted_on_at')
 
     if (insertErr) {
       console.error('[generate-project-ideas] insert failed:', insertErr)
