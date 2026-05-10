@@ -58,32 +58,30 @@ export async function generateProjectIdeas(
   console.log(`[project-ideas] seed picker chose ${seeds.length} pair(s)${seeds.length ? `: ${seeds.map(s => `${s.centre.kind}#${s.centre.id.slice(0, 8)}×${s.arrival.kind}#${s.arrival.id.slice(0, 8)} (score=${s.score.toFixed(2)}, overlap=${s.topical_overlap.toFixed(2)})`).join('; ')}` : ''}`)
 
   if (opts.fast) {
-    // Fast path — user is waiting. One mode (crossover), one idea (top
-    // seed only, not all three). Same model (Flash) for quality; the
-    // speed win is doing less work. The cron-baked queue still has the
-    // full Read + 3-pair output in it; this is the empty-queue fallback.
-    //
-    // The user explicitly asked for an idea — silence is not acceptable.
-    // We try locked-pairs (top seed), fall back to permissive, and retry
-    // permissive once if the first attempt parses to zero. Two LLM calls
-    // worst case, almost always one.
-    console.log('[project-ideas] fast path: crossover-only, top seed only')
-    const topSeed = seeds.slice(0, 1)
-    const ideas = topSeed.length > 0
-      ? await runLockedPairs(gathered, topSeed, { fast: true })
-      : []
-    if (ideas.length > 0) {
-      return { ideas: ideas.map(i => ({ ...i, mode: 'crossover' as const })), attempts: 1 }
+    // Fast path — user is waiting. Two-stage pipeline:
+    //   1. Flash-Lite reads the full gathered context and produces a tight
+    //      JSON snapshot (~1K chars) of the highest-signal items: dominant
+    //      taste fingerprint, top dormant projects, recent themes. Cheap
+    //      and fast (~2–4s) because Lite is built for compression-style
+    //      tasks on big inputs.
+    //   2. Flash writes the final idea from that snapshot. Small input,
+    //      small output, fast (~3–5s) and high-quality because Flash gets
+    //      pre-digested signal instead of raw data.
+    //   3. If the LLM path fails for any reason, a server-side template
+    //      fallback synthesises an idea from the gathered data without an
+    //      LLM call. The button NEVER returns empty.
+    // Target end-to-end: ~6–8s. The fallback adds ~10ms on top.
+    console.log('[project-ideas] fast path: two-stage Lite→Flash')
+    const fastIdea = await runFastTwoStage(gathered)
+    if (fastIdea) {
+      return { ideas: [{ ...fastIdea, mode: 'crossover' }], attempts: 1 }
     }
-    if (opts.force) {
-      let fallback = await runPermissive(gathered, { fast: true })
-      if (fallback.length === 0) {
-        console.log('[project-ideas] permissive returned 0 — retrying once')
-        fallback = await runPermissive(gathered, { fast: true })
-      }
-      if (fallback.length > 0) return { ideas: fallback, attempts: 2 }
-    }
-    return { ideas: [], reason: 'parse_failure', attempts: opts.force ? 3 : 1 }
+    // Either Lite or Flash misbehaved. The template never returns null —
+    // the button is guaranteed to come back with something, even on a day
+    // when the user has almost no data and both LLM stages are flaky.
+    console.log('[project-ideas] fast path: served server-side template fallback')
+    const synth = synthesiseFallbackIdea(gathered)
+    return { ideas: [{ ...synth, mode: 'crossover' }], attempts: 2 }
   }
 
   // Read and crossover run in parallel — the wow shape and the convergence
@@ -178,6 +176,335 @@ async function runPermissive(gathered: GatherResult, opts: { fast?: boolean } = 
  *  that breaks or extends it. Returns 0 (silent — no real pattern visible)
  *  or 1 idea. The bar is "would the user say 'huh, that's me' before they
  *  say anything else." */
+/** Hard cap per LLM call in the fast path. Gemini Flash has been observed
+ *  serving 125 output tokens over 17s (~7 tok/s) when overloaded; without
+ *  a cap a single bad backend day produces 40s waits and an empty card.
+ *  We'd rather bail to the next stage / the template and ship something.
+ *  The underlying call continues in the background (Promise.race doesn't
+ *  cancel) but we stop waiting. */
+const FAST_STAGE_TIMEOUT_MS = 15_000
+
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)),
+  ])
+}
+
+/** Two-stage on-demand pipeline. Stage 1 uses Flash-Lite to compress the
+ *  raw gathered context into a tight JSON snapshot; Stage 2 uses Flash on
+ *  that snapshot to write ONE idea. Returns the idea or null if either
+ *  stage fails — the caller falls back to a server-side template. */
+async function runFastTwoStage(gathered: GatherResult): Promise<ProjectIdea | null> {
+  // ── Stage 1: Lite reads everything and digests it ─────────────────
+  const snapshotPrompt = buildSnapshotPrompt(gathered)
+  console.log(`[project-ideas] fast/stage-1 (Lite) snapshot prompt: ${snapshotPrompt.length} chars`)
+  const t1 = Date.now()
+  let snapshotRaw: string
+  try {
+    snapshotRaw = await withTimeout(
+      generateText(snapshotPrompt, {
+        model: MODELS.DEFAULT_CHAT, // gemini-3.1-flash-lite-preview — fast on big input
+        maxTokens: 1500,
+        temperature: 0.3, // compression-style task; we want deterministic structure
+        responseFormat: 'json',
+      }),
+      FAST_STAGE_TIMEOUT_MS,
+      'stage-1 Lite',
+    )
+  } catch (err) {
+    console.error(`[project-ideas] fast/stage-1 Lite threw after ${Date.now() - t1}ms:`, err)
+    return null
+  }
+  console.log(`[project-ideas] fast/stage-1 Lite responded in ${Date.now() - t1}ms (${snapshotRaw.length} chars)`)
+  const snapshot = parseSnapshot(snapshotRaw)
+  if (!snapshot) {
+    console.warn('[project-ideas] fast/stage-1 produced unparseable snapshot — bailing')
+    return null
+  }
+
+  // ── Stage 2: Flash writes the idea from the snapshot ──────────────
+  const ideaPrompt = buildFastIdeaPrompt(snapshot)
+  console.log(`[project-ideas] fast/stage-2 (Flash) idea prompt: ${ideaPrompt.length} chars`)
+  const t2 = Date.now()
+  let ideaRaw: string
+  try {
+    ideaRaw = await withTimeout(
+      generateText(ideaPrompt, {
+        model: MODELS.FLASH_CHAT, // gemini-3-flash-preview — quality on small input
+        maxTokens: 1200,
+        temperature: 0.85,
+        responseFormat: 'json',
+      }),
+      FAST_STAGE_TIMEOUT_MS,
+      'stage-2 Flash',
+    )
+  } catch (err) {
+    console.error(`[project-ideas] fast/stage-2 Flash threw after ${Date.now() - t2}ms:`, err)
+    return null
+  }
+  console.log(`[project-ideas] fast/stage-2 Flash responded in ${Date.now() - t2}ms (${ideaRaw.length} chars)`)
+  return parseFastIdea(ideaRaw, gathered)
+}
+
+interface Snapshot {
+  taste: string
+  dormant: Array<{ id: string; title: string; description: string; last_touched: string }>
+  recent_themes: string[]
+  recent_voice_notes: Array<{ id: string; excerpt: string; date: string }>
+  reactions_make: string[]
+  reactions_sparked: string[]
+}
+
+/** Builds the Lite stage prompt. Hands the model everything we have and
+ *  asks for a compact structured snapshot — taste fingerprint, top dormant
+ *  projects, recent themes from voice notes, identity signals from list
+ *  reactions. The point is to extract the highest-signal bits so Flash
+ *  doesn't have to wade through 12K chars to write one idea. */
+function buildSnapshotPrompt(g: GatherResult): string {
+  const dormantBlock = g.dormant_projects.slice(0, 12).map(p =>
+    `  project_dormant#${p.id} "${p.title}" — last touched ${isoDate(p.updated_at)}${p.description ? `; ${truncate(p.description, 180)}` : ''}`
+  ).join('\n')
+  const activeBlock = g.active_projects.slice(0, 10).map(p =>
+    `  project_active#${p.id} "${p.title}"`
+  ).join('\n')
+  const memBlock = g.memories.slice(0, 30).map(m =>
+    `  memory#${m.id} (${isoDate(m.created_at)}) — "${truncate(m.body, 200)}"`
+  ).join('\n')
+  const listMake = g.list_items.filter((li) => li.reaction === 'make').slice(0, 12).map((li) =>
+    `  ${li.list_type}: "${truncate(li.content, 80)}"`
+  ).join('\n')
+  const listSpark = g.list_items.filter((li) => li.reaction === 'sparked').slice(0, 12).map((li) =>
+    `  ${li.list_type}: "${truncate(li.content, 80)}"`
+  ).join('\n')
+
+  return `You are pre-digesting a user's creative life for a second model that will write one project idea. Your job: extract the highest-signal bits into a compact JSON snapshot. Do not propose ideas. Do not add commentary. Just structure what's there.
+
+═══════ INPUT ═══════
+
+ACTIVE PROJECTS (already on the user's plate — they don't need new ideas about these):
+${activeBlock || '  (none)'}
+
+DORMANT / ON-HOLD / ARCHIVED PROJECTS (the graveyard — strongest source for new ideas):
+${dormantBlock || '  (none)'}
+
+RECENT VOICE NOTES (the user's thoughts in their own words):
+${memBlock || '  (none)'}
+
+THINGS THE USER EXPLICITLY SAID THEY WANT TO MAKE:
+${listMake || '  (none)'}
+
+THINGS THE USER SAID SPARKED THEM:
+${listSpark || '  (none)'}
+
+═══════ OUTPUT (strict JSON, no markdown fences) ═══════
+{
+  "taste": "ONE sentence in plain English describing the user as a maker. Concrete adjectives. e.g. 'makes small physical things from sound, allergic to digital-only, ships in bursts.' If unclear, say 'still forming.'",
+  "dormant": [
+    { "id": "<full project_dormant id>", "title": "...", "description": "≤180 chars summary of the project's actual content", "last_touched": "YYYY-MM-DD" }
+  ],
+  "recent_themes": [
+    "ONE phrase per theme. ≤8 themes. Drawn from voice notes. Concrete (e.g. 'wood joinery', 'birdcam latency', 'songs about constraint'). Skip generic ones (e.g. 'creativity', 'process')."
+  ],
+  "recent_voice_notes": [
+    { "id": "<full memory id>", "excerpt": "verbatim ≤140-char substring of the body", "date": "YYYY-MM-DD" }
+  ],
+  "reactions_make": ["≤6 verbatim list items the user said they want to make"],
+  "reactions_sparked": ["≤6 verbatim list items that sparked them"]
+}
+
+Pick at most 5 dormant entries and at most 5 recent_voice_notes — top quality only. Keep IDs intact (full UUIDs from above). The second model trusts your IDs.`
+}
+
+function parseSnapshot(raw: string): Snapshot | null {
+  const payload = robustJsonParse(raw)
+  if (!payload || typeof payload !== 'object') return null
+  const p = payload as Partial<Snapshot>
+  if (typeof p.taste !== 'string') return null
+  return {
+    taste: p.taste,
+    dormant: Array.isArray(p.dormant) ? p.dormant.filter((d): d is Snapshot['dormant'][number] =>
+      !!d && typeof d.id === 'string' && typeof d.title === 'string'
+    ).slice(0, 5) : [],
+    recent_themes: Array.isArray(p.recent_themes) ? p.recent_themes.filter((t): t is string => typeof t === 'string').slice(0, 8) : [],
+    recent_voice_notes: Array.isArray(p.recent_voice_notes) ? p.recent_voice_notes.filter((v): v is Snapshot['recent_voice_notes'][number] =>
+      !!v && typeof v.id === 'string' && typeof v.excerpt === 'string'
+    ).slice(0, 5) : [],
+    reactions_make: Array.isArray(p.reactions_make) ? p.reactions_make.filter((s): s is string => typeof s === 'string').slice(0, 6) : [],
+    reactions_sparked: Array.isArray(p.reactions_sparked) ? p.reactions_sparked.filter((s): s is string => typeof s === 'string').slice(0, 6) : [],
+  }
+}
+
+/** Builds the Flash stage prompt. Tiny input — just the snapshot — so Flash
+ *  can spend its time on the writing, not on parsing context. Asks for ONE
+ *  idea, plain text fields, no evidence citations (we'll synthesise those
+ *  ourselves to keep the model fast). */
+function buildFastIdeaPrompt(s: Snapshot): string {
+  return `You are a friend who has been paying attention to someone's creative life. They opened the app and asked: "give me one project to work on today." Your job: ONE idea, written like you actually know them.
+
+═══════ HOW TO WRITE ═══════
+
+Plain English. The way a friend talks. Short sentences.
+NEVER use: "leveraging," "synergies," "soundscapes," "narrative substrate," "experiential," "feature-rich," "exploring." No scare-quoted phrases.
+NEVER use abstract nouns in the title: no "exploration," "study," "series," "directory," "newsletter," "podcast," "zine," "investigation," "meditation on," "in conversation with."
+Concrete. "Cut the beech strip for the synth case" beats "begin work on the woodwork aspect."
+
+═══════ WHO THEY ARE ═══════
+
+${s.taste}
+
+═══════ DORMANT PROJECTS (preferred ground — revive the right one) ═══════
+${s.dormant.length ? s.dormant.map(d => `  • "${d.title}" (last touched ${d.last_touched})${d.description ? ` — ${d.description}` : ''}`).join('\n') : '  (none yet)'}
+
+═══════ RECENT THEMES (what they've been circling) ═══════
+${s.recent_themes.length ? s.recent_themes.map(t => `  • ${t}`).join('\n') : '  (none yet)'}
+
+═══════ RECENT VOICE NOTES ═══════
+${s.recent_voice_notes.length ? s.recent_voice_notes.map(v => `  • (${v.date}) "${v.excerpt}"`).join('\n') : '  (none yet)'}
+
+═══════ THINGS THEY WANT TO MAKE ═══════
+${s.reactions_make.length ? s.reactions_make.map(r => `  • ${r}`).join('\n') : '  (none yet)'}
+
+═══════ THINGS THAT SPARKED THEM ═══════
+${s.reactions_sparked.length ? s.reactions_sparked.map(r => `  • ${r}`).join('\n') : '  (none yet)'}
+
+═══════ THE IDEA ═══════
+
+Pick the ONE project that makes the most sense for this person to start today. Prefer reviving a dormant project when one fits the recent themes. If no dormant project fits, propose a new project rooted in their taste + recent themes. NEVER propose "finish/ship/complete/continue X" against an active project. NEVER use abstract framings.
+
+═══════ OUTPUT (strict JSON, no markdown fences) ═══════
+{
+  "title": "≤6 words. Names the artefact or the action.",
+  "pitch": "2 sentences. Sentence 1 = what the project IS. Sentence 2 = what done looks like in one observable test.",
+  "why_now": "ONE sentence. What in their data makes this the right one right now.",
+  "next_step": "ONE physical action they can do TODAY. Cut, drill, flash, commit a named file with named first content, drive, phone. NOT 'research,' 'plan,' 'sketch,' 'outline,' 'decide.'"
+}
+
+No extra fields. No commentary. No evidence array — we'll build that ourselves from the snapshot.`
+}
+
+/** Parses the Flash idea response, synthesises evidence from the snapshot
+ *  + the original gathered data (no LLM-fabricated source_ids), and
+ *  returns a ProjectIdea. Relaxed compared to validateRawIdea — we trust
+ *  the snapshot was honest and don't require the model to cite anything. */
+function parseFastIdea(raw: string, gathered: GatherResult): ProjectIdea | null {
+  const payload = robustJsonParse(raw)
+  if (!payload || typeof payload !== 'object') return null
+  const item = payload as { title?: string; pitch?: string; why_now?: string; next_step?: string }
+  if (!item.title || !item.pitch || !item.next_step) {
+    console.warn('[project-ideas] fast/stage-2 missing required fields', { hasTitle: !!item.title, hasPitch: !!item.pitch, hasNextStep: !!item.next_step })
+    return null
+  }
+  const title = String(item.title).trim().slice(0, 140)
+  if (title.length < 3) return null
+  const FINISH_RE = /^\s*(finish(ing)?|ship(ping)?|complete(\s+the)?|wrap\s*up|polish(\s+the)?|continue(\s+the)?)\b/i
+  // We don't have evidence to check against active project ids; just block
+  // titles that start with finish/ship verbs and mention an active project
+  // title (belt-and-braces with the GET-side filter in utilities.ts).
+  if (FINISH_RE.test(title)) {
+    const activeTitles = gathered.active_projects.map(p => p.title.toLowerCase())
+    if (activeTitles.some(t => title.toLowerCase().includes(t))) {
+      console.log(`[project-ideas] fast/stage-2 dropped "${title}" — finish/ship against active`)
+      return null
+    }
+  }
+  return {
+    rank: 1,
+    title,
+    pitch: String(item.pitch).trim().slice(0, 800),
+    why_now: String(item.why_now ?? '').trim().slice(0, 400) || 'A capture pointing at this surfaced recently.',
+    next_step: String(item.next_step).trim().slice(0, 400),
+    evidence: synthesiseEvidence(gathered),
+  }
+}
+
+/** Builds 2 evidence rows from real gathered data — the top dormant project
+ *  and the most recent memory. Never fabricates source_ids; the UI can
+ *  expand the "signals" drawer and link through. */
+function synthesiseEvidence(g: GatherResult): IdeaEvidence[] {
+  const out: IdeaEvidence[] = []
+  if (g.dormant_projects[0]) {
+    const p = g.dormant_projects[0]
+    out.push({
+      kind: 'project_dormant',
+      source_id: p.id,
+      label: `dormant project: ${p.title}`,
+      date: isoDate(p.updated_at),
+      excerpt: truncate(p.description ?? p.title, 220),
+    })
+  }
+  if (g.memories[0]) {
+    const m = g.memories[0]
+    out.push({
+      kind: 'memory',
+      source_id: m.id,
+      label: 'voice note',
+      date: isoDate(m.created_at),
+      excerpt: truncate(m.body, 220),
+    })
+  }
+  return out
+}
+
+/** Last-resort server-side template. No LLM call. Used when both LLM stages
+ *  fail — guarantees the button always returns something rather than 40s
+ *  of nothing. Four tiers, ordered by quality:
+ *    1. Top dormant project + revival framing
+ *    2. Most recent voice note + follow-it framing
+ *    3. Top "want to make" list reaction
+ *    4. Universal fallback — never returns null
+ *  Lower quality than LLM output; always better than empty. */
+function synthesiseFallbackIdea(g: GatherResult): ProjectIdea {
+  // Tier 1: a dormant project to revive — the strongest fallback signal.
+  const project = g.dormant_projects[0]
+  if (project) {
+    const desc = (project.description ?? '').trim()
+    return {
+      rank: 1,
+      title: project.title,
+      pitch: desc
+        ? `Pick this back up. ${truncate(desc, 280)}`
+        : `Pick this back up. You started it and walked away — try one move and see what it tells you.`,
+      why_now: 'You started this and stopped. Today is as good a day as any to revisit it.',
+      next_step: 'Open the project. Make the smallest visible change you can in the next 30 minutes.',
+      evidence: synthesiseEvidence(g),
+    }
+  }
+  // Tier 2: a recent voice note to follow.
+  const memory = g.memories[0]
+  if (memory) {
+    return {
+      rank: 1,
+      title: 'Make what you were just thinking about',
+      pitch: 'Something you said recently is worth following. Spend an hour on it before it fades.',
+      why_now: truncate(memory.body, 280),
+      next_step: 'Take 30 minutes. Write or sketch the smallest version of it.',
+      evidence: synthesiseEvidence(g),
+    }
+  }
+  // Tier 3: a "want to make" list reaction.
+  const wantsToMake = g.list_items.find((li) => li.reaction === 'make')
+  if (wantsToMake) {
+    return {
+      rank: 1,
+      title: truncate(wantsToMake.content, 60),
+      pitch: `You said you want to make this. Spend the next hour on the smallest version of it that exists by the end of today.`,
+      why_now: 'You marked this as "want to make" — that\'s the green light.',
+      next_step: 'Take 30 minutes. Make the rough first version. Done is better than careful.',
+      evidence: [],
+    }
+  }
+  // Tier 4: universal — always succeeds. The button must never come back empty.
+  return {
+    rank: 1,
+    title: 'Capture something new',
+    pitch: 'You opened the app with a creative impulse. Aim it. Pick the smallest thing you can make today and do it.',
+    why_now: 'You showed up. That\'s the data point.',
+    next_step: 'Take 30 minutes. Make one thing — anything — and write down what you did.',
+    evidence: [],
+  }
+}
+
 async function runRead(gathered: GatherResult): Promise<ProjectIdea[]> {
   const prompt = buildReadPrompt(gathered)
   console.log(`[project-ideas] read prompt: ${prompt.length} chars`)
