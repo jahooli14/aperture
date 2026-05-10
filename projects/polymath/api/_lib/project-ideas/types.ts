@@ -74,6 +74,16 @@ export interface GatherResult {
   /** Seed pairs used in recent batches (within the cooldown window).
    *  Drives the picker's "don't reuse this convergence" filter. */
   recent_seed_pairs: Array<{ centre_id: string; arrival_id: string; used_at: string; status: string }>
+  /** Titles from very recent (pending or superseded) batches — typically the
+   *  one we just overwrote when the user clicked "try another". Fed into the
+   *  prompt's do-not-repeat block so the model doesn't re-emit the title it
+   *  wrote sixty seconds ago. Permissive rows show up here too even though
+   *  they have no seed_pair, which closes the permissive-cooldown gap. */
+  recent_titles: Array<{ title: string; used_at: string }>
+  /** Centres used in the last short window (still pending or just superseded).
+   *  The picker treats these as deprioritised so a back-to-back regen can't
+   *  pick the same centre × a different arrival and produce a reword. */
+  recent_centre_ids: string[]
   total_signal_count: number
 }
 

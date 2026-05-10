@@ -53,6 +53,7 @@ export function pickSeedPairs(g: GatherResult, opts: PickOptions = {}): SeedCand
   const arrivalWindowDays = opts.arrivalWindowDays ?? 30
 
   const cooldown = new Set(g.recent_seed_pairs.map(p => `${p.centre_id}::${p.arrival_id}`))
+  const recentCentres = new Set(g.recent_centre_ids ?? [])
 
   const centres = enumerateCentres(g)
   const arrivals = enumerateArrivals(g, arrivalWindowDays)
@@ -91,13 +92,31 @@ export function pickSeedPairs(g: GatherResult, opts: PickOptions = {}): SeedCand
   // Greedy distinct-centre selection. The first time we see a centre we keep
   // the pair; later pairs sharing that centre are skipped. Two ideas leading
   // from the same dormant project are always two flavours of the same thing.
+  //
+  // Two passes so a back-to-back regen can't reach for the just-used centre
+  // with a different arrival: pass 1 skips centres in recent_centre_ids;
+  // pass 2 fills any remaining slots from those skipped centres if we'd
+  // otherwise return fewer than `count`.
   const usedCentres = new Set<string>()
   const picked: SeedCandidate[] = []
+  const deferred: SeedCandidate[] = []
   for (const cand of candidates) {
     if (usedCentres.has(cand.centre.id)) continue
+    if (recentCentres.has(cand.centre.id)) {
+      deferred.push(cand)
+      continue
+    }
     usedCentres.add(cand.centre.id)
     picked.push(cand)
     if (picked.length >= count) break
+  }
+  if (picked.length < count) {
+    for (const cand of deferred) {
+      if (usedCentres.has(cand.centre.id)) continue
+      usedCentres.add(cand.centre.id)
+      picked.push(cand)
+      if (picked.length >= count) break
+    }
   }
   return picked
 }

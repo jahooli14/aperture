@@ -24,7 +24,7 @@
 import { generateText } from '../gemini-chat.js'
 import { MODELS } from '../models.js'
 import { pickSeedPairs, type SeedCandidate } from './seed-picker.js'
-import type { GatherResult, GenerationResult, IdeaEvidence, ProjectIdea } from './types.js'
+import type { ArrivalKind, CentreKind, GatherResult, GenerationResult, IdeaEvidence, ProjectIdea, SeedPair } from './types.js'
 
 const MIN_SIGNALS = 8
 
@@ -173,6 +173,15 @@ function buildLockedPrompt(g: GatherResult, seeds: SeedCandidate[]): string {
     ...g.prior_ideas.rejected.map(t => `  · rejected: "${t.title}"${t.feedback ? ` — reason: ${truncate(t.feedback, 120)}` : ''}`),
   ].join('\n')
 
+  // Titles from the last ~14 days that are still pending or were superseded
+  // by a regen. Fed in separately so the model sees "you literally just
+  // wrote this" — the do-not-repeat rule otherwise misses superseded rows
+  // and the user can hit regen and get the same title back.
+  const justShownBlock = (g.recent_titles ?? [])
+    .slice(0, 12)
+    .map(t => `  · "${t.title}"`)
+    .join('\n')
+
   const slotShape = seeds.map((_s, i) =>
     `    { "pair_index": ${i}, "idea": <idea-object> | null, "skip_reason": "<one short sentence; only when idea is null>" }`,
   ).join(',\n')
@@ -228,6 +237,9 @@ ${recentMemBlock || '  (none)'}
 
 PREVIOUSLY SURFACED IDEAS (do NOT repeat any title; honour rejection reasons):
 ${seenBlock || '  (none)'}
+
+JUST SHOWN — these are the titles the user is currently looking at or just regenerated away from. NEVER emit any of these titles, and do not write a near-paraphrase ("Build your synth" → "Build the synth" / "Make your synth" all count as repeats). Pick a different angle entirely:
+${justShownBlock || '  (none)'}
 
 ═══════ FOR EACH WRITTEN IDEA ═══════
 
@@ -305,6 +317,11 @@ function buildPermissivePrompt(g: GatherResult): string {
     ...g.prior_ideas.rejected.map(t => `  · rejected: "${t.title}"`),
   ].join('\n')
 
+  const justShownBlock = (g.recent_titles ?? [])
+    .slice(0, 12)
+    .map(t => `  · "${t.title}"`)
+    .join('\n')
+
   return `You are a friend looking through someone's recent thoughts and projects, asked directly: "give me one project idea I should think about." Don't be silent — they asked. But don't fake it either: ground the idea in real captures.
 
 Plain English. No "leveraging," "synergies," "soundscapes," "narrative substrate," or scare-quoted invented phrases. Talk like a friend.
@@ -315,7 +332,7 @@ Plain English. No "leveraging," "synergies," "soundscapes," "narrative substrate
 3. The idea must cite at least 2 evidence items from the data below. Lead evidence must be a memory, dormant project, or highlight — never a list item.
 4. Title ≤ 6 words. No abstract nouns: no "exploration", "study", "series", "totem", "memory of", "in conversation with", "meditation on".
 5. The next_step must be a real first action (cut, drill, flash, commit a named file, drive somewhere, phone someone). NOT "research", "plan", "sketch", "outline".
-6. Do not repeat any title in PREVIOUSLY SURFACED IDEAS.
+6. Do not repeat any title in PREVIOUSLY SURFACED IDEAS or in JUST SHOWN, and do not write a near-paraphrase of either.
 
 ═══════ DATA ═══════
 
@@ -336,6 +353,9 @@ ${highlightBlock || '  (none)'}
 
 PREVIOUSLY SURFACED (do not repeat):
 ${seenBlock || '  (none)'}
+
+JUST SHOWN — titles the user is currently looking at or just regenerated away from. NEVER emit any of these or a near-paraphrase. Pick a different angle entirely:
+${justShownBlock || '  (none)'}
 
 ═══════ OUTPUT (strict JSON, no markdown fences) ═══════
 {
@@ -513,10 +533,12 @@ function parseLockedSlots(raw: string, gathered: GatherResult, seeds: SeedCandid
   return final
 }
 
-/** Permissive single-idea response: `{ ideas: [...] }`. No seed_pair attached
- *  — this path runs when the picker found no candidates, so the cooldown
- *  filter has nothing to track. The active-project / "finish X" filter
- *  still applies. */
+/** Permissive single-idea response: `{ ideas: [...] }`. We derive a seed_pair
+ *  from the validated evidence (lead centre-kind item × first arrival-kind
+ *  item) so the row participates in the picker's cooldown the next time the
+ *  permissive path fires — without this, regen on a sparse corpus kept
+ *  re-emitting the same idea. The active-project / "finish X" filter still
+ *  applies. */
 function parsePermissive(raw: string, gathered: GatherResult): ProjectIdea[] {
   const payload = robustJsonParse(raw)
   if (!payload || typeof payload !== 'object') return []
@@ -535,10 +557,45 @@ function parsePermissive(raw: string, gathered: GatherResult): ProjectIdea[] {
       console.log(`[project-ideas] dropped idea "${idea.title}" — "finish/ship X" against active project (Keep Going dup)`)
       continue
     }
-    out.push(idea)
+    const seed_pair = deriveSeedPairFromEvidence(idea.evidence)
+    out.push(seed_pair ? { ...idea, seed_pair } : idea)
     if (out.length >= 1) break
   }
   return out.map((idea, i) => ({ ...idea, rank: i + 1 }))
+}
+
+const CENTRE_KINDS: ReadonlySet<CentreKind> = new Set(['project_dormant', 'project_active', 'memory'])
+const ARRIVAL_KINDS: ReadonlySet<ArrivalKind> = new Set(['memory', 'reading', 'highlight'])
+
+/** Best-effort SeedPair from a permissive idea's evidence. Lead item is the
+ *  centre when its kind is centre-eligible; the first remaining item with an
+ *  arrival-eligible kind (and a different source_id) is the arrival. Returns
+ *  undefined when the evidence shape doesn't yield a valid pair — in that
+ *  case the row is stored with seed_pair=null as before. */
+function deriveSeedPairFromEvidence(evidence: IdeaEvidence[]): SeedPair | undefined {
+  let centreIdx = -1
+  for (let i = 0; i < evidence.length; i++) {
+    if (CENTRE_KINDS.has(evidence[i].kind as CentreKind)) {
+      centreIdx = i
+      break
+    }
+  }
+  if (centreIdx === -1) return undefined
+  const centre = evidence[centreIdx]
+  for (let j = 0; j < evidence.length; j++) {
+    if (j === centreIdx) continue
+    const a = evidence[j]
+    if (a.source_id === centre.source_id) continue
+    if (ARRIVAL_KINDS.has(a.kind as ArrivalKind)) {
+      return {
+        centre_kind: centre.kind as CentreKind,
+        centre_id: centre.source_id,
+        arrival_kind: a.kind as ArrivalKind,
+        arrival_id: a.source_id,
+      }
+    }
+  }
+  return undefined
 }
 
 interface SourceRow {
