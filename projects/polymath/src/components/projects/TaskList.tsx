@@ -3,11 +3,10 @@
  * Checklist for project tasks with inline add/edit/delete
  */
 
-import { useState, useEffect } from 'react'
-import { Plus, Trash2, Check, GripVertical, ChevronDown, ChevronRight, Zap, ListTodo, Clock } from 'lucide-react'
+import { useState } from 'react'
+import { Plus, Trash2, Check, GripVertical, ChevronDown, ChevronRight, Zap, Clock } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { handleInputFocus } from '../../utils/keyboard'
-import { useTodoStore, selectByProject } from '../../stores/useTodoStore'
 
 export interface Task {
   id: string
@@ -459,9 +458,6 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
         </button>
       )}
 
-      {/* Linked Todos from the Todo system */}
-      {projectId && <LinkedTodos projectId={projectId} />}
-
       {/* Empty State */}
       {tasks.length === 0 && !isAdding && (
         <div className="text-center py-8" style={{ color: "var(--brand-primary)" }}>
@@ -469,66 +465,6 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
           <p className="text-xs mt-1">Break down your project into steps</p>
         </div>
       )}
-    </div>
-  )
-}
-
-/**
- * Linked Todos  shows todos with this project_id from the todo store.
- * Completing here syncs with the main todo system.
- */
-function LinkedTodos({ projectId }: { projectId: string }) {
-  const todos = useTodoStore(state => state.todos)
-  const toggleTodo = useTodoStore(state => state.toggleTodo)
-  const fetchTodos = useTodoStore(state => state.fetchTodos)
-  const linkedTodos = selectByProject(todos, projectId)
-
-  // Ensure todos are loaded
-  useEffect(() => {
-    if (todos.length === 0) fetchTodos()
-  }, [todos.length, fetchTodos])
-
-  if (linkedTodos.length === 0) return null
-
-  const activeTodos = linkedTodos.filter(t => !t.done)
-  const doneTodos = linkedTodos.filter(t => t.done)
-
-  return (
-    <div className="mt-4 pt-4 border-t border-brand-border">
-      <div className="flex items-center gap-2 mb-3">
-        <ListTodo className="h-3.5 w-3.5" style={{ color: "var(--brand-primary)" }} />
-        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--brand-primary)" }}>
-          Linked Todos
-        </span>
-        <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(var(--brand-primary-rgb),0.1)', color: "var(--brand-text-secondary)" }}>
-          {activeTodos.length}
-        </span>
-      </div>
-      <div className="space-y-1.5">
-        {activeTodos.map(todo => (
-          <div key={todo.id} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-white/[0.03] transition-colors">
-            <button
-              onClick={() => toggleTodo(todo.id)}
-              className="flex-shrink-0 h-5 w-5 rounded-md flex items-center justify-center border-2 border-white/20 bg-black/20 transition-all hover:border-brand-primary/50"
-            >
-              {todo.done && <Check className="h-3 w-3 text-brand-text-primary" />}
-            </button>
-            <span className="text-sm" style={{ color: "var(--brand-primary)" }}>
-              {todo.text}
-            </span>
-            {todo.source_memory_id && (
-              <span className="text-[9px] px-1.5 py-0.5 rounded-full ml-auto" style={{ backgroundColor: 'rgba(var(--brand-primary-rgb),0.1)', color: "var(--brand-text-secondary)" }}>
-                from thought
-              </span>
-            )}
-          </div>
-        ))}
-        {doneTodos.length > 0 && (
-          <p className="text-[10px] pt-1" style={{ color: "var(--brand-primary)" }}>
-            {doneTodos.length} completed
-          </p>
-        )}
-      </div>
     </div>
   )
 }

@@ -46,7 +46,6 @@ const BedtimePage = lazy(lazyRetry(() => import('./pages/BedtimePage').then(m =>
 const ListsPage = lazy(lazyRetry(() => import('./pages/ListsPage')))
 const ListDetailPage = lazy(lazyRetry(() => import('./pages/ListDetailPage')))
 const FavouritesPage = lazy(lazyRetry(() => import('./pages/FavouritesPage')))
-const TodosPage = lazy(lazyRetry(() => import('./pages/TodosPage').then(m => ({ default: m.TodosPage }))))
 const FixQueuePage = lazy(lazyRetry(() => import('./pages/FixQueuePage')))
 const LoginPage = lazy(lazyRetry(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage }))))
 const CognitiveReplayPage = lazy(lazyRetry(() => import('./pages/CognitiveReplayPage').then(m => ({ default: m.CognitiveReplayPage }))))
@@ -328,8 +327,7 @@ export default function App() {
                       <Route path="/lists" element={<AnimatedPage page="lists"><ListsPage /></AnimatedPage>} />
                       <Route path="/lists/:id" element={<AnimatedPage page="lists"><ListDetailPage /></AnimatedPage>} />
                       <Route path="/favourites" element={<AnimatedPage page="lists"><FavouritesPage /></AnimatedPage>} />
-                      <Route path="/todos" element={<AnimatedPage page="todos"><TodosPage /></AnimatedPage>} />
-                      <Route path="/fixes" element={<AnimatedPage page="todos"><FixQueuePage /></AnimatedPage>} />
+                      <Route path="/fixes" element={<AnimatedPage page="fixes"><FixQueuePage /></AnimatedPage>} />
                       <Route path="/login" element={<LoginPage />} />
                       <Route path="/share-target" element={<ShareTargetFallback />} />
                     </Routes>

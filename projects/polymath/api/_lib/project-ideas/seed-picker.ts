@@ -205,19 +205,6 @@ function enumerateArrivals(g: GatherResult, windowDays: number): ArrivalRow[] {
     })
   }
 
-  for (const todo of g.todos) {
-    const t = new Date(todo.created_at).getTime()
-    if (Number.isNaN(t) || t < cutoff) continue
-    out.push({
-      kind: 'todo',
-      id: todo.id,
-      label: 'todo',
-      date: todo.created_at,
-      excerpt: todo.text,
-      tokens: tokenise(`${todo.text} ${todo.notes ?? ''} ${todo.tags.join(' ')}`),
-    })
-  }
-
   return out
 }
 

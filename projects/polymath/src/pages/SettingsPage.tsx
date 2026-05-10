@@ -58,12 +58,8 @@ export function SettingsPage() {
   const {
     bedtimeEnabled, bedtimeHour, bedtimeMinute,
     morningEnabled, morningHour, morningMinute,
-    todoTimeNotificationsEnabled,
-    overdueReminderEnabled, overdueReminderHour, overdueReminderMinute,
     toggleBedtime, updateBedtime,
     toggleMorning, updateMorning,
-    toggleTodoNotifications,
-    toggleOverdueReminder, updateOverdueReminder,
   } = useNotificationSettings()
 
   const handleResetOnboarding = async () => {
@@ -405,68 +401,6 @@ export function SettingsPage() {
                     <select
                       value={morningMinute}
                       onChange={e => updateMorning(morningHour, Number(e.target.value))}
-                      className="rounded-lg px-2 py-1 text-[13px] outline-none"
-                      style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
-                    >
-                      {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => (
-                        <option key={m} value={m} style={{ background: 'var(--brand-bg)' }}>
-                          {String(m).padStart(2, '0')}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-
-              {/* Task-time notifications */}
-              <div className="flex items-center justify-between px-4 py-3.5 rounded-xl" style={{ background: 'var(--premium-surface-1)', border: '1px solid var(--glass-surface-hover)' }}>
-                <div>
-                  <p className="text-[15px]" style={{ color: "var(--brand-primary)" }}>Task-time reminders</p>
-                  <p className="text-[12px]" style={{ color: "var(--brand-primary)" }}>Notify when a task's scheduled time arrives</p>
-                </div>
-                <button
-                  onClick={() => toggleTodoNotifications(!todoTimeNotificationsEnabled)}
-                  className="relative h-7 w-12 rounded-full transition-all flex-shrink-0"
-                  style={{ background: todoTimeNotificationsEnabled ? 'rgba(var(--brand-primary-rgb), 0.65)' : 'var(--glass-surface-hover)' }}
-                >
-                  <div className="absolute top-1 h-5 w-5 rounded-full bg-white transition-all" style={{ left: todoTimeNotificationsEnabled ? '26px' : '4px' }} />
-                </button>
-              </div>
-
-              {/* End-of-day overdue reminder */}
-              <div className="rounded-xl" style={{ background: 'var(--premium-surface-1)', border: '1px solid var(--glass-surface-hover)' }}>
-                <div className="flex items-center justify-between px-4 py-3.5">
-                  <div>
-                    <p className="text-[15px]" style={{ color: "var(--brand-primary)" }}>End-of-day overdue reminder</p>
-                    <p className="text-[12px]" style={{ color: "var(--brand-primary)" }}>Alert when tasks are still open late in the day</p>
-                  </div>
-                  <button
-                    onClick={() => toggleOverdueReminder(!overdueReminderEnabled)}
-                    className="relative h-7 w-12 rounded-full transition-all flex-shrink-0"
-                    style={{ background: overdueReminderEnabled ? 'rgba(var(--brand-primary-rgb), 0.65)' : 'var(--glass-surface-hover)' }}
-                  >
-                    <div className="absolute top-1 h-5 w-5 rounded-full bg-white transition-all" style={{ left: overdueReminderEnabled ? '26px' : '4px' }} />
-                  </button>
-                </div>
-                {overdueReminderEnabled && (
-                  <div className="px-4 pb-3.5 flex items-center gap-3 border-t border-[var(--glass-surface)] pt-3">
-                    <span className="text-[12px]" style={{ color: "var(--brand-primary)" }}>Time</span>
-                    <select
-                      value={overdueReminderHour}
-                      onChange={e => updateOverdueReminder(Number(e.target.value), overdueReminderMinute)}
-                      className="rounded-lg px-2 py-1 text-[13px] outline-none"
-                      style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
-                    >
-                      {Array.from({ length: 24 }, (_, i) => (
-                        <option key={i} value={i} style={{ background: 'var(--brand-bg)' }}>
-                          {String(i).padStart(2, '0')}
-                        </option>
-                      ))}
-                    </select>
-                    <span style={{ color: "var(--brand-primary)" }}>:</span>
-                    <select
-                      value={overdueReminderMinute}
-                      onChange={e => updateOverdueReminder(overdueReminderHour, Number(e.target.value))}
                       className="rounded-lg px-2 py-1 text-[13px] outline-none"
                       style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
                     >

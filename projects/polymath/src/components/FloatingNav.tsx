@@ -27,7 +27,6 @@ const SCHEMA_COLORS = {
   timeline: { primary: 'rgb(var(--brand-primary-rgb))', glow: 'rgba(var(--brand-primary-rgb), 0.4)' },
   context: { primary: 'rgb(var(--brand-primary-rgb))', glow: 'rgba(var(--brand-primary-rgb), 0.4)' },
   lists: { primary: 'rgb(var(--brand-primary-rgb))', glow: 'rgba(var(--brand-primary-rgb), 0.4)' },
-  todos: { primary: 'rgb(var(--color-error-rgb))', glow: 'rgba(var(--color-error-rgb), 0.4)' },
 } as const
 
 interface NavOption {

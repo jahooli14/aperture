@@ -82,11 +82,15 @@ function deriveMode(idea: ProjectIdea): IdeaMode {
   return 'new_idea'
 }
 
-const MODE_LABEL: Record<IdeaMode, string> = {
-  new_idea: 'something you\'ve been circling',
-  forgotten: 'you set this down a while ago',
-  reshape: 'time to see this differently',
-  extend: 'a new direction for something you\'re building',
+// Each mode gets a glyph + accent so the card reads as correspondence FROM
+// the harness, not a generic note. The glyphs are typographic ornaments
+// (fleurons, dingbats); the accents are non-brand colours so the card
+// feels distinct from the rest of the cyan UI without breaking the system.
+const MODE_VISUAL: Record<IdeaMode, { glyph: string; accentRgb: string; eyebrow: string }> = {
+  new_idea: { glyph: '✦', accentRgb: '252, 211, 77',  eyebrow: 'a new idea taking shape' },   // amber
+  forgotten: { glyph: '❋', accentRgb: '148, 163, 184', eyebrow: 'you set this down' },         // slate
+  reshape:   { glyph: '◈', accentRgb: '167, 139, 250', eyebrow: 'a new angle' },               // violet
+  extend:    { glyph: '→', accentRgb: '56, 189, 248',  eyebrow: 'pick this up' },              // cyan
 }
 
 const KIND_LABEL: Record<string, string> = {
@@ -96,7 +100,6 @@ const KIND_LABEL: Record<string, string> = {
   project_dormant: 'dormant project',
   reading: 'article',
   highlight: 'highlight',
-  todo: 'todo',
   suggestion: 'idea',
   idea_engine: 'frontier idea',
 }
@@ -272,13 +275,7 @@ export function ProjectIdeasHome() {
 
   return (
     <section className="relative">
-      <div className="max-w-xl mx-auto flex items-center justify-between mb-6 px-1">
-        <h2
-          className="text-[10px] uppercase tracking-[0.28em]"
-          style={{ color: 'var(--brand-text-muted)', fontWeight: 500 }}
-        >
-          {mode ? MODE_LABEL[mode] : 'ideas for you'}
-        </h2>
+      <div className="max-w-2xl mx-auto flex items-center justify-end gap-3 mb-4 px-1 min-h-[28px]">
         <div className="flex items-center gap-3">
           {ideas.length > 1 && (
             <div className="flex items-center gap-1.5">
@@ -452,7 +449,18 @@ export function ProjectIdeasHome() {
           </div>
         )}
 
-        {!loading && !generating && active && (
+        {!loading && !generating && active && (() => {
+          // Mode-specific visual identity. Falls back to brand cyan if mode
+          // can't be derived (rare — only on legacy ideas without evidence).
+          const visual = mode ? MODE_VISUAL[mode] : { glyph: '✦', accentRgb: 'var(--brand-primary-rgb)', eyebrow: 'for you' }
+          const accent = visual.accentRgb
+          const glyph = visual.glyph
+          // Drop cap is only worth it on pitches longer than ~80 chars; on
+          // short ones it crowds the layout and looks accidental.
+          const useDropCap = (active.pitch?.length ?? 0) > 80
+          const pitchFirstChar = active.pitch?.charAt(0) ?? ''
+          const pitchRest = active.pitch?.slice(1) ?? ''
+          return (
           <div className="max-w-2xl mx-auto">
             <AnimatePresence mode="wait">
               <motion.article
@@ -463,101 +471,198 @@ export function ProjectIdeasHome() {
                 transition={{ duration: 0.45, ease: 'easeOut' }}
                 className="relative"
               >
-                {/* Atmospheric glow behind the title — gives the page a centre of gravity */}
+                {/* Atmospheric mesh — mode-tinted radial gradients give the
+                    card a colour identity without a literal background panel.
+                    Two offset ellipses create a soft, organic glow. */}
                 <div
                   aria-hidden
-                  className="absolute -top-4 left-1/2 -translate-x-1/2 w-[85%] h-40 pointer-events-none"
+                  className="absolute -inset-x-6 -top-16 h-[120%] pointer-events-none -z-10"
                   style={{
-                    background: 'radial-gradient(ellipse at center top, rgba(var(--brand-primary-rgb), 0.14) 0%, transparent 65%)',
-                    filter: 'blur(24px)',
+                    background: `
+                      radial-gradient(ellipse 70% 45% at 30% 10%, rgba(${accent}, 0.22), transparent 65%),
+                      radial-gradient(ellipse 50% 35% at 80% 25%, rgba(${accent}, 0.12), transparent 60%),
+                      radial-gradient(ellipse 60% 30% at 50% 80%, rgba(${accent}, 0.08), transparent 70%)
+                    `,
+                    filter: 'blur(32px)',
                   }}
                 />
 
-                {active.status !== 'pending' && (
-                  <div className="relative mb-5 flex justify-end">
+                {/* Editorial stamp at the top — glyph · rule · mode label.
+                    Reads as the masthead of an issue from the harness. */}
+                <div className="relative flex items-center gap-3 mb-7">
+                  <span
+                    aria-hidden
+                    className="text-[24px] leading-none flex-shrink-0"
+                    style={{
+                      color: `rgb(${accent})`,
+                      fontFamily: 'var(--brand-font-serif)',
+                      textShadow: `0 0 18px rgba(${accent}, 0.45)`,
+                    }}
+                  >
+                    {glyph}
+                  </span>
+                  <span
+                    className="h-px w-8 flex-shrink-0"
+                    style={{ background: `linear-gradient(to right, rgba(${accent}, 0.6), rgba(${accent}, 0.1))` }}
+                  />
+                  <span
+                    className="text-[10px] uppercase tracking-[0.32em] font-semibold flex-1 truncate"
+                    style={{ color: `rgb(${accent})`, opacity: 0.85 }}
+                  >
+                    {visual.eyebrow}
+                  </span>
+                  {active.status !== 'pending' && (
                     <span
-                      className="text-[10px] tracking-[0.28em] uppercase font-medium"
-                      style={{ color: 'rgb(var(--brand-primary-rgb))' }}
+                      className="text-[9px] tracking-[0.28em] uppercase font-medium px-2 py-1 rounded-full flex-shrink-0"
+                      style={{
+                        color: `rgb(${accent})`,
+                        background: `rgba(${accent}, 0.1)`,
+                        border: `1px solid rgba(${accent}, 0.25)`,
+                      }}
                     >
-                      · {active.status} ·
+                      {active.status}
                     </span>
-                  </div>
-                )}
+                  )}
+                </div>
 
-                {/* Title — light serif, generous size, the unmistakable hero */}
+                {/* Title — generous serif, with a mode-tinted underline that
+                    acts as a printer's slug rule. */}
                 <h3
-                  className="relative text-[28px] sm:text-[38px] leading-[1.08] mb-7"
+                  className="relative text-[30px] sm:text-[42px] leading-[1.05] mb-3"
                   style={{
                     color: 'var(--brand-text-primary)',
                     fontFamily: 'var(--brand-font-serif)',
                     fontWeight: 500,
-                    letterSpacing: '-0.018em',
+                    letterSpacing: '-0.022em',
                   }}
                 >
                   {active.title}
                 </h3>
+                <div
+                  aria-hidden
+                  className="h-[2px] w-16 mb-8 rounded-full"
+                  style={{
+                    background: `linear-gradient(to right, rgb(${accent}), rgba(${accent}, 0.15))`,
+                    boxShadow: `0 0 12px rgba(${accent}, 0.4)`,
+                  }}
+                />
 
-                {/* Pitch — serif body, comfortable reading */}
+                {/* Pitch — serif body with a drop cap on the first letter.
+                    Drop cap is mode-tinted and slightly glowing so the
+                    paragraph feels like the start of a chapter. */}
                 <p
-                  className="relative text-[15.5px] sm:text-[17px] leading-[1.7] mb-9"
+                  className="relative text-[15.5px] sm:text-[17px] leading-[1.7] mb-10"
                   style={{
                     color: 'var(--brand-text-primary)',
                     fontFamily: 'var(--brand-font-serif)',
                     fontWeight: 400,
-                    opacity: 0.94,
+                    opacity: 0.95,
                   }}
                 >
-                  {active.pitch}
+                  {useDropCap ? (
+                    <>
+                      <span
+                        aria-hidden
+                        className="float-left mr-2 mt-1 text-[58px] sm:text-[68px] leading-[0.85] font-medium select-none"
+                        style={{
+                          color: `rgb(${accent})`,
+                          fontFamily: 'var(--brand-font-serif)',
+                          textShadow: `0 0 24px rgba(${accent}, 0.35)`,
+                        }}
+                      >
+                        {pitchFirstChar}
+                      </span>
+                      <span aria-hidden className="sr-only">{pitchFirstChar}</span>
+                      {pitchRest}
+                    </>
+                  ) : (
+                    active.pitch
+                  )}
                 </p>
 
-                {/* why_now — pull-quote with brand accent bar */}
-                <figure
-                  className="relative pl-5 sm:pl-6 mb-10"
-                  style={{
-                    borderLeft: '2px solid rgba(var(--brand-primary-rgb), 0.45)',
-                  }}
-                >
-                  <figcaption
-                    className="text-[10px] uppercase tracking-[0.26em] mb-2 font-medium"
-                    style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.75 }}
+                {/* Decorative fleuron divider — typographic ornament centred
+                    between body and pull-quote. Stops the page from reading
+                    as a uniform column of text. */}
+                <div aria-hidden className="flex items-center gap-4 my-8 px-2">
+                  <span
+                    className="h-px flex-1"
+                    style={{ background: `linear-gradient(to right, transparent, rgba(${accent}, 0.3))` }}
+                  />
+                  <span
+                    className="text-[14px] leading-none"
+                    style={{ color: `rgb(${accent})`, opacity: 0.7, fontFamily: 'var(--brand-font-serif)' }}
                   >
-                    why now
-                  </figcaption>
-                  <blockquote
-                    className="text-[14.5px] sm:text-[16px] leading-[1.65] italic"
+                    {glyph}
+                  </span>
+                  <span
+                    className="h-px flex-1"
+                    style={{ background: `linear-gradient(to left, transparent, rgba(${accent}, 0.3))` }}
+                  />
+                </div>
+
+                {/* why_now — proper pull-quote treatment with a large opening
+                    quotation mark glyph, mode-tinted. */}
+                <figure className="relative mb-10 pl-2">
+                  <span
+                    aria-hidden
+                    className="absolute -top-6 -left-2 text-[78px] leading-none select-none font-serif"
                     style={{
-                      color: 'var(--brand-text-secondary)',
+                      color: `rgb(${accent})`,
+                      opacity: 0.28,
+                      fontFamily: 'Georgia, "Times New Roman", serif',
+                    }}
+                  >
+                    “
+                  </span>
+                  <blockquote
+                    className="relative pl-7 text-[15px] sm:text-[17px] leading-[1.65] italic"
+                    style={{
+                      color: 'var(--brand-text-primary)',
                       fontFamily: 'var(--brand-font-serif)',
+                      opacity: 0.92,
                     }}
                   >
                     {active.why_now}
                   </blockquote>
+                  <figcaption
+                    className="mt-3 pl-7 text-[10px] uppercase tracking-[0.32em] font-semibold"
+                    style={{ color: `rgb(${accent})`, opacity: 0.7 }}
+                  >
+                    — why now
+                  </figcaption>
                 </figure>
 
-                {/* Next step — flanking hairlines + label, no boxy panel */}
-                <div className="relative mb-9">
-                  <div className="flex items-center gap-3 mb-3">
-                    <span
-                      className="h-px flex-1"
-                      style={{ background: 'linear-gradient(to right, transparent, rgba(var(--brand-primary-rgb), 0.4))' }}
-                    />
-                    <span
-                      className="text-[10px] uppercase tracking-[0.32em] font-semibold"
-                      style={{ color: 'rgb(var(--brand-primary-rgb))' }}
-                    >
-                      what's next
-                    </span>
-                    <span
-                      className="h-px flex-1"
-                      style={{ background: 'linear-gradient(to left, transparent, rgba(var(--brand-primary-rgb), 0.4))' }}
-                    />
-                  </div>
+                {/* What's next — visual CTA panel with mode-tinted gradient.
+                    NOT a button (the build/save/dismiss row below is where
+                    decisions land), but visually weighty so the user knows
+                    this is the concrete first move. */}
+                <div
+                  className="relative mb-8 p-5 sm:p-6 rounded-2xl overflow-hidden"
+                  style={{
+                    background: `linear-gradient(135deg, rgba(${accent}, 0.14), rgba(${accent}, 0.04) 60%, transparent)`,
+                    border: `1px solid rgba(${accent}, 0.22)`,
+                    boxShadow: `0 8px 32px -12px rgba(${accent}, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)`,
+                  }}
+                >
+                  {/* Subtle corner glyph as decoration */}
+                  <span
+                    aria-hidden
+                    className="absolute top-3 right-4 text-[32px] leading-none opacity-15 select-none"
+                    style={{ color: `rgb(${accent})`, fontFamily: 'var(--brand-font-serif)' }}
+                  >
+                    {glyph}
+                  </span>
+                  <span
+                    className="block text-[10px] uppercase tracking-[0.32em] mb-3 font-semibold"
+                    style={{ color: `rgb(${accent})` }}
+                  >
+                    your move
+                  </span>
                   <p
-                    className="text-[16px] sm:text-[18px] leading-[1.5] text-center"
+                    className="text-[16px] sm:text-[19px] leading-[1.45] font-medium pr-8"
                     style={{
                       color: 'var(--brand-text-primary)',
                       fontFamily: 'var(--brand-font-serif)',
-                      fontWeight: 500,
                     }}
                   >
                     {active.next_step}
@@ -611,44 +716,55 @@ export function ProjectIdeasHome() {
                   )}
                 </AnimatePresence>
 
-                {/* Action row — minimalist, separated by hairline */}
+                {/* Action row — clear hierarchy: dismiss (ghost) | save (outlined)
+                    | building it (filled, mode-tinted, the unmistakable CTA). */}
                 <div
-                  className="relative mt-10 pt-5 flex items-center justify-end gap-1"
-                  style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
+                  className="relative mt-10 pt-5 flex items-center gap-2"
+                  style={{ borderTop: `1px solid rgba(${accent}, 0.12)` }}
                 >
                   <button
                     type="button"
                     onClick={() => sendFeedback(active, 'rejected')}
                     disabled={pendingFeedback === active.id}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] tracking-wide transition-opacity opacity-50 hover:opacity-100 disabled:opacity-30"
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[11px] tracking-wide transition-opacity opacity-50 hover:opacity-100 disabled:opacity-30"
                     style={{ color: 'var(--brand-text-muted)' }}
                     title="Not for me"
                   >
                     <X className="h-3.5 w-3.5" />
                     <span>not for me</span>
                   </button>
+
+                  <span className="flex-1" aria-hidden />
+
                   <button
                     type="button"
                     onClick={() => sendFeedback(active, active.status === 'saved' ? 'pending' : 'saved')}
                     disabled={pendingFeedback === active.id}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] tracking-wide transition-all"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[11.5px] font-medium tracking-wide transition-all"
                     style={{
-                      color: active.status === 'saved' ? 'rgb(var(--brand-primary-rgb))' : 'var(--brand-text-muted)',
-                      background: active.status === 'saved' ? 'rgba(var(--brand-primary-rgb), 0.12)' : 'transparent',
+                      color: active.status === 'saved' ? `rgb(${accent})` : 'var(--brand-text-secondary)',
+                      background: active.status === 'saved' ? `rgba(${accent}, 0.12)` : 'transparent',
+                      border: active.status === 'saved' ? `1px solid rgba(${accent}, 0.4)` : '1px solid rgba(255,255,255,0.08)',
                     }}
                     title={active.status === 'saved' ? 'Unsave' : 'Save for later'}
                   >
                     {active.status === 'saved' ? <BookmarkCheck className="h-3.5 w-3.5" /> : <BookmarkPlus className="h-3.5 w-3.5" />}
                     <span>{active.status === 'saved' ? 'saved' : 'save'}</span>
                   </button>
+
                   <button
                     type="button"
                     onClick={() => sendFeedback(active, 'built')}
                     disabled={pendingFeedback === active.id || active.status === 'built'}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] tracking-wide transition-all"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[12px] font-bold tracking-wide transition-all disabled:opacity-60"
                     style={{
-                      color: active.status === 'built' ? 'rgb(var(--brand-primary-rgb))' : 'var(--brand-text-muted)',
-                      background: active.status === 'built' ? 'rgba(var(--brand-primary-rgb), 0.12)' : 'transparent',
+                      color: '#0b1320',
+                      background: active.status === 'built'
+                        ? `rgba(${accent}, 0.5)`
+                        : `linear-gradient(135deg, rgb(${accent}), rgba(${accent}, 0.8))`,
+                      boxShadow: active.status === 'built'
+                        ? 'none'
+                        : `0 4px 16px -4px rgba(${accent}, 0.6), inset 0 1px 0 rgba(255,255,255,0.2)`,
                     }}
                     title="I'm building it"
                   >
@@ -663,7 +779,8 @@ export function ProjectIdeasHome() {
               </motion.article>
             </AnimatePresence>
           </div>
-        )}
+          )
+        })()}
       </div>
     </section>
   )

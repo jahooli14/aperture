@@ -61,7 +61,7 @@
     --page-bedtime-rgb: 56, 189, 248;      /* Cyan */
     --page-timeline-rgb: 56, 189, 248;     /* Cyan */
     --page-suggestions-rgb: 56, 189, 248;  /* Cyan */
-    --page-todos-rgb: 56, 189, 248;        /* Cyan */
+    --page-fixes-rgb: 56, 189, 248;        /* Cyan */
 
     /* Semantic State Colors (RGB for rgba usage) */
     --color-success-rgb: 56, 189, 248;    /* Cyan — unified accent */
@@ -281,7 +281,7 @@ h6 {
 [data-page="bedtime"]   { --page-accent-rgb: var(--page-bedtime-rgb); }
 [data-page="timeline"]  { --page-accent-rgb: var(--page-timeline-rgb); }
 [data-page="suggestions"] { --page-accent-rgb: var(--page-suggestions-rgb); }
-[data-page="todos"]     { --page-accent-rgb: var(--page-todos-rgb); }
+[data-page="fixes"]     { --page-accent-rgb: var(--page-fixes-rgb); }
 
 .page-accent       { color: rgb(var(--page-accent-rgb)); }
 .page-accent-bg    { background-color: rgba(var(--page-accent-rgb), 0.12); }

@@ -12,7 +12,6 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useProjectStore } from '../stores/useProjectStore'
 import { useReadingStore } from '../stores/useReadingStore'
-import { useTodoStore } from '../stores/useTodoStore'
 import { useListStore } from '../stores/useListStore'
 
 export interface DiscoveredLink {
@@ -152,21 +151,6 @@ export function useAmbientLinker() {
     const content = [latest.title, latest.excerpt].filter(Boolean).join('. ')
     runLinker(latest.id, 'article', content, latest.title || 'Article')
   }, [articles])
-
-  // Watch todos
-  const todos = useTodoStore(s => s.todos)
-  useEffect(() => {
-    const sorted = [...todos].sort(
-      (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
-    )
-    const latest = sorted[0]
-    if (!latest) return
-    const key = `todo:${latest.id}`
-    if (processed.current.has(key)) return
-    if (!isFresh(latest.created_at)) return
-    processed.current.add(key)
-    runLinker(latest.id, 'todo', latest.text, latest.text)
-  }, [todos])
 
   // Watch list items (items in the currently open list)
   const currentListItems = useListStore(s => s.currentListItems)

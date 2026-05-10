@@ -203,18 +203,6 @@ export async function processMemory(memoryId: string): Promise<void> {
             .eq('id', project_id)
           logger.info({ project_id }, '✅ Task added to project')
         }
-      } else if (category === 'todo_new') {
-        logger.info('🔄 Creating new standalone todo from triage...')
-        await supabase
-          .from('todos')
-          .insert({
-            user_id: userId,
-            text: metadata.summary_title,
-            notes: metadata.insightful_body,
-            status: 'pending',
-            source_memory_id: memoryId
-          })
-        logger.info('✅ New todo created')
       } else if (category === 'list_item') {
         logger.info('🔄 Adding to appropriate list from triage...')
         // Find or create a "Triage" list if no specific list is found
@@ -472,7 +460,7 @@ Return JSON:
   "tags": ["3-5 specific tags like 'philosophy', 'biology', 'curiosity', 'nature'. Avoid generic words like 'thought', 'note', 'voice'"],
   "emotional_tone": "brief phrase describing the mood",
   "triage": {
-    "category": "task_update|todo_new|list_item|new_thought|reading_lead|new_project_idea|annoyance",
+    "category": "task_update|list_item|new_thought|reading_lead|new_project_idea|annoyance",
     "project_id": "uuid of matching project or null",
     "confidence": 0.0-1.0,
     "severity": "critical|annoying|minor (only for annoyance category)",
@@ -483,11 +471,10 @@ Return JSON:
 
 TRIAGE CATEGORY GUIDE:
 - task_update: Actionable item that clearly belongs to an EXISTING project listed above.
-- todo_new: A new, standalone actionable item that doesn't fit existing projects.
 - list_item: A piece of information or item that belongs in a collection or list (books to read, restaurants to try, gift ideas).
 - reading_lead: An article, newsletter, or specific resource to be read later.
 - new_project_idea: A large, multi-step goal that could become a new project.
-- new_thought: Default for insights, musings, or memories without immediate action.
+- new_thought: Default for insights, musings, or memories without immediate action. Use this for standalone actionable items too — there is no separate todo surface.
 - annoyance: A frustration, recurring problem, or friction point in daily life. Things that bug the user — broken stuff, inefficiencies, things that should work better. If a cron job, notification, API call, or smart home automation could fix it, mark automatable=true and provide a fix_hint.
 
 Return only valid JSON.`
