@@ -11,8 +11,6 @@ interface WarmedProject extends Project {
   heat_reason?: string
 }
 
-const FOCUS_CAP = 3
-
 export default function DrawerPage() {
   const { allProjects, fetchProjects, loading } = useProjectStore()
   const [query, setQuery] = useState('')
@@ -24,17 +22,27 @@ export default function DrawerPage() {
   const drawerProjects = useMemo(() => {
     const list = (Array.isArray(allProjects) ? allProjects : []) as WarmedProject[]
 
-    // Compute the focus set (priority + recent) so drawer = everything else
-    const priorityProjects = list.filter(p => p.is_priority).slice(0, FOCUS_CAP)
+    // Drawer = everything not on the home page shelves.
+    // Focus stack on the home: priority (1) + Up Next (up to 3) +
+    // the single most-recent active non-pinned project (the "recent" slot
+    // in Keep Going). Anything else is in the drawer.
+    const priorityProjects = list.filter(p => p.is_priority).slice(0, 1)
     const priorityIds = new Set(priorityProjects.map(p => p.id))
-    const recentNonPriority = [...list]
+    const upNextProjects = list.filter(p => p.up_next_position != null)
+    const upNextIds = new Set(upNextProjects.map(p => p.id))
+    const recentSlot = [...list]
+      .filter(p =>
+        !priorityIds.has(p.id) &&
+        !upNextIds.has(p.id) &&
+        ['active', 'upcoming'].includes(p.status) &&
+        p.metadata?.is_shaped !== false
+      )
       .sort((a, b) =>
         new Date(b.last_active || b.updated_at || b.created_at).getTime() -
         new Date(a.last_active || a.updated_at || a.created_at).getTime()
       )
-      .filter(p => !p.is_priority && !priorityIds.has(p.id))
-      .slice(0, Math.max(0, FOCUS_CAP - priorityProjects.length))
-    const focusIds = new Set([...priorityProjects, ...recentNonPriority].map(p => p.id))
+      .slice(0, 1)
+    const focusIds = new Set([...priorityProjects, ...upNextProjects, ...recentSlot].map(p => p.id))
 
     const filtered = list.filter(p => !focusIds.has(p.id))
     const q = query.trim().toLowerCase()

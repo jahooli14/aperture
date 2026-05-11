@@ -4,7 +4,8 @@
  * Stack (top to bottom):
  *   1. YourHourHeader — brand + duration toggle + search
  *   2. KeepGoingCarousel — focus mode for active projects (the hero)
- *   3. ProjectIdeasHome — quiet button. Expands to a full idea card when
+ *   3. UpNextShelf — user-pinned queue (up to 3); only renders when populated
+ *   4. ProjectIdeasHome — quiet button. Expands to a full idea card when
  *      the user wants something new. Two states: an "unlock" prompt when a
  *      pre-baked idea is waiting (instant reveal), or "suggest a project"
  *      when the queue is empty (generates one on demand, fast model).
@@ -30,6 +31,7 @@ import { useAuthContext } from '../contexts/AuthContext'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { YourHourHeader } from '../components/home/YourHourHeader'
 import { KeepGoingCarousel } from '../components/home/KeepGoingCarousel'
+import { UpNextShelf } from '../components/home/UpNextShelf'
 import { ThoughtOfTheDay } from '../components/home/ThoughtOfTheDay'
 import { BedtimeFloatingIcon } from '../components/home/BedtimeFloatingIcon'
 import { ProjectIdeasHome } from '../components/home/ProjectIdeasHome'
@@ -233,21 +235,26 @@ export function HomePage() {
             <KeepGoingCarousel />
           </motion.div>
 
+          {/* Up Next — pinned queue. Hidden when empty. */}
+          <motion.div className="mb-10" {...stackTransition(2)}>
+            <UpNextShelf />
+          </motion.div>
+
           {/* Project ideas — quiet button until clicked. Reveals a pre-baked
               idea instantly when the queue has one, or generates on demand
               when it doesn't. Opt-in: only fires when the user wants something
               new. Expands to a full hero card while the user is reviewing. */}
-          <motion.div className="mb-10" {...stackTransition(2)}>
+          <motion.div className="mb-10" {...stackTransition(3)}>
             <ProjectIdeasHome />
           </motion.div>
 
           {/* What you're consuming */}
-          <motion.div {...stackTransition(3)}>
+          <motion.div {...stackTransition(4)}>
             <NowConsumingWidget />
           </motion.div>
 
           {/* Thought of the day */}
-          <motion.div {...stackTransition(4)}>
+          <motion.div {...stackTransition(5)}>
             <ThoughtOfTheDay />
           </motion.div>
 
