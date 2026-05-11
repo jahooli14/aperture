@@ -26,7 +26,7 @@
 
 import { generateText } from '../gemini-chat.js'
 import { MODELS } from '../models.js'
-import { pickSeedPairs, type SeedCandidate } from './seed-picker.js'
+import { pickSeedPairs, tokenise, topicalOverlap, type SeedCandidate } from './seed-picker.js'
 import type { ArrivalKind, CentreKind, GatherResult, GenerationResult, IdeaEvidence, ProjectIdea, SeedPair } from './types.js'
 
 const MIN_SIGNALS = 8
@@ -448,61 +448,182 @@ function synthesiseEvidence(g: GatherResult): IdeaEvidence[] {
 
 /** Last-resort server-side template. No LLM call. Used when both LLM stages
  *  fail — guarantees the button always returns something rather than 40s
- *  of nothing. Four tiers, ordered by quality:
- *    1. Top dormant project + revival framing
- *    2. Most recent voice note + follow-it framing
- *    3. Top "want to make" list reaction
- *    4. Universal fallback — never returns null
+ *  of nothing. Tiers, ordered by quality:
+ *    1. Dormant project whose themes overlap a recent voice note — the
+ *       resurfacing is earned and the why_now names the specific resonance.
+ *    2. Top dormant project with no resonance — still surfaced, but the
+ *       why_now names the gap, not a "today is as good a day as any" bromide.
+ *    3. Most recent voice note + follow-it framing.
+ *    4. Top "want to make" list reaction.
+ *    5. Universal fallback — never returns null.
  *  Lower quality than LLM output; always better than empty. */
-function synthesiseFallbackIdea(g: GatherResult): ProjectIdea {
-  // Tier 1: a dormant project to revive — the strongest fallback signal.
-  const project = g.dormant_projects[0]
-  if (project) {
-    const desc = (project.description ?? '').trim()
-    return {
-      rank: 1,
-      title: project.title,
-      pitch: desc
-        ? `Pick this back up. ${truncate(desc, 280)}`
-        : `Pick this back up. You started it and walked away — try one move and see what it tells you.`,
-      why_now: 'You started this and stopped. Today is as good a day as any to revisit it.',
-      next_step: 'Open the project. Make the smallest visible change you can in the next 30 minutes.',
-      evidence: synthesiseEvidence(g),
-    }
+export function synthesiseFallbackIdea(g: GatherResult): ProjectIdea {
+  // Tier 1 + 2 — dormant project. Pick the one whose themes overlap a
+  // recent voice note over the top-of-list pick; otherwise fall back to
+  // most-recently-touched.
+  const match = findResonantDormantProject(g)
+  if (match) {
+    return buildDormantRevival(match, g)
   }
-  // Tier 2: a recent voice note to follow.
+  // Tier 3: a recent voice note to follow.
   const memory = g.memories[0]
   if (memory) {
+    const excerpt = truncate(memory.body.replace(/\s+/g, ' ').trim(), 240)
+    const days = daysAgo(memory.created_at)
     return {
       rank: 1,
-      title: 'Make what you were just thinking about',
-      pitch: 'Something you said recently is worth following. Spend an hour on it before it fades.',
-      why_now: truncate(memory.body, 280),
-      next_step: 'Take 30 minutes. Write or sketch the smallest version of it.',
+      title: 'Follow what you said',
+      pitch: `"${excerpt}" — that was you, ${describeRecency(days)}. The shape is half-named already. Make the version of it that exists by tonight.`,
+      why_now: `${describeRecency(days, { capitalise: true })} you put this on the record. It hasn\'t cooled yet — that\'s the window.`,
+      next_step: 'Re-read it once. Then spend 30 minutes making the smallest real version — write a draft, cut a clip, sketch the frame. Stop when the timer ends.',
       evidence: synthesiseEvidence(g),
     }
   }
-  // Tier 3: a "want to make" list reaction.
+  // Tier 4: a "want to make" list reaction.
   const wantsToMake = g.list_items.find((li) => li.reaction === 'make')
   if (wantsToMake) {
     return {
       rank: 1,
       title: truncate(wantsToMake.content, 60),
-      pitch: `You said you want to make this. Spend the next hour on the smallest version of it that exists by the end of today.`,
-      why_now: 'You marked this as "want to make" — that\'s the green light.',
-      next_step: 'Take 30 minutes. Make the rough first version. Done is better than careful.',
+      pitch: `You marked this "want to make" — that\'s your own past self handing you the brief. Spend an hour today on the version that\'s ugly but real.`,
+      why_now: 'You already said yes to this. It\'s been sitting on the list waiting for the hour.',
+      next_step: 'Set a 30-minute timer. Make the rough first version. Save it somewhere you\'ll find it tomorrow.',
       evidence: [],
     }
   }
-  // Tier 4: universal — always succeeds. The button must never come back empty.
+  // Tier 5: universal — always succeeds. The button must never come back empty.
   return {
     rank: 1,
-    title: 'Capture something new',
-    pitch: 'You opened the app with a creative impulse. Aim it. Pick the smallest thing you can make today and do it.',
-    why_now: 'You showed up. That\'s the data point.',
-    next_step: 'Take 30 minutes. Make one thing — anything — and write down what you did.',
+    title: 'Capture before you make',
+    pitch: 'There\'s not enough on the record yet to point at a specific project. The next move is to feed the harness — record the half-formed thought you came in with so the next idea has somewhere to land.',
+    why_now: 'No dormant projects, no recent captures. Today\'s job is to put a thought on the record, not to ship something.',
+    next_step: 'Open the recorder. Talk for two minutes about whatever you came here thinking about. Don\'t edit, don\'t polish — just leave a trace.',
     evidence: [],
   }
+}
+
+interface DormantMatch {
+  project: GatherResult['dormant_projects'][number]
+  /** The recent voice note whose themes overlap this project, if any. */
+  memory?: GatherResult['memories'][number]
+  /** Jaccard overlap between project text and memory text. 0 if no memory. */
+  overlap: number
+}
+
+/** Pick the dormant project most worth resurfacing today. Prefers thematic
+ *  overlap with a recent voice note — that's the signal that the user is
+ *  back in this project's territory without realising it. Falls back to the
+ *  top-of-list dormant project (most recently touched) when nothing
+ *  resonates, so the button still answers. Returns null only when there
+ *  are no dormant projects at all. */
+function findResonantDormantProject(g: GatherResult): DormantMatch | null {
+  if (g.dormant_projects.length === 0) return null
+
+  const now = Date.now()
+  const NINETY_DAYS_MS = 90 * 86_400_000
+  const recentMemories = g.memories.filter((m) => {
+    const t = new Date(m.created_at).getTime()
+    return !Number.isNaN(t) && now - t <= NINETY_DAYS_MS
+  })
+
+  let best: DormantMatch | null = null
+  for (const project of g.dormant_projects) {
+    const projectTokens = tokenise(`${project.title} ${project.description ?? ''}`)
+    if (projectTokens.size === 0) continue
+    for (const memory of recentMemories) {
+      const memTokens = tokenise(`${memory.title ?? ''} ${memory.body} ${memory.themes.join(' ')}`)
+      const overlap = topicalOverlap(projectTokens, memTokens)
+      if (overlap <= 0) continue
+      if (!best || overlap > best.overlap) {
+        best = { project, memory, overlap }
+      }
+    }
+  }
+  if (best) return best
+  return { project: g.dormant_projects[0], overlap: 0 }
+}
+
+function buildDormantRevival(match: DormantMatch, g: GatherResult): ProjectIdea {
+  const { project, memory, overlap } = match
+  const desc = (project.description ?? '').trim()
+  const weeks = weeksAgo(project.updated_at)
+
+  // Pitch leads with what the project actually IS. No "Pick this back up"
+  // preamble — that's the template tell. If there's no description, lean
+  // on the title shape rather than a generic line.
+  const pitch = desc
+    ? truncate(desc, 280)
+    : `You started "${project.title}" and walked away. The shape was clear enough to name; that\'s usually clear enough to restart.`
+
+  // Why now names the actual reason this project is surfacing today.
+  // Resonance > dormancy length > "you set this down."
+  let why_now: string
+  if (memory && overlap > 0) {
+    const excerpt = truncate(memory.body.replace(/\s+/g, ' ').trim(), 180)
+    why_now = `${describeRecency(daysAgo(memory.created_at), { capitalise: true })} you said: "${excerpt}" — same territory as this project, ${weeks ? `which has been sitting ${weeks} week${weeks === 1 ? '' : 's'}.` : 'which is waiting.'}`
+  } else if (weeks >= 16) {
+    why_now = `Dormant ${weeks} weeks. You\'re a different maker than the one who set it down — that\'s the point of looking again.`
+  } else if (weeks >= 4) {
+    why_now = `${weeks} weeks since you touched this. Long enough to forget the friction, short enough to still mean it.`
+  } else {
+    why_now = 'You moved past this in the last few weeks. Look once before it slides further out of reach.'
+  }
+
+  const next_step = buildDormantNextStep(project, !!memory)
+
+  return {
+    rank: 1,
+    title: project.title,
+    pitch,
+    why_now,
+    next_step,
+    evidence: synthesiseEvidence(g),
+  }
+}
+
+/** Build a next-step line tied to the project's own description when we
+ *  can — the first imperative-looking clause is usually a real action.
+ *  Falls back to a concrete-but-generic move that doesn't say "open the
+ *  project" or "smallest visible change" (the template tells). */
+function buildDormantNextStep(
+  project: GatherResult['dormant_projects'][number],
+  hasResonance: boolean,
+): string {
+  const desc = (project.description ?? '').trim()
+  if (desc) {
+    const firstClause = desc.split(/(?<=[.!?])\s+|[,;]/, 1)[0]?.trim() ?? ''
+    // Verb-led first clause: looks like "Cut the beech strip", "Smash some
+    // glass", "Write the cold open". Use it as the action directly.
+    if (/^[A-Z][a-z]+\s+\S/.test(firstClause) && firstClause.length >= 8 && firstClause.length <= 110) {
+      return `${firstClause} — today, not tomorrow. One real version, not a plan.`
+    }
+  }
+  if (hasResonance) {
+    return 'Re-open the project. Use the recent capture above as the way back in — write one paragraph or make one piece that ties them together.'
+  }
+  return 'Open it today. Read the description back to yourself, then do whichever sentence sounds easiest. Stop before you start planning.'
+}
+
+function daysAgo(dateStr: string | null | undefined): number {
+  if (!dateStr) return 0
+  const t = new Date(dateStr).getTime()
+  if (Number.isNaN(t)) return 0
+  return Math.max(0, Math.floor((Date.now() - t) / 86_400_000))
+}
+
+function weeksAgo(dateStr: string | null | undefined): number {
+  return Math.floor(daysAgo(dateStr) / 7)
+}
+
+function describeRecency(days: number, opts: { capitalise?: boolean } = {}): string {
+  let phrase: string
+  if (days <= 1) phrase = 'yesterday'
+  else if (days <= 7) phrase = `${days} days ago`
+  else if (days <= 14) phrase = 'last week'
+  else if (days <= 30) phrase = 'a few weeks back'
+  else if (days <= 60) phrase = 'last month'
+  else phrase = 'a couple of months ago'
+  return opts.capitalise ? phrase.charAt(0).toUpperCase() + phrase.slice(1) : phrase
 }
 
 async function runRead(gathered: GatherResult): Promise<ProjectIdea[]> {
