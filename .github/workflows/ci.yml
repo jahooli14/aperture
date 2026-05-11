@@ -64,5 +64,5 @@ jobs:
       continue-on-error: true
 
     - name: Dependency Review
-      uses: actions/dependency-review-action@v4
+      uses: actions/dependency-review-action@v5
       if: github.event_name == 'pull_request'
