@@ -219,10 +219,11 @@ export function ProjectIdeasHome() {
         return
       }
       setInsufficientSignals(null)
-      await load()
-      // Expand the card now that we have something to show.
-      setExpanded(true)
+      // POST already returns the inserted rows — use them directly to
+      // skip the GET round-trip and expand the card immediately.
+      setIdeas(res.ideas.slice(0, 3))
       setActiveIndex(0)
+      setExpanded(true)
     } catch (err) {
       // The apiClient throws ApiError with .status === 429 on cooldown.
       const e = err as { status?: number; message?: string; details?: { retry_after_ms?: number; message?: string } }
@@ -235,7 +236,7 @@ export function ProjectIdeasHome() {
     } finally {
       setGenerating(false)
     }
-  }, [generating, load])
+  }, [generating])
 
   const sendFeedback = useCallback(async (idea: ProjectIdea, status: 'saved' | 'rejected' | 'built' | 'pending') => {
     if (pendingFeedback === idea.id) return
@@ -453,7 +454,7 @@ export function ProjectIdeasHome() {
               className="text-[10px] tracking-[0.16em] uppercase mt-1 opacity-50"
               style={{ color: 'var(--brand-text-muted)' }}
             >
-              About 30 seconds.
+              A few seconds.
             </p>
           </div>
         )}

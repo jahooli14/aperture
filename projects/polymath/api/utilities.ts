@@ -1449,10 +1449,11 @@ async function handleProjectIdeasFeedback(req: VercelRequest, res: VercelRespons
   }
 }
 
-// Cooldown between manual regenerations. The Pro synthesis call costs
-// ~$0.20 and a frustrated user can otherwise hammer it. Cron path is
-// exempt — it can only fire once per scheduled run anyway.
-const GENERATION_COOLDOWN_MS = 60_000
+// Anti-spam cooldown. The two-stage Lite→Flash fast path is cheap so the
+// 60s wall that used to exist (for the old expensive Pro path) is gone.
+// 5 seconds is just enough to ignore accidental double-taps without
+// frustrating dismiss-then-regenerate. Cron is exempt.
+const GENERATION_COOLDOWN_MS = 5_000
 
 async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelResponse) {
   const started = Date.now()
@@ -1502,11 +1503,11 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
       }
     }
 
-    // Cooldown check — only on manual user-triggered runs. Reads the
-    // newest non-pending row's generated_at; if too recent we throttle.
-    // (Pending rows are now handled by the short-circuit above, so the
-    // cooldown only matters when the queue is empty AND the user clicks
-    // again right after their previous on-demand generation.)
+    // Anti-spam cooldown — only fires on accidental rapid double-clicks
+    // (< 5s apart). Two-stage fast path costs ~$0.003 per call so the
+    // dollar pressure that justified a 60s cooldown is gone. The check
+    // looks at the newest row of any status: if you click, dismiss, and
+    // immediately click again you should get a fresh idea, not a 429.
     if (!viaCron) {
       const { data: recent } = await supabase
         .from('project_ideas')
@@ -1521,7 +1522,7 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
           return res.status(429).json({
             error: 'cooldown',
             retry_after_ms: GENERATION_COOLDOWN_MS - ageMs,
-            message: 'Just generated — try again in a minute.',
+            message: 'One sec — give it a moment.',
           })
         }
       }
