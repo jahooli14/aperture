@@ -15,7 +15,7 @@ import { haptic } from '../../utils/haptics'
 import { useToast } from '../ui/toast'
 
 const SWIPE_THRESHOLD = 50
-const DURATION_KEY = 'polymath-power-hour-duration'
+const SESSION_DURATION_MINUTES = 60
 
 function formatRelativeTime(dateStr?: string): string {
   if (!dateStr) return 'not started yet'
@@ -49,11 +49,10 @@ export function KeepGoingCarousel() {
   useEffect(() => {
     if (!projectIds) return
     const ids = projectIds.split(',')
-    const duration = Number(localStorage.getItem(DURATION_KEY)) || 60
     ids.forEach(async (id) => {
       if (sessionPlansRef.current[id]) return
       try {
-        const res = await fetch(`/api/power-hour?projectId=${id}&duration=${duration}`)
+        const res = await fetch(`/api/power-hour?projectId=${id}&duration=${SESSION_DURATION_MINUTES}`)
         if (res.ok) {
           const data = await res.json()
           if (data.tasks?.[0]) {
@@ -98,8 +97,7 @@ export function KeepGoingCarousel() {
         }
       }
 
-      const duration = Number(localStorage.getItem(DURATION_KEY)) || 60
-      const res = await fetch(`/api/power-hour?projectId=${projectId}&duration=${duration}`)
+      const res = await fetch(`/api/power-hour?projectId=${projectId}&duration=${SESSION_DURATION_MINUTES}`)
 
       if (!res.ok) {
         // authFetch will sign the user out on an unrecoverable 401, so don't
