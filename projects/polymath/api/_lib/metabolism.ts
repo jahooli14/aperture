@@ -444,13 +444,23 @@ export async function evolveProjectsForUser(
   const evolved: string[] = []
   for (const project of projects.slice(0, 10)) {
     try {
-      const prompt = `You are a creative catalyst AI. Given this project, generate a fresh evolution insight — a new angle, intersection, or breakthrough idea that could reshape it.
+      const prompt = `You're a friend looking at one of my projects and naming a single specific direction it could take — a new angle, a missing intersection, or a reshape. Just one. Real, not decorative.
 
 Project: ${project.title}
 Description: ${project.description || 'No description'}
 Current notes: ${JSON.stringify((project.metadata as any)?.tasks?.slice(0, 3) || [])}
 
-Respond with JSON: { "event_type": "intersection"|"reshape"|"reflection", "description": "one specific, surprising insight in plain language (max 2 sentences)" }`
+Plain English. Short sentences. Words people actually say. One idea per sentence.
+Never use: "leveraging," "synergies," "soundscapes," "narrative substrate," "feature-rich," "high-impact," "creative momentum," "unlocking."
+Never invent hyphenated phrases in scare-quotes ("friction-over-function," "blind-edit"). If a term needs scare-quotes, rewrite it.
+No coach voice ("you are shifting from X to Y"). Talk to me, not at me.
+
+Bad: "Your reliance on the trial deadline acted as a forcing function for creative momentum."
+Good: "The Logic Pro trial ran out — that's the deadline this song needs."
+
+If nothing real is there, pick "reflection" and just name what the project actually is in one sentence. Don't pad.
+
+Respond with JSON: { "event_type": "intersection"|"reshape"|"reflection", "description": "one specific angle or reshape, max 2 sentences" }`
 
       const response = await generateText(prompt, { responseFormat: 'json', temperature: 0.8 })
       const insight = JSON.parse(response)

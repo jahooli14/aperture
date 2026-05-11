@@ -88,10 +88,10 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
               </div>
               <div>
                 <h3 className="font-semibold mb-1" style={{ color: "var(--brand-primary)" }}>
-                  1. Capture Memories
+                  1. Record voice notes
                 </h3>
                 <p className="text-sm" style={{ color: "var(--brand-primary)" }}>
-                  Send voice notes via Audiopen. <BrandName size="sm" /> extracts themes, entities, and insights automatically.
+                  Talk for 30 seconds. <BrandName size="sm" /> transcribes, tidies it up, and gives it a title.
                 </p>
               </div>
             </div>
