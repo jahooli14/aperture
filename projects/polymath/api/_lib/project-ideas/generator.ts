@@ -181,8 +181,12 @@ async function runPermissive(gathered: GatherResult, opts: { fast?: boolean } = 
  *  a cap a single bad backend day produces 40s waits and an empty card.
  *  We'd rather bail to the next stage / the template and ship something.
  *  The underlying call continues in the background (Promise.race doesn't
- *  cancel) but we stop waiting. */
-const FAST_STAGE_TIMEOUT_MS = 15_000
+ *  cancel) but we stop waiting.
+ *
+ *  Raised from 15s → 25s after the template kept firing on real button
+ *  presses. The user explicitly asked for the LLM idea — they'll wait
+ *  25s for a real thought before they want the template's fake one. */
+const FAST_STAGE_TIMEOUT_MS = 25_000
 
 function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
@@ -193,14 +197,40 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
 
 /** Two-stage on-demand pipeline. Stage 1 uses Flash-Lite to compress the
  *  raw gathered context into a tight JSON snapshot; Stage 2 uses Flash on
- *  that snapshot to write ONE idea. Returns the idea or null if either
- *  stage fails — the caller falls back to a server-side template. */
+ *  that snapshot to write ONE idea.
+ *
+ *  Both stages are guarded against the text-template trapdoor:
+ *    - Stage 1 failure (throw, timeout, or unparseable JSON) builds a
+ *      deterministic snapshot from the gathered data and continues. The
+ *      user pressed the button — Flash still runs.
+ *    - Stage 2 failure or parse-null retries once with a slightly bumped
+ *      temperature. Two clean attempts before we even consider bailing.
+ *
+ *  Returns null only if both Stage 2 attempts fail. */
 async function runFastTwoStage(gathered: GatherResult): Promise<ProjectIdea | null> {
   // ── Stage 1: Lite reads everything and digests it ─────────────────
+  const snapshot = await runStage1Snapshot(gathered)
+
+  // ── Stage 2: Flash writes the idea from the snapshot ──────────────
+  const first = await runStage2Idea(snapshot, gathered, { attempt: 1, temperature: 0.85 })
+  if (first) return first
+  // Same snapshot, slightly hotter temperature so the second attempt
+  // doesn't reproduce the same parse-fail. Cheap insurance — one extra
+  // ~3–5s call to keep the LLM idea on screen instead of the template.
+  const second = await runStage2Idea(snapshot, gathered, { attempt: 2, temperature: 0.95 })
+  return second
+}
+
+/** Stage 1 — Flash-Lite snapshot, with a deterministic fallback so the
+ *  pipeline never bails before Stage 2. If Lite throws, times out, or
+ *  returns unparseable JSON, we assemble the same shape from raw gather
+ *  data using token overlap + recency. Lower quality than Lite's read,
+ *  but Stage 2 (the model the user is really asking for) still runs. */
+async function runStage1Snapshot(gathered: GatherResult): Promise<Snapshot> {
   const snapshotPrompt = buildSnapshotPrompt(gathered)
   console.log(`[project-ideas] fast/stage-1 (Lite) snapshot prompt: ${snapshotPrompt.length} chars`)
   const t1 = Date.now()
-  let snapshotRaw: string
+  let snapshotRaw: string | null = null
   try {
     snapshotRaw = await withTimeout(
       generateText(snapshotPrompt, {
@@ -213,19 +243,27 @@ async function runFastTwoStage(gathered: GatherResult): Promise<ProjectIdea | nu
       'stage-1 Lite',
     )
   } catch (err) {
-    console.error(`[project-ideas] fast/stage-1 Lite threw after ${Date.now() - t1}ms:`, err)
-    return null
+    console.error(`[project-ideas] fast/stage-1 Lite threw after ${Date.now() - t1}ms — using deterministic snapshot:`, err)
   }
-  console.log(`[project-ideas] fast/stage-1 Lite responded in ${Date.now() - t1}ms (${snapshotRaw.length} chars)`)
-  const snapshot = parseSnapshot(snapshotRaw)
-  if (!snapshot) {
-    console.warn('[project-ideas] fast/stage-1 produced unparseable snapshot — bailing')
-    return null
+  if (snapshotRaw !== null) {
+    console.log(`[project-ideas] fast/stage-1 Lite responded in ${Date.now() - t1}ms (${snapshotRaw.length} chars)`)
+    const parsed = parseSnapshot(snapshotRaw)
+    if (parsed) return parsed
+    console.warn('[project-ideas] fast/stage-1 produced unparseable snapshot — using deterministic snapshot')
   }
+  return buildDeterministicSnapshot(gathered)
+}
 
-  // ── Stage 2: Flash writes the idea from the snapshot ──────────────
+/** Stage 2 — Flash writes the idea from the snapshot. Either attempt
+ *  resolves to a parsed idea or null; the caller retries once with a
+ *  hotter temperature before considering the pipeline dead. */
+async function runStage2Idea(
+  snapshot: Snapshot,
+  gathered: GatherResult,
+  opts: { attempt: number; temperature: number },
+): Promise<ProjectIdea | null> {
   const ideaPrompt = buildFastIdeaPrompt(snapshot)
-  console.log(`[project-ideas] fast/stage-2 (Flash) idea prompt: ${ideaPrompt.length} chars`)
+  console.log(`[project-ideas] fast/stage-2 (Flash) idea prompt: ${ideaPrompt.length} chars; attempt=${opts.attempt}`)
   const t2 = Date.now()
   let ideaRaw: string
   try {
@@ -233,18 +271,91 @@ async function runFastTwoStage(gathered: GatherResult): Promise<ProjectIdea | nu
       generateText(ideaPrompt, {
         model: MODELS.FLASH_CHAT, // gemini-3-flash-preview — quality on small input
         maxTokens: 1200,
-        temperature: 0.85,
+        temperature: opts.temperature,
         responseFormat: 'json',
       }),
       FAST_STAGE_TIMEOUT_MS,
-      'stage-2 Flash',
+      `stage-2 Flash attempt ${opts.attempt}`,
     )
   } catch (err) {
-    console.error(`[project-ideas] fast/stage-2 Flash threw after ${Date.now() - t2}ms:`, err)
+    console.error(`[project-ideas] fast/stage-2 Flash attempt ${opts.attempt} threw after ${Date.now() - t2}ms:`, err)
     return null
   }
-  console.log(`[project-ideas] fast/stage-2 Flash responded in ${Date.now() - t2}ms (${ideaRaw.length} chars)`)
+  console.log(`[project-ideas] fast/stage-2 Flash attempt ${opts.attempt} responded in ${Date.now() - t2}ms (${ideaRaw.length} chars)`)
   return parseFastIdea(ideaRaw, gathered)
+}
+
+/** Build the Snapshot shape Lite would produce, but deterministically
+ *  from the raw gathered data — no LLM. Used when Stage 1 fails so Stage
+ *  2 still runs on real signal instead of bailing the whole pipeline. */
+function buildDeterministicSnapshot(g: GatherResult): Snapshot {
+  // Score memories by recency × theme density so the top picks are the
+  // user's freshest, themiest captures.
+  const now = Date.now()
+  const NINETY_DAYS_MS = 90 * 86_400_000
+  const scoredMemories = g.memories
+    .map((m) => {
+      const t = new Date(m.created_at).getTime()
+      const ageMs = Number.isNaN(t) ? Infinity : Math.max(0, now - t)
+      const recencyScore = ageMs <= 14 * 86_400_000 ? 1.0 : ageMs <= 30 * 86_400_000 ? 0.7 : ageMs <= 60 * 86_400_000 ? 0.4 : 0.2
+      const themeBonus = Math.min(0.5, (m.themes?.length ?? 0) * 0.1)
+      return { m, score: recencyScore + themeBonus, ageMs }
+    })
+    .sort((a, b) => b.score - a.score)
+
+  const recentVoice = scoredMemories
+    .filter(({ ageMs }) => ageMs <= NINETY_DAYS_MS)
+    .slice(0, 5)
+    .map(({ m }) => ({
+      id: m.id,
+      excerpt: truncate(m.body.replace(/\s+/g, ' ').trim(), 140),
+      date: isoDate(m.created_at),
+    }))
+
+  const dormant = g.dormant_projects.slice(0, 5).map((p) => ({
+    id: p.id,
+    title: p.title,
+    description: truncate(p.description ?? '', 180),
+    last_touched: isoDate(p.updated_at),
+  }))
+
+  // Recent themes = aggregate themes across the top-scored memories.
+  // Cheap proxy for what the user has been circling.
+  const themeCounts = new Map<string, number>()
+  for (const { m } of scoredMemories.slice(0, 20)) {
+    for (const theme of m.themes ?? []) {
+      const key = theme.trim().toLowerCase()
+      if (key.length < 3) continue
+      themeCounts.set(key, (themeCounts.get(key) ?? 0) + 1)
+    }
+  }
+  const recent_themes = Array.from(themeCounts.entries())
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 8)
+    .map(([t]) => t)
+
+  // Taste line: a sober stub. Stage 2's prompt opens with "who they
+  // are" — better to hand it "still forming, drawn to: X, Y, Z" than
+  // an empty string that the model has to invent its way around.
+  const tasteHints = recent_themes.slice(0, 4).join(', ')
+  const taste = tasteHints
+    ? `Still forming — recently drawn to: ${tasteHints}.`
+    : 'Still forming.'
+
+  return {
+    taste,
+    dormant,
+    recent_themes,
+    recent_voice_notes: recentVoice,
+    reactions_make: g.list_items
+      .filter((li) => li.reaction === 'make')
+      .slice(0, 6)
+      .map((li) => truncate(li.content, 80)),
+    reactions_sparked: g.list_items
+      .filter((li) => li.reaction === 'sparked')
+      .slice(0, 6)
+      .map((li) => truncate(li.content, 80)),
+  }
 }
 
 interface Snapshot {
