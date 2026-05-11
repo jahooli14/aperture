@@ -216,12 +216,18 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
         style={{
           borderColor: project.is_priority ? 'var(--brand-primary)' : theme.border,
           background: `rgba(${theme.rgb}, 0.08)`,
-          boxShadow: project.is_priority ? `0 8px 32px rgba(${theme.rgb}, 0.2)` : 'none'
+          boxShadow: project.is_priority ? `0 8px 32px rgba(${theme.rgb}, 0.2)` : 'none',
+          // Suppress iOS Safari's own long-press menu (link share sheet) so
+          // our long-press handler can open the context sheet uninterrupted.
+          WebkitTouchCallout: 'none',
+          WebkitUserSelect: 'none',
+          userSelect: 'none',
         }}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         onTouchMove={handleTouchEnd}
         onClick={handleClick}
+        onContextMenu={(e) => e.preventDefault()}
       >
         {/* Header — full-width title, no icon buttons */}
         <div className="mb-3 flex items-start gap-2">

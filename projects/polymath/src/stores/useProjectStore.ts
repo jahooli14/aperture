@@ -442,14 +442,18 @@ export const useProjectStore = create<ProjectState>()(
 
         const nextValue = !targetProject.is_priority
 
-        // Optimistic update — only this project changes, others stay untouched.
-        // Promoting to priority also clears up_next_position locally to mirror
-        // the server's mutual-exclusion rule.
-        const updatedAllProjects = previousAllProjects.map(p =>
-          p.id === id
-            ? { ...p, is_priority: nextValue, ...(nextValue ? { up_next_position: null } : {}) }
-            : p
-        )
+        // Optimistic update. When promoting to priority, also demote all
+        // other priorities locally (cap=1, server auto-demotes too) and
+        // clear up_next_position on the new priority (mutually exclusive).
+        const updatedAllProjects = previousAllProjects.map(p => {
+          if (p.id === id) {
+            return { ...p, is_priority: nextValue, ...(nextValue ? { up_next_position: null } : {}) }
+          }
+          if (nextValue && p.is_priority) {
+            return { ...p, is_priority: false }
+          }
+          return p
+        })
         const sorted = smartSortProjects(updatedAllProjects)
 
         set(state => ({

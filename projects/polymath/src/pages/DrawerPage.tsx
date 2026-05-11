@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Archive, Flame, Search } from 'lucide-react'
+import { Archive, Flame, Search, ListOrdered } from 'lucide-react'
 import { useProjectStore } from '../stores/useProjectStore'
 import { SubtleBackground } from '../components/SubtleBackground'
+import { useToast } from '../components/ui/toast'
+import { haptic } from '../utils/haptics'
 import type { Project } from '../types'
 
 interface WarmedProject extends Project {
@@ -12,12 +14,64 @@ interface WarmedProject extends Project {
 }
 
 export default function DrawerPage() {
-  const { allProjects, fetchProjects, loading } = useProjectStore()
+  const { allProjects, fetchProjects, loading, setUpNext, replaceUpNext } = useProjectStore()
   const [query, setQuery] = useState('')
+  const { addToast } = useToast()
 
   useEffect(() => {
     fetchProjects()
   }, [])
+
+  const handleTogglePin = async (e: React.MouseEvent, project: WarmedProject) => {
+    e.preventDefault()
+    e.stopPropagation()
+    haptic.light()
+    const wasPinned = project.up_next_position != null
+    try {
+      await setUpNext(project.id)
+      if (!wasPinned) {
+        addToast({
+          title: 'Added to Up Next',
+          description: `"${project.title}" is in the queue.`,
+          variant: 'success',
+        })
+      }
+    } catch (err: any) {
+      const body = err?.details || {}
+      if (body?.error === 'up_next_cap_reached') {
+        const current: Array<{ id: string; title: string }> = body?.current || []
+        const replaceTarget = current.find((p) => p.id === body?.suggested_replace_id) || current[0]
+        if (replaceTarget) {
+          addToast({
+            title: 'Up Next is full',
+            description: `Replace "${replaceTarget.title}" with "${project.title}"?`,
+            variant: 'default',
+            action: {
+              label: 'Replace',
+              onClick: async () => {
+                try {
+                  await replaceUpNext(project.id, replaceTarget.id)
+                  addToast({
+                    title: 'Added to Up Next',
+                    description: `"${project.title}" replaced "${replaceTarget.title}".`,
+                    variant: 'success',
+                  })
+                } catch {
+                  addToast({ title: 'Couldn\'t replace', variant: 'destructive' })
+                }
+              },
+            },
+          })
+          return
+        }
+      }
+      addToast({
+        title: 'Couldn\'t pin to Up Next',
+        description: err?.message || 'Try again in a moment.',
+        variant: 'destructive',
+      })
+    }
+  }
 
   const drawerProjects = useMemo(() => {
     const list = (Array.isArray(allProjects) ? allProjects : []) as WarmedProject[]
@@ -104,13 +158,14 @@ export default function DrawerPage() {
           <div className="columns-1 sm:columns-2 lg:columns-3 gap-4 space-y-4">
             {drawerProjects.map((p, i) => {
               const isWarm = (p.heat_score || 0) > 0 && !!p.heat_reason
+              const isPinned = p.up_next_position != null
               return (
                 <motion.div
                   key={p.id}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: Math.min(i * 0.02, 0.3) }}
-                  className="break-inside-avoid mb-4"
+                  className="break-inside-avoid mb-4 relative"
                 >
                   <Link
                     to={`/projects/${p.id}`}
@@ -121,10 +176,12 @@ export default function DrawerPage() {
                         : 'rgba(15, 24, 41, 0.5)',
                       borderColor: isWarm ? 'rgba(var(--brand-primary-rgb),0.4)' : 'rgba(255,255,255,0.1)',
                       boxShadow: isWarm ? '0 4px 16px rgba(var(--brand-primary-rgb),0.12)' : '0 2px 10px rgba(0,0,0,0.35)',
+                      WebkitTouchCallout: 'none',
                     }}
+                    onContextMenu={(e) => e.preventDefault()}
                   >
                     <div className="flex items-start justify-between gap-2 mb-1.5">
-                      <h4 className="font-bold text-[var(--brand-text-primary)] text-[15px] leading-tight line-clamp-2">
+                      <h4 className="font-bold text-[var(--brand-text-primary)] text-[15px] leading-tight line-clamp-2 pr-9">
                         {p.title}
                       </h4>
                       {isWarm && (
@@ -143,6 +200,25 @@ export default function DrawerPage() {
                       </p>
                     )}
                   </Link>
+
+                  {/* Pin to Up Next — visible on every tile, one tap to promote */}
+                  <button
+                    onClick={(e) => handleTogglePin(e, p)}
+                    aria-label={isPinned ? `Remove ${p.title} from Up Next` : `Add ${p.title} to Up Next`}
+                    title={isPinned ? `In Up Next (#${p.up_next_position})` : 'Add to Up Next'}
+                    className="absolute top-2.5 right-2.5 h-8 w-8 rounded-lg flex items-center justify-center transition-all hover:scale-110"
+                    style={{
+                      background: isPinned
+                        ? 'rgba(var(--brand-primary-rgb), 0.18)'
+                        : 'rgba(0,0,0,0.35)',
+                      border: isPinned
+                        ? '1px solid rgba(var(--brand-primary-rgb), 0.5)'
+                        : '1px solid rgba(255,255,255,0.08)',
+                      color: isPinned ? 'rgb(var(--brand-primary-rgb))' : 'rgba(255,255,255,0.5)',
+                    }}
+                  >
+                    <ListOrdered className="h-4 w-4" />
+                  </button>
                 </motion.div>
               )
             })}
