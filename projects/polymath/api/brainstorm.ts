@@ -364,9 +364,13 @@ ${draft.slice(0, 2000)}
 ${contextBlock ? `\nFrom their knowledge lake:\n${contextBlock}\n` : ''}
 Do three things:
 
-1. Write a "ghost" — a short paragraph (3-5 sentences) that continues from where their draft ends, written in their voice. Not a summary of what they wrote. Take one step further. Something they might steal, react to, or discard. Write it as if you are them, continuing their thought.
+1. Write a "ghost" — a short paragraph (3-5 sentences) that continues from where their draft ends, written in their voice. Not a summary of what they wrote. Take one step further. Something they might steal, react to, or discard. Write it as if you are them, continuing their thought. Match their vocabulary and rhythm.
 
 2. Write 3 "provocations" — specific, pointed observations or questions targeted at this exact draft. Not generic writing advice. Think: a brilliant editor's marginalia. Name assumptions they're making, gaps in the argument, the thing they're circling without quite saying. Be uncomfortable.
+
+   Plain English. Real words. No "leveraging," "unlocking," "synergies," "narrative substrate," "creative momentum." No analyst voice. One idea per sentence.
+   BAD provocation: "Your text exhibits an unresolved tension between narrative substrate and emergent thematic actualization."
+   GOOD provocation: "You say the project is about constraint, but every example you cite is about freedom. Which is it?"
 
 3. Identify up to 3 items from their knowledge lake where there's a genuine insight in the collision with this draft — not just topical similarity, but something that would actually change how they think about what they're writing.
 
