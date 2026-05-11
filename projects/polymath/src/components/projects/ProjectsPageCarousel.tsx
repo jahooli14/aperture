@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Star, ArrowRight, CheckCircle2, Clock, Snowflake, Archive, Sprout, Loader2 } from 'lucide-react'
+import { Star, ArrowRight, CheckCircle2, Clock, Snowflake, Archive, Sprout, Loader2, ListOrdered } from 'lucide-react'
 import type { Project } from '../../types'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useSuggestionStore } from '../../stores/useSuggestionStore'
@@ -32,7 +32,8 @@ const CARD_HOVER_STYLES = {
 
 function ProjectCard({ project, prominent = false }: { project: Project, prominent?: boolean }) {
   const { setContext, toggleSidebar } = useContextEngineStore()
-  const { setPriority } = useProjectStore()
+  const { setPriority, setUpNext, replaceUpNext } = useProjectStore()
+  const { addToast } = useToast()
   const tasks = (project.metadata?.tasks || []) as Task[]
   const nextTask = getNextTask(project)
   const totalTasks = tasks.length
@@ -49,6 +50,56 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
     toggleSidebar(true)
   }
 
+  const handleToggleUpNext = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const wasPinned = project.up_next_position != null
+    try {
+      await setUpNext(project.id)
+      if (!wasPinned) {
+        addToast({
+          title: 'Added to Up Next',
+          description: `"${project.title}" is in the queue.`,
+          variant: 'success',
+        })
+      }
+    } catch (err: any) {
+      const body = err?.details || {}
+      if (body?.error === 'up_next_cap_reached') {
+        const current: Array<{ id: string; title: string }> = body?.current || []
+        const replaceTarget = current.find((p) => p.id === body?.suggested_replace_id) || current[0]
+        if (replaceTarget) {
+          addToast({
+            title: 'Up Next is full',
+            description: `Replace "${replaceTarget.title}" with "${project.title}"?`,
+            variant: 'default',
+            action: {
+              label: 'Replace',
+              onClick: async () => {
+                try {
+                  await replaceUpNext(project.id, replaceTarget.id)
+                  addToast({
+                    title: 'Added to Up Next',
+                    description: `"${project.title}" replaced "${replaceTarget.title}".`,
+                    variant: 'success',
+                  })
+                } catch {
+                  addToast({ title: 'Couldn\'t replace', variant: 'destructive' })
+                }
+              },
+            },
+          })
+          return
+        }
+      }
+      addToast({
+        title: 'Couldn\'t pin to Up Next',
+        description: err?.message || 'Try again in a moment.',
+        variant: 'destructive',
+      })
+    }
+  }
+
   return (
     <Link
       to={`/projects/${project.id}`}
@@ -58,8 +109,15 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
           ? `0 10px 32px rgba(0,0,0,0.5), 0 0 36px rgba(${theme.rgb}, 0.22), inset 0 1px 0 rgba(255,255,255,0.08)`
           : `0 6px 18px rgba(0,0,0,0.42), 0 0 20px rgba(${theme.rgb}, 0.1), inset 0 1px 0 rgba(255,255,255,0.05)`,
         border: `1px solid ${prominent || project.is_priority ? `rgba(${theme.rgb}, 0.65)` : `rgba(${theme.rgb}, 0.4)`}`,
-        background: `linear-gradient(165deg, rgba(${theme.rgb}, 0.18) 0%, rgba(${theme.rgb}, 0.06) 45%, rgba(15, 24, 41, 0.75) 100%)`
+        background: `linear-gradient(165deg, rgba(${theme.rgb}, 0.18) 0%, rgba(${theme.rgb}, 0.06) 45%, rgba(15, 24, 41, 0.75) 100%)`,
+        // Block the browser's own long-press menu (Copy link / Share link)
+        // on mobile so taps and our buttons aren't ambushed.
+        WebkitTouchCallout: 'none',
+        WebkitUserSelect: 'none',
+        userSelect: 'none',
       }}
+      onContextMenu={(e) => e.preventDefault()}
+      draggable={false}
     >
       {/* Header — title shrinks first, icon cluster stays compact so it
           can't overflow narrow masonry columns. min-w-0 is what lets
@@ -76,6 +134,18 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
             title="What connects here"
           >
             <span className="block w-2 h-2 rounded-full" style={{ backgroundColor: theme.textColor, opacity: 0.75 }} />
+          </button>
+          <button
+            onClick={handleToggleUpNext}
+            className="h-7 w-7 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
+            title={project.up_next_position != null ? `In Up Next (#${project.up_next_position})` : 'Add to Up Next'}
+          >
+            <ListOrdered
+              className="h-4 w-4"
+              style={{
+                color: project.up_next_position != null ? 'var(--brand-primary)' : 'rgba(255,255,255,0.35)',
+              }}
+            />
           </button>
           <button
             onClick={(e) => {

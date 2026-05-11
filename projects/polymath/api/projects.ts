@@ -339,10 +339,10 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
 
   // SET-PRIORITY RESOURCE - Atomically set one project as priority
   if (resource === 'set-priority') {
-    // Toggle semantic with a focus-tier cap of 1. Priority is the single
-    // hero in Keep Going; "Up Next" handles the next-in-line slots.
-    // Toggling on when the cap is full returns 409 with the current priority
-    // so the client can prompt the user to demote it.
+    // Priority is the single hero in Keep Going (cap = 1). Promoting a new
+    // project auto-demotes the existing priority — there's only ever one
+    // priority slot, so "make this the priority" should not require the
+    // user to demote first.
     const FOCUS_CAP = 1
 
     if (req.method !== 'POST') {
@@ -376,32 +376,23 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         return res.status(404).json({ error: 'Project not found' })
       }
 
-      // Count current priorities (excluding this project)
-      const { data: currentPriorities, error: countError } = await supabase
-        .from('projects')
-        .select('id, title')
-        .eq('user_id', userId)
-        .eq('is_priority', true)
-        .neq('id', project_id)
-
-      if (countError) {
-        return res.status(500).json({
-          error: 'Failed to count current priorities',
-          details: countError.message
-        })
-      }
-
-      const currentCount = currentPriorities?.length || 0
       const nextValue = !project.is_priority
 
-      // Enforce cap when promoting
-      if (nextValue && currentCount >= FOCUS_CAP) {
-        return res.status(409).json({
-          error: 'focus_cap_reached',
-          message: `You can focus on up to ${FOCUS_CAP} projects at a time. Drop one to promote another.`,
-          cap: FOCUS_CAP,
-          current_priorities: currentPriorities || []
-        })
+      // When promoting, demote every other priority first so the cap is
+      // enforced as a single live slot rather than a hard reject.
+      if (nextValue) {
+        const { error: demoteError } = await supabase
+          .from('projects')
+          .update({ is_priority: false })
+          .eq('user_id', userId)
+          .eq('is_priority', true)
+          .neq('id', project_id)
+        if (demoteError) {
+          return res.status(500).json({
+            error: 'Failed to demote previous priority',
+            details: demoteError.message,
+          })
+        }
       }
 
       // Toggle priority on the target project. If promoting, also stamp
