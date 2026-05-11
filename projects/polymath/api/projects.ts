@@ -339,11 +339,11 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
 
   // SET-PRIORITY RESOURCE - Atomically set one project as priority
   if (resource === 'set-priority') {
-    // Toggle semantic with a focus-tier cap.
-    // Up to FOCUS_CAP projects can be priority at once. Toggling on when the
-    // cap is full returns 409 with the list of current priorities so the
-    // client can prompt the user to demote one.
-    const FOCUS_CAP = 3
+    // Toggle semantic with a focus-tier cap of 1. Priority is the single
+    // hero in Keep Going; "Up Next" handles the next-in-line slots.
+    // Toggling on when the cap is full returns 409 with the current priority
+    // so the client can prompt the user to demote it.
+    const FOCUS_CAP = 1
 
     if (req.method !== 'POST') {
       return res.status(405).json({ error: 'Method not allowed' })
@@ -404,13 +404,28 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         })
       }
 
-      // Toggle priority on the target project
+      // Toggle priority on the target project. If promoting, also stamp
+      // metadata.last_promoted so The Moment can learn from user intent,
+      // and clear up_next_position (priority and Up Next are mutually exclusive).
+      let updatePayload: any = { is_priority: nextValue }
+      if (nextValue) {
+        const { data: full } = await supabase
+          .from('projects')
+          .select('metadata')
+          .eq('id', project_id)
+          .eq('user_id', userId)
+          .single()
+        updatePayload = {
+          ...updatePayload,
+          last_active: new Date().toISOString(),
+          up_next_position: null,
+          metadata: { ...(full?.metadata || {}), last_promoted: new Date().toISOString() },
+        }
+      }
+
       const { data: updatedProject, error: setError } = await supabase
         .from('projects')
-        .update({
-          is_priority: nextValue,
-          ...(nextValue ? { last_active: new Date().toISOString() } : {})
-        })
+        .update(updatePayload)
         .eq('id', project_id)
         .eq('user_id', userId)
         .select()
@@ -453,6 +468,222 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
+  // UP-NEXT RESOURCE — manage the Up Next shelf (capped at 3, ordered 1-3).
+  //
+  // Actions:
+  //   add      — pin a project to the next free position. 409 if cap reached.
+  //   remove   — clear a project's up_next_position.
+  //   replace  — swap a pinned project for a new one at the same position.
+  //   reorder  — set positions atomically given an ordered array of ids.
+  if (resource === 'up-next') {
+    const UP_NEXT_CAP = 3
+
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' })
+    }
+
+    try {
+      const { action, project_id, replace_id, order } = req.body || {}
+
+      if (action === 'add') {
+        if (!project_id) return res.status(400).json({ error: 'project_id is required' })
+
+        const { data: target } = await supabase
+          .from('projects')
+          .select('id, is_priority, up_next_position, metadata')
+          .eq('id', project_id)
+          .eq('user_id', userId)
+          .single()
+
+        if (!target) return res.status(404).json({ error: 'Project not found' })
+
+        // Already pinned — no-op
+        if (target.up_next_position) {
+          const { data: allProjects } = await supabase
+            .from('projects')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+          return res.status(200).json({ success: true, projects: allProjects || [], cap: UP_NEXT_CAP })
+        }
+
+        const { data: pinned } = await supabase
+          .from('projects')
+          .select('id, title, up_next_position, last_active, updated_at')
+          .eq('user_id', userId)
+          .not('up_next_position', 'is', null)
+          .order('up_next_position', { ascending: true })
+
+        const takenPositions = new Set((pinned || []).map((p: any) => p.up_next_position))
+        if (takenPositions.size >= UP_NEXT_CAP) {
+          // Pick the oldest pinned (least recently active) as the suggested
+          // replacement. Client can offer this in the cap-reached toast.
+          const oldest = [...(pinned || [])].sort((a: any, b: any) =>
+            new Date(a.last_active || a.updated_at || 0).getTime() -
+            new Date(b.last_active || b.updated_at || 0).getTime()
+          )[0]
+          return res.status(409).json({
+            error: 'up_next_cap_reached',
+            message: `Up Next is full. Replace one to pin another.`,
+            cap: UP_NEXT_CAP,
+            current: pinned || [],
+            suggested_replace_id: oldest?.id ?? null,
+          })
+        }
+
+        // First free position 1..3
+        let nextPosition = 1
+        for (let i = 1; i <= UP_NEXT_CAP; i++) {
+          if (!takenPositions.has(i)) { nextPosition = i; break }
+        }
+
+        const newMetadata = { ...(target.metadata || {}), last_promoted: new Date().toISOString() }
+        const { error: updateError } = await supabase
+          .from('projects')
+          .update({
+            up_next_position: nextPosition,
+            is_priority: false, // mutually exclusive with priority
+            metadata: newMetadata,
+          })
+          .eq('id', project_id)
+          .eq('user_id', userId)
+
+        if (updateError) {
+          return res.status(500).json({ error: 'Failed to pin to Up Next', details: updateError.message })
+        }
+
+        const { data: allProjects } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+        return res.status(200).json({ success: true, projects: allProjects || [], cap: UP_NEXT_CAP })
+      }
+
+      if (action === 'remove') {
+        if (!project_id) return res.status(400).json({ error: 'project_id is required' })
+
+        const { error: updateError } = await supabase
+          .from('projects')
+          .update({ up_next_position: null })
+          .eq('id', project_id)
+          .eq('user_id', userId)
+
+        if (updateError) {
+          return res.status(500).json({ error: 'Failed to unpin from Up Next', details: updateError.message })
+        }
+
+        const { data: allProjects } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+        return res.status(200).json({ success: true, projects: allProjects || [], cap: UP_NEXT_CAP })
+      }
+
+      if (action === 'replace') {
+        if (!project_id || !replace_id) {
+          return res.status(400).json({ error: 'project_id and replace_id are required' })
+        }
+
+        const { data: replaceTarget } = await supabase
+          .from('projects')
+          .select('id, up_next_position')
+          .eq('id', replace_id)
+          .eq('user_id', userId)
+          .single()
+
+        if (!replaceTarget?.up_next_position) {
+          return res.status(400).json({ error: 'replace_id is not currently pinned' })
+        }
+
+        const position = replaceTarget.up_next_position
+
+        // Two-step swap to avoid the partial unique index conflict: clear the
+        // old slot first, then assign the new one.
+        const { error: clearError } = await supabase
+          .from('projects')
+          .update({ up_next_position: null })
+          .eq('id', replace_id)
+          .eq('user_id', userId)
+        if (clearError) {
+          return res.status(500).json({ error: 'Failed to clear old slot', details: clearError.message })
+        }
+
+        const { data: target } = await supabase
+          .from('projects')
+          .select('metadata')
+          .eq('id', project_id)
+          .eq('user_id', userId)
+          .single()
+
+        const newMetadata = { ...(target?.metadata || {}), last_promoted: new Date().toISOString() }
+        const { error: assignError } = await supabase
+          .from('projects')
+          .update({
+            up_next_position: position,
+            is_priority: false,
+            metadata: newMetadata,
+          })
+          .eq('id', project_id)
+          .eq('user_id', userId)
+        if (assignError) {
+          return res.status(500).json({ error: 'Failed to assign new slot', details: assignError.message })
+        }
+
+        const { data: allProjects } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+        return res.status(200).json({ success: true, projects: allProjects || [], cap: UP_NEXT_CAP })
+      }
+
+      if (action === 'reorder') {
+        if (!Array.isArray(order) || order.length === 0 || order.length > UP_NEXT_CAP) {
+          return res.status(400).json({ error: `order must be an array of 1-${UP_NEXT_CAP} project ids` })
+        }
+
+        // Two-pass to avoid colliding with the partial unique index: clear
+        // all slots for the listed projects, then re-assign in order.
+        const { error: clearError } = await supabase
+          .from('projects')
+          .update({ up_next_position: null })
+          .in('id', order)
+          .eq('user_id', userId)
+        if (clearError) {
+          return res.status(500).json({ error: 'Failed to clear positions', details: clearError.message })
+        }
+
+        for (let i = 0; i < order.length; i++) {
+          const { error: assignError } = await supabase
+            .from('projects')
+            .update({ up_next_position: i + 1 })
+            .eq('id', order[i])
+            .eq('user_id', userId)
+          if (assignError) {
+            return res.status(500).json({ error: 'Failed to assign position', details: assignError.message })
+          }
+        }
+
+        const { data: allProjects } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+        return res.status(200).json({ success: true, projects: allProjects || [], cap: UP_NEXT_CAP })
+      }
+
+      return res.status(400).json({ error: 'unknown action — expected add | remove | replace | reorder' })
+    } catch (error) {
+      console.error('[up-next] UNEXPECTED ERROR:', error)
+      return res.status(500).json({
+        error: 'Failed to update Up Next',
+        details: error instanceof Error ? error.message : JSON.stringify(error),
+      })
+    }
+  }
+
   if (resource === 'recompute-heat') {
     if (req.method !== 'POST') {
       return res.status(405).json({ error: 'Method not allowed' })
@@ -488,18 +719,28 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
 
       const allProjects = projects || []
 
-      // Compute focus set (priority + top recent) to exclude from drawer
-      const FOCUS_CAP = 3
-      const priorityProjects = allProjects.filter((p: any) => p.is_priority).slice(0, FOCUS_CAP)
+      // Drawer excludes the focus stack: priority (1) + Up Next (up to 3) +
+      // the single most-recent non-pinned active project (the "recent" slot
+      // in Keep Going).
+      const priorityProjects = allProjects.filter((p: any) => p.is_priority).slice(0, 1)
       const priorityIds = new Set(priorityProjects.map((p: any) => p.id))
-      const recentNonPriority = [...allProjects]
+      const upNextProjects = allProjects.filter((p: any) => p.up_next_position != null)
+      const upNextIds = new Set(upNextProjects.map((p: any) => p.id))
+      const recentSlot = [...allProjects]
+        .filter((p: any) =>
+          !priorityIds.has(p.id) &&
+          !upNextIds.has(p.id) &&
+          ['active', 'upcoming'].includes(p.status) &&
+          p.metadata?.is_shaped !== false
+        )
         .sort((a: any, b: any) =>
           new Date(b.last_active || b.updated_at || b.created_at).getTime() -
           new Date(a.last_active || a.updated_at || a.created_at).getTime()
         )
-        .filter((p: any) => !p.is_priority && !priorityIds.has(p.id))
-        .slice(0, Math.max(0, FOCUS_CAP - priorityProjects.length))
-      const focusIds = new Set([...priorityProjects, ...recentNonPriority].map((p: any) => p.id))
+        .slice(0, 1)
+      const focusIds = new Set(
+        [...priorityProjects, ...upNextProjects, ...recentSlot].map((p: any) => p.id)
+      )
 
       const all = allProjects.filter((p: any) => !focusIds.has(p.id))
       const warmed = all.filter((p: any) => (p.heat_score || 0) > 0 && p.heat_reason)

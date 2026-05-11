@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MarkdownRenderer } from '../ui/MarkdownRenderer'
-import { ArrowRight, Clock, Star, Zap, X, CheckCircle, Archive, Plus } from 'lucide-react'
+import { ArrowRight, Clock, Star, Zap, X, CheckCircle, Archive, Plus, ListOrdered } from 'lucide-react'
 import type { Project } from '../../types'
 import { useContextEngineStore } from '../../stores/useContextEngineStore'
 import { useProjectStore } from '../../stores/useProjectStore'
@@ -32,7 +32,7 @@ const LONG_PRESS_DURATION = 450
 
 export function ProjectCard({ project, prominent = false }: { project: Project, prominent?: boolean }) {
   const { setContext, toggleSidebar } = useContextEngineStore()
-  const { setPriority, updateProject } = useProjectStore()
+  const { setPriority, setUpNext, replaceUpNext, updateProject } = useProjectStore()
   const { addToast } = useToast()
   const navigate = useNavigate()
 
@@ -83,8 +83,87 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
   const handleTogglePriority = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    await setPriority(project.id)
+    try {
+      await setPriority(project.id)
+    } catch (err: any) {
+      // Server enforces the cap-1 priority slot; surface 409 as a toast so the
+      // user knows they must demote the current priority first.
+      const body = err?.details || {}
+      const msg = err?.message || ''
+      if (body?.error === 'focus_cap_reached') {
+        addToast({
+          title: 'You already have a priority project',
+          description: 'Remove the current priority first, then promote this one.',
+          variant: 'destructive',
+        })
+      } else {
+        addToast({
+          title: 'Couldn\'t set priority',
+          description: msg || 'Try again in a moment.',
+          variant: 'destructive',
+        })
+      }
+    }
     setShowContextMenu(false)
+  }
+
+  const handleToggleUpNext = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setShowContextMenu(false)
+
+    const isPinned = project.up_next_position != null
+    try {
+      await setUpNext(project.id)
+      if (!isPinned) {
+        addToast({
+          title: 'Added to Up Next',
+          description: `"${project.title}" is in the queue.`,
+          variant: 'success',
+        })
+      }
+    } catch (err: any) {
+      // Cap-reached — offer to replace the oldest pinned project.
+      // ApiError carries the JSON body in err.details.
+      const body = err?.details || {}
+      const code = body?.error
+      const suggestedId: string | null = body?.suggested_replace_id ?? null
+      const current: Array<{ id: string; title: string }> = body?.current || []
+      const replaceTarget = current.find((p) => p.id === suggestedId) || current[0]
+
+      if (code === 'up_next_cap_reached' && replaceTarget) {
+        addToast({
+          title: 'Up Next is full',
+          description: `Replace "${replaceTarget.title}" with "${project.title}"?`,
+          variant: 'default',
+          action: {
+            label: 'Replace',
+            onClick: async () => {
+              try {
+                await replaceUpNext(project.id, replaceTarget.id)
+                addToast({
+                  title: 'Added to Up Next',
+                  description: `"${project.title}" replaced "${replaceTarget.title}".`,
+                  variant: 'success',
+                })
+              } catch {
+                addToast({
+                  title: 'Couldn\'t replace',
+                  description: 'Try again in a moment.',
+                  variant: 'destructive',
+                })
+              }
+            },
+          },
+        })
+      } else {
+        addToast({
+          title: 'Couldn\'t pin to Up Next',
+          description: err?.message || 'Try again in a moment.',
+          variant: 'destructive',
+        })
+      }
+    }
   }
 
   const handleMarkComplete = async (e: React.MouseEvent) => {
@@ -284,6 +363,30 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
                       </p>
                       <p className="text-[11px] opacity-60 mt-0.5">
                         {project.is_priority ? 'Clear this project\'s focus status' : 'Pin this project as your main focus'}
+                      </p>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={handleToggleUpNext}
+                    className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all text-left"
+                    style={{
+                      background: project.up_next_position != null ? `rgba(${theme.rgb}, 0.12)` : 'var(--glass-surface)',
+                      border: project.up_next_position != null ? `1.5px solid rgba(${theme.rgb}, 0.3)` : '1.5px solid rgba(255,255,255,0.06)',
+                      color: project.up_next_position != null ? theme.text : 'var(--brand-text-primary)',
+                    }}
+                  >
+                    <ListOrdered className="h-5 w-5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-bold">
+                        {project.up_next_position != null
+                          ? `Remove from Up Next (#${project.up_next_position})`
+                          : 'Add to Up Next'}
+                      </p>
+                      <p className="text-[11px] opacity-60 mt-0.5">
+                        {project.up_next_position != null
+                          ? 'Drop this project out of the queue'
+                          : 'Queue this project after the current priority'}
                       </p>
                     </div>
                   </button>

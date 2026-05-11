@@ -86,6 +86,9 @@ interface ProjectState {
   updateProject: (id: string, data: Partial<Project>) => Promise<void>
   deleteProject: (id: string) => Promise<void>
   setPriority: (id: string) => Promise<void>
+  setUpNext: (id: string) => Promise<void>
+  replaceUpNext: (newId: string, replaceId: string) => Promise<void>
+  reorderUpNext: (orderedIds: string[]) => Promise<void>
   setFilter: (filter: ProjectState['filter']) => void
   clearCache: () => void
   // React Query Sync Actions
@@ -439,9 +442,13 @@ export const useProjectStore = create<ProjectState>()(
 
         const nextValue = !targetProject.is_priority
 
-        // Optimistic update — only this project changes, others stay untouched
+        // Optimistic update — only this project changes, others stay untouched.
+        // Promoting to priority also clears up_next_position locally to mirror
+        // the server's mutual-exclusion rule.
         const updatedAllProjects = previousAllProjects.map(p =>
-          p.id === id ? { ...p, is_priority: nextValue } : p
+          p.id === id
+            ? { ...p, is_priority: nextValue, ...(nextValue ? { up_next_position: null } : {}) }
+            : p
         )
         const sorted = smartSortProjects(updatedAllProjects)
 
@@ -477,6 +484,92 @@ export const useProjectStore = create<ProjectState>()(
           import('../lib/db').then(({ readingDb }) => {
             readingDb.cacheProjects(previousAllProjects).catch(e => logger.warn('Failed to revert project cache:', e))
           })
+          throw error
+        }
+      },
+
+      setUpNext: async (id) => {
+        // Toggle: if already pinned, remove. Otherwise add.
+        const previousAllProjects = get().allProjects
+        const targetProject = previousAllProjects.find(p => p.id === id)
+        if (!targetProject) return
+
+        const isPinned = targetProject.up_next_position != null
+        const action = isPinned ? 'remove' : 'add'
+
+        try {
+          const response = await api.post('projects?resource=up-next', { action, project_id: id })
+          if (response && response.projects) {
+            const sortedResponse = smartSortProjects(response.projects)
+            set(state => ({
+              allProjects: sortedResponse,
+              projects: filterProjects(sortedResponse, state.filter)
+            }))
+            import('../lib/db').then(({ readingDb }) => {
+              readingDb.cacheProjects(sortedResponse).catch(e => logger.warn('Failed to cache projects after Up Next toggle:', e))
+            })
+          }
+        } catch (error: any) {
+          logger.error('Failed to toggle Up Next:', error)
+          throw error
+        }
+      },
+
+      replaceUpNext: async (newId, replaceId) => {
+        try {
+          const response = await api.post('projects?resource=up-next', {
+            action: 'replace',
+            project_id: newId,
+            replace_id: replaceId,
+          })
+          if (response && response.projects) {
+            const sortedResponse = smartSortProjects(response.projects)
+            set(state => ({
+              allProjects: sortedResponse,
+              projects: filterProjects(sortedResponse, state.filter)
+            }))
+            import('../lib/db').then(({ readingDb }) => {
+              readingDb.cacheProjects(sortedResponse).catch(e => logger.warn('Failed to cache projects after Up Next replace:', e))
+            })
+          }
+        } catch (error: any) {
+          logger.error('Failed to replace Up Next slot:', error)
+          throw error
+        }
+      },
+
+      reorderUpNext: async (orderedIds) => {
+        // Optimistic: rewrite positions locally first so the drag feels instant.
+        const previousAllProjects = get().allProjects
+        const positionById = new Map<string, number>()
+        orderedIds.forEach((id, i) => positionById.set(id, i + 1))
+        const optimistic = previousAllProjects.map(p =>
+          positionById.has(p.id) ? { ...p, up_next_position: positionById.get(p.id)! } : p
+        )
+        set(state => ({
+          allProjects: optimistic,
+          projects: filterProjects(optimistic, state.filter),
+        }))
+
+        try {
+          const response = await api.post('projects?resource=up-next', {
+            action: 'reorder',
+            order: orderedIds,
+          })
+          if (response && response.projects) {
+            const sortedResponse = smartSortProjects(response.projects)
+            set(state => ({
+              allProjects: sortedResponse,
+              projects: filterProjects(sortedResponse, state.filter)
+            }))
+          }
+        } catch (error: any) {
+          logger.error('Failed to reorder Up Next:', error)
+          // Roll back
+          set(state => ({
+            allProjects: previousAllProjects,
+            projects: filterProjects(previousAllProjects, state.filter),
+          }))
           throw error
         }
       },
@@ -564,20 +657,32 @@ export const useProjectStore = create<ProjectState>()(
 export const useUnshapedProjects = () =>
   useProjectStore(useShallow(state => state.allProjects.filter(p => p.metadata?.is_shaped === false)))
 
+// Keep Going shelf: at most 2 cards — the single priority project (if any)
+// plus the single most-recent active non-pinned, non-Up-Next project.
+// Up Next has its own shelf and is excluded here.
 export const useFocusedProjects = () =>
   useProjectStore(useShallow(state => {
     const active = state.allProjects.filter(p =>
       ['active', 'upcoming'].includes(p.status) && p.status !== 'graveyard'
       && p.metadata?.is_shaped !== false
     )
-    const priority = active.filter(p => p.is_priority)
+    const priority = active.filter(p => p.is_priority).slice(0, 1)
+    const priorityId = priority[0]?.id
     const recent = active
-      .filter(p => !p.is_priority)
+      .filter(p => !p.is_priority && p.up_next_position == null && p.id !== priorityId)
       .sort((a, b) => {
         const aTime = new Date(a.updated_at || a.last_active || 0).getTime()
         const bTime = new Date(b.updated_at || b.last_active || 0).getTime()
         return bTime - aTime
       })
-    // Priority first, then fill remaining slots with most recently active (max 3 total)
-    return [...priority, ...recent].slice(0, 3)
+      .slice(0, 1)
+    return [...priority, ...recent]
   }))
+
+// Up Next shelf: projects with up_next_position set, sorted by position asc.
+export const useUpNextProjects = () =>
+  useProjectStore(useShallow(state =>
+    state.allProjects
+      .filter(p => p.up_next_position != null)
+      .sort((a, b) => (a.up_next_position ?? 99) - (b.up_next_position ?? 99))
+  ))

@@ -507,7 +507,8 @@ export interface Project {
   last_active: string // ISO 8601
   created_at: string
   updated_at?: string
-  is_priority?: boolean // Focus tier — up to 3 projects can be priority at once
+  is_priority?: boolean // Focus tier — at most 1 priority project (the hero in Keep Going)
+  up_next_position?: number | null // 1, 2, or 3 — pinned to the Up Next shelf
   metadata?: ProjectMetadata
   embedding?: number[] // Vector embedding (1536 dims)
 
@@ -583,6 +584,7 @@ export interface ProjectMetadata {
   is_shaped?: boolean // Whether the project has been through the shaping conversation (default true for legacy)
   session_headline?: string // AI-generated headline for Power Hour card (cached)
   session_pitch?: string // AI-generated one-liner pitch for Power Hour card (cached)
+  last_promoted?: string // ISO timestamp of last promotion to priority or Up Next — signal for The Moment
   [key: string]: any // Allow arbitrary metadata
   // DEPRECATED: next_step field removed - use tasks?.find(t => !t.done)?.text instead
 }
