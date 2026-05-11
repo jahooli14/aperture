@@ -22,14 +22,8 @@ export function FoundationalPrompts() {
   const [modalOpen, setModalOpen] = useState(false)
 
   useEffect(() => {
-    console.log('[FoundationalPrompts] Fetching prompts...')
     fetchPrompts()
   }, [fetchPrompts])
-
-  useEffect(() => {
-    console.log('[FoundationalPrompts] requiredPrompts:', requiredPrompts)
-    console.log('[FoundationalPrompts] progress:', progress)
-  }, [requiredPrompts, progress])
 
   const handlePromptClick = (prompt: MemoryPromptWithStatus) => {
     if (prompt.status === 'completed') {

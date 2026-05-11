@@ -384,12 +384,7 @@ export function ProjectDetailPage() {
   }
 
   const addPinnedTask = useCallback(async (text: string) => {
-    console.log('[addPinnedTask] Called with text:', text)
-
-    if (!project) {
-      console.log('[addPinnedTask] No project')
-      return
-    }
+    if (!project) return
 
     const tasks = (project.metadata?.tasks || []) as Task[]
     const newTask = {
@@ -405,11 +400,8 @@ export function ProjectDetailPage() {
       tasks: updatedTasks
     }
 
-    console.log('[addPinnedTask] Adding task:', newTask)
-
     try {
       await updateProject(project.id, { metadata: newMetadata })
-      console.log('[addPinnedTask] Task saved to backend')
       await loadProjectDetails()
       addToast({
         title: 'Updated!',

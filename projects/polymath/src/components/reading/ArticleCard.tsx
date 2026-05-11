@@ -351,7 +351,7 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
         }}
         isOpen={showConnectionsDialog}
         onClose={() => setShowConnectionsDialog(false)}
-        onConnectionsCreated={() => { console.log('Connections created') }}
+        onConnectionsCreated={() => { /* no-op; the dialog updates the store */ }}
         initialStage="discovering"
       />
 

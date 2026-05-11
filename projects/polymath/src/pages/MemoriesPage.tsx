@@ -313,12 +313,10 @@ function MemoriesPageInner() {
     }
 
     if (!isPollingRef.current) {
-      console.log(` Polling for thought updates (${unprocessedCount} unprocessed)`)
       isPollingRef.current = true
     }
 
     const pollInterval = setInterval(async () => {
-      console.log(' Polling tick - checking for updates...')
       try {
         // Don't force refresh - let store's smart state updates handle it
         // This prevents flickering by skipping updates when data hasn't changed
