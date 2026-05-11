@@ -111,10 +111,10 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
               </div>
               <div>
                 <h3 className="font-semibold mb-1" style={{ color: "var(--brand-primary)" }}>
-                  2. AI Generates Suggestions
+                  2. See connections you missed
                 </h3>
                 <p className="text-sm" style={{ color: "var(--brand-primary)" }}>
-                  AI spots connections between your thoughts and suggests projects that fit your interests. Connects your different interests in unexpected ways.
+                  <BrandName size="sm" /> spots threads across your notes and projects you didn't notice yourself — and names projects worth starting.
                 </p>
               </div>
             </div>

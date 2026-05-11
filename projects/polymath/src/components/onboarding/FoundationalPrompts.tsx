@@ -92,9 +92,9 @@ export function FoundationalPrompts() {
         </div>
         <p className="text-sm mt-2" style={{ color: "var(--brand-primary)" }}>
           {progress?.has_unlocked_projects ? (
-            <span className="font-medium" style={{ color: "var(--brand-primary)" }}> Projects unlocked!</span>
+            <span className="font-medium" style={{ color: "var(--brand-primary)" }}> Projects ready.</span>
           ) : (
-            <>Complete {(progress?.total_required || 5) - (progress?.completed_required || 0)} more to unlock Projects</>
+            <>Answer {(progress?.total_required || 5) - (progress?.completed_required || 0)} more to start Projects</>
           )}
         </p>
         <p className="text-xs mt-1" style={{ color: "var(--brand-primary)" }}>

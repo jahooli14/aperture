@@ -808,7 +808,7 @@ function MemoriesPageInner() {
                         </div>
                       ) : (
                         <div className="p-6 rounded-lg text-center" style={{ background: 'var(--brand-glass-bg)', border: '1px solid var(--glass-surface-hover)', boxShadow: '0 4px 16px rgba(0,0,0,0.6)' }}>
-                          <p className="text-xs" style={{ color: "var(--brand-primary)" }}>No themes detected yet. Add more thoughts with diverse topics!</p>
+                          <p className="text-xs" style={{ color: "var(--brand-primary)" }}>No themes yet. Add a few more thoughts and they'll start showing up.</p>
                         </div>
                       )}
                     </>

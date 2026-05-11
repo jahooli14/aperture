@@ -240,7 +240,7 @@ export function CreateProjectDialog({
       })
       addToast({
         title: 'Project saved',
-        description: `"${quickTitle.trim()}" added — shape it to unlock Power Hour.`,
+        description: `"${quickTitle.trim()}" added — shape it, then Power Hour can run on it.`,
         variant: 'success',
       })
       setQuickTitle('')
