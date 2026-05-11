@@ -118,9 +118,8 @@ export function LoginPage() {
         {/* Brand mark — quiet, not hero */}
         <div className="mb-10 text-center">
           <h1
-            className="aperture-header"
+            className="aperture-header text-xl"
             style={{
-              fontSize: '1.25rem',
               color: 'rgb(var(--brand-primary-rgb))',
               opacity: 0.9,
               letterSpacing: '-0.02em',

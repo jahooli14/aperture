@@ -647,7 +647,7 @@ export function ProjectIdeasHome() {
                     style={{
                       color: `rgb(${accent})`,
                       opacity: 0.28,
-                      fontFamily: 'Georgia, "Times New Roman", serif',
+                      fontFamily: 'var(--brand-font-serif)',
                     }}
                   >
                     “

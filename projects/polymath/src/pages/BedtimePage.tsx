@@ -281,7 +281,7 @@ export function BedtimePage() {
                 style={{
                   fontFamily: 'var(--brand-font-serif)',
                   fontWeight: 500,
-                  fontSize: '1.15rem',
+                  fontSize: '1.125rem',
                   letterSpacing: '-0.018em',
                   color: 'rgba(255, 255, 255, 0.92)',
                 }}
@@ -347,10 +347,9 @@ export function BedtimePage() {
               Thoughts before bed.
             </h2>
             <p
-              className="mt-3 italic"
+              className="mt-3 italic text-base"
               style={{
                 fontFamily: 'var(--brand-font-serif)',
-                fontSize: '15px',
                 color: 'rgba(199, 184, 255, 0.75)',
                 fontWeight: 400,
               }}

@@ -456,7 +456,7 @@ export function SettingsPage() {
                   <h3 className="font-semibold premium-text-platinum text-sm">
                     Bug Tracker / Debug Panel
                   </h3>
-                  <p style={{ color: 'var(--brand-text-secondary)', fontSize: '0.8rem' }}>
+                  <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
                     Show technical details and debug tools
                   </p>
                 </div>
@@ -486,7 +486,7 @@ export function SettingsPage() {
                   <h3 className="font-semibold premium-text-platinum text-sm">
                     Regenerate “this week” button
                   </h3>
-                  <p style={{ color: 'var(--brand-text-secondary)', fontSize: '0.8rem' }}>
+                  <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
                     Show a refresh icon on the home-page deck so you can rebuild it on demand instead of waiting for Monday.
                   </p>
                 </div>
@@ -516,7 +516,7 @@ export function SettingsPage() {
                   <h3 className="font-semibold premium-text-platinum text-sm">
                     Hand off stuck projects
                   </h3>
-                  <p style={{ color: 'var(--brand-text-secondary)', fontSize: '0.8rem' }}>
+                  <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
                     The weekly digest can suggest giving a dormant project to someone else.
                   </p>
                 </div>
@@ -548,7 +548,7 @@ export function SettingsPage() {
                   <h3 className="font-semibold premium-text-platinum text-sm">
                     Rediscover Connections
                   </h3>
-                  <p style={{ color: 'var(--brand-text-secondary)', fontSize: '0.8rem' }}>
+                  <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
                     Re-scan everything to find new links between your ideas
                   </p>
                 </div>
@@ -573,7 +573,7 @@ export function SettingsPage() {
                   <h3 className="font-semibold premium-text-platinum text-sm">
                     Tidy old thoughts
                   </h3>
-                  <p style={{ color: 'var(--brand-text-secondary)', fontSize: '0.8rem' }}>
+                  <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
                     Strip ums and uhs from voice notes you captured before this update.
                   </p>
                 </div>
@@ -600,7 +600,7 @@ export function SettingsPage() {
                   <h3 className="font-semibold premium-text-platinum text-sm">
                     Rescan tags
                   </h3>
-                  <p style={{ color: 'var(--brand-text-secondary)', fontSize: '0.8rem' }}>
+                  <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
                     Re-tag every thought using your current vocabulary, so old notes pick up tags you've added since.
                   </p>
                 </div>
@@ -624,7 +624,7 @@ export function SettingsPage() {
                     <h3 className="font-semibold premium-text-platinum text-sm">
                       Reset onboarding
                     </h3>
-                    <p style={{ color: 'var(--brand-text-secondary)', fontSize: '0.8rem' }}>
+                    <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
                       Wipe onboarding-created memories, lists, and ideas so you can run it again
                     </p>
                   </div>
@@ -646,7 +646,7 @@ export function SettingsPage() {
                       <h3 className="font-semibold premium-text-platinum text-sm mb-1">
                         Reset onboarding?
                       </h3>
-                      <p style={{ color: 'var(--brand-text-secondary)', fontSize: '0.8rem' }}>
+                      <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
                         This permanently deletes everything the voice chat created — memories, list items, the captured lists (if still empty), projects, and idea suggestions. Items you added manually are kept. Can't be undone.
                       </p>
                       <div className="flex gap-2 mt-3">
