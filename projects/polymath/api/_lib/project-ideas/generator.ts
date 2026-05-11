@@ -26,7 +26,7 @@
 
 import { generateText } from '../gemini-chat.js'
 import { MODELS } from '../models.js'
-import { pickSeedPairs, type SeedCandidate } from './seed-picker.js'
+import { pickSeedPairs, tokenise, topicalOverlap, type SeedCandidate } from './seed-picker.js'
 import type { ArrivalKind, CentreKind, GatherResult, GenerationResult, IdeaEvidence, ProjectIdea, SeedPair } from './types.js'
 
 const MIN_SIGNALS = 8
@@ -181,8 +181,12 @@ async function runPermissive(gathered: GatherResult, opts: { fast?: boolean } = 
  *  a cap a single bad backend day produces 40s waits and an empty card.
  *  We'd rather bail to the next stage / the template and ship something.
  *  The underlying call continues in the background (Promise.race doesn't
- *  cancel) but we stop waiting. */
-const FAST_STAGE_TIMEOUT_MS = 15_000
+ *  cancel) but we stop waiting.
+ *
+ *  Raised from 15s → 25s after the template kept firing on real button
+ *  presses. The user explicitly asked for the LLM idea — they'll wait
+ *  25s for a real thought before they want the template's fake one. */
+const FAST_STAGE_TIMEOUT_MS = 25_000
 
 function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
@@ -193,14 +197,40 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
 
 /** Two-stage on-demand pipeline. Stage 1 uses Flash-Lite to compress the
  *  raw gathered context into a tight JSON snapshot; Stage 2 uses Flash on
- *  that snapshot to write ONE idea. Returns the idea or null if either
- *  stage fails — the caller falls back to a server-side template. */
+ *  that snapshot to write ONE idea.
+ *
+ *  Both stages are guarded against the text-template trapdoor:
+ *    - Stage 1 failure (throw, timeout, or unparseable JSON) builds a
+ *      deterministic snapshot from the gathered data and continues. The
+ *      user pressed the button — Flash still runs.
+ *    - Stage 2 failure or parse-null retries once with a slightly bumped
+ *      temperature. Two clean attempts before we even consider bailing.
+ *
+ *  Returns null only if both Stage 2 attempts fail. */
 async function runFastTwoStage(gathered: GatherResult): Promise<ProjectIdea | null> {
   // ── Stage 1: Lite reads everything and digests it ─────────────────
+  const snapshot = await runStage1Snapshot(gathered)
+
+  // ── Stage 2: Flash writes the idea from the snapshot ──────────────
+  const first = await runStage2Idea(snapshot, gathered, { attempt: 1, temperature: 0.85 })
+  if (first) return first
+  // Same snapshot, slightly hotter temperature so the second attempt
+  // doesn't reproduce the same parse-fail. Cheap insurance — one extra
+  // ~3–5s call to keep the LLM idea on screen instead of the template.
+  const second = await runStage2Idea(snapshot, gathered, { attempt: 2, temperature: 0.95 })
+  return second
+}
+
+/** Stage 1 — Flash-Lite snapshot, with a deterministic fallback so the
+ *  pipeline never bails before Stage 2. If Lite throws, times out, or
+ *  returns unparseable JSON, we assemble the same shape from raw gather
+ *  data using token overlap + recency. Lower quality than Lite's read,
+ *  but Stage 2 (the model the user is really asking for) still runs. */
+async function runStage1Snapshot(gathered: GatherResult): Promise<Snapshot> {
   const snapshotPrompt = buildSnapshotPrompt(gathered)
   console.log(`[project-ideas] fast/stage-1 (Lite) snapshot prompt: ${snapshotPrompt.length} chars`)
   const t1 = Date.now()
-  let snapshotRaw: string
+  let snapshotRaw: string | null = null
   try {
     snapshotRaw = await withTimeout(
       generateText(snapshotPrompt, {
@@ -213,19 +243,27 @@ async function runFastTwoStage(gathered: GatherResult): Promise<ProjectIdea | nu
       'stage-1 Lite',
     )
   } catch (err) {
-    console.error(`[project-ideas] fast/stage-1 Lite threw after ${Date.now() - t1}ms:`, err)
-    return null
+    console.error(`[project-ideas] fast/stage-1 Lite threw after ${Date.now() - t1}ms — using deterministic snapshot:`, err)
   }
-  console.log(`[project-ideas] fast/stage-1 Lite responded in ${Date.now() - t1}ms (${snapshotRaw.length} chars)`)
-  const snapshot = parseSnapshot(snapshotRaw)
-  if (!snapshot) {
-    console.warn('[project-ideas] fast/stage-1 produced unparseable snapshot — bailing')
-    return null
+  if (snapshotRaw !== null) {
+    console.log(`[project-ideas] fast/stage-1 Lite responded in ${Date.now() - t1}ms (${snapshotRaw.length} chars)`)
+    const parsed = parseSnapshot(snapshotRaw)
+    if (parsed) return parsed
+    console.warn('[project-ideas] fast/stage-1 produced unparseable snapshot — using deterministic snapshot')
   }
+  return buildDeterministicSnapshot(gathered)
+}
 
-  // ── Stage 2: Flash writes the idea from the snapshot ──────────────
+/** Stage 2 — Flash writes the idea from the snapshot. Either attempt
+ *  resolves to a parsed idea or null; the caller retries once with a
+ *  hotter temperature before considering the pipeline dead. */
+async function runStage2Idea(
+  snapshot: Snapshot,
+  gathered: GatherResult,
+  opts: { attempt: number; temperature: number },
+): Promise<ProjectIdea | null> {
   const ideaPrompt = buildFastIdeaPrompt(snapshot)
-  console.log(`[project-ideas] fast/stage-2 (Flash) idea prompt: ${ideaPrompt.length} chars`)
+  console.log(`[project-ideas] fast/stage-2 (Flash) idea prompt: ${ideaPrompt.length} chars; attempt=${opts.attempt}`)
   const t2 = Date.now()
   let ideaRaw: string
   try {
@@ -233,18 +271,91 @@ async function runFastTwoStage(gathered: GatherResult): Promise<ProjectIdea | nu
       generateText(ideaPrompt, {
         model: MODELS.FLASH_CHAT, // gemini-3-flash-preview — quality on small input
         maxTokens: 1200,
-        temperature: 0.85,
+        temperature: opts.temperature,
         responseFormat: 'json',
       }),
       FAST_STAGE_TIMEOUT_MS,
-      'stage-2 Flash',
+      `stage-2 Flash attempt ${opts.attempt}`,
     )
   } catch (err) {
-    console.error(`[project-ideas] fast/stage-2 Flash threw after ${Date.now() - t2}ms:`, err)
+    console.error(`[project-ideas] fast/stage-2 Flash attempt ${opts.attempt} threw after ${Date.now() - t2}ms:`, err)
     return null
   }
-  console.log(`[project-ideas] fast/stage-2 Flash responded in ${Date.now() - t2}ms (${ideaRaw.length} chars)`)
+  console.log(`[project-ideas] fast/stage-2 Flash attempt ${opts.attempt} responded in ${Date.now() - t2}ms (${ideaRaw.length} chars)`)
   return parseFastIdea(ideaRaw, gathered)
+}
+
+/** Build the Snapshot shape Lite would produce, but deterministically
+ *  from the raw gathered data — no LLM. Used when Stage 1 fails so Stage
+ *  2 still runs on real signal instead of bailing the whole pipeline. */
+function buildDeterministicSnapshot(g: GatherResult): Snapshot {
+  // Score memories by recency × theme density so the top picks are the
+  // user's freshest, themiest captures.
+  const now = Date.now()
+  const NINETY_DAYS_MS = 90 * 86_400_000
+  const scoredMemories = g.memories
+    .map((m) => {
+      const t = new Date(m.created_at).getTime()
+      const ageMs = Number.isNaN(t) ? Infinity : Math.max(0, now - t)
+      const recencyScore = ageMs <= 14 * 86_400_000 ? 1.0 : ageMs <= 30 * 86_400_000 ? 0.7 : ageMs <= 60 * 86_400_000 ? 0.4 : 0.2
+      const themeBonus = Math.min(0.5, (m.themes?.length ?? 0) * 0.1)
+      return { m, score: recencyScore + themeBonus, ageMs }
+    })
+    .sort((a, b) => b.score - a.score)
+
+  const recentVoice = scoredMemories
+    .filter(({ ageMs }) => ageMs <= NINETY_DAYS_MS)
+    .slice(0, 5)
+    .map(({ m }) => ({
+      id: m.id,
+      excerpt: truncate(m.body.replace(/\s+/g, ' ').trim(), 140),
+      date: isoDate(m.created_at),
+    }))
+
+  const dormant = g.dormant_projects.slice(0, 5).map((p) => ({
+    id: p.id,
+    title: p.title,
+    description: truncate(p.description ?? '', 180),
+    last_touched: isoDate(p.updated_at),
+  }))
+
+  // Recent themes = aggregate themes across the top-scored memories.
+  // Cheap proxy for what the user has been circling.
+  const themeCounts = new Map<string, number>()
+  for (const { m } of scoredMemories.slice(0, 20)) {
+    for (const theme of m.themes ?? []) {
+      const key = theme.trim().toLowerCase()
+      if (key.length < 3) continue
+      themeCounts.set(key, (themeCounts.get(key) ?? 0) + 1)
+    }
+  }
+  const recent_themes = Array.from(themeCounts.entries())
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 8)
+    .map(([t]) => t)
+
+  // Taste line: a sober stub. Stage 2's prompt opens with "who they
+  // are" — better to hand it "still forming, drawn to: X, Y, Z" than
+  // an empty string that the model has to invent its way around.
+  const tasteHints = recent_themes.slice(0, 4).join(', ')
+  const taste = tasteHints
+    ? `Still forming — recently drawn to: ${tasteHints}.`
+    : 'Still forming.'
+
+  return {
+    taste,
+    dormant,
+    recent_themes,
+    recent_voice_notes: recentVoice,
+    reactions_make: g.list_items
+      .filter((li) => li.reaction === 'make')
+      .slice(0, 6)
+      .map((li) => truncate(li.content, 80)),
+    reactions_sparked: g.list_items
+      .filter((li) => li.reaction === 'sparked')
+      .slice(0, 6)
+      .map((li) => truncate(li.content, 80)),
+  }
 }
 
 interface Snapshot {
@@ -448,61 +559,182 @@ function synthesiseEvidence(g: GatherResult): IdeaEvidence[] {
 
 /** Last-resort server-side template. No LLM call. Used when both LLM stages
  *  fail — guarantees the button always returns something rather than 40s
- *  of nothing. Four tiers, ordered by quality:
- *    1. Top dormant project + revival framing
- *    2. Most recent voice note + follow-it framing
- *    3. Top "want to make" list reaction
- *    4. Universal fallback — never returns null
+ *  of nothing. Tiers, ordered by quality:
+ *    1. Dormant project whose themes overlap a recent voice note — the
+ *       resurfacing is earned and the why_now names the specific resonance.
+ *    2. Top dormant project with no resonance — still surfaced, but the
+ *       why_now names the gap, not a "today is as good a day as any" bromide.
+ *    3. Most recent voice note + follow-it framing.
+ *    4. Top "want to make" list reaction.
+ *    5. Universal fallback — never returns null.
  *  Lower quality than LLM output; always better than empty. */
-function synthesiseFallbackIdea(g: GatherResult): ProjectIdea {
-  // Tier 1: a dormant project to revive — the strongest fallback signal.
-  const project = g.dormant_projects[0]
-  if (project) {
-    const desc = (project.description ?? '').trim()
-    return {
-      rank: 1,
-      title: project.title,
-      pitch: desc
-        ? `Pick this back up. ${truncate(desc, 280)}`
-        : `Pick this back up. You started it and walked away — try one move and see what it tells you.`,
-      why_now: 'You started this and stopped. Today is as good a day as any to revisit it.',
-      next_step: 'Open the project. Make the smallest visible change you can in the next 30 minutes.',
-      evidence: synthesiseEvidence(g),
-    }
+export function synthesiseFallbackIdea(g: GatherResult): ProjectIdea {
+  // Tier 1 + 2 — dormant project. Pick the one whose themes overlap a
+  // recent voice note over the top-of-list pick; otherwise fall back to
+  // most-recently-touched.
+  const match = findResonantDormantProject(g)
+  if (match) {
+    return buildDormantRevival(match, g)
   }
-  // Tier 2: a recent voice note to follow.
+  // Tier 3: a recent voice note to follow.
   const memory = g.memories[0]
   if (memory) {
+    const excerpt = truncate(memory.body.replace(/\s+/g, ' ').trim(), 240)
+    const days = daysAgo(memory.created_at)
     return {
       rank: 1,
-      title: 'Make what you were just thinking about',
-      pitch: 'Something you said recently is worth following. Spend an hour on it before it fades.',
-      why_now: truncate(memory.body, 280),
-      next_step: 'Take 30 minutes. Write or sketch the smallest version of it.',
+      title: 'Follow what you said',
+      pitch: `"${excerpt}" — that was you, ${describeRecency(days)}. The shape is half-named already. Make the version of it that exists by tonight.`,
+      why_now: `${describeRecency(days, { capitalise: true })} you put this on the record. It hasn\'t cooled yet — that\'s the window.`,
+      next_step: 'Re-read it once. Then spend 30 minutes making the smallest real version — write a draft, cut a clip, sketch the frame. Stop when the timer ends.',
       evidence: synthesiseEvidence(g),
     }
   }
-  // Tier 3: a "want to make" list reaction.
+  // Tier 4: a "want to make" list reaction.
   const wantsToMake = g.list_items.find((li) => li.reaction === 'make')
   if (wantsToMake) {
     return {
       rank: 1,
       title: truncate(wantsToMake.content, 60),
-      pitch: `You said you want to make this. Spend the next hour on the smallest version of it that exists by the end of today.`,
-      why_now: 'You marked this as "want to make" — that\'s the green light.',
-      next_step: 'Take 30 minutes. Make the rough first version. Done is better than careful.',
+      pitch: `You marked this "want to make" — that\'s your own past self handing you the brief. Spend an hour today on the version that\'s ugly but real.`,
+      why_now: 'You already said yes to this. It\'s been sitting on the list waiting for the hour.',
+      next_step: 'Set a 30-minute timer. Make the rough first version. Save it somewhere you\'ll find it tomorrow.',
       evidence: [],
     }
   }
-  // Tier 4: universal — always succeeds. The button must never come back empty.
+  // Tier 5: universal — always succeeds. The button must never come back empty.
   return {
     rank: 1,
-    title: 'Capture something new',
-    pitch: 'You opened the app with a creative impulse. Aim it. Pick the smallest thing you can make today and do it.',
-    why_now: 'You showed up. That\'s the data point.',
-    next_step: 'Take 30 minutes. Make one thing — anything — and write down what you did.',
+    title: 'Capture before you make',
+    pitch: 'There\'s not enough on the record yet to point at a specific project. The next move is to feed the harness — record the half-formed thought you came in with so the next idea has somewhere to land.',
+    why_now: 'No dormant projects, no recent captures. Today\'s job is to put a thought on the record, not to ship something.',
+    next_step: 'Open the recorder. Talk for two minutes about whatever you came here thinking about. Don\'t edit, don\'t polish — just leave a trace.',
     evidence: [],
   }
+}
+
+interface DormantMatch {
+  project: GatherResult['dormant_projects'][number]
+  /** The recent voice note whose themes overlap this project, if any. */
+  memory?: GatherResult['memories'][number]
+  /** Jaccard overlap between project text and memory text. 0 if no memory. */
+  overlap: number
+}
+
+/** Pick the dormant project most worth resurfacing today. Prefers thematic
+ *  overlap with a recent voice note — that's the signal that the user is
+ *  back in this project's territory without realising it. Falls back to the
+ *  top-of-list dormant project (most recently touched) when nothing
+ *  resonates, so the button still answers. Returns null only when there
+ *  are no dormant projects at all. */
+function findResonantDormantProject(g: GatherResult): DormantMatch | null {
+  if (g.dormant_projects.length === 0) return null
+
+  const now = Date.now()
+  const NINETY_DAYS_MS = 90 * 86_400_000
+  const recentMemories = g.memories.filter((m) => {
+    const t = new Date(m.created_at).getTime()
+    return !Number.isNaN(t) && now - t <= NINETY_DAYS_MS
+  })
+
+  let best: DormantMatch | null = null
+  for (const project of g.dormant_projects) {
+    const projectTokens = tokenise(`${project.title} ${project.description ?? ''}`)
+    if (projectTokens.size === 0) continue
+    for (const memory of recentMemories) {
+      const memTokens = tokenise(`${memory.title ?? ''} ${memory.body} ${memory.themes.join(' ')}`)
+      const overlap = topicalOverlap(projectTokens, memTokens)
+      if (overlap <= 0) continue
+      if (!best || overlap > best.overlap) {
+        best = { project, memory, overlap }
+      }
+    }
+  }
+  if (best) return best
+  return { project: g.dormant_projects[0], overlap: 0 }
+}
+
+function buildDormantRevival(match: DormantMatch, g: GatherResult): ProjectIdea {
+  const { project, memory, overlap } = match
+  const desc = (project.description ?? '').trim()
+  const weeks = weeksAgo(project.updated_at)
+
+  // Pitch leads with what the project actually IS. No "Pick this back up"
+  // preamble — that's the template tell. If there's no description, lean
+  // on the title shape rather than a generic line.
+  const pitch = desc
+    ? truncate(desc, 280)
+    : `You started "${project.title}" and walked away. The shape was clear enough to name; that\'s usually clear enough to restart.`
+
+  // Why now names the actual reason this project is surfacing today.
+  // Resonance > dormancy length > "you set this down."
+  let why_now: string
+  if (memory && overlap > 0) {
+    const excerpt = truncate(memory.body.replace(/\s+/g, ' ').trim(), 180)
+    why_now = `${describeRecency(daysAgo(memory.created_at), { capitalise: true })} you said: "${excerpt}" — same territory as this project, ${weeks ? `which has been sitting ${weeks} week${weeks === 1 ? '' : 's'}.` : 'which is waiting.'}`
+  } else if (weeks >= 16) {
+    why_now = `Dormant ${weeks} weeks. You\'re a different maker than the one who set it down — that\'s the point of looking again.`
+  } else if (weeks >= 4) {
+    why_now = `${weeks} weeks since you touched this. Long enough to forget the friction, short enough to still mean it.`
+  } else {
+    why_now = 'You moved past this in the last few weeks. Look once before it slides further out of reach.'
+  }
+
+  const next_step = buildDormantNextStep(project, !!memory)
+
+  return {
+    rank: 1,
+    title: project.title,
+    pitch,
+    why_now,
+    next_step,
+    evidence: synthesiseEvidence(g),
+  }
+}
+
+/** Build a next-step line tied to the project's own description when we
+ *  can — the first imperative-looking clause is usually a real action.
+ *  Falls back to a concrete-but-generic move that doesn't say "open the
+ *  project" or "smallest visible change" (the template tells). */
+function buildDormantNextStep(
+  project: GatherResult['dormant_projects'][number],
+  hasResonance: boolean,
+): string {
+  const desc = (project.description ?? '').trim()
+  if (desc) {
+    const firstClause = desc.split(/(?<=[.!?])\s+|[,;]/, 1)[0]?.trim() ?? ''
+    // Verb-led first clause: looks like "Cut the beech strip", "Smash some
+    // glass", "Write the cold open". Use it as the action directly.
+    if (/^[A-Z][a-z]+\s+\S/.test(firstClause) && firstClause.length >= 8 && firstClause.length <= 110) {
+      return `${firstClause} — today, not tomorrow. One real version, not a plan.`
+    }
+  }
+  if (hasResonance) {
+    return 'Re-open the project. Use the recent capture above as the way back in — write one paragraph or make one piece that ties them together.'
+  }
+  return 'Open it today. Read the description back to yourself, then do whichever sentence sounds easiest. Stop before you start planning.'
+}
+
+function daysAgo(dateStr: string | null | undefined): number {
+  if (!dateStr) return 0
+  const t = new Date(dateStr).getTime()
+  if (Number.isNaN(t)) return 0
+  return Math.max(0, Math.floor((Date.now() - t) / 86_400_000))
+}
+
+function weeksAgo(dateStr: string | null | undefined): number {
+  return Math.floor(daysAgo(dateStr) / 7)
+}
+
+function describeRecency(days: number, opts: { capitalise?: boolean } = {}): string {
+  let phrase: string
+  if (days <= 1) phrase = 'yesterday'
+  else if (days <= 7) phrase = `${days} days ago`
+  else if (days <= 14) phrase = 'last week'
+  else if (days <= 30) phrase = 'a few weeks back'
+  else if (days <= 60) phrase = 'last month'
+  else phrase = 'a couple of months ago'
+  return opts.capitalise ? phrase.charAt(0).toUpperCase() + phrase.slice(1) : phrase
 }
 
 async function runRead(gathered: GatherResult): Promise<ProjectIdea[]> {
