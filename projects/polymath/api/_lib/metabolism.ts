@@ -365,7 +365,7 @@ export async function generateDigestForUser(
 
   const proposals = await Promise.all(warmed.slice(0, 3).map(async (p): Promise<Evolution | null> => {
     const evidence = (p as any).heat_reason || ''
-    const prompt = `You are helping evolve a dormant project. Pick ONE mutation mode and return a proposal.
+    const prompt = `You're helping me evolve a dormant project. Pick ONE mutation mode and write the proposal.
 
 PROJECT
 title: ${p.title}
@@ -379,12 +379,16 @@ MODES (pick ONE that fits best)
 - reframe: propose a new angle / positioning
 - snapshot: propose capturing current state as a standalone artifact (essay, note, sketch) and retiring the full project${allowHandoff ? '\n- handoff: propose handing off to someone else' : ''}
 
-RULES
+HOW TO WRITE
+- Plain English. Short sentences. Words people actually say.
+- Never use: "leveraging," "synergies," "narrative substrate," "unlocking momentum," "creative momentum," "feature-rich," "high-impact."
+- No invented hyphenated phrases in scare-quotes. No coach voice ("you are shifting from X to Y").
 - The proposal must cite the provided evidence. If you can't, return mode='none'.
-- Return concrete, specific text. No platitudes.
+- Bad: "Reframe to leverage the synergies between your recent reading and the project's core thesis."
+- Good: "Reframe it: stop trying to build the full IDE. Ship the single best thing — the chapter outline view — as a standalone tool."
 
 Return JSON only:
-{ "mode": "shrink|merge|split|reframe|snapshot${allowHandoff ? '|handoff' : ''}|none", "title": "new title if applicable", "proposal": "2-3 sentence concrete proposal", "evidence": "the evidence you cited" }`
+{ "mode": "shrink|merge|split|reframe|snapshot${allowHandoff ? '|handoff' : ''}|none", "title": "new title if applicable", "proposal": "2-3 sentence concrete proposal in plain English", "evidence": "the evidence you cited" }`
     try {
       const raw = await generateText(prompt, { temperature: 0.5, maxTokens: 400, responseFormat: 'json' })
       const parsed = JSON.parse(raw)

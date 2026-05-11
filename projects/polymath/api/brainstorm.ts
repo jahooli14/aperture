@@ -715,11 +715,15 @@ Write a 2-3 sentence statement that explains why THIS person is the right person
 
 Rules:
 - No filler, no "Great job", no "This is exciting"
+- Plain English. Short punchy sentences. One thought per sentence.
 - Write like a sharp friend who sees you clearly, not a motivational poster
-- Second person ("you")
-- Short punchy sentences. One thought per sentence.
-- Do NOT start with "You" — vary the opening
-- The tone is: knowing, warm, precise
+- Never use: "leveraging," "synergies," "unlocking," "narrative substrate," "feature-rich," "creative momentum," "psychological defenses," "experiential," "high-impact."
+- Never invent hyphenated phrases in scare-quotes ("friction-over-function," "blind-edit"). If it needs scare-quotes, rewrite it.
+- Second person ("you"). Do NOT start with "You" — vary the opening.
+- The tone is: knowing, warm, precise.
+
+Bad: "Your multifaceted curiosity uniquely positions you to leverage cross-domain synthesis on this project."
+Good: "The way you keep coming back to constraints — in the songs, in the photos — is exactly what this project needs. You already wrote about wanting fewer choices."
 
 Return JSON only:
 { "statement": "your 2-3 sentence statement" }`
