@@ -522,7 +522,9 @@ Write a synthesis that reveals what this item ACTUALLY means in context — not 
 2. Show 2-3 ways this idea echoes, extends, or evolves across specific items in the lake. Name titles directly. Make the connection feel inevitable in retrospect.
 3. Close with what this entire cluster is building toward — the emergent thing they're working on without quite naming it yet.
 
-Be specific. Be bold. Name actual titles. 3-5 tight sentences. No hedging, no generic observations.`
+Be specific. Be bold. Name actual titles. 3-5 tight sentences. No hedging, no generic observations.
+
+Plain English only. Real words a friend would say. No "leveraging," "unlocking," "synergies," "narrative substrate," "high-impact." No analyst voice. BAD: "Your multifaceted engagement with constraint reveals an emergent creative trajectory." GOOD: "Across the Logic Pro notes, the bedtime book, and the running playlist project — you keep coming back to time limits making things easier."`
             break
 
           case 'find-gaps':
@@ -540,7 +542,9 @@ You can see what's there. Now find what's missing.
 2. What question does this corpus raise loudly but never answers? Name the exact tension you see in the items.
 3. The ONE most valuable gap to fill next — what specific book, experiment, conversation, or deep-dive would unlock the most, and why (reference specific items to justify)?
 
-Be a doctor reading a chart, not a cheerleader. Name what's missing precisely.`
+Be a doctor reading a chart, not a cheerleader. Name what's missing precisely.
+
+Plain English only. Real words a friend would say. No "leveraging," "unlocking," "synergies," "narrative substrate." No analyst voice. BAD: "A noticeable absence of perspectives that interrogate the foundational premises of your creative ontology." GOOD: "You've read 4 books about how songs get made, none about how they get released. The Logic Pro project will stall on the same question."`
             break
 
           case 'suggest-next':
@@ -613,7 +617,9 @@ Construct the sharpest possible challenge using THEIR OWN knowledge base:
 2. Find 2-3 specific items in their own corpus that complicate, contradict, or create genuine tension with that assumption. Quote titles. Show exactly why their own thinking creates the problem.
 3. Pose the ONE question they most need to sit with. Not rhetorical — a real question that, if answered honestly, would force an update. Make it sharp enough to be uncomfortable.
 
-Don't soften it. Don't end with encouragement. Just the challenge. Use their own words and reading against them — constructively, but without mercy.`
+Don't soften it. Don't end with encouragement. Just the challenge. Use their own words and reading against them — constructively, but without mercy.
+
+Plain English only. Real words a friend would say. No "leveraging," "unlocking," "synergies," "narrative substrate." No analyst voice. BAD: "Your epistemological framework here is internally inconsistent with the actualization patterns you've documented." GOOD: "Three months ago you wrote that the song needs to be done by August. Now you're talking about reworking the structure. Which one's real?"`
             break
 
           default:
