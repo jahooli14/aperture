@@ -26,7 +26,12 @@ export interface FASResult extends FASComponents {
 // the daily email. Block promotion ignores this — every BUILD idea becomes a
 // block so the sampler has more compositional material; the sampler weights
 // by FAS, so low-FAS blocks get drawn rarely.
-export const HIGH_SIGNAL_THRESHOLD = 0.7;
+//
+// Tuned from the FAS formula: weighted sum maxes at ~0.65 even for a clearly
+// novel idea (1.0 structural × 0.3 + 0.5 distance × 0.25 + 0 leap × 0.2 +
+// 0.5 surprise × 0.25 = 0.55). At 0.7 the digest was effectively unreachable
+// and every day fell into the vault/empty branch.
+export const HIGH_SIGNAL_THRESHOLD = 0.55;
 
 /**
  * Calculate Frontier Advancement Score
@@ -43,9 +48,12 @@ export async function calculateFAS(
   );
 
   // 2. Conceptual distance: How far from existing idea clusters?
+  // Pass idea.id so the self-match (the idea is already in ie_ideas by the
+  // time FAS runs) doesn't collapse distance to 0.
   const conceptualDistance = await calculateConceptualDistance(
     userId,
-    idea.embedding || []
+    idea.embedding || [],
+    idea.id
   );
 
   // 3. Tractability leap: Did we solve something previously hard?
@@ -124,15 +132,18 @@ async function calculateDomainPairNovelty(
  */
 async function calculateConceptualDistance(
   userId: string,
-  embedding: number[]
+  embedding: number[],
+  excludeIdeaId?: string
 ): Promise<number> {
   if (embedding.length === 0) return 0.5; // Unknown
 
-  // Find the closest idea using vector similarity
+  // Find the closest idea using vector similarity. Request 2 so we can skip
+  // the idea itself: FAS runs *after* the idea is stored, so the top match is
+  // always a self-match with similarity 1.0 and distance 0.
   const { data, error } = await supabase.rpc('match_ie_ideas', {
     query_embedding: embedding,
     match_threshold: 0.0, // Get all matches
-    match_count: 1,
+    match_count: 2,
     filter_user_id: userId,
   });
 
@@ -141,9 +152,16 @@ async function calculateConceptualDistance(
     return 1.0;
   }
 
-  // Distance = 1 - similarity
-  const closestSimilarity = data[0].similarity;
-  return 1 - closestSimilarity;
+  const others = excludeIdeaId
+    ? data.filter((m: { id: string }) => m.id !== excludeIdeaId)
+    : data;
+
+  if (others.length === 0) {
+    // Only the self-match exists in the corpus — treat as maximum distance.
+    return 1.0;
+  }
+
+  return 1 - others[0].similarity;
 }
 
 /**
