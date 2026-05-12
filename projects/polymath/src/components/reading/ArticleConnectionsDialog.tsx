@@ -62,7 +62,7 @@ export function ArticleConnectionsDialog({
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             className="fixed inset-x-4 top-[10%] z-50 mx-auto max-w-2xl"
           >
-            <div className="premium-card border-2 shadow-2xl" style={{ borderColor: 'rgba(var(--brand-primary-rgb), 0.3)' }}>
+            <div className="glass-card border-2 shadow-2xl" style={{ borderColor: 'rgba(var(--brand-primary-rgb), 0.3)' }}>
               {/* Close Button */}
               <button
                 onClick={onClose}

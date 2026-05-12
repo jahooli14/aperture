@@ -60,7 +60,7 @@ export function ThoughtOfTheDay() {
           className="absolute -top-6 -left-3 text-[160px] leading-none select-none pointer-events-none"
           style={{
             color: 'rgba(var(--brand-primary-rgb), 0.11)',
-            fontFamily: 'Georgia, "Times New Roman", serif',
+            fontFamily: 'var(--brand-font-serif)',
             fontWeight: 700,
           }}
         >

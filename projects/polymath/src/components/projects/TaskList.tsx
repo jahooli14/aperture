@@ -419,7 +419,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
             }}
             placeholder="Task description..."
             autoFocus
-            className="flex-1 px-3 py-2 text-sm rounded-lg focus:outline-none focus:ring-2 premium-glass"
+            className="flex-1 px-3 py-2 text-sm rounded-lg focus:outline-none focus:ring-2 glass-card"
             style={{ color: "var(--brand-primary)" }}
           />
           <button

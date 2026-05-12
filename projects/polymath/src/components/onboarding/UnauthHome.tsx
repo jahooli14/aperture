@@ -105,7 +105,6 @@ export function UnauthHome() {
         transition={{ duration: 0.5 }}
         className="aperture-header mb-3"
         style={{
-          fontSize: '2.5rem',
           color: 'var(--brand-primary)',
           letterSpacing: '-0.04em',
         }}

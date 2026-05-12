@@ -23,7 +23,6 @@ import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useProjectStore } from '../stores/useProjectStore'
-import { useSuggestionStore } from '../stores/useSuggestionStore'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { useJourneyStore } from '../stores/useJourneyStore'
@@ -149,7 +148,6 @@ export function HomePage() {
   const { isAuthenticated } = useAuthContext()
   const fetchProjects = useProjectStore(s => s.fetchProjects)
   const projects = useProjectStore(s => s.projects)
-  const fetchSuggestions = useSuggestionStore(s => s.fetchSuggestions)
   const fetchMemories = useMemoryStore(s => s.fetchMemories)
   const setContext = useContextEngineStore(s => s.setContext)
   const onboardingCompletedAt = useJourneyStore(s => s.onboardingCompletedAt)
@@ -172,7 +170,6 @@ export function HomePage() {
         } else {
           fetchProjects()
         }
-        fetchSuggestions()
         fetchMemories()
       } catch (err) {
         console.error('Failed to load data on mount:', err)

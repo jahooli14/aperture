@@ -25,7 +25,7 @@ export function BulkActionsBar({ selectedCount, onCancel, actions }: BulkActions
           className="fixed bottom-20 left-4 right-4 z-40 sm:left-auto sm:right-6 sm:max-w-md"
         >
           <div
-            className="premium-glass-subtle rounded-2xl p-4 shadow-2xl"
+            className="glass-card-subtle rounded-2xl p-4 shadow-2xl"
             style={{
               backdropFilter: 'blur(20px)',
               border: '1px solid rgba(255, 255, 255, 0.1)',

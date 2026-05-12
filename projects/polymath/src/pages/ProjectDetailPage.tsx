@@ -51,10 +51,9 @@ function BlockerField({ blocker, onSave }: { blocker?: string; onSave: (text: st
   return (
     <div className="post-it">
       <span
-        className="block mb-2 italic"
+        className="block mb-2 italic text-xs"
         style={{
           fontFamily: 'var(--brand-font-serif)',
-          fontSize: '11px',
           color: 'rgba(252,211,77,0.75)',
           letterSpacing: '0.02em',
         }}
@@ -68,10 +67,9 @@ function BlockerField({ blocker, onSave }: { blocker?: string; onSave: (text: st
             value={text}
             onChange={e => setText(e.target.value)}
             placeholder="One sentence."
-            className="w-full bg-black/20 rounded-xl p-3 resize-none focus:outline-none border"
+            className="w-full bg-black/20 rounded-xl p-3 resize-none focus:outline-none border text-base"
             style={{
               fontFamily: 'var(--brand-font-serif)',
-              fontSize: '15px',
               lineHeight: 1.55,
               color: 'var(--brand-text-primary)',
               borderColor: 'rgba(252,211,77,0.18)',
@@ -102,11 +100,10 @@ function BlockerField({ blocker, onSave }: { blocker?: string; onSave: (text: st
         </div>
       ) : (
         <p
-          className="cursor-pointer hover:opacity-95 transition-opacity"
+          className="cursor-pointer hover:opacity-95 transition-opacity text-base"
           style={{
             fontFamily: 'var(--brand-font-serif)',
             fontStyle: blocker ? 'normal' : 'italic',
-            fontSize: '15.5px',
             lineHeight: 1.55,
             color: 'var(--brand-text-primary)',
             opacity: blocker ? 0.92 : 0.45,

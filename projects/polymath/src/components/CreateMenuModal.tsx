@@ -9,35 +9,13 @@ interface CreateMenuModalProps {
     onAction: (action: 'thought' | 'project' | 'article' | 'list') => void
 }
 
+// All actions share the brand cyan accent — icon + label do the work of
+// distinguishing them. Per design system: cyan-only chrome.
 const creationActions = [
-    {
-        id: 'thought',
-        label: 'Thought',
-        description: 'Write down a thought',
-        icon: Brain,
-        accent: '139, 92, 246',
-    },
-    {
-        id: 'project',
-        label: 'Project',
-        description: 'Start something new',
-        icon: Layers,
-        accent: '59, 130, 246',
-    },
-    {
-        id: 'article',
-        label: 'Short Read',
-        description: 'Save a link to read later',
-        icon: BookmarkPlus,
-        accent: '16, 185, 129',
-    },
-    {
-        id: 'list',
-        label: 'List Item',
-        description: 'Add to one of your lists',
-        icon: ListPlus,
-        accent: '245, 158, 11',
-    },
+    { id: 'thought', label: 'Thought',    description: 'Write down a thought',         icon: Brain },
+    { id: 'project', label: 'Project',    description: 'Start something new',          icon: Layers },
+    { id: 'article', label: 'Short Read', description: 'Save a link to read later',    icon: BookmarkPlus },
+    { id: 'list',    label: 'List Item',  description: 'Add to one of your lists',     icon: ListPlus },
 ] as const
 
 export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalProps) {
@@ -63,7 +41,7 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
                         transition={{ type: 'spring', damping: 36, stiffness: 520, mass: 0.45 }}
                         className="relative w-full z-10 overflow-hidden"
                         style={{
-                            background: 'linear-gradient(to top, #0d0d10, #111116)',
+                            background: 'var(--brand-bg)',
                             borderTop: '1px solid rgba(255,255,255,0.08)',
                             borderRadius: '24px 24px 0 0',
                             paddingBottom: 'env(safe-area-inset-bottom, 20px)',
@@ -95,7 +73,6 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
                         <div className="grid grid-cols-2 gap-3 px-4 pb-5">
                             {creationActions.map((action, i) => {
                                 const Icon = action.icon
-                                const rgb = action.accent
                                 return (
                                     <motion.button
                                         key={action.id}
@@ -108,17 +85,20 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
                                         }}
                                         className="relative flex flex-col items-start gap-3 p-4 rounded-2xl text-left overflow-hidden active:scale-[0.97] transition-transform min-h-[110px]"
                                         style={{
-                                            background: `rgba(${rgb}, 0.12)`,
-                                            border: `1px solid rgba(${rgb}, 0.3)`,
-                                            boxShadow: `0 4px 16px rgba(${rgb}, 0.08)`,
+                                            background: 'rgba(var(--brand-primary-rgb), 0.10)',
+                                            border: '1px solid rgba(var(--brand-primary-rgb), 0.28)',
+                                            boxShadow: '0 4px 16px rgba(var(--brand-primary-rgb), 0.08)',
                                         }}
                                     >
                                         {/* Icon */}
                                         <div
                                             className="h-11 w-11 rounded-xl flex items-center justify-center"
-                                            style={{ background: `rgba(${rgb}, 0.2)`, border: `1px solid rgba(${rgb}, 0.3)` }}
+                                            style={{
+                                                background: 'rgba(var(--brand-primary-rgb), 0.18)',
+                                                border: '1px solid rgba(var(--brand-primary-rgb), 0.28)',
+                                            }}
                                         >
-                                            <Icon className="h-5 w-5" style={{ color: `rgb(${rgb})` }} />
+                                            <Icon className="h-5 w-5" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
                                         </div>
 
                                         {/* Text */}
@@ -126,7 +106,7 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
                                             <p className="text-sm font-black uppercase tracking-tight text-white leading-tight">
                                                 {action.label}
                                             </p>
-                                            <p className="text-[12px] text-white/70 mt-0.5 leading-snug">
+                                            <p className="text-xs text-white/70 mt-0.5 leading-snug">
                                                 {action.description}
                                             </p>
                                         </div>
@@ -135,7 +115,7 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
                                         <div
                                             className="absolute top-0 right-0 w-16 h-16 rounded-full opacity-40 pointer-events-none"
                                             style={{
-                                                background: `radial-gradient(circle at top right, rgba(${rgb}, 0.6), transparent 70%)`,
+                                                background: 'radial-gradient(circle at top right, rgba(var(--brand-primary-rgb), 0.55), transparent 70%)',
                                             }}
                                         />
                                     </motion.button>
@@ -144,7 +124,7 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
                         </div>
 
                         {/* Footer hint */}
-                        <p className="text-center text-[11px] font-bold uppercase tracking-[0.2em] text-white/50 pb-4">
+                        <p className="meta-caps text-center pb-4" style={{ color: 'rgba(255,255,255,0.5)' }}>
                             Hold the FAB to dictate directly
                         </p>
                     </motion.div>

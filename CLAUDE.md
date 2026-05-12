@@ -122,6 +122,8 @@ npm run type-check           # polymath only (tsc --noEmit)
 - **AI**: Gemini for embeddings, classification, AND synthesis in Polymath (via `@google/generative-ai`). Claude is referenced in the Idea Engine project (Python) but Polymath itself does not currently call the Anthropic SDK — don't add it without asking.
 - **Naming**: PascalCase components, camelCase functions, feature-based folders, files ≤ 300 lines
 - **AI model IDs**: Verify against live docs (e.g. [Gemini models](https://ai.google.dev/gemini-api/docs/models)) before changing. Models get deprecated — don't guess.
+- **Card surfaces**: use `.glass-card` (theme.css) — this is canonical. `.premium-card` / `.premium-glass` (premium-dark.css) are legacy; don't reach for them in new code.
+- **AI voice**: every prompt that produces user-facing prose interpolates `PLAIN_ENGLISH_RULES` from `api/_lib/plain-english.ts`. Add new banned words / cringe patterns there, not inline.
 
 ## Deploy
 
@@ -169,13 +171,15 @@ One workflow dispatches every Vercel cron endpoint. Branches on `github.event.sc
 
 | Schedule | Endpoints |
 |----------|-----------|
-| `*/30 * * * *` | `idea-engine?action=generate`, `fix-queue?action=run-fixes` |
-| `0 */6 * * *` | `fix-queue?action=draft-pending`, `projects?resource=recompute-heat` |
+| `*/30 * * * *` | `idea-engine?action=generate` |
+| `0 */6 * * *` | `projects?resource=recompute-heat` |
 | `0 8 * * *` | `projects?resource=evolve`, `utilities?resource=generate-project-ideas` |
 | `0 9 * * *` | `idea-engine?action=review` then `idea-engine?action=send-digest` (sequential) |
 | `0 8 * * 0` | `projects?resource=generate-digest` |
 
-> The `idea-engine?action=*` and `fix-queue?action=*` rows belong to the standalone Idea Engine project and the Fix Queue feature respectively. Both flagged for review (see Projects table). The `projects?resource=*` rows and `utilities?resource=generate-project-ideas` are part of Polymath proper.
+> The `idea-engine?action=*` rows belong to the standalone Idea Engine project (separate from Polymath; lives in this repo to keep hosting costs down). The `projects?resource=*` rows and `utilities?resource=generate-project-ideas` are part of Polymath proper. **Fix Queue cron is disabled** — the route and API remain so existing drafts stay visible, but no new drafts are generated or executed.
+
+Background sync calls (DataSynchronizer): `/api/memories?action=evolution`, `/api/projects?resource=bedtime`, `/api/reading?resource=rss` — these are triggered from the client on internal timers, not by cron, so they are not in the table above.
 
 ## Fix Queue (Polymath feature)
 

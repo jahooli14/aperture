@@ -390,7 +390,7 @@ function ListsPageInner() {
                                     />
                                 ) : quoteCover ? (
                                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-zinc-950 via-zinc-900 to-black p-1">
-                                        <p className="text-[var(--brand-text-primary)]/60 text-[8px] font-light text-center line-clamp-4" style={{ fontFamily: 'Georgia, serif' }}>
+                                        <p className="text-[var(--brand-text-primary)]/60 text-[8px] font-light text-center line-clamp-4" style={{ fontFamily: 'var(--brand-font-serif)' }}>
                                             {quoteCover}
                                         </p>
                                     </div>
@@ -470,7 +470,7 @@ function ListsPageInner() {
                                         <div className="relative z-10 flex flex-col items-center justify-center text-center">
                                             <p className="text-[var(--brand-text-primary)]/90 font-light text-lg sm:text-xl leading-relaxed tracking-wide px-2"
                                                 style={{
-                                                    fontFamily: 'Georgia, serif',
+                                                    fontFamily: 'var(--brand-font-serif)',
                                                     textShadow: `0 2px 20px rgba(${rgb}, 0.3)`,
                                                     display: '-webkit-box',
                                                     WebkitLineClamp: 6,

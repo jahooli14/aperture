@@ -73,7 +73,7 @@ export function FocusSummary() {
 
                 {/* How did that go? */}
                 <div className="mb-8">
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--brand-text-muted)] mb-4 text-center">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--brand-text-muted)] aperture-header mb-4 text-center">
                         How did that go?
                     </h3>
                     <div className="flex items-center justify-center gap-3">
@@ -101,7 +101,7 @@ export function FocusSummary() {
                 {/* Task List - Minimal */}
                 {completedTasks.length > 0 && (
                     <div className="bg-[var(--glass-surface)] rounded-2xl p-6 mb-6 border border-[var(--glass-surface)] max-h-[25vh] overflow-y-auto">
-                        <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--brand-text-muted)] mb-4">
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--brand-text-muted)] aperture-header mb-4">
                             Completed
                         </h3>
                         <ul className="space-y-3">
@@ -117,7 +117,7 @@ export function FocusSummary() {
 
                 {/* Post-session voice capture — captures what happened + what's next */}
                 <div className="mb-6">
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--brand-text-muted)] mb-3 flex items-center gap-2">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--brand-text-muted)] aperture-header mb-3 flex items-center gap-2">
                         <Mic className="h-3 w-3" />
                         What did you do? What's next?
                     </h3>
@@ -160,7 +160,7 @@ export function FocusSummary() {
 
                 {/* Bookmark / Next Step */}
                 <div className="mb-8">
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--brand-text-muted)] mb-4 flex items-center gap-2">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--brand-text-muted)] aperture-header mb-4 flex items-center gap-2">
                         <Bookmark className="h-3 w-3" />
                         Leave a bookmark
                     </h3>

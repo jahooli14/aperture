@@ -24,6 +24,7 @@
 
 import { generateText } from './gemini-chat.js'
 import { MODELS } from './models.js'
+import { findVoiceViolations, findTitleViolations } from './plain-english.js'
 
 export interface CandidateFields {
   crossover_title?: string
@@ -98,55 +99,13 @@ function checkShorthand(step: string): string | null {
 }
 
 /**
- * Jargon words the writer prompt explicitly bans. Worth checking server-side
- * because the model still slips them in, especially under temperature 1.0.
+ * Jargon + cringe detection uses the shared plain-english module so the
+ * voice rules stay in one place across every prompt that produces user-
+ * facing copy.
  */
-const BANNED_WORDS: string[] = [
-  'stochastic', 'ontological', 'epistemological', 'heuristic', 'emergent',
-  'bifurcation', 'isomorphism', 'bisociation', 'exaptation', 'orthogonal',
-  'teleological', 'dialectical', 'paradigm', 'paradigmatic', 'topology',
-  'actualize', 'ideate', 'leverage', 'synergy', 'synergies',
-]
-
-/**
- * Cringe phrases that survived the first prompt tightening. Mostly marketing
- * copy energy ("massive flex"), flattery verbs ("deeply fascinated"), and
- * LLM tells that make the output sound like a LinkedIn post.
- */
-const CRINGE_PATTERNS: RegExp[] = [
-  /\bmassive flex\b/i,
-  /\b(humble|stealth|flex) brag\b/i,
-  /\bdeeply (fascinated|obsessed|interested|committed)\b/i,
-  /\b(truly|deeply|profoundly) (beautiful|meaningful|significant|important)\b/i,
-  /\b(at the intersection of|the sweet spot between)\b/i,
-  /\bnext-level\b/i,
-  /\bgame-?changer\b/i,
-  /\bunlock(s|ing)? (new|hidden|deeper)\b/i,
-]
-
-/**
- * Titles should name the mechanism concretely. Flowery abstract nouns
- * ("profound meaning in mundanity") and -ness endings ("strangeness",
- * "sameness") are the marker of an LLM reaching for poetry.
- */
-const TITLE_CRINGE_PATTERNS: RegExp[] = [
-  /\b(profound|unconventional|radical|ultimate|masterful|brilliant|exquisite)\b/i,
-  /\b\w+ness\b/i,
-  /\bin (mundanity|liminality|otherness)\b/i,
-]
 
 function checkField(text: string, fieldName: string): string[] {
-  const reasons: string[] = []
-  const lower = text.toLowerCase()
-  for (const w of BANNED_WORDS) {
-    if (new RegExp(`\\b${w}\\b`, 'i').test(lower)) {
-      reasons.push(`${fieldName} uses banned word "${w}"`)
-    }
-  }
-  for (const re of CRINGE_PATTERNS) {
-    if (re.test(text)) reasons.push(`${fieldName} uses cringe phrase (${re.source})`)
-  }
-  return reasons
+  return findVoiceViolations(text).map(v => `${fieldName} ${v}`)
 }
 
 /**
@@ -231,10 +190,9 @@ export function validateCandidate(c: CandidateFields): AuditResult {
     reasons.push(...checkField(steps[i], `first_steps[${i + 1}]`))
   }
 
-  // Title-specific
-  for (const re of TITLE_CRINGE_PATTERNS) {
-    if (re.test(title)) reasons.push(`title uses flowery phrase (${re.source})`)
-  }
+  // Title-specific (adds the -ness / flowery-adjective checks on top of
+  // the standard voice violations).
+  reasons.push(...findTitleViolations(title).map(v => `title ${v}`))
   const titleWords = title.split(/\s+/).filter(Boolean).length
   if (titleWords > 7) reasons.push(`title too long (${titleWords} words, target 3-6)`)
 

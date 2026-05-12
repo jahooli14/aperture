@@ -412,8 +412,8 @@ export function ReaderPage() {
     <div
       className="min-h-screen relative overflow-x-hidden"
       style={{
-        background: '#0b1018',
-        color: '#e1e1e3',
+        background: 'var(--brand-bg)',
+        color: 'var(--brand-text-secondary)',
       }}
     >
       {/* Single, calm wash. Reading is sacred — no parallax orbs. */}

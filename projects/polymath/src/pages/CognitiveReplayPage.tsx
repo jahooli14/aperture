@@ -267,7 +267,7 @@ export function CognitiveReplayPage() {
               </div>
 
               {/* Narrative */}
-              <Card className="premium-card overflow-hidden">
+              <Card className="glass-card overflow-hidden">
                 <CardContent className="p-8 md:p-10">
                   <div className="prose prose-invert max-w-none">
                     {chapter.narrative.split('\n\n').map((paragraph, i) => (
@@ -281,7 +281,7 @@ export function CognitiveReplayPage() {
 
               {/* Emotional Arc */}
               {chapter.emotionalArc.length > 0 && (
-                <Card className="premium-card overflow-hidden">
+                <Card className="glass-card overflow-hidden">
                   <CardContent className="p-6">
                     <h3 className="text-sm font-bold text-brand-primary uppercase tracking-wider mb-4 flex items-center gap-2">
                       <TrendingUp className="w-4 h-4" />
@@ -305,7 +305,7 @@ export function CognitiveReplayPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Dominant Themes */}
                 {chapter.dominantThemes.length > 0 && (
-                  <Card className="premium-card">
+                  <Card className="glass-card">
                     <CardContent className="p-6">
                       <h3 className="text-sm font-bold text-brand-primary uppercase tracking-wider mb-4 flex items-center gap-2">
                         <Zap className="w-4 h-4" />
@@ -327,7 +327,7 @@ export function CognitiveReplayPage() {
 
                 {/* Active Projects */}
                 {chapter.activeProjects.length > 0 && (
-                  <Card className="premium-card">
+                  <Card className="glass-card">
                     <CardContent className="p-6">
                       <h3 className="text-sm font-bold text-brand-primary uppercase tracking-wider mb-4 flex items-center gap-2">
                         <Calendar className="w-4 h-4" />
@@ -351,7 +351,7 @@ export function CognitiveReplayPage() {
 
               {/* Breakthroughs */}
               {chapter.breakthroughs.length > 0 && (
-                <Card className="premium-card border-brand-primary/20">
+                <Card className="glass-card border-brand-primary/20">
                   <CardContent className="p-6">
                     <h3 className="text-sm font-bold text-brand-primary uppercase tracking-wider mb-4 flex items-center gap-2">
                       <TrendingUp className="w-4 h-4" />

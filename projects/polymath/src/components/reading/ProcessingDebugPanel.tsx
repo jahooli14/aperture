@@ -86,7 +86,7 @@ export function ProcessingDebugPanel({ articles, onRetry, onFlushAll }: Processi
   return (
     <div className="fixed bottom-20 left-0 right-0 z-50 px-4 pb-4">
       <div
-        className="max-w-4xl mx-auto premium-glass rounded-xl overflow-hidden"
+        className="max-w-4xl mx-auto glass-card rounded-xl overflow-hidden"
         style={{
           backgroundColor: 'rgba(15, 24, 41, 0.98)',
           borderColor: 'var(--premium-red)',
@@ -158,7 +158,7 @@ export function ProcessingDebugPanel({ articles, onRetry, onFlushAll }: Processi
                 return (
                   <div
                     key={article.id}
-                    className="premium-glass rounded-lg p-3 space-y-2"
+                    className="glass-card rounded-lg p-3 space-y-2"
                     style={{ backgroundColor: 'var(--glass-surface)' }}
                   >
                     <div className="flex items-start justify-between gap-2">

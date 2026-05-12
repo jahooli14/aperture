@@ -172,7 +172,7 @@ export function FocusSession() {
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: 0.15 + gi * 0.08 }}
                                 >
-                                    <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--brand-text-muted)] mb-3">
+                                    <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--brand-text-muted)] mb-3 aperture-header">
                                         {group.label}
                                     </h3>
                                     <ul className="space-y-2">

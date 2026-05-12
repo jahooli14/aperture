@@ -131,11 +131,11 @@
    accent on the highlight word. No gradient text, no glow. */
 .section-header {
     position: relative;
-    font-size: 1.5rem !important;
-    line-height: 1.2 !important;
-    font-weight: 700 !important;
+    font-size: 1.5rem;
+    line-height: 1.2;
+    font-weight: 700;
     color: rgba(255, 255, 255, 0.92);
-    letter-spacing: -0.03em !important;
+    letter-spacing: -0.03em;
     font-family: var(--brand-font-header);
     margin-bottom: 1.25rem;
     display: flex;
@@ -229,6 +229,29 @@
     transform: translateY(-1px);
 }
 
+/* Weight variants for floating notifications, install banners, etc.
+   Strong = more present (heavier blur, more opacity); subtle = quieter
+   (lighter blur, less opacity). All three share the cyan/glass palette. */
+.glass-card-strong {
+    background: rgba(20, 27, 38, 0.5);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border-bold);
+    border-radius: var(--brand-radius);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card-subtle {
+    background: rgba(20, 27, 38, 0.2);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--brand-radius);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 .glass-button {
     background: var(--glass-surface);
     border: 1px solid var(--glass-border);
@@ -263,46 +286,47 @@
     background-clip: text;
     -webkit-text-fill-color: transparent;
 }
-/* Unified Heading Sizes */
+/* Unified Heading Sizes — defaults, not enforcements. Tailwind text-* and
+   inline fontSize will override naturally. */
 h1 {
-    font-size: 2.5rem !important; /* 40px */
-    font-weight: 800 !important;
-    line-height: 1.2 !important;
-    letter-spacing: -0.04em !important;
+    font-size: 2.5rem; /* 40px */
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.04em;
 }
 
 h2 {
-    font-size: 1.875rem !important; /* 30px */
-    font-weight: 800 !important;
-    line-height: 1.3 !important;
-    letter-spacing: -0.04em !important;
+    font-size: 1.875rem; /* 30px */
+    font-weight: 800;
+    line-height: 1.3;
+    letter-spacing: -0.04em;
 }
 
 h3 {
-    font-size: 1.5rem !important; /* 24px */
-    font-weight: 700 !important;
-    line-height: 1.4 !important;
-    letter-spacing: -0.03em !important;
+    font-size: 1.5rem; /* 24px */
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: -0.03em;
 }
 
 h4 {
-    font-size: 1.25rem !important; /* 20px */
-    font-weight: 700 !important;
-    line-height: 1.4 !important;
-    letter-spacing: -0.02em !important;
+    font-size: 1.25rem; /* 20px */
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: -0.02em;
 }
 
 h5 {
-    font-size: 1.125rem !important; /* 18px */
-    font-weight: 600 !important;
-    line-height: 1.5 !important;
-    letter-spacing: -0.01em !important;
+    font-size: 1.125rem; /* 18px */
+    font-weight: 600;
+    line-height: 1.5;
+    letter-spacing: -0.01em;
 }
 
 h6 {
-    font-size: 1rem !important; /* 16px */
-    font-weight: 600 !important;
-    line-height: 1.5 !important;
+    font-size: 1rem; /* 16px */
+    font-weight: 600;
+    line-height: 1.5;
 }
 
 /* ─── Page Color Identity Classes ────────────────────────── */
@@ -532,8 +556,8 @@ h6 {
     }
 
     /* Tighten huge headings on small screens so they don't dominate */
-    h1 { font-size: 2rem !important; }
-    h2 { font-size: 1.625rem !important; }
+    h1 { font-size: 2rem; }
+    h2 { font-size: 1.625rem; }
 }
 
 /* Universal min tap-target hint for icon-only buttons */

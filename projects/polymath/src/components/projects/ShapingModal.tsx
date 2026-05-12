@@ -260,8 +260,8 @@ export function ShapingModal({ project, isOpen, onClose }: ShapingModalProps) {
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
               autoComplete="off"
               autoFocus
-              className="flex-1 border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none"
-              style={{ color: 'var(--brand-text-primary)', fontSize: '15px' }}
+              className="flex-1 border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none text-base"
+              style={{ color: 'var(--brand-text-primary)' }}
             />
             <button
               onClick={handleSend}

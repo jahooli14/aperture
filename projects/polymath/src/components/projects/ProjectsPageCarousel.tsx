@@ -4,7 +4,6 @@ import { motion } from 'framer-motion'
 import { Star, ArrowRight, CheckCircle2, Clock, Snowflake, Archive, Sprout, Loader2, ListOrdered } from 'lucide-react'
 import type { Project } from '../../types'
 import { useProjectStore } from '../../stores/useProjectStore'
-import { useSuggestionStore } from '../../stores/useSuggestionStore'
 import { useContextEngineStore } from '../../stores/useContextEngineStore'
 import { PROJECT_COLORS, getTheme } from '../../lib/projectTheme'
 import { getNextTask } from '../../lib/taskUtils'
@@ -16,7 +15,6 @@ interface ProjectsPageCarouselProps {
   activeProjects: Project[]
   drawerProjects: Project[]
   archiveSpotlight?: Project | null
-  onClearSuggestions?: () => void
 }
 
 interface Task {
@@ -332,12 +330,7 @@ export function ProjectsPageCarousel({
   activeProjects: activeList,
   drawerProjects: drawerList,
   archiveSpotlight,
-  onClearSuggestions
 }: ProjectsPageCarouselProps) {
-  // const { projects } = useProjectStore() // Removed internal fetching
-  // const { clearSuggestions } = useSuggestionStore() // Passed as prop
-
-  // Categorization logic moved to parent (ProjectsPage)
 
   if (loading) return <div className="p-8 text-center text-[var(--brand-text-muted)] animate-pulse aperture-header uppercase tracking-widest text-xs">Loading dashboard...</div>
 

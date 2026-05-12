@@ -232,10 +232,9 @@ function ChecklistEditor({
               placeholder="List item…"
               onChange={(e) => updateItem(item.id, e.target.value)}
               onKeyDown={(e) => handleKeyDown(e, item.id, index)}
-              className="flex-1 bg-transparent border-0 focus:outline-none focus:ring-0 py-1"
+              className="flex-1 bg-transparent border-0 focus:outline-none focus:ring-0 py-1 text-lg"
               style={{
                 color: item.checked ? 'rgba(255,255,255,0.3)' : 'var(--brand-text-primary)',
-                fontSize: '17px',
                 lineHeight: '1.5',
                 textDecoration: item.checked ? 'line-through' : 'none',
               }}
@@ -259,7 +258,7 @@ function ChecklistEditor({
         style={{ color: 'var(--brand-text-secondary)' }}
       >
         <Plus className="h-4 w-4" />
-        <span style={{ fontSize: '15px' }}>New item</span>
+        <span className="text-base">New item</span>
       </button>
     </div>
   )
@@ -604,10 +603,9 @@ export function CreateMemoryDialog({
                 onFocus={(e) => { setBodyFocused(true); handleInputFocus(e) }}
                 onBlur={() => setBodyFocused(false)}
                 autoFocus
-                className="w-full border-0 focus:outline-none focus:ring-0 resize-none appearance-none bg-transparent"
+                className="w-full border-0 focus:outline-none focus:ring-0 resize-none appearance-none bg-transparent text-lg"
                 style={{
                   color: 'var(--brand-text-primary)',
-                  fontSize: '17px',
                   lineHeight: '1.65',
                   minHeight: '160px',
                 }}
@@ -623,9 +621,8 @@ export function CreateMemoryDialog({
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               onFocus={handleInputFocus}
               autoComplete="off"
-              className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none mb-3"
+              className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none mb-3 text-xs"
               style={{
-                fontSize: '13px',
                 color: 'var(--brand-text-secondary)',
                 opacity: formData.title ? 0.7 : 0.35,
               }}

@@ -85,15 +85,16 @@ jobs:
 
           # ── Every 30 min ──────────────────────────────────────────────
           # Idea Engine generator fires twice an hour.
-          # Fix Queue runner catches approved fixes on 30-min granularity.
+          # Fix Queue runner: disabled — feature is dormant (owner doesn't
+          # use it; CLAUDE.md flags it as needs-review). Kept the route +
+          # API so old drafts remain visible if you ever come back.
           if [ "$SCHEDULE" = "*/30 * * * *" ] || [ "$FORCE" = "true" ]; then
             hit "/api/idea-engine?action=generate" &
-            hit "/api/fix-queue?action=run-fixes" &
           fi
 
-          # ── Every 6h: Fix Queue drafter + Polymath heat recompute ─────
+          # ── Every 6h: Polymath heat recompute ────────────────────────
+          # Fix Queue drafter: disabled (see above).
           if [ "$SCHEDULE" = "0 */6 * * *" ] || [ "$FORCE" = "true" ]; then
-            hit "/api/fix-queue?action=draft-pending" &
             hit "/api/projects?resource=recompute-heat" &
           fi
 

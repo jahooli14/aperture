@@ -101,7 +101,7 @@ export function SuggestionToast({ itemId, itemType, itemTitle }: SuggestionToast
           className="fixed bottom-6 left-4 right-4 z-50 md:left-auto md:right-6 md:max-w-md"
         >
           <div
-            className="premium-glass-subtle rounded-2xl p-4 shadow-2xl"
+            className="glass-card-subtle rounded-2xl p-4 shadow-2xl"
             style={{
               backdropFilter: 'blur(20px)',
               border: '1px solid rgba(255, 255, 255, 0.1)'
@@ -134,7 +134,7 @@ export function SuggestionToast({ itemId, itemType, itemTitle }: SuggestionToast
 
             {/* Suggestion Card */}
             <div
-              className="premium-glass rounded-xl p-4 mb-3"
+              className="glass-card rounded-xl p-4 mb-3"
               style={{
                 backgroundColor: 'var(--glass-surface)',
                 border: '1px solid var(--glass-surface-hover)'
