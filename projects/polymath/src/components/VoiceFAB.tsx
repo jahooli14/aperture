@@ -241,14 +241,19 @@ export function VoiceFAB({
       onPointerCancel={onSystemCancel}
       className={cn(
         'fixed z-[25001]',
-        'right-5 md:right-12',
+        // Centered above the nav — the raised middle slot. The right-edge
+        // orphan position has been retired; the FAB now belongs to the nav
+        // visually, not the page corner.
+        'left-1/2 -translate-x-1/2',
         'h-14 w-14 md:h-16 md:w-16 rounded-full',
         'flex items-center justify-center',
         'transition-all duration-200',
         'group overflow-hidden touch-none',
       )}
       style={{
-        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 6rem)',
+        // Sit raised over the centered spacer in the nav pill, peeking
+        // ~16-20px above the nav's top edge.
+        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 3.75rem)',
         background: 'linear-gradient(135deg, rgb(var(--color-accent-light-rgb)) 0%, rgb(var(--brand-primary-rgb)) 60%, rgb(var(--color-accent-dark-rgb)) 100%)',
         border: '1px solid rgba(255, 255, 255, 0.22)',
         backdropFilter: 'blur(16px)',

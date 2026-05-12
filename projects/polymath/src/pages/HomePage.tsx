@@ -1,29 +1,28 @@
 /**
  * Home Page — the creative harness.
  *
- * Stack (top to bottom):
- *   1. YourHourHeader — brand + duration toggle + search
- *   2. MomentSurface — earned AI idea. Only renders when the cron has
- *      pre-baked a high-confidence Read idea; otherwise null.
- *   3. Priority project card — the starred one. Hidden if nothing starred.
- *   4. Still-warm card — most-recently-touched non-priority project.
- *   5. UpNextShelf — user-pinned queue. Hidden when empty.
- *   6. ProjectIdeasHome — "suggest a project" pill. The escape hatch when
- *      no earned idea is ready; expands to the full editorial card on click.
- *   7. NowConsumingWidget — compact strip of active list items.
- *   8. ThoughtOfTheDay — resurfaced memory quote.
- *   9. BedtimeFloatingIcon — after 9:30pm.
+ * The home renders as a single continuous surface — no section headings,
+ * no "your priority / recently active / up next" labels. Group identity
+ * is carried by the cards' material:
  *
- * Ordering: the AI moment leads when present (the most-important surface).
- * Otherwise Keep Going leads — the user opens the app to do the thing
- * they're already on, and the suggest-pill stays a quiet escape hatch
- * below Up Next.
+ *   • The Moment / priority hero — saturated. Project accent washes the card.
+ *   • Recently active — glass cards, 2-up. Accent dot + soft corner vignette.
+ *   • Up Next — ghost cards, 2-up. Outline-only. Quieter, reads as "later".
+ *
+ * Section breaks are 1px hairline "seams" (.section-seam) that fade across
+ * the page width. Behind everything: a vanishingly subtle vertical wash
+ * (.home-atmosphere) — warmer at the top, cooler at the bottom.
+ *
+ * Top-left of the masthead carries a "mode register" chip naming what the
+ * lead card is firing in: priority / keep going / quiet. Replaces the
+ * removed wordmark/eyebrow.
  */
 
 import React, { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useProjectStore, usePriorityProject, useMostRecentNonPriorityProject } from '../stores/useProjectStore'
+import { getTheme } from '../lib/projectTheme'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { useJourneyStore } from '../stores/useJourneyStore'
@@ -61,6 +60,37 @@ const LIST_TYPE_ACCENT: Record<string, string> = {
   generic: '156, 163, 175', // slate
 }
 
+/**
+ * Mode register chip — small two-line label in the top-left of the home
+ * masthead. Names what the lead card is firing in, and tints itself in
+ * that project's accent colour so the chip echoes the hero downscreen.
+ *
+ * For now the chip reads off the priority / recent state we already have.
+ * When MomentSurface lifts its mode (new idea / reshape / extend) into
+ * shared state, this is where it should land.
+ */
+function ModeRegister({
+  label,
+  detail,
+  rgb,
+}: {
+  label: string
+  detail?: string
+  rgb?: string
+}) {
+  return (
+    <div className="mode-register">
+      <span
+        className="mode-register-label"
+        style={{ color: rgb ? `rgb(${rgb})` : 'rgba(255,255,255,0.78)' }}
+      >
+        {label}
+      </span>
+      {detail && <span className="mode-register-detail">{detail}</span>}
+    </div>
+  )
+}
+
 function NowConsumingWidget() {
   const [activeItems, setActiveItems] = useState<{ listId: string; listTitle: string; listType: string; itemId: string; itemContent: string }[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -90,7 +120,6 @@ function NowConsumingWidget() {
 
   return (
     <section className="pb-8">
-      <h2 className="section-header">what you're <span>into</span></h2>
       <div
         className="relative flex flex-col rounded-2xl overflow-hidden"
         style={{
@@ -232,6 +261,15 @@ export function HomePage() {
     transition: { ...ease.editorial, delay: 0.04 + i * stagger.list },
   })
 
+  // Mode register copy + accent. Reads off the data we already have —
+  // priority project takes the chip, falling back to the still-warm card,
+  // then a quiet "no focus" state. When MomentSurface starts surfacing
+  // explicit modes (new idea / reshape / extend), wire them in here.
+  const leadProject = priorityProject || recentProject
+  const leadTheme = leadProject ? getTheme(leadProject.type || 'other', leadProject.title) : null
+  const modeLabel = priorityProject ? 'priority' : recentProject ? 'keep going' : 'quiet'
+  const modeDetail = leadProject?.title
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -242,17 +280,24 @@ export function HomePage() {
       <SubtleBackground />
 
       <div className="min-h-screen pb-24 relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Vertical time-of-day wash — warm-top to cool-bottom. The trick
+            that makes "now → later" feel like a real axis on the page. */}
+        <div className="home-atmosphere" aria-hidden />
 
-          {/* Quiet top bar — just a search affordance on the right.
-              Uses the shared .page-masthead spacing so the first piece of
-              real content (The Moment / priority card) starts at the same
-              y as other tabs' page titles. The wordmark + day-of-week
-              eyebrow has been removed — the home is now an unmediated
-              creative surface. */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative" style={{ zIndex: 1 }}>
+
+          {/* Masthead: mode register chip (left) + bedtime/search (right). */}
           <motion.div {...stackTransition(0)}>
             <header className="page-masthead">
-              <div className="page-masthead-text" />
+              <div className="page-masthead-text">
+                {leadProject && (
+                  <ModeRegister
+                    label={modeLabel}
+                    detail={modeDetail}
+                    rgb={leadTheme?.rgb}
+                  />
+                )}
+              </div>
               <div className="page-masthead-actions">
                 {isAfterBedtime && (
                   <button
@@ -282,61 +327,56 @@ export function HomePage() {
 
           {/* The Moment — earned AI idea. Renders only when the cron has
               pre-baked a high-confidence Read idea; otherwise null and the
-              page falls back to Keep Going as the lead. */}
-          <motion.div className="mb-10" {...stackTransition(1)}>
+              page falls back to the priority hero. */}
+          <motion.div {...stackTransition(1)}>
             <MomentSurface />
           </motion.div>
 
-          {/* Priority — the single starred project, full hero card. */}
+          {/* Hero — the single priority project, or the empty-state nudge. */}
           {priorityProject ? (
-            <motion.div className="mb-10" {...stackTransition(2)}>
-              <KeepGoingCard
-                project={priorityProject}
-                heading={<>your <span>priority</span></>}
-              />
+            <motion.div {...stackTransition(2)}>
+              <KeepGoingCard project={priorityProject} />
             </motion.div>
           ) : !hasAnyFocus ? (
-            <motion.div className="mb-10" {...stackTransition(2)}>
-              <h2 className="section-header">keep <span>going</span></h2>
+            <motion.div {...stackTransition(2)}>
               <KeepGoingEmpty />
             </motion.div>
           ) : null}
 
-          {/* Recently active — two compact side-by-side cards. */}
-          <motion.div className="mb-10" {...stackTransition(3)}>
+          {/* Recently active — 2-up glass cards. The seam above it tells
+              the eye "different group" without a heading. */}
+          <div className="section-seam" aria-hidden />
+          <motion.div {...stackTransition(3)}>
             <RecentlyActiveMini />
           </motion.div>
 
-          {/* Up Next — two compact side-by-side cards. The full
-              reorderable queue lives on the Projects page. */}
-          <motion.div className="mb-10" {...stackTransition(4)}>
+          {/* Up Next — 2-up ghost cards. Quieter material than the glass
+              row above, so it reads as further away. */}
+          <div className="section-seam" aria-hidden />
+          <motion.div {...stackTransition(4)}>
             <UpNextMini />
           </motion.div>
 
-          {/* Suggest a project — the quiet escape-hatch pill. Expands to the
-              full editorial card on click. The earned-teaser case has moved
-              to MomentSurface at the top; this slot is the on-demand
-              generation surface only. */}
-          <motion.div className="mb-10" {...stackTransition(5)}>
+          {/* Suggest a project — quiet escape-hatch pill for on-demand
+              generation when nothing higher-up has earned the page. */}
+          <div className="section-seam" aria-hidden />
+          <motion.div {...stackTransition(5)}>
             <ProjectIdeasHome />
           </motion.div>
 
-          {/* What you're consuming */}
+          {/* What you're consuming — identity layer. */}
+          <div className="section-seam" aria-hidden />
           <motion.div {...stackTransition(6)}>
             <NowConsumingWidget />
           </motion.div>
 
-          {/* Thought of the day */}
+          {/* Thought of the day — resurfaced memory quote. */}
           <motion.div {...stackTransition(7)}>
             <ThoughtOfTheDay />
           </motion.div>
 
         </div>
       </div>
-
-      {/* The bedtime floating icon has been promoted to a quiet
-          masthead action above (visible only after 9:30pm). The
-          floating FAB was competing visually with the voice FAB. */}
     </motion.div>
   )
 }
