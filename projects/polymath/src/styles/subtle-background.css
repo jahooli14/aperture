@@ -130,6 +130,30 @@
   100% { transform: translate(0, 0); }
 }
 
+/* Mobile: scale orbs down so they don't overflow narrow viewports and
+   so the heavy blur stays cheap on lower-end Android GPUs. */
+@media (max-width: 480px) {
+  .gradient-orb {
+    filter: blur(60px);
+  }
+  .orb-1 {
+    width: 340px;
+    height: 340px;
+  }
+  .orb-2 {
+    width: 280px;
+    height: 280px;
+  }
+  .orb-3 {
+    width: 320px;
+    height: 320px;
+  }
+  .subtle-background .aurora {
+    height: 220px;
+    filter: blur(48px);
+  }
+}
+
 /* Reduce motion for accessibility */
 @media (prefers-reduced-motion: reduce) {
   .gradient-orb,
