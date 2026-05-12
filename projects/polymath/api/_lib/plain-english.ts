@@ -15,17 +15,26 @@ export const BANNED_WORDS: readonly string[] = [
   'leverage', 'leveraging', 'leveraged', 'synergy', 'synergies',
   'unlock', 'unlocks', 'unlocking', 'unlocked',
   'high-impact', 'feature-rich', 'experiential',
-  'actualize', 'actualization',
+  'actualize', 'actualization', 'actualizes',
   'ideate', 'ideation',
+  'transformative', 'transformational',
+  'culmination', 'culminate', 'culminates',
   // Tech-Twitter
   'narrative substrate', 'soundscape', 'soundscapes',
   'psychological defense', 'psychological defenses',
   // LLM jargon
-  'stochastic', 'ontological', 'epistemological', 'heuristic', 'emergent',
+  'stochastic', 'ontological', 'ontologies', 'ontology',
+  'epistemological', 'epistemology', 'epistemologies',
+  'heuristic', 'heuristics', 'emergent',
   'bifurcation', 'isomorphism', 'bisociation', 'exaptation', 'orthogonal',
   'teleological', 'dialectical', 'paradigm', 'paradigmatic', 'topology',
   // Coach-voice
   'journey', 'essence', 'reimagined', 'evolved', 'multifaceted',
+  'preoccupation', 'preoccupations',
+  'interrogate', 'interrogates', 'interrogating',
+  // Context-Engine specific cringe seen in the wild
+  'through-line', 'throughline', 'thread of', 'central thread',
+  'creative ontology', 'foundational premise', 'foundational premises',
 ]
 
 /** Phrases / patterns that still slip through even after BANNED_WORDS. */
@@ -39,6 +48,13 @@ export const CRINGE_PATTERNS: readonly RegExp[] = [
   /\bgame-?changer\b/i,
   /\bcreative momentum\b/i,
   /\bhigh-impact transition\b/i,
+  // Newer drift seen in the Context Engine output
+  /\binternally (in)?consistent\b/i,
+  /\bcore assumption embedded\b/i,
+  /\b(constraint-based|structure-based)\s+\w+\b/i,
+  /\binevitable in retrospect\b/i,
+  /\bcouldn't see from inside\b/i,
+  /\bthe moment when [a-z\s]+ makes [a-z\s]+ possible\b/i,
 ]
 
 /** Title-only patterns — abstract -ness nouns + flowery adjectives. */

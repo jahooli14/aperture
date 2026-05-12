@@ -19,7 +19,7 @@ import { Button } from '../components/ui/button'
 import { useToast } from '../components/ui/toast'
 import { PremiumTabs } from '../components/ui/premium-tabs'
 import { SkeletonCard } from '../components/ui/skeleton-card'
-import { Brain, Zap, ArrowLeft, CloudOff, Search, X, Tag, Pin, Wind, Moon } from 'lucide-react'
+import { Brain, Zap, ArrowLeft, CloudOff, Search, X, Pin, Wind, Moon } from 'lucide-react'
 import { BrandName } from '../components/BrandName'
 import { SubtleBackground } from '../components/SubtleBackground'
 import type { Memory, ThemeCluster, ThemeClustersResponse } from '../types'
@@ -130,10 +130,8 @@ function MemoriesPageInner() {
     [memories, selectedMemoryForModal]
   )
 
-  // Search and filter state
+  // Search state (tag filtering has been removed from this page)
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeTags, setActiveTags] = useState<string[]>([])
-  const [dismissedResurface, setDismissedResurface] = useState(false)
 
   // Drift Mode state — after 9pm, Drift Mode flips into Bedtime (sleep) mode
   // and pulls bedtime prompts; otherwise it stays as the daytime mental reset.
@@ -287,9 +285,18 @@ function MemoriesPageInner() {
       } else if (view === 'themes') {
         await loadMemories(true)
         await fetchThemeClusters()
+        // Keep the Resurface tab count fresh while we're on Themes too.
+        fetchResurfacing()
       } else {
         await loadMemories(true)
         fetchOnboardingPrompts() // Load suggested follow-up prompts
+        // Always fetch the resurface queue on page entry so the tab
+        // label shows a real count instead of "(0)" until the user
+        // switches over. Previously the count only ever updated when
+        // you actively visited the Resurface tab, which felt like a
+        // bug — you'd land here with five things to revisit and not
+        // know it.
+        fetchResurfacing()
       }
     }
     loadData()
@@ -359,50 +366,15 @@ function MemoriesPageInner() {
     await loadMemories(true)
   }, [loadMemories])
 
-  // Tags ranked by how many thoughts use them. The strip only shows the
-  // top slice by default — the full list opens on demand so the corpus
-  // doesn't drown the page in pills.
-  const TAGS_PREVIEW_COUNT = 6
-  const SYSTEM_TAG_SET = useMemo(() => new Set(['onboarding', 'live-hybrid', 'morning-followup', 'bedtime-synthesis']), [])
-  const rankedTags = useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const m of memories) {
-      for (const t of m.tags || []) {
-        if (!t || SYSTEM_TAG_SET.has(t)) continue
-        counts.set(t, (counts.get(t) ?? 0) + 1)
-      }
-    }
-    return Array.from(counts.entries())
-      .sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0]))
-      .map(([tag, count]) => ({ tag, count }))
-  }, [memories, SYSTEM_TAG_SET])
-  const [tagsExpanded, setTagsExpanded] = useState(false)
-  // Always keep any active tag visible even when collapsed — so selecting
-  // a rare tag doesn't visually vanish from the strip the moment you pick it.
-  const visibleTags = useMemo(() => {
-    if (tagsExpanded) return rankedTags
-    const preview = rankedTags.slice(0, TAGS_PREVIEW_COUNT)
-    const previewSet = new Set(preview.map(t => t.tag))
-    const stickyActive = rankedTags.filter(t => activeTags.includes(t.tag) && !previewSet.has(t.tag))
-    return [...preview, ...stickyActive]
-  }, [rankedTags, tagsExpanded, activeTags])
-
-  // Pick one random memory that's 30+ days old for "Resurface" section
-  // Stabilised so it doesn't re-pick on every render  only when the total count changes
-  const resurfacedMemory = useMemo(() => {
-    const oldMemories = memories.filter(m => {
-      const age = (Date.now() - new Date(m.created_at).getTime()) / 86400000
-      return age >= 30
-    })
-    if (oldMemories.length === 0) return null
-    return oldMemories[Math.floor(Math.random() * oldMemories.length)]
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [memories.length]) // Only recompute when memories count changes
+  // The tag strip + top-of-page resurface block have been removed from
+  // this page. Tags are still editable on a single thought (see the
+  // detail modal); themes are the canonical organising axis now.
+  // Resurfacing lives on the home page as "Thought of the day".
 
   // Reset the progressive window when filters change.
   useEffect(() => {
     setVisibleCount(PAGE_SIZE)
-  }, [view, searchQuery, activeTags])
+  }, [view, searchQuery])
 
   // Window-scroll-based progressive loading. Capacitor / Android WebView
   // had IntersectionObserver inconsistencies (sometimes the sentinel
@@ -437,7 +409,7 @@ function MemoriesPageInner() {
     return view === 'resurfacing' ? resurfacing : memories
   }, [view, memories, resurfacing])
 
-  // Apply search and tag filters
+  // Apply search filter (tag filtering has moved off this page).
   const displayMemories = useMemo(() => {
     let filtered = baseMemories
     const q = searchQuery.trim().toLowerCase()
@@ -449,17 +421,12 @@ function MemoriesPageInner() {
         return inTitle || inBody || inTags
       })
     }
-    if (activeTags.length > 0) {
-      filtered = filtered.filter(m =>
-        activeTags.every(tag => m.tags?.includes(tag))
-      )
-    }
     return filtered.slice().sort((a, b) => {
       const dateA = new Date(a.audiopen_created_at || a.created_at).getTime()
       const dateB = new Date(b.audiopen_created_at || b.created_at).getTime()
       return dateB - dateA
     })
-  }, [baseMemories, searchQuery, activeTags])
+  }, [baseMemories, searchQuery])
 
   // Keep the scroll listener's notion of total in sync without forcing
   // it to depend on displayMemories (would re-create the listener every
@@ -471,7 +438,7 @@ function MemoriesPageInner() {
     return memories.filter(m => m.is_pinned)
   }, [memories])
 
-  const isFiltered = searchQuery.trim().length > 0 || activeTags.length > 0
+  const isFiltered = searchQuery.trim().length > 0
 
   const isLoading = view === 'resurfacing' ? loadingResurfacing : loading
 
@@ -511,7 +478,9 @@ function MemoriesPageInner() {
             />
           )}
 
-          {/* Drift Mode button — after 9pm becomes Bedtime Mode (sleep variant) */}
+          {/* Drift Mode button — after 9pm becomes Bedtime Mode (sleep variant).
+              Sentence-case labels; the previous uppercase pills shouted at
+              the reader from the top of the page. */}
           <div className="flex items-center gap-3 mb-3">
             <button
               onClick={handleOpenDrift}
@@ -521,19 +490,19 @@ function MemoriesPageInner() {
               {isAfterBedtime ? (
                 <>
                   <Moon className="h-3.5 w-3.5" />
-                  Bedtime Mode — wind down
+                  Bedtime mode — wind down
                 </>
               ) : (
                 <>
                   <Wind className="h-3.5 w-3.5" />
-                  Drift Mode — mental reset
+                  Drift mode — mental reset
                 </>
               )}
             </button>
             {/* Cross-link to bedtime — small & unobtrusive */}
             <Link
               to="/bedtime"
-              className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.15em] transition-opacity hover:opacity-100"
+              className="inline-flex items-center gap-1 text-[10px] tracking-[0.15em] transition-opacity hover:opacity-100"
               style={{ color: 'rgba(var(--brand-primary-rgb),0.55)', opacity: 0.75 }}
             >
               <Moon className="h-3 w-3" />
@@ -562,107 +531,10 @@ function MemoriesPageInner() {
               page background. Day One scrapbook feel, not "premium card." */}
           <div className="mb-6 w-full max-w-full">
 
-            {/* Search — Dia central input, soft and quiet */}
-            {(view === 'recent' || view === 'themes') && (
-              <div className="mb-5 space-y-3">
-                <div className="relative">
-                  <Search
-                    className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none opacity-60"
-                    style={{ color: 'rgb(var(--brand-primary-rgb))' }}
-                  />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    placeholder="Search your thoughts…"
-                    className="soft-input pl-11 pr-10"
-                  />
-                  {searchQuery && (
-                    <button
-                      onClick={() => setSearchQuery('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 h-7 w-7 flex items-center justify-center rounded-full transition-colors hover:bg-white/[0.04]"
-                      style={{ color: 'var(--brand-text-muted)' }}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
-
-                {isFiltered && (
-                  <p className="text-[10px] uppercase tracking-[0.28em] opacity-70" style={{ color: 'rgb(var(--brand-primary-rgb))' }}>
-                    {displayMemories.length} of {memories.length}
-                  </p>
-                )}
-
-                {/* Tag band — contained strip, hairline above & below,
-                    top-6 by usage with a "More" affordance. The earlier
-                    full-corpus scroll bar was eating 60–80px of vertical
-                    space for a list that's almost entirely one-off tags. */}
-                {rankedTags.length > 0 && (
-                  <div
-                    className="py-2 flex flex-wrap items-center gap-2"
-                    style={{
-                      borderTop: '1px solid rgba(255,255,255,0.06)',
-                      borderBottom: '1px solid rgba(255,255,255,0.06)',
-                    }}
-                  >
-                    {visibleTags.map(({ tag, count }) => {
-                      const isActive = activeTags.includes(tag)
-                      return (
-                        <button
-                          key={tag}
-                          onClick={() => setActiveTags(prev =>
-                            isActive ? prev.filter(t => t !== tag) : [...prev, tag]
-                          )}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] tracking-wide transition-all"
-                          style={{
-                            background: isActive ? 'rgba(var(--brand-primary-rgb),0.14)' : 'rgba(255,255,255,0.03)',
-                            border: isActive ? '1px solid rgba(var(--brand-primary-rgb),0.4)' : '1px solid rgba(255,255,255,0.06)',
-                            color: isActive ? 'rgb(var(--brand-primary-rgb))' : 'var(--brand-text-muted)',
-                          }}
-                          aria-pressed={isActive}
-                        >
-                          <Tag className="h-3 w-3" />
-                          <span>{tag}</span>
-                          {count > 1 && (
-                            <span className="opacity-50 text-[10px]">{count}</span>
-                          )}
-                        </button>
-                      )
-                    })}
-
-                    {rankedTags.length > TAGS_PREVIEW_COUNT && (
-                      <button
-                        onClick={() => setTagsExpanded(v => !v)}
-                        className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] uppercase tracking-[0.18em] transition-opacity opacity-70 hover:opacity-100"
-                        style={{
-                          background: 'transparent',
-                          border: '1px dashed rgba(var(--brand-primary-rgb),0.25)',
-                          color: 'rgb(var(--brand-primary-rgb))',
-                        }}
-                      >
-                        {tagsExpanded ? 'less' : `more (${rankedTags.length - TAGS_PREVIEW_COUNT})`}
-                      </button>
-                    )}
-
-                    {activeTags.length > 0 && (
-                      <button
-                        onClick={() => setActiveTags([])}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] uppercase tracking-[0.18em] transition-opacity opacity-70 hover:opacity-100 ml-auto"
-                        style={{
-                          background: 'rgba(255,255,255,0.03)',
-                          border: '1px solid rgba(255,255,255,0.08)',
-                          color: 'var(--brand-text-muted)',
-                        }}
-                      >
-                        <X className="h-3 w-3" />
-                        clear
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
+            {/* The in-page search bar + tag strip have been removed.
+                The masthead's top-right search icon opens the full
+                global search; tag-as-filter has moved off this page in
+                favour of the Themes tab. */}
 
             {/* Inner Content */}
             <div>
@@ -716,19 +588,17 @@ function MemoriesPageInner() {
                         style={{ background: 'rgba(var(--brand-primary-rgb),0.08)', border: '1px solid rgba(var(--brand-primary-rgb),0.2)' }}>
                         <Search className="h-6 w-6 text-brand-primary opacity-50" />
                       </div>
-                      <h3 className="text-lg font-black uppercase tracking-tight text-[var(--brand-text-primary)]">
-                        Nothing matches
-                      </h3>
+                      <h3 className="page-hero-sm mb-2">Nothing matches.</h3>
                       <p className="text-sm text-[var(--brand-text-muted)] leading-relaxed">
-                        {searchQuery ? `No thoughts containing "${searchQuery}"` : 'No thoughts match your current filters'}
+                        {searchQuery ? `No thoughts containing "${searchQuery}"` : 'Nothing to show with the current filter.'}
                       </p>
                       <button
-                        onClick={() => { setSearchQuery(''); setActiveTags([]) }}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-95"
+                        onClick={() => { setSearchQuery('') }}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all active:scale-95"
                         style={{ background: 'rgba(var(--brand-primary-rgb),0.1)', border: '1px solid rgba(var(--brand-primary-rgb),0.25)', color: 'var(--brand-primary)' }}
                       >
                         <X className="h-3.5 w-3.5" />
-                        Clear filters
+                        Clear search
                       </button>
                     </div>
                   ) : (view === 'recent' || view === 'themes') ? (
@@ -772,7 +642,7 @@ function MemoriesPageInner() {
                         style={{ background: 'rgba(var(--brand-primary-rgb),0.08)', border: '1px solid rgba(var(--brand-primary-rgb),0.2)' }}>
                         <Zap className="h-6 w-6 text-brand-primary opacity-50" />
                       </div>
-                      <h3 className="text-lg font-black uppercase tracking-tight text-[var(--brand-text-primary)]">All caught up</h3>
+                      <h3 className="page-hero-sm mb-2">All caught up.</h3>
                       <p className="text-sm text-[var(--brand-text-muted)] leading-relaxed">
                         Nothing to revisit right now. Keep capturing thoughts and they'll resurface when the time is right.
                       </p>
@@ -789,7 +659,7 @@ function MemoriesPageInner() {
                     <div className="mb-8">
                       <button
                         onClick={() => setSelectedCluster(null)}
-                        className="mb-6 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all"
+                        className="mb-6 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
                         style={{
                           background: 'rgba(var(--brand-primary-rgb),0.08)',
                           color: "var(--brand-text-secondary)",
@@ -798,9 +668,9 @@ function MemoriesPageInner() {
                         }}
                       >
                         <ArrowLeft className="h-3.5 w-3.5" />
-                        Back to Themes
+                        Back to themes
                       </button>
-                      <h2 className="text-xl font-black mb-6 flex items-center gap-3 uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>
+                      <h2 className="section-heading mb-6" style={{ color: "var(--brand-primary)" }}>
                         <div
                           className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
                           style={{
@@ -839,7 +709,7 @@ function MemoriesPageInner() {
                       {loadingClusters && clusters.length === 0 ? (
                         <div className="text-center py-12">
                           <div className="inline-block h-10 w-10 animate-spin rounded-lg border-4 border-solid mb-4" style={{ borderColor: 'var(--brand-primary)', borderRightColor: 'transparent' }}></div>
-                          <p className="text-xs font-black uppercase tracking-widest" style={{ color: "var(--brand-primary)" }}>Analyzing themes...</p>
+                          <p className="text-xs" style={{ color: "var(--brand-primary)" }}>Working out the themes…</p>
                         </div>
                       ) : clusters.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -852,8 +722,44 @@ function MemoriesPageInner() {
                           ))}
                         </div>
                       ) : (
-                        <div className="p-6 rounded-lg text-center" style={{ background: 'var(--brand-glass-bg)', border: '1px solid var(--glass-surface-hover)', boxShadow: '0 4px 16px rgba(0,0,0,0.6)' }}>
-                          <p className="text-xs" style={{ color: "var(--brand-primary)" }}>No themes yet. Add a few more thoughts and they'll start showing up.</p>
+                        // Empty themes state — show a primer of the canonical
+                        // themes the AI uses so the user knows what to expect
+                        // before their first thoughts get processed. The list
+                        // mirrors the categories enumerated in
+                        // api/_lib/process-memory.ts (career / health /
+                        // creativity / relationships / learning / family).
+                        <div className="rounded-2xl p-6"
+                          style={{ background: 'var(--brand-glass-bg)', border: '1px solid var(--glass-surface-hover)', boxShadow: '0 4px 16px rgba(0,0,0,0.4)' }}>
+                          <p className="page-eyebrow mt-0 mb-3">How themes work</p>
+                          <p className="text-sm leading-relaxed mb-5" style={{ color: 'var(--brand-text-secondary)' }}>
+                            Every thought gets tagged with one or two themes automatically. As you capture more, the themes group your thinking so you can spot what you keep coming back to.
+                          </p>
+                          <p className="text-[11px] tracking-[0.18em] mb-2" style={{ color: 'rgba(var(--brand-primary-rgb), 0.7)' }}>
+                            the six themes
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {[
+                              { name: 'creativity', desc: 'making things' },
+                              { name: 'career', desc: 'work + craft' },
+                              { name: 'learning', desc: 'study + skill' },
+                              { name: 'relationships', desc: 'people in your life' },
+                              { name: 'health', desc: 'body + energy' },
+                              { name: 'family', desc: 'the small core' },
+                            ].map(t => (
+                              <span
+                                key={t.name}
+                                className="inline-flex flex-col px-3 py-1.5 rounded-xl text-xs"
+                                style={{
+                                  background: 'rgba(var(--brand-primary-rgb), 0.08)',
+                                  border: '1px solid rgba(var(--brand-primary-rgb), 0.25)',
+                                  color: 'var(--brand-text-secondary)',
+                                }}
+                              >
+                                <span className="font-medium" style={{ color: 'rgb(var(--brand-primary-rgb))' }}>{t.name}</span>
+                                <span className="opacity-60 text-[10px]">{t.desc}</span>
+                              </span>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </>
@@ -865,73 +771,12 @@ function MemoriesPageInner() {
               {/* Recent memories view - Google Keep Style Masonry (Across then Down) */}
               {view === 'recent' && !isLoading && memories.length > 0 && (
                 <>
-                  {/* Resurface a thought  one random memory 30+ days old */}
-                  <AnimatePresence>
-                    {!dismissedResurface && resurfacedMemory && !isFiltered && (
-                      <motion.div
-                        key="resurface"
-                        initial={{ opacity: 0, y: -12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.97 }}
-                        transition={{ duration: 0.25 }}
-                        className="mb-6 rounded-lg p-4"
-                        style={{
-                          background: 'var(--brand-glass-bg)',
-                          border: '1px solid rgba(var(--brand-primary-rgb),0.3)',
-                          borderLeft: '4px solid rgba(var(--brand-primary-rgb),0.6)',
-                          boxShadow: '0 0 20px rgba(var(--brand-primary-rgb),0.08)',
-                        }}
-                      >
-                        <div className="flex items-start justify-between gap-3 mb-3">
-                          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--brand-primary)" }}>
-                            A thought from {Math.floor((Date.now() - new Date(resurfacedMemory.created_at).getTime()) / 86400000)} days ago...
-                          </p>
-                          <button
-                            onClick={() => setDismissedResurface(true)}
-                            className="flex-shrink-0 h-5 w-5 flex items-center justify-center rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.1)]"
-                            style={{ color: "var(--brand-primary)" }}
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </div>
-                        <h4 className="font-semibold text-sm mb-1" style={{ color: "var(--brand-primary)" }}>
-                          {resurfacedMemory.title}
-                        </h4>
-                        <p className="text-sm line-clamp-3 mb-4" style={{ color: "var(--brand-primary)" }}>
-                          {resurfacedMemory.body}
-                        </p>
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => setDismissedResurface(true)}
-                            className="text-[10px] px-3 py-1.5 rounded-lg font-black uppercase tracking-wide transition-colors"
-                            style={{
-                              background: 'var(--glass-surface)',
-                              border: '1.5px solid rgba(255,255,255,0.1)',
-                              color: "var(--brand-text-secondary)",
-                              boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
-                            }}
-                          >
-                            Dismiss
-                          </button>
-                          <button
-                            onClick={() => handleOpenDetail(resurfacedMemory)}
-                            className="text-[10px] px-3 py-1.5 rounded-lg font-black uppercase tracking-wide transition-colors"
-                            style={{
-                              background: 'rgba(var(--brand-primary-rgb),0.12)',
-                              border: '1.5px solid rgba(var(--brand-primary-rgb),0.4)',
-                              color: "var(--brand-text-secondary)",
-                              boxShadow: '0 0 12px rgba(var(--brand-primary-rgb),0.1)',
-                            }}
-                          >
-                            Connect to today
-                          </button>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  {/* The "thought from N days ago" resurface block has been
+                      removed — the home page's "thought of the day" surface
+                      is now the single place we resurface an old memory. */}
 
                   {/* Pinned Thoughts Section */}
-                  {pinnedMemories.length > 0 && !searchQuery && activeTags.length === 0 && (
+                  {pinnedMemories.length > 0 && !searchQuery && (
                     <div className="mb-6">
                       <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--brand-primary)" }}>
                         <Pin className="w-3.5 h-3.5 text-brand-text-secondary" style={{ fill: 'currentColor' }} />
@@ -992,7 +837,7 @@ function MemoriesPageInner() {
                       <button
                         type="button"
                         onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
-                        className="text-[10px] tracking-[0.2em] uppercase opacity-60 hover:opacity-100 transition-opacity px-3 py-1.5 rounded-full border"
+                        className="text-[11px] opacity-60 hover:opacity-100 transition-opacity px-3 py-1.5 rounded-full border"
                         style={{ color: 'var(--brand-text-secondary)', borderColor: 'var(--glass-surface)' }}
                       >
                         load more

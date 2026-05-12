@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { CheckCircle2, ArrowRight, Bookmark, ThumbsDown, Minus, ThumbsUp, Smile, Flame, Mic } from 'lucide-react'
+import { CheckCircle2, ArrowRight, Bookmark, ThumbsDown, Minus, ThumbsUp, Smile, Flame, Mic, AlertTriangle } from 'lucide-react'
 import { useFocusStore } from '../../stores/useFocusStore'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { VoiceInput } from '../VoiceInput'
@@ -17,6 +17,7 @@ export function FocusSummary() {
     const { tasks, elapsedSeconds, reset, projectId } = useFocusStore()
     const { updateProject } = useProjectStore()
     const [nextStep, setNextStep] = useState('')
+    const [blocker, setBlocker] = useState('')
     const [rating, setRating] = useState<number | null>(null)
     const [showVoiceCapture, setShowVoiceCapture] = useState(false)
     const [sessionNoteRecorded, setSessionNoteRecorded] = useState(false)
@@ -25,15 +26,28 @@ export function FocusSummary() {
     const skippedTasks = tasks.filter(t => !t.completed)
     const durationMinutes = Math.floor(elapsedSeconds / 60)
 
+    // Surface the blocker prompt only when the session genuinely
+    // didn't go well — low self-rating, or more tasks skipped than
+    // completed. Nagging "what's blocked?" after every successful
+    // session would just make the user dismiss it on autopilot.
+    const sessionStalled = (rating !== null && rating <= 2) ||
+        (tasks.length > 0 && skippedTasks.length > completedTasks.length)
+
     const handleExit = async () => {
         if (projectId) {
             const project = useProjectStore.getState().allProjects.find(p => p.id === projectId)
             const existingSessions = project?.metadata?.sessions || []
 
+            const cleanedBlocker = blocker.trim()
             await updateProject(projectId, {
                 metadata: {
                     ...project?.metadata,
                     next_step: nextStep.trim() || undefined,
+                    // Latest blocker — overrides any previous one so the
+                    // current truth wins. Cleared when the user pauses
+                    // without noting anything new.
+                    blocker: cleanedBlocker || (project?.metadata?.blocker as string | undefined),
+                    blocker_at: cleanedBlocker ? new Date().toISOString() : (project?.metadata?.blocker_at as string | undefined),
                     last_session: new Date().toISOString(),
                     last_duration: durationMinutes,
                     sessions: [
@@ -45,6 +59,7 @@ export function FocusSummary() {
                             tasks_skipped: skippedTasks.length,
                             rating: rating || undefined,
                             bookmark: nextStep.trim() || undefined,
+                            blocker: cleanedBlocker || undefined,
                         },
                     ].slice(-20), // Keep last 20 sessions
                 }
@@ -157,6 +172,26 @@ export function FocusSummary() {
                         </button>
                     )}
                 </div>
+
+                {/* Blocker prompt — only when the session stalled (low
+                    rating or more skips than completes). One sentence,
+                    captured at the moment of pause; powers the Mode 2b
+                    reshape later by giving the next session something to
+                    react to. */}
+                {sessionStalled && (
+                    <div className="mb-6">
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--brand-text-muted)] aperture-header mb-3 flex items-center gap-2">
+                            <AlertTriangle className="h-3 w-3" />
+                            What got in the way?
+                        </h3>
+                        <textarea
+                            value={blocker}
+                            onChange={e => setBlocker(e.target.value)}
+                            placeholder="One sentence — what blocked you, what felt off, what shifted."
+                            className="w-full bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] rounded-xl p-4 text-sm text-[var(--brand-text-secondary)] focus:outline-none focus:border-white/30 transition-colors min-h-[72px] resize-none"
+                        />
+                    </div>
+                )}
 
                 {/* Bookmark / Next Step */}
                 <div className="mb-8">

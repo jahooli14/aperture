@@ -66,11 +66,14 @@
   --eyebrow-color: rgba(var(--brand-primary-rgb), 0.7);
   --eyebrow-rule-width: 40px;
 
-  /* Section heading inside a page (groups cards). Must outrank card titles. */
-  --section-heading-size: clamp(1.05rem, 3.2vw, 1.25rem); /* 17–20px */
+  /* Section heading inside a page (groups cards). Must outrank card titles.
+     Bumped up from clamp(17–20px) so sections feel like real signposts on
+     the Projects + Lists pages (the previous size was barely louder than
+     the body text below it). */
+  --section-heading-size: clamp(1.25rem, 4.2vw, 1.5rem); /* 20–24px */
   --section-heading-weight: 700;
-  --section-heading-tracking: -0.015em;
-  --section-heading-color: rgba(255, 255, 255, 0.92);
+  --section-heading-tracking: -0.02em;
+  --section-heading-color: rgba(255, 255, 255, 0.96);
 
   /* Card title inside a section. Stays below section heading. */
   --card-title-size: 0.9375rem;       /* 15px */
@@ -291,6 +294,13 @@
   caret-color: rgb(var(--brand-primary-rgb));
   transition: border-color 0.18s ease;
 }
+
+/* When a search icon is absolutely-positioned inside the input, Tailwind's
+   `pl-11` utility was losing to the base `.soft-input { padding-left: 16px }`
+   declaration depending on CSS load order — and the placeholder ended up
+   running under the icon. Boost the icon-aware padding so it always wins. */
+.soft-input.pl-11 { padding-left: 2.75rem; }
+.soft-input.pl-10 { padding-left: 2.5rem; }
 
 .soft-input:not(:placeholder-shown) {
   font-style: normal;

@@ -535,12 +535,14 @@ ${contextBlock}
 Write a synthesis that reveals what this item ACTUALLY means in context — not what it says.
 
 1. Open with ONE punchy sentence: what is the central idea, given everything else in their corpus?
-2. Show 2-3 ways this idea echoes, extends, or evolves across specific items in the lake. Name titles directly. Make the connection feel inevitable in retrospect.
-3. Close with what this entire cluster is building toward — the emergent thing they're working on without quite naming it yet.
+2. Show 2-3 ways this idea echoes, extends, or evolves across specific items in the lake. Name titles directly.
+3. Close with the concrete thing this cluster points toward — the project, decision, or build that lines up with what they keep coming back to.
 
-Be specific. Be bold. Name actual titles. 3-5 tight sentences. No hedging, no generic observations.
+Be specific. Name actual titles. 3-5 tight sentences. No hedging, no generic observations.
 
-Plain English only. Real words a friend would say. No "leveraging," "unlocking," "synergies," "narrative substrate," "high-impact." No analyst voice. BAD: "Your multifaceted engagement with constraint reveals an emergent creative trajectory." GOOD: "Across the Logic Pro notes, the bedtime book, and the running playlist project — you keep coming back to time limits making things easier."`
+${PLAIN_ENGLISH_RULES}
+BAD: "Your multifaceted engagement with constraint reveals an emergent creative trajectory."
+GOOD: "Across the Logic Pro notes, the bedtime book, and the running playlist project — you keep coming back to time limits making things easier."`
             break
 
           case 'find-gaps':
@@ -554,13 +556,15 @@ ${contextBlock}
 
 You can see what's there. Now find what's missing.
 
-1. What domains, perspectives, or voices are conspicuously absent given what they're working on? Name 2 specific gaps and why each matters given specific items in the lake.
-2. What question does this corpus raise loudly but never answers? Name the exact tension you see in the items.
-3. The ONE most valuable gap to fill next — what specific book, experiment, conversation, or deep-dive would unlock the most, and why (reference specific items to justify)?
+1. Name 2 specific gaps — what's conspicuously absent given what they're working on, and why each matters. Reference items in the lake.
+2. What question does this corpus raise loudly but never answers? Name the exact tension.
+3. The ONE most useful gap to fill next — what specific book, experiment, conversation, or deep-dive would help most, and why (reference specific items).
 
-Be a doctor reading a chart, not a cheerleader. Name what's missing precisely.
+Be a doctor reading a chart. Name what's missing precisely.
 
-Plain English only. Real words a friend would say. No "leveraging," "unlocking," "synergies," "narrative substrate." No analyst voice. BAD: "A noticeable absence of perspectives that interrogate the foundational premises of your creative ontology." GOOD: "You've read 4 books about how songs get made, none about how they get released. The Logic Pro project will stall on the same question."`
+${PLAIN_ENGLISH_RULES}
+BAD: "A noticeable absence of perspectives that interrogate the foundational premises of your creative ontology."
+GOOD: "You've read 4 books about how songs get made, none about how they get released. The Logic Pro project will stall on the same question."`
             break
 
           case 'suggest-next':
@@ -583,7 +587,7 @@ ${PLAIN_ENGLISH_RULES}`
             break
 
           case 'connect-dots':
-            prompt = `You've read everything this person has saved. Find the one thread they keep coming back to without realizing it.
+            prompt = `You've read everything this person has saved. Find the one thing they keep coming back to without realising it.
 
 FOCUS ITEM:
 ${truncatedSource}
@@ -593,16 +597,16 @@ ${contextBlock}
 
 Find the single most surprising, non-obvious connection between this item and their broader corpus.
 
-1. Name the hidden through-line in one sharp, specific sentence — not "they're interested in X" but the precise way X appears in THIS person's mind.
-2. Show the evidence: trace the pattern through 3 specific items, noting exactly how the idea mutates or deepens each time. Quote or closely paraphrase the specific items.
-3. Why does this synthesis matter? What does it reveal that they couldn't see from inside any single item?
+1. Name the pattern in one sharp, specific sentence — not "they're interested in X" but the precise way X shows up in their thinking.
+2. Show the evidence: walk through 3 specific items, noting exactly how the idea changes or deepens each time. Quote or closely paraphrase.
+3. Why it matters: what does seeing all three together reveal that any single one couldn't?
 
 ${PLAIN_ENGLISH_RULES}
 Name what you see in one sharp sentence. Show it in the items. Stop.`
             break
 
           case 'chase-thread':
-            prompt = `You are reading someone's notes and saved articles over time, following a single idea like a thread through everything.
+            prompt = `You're reading someone's notes and saved articles over time, following a single idea like a line through everything.
 
 FOCUS ITEM:
 ${truncatedSource}
@@ -610,11 +614,11 @@ ${truncatedSource}
 KNOWLEDGE LAKE — ${corpusSize} items from their complete corpus (thoughts, articles, projects, lists):
 ${contextBlock}
 
-Find the single most compelling recurring thread — the idea this person keeps returning to without fully naming.
+Find the single most compelling recurring idea — the thing this person keeps coming back to without quite naming.
 
-1. Name it in one vivid, specific phrase. Not "creativity" — but "the moment when structure makes spontaneity possible" or whatever this person's actual version is. Make it feel THEIRS.
-2. Track it through at least 3 specific items in the lake, showing exactly how the idea evolves: where it starts hesitant, where it gets confident, where it contradicts itself, where it resurfaces in a new domain.
-3. Where is this thread leading? What's the natural culmination of this preoccupation — the project, idea, or decision that would represent arriving where they've been heading?
+1. Name it in one specific phrase. Not "creativity" — say what this person's actual version is, in plain words. Make it feel like THEIRS.
+2. Track it through at least 3 specific items, showing how it changes: where it starts shaky, where it gets confident, where it contradicts itself, where it shows up in a new domain.
+3. Where is this heading? Name the specific project, idea, or decision that would represent landing where they've been heading.
 
 ${PLAIN_ENGLISH_RULES}
 Three sentences max. Name the items.`
@@ -629,26 +633,44 @@ ${truncatedSource}
 KNOWLEDGE LAKE — ${corpusSize} items from their complete corpus (thoughts, articles, projects, lists):
 ${contextBlock}
 
-Construct the sharpest possible challenge using THEIR OWN knowledge base:
+Build the sharpest possible challenge using THEIR OWN saved stuff:
 
-1. Identify the core assumption embedded in this item — the thing they're taking for granted.
-2. Find 2-3 specific items in their own corpus that complicate, contradict, or create genuine tension with that assumption. Quote titles. Show exactly why their own thinking creates the problem.
-3. Pose the ONE question they most need to sit with. Not rhetorical — a real question that, if answered honestly, would force an update. Make it sharp enough to be uncomfortable.
+1. Name the assumption they're taking for granted in this item.
+2. Find 2-3 specific items in their own corpus that contradict or push against that assumption. Quote titles. Show exactly why their own thinking creates the problem.
+3. Ask the ONE question they most need to sit with. Real, not rhetorical. Sharp enough to be uncomfortable.
 
-Don't soften it. Don't end with encouragement. Just the challenge. Use their own words and reading against them — constructively, but without mercy.
+Don't soften it. Don't end with encouragement. Just the challenge — using their words and reading against them.
 
-Plain English only. Real words a friend would say. No "leveraging," "unlocking," "synergies," "narrative substrate." No analyst voice. BAD: "Your epistemological framework here is internally inconsistent with the actualization patterns you've documented." GOOD: "Three months ago you wrote that the song needs to be done by August. Now you're talking about reworking the structure. Which one's real?"`
+${PLAIN_ENGLISH_RULES}
+BAD: "Your epistemological framework here is internally inconsistent with the actualization patterns you've documented."
+GOOD: "Three months ago you wrote that the song needs to be done by August. Now you're talking about reworking the structure. Which one's real?"`
             break
 
           default:
             return res.status(400).json({ error: 'Invalid actionType' })
         }
 
-        const result = await model.generateContent(prompt)
-        const responseText = result.response.text()
+        // Up to 2 attempts: if the first response trips the plain-English
+        // voice gate, regenerate once with the specific violations called
+        // out. The Context Engine output is the loudest place corporate
+        // drift used to land — we'd rather show a quiet fallback than ship
+        // analyst voice to the user.
+        let responseText = ''
+        let cleanText: string | null = null
+        for (let attempt = 0; attempt < 2 && cleanText === null; attempt++) {
+          const finalPrompt = attempt === 0
+            ? prompt
+            : `${prompt}\n\nPREVIOUS ATTEMPT TRIPPED THE VOICE GATE: ${responseText.slice(0, 240).replace(/\n+/g, ' ')}\nRewrite using the rules above. No corporate or coach voice. Concrete nouns, short sentences.`
+          const result = await model.generateContent(finalPrompt)
+          responseText = result.response.text()
+          const violations = findVoiceViolations(responseText)
+          if (violations.length === 0 || attempt === 1) {
+            cleanText = responseText
+          }
+        }
 
         return res.status(200).json({
-          result: responseText,
+          result: cleanText ?? responseText,
           actionType,
           itemTitle: sourceTitle,
           connectionCount: connections?.length || 0,

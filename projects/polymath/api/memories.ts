@@ -165,6 +165,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return await handleUpdateTags(req, res)
     }
 
+    // POST: Update themes on a single memory. AI fills these in
+    // automatically during processing; this is the manual override
+    // surface used from the thought detail modal.
+    if (req.method === 'POST' && action === 'update-themes') {
+      if (!req.body && req.headers['content-type']?.includes('application/json')) {
+        const chunks = []
+        for await (const chunk of req) chunks.push(chunk)
+        req.body = JSON.parse(Buffer.concat(chunks).toString())
+      }
+      return await handleUpdateThemes(req, res)
+    }
+
+    // GET: Theme vocabulary across the user's corpus (for the
+    // ThemeEditor autocomplete).
+    if (req.method === 'GET' && action === 'theme-vocab') {
+      return await handleThemeVocab(req, res)
+    }
+
     // ── Auth required for all remaining endpoints ──
     const userId = await getUserId(req)
     if (!userId) {
@@ -2694,4 +2712,78 @@ async function handleUpdateTags(req: any, res: any) {
   }
 
   return res.status(200).json({ tags: merged })
+}
+
+// ── Theme vocabulary across the corpus ──
+async function handleThemeVocab(req: any, res: any) {
+  const userId = await getUserId(req)
+  if (!userId) return res.status(401).json({ error: 'Sign in' })
+  const supabase = getSupabaseClient()
+
+  const { data, error } = await supabase
+    .from('memories')
+    .select('themes')
+    .eq('user_id', userId)
+    .range(0, 4999)
+
+  if (error) {
+    console.error('[theme-vocab] read failed:', error)
+    return res.status(500).json({ error: error.message })
+  }
+
+  const counts = new Map<string, number>()
+  for (const row of (data ?? []) as Array<{ themes: string[] | null }>) {
+    for (const t of row.themes ?? []) {
+      const norm = (t || '').trim().toLowerCase()
+      if (!norm) continue
+      counts.set(norm, (counts.get(norm) ?? 0) + 1)
+    }
+  }
+  const vocab = Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([theme, count]) => ({ theme, count }))
+
+  return res.status(200).json({ vocabulary: vocab })
+}
+
+// ── Update themes on one memory ──
+async function handleUpdateThemes(req: any, res: any) {
+  const userId = await getUserId(req)
+  if (!userId) return res.status(401).json({ error: 'Sign in' })
+
+  const { id, themes } = (req.body ?? {}) as { id?: string; themes?: unknown }
+  if (!id || typeof id !== 'string') return res.status(400).json({ error: 'id required' })
+  if (!Array.isArray(themes)) return res.status(400).json({ error: 'themes must be an array' })
+
+  const cleaned = (themes as unknown[])
+    .map(t => (typeof t === 'string' ? t.trim().toLowerCase() : ''))
+    .filter(t => t.length > 0 && t.length <= 32)
+    .filter((t, i, arr) => arr.indexOf(t) === i)
+    .slice(0, 6)
+
+  const supabase = getSupabaseClient()
+  const { data: existing, error: readErr } = await supabase
+    .from('memories')
+    .select('id')
+    .eq('id', id)
+    .eq('user_id', userId)
+    .single()
+
+  if (readErr || !existing) {
+    console.error('[update-themes] memory not found:', readErr)
+    return res.status(404).json({ error: 'Memory not found' })
+  }
+
+  const { error: updErr } = await supabase
+    .from('memories')
+    .update({ themes: cleaned })
+    .eq('id', id)
+    .eq('user_id', userId)
+
+  if (updErr) {
+    console.error('[update-themes] update failed:', updErr)
+    return res.status(500).json({ error: updErr.message })
+  }
+
+  return res.status(200).json({ themes: cleaned })
 }

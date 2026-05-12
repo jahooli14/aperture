@@ -1074,6 +1074,11 @@ export interface ListSettings {
     active?: string
     completed?: string
   }
+  // Cover overrides — when set, the Lists grid uses these instead of the
+  // backend-derived "first item with an image" cover. Exactly one of the
+  // two should be set at a time; the customise sheet enforces this.
+  cover_image_url?: string | null
+  cover_color?: string | null // CSS rgb triple, e.g. "236, 72, 153"
 }
 
 // Types where status tracking is ON by default (meaningful progression exists)

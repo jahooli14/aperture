@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { Reorder, motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, GripVertical, ListOrdered, Check, Star, ArrowUpDown } from 'lucide-react'
+import { Plus, Trash2, GripVertical, ListOrdered, Check, Star, ArrowUpDown, ImageIcon } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthContext } from '../contexts/AuthContext'
 import { SignInNudge } from '../components/SignInNudge'
@@ -8,6 +8,7 @@ import { useListStore } from '../stores/useListStore'
 import { Button } from '../components/ui/button'
 import { CreateListDialog } from '../components/lists/CreateListDialog'
 import { QuickAddSheet } from '../components/lists/QuickAddSheet'
+import { CustomiseCoverSheet } from '../components/lists/CustomiseCoverSheet'
 import { OptimizedImage } from '../components/ui/optimized-image'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import type { ListType, List } from '../types'
@@ -56,6 +57,8 @@ function ListsPageInner() {
     const [quickAddList, setQuickAddList] = useState<List | null>(null)
     // Long-press action sheet state
     const [actionSheetList, setActionSheetList] = useState<List | null>(null)
+    // Customise-cover sheet state
+    const [customiseList, setCustomiseList] = useState<List | null>(null)
 
     const { confirm, dialog: confirmDialog } = useConfirmDialog()
 
@@ -234,7 +237,7 @@ function ListsPageInner() {
             <header className="page-masthead">
                 <div className="page-masthead-text">
                     <h1 className="page-hero">Your collections.</h1>
-                    <div className="page-eyebrow">Films · books · places · &amp; the rest</div>
+                    <div className="page-eyebrow">{lists.length} {lists.length === 1 ? 'list' : 'lists'}</div>
                 </div>
                 <div className="page-masthead-actions">
                     <button
@@ -425,9 +428,16 @@ function ListsPageInner() {
             {lists.length > 0 && !isReordering && (
                 <div className="grid gap-3 pb-20" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(140px, calc(50% - 6px)), 1fr))' }}>
                 {lists.map((list) => {
-                    const rgb = ListColor(list.type)
-                    const coverImage = listCovers[list.id]
-                    const quoteCover = quoteCovers[list.id]
+                    const typeRgb = ListColor(list.type)
+                    // User overrides win over the auto-derived cover. Image
+                    // beats palette beats backend-derived. When a palette
+                    // colour is set, swap the type accent for it too so
+                    // chrome on the card (chips, dots) stays consistent.
+                    const overrideUrl = list.settings?.cover_image_url ?? null
+                    const overrideColor = list.settings?.cover_color ?? null
+                    const rgb = overrideColor || typeRgb
+                    const coverImage = overrideUrl || (overrideColor ? null : listCovers[list.id])
+                    const quoteCover = overrideUrl || overrideColor ? null : quoteCovers[list.id]
                     const recentlyUpdated = isRecentlyUpdated(list)
                     const itemCount = list.item_count || 0
 
@@ -480,30 +490,45 @@ function ListsPageInner() {
                                         </div>
                                     </div>
                                 ) : (
-                                    // Empty list fallback
-                                    <div className="w-full h-full flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-zinc-950 via-zinc-900 to-black">
-                                        {/* Single gradient background */}
-                                        <div className={`absolute inset-0 bg-gradient-to-br ${ListGradient(list.type)} opacity-30`} />
-
-                                        {/* Simple geometric pattern */}
-                                        <div className="absolute inset-0 opacity-[0.02]" style={{
-                                            backgroundImage: `linear-gradient(rgba(${rgb}, 0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(${rgb}, 0.5) 1px, transparent 1px)`,
-                                            backgroundSize: '40px 40px'
-                                        }} />
-
-                                        {/* Single background icon */}
-                                        <div className="absolute inset-0 flex items-center justify-center opacity-[0.05] scale-150">
-                                            <ListIcon type={list.type} className="h-64 w-64" style={{ color: `rgb(${rgb})` }} />
+                                    // Empty list fallback — a stylised "cover"
+                                    // built from the type colour. Big poster-style
+                                    // gradient + title set in serif, so empty lists
+                                    // read like proper covers in the grid instead
+                                    // of icon-only thumbnails.
+                                    <div
+                                        className="w-full h-full relative overflow-hidden"
+                                        style={{
+                                            background: `linear-gradient(150deg, rgba(${rgb}, 0.85) 0%, rgba(${rgb}, 0.35) 45%, #0a0f1c 100%)`,
+                                        }}
+                                    >
+                                        {/* Soft radial highlight in the top-left */}
+                                        <div
+                                            className="absolute inset-0"
+                                            style={{
+                                                background: `radial-gradient(circle at 25% 18%, rgba(255,255,255,0.18), transparent 55%)`,
+                                            }}
+                                        />
+                                        {/* Big translucent type icon as decorative motif */}
+                                        <div className="absolute -bottom-6 -right-6 opacity-[0.18]">
+                                            <ListIcon
+                                                type={list.type}
+                                                className="h-44 w-44"
+                                                style={{ color: '#ffffff' }}
+                                            />
                                         </div>
-
-                                        {/* Main Icon */}
-                                        <div className="relative z-10 flex flex-col items-center gap-3">
-                                            <div className="relative p-6 rounded-full bg-[var(--glass-surface)] transition-all duration-300" style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1)' }}>
-                                                <ListIcon type={list.type} className="h-10 w-10" style={{ color: `rgb(${rgb})` }} />
-                                            </div>
-                                            <div className="text-xs font-semibold text-[var(--brand-text-primary)]/50 text-center px-2 leading-tight">
+                                        {/* Serif title — feels like a poster, not an icon-card */}
+                                        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 px-4 text-center">
+                                            <p
+                                                className="text-[var(--brand-text-primary)] leading-tight"
+                                                style={{
+                                                    fontFamily: 'var(--brand-font-serif)',
+                                                    fontSize: 'clamp(18px, 4.5vw, 24px)',
+                                                    fontStyle: 'italic',
+                                                    textShadow: '0 2px 12px rgba(0,0,0,0.6)',
+                                                }}
+                                            >
                                                 {list.title}
-                                            </div>
+                                            </p>
                                         </div>
                                     </div>
                                 )}
@@ -638,6 +663,18 @@ function ListsPageInner() {
                                     </button>
                                     <button
                                         onClick={() => {
+                                            const target = actionSheetList
+                                            setActionSheetList(null)
+                                            setCustomiseList(target)
+                                        }}
+                                        className="w-full flex items-center gap-3 px-4 py-4 rounded-xl transition-all hover:bg-[var(--glass-surface)] min-h-[52px]"
+                                        style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface-hover)' }}
+                                    >
+                                        <ImageIcon className="h-4 w-4 text-brand-primary" />
+                                        <span className="text-sm font-bold text-[var(--brand-text-primary)] uppercase tracking-widest">Customise Cover</span>
+                                    </button>
+                                    <button
+                                        onClick={() => {
                                             setActionSheetList(null)
                                             setIsReordering(true)
                                         }}
@@ -673,6 +710,13 @@ function ListsPageInner() {
                     </>
                 )}
             </AnimatePresence>
+
+            {/* Customise Cover Sheet */}
+            <CustomiseCoverSheet
+                list={customiseList}
+                isOpen={!!customiseList}
+                onClose={() => setCustomiseList(null)}
+            />
 
             {confirmDialog}
         </div>
