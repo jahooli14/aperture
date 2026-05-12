@@ -132,29 +132,33 @@ export function FixQueuePage() {
     })
 
     if (resp.ok) {
-      addToast({ title: `Approved: ${draft?.name}`, variant: 'success' })
+      addToast({ title: draft?.name ? `Approved: ${draft.name}` : 'Approved', variant: 'success' })
       fetchItems()
     } else {
-      const err = await resp.json().catch(() => ({ error: 'Failed' }))
-      addToast({ title: err.error || 'Approval failed', variant: 'default' })
+      const err = await resp.json().catch(() => ({ error: 'Approval failed' }))
+      addToast({ title: err.error || 'Approval failed', variant: 'destructive' })
     }
     setApproving(null)
   }
 
   const handleReject = async (item: FixItem) => {
     const headers = await getAuthHeaders()
-    await fetch('/api/fix-queue?action=reject', {
+    const resp = await fetch('/api/fix-queue?action=reject', {
       method: 'POST',
       headers,
       body: JSON.stringify({ item_id: item.id })
     })
 
-    addToast({ title: 'Fix rejected', variant: 'default' })
-    fetchItems()
+    if (resp.ok) {
+      addToast({ title: 'Fix rejected', variant: 'default' })
+      fetchItems()
+    } else {
+      addToast({ title: 'Couldn\'t reject fix', description: 'Try again in a moment.', variant: 'destructive' })
+    }
   }
 
   const handleMarkDone = async (item: FixItem) => {
-    await supabase
+    const { error } = await supabase
       .from('list_items')
       .update({
         status: 'completed',
@@ -166,7 +170,12 @@ export function FixQueuePage() {
       })
       .eq('id', item.id)
 
-    addToast({ title: 'Marked as fixed!', variant: 'success' })
+    if (error) {
+      addToast({ title: 'Couldn\'t mark as fixed', description: 'Try again in a moment.', variant: 'destructive' })
+      return
+    }
+
+    addToast({ title: 'Marked as fixed', variant: 'success' })
     fetchItems()
   }
 

@@ -3,7 +3,7 @@
  * Shown to first-time users to explain Aperture and offer demo data
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Brain, Zap, Layers, ArrowRight, X, Lightbulb } from 'lucide-react'
 import { BrandName } from '../BrandName'
@@ -18,6 +18,16 @@ interface WelcomeModalProps {
 export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: WelcomeModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
+
+  // Close on Escape so keyboard users can dismiss the first-run modal.
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [open, onClose])
 
   if (!open) return null
 

@@ -70,6 +70,17 @@ export function ShapingModal({ project, isOpen, onClose }: ShapingModalProps) {
     }
   }, [isOpen, project.id])
 
+  // Close on Escape so keyboard users can dismiss the chat without hunting
+  // for the X button.
+  useEffect(() => {
+    if (!isOpen) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [isOpen, onClose])
+
   const handleSend = async () => {
     const message = chatInput.trim()
     if (!message || thinking) return
