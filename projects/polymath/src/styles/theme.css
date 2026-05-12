@@ -131,7 +131,7 @@
    accent on the highlight word. No gradient text, no glow. */
 .section-header {
     position: relative;
-    font-size: 1.5rem;
+    font-size: clamp(1.25rem, 4.6vw, 1.5rem);
     line-height: 1.2;
     font-weight: 700;
     color: rgba(255, 255, 255, 0.92);

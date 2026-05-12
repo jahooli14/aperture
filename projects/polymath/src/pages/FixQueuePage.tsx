@@ -183,16 +183,16 @@ export function FixQueuePage() {
 
       {/* Header */}
       <div className="sticky top-0 z-20 backdrop-blur-xl" style={{ backgroundColor: 'rgba(var(--brand-bg-rgb), 0.8)' }}>
-        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-2 rounded-xl hover:bg-white/5 transition-colors">
+        <div className="max-w-2xl mx-auto px-3 sm:px-4 py-3 sm:py-4 flex items-center gap-2 sm:gap-3">
+          <button onClick={() => navigate(-1)} className="p-2 rounded-xl hover:bg-white/5 active:scale-95 transition-all flex-shrink-0">
             <ArrowLeft className="h-5 w-5" style={{ color: 'var(--brand-text-secondary)' }} />
           </button>
-          <Wrench className="h-5 w-5" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
-          <h1 className="text-xl font-bold" style={{ color: 'var(--brand-text)' }}>Fix Queue</h1>
-          <span className="text-sm ml-auto" style={{ color: 'var(--brand-text-tertiary)' }}>
+          <Wrench className="h-5 w-5 flex-shrink-0" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
+          <h1 className="text-lg sm:text-xl font-bold truncate" style={{ color: 'var(--brand-text)' }}>Fix Queue</h1>
+          <span className="text-xs sm:text-sm ml-auto whitespace-nowrap" style={{ color: 'var(--brand-text-tertiary)' }}>
             {deployed.length} running
           </span>
-          <button onClick={() => { setLoading(true); fetchItems() }} className="p-2 rounded-xl hover:bg-white/5">
+          <button onClick={() => { setLoading(true); fetchItems() }} className="p-2 rounded-xl hover:bg-white/5 active:scale-95 transition-all flex-shrink-0">
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} style={{ color: 'var(--brand-text-tertiary)' }} />
           </button>
         </div>

@@ -27,7 +27,8 @@ export function YourHourHeader() {
 
         <button
           onClick={() => navigate('/search')}
-          className="h-9 w-9 rounded-full flex items-center justify-center transition-all hover:scale-105"
+          aria-label="Search everything"
+          className="h-11 w-11 sm:h-10 sm:w-10 rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95"
           style={{
             background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.15), rgba(var(--brand-primary-rgb),0.04))',
             border: '1px solid rgba(var(--brand-primary-rgb),0.25)',
@@ -36,7 +37,7 @@ export function YourHourHeader() {
           }}
           title="Search everything"
         >
-          <Search className="h-4 w-4" />
+          <Search className="h-[18px] w-[18px] sm:h-4 sm:w-4" />
         </button>
       </div>
     </div>
