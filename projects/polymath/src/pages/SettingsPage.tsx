@@ -101,8 +101,8 @@ export function SettingsPage() {
       })
     } catch (error) {
       addToast({
-        title: 'Error',
-        description: 'Failed to regenerate connections',
+        title: 'Couldn\'t rebuild connections',
+        description: 'Try again in a moment.',
         variant: 'destructive'
       })
     } finally {
@@ -546,10 +546,10 @@ export function SettingsPage() {
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold premium-text-platinum text-sm">
-                    Rediscover Connections
+                    Find new connections
                   </h3>
                   <p style={{ color: 'var(--brand-text-secondary)', fontSize: '0.8rem' }}>
-                    Re-scan everything to find new links between your ideas
+                    Re-scan everything for new links between your ideas.
                   </p>
                 </div>
               </button>

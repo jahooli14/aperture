@@ -675,7 +675,7 @@ export function BedtimePage() {
           }}
         >
           <p className="text-sm leading-relaxed" style={{ color: "var(--brand-primary)" }}>
-            <strong className="premium-text-platinum">Reflection ritual:</strong> These prompts are designed to spark gentle curiosity before sleep. Let them simmer in your subconscious overnightinsights often arrive in the morning. Try Zen Mode for a peaceful, one-at-a-time experience.
+            <strong className="premium-text-platinum">Reflection ritual:</strong> Quiet prompts for the end of the day. Let them sit overnight — the good answers usually arrive in the morning. Zen Mode shows them one at a time.
           </p>
         </motion.div>
 

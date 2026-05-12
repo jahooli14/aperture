@@ -213,8 +213,8 @@ export function ReadingPage() {
               if (status === 'complete') {
                 next.delete(article.id)
                 addToast({
-                  title: ' Graph Updated',
-                  description: `Extracted ${updatedArticle?.entities?.length || 5} new knowledge nodes from "${updatedArticle?.title}"`,
+                  title: 'Article saved',
+                  description: `"${updatedArticle?.title}" extracted and linked.`,
                   variant: 'success',
                 })
                 fetchArticles(undefined, true) // Force refresh for auto-recovery
@@ -295,8 +295,8 @@ export function ReadingPage() {
       const article = await saveArticle({ url: item.link })
 
       addToast({
-        title: 'Injecting Knowledge...',
-        description: `Added "${article.title || 'article'}" to your graph`,
+        title: 'Article saved',
+        description: `"${article.title || 'article'}" added to your reading.`,
         variant: 'success',
       })
       fetchArticles()
@@ -386,8 +386,8 @@ export function ReadingPage() {
               if (status === 'complete') {
                 next.delete(article.id)
                 addToast({
-                  title: 'Article ready!',
-                  description: updatedArticle?.title || 'Content extracted successfully',
+                  title: 'Article ready',
+                  description: updatedArticle?.title || 'Content extracted.',
                   variant: 'success',
                 })
 
@@ -469,8 +469,8 @@ export function ReadingPage() {
                 if (status === 'complete') {
                   next.delete(article.id)
                   addToast({
-                    title: 'Article ready!',
-                    description: updatedArticle?.title || 'Content extracted successfully',
+                    title: 'Article ready',
+                    description: updatedArticle?.title || 'Content extracted.',
                     variant: 'success',
                   })
                   if (updatedArticle) {
@@ -562,8 +562,8 @@ export function ReadingPage() {
             if (status === 'complete') {
               next.delete(article.id)
               addToast({
-                title: 'Article ready!',
-                description: updatedArticle?.title || 'Content extracted successfully',
+                title: 'Article ready',
+                description: updatedArticle?.title || 'Content extracted.',
                 variant: 'success',
               })
               fetchArticles(undefined, true)
@@ -702,8 +702,8 @@ export function ReadingPage() {
       bulkSelection.exitSelectionMode()
     } catch (error) {
       addToast({
-        title: 'Error',
-        description: 'Failed to archive articles',
+        title: 'Couldn\'t archive articles',
+        description: 'Try again in a moment.',
         variant: 'destructive',
       })
     } finally {
@@ -730,8 +730,8 @@ export function ReadingPage() {
       bulkSelection.exitSelectionMode()
     } catch (error) {
       addToast({
-        title: 'Error',
-        description: 'Failed to delete articles',
+        title: 'Couldn\'t delete articles',
+        description: 'Try again in a moment.',
         variant: 'destructive',
       })
     } finally {
@@ -998,7 +998,7 @@ export function ReadingPage() {
                     <EmptyState
                       icon={BookOpen}
                       title="No updates yet"
-                      description='Click "Sync Feeds" to fetch latest articles from your RSS feeds'
+                      description='Tap the button to check your feeds for new articles.'
                       action={
                         <button
                           onClick={handleRSSSync}
@@ -1170,8 +1170,8 @@ export function ReadingPage() {
                 if (status === 'complete') {
                   next.delete(articleId)
                   addToast({
-                    title: ' Article ready!',
-                    description: updatedArticle?.title || 'Content extracted successfully',
+                    title: 'Article ready',
+                    description: updatedArticle?.title || 'Content extracted.',
                     variant: 'success',
                   })
                   fetchArticles()

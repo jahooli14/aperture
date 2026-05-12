@@ -166,7 +166,7 @@ const CompletionCelebration = ({
                             </motion.div>
 
                             <h3 className="text-lg font-black text-[var(--brand-text-primary)] uppercase tracking-tight mb-1">
-                                Marked as done!
+                                Done
                             </h3>
                             <p className="text-sm text-[var(--brand-text-primary)]/40 mb-6 font-mono truncate">{item.content}</p>
 

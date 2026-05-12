@@ -262,8 +262,8 @@ export function ReaderPage() {
       window.getSelection()?.removeAllRanges()
     } catch (error) {
       addToast({
-        title: 'Error',
-        description: 'Failed to save highlight',
+        title: 'Couldn\'t save highlight',
+        description: 'Try again in a moment.',
         variant: 'destructive',
       })
     }
@@ -286,8 +286,8 @@ export function ReaderPage() {
       navigate(-1)
     } catch (error) {
       addToast({
-        title: 'Error',
-        description: 'Failed to archive',
+        title: 'Couldn\'t archive',
+        description: 'Try again in a moment.',
         variant: 'destructive',
       })
     }

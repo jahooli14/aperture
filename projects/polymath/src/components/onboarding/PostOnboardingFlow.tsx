@@ -146,13 +146,13 @@ export function PostOnboardingFlow({ analysis, sparkedSuggestion, transcripts = 
     ? [
         {
           role: 'model' as const,
-          content: `Based on everything you shared — your interest in **${topTheme}**, your knack for **${topCapability}** — here's what stood out:\n\n**${sparkedSuggestion.title}**\n\n${sparkedSuggestion.description}\n\n_${sparkedSuggestion.reasoning}_\n\nLet's shape this into something real. What version of this would only you make?`,
+          content: `Based on what you shared — your interest in **${topTheme}**, your knack for **${topCapability}** — here's what stood out:\n\n**${sparkedSuggestion.title}**\n\n${sparkedSuggestion.description}\n\n_${sparkedSuggestion.reasoning}_\n\nMake it yours. What version of this would only you make?`,
         },
       ]
     : [
         {
           role: 'model' as const,
-          content: `I've been thinking about what you shared. Your mind keeps circling back to **${topTheme}**, and you've got a real strength in **${topCapability}**.\n\n${analysis.first_insight || 'There\'s a project hiding in those threads.'}\n\nLet's find it. What\'s the thing you keep wanting to build but haven\'t started?`,
+          content: `I've been thinking about what you shared. Your mind keeps circling back to **${topTheme}**, and you've got a real strength in **${topCapability}**.\n\n${analysis.first_insight || 'There\'s a project hiding in those threads.'}\n\nName it. What\'s the thing you keep wanting to build but haven\'t started?`,
         },
       ]
 
