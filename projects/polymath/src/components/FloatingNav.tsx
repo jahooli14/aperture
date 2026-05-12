@@ -5,8 +5,8 @@
 
 import React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Home, Lightbulb, Rocket, ListChecks, User, LogOut, Settings } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { Home, Lightbulb, Rocket, ListChecks } from 'lucide-react'
 import { VoiceFAB } from './VoiceFAB'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useKeyboardVisible } from '../hooks/useKeyboardVisible'
@@ -16,7 +16,6 @@ import type { Memory } from '../types'
 import { useOfflineSync } from '../hooks/useOfflineSync'
 import { useToast } from './ui/toast'
 import { useAuthContext } from '../contexts/AuthContext'
-import { supabase } from '../lib/supabase'
 
 // Schema colors for each section — unique per page to reduce blue monotony
 const SCHEMA_COLORS = {
@@ -54,7 +53,6 @@ export function FloatingNav() {
   const { addToast } = useToast()
   const navigate = useNavigate()
   const { user } = useAuthContext()
-  const [showUserMenu, setShowUserMenu] = React.useState(false)
 
   const location = useLocation()
   const [isHidden, setIsHidden] = React.useState(false)
@@ -90,11 +88,6 @@ export function FloatingNav() {
   // Reset visibility on route change (e.g. leaving Reader page)
   React.useEffect(() => {
     setIsHidden(false)
-  }, [location.pathname])
-
-  // Close user menu on route change
-  React.useEffect(() => {
-    setShowUserMenu(false)
   }, [location.pathname])
 
   // Listen for voice captures queued offline (from useMediaRecorderVoice)
@@ -139,24 +132,6 @@ export function FloatingNav() {
   const handleVoiceFABTap = () => {
     // Force voice capture as requested by user, bypassing project-specific interception
     return false
-  }
-
-  const handleSignOut = async () => {
-    setShowUserMenu(false)
-    await supabase.auth.signOut()
-    navigate('/')
-  }
-
-  const getAvatarContent = () => {
-    if (!user) return null
-    const name = user.user_metadata?.full_name || user.email || ''
-    const initials = name
-      .split(' ')
-      .map((n: string) => n[0])
-      .slice(0, 2)
-      .join('')
-      .toUpperCase()
-    return initials || <User className="h-3.5 w-3.5" />
   }
 
   const handleVoiceTranscript = async (rawText: string) => {
@@ -322,81 +297,13 @@ export function FloatingNav() {
 
   return (
     <>
-      {/* Replaced inline FAB with Universal Action FAB */}
+      {/* Universal voice/action FAB — now centered above the nav (raised
+          middle slot) rather than the right-edge orphan it used to be. */}
       <VoiceFAB
         onTranscript={handleVoiceTranscript}
         hidden={shouldHide || isKeyboardVisible}
         onTap={handleVoiceFABTap}
       />
-
-      {/* User menu popup */}
-      <AnimatePresence>
-        {showUserMenu && user && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[9998]"
-              onClick={() => setShowUserMenu(false)}
-            />
-            {/* Menu */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 8 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-              className="fixed z-[9999] right-4"
-              style={{
-                bottom: 'calc(var(--safe-area-inset-bottom, 20px) + 5rem)',
-              }}
-            >
-              <div
-                className="rounded-2xl overflow-hidden min-w-[200px]"
-                style={{
-                  backgroundColor: 'rgba(15, 24, 41, 0.96)',
-                  backdropFilter: 'blur(20px)',
-                  WebkitBackdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-                }}
-              >
-                {/* User info */}
-                <div className="px-4 py-3 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-                  <p className="text-xs font-semibold truncate" style={{ color: 'var(--brand-text-primary)' }}>
-                    {user.user_metadata?.full_name || 'signed in'}
-                  </p>
-                  <p className="text-xs truncate mt-0.5" style={{ color: 'var(--brand-text-muted)' }}>
-                    {user.email}
-                  </p>
-                </div>
-                {/* Settings */}
-                <button
-                  onClick={() => {
-                    setShowUserMenu(false)
-                    navigate('/settings')
-                  }}
-                  className="flex items-center gap-3 w-full px-4 py-3 text-sm transition-colors hover:bg-white/5 border-b"
-                  style={{ color: 'var(--brand-text-secondary)', borderColor: 'rgba(255,255,255,0.06)' }}
-                >
-                  <Settings className="h-4 w-4 flex-shrink-0" />
-                  settings
-                </button>
-                {/* Sign out */}
-                <button
-                  onClick={handleSignOut}
-                  className="flex items-center gap-3 w-full px-4 py-3 text-sm transition-colors hover:bg-white/5"
-                  style={{ color: 'var(--brand-text-secondary)' }}
-                >
-                  <LogOut className="h-4 w-4 flex-shrink-0" />
-                  sign out
-                </button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
 
       {/* Bottom Navigation Bar - Premium Glassmorphism */}
       <motion.nav
@@ -433,156 +340,80 @@ export function FloatingNav() {
                 'inset 0 -1px 0 rgba(0,0,0,0.30)',
             }}
           >
-            {/* Nav tabs */}
+            {/* Four equal-flex tabs with a centered spacer for the raised
+                voice FAB. The "you" tab has been removed — settings + sign
+                out live on the /settings page. */}
             <div className="flex flex-1 items-center">
-              {NAV_OPTIONS.map((option) => {
-                const Icon = option.icon
-                const colors = SCHEMA_COLORS[option.color]
-                const active = isActive(option)
-
-                const dot = option.id === 'thoughts' && hasRecentMemories
-
-                return (
-                  <motion.button
-                    key={option.id}
-                    onClick={() => handleNavClick(option)}
-                    whileTap={{ scale: 0.85 }}
-                    className="flex flex-col items-center justify-center relative min-w-0"
-                    style={{
-                      flex: '1 1 0px',
-                      paddingTop: '8px',
-                      paddingBottom: '8px',
-                      gap: '4px',
-                    }}
-                  >
-                    {/* Icon + badge wrapper */}
-                    <div className="relative z-10">
-                      <motion.div
-                        animate={{ scale: active ? 1.1 : 1 }}
-                        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                      >
-                        <Icon
-                          style={{
-                            width: '20px',
-                            height: '20px',
-                            color: active ? colors.primary : 'rgba(255,255,255,0.5)',
-                            transition: 'color 200ms',
-                            filter: active ? `drop-shadow(0 0 6px ${colors.glow})` : 'none',
-                            strokeWidth: active ? 2 : 1.5,
-                          }}
-                        />
-                      </motion.div>
-
-                      {/* Dot badge (recent thoughts) */}
-                      {dot && (
-                        <span
-                          className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full"
+              {(() => {
+                const renderTab = (option: NavOption) => {
+                  const Icon = option.icon
+                  const colors = SCHEMA_COLORS[option.color]
+                  const active = isActive(option)
+                  const dot = option.id === 'thoughts' && hasRecentMemories
+                  return (
+                    <motion.button
+                      key={option.id}
+                      onClick={() => handleNavClick(option)}
+                      whileTap={{ scale: 0.85 }}
+                      className="flex flex-col items-center justify-center relative min-w-0"
+                      style={{
+                        flex: '1 1 0px',
+                        paddingTop: '8px',
+                        paddingBottom: '8px',
+                        gap: '4px',
+                      }}
+                    >
+                      <div className="relative z-10">
+                        <motion.div
+                          animate={{ scale: active ? 1.1 : 1 }}
+                          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                        >
+                          <Icon
+                            style={{
+                              width: '20px',
+                              height: '20px',
+                              color: active ? colors.primary : 'rgba(255,255,255,0.5)',
+                              transition: 'color 200ms',
+                              filter: active ? `drop-shadow(0 0 6px ${colors.glow})` : 'none',
+                              strokeWidth: active ? 2 : 1.5,
+                            }}
+                          />
+                        </motion.div>
+                        {dot && (
+                          <span
+                            className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full"
+                            style={{
+                              background: colors.primary,
+                              boxShadow: `0 0 4px ${colors.glow}`,
+                            }}
+                          />
+                        )}
+                      </div>
+                      {active && (
+                        <motion.div
+                          layoutId="floatingNavActiveDot"
+                          className="w-1 h-1 rounded-full"
                           style={{
                             background: colors.primary,
-                            boxShadow: `0 0 4px ${colors.glow}`
+                            boxShadow: `0 0 8px ${colors.glow}, 0 0 16px ${colors.glow}`,
                           }}
+                          transition={{ type: 'spring', stiffness: 400, damping: 35 }}
                         />
                       )}
-                    </div>
-
-                    {/* Glowing dot indicator for active tab */}
-                    {active && (
-                      <motion.div
-                        layoutId="floatingNavActiveDot"
-                        className="w-1 h-1 rounded-full"
-                        style={{
-                          background: colors.primary,
-                          boxShadow: `0 0 8px ${colors.glow}, 0 0 16px ${colors.glow}`,
-                        }}
-                        transition={{ type: 'spring', stiffness: 400, damping: 35 }}
-                      />
-                    )}
-                  </motion.button>
-                )
-              })}
-            </div>
-
-            {/* User / Login button */}
-            <motion.button
-              whileTap={{ scale: 0.85 }}
-              onClick={() => {
-                if (user) {
-                  setShowUserMenu(prev => !prev)
-                } else {
-                  navigate('/login')
+                    </motion.button>
+                  )
                 }
-              }}
-              className="flex flex-col items-center justify-center relative flex-shrink-0"
-              style={{
-                width: '44px',
-                paddingTop: '8px',
-                paddingBottom: '8px',
-              }}
-            >
-              {user ? (
-                <>
-                  {/* Avatar circle */}
-                  <motion.div
-                    animate={{ scale: showUserMenu ? 1.12 : 1 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold"
-                    style={{
-                      background: showUserMenu
-                        ? 'linear-gradient(135deg, rgb(var(--brand-primary-rgb)), rgb(var(--color-accent-light-rgb)))'
-                        : 'rgba(var(--brand-primary-rgb), 0.2)',
-                      border: `1.5px solid ${showUserMenu ? 'rgb(var(--brand-primary-rgb))' : 'rgba(var(--brand-primary-rgb),0.35)'}`,
-                      color: showUserMenu ? '#fff' : 'rgb(var(--brand-primary-rgb))',
-                      boxShadow: showUserMenu ? '0 0 10px rgba(var(--brand-primary-rgb),0.4)' : 'none',
-                      transition: 'all 200ms',
-                    }}
-                  >
-                    {getAvatarContent()}
-                  </motion.div>
-                  <span
-                    className="font-semibold"
-                    style={{
-                      fontSize: '10px',
-                      letterSpacing: '0.04em',
-                      lineHeight: 1,
-                      color: showUserMenu ? 'rgb(var(--brand-primary-rgb))' : 'rgba(255,255,255,0.38)',
-                      transition: 'color 200ms',
-                    }}
-                  >
-                    you
-                  </span>
-                </>
-              ) : (
-                <>
-                  <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    className="w-7 h-7 rounded-full flex items-center justify-center"
-                    style={{
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1.5px dashed rgba(255,255,255,0.2)',
-                    }}
-                  >
-                    <User
-                      style={{
-                        width: '14px',
-                        height: '14px',
-                        color: 'rgba(255,255,255,0.38)',
-                      }}
-                    />
-                  </motion.div>
-                  <span
-                    className="font-semibold"
-                    style={{
-                      fontSize: '10px',
-                      letterSpacing: '0.04em',
-                      lineHeight: 1,
-                      color: 'rgba(255,255,255,0.38)',
-                    }}
-                  >
-                    sign in
-                  </span>
-                </>
-              )}
-            </motion.button>
+                return (
+                  <>
+                    {NAV_OPTIONS.slice(0, 2).map(renderTab)}
+                    {/* Spacer for the raised voice FAB that sits above the
+                        nav center. Keeps tap targets on either side of it. */}
+                    <div aria-hidden style={{ width: '68px', flexShrink: 0 }} />
+                    {NAV_OPTIONS.slice(2).map(renderTab)}
+                  </>
+                )
+              })()}
+            </div>
           </div>
         </div>
       </motion.nav>

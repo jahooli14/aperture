@@ -1,9 +1,10 @@
 /**
- * UpNextMini — the two-up "up next" row used on the home page. Pulls
- * the first two pinned projects from the Up Next queue and renders
- * them as ProjectMiniCards side-by-side. Hidden when no project is
- * pinned. The full Up Next list (with reorder + unpin) lives on the
- * Projects page via UpNextShelf.
+ * UpNextMini — two-up "soon" row on the home. Pinned projects from the
+ * Up Next queue, rendered with the ghost variant — outline-only cards
+ * that read as "further away" than the recent group above.
+ *
+ * No section heading — group identity comes from the cards' lighter
+ * material and the seam hairline above.
  */
 
 import { useUpNextProjects } from '../../stores/useProjectStore'
@@ -16,18 +17,16 @@ export function UpNextMini() {
   const shown = projects.slice(0, 2)
 
   return (
-    <div>
-      <h2 className="section-header">up <span>next</span></h2>
-      <div className="grid grid-cols-2 gap-3 items-start pb-3">
-        {shown.map((p, i) => (
-          <ProjectMiniCard
-            key={p.id}
-            project={p}
-            index={i}
-            meta={`#${i + 1} in queue`}
-          />
-        ))}
-      </div>
+    <div className="grid grid-cols-2 gap-3 items-stretch">
+      {shown.map((p, i) => (
+        <ProjectMiniCard
+          key={p.id}
+          project={p}
+          index={i}
+          variant="ghost"
+          meta={`#${i + 1} in queue`}
+        />
+      ))}
     </div>
   )
 }

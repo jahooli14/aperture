@@ -1,118 +1,188 @@
 /**
- * ProjectMiniCard — compact two-up card used in the Recently Active
- * and Up Next sections on the home page.
+ * ProjectMiniCard — compact two-up card used in the home's project rows.
  *
- * Editorial newspaper treatment:
- *   • Big serif italic numeral watermark (01 / 02 …) behind the title
- *   • Vertical theme stripe on the left edge — the "section spine"
- *   • Even-indexed cards stagger down ~10px so the row reads like a
- *     magazine spread, not a rigid 2-up grid
- *   • Small inline ▶ button starts a focus session without navigating
+ * Two variants drive the home's atmospheric stack:
+ *   • glass — recent / active. Filled glass surface with accent dot + soft
+ *     inner corner vignette in the project's accent colour.
+ *   • ghost — soon / queued. Outline-only. Same anatomy, quieter material —
+ *     reads as "further away" without anyone labelling it.
+ *
+ * Section identity on the home now lives in material, not in headings.
+ * The card carries its own framing (accent dot, type icon, mode line).
  */
 
 import { useNavigate } from 'react-router-dom'
-import { Play } from 'lucide-react'
+import {
+  Play, PenLine, Cpu, Palette, Music, Briefcase, Sparkles, Wand2, BookOpen, Box,
+} from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { getTheme } from '../../lib/projectTheme'
 import { haptic } from '../../utils/haptics'
 import { useStartProjectSession } from '../../hooks/useStartProjectSession'
 import type { Project } from '../../types'
 
-interface ProjectMiniCardProps {
-  project: Project
-  /** Small meta line under the title (e.g. "yesterday", "#1 in queue"). */
-  meta?: string
-  /** Zero-based index within its row. Drives the editorial numeral + the
-   *  asymmetric stagger so the two cards don't read as a flat 2×2 table. */
-  index?: number
+const TYPE_ICONS: Record<string, LucideIcon> = {
+  writing: PenLine,
+  tech: Cpu,
+  art: Palette,
+  music: Music,
+  business: Briefcase,
+  life: Sparkles,
+  creative: Wand2,
+  learning: BookOpen,
 }
 
-export function ProjectMiniCard({ project, meta, index = 0 }: ProjectMiniCardProps) {
+function iconForType(type?: string): LucideIcon {
+  const t = (type || '').toLowerCase().trim()
+  return TYPE_ICONS[t] || Box
+}
+
+export type MiniCardVariant = 'glass' | 'ghost'
+
+interface ProjectMiniCardProps {
+  project: Project
+  /** Mode-framing sub-line ("from your note last night", "#1 in queue", "3w ago"). */
+  meta?: string
+  /** Zero-based index within its row. Drives the corner vignette side — even
+   *  cards vignette top-left, odd cards top-right. Subtle, but each card
+   *  breathes in its own direction. */
+  index?: number
+  /** Visual weight. Glass = filled (recent). Ghost = outline (soon). */
+  variant?: MiniCardVariant
+}
+
+export function ProjectMiniCard({
+  project,
+  meta,
+  index = 0,
+  variant = 'glass',
+}: ProjectMiniCardProps) {
   const navigate = useNavigate()
   const theme = getTheme(project.type || 'other', project.title)
   const { start, loading } = useStartProjectSession(project.id)
+  const TypeIcon = iconForType(project.type)
 
   const isOdd = index % 2 === 1
-  const numeral = String(index + 1).padStart(2, '0')
+  const isGhost = variant === 'ghost'
+
+  // Surface treatment: glass = filled with project ambient + vignette.
+  // Ghost = nearly transparent, hairline border only. Same anatomy
+  // inside, different material outside.
+  const surface = isGhost
+    ? {
+        background: 'rgba(15, 24, 41, 0.30)',
+        border: `1px solid rgba(${theme.rgb}, 0.18)`,
+        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.025)`,
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+      }
+    : {
+        background: `linear-gradient(155deg, rgba(${theme.rgb}, 0.11) 0%, rgba(15,24,41,0.55) 70%)`,
+        border: `1px solid rgba(${theme.rgb}, 0.28)`,
+        boxShadow:
+          `0 10px 26px -12px rgba(0,0,0,0.5),` +
+          `0 0 22px rgba(${theme.rgb}, 0.10),` +
+          `inset 0 1px 0 rgba(255,255,255,0.05)`,
+        backdropFilter: 'blur(14px) saturate(140%)',
+        WebkitBackdropFilter: 'blur(14px) saturate(140%)',
+      }
+
+  // Alternating corner vignette — top-left on even cards, top-right on odd.
+  // Subtle radial wash in the project accent. Read as "lit from a corner"
+  // rather than a flat panel. Skipped on ghost cards (they're meant quiet).
+  const vignetteCorner = isOdd ? '100% 0%' : '0% 0%'
+  const vignette = isGhost
+    ? null
+    : `radial-gradient(circle at ${vignetteCorner}, rgba(${theme.rgb}, 0.16) 0%, transparent 55%)`
 
   return (
     <button
       type="button"
       onClick={() => { haptic.light(); navigate(`/projects/${project.id}`) }}
-      className="group relative w-full text-left rounded-2xl px-3.5 py-3.5 pl-5 transition-all hover:brightness-110 hover:-translate-y-1 active:scale-[0.99]"
+      className="group relative w-full text-left transition-all hover:-translate-y-0.5 active:scale-[0.99]"
       style={{
-        background: `linear-gradient(155deg, rgba(${theme.rgb}, 0.12) 0%, rgba(15,24,41,0.55) 65%)`,
-        border: `1px solid rgba(${theme.rgb}, 0.30)`,
-        boxShadow:
-          `0 14px 32px -12px rgba(0,0,0,0.55),` +
-          `0 4px 10px rgba(0,0,0,0.20),` +
-          `0 0 22px rgba(${theme.rgb}, 0.12),` +
-          `inset 0 1px 0 rgba(255,255,255,0.06)`,
-        minHeight: '108px',
-        backdropFilter: 'blur(14px) saturate(160%)',
-        WebkitBackdropFilter: 'blur(14px) saturate(160%)',
-        transform: isOdd ? 'translateY(12px)' : 'translateY(0)',
+        ...surface,
+        borderRadius: '18px',
+        padding: '14px',
+        minHeight: '120px',
       }}
     >
-      {/* Left-edge "section spine" — replaces the top hairline */}
-      <span
-        aria-hidden
-        className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r-full"
-        style={{
-          background: `linear-gradient(180deg, rgba(${theme.rgb}, 0.9), rgba(${theme.rgb}, 0.25))`,
-          boxShadow: `0 0 12px rgba(${theme.rgb}, 0.55)`,
-        }}
-      />
+      {/* Corner vignette — only on glass variant. */}
+      {vignette && (
+        <span
+          aria-hidden
+          className="absolute pointer-events-none"
+          style={{ inset: 0, background: vignette, borderRadius: '18px' }}
+        />
+      )}
 
-      {/* Editorial numeral, faint serif italic, sits behind the title */}
-      <span
-        aria-hidden
-        className="absolute top-1 right-3 select-none pointer-events-none italic font-bold leading-none"
-        style={{
-          fontFamily: 'var(--brand-font-serif)',
-          fontSize: '44px',
-          color: theme.text,
-          opacity: 0.10,
-          letterSpacing: '-0.04em',
-        }}
-      >
-        {numeral}
-      </span>
+      <div className="relative z-10 flex flex-col gap-1.5 h-full min-h-[92px]">
+        {/* Top row: accent dot (left), type icon (right). */}
+        <div className="flex items-center justify-between">
+          <span
+            aria-hidden
+            className="block rounded-full"
+            style={{
+              width: '6px',
+              height: '6px',
+              background: `rgb(${theme.rgb})`,
+              boxShadow: isGhost ? 'none' : `0 0 8px rgba(${theme.rgb}, 0.6)`,
+            }}
+          />
+          <TypeIcon
+            className="h-3.5 w-3.5"
+            style={{ color: `rgba(${theme.rgb}, ${isGhost ? 0.45 : 0.6})` }}
+            strokeWidth={1.75}
+          />
+        </div>
 
-      <div className="relative z-10 flex flex-col gap-1.5 h-full min-h-[88px]">
+        {/* Title. */}
         <h4
-          className="text-[13px] font-bold leading-snug line-clamp-3 text-[var(--brand-text-primary)] pr-7"
-          style={{ textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}
+          className="text-[13px] font-bold leading-snug line-clamp-3 text-[var(--brand-text-primary)] mt-0.5"
+          style={{
+            textShadow: isGhost ? 'none' : '0 1px 2px rgba(0,0,0,0.4)',
+            opacity: isGhost ? 0.85 : 1,
+          }}
         >
           {project.title}
         </h4>
 
+        {/* Mode framing sub-line. Plain — no italic, no serif. */}
         {meta && (
           <p
-            className="text-[10.5px] italic opacity-75"
-            style={{ color: theme.text, fontFamily: 'var(--brand-font-serif)' }}
+            className="text-[10.5px] font-medium leading-snug"
+            style={{ color: 'rgba(255,255,255,0.55)' }}
           >
             {meta}
           </p>
         )}
 
+        {/* Bottom row: small play glyph. Inherits project accent. */}
         <div className="mt-auto flex items-center justify-end pt-1">
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); haptic.medium(); start() }}
             disabled={loading}
             aria-label={`Start session for ${project.title}`}
-            className="h-7 w-7 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95 disabled:opacity-60"
-            style={{
-              background: `linear-gradient(135deg, rgba(${theme.rgb}, 0.95), rgba(${theme.rgb}, 0.65))`,
-              boxShadow: `0 4px 12px -2px rgba(${theme.rgb}, 0.45), inset 0 1px 0 rgba(255,255,255,0.25)`,
-              border: `1px solid rgba(${theme.rgb}, 0.45)`,
-              color: '#0b0f1a',
-            }}
+            className="h-7 w-7 rounded-full flex items-center justify-center transition-transform hover:scale-110 active:scale-95 disabled:opacity-60"
+            style={isGhost
+              ? {
+                  background: 'transparent',
+                  border: `1px solid rgba(${theme.rgb}, 0.45)`,
+                  color: `rgb(${theme.rgb})`,
+                }
+              : {
+                  background: `linear-gradient(135deg, rgba(${theme.rgb}, 0.95), rgba(${theme.rgb}, 0.70))`,
+                  boxShadow: `0 4px 12px -2px rgba(${theme.rgb}, 0.45), inset 0 1px 0 rgba(255,255,255,0.22)`,
+                  border: `1px solid rgba(${theme.rgb}, 0.45)`,
+                  color: '#0b0f1a',
+                }
+            }
           >
             {loading ? (
               <span
-                className="block w-2.5 h-2.5 rounded-full animate-pulse"
-                style={{ background: '#0b0f1a' }}
+                className="block w-2 h-2 rounded-full animate-pulse"
+                style={{ background: isGhost ? `rgb(${theme.rgb})` : '#0b0f1a' }}
               />
             ) : (
               <Play className="h-3 w-3 fill-current" style={{ marginLeft: '1px' }} />

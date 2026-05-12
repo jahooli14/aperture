@@ -33,9 +33,10 @@ function formatRelativeTime(dateStr?: string): string {
 
 interface KeepGoingCardProps {
   project: Project | null
-  /** Heading shown above the card. Pass an inline JSX node so the accent
-   *  word can use the same `<span>` trick as other section headers. */
-  heading: React.ReactNode
+  /** Optional heading rendered above the card. Omit on the home — the
+   *  home stack uses atmospheric separation, not labels. Other surfaces
+   *  may still want a heading. */
+  heading?: React.ReactNode
   /** Shown when the project slot is empty. Hidden if not provided. */
   emptyState?: React.ReactNode
 }
@@ -66,7 +67,7 @@ export function KeepGoingCard({ project, heading, emptyState }: KeepGoingCardPro
     if (!emptyState) return null
     return (
       <div>
-        <h2 className="section-header">{heading}</h2>
+        {heading && <h2 className="section-header">{heading}</h2>}
         {emptyState}
       </div>
     )
@@ -98,25 +99,34 @@ export function KeepGoingCard({ project, heading, emptyState }: KeepGoingCardPro
 
   return (
     <div>
-      <h2 className="section-header">{heading}</h2>
+      {heading && <h2 className="section-header">{heading}</h2>}
       <div
         className="rounded-2xl p-5 flex flex-col overflow-hidden relative transition-all duration-700 cursor-pointer"
         onClick={() => navigate(`/projects/${project.id}`)}
         style={{
-          background: `linear-gradient(135deg, rgba(${theme.rgb}, 0.07) 0%, rgba(15,24,41,0.55) 70%)`,
+          // Hero card breathes the project's accent — soft ambient wash
+          // from one corner, deepening into the dark surface. The only
+          // saturated card on the home; everything below recedes from this.
+          background:
+            `radial-gradient(circle at 0% 0%, rgba(${theme.rgb}, 0.18) 0%, transparent 55%),` +
+            `linear-gradient(135deg, rgba(${theme.rgb}, 0.10) 0%, rgba(15,24,41,0.55) 70%)`,
           backdropFilter: 'blur(18px)',
-          border: `1px solid ${dormancyColor ?? `rgba(${theme.rgb}, 0.22)`}`,
+          border: `1px solid ${dormancyColor ?? `rgba(${theme.rgb}, 0.28)`}`,
           boxShadow: dormancyColor
-            ? `0 0 28px ${dormancyColor.replace('0.55', '0.08')}, 0 6px 22px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)`
-            : `0 0 32px -10px rgba(${theme.rgb}, 0.18), 0 6px 22px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)`,
+            ? `0 0 28px ${dormancyColor.replace('0.55', '0.08')}, 0 12px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05)`
+            : `0 0 40px -8px rgba(${theme.rgb}, 0.22), 0 12px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05)`,
           minHeight: '260px',
         }}
       >
-        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: `linear-gradient(90deg, transparent, rgba(${theme.rgb}, 0.5), transparent)` }} />
+        {/* Single hairline at the top in the project accent. This is the
+            only "progress bar"-shaped element — semantic (project accent),
+            not decorative. The previous standalone h-1 strip is gone. */}
+        <div
+          className="absolute top-0 left-0 right-0 h-px"
+          style={{ background: `linear-gradient(90deg, transparent, rgba(${theme.rgb}, 0.5), transparent)` }}
+        />
 
-        <div className="h-1 rounded-full mb-4 opacity-60" style={{ background: theme.text }} />
-
-        <div className="flex items-start justify-between gap-2 mb-1">
+        <div className="flex items-start justify-between gap-2 mb-1 mt-1">
           <h3 className="text-lg font-bold text-[var(--brand-text-primary)] leading-tight aperture-header line-clamp-2 flex-1">
             {project.title}
           </h3>

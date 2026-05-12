@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { Reorder, motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, GripVertical, ListOrdered, Check, Star, ArrowUpDown, ImageIcon } from 'lucide-react'
+import { Plus, Trash2, GripVertical, ListOrdered, Check, Star, ArrowUpDown, ImageIcon, Search } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthContext } from '../contexts/AuthContext'
 import { SignInNudge } from '../components/SignInNudge'
@@ -240,6 +240,14 @@ function ListsPageInner() {
                     <div className="page-eyebrow">{lists.length} {lists.length === 1 ? 'list' : 'lists'}</div>
                 </div>
                 <div className="page-masthead-actions">
+                    <button
+                        onClick={() => navigate('/search')}
+                        title="Search"
+                        aria-label="Search lists"
+                        className="masthead-action press-spring"
+                    >
+                        <Search className="h-5 w-5" />
+                    </button>
                     <button
                         onClick={() => navigate('/favourites')}
                         title="Favourites"
