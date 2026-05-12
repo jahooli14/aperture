@@ -401,8 +401,8 @@ export function ReadingPage() {
               } else if (status === 'failed') {
                 next.delete(article.id)
                 addToast({
-                  title: 'Extraction failed',
-                  description: 'Could not extract content. You can still view the original URL.',
+                  title: 'Couldn\'t extract content',
+                  description: 'The original link still works.',
                   variant: 'destructive',
                 })
                 fetchArticles(undefined, true)
@@ -482,8 +482,8 @@ export function ReadingPage() {
                 } else if (status === 'failed') {
                   next.delete(article.id)
                   addToast({
-                    title: 'Extraction failed',
-                    description: 'Could not extract content. You can still view the original URL.',
+                    title: 'Couldn\'t extract content',
+                    description: 'The original link still works.',
                     variant: 'destructive',
                   })
                   fetchArticles(undefined, true)
@@ -1180,8 +1180,8 @@ export function ReadingPage() {
                 } else if (status === 'failed') {
                   next.delete(articleId)
                   addToast({
-                    title: 'Extraction failed',
-                    description: 'Could not extract content after retries',
+                    title: 'Couldn\'t extract content',
+                    description: 'Tried a few times. The original link still works.',
                     variant: 'destructive',
                   })
                   fetchArticles()

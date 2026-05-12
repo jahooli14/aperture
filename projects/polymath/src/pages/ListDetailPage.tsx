@@ -1153,7 +1153,7 @@ function ArticleListMode({ list, navigate }: ArticleListModeProps) {
         try {
             await saveArticle({ url })
             await fetchArticles(undefined, true)
-            addToast({ title: 'Saved!', description: 'Article added to your reading queue.', variant: 'success' })
+            addToast({ title: 'Article saved', description: 'Added to your reading queue.', variant: 'success' })
         } catch {
             addToast({ title: 'Failed to save', description: 'Could not save the article. Try again.', variant: 'destructive' })
         } finally {

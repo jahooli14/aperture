@@ -58,7 +58,7 @@ export function SaveArticleDialog({ isOpen, onOpenChange }: SaveArticleDialogPro
         try {
             await saveArticle({ url: finalUrl })
             await fetchArticles(undefined, true)
-            addToast({ title: 'Saved!', description: 'Article added to your reading queue.', variant: 'success' })
+            addToast({ title: 'Article saved', description: 'Added to your reading queue.', variant: 'success' })
             onOpenChange(false)
         } catch {
             addToast({ title: 'Failed to save', description: 'Could not extract article. Try again.', variant: 'destructive' })

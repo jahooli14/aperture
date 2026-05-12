@@ -404,8 +404,7 @@ export function ProjectDetailPage() {
       await updateProject(project.id, { metadata: newMetadata })
       await loadProjectDetails()
       addToast({
-        title: 'Updated!',
-        description: 'Task added to project',
+        title: 'Task added',
         variant: 'success',
       })
     } catch (error) {
@@ -438,8 +437,7 @@ export function ProjectDetailPage() {
       await updateProject(project.id, { metadata: newMetadata })
       await loadProjectDetails()
       addToast({
-        title: 'Updated!',
-        description: 'Task status updated',
+        title: 'Task updated',
         variant: 'success',
       })
     } catch (error) {
