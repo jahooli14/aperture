@@ -28,7 +28,6 @@ export function PinButton({ type, id, title, content, currentId, contentVersion 
   // Update pinned content when it changes (if this item is currently pinned)
   useEffect(() => {
     if (isThisPinned) {
-      console.log('[PinButton] Updating pinned content, version:', contentVersion)
       pinItem({ type, id, title, content })
     }
   }, [content, contentVersion, isThisPinned, type, id, title])

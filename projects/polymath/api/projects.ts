@@ -828,7 +828,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
 
       const proposals = await Promise.all(warmed.slice(0, 3).map(async (p: any): Promise<Evolution | null> => {
         const evidence = p.heat_reason || ''
-        const prompt = `You are helping evolve a dormant project. Pick ONE mutation mode and return a proposal.
+        const prompt = `You're helping me evolve a dormant project. Pick ONE mutation mode and write the proposal.
 
 PROJECT
 title: ${p.title}
@@ -842,12 +842,16 @@ MODES (pick ONE that fits best)
 - reframe: propose a new angle / positioning
 - snapshot: propose capturing current state as a standalone artifact (essay, note, sketch) and retiring the full project${allowHandoff ? '\n- handoff: propose handing off to someone else' : ''}
 
-RULES
+HOW TO WRITE
+- Plain English. Short sentences. Words people actually say.
+- Never use: "leveraging," "synergies," "narrative substrate," "unlocking momentum," "creative momentum," "feature-rich," "high-impact."
+- No invented hyphenated phrases in scare-quotes. No coach voice ("you are shifting from X to Y").
 - The proposal must cite the provided evidence. If you can't, return mode='none'.
-- Return concrete, specific text. No platitudes.
+- Bad: "Reframe to leverage the synergies between your recent reading and the project's core thesis."
+- Good: "Reframe it: stop trying to build the full IDE. Ship the single best thing — the chapter outline view — as a standalone tool."
 
 Return JSON only:
-{ "mode": "shrink|merge|split|reframe|snapshot${allowHandoff ? '|handoff' : ''}|none", "title": "new title if applicable", "proposal": "2-3 sentence concrete proposal", "evidence": "the evidence you cited" }`
+{ "mode": "shrink|merge|split|reframe|snapshot${allowHandoff ? '|handoff' : ''}|none", "title": "new title if applicable", "proposal": "2-3 sentence concrete proposal in plain English", "evidence": "the evidence you cited" }`
         try {
           const raw = await generateText(prompt, { temperature: 0.5, maxTokens: 400, responseFormat: 'json' })
           const parsed = JSON.parse(raw)
@@ -1076,7 +1080,7 @@ Return JSON only:
 
       let sparks: Array<{ title: string; description: string }> = []
       try {
-        const prompt = `A user just finished a project. Read their retrospective and suggest 1-3 NEW sparks (tiny project ideas) that naturally extend from what they just made. Concrete, specific, each written as a noun or verb phrase.
+        const prompt = `I just finished a project. Read my retrospective and suggest 1-3 NEW sparks (tiny project ideas) that pick up directly from what I just made. Each spark is a noun or verb phrase — think album title, not task description.
 
 JUST FINISHED
 title: ${project.title}
@@ -1087,13 +1091,19 @@ What worked: ${answers.what_worked || '(blank)'}
 What surprised: ${answers.what_surprised || '(blank)'}
 What's next: ${answers.what_next || '(blank)'}
 
-RULES
-- Cite the retro. Each spark should feel like a direct continuation.
-- Empty array is allowed if the answers don't justify anything concrete.
-- No platitudes. No generic self-improvement ideas.
+HOW TO WRITE
+- Plain English. Short sentences. Real words.
+- Each spark must cite something specific from the retro. If the retro doesn't justify a spark, return an empty array.
+- Empty array is fine. Silence beats a forced spark.
+
+TITLE BLACKLIST — never propose any of these tropes:
+"newsletter about X", "podcast about X", "course on X", "directory of X", "X tracker", "X dashboard", "digital garden", "second brain", "year of X challenge", "zine that explores X". Also avoid abstract nouns as titles: "exploration", "study", "series", "totem", "memory of", "in conversation with", "meditation on", "investigation into."
+
+Bad spark: { "title": "Newsletter About What You Learned", "description": "Share weekly insights from your recent project to leverage what you've built." }
+Good spark: { "title": "Wire the bird cam to a Sonos chime", "description": "You said the bird cam works but you never hear when a bird lands. Trigger a Sonos chime when motion fires." }
 
 Return JSON only:
-{ "sparks": [ { "title": "...", "description": "one-sentence concrete brief" }, ... ] }`
+{ "sparks": [ { "title": "...", "description": "one sentence in plain English, citing the retro" }, ... ] }`
         const raw = await generateText(prompt, { temperature: 0.6, maxTokens: 500, responseFormat: 'json' })
         const parsed = JSON.parse(raw)
         const list = Array.isArray(parsed.sparks) ? parsed.sparks : []
@@ -2233,7 +2243,8 @@ Return JSON only:
   // EVOLUTION FEED RESOURCE — GET recent evolution events for the home feed
   if (resource === 'evolution-feed') {
     if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
-    const limit = parseInt(req.query.limit as string || '10', 10)
+    const parsedLimit = parseInt(req.query.limit as string || '10', 10)
+    const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 100) : 10
     try {
       const { data: events, error } = await supabase
         .from('evolution_events')
@@ -2281,13 +2292,23 @@ Return JSON only:
       type Outcome = { project_id: string; ok: boolean; error?: string }
       const outcomes = await Promise.all(candidates.map(async (project): Promise<Outcome> => {
         try {
-          const prompt = `You are a creative catalyst AI. Given this project, generate a fresh evolution insight — a new angle, intersection, or breakthrough idea that could reshape it.
+          const prompt = `You're a friend looking at one of my projects and naming a single specific direction it could take — a new angle, a missing intersection, or a reshape. Just one. Real, not decorative.
 
 Project: ${project.title}
 Description: ${project.description || 'No description'}
 Current notes: ${JSON.stringify(project.metadata?.tasks?.slice(0, 3) || [])}
 
-Respond with JSON: { "event_type": "intersection"|"reshape"|"reflection", "description": "one specific, surprising insight in plain language (max 2 sentences)" }`
+Plain English. Short sentences. Words people actually say. One idea per sentence.
+Never use: "leveraging," "synergies," "soundscapes," "narrative substrate," "feature-rich," "high-impact," "creative momentum," "unlocking."
+Never invent hyphenated phrases in scare-quotes ("friction-over-function," "blind-edit"). If a term needs scare-quotes, rewrite it.
+No coach voice ("you are shifting from X to Y"). Talk to me, not at me.
+
+Bad: "Your reliance on the trial deadline acted as a forcing function for creative momentum."
+Good: "The Logic Pro trial ran out — that's the deadline this song needs."
+
+If nothing real is there, pick "reflection" and just name what the project actually is in one sentence. Don't pad.
+
+Respond with JSON: { "event_type": "intersection"|"reshape"|"reflection", "description": "one specific angle or reshape, max 2 sentences" }`
 
           const response = await Promise.race([
             generateText(prompt, { responseFormat: 'json', temperature: 0.8 }),
@@ -3110,16 +3131,22 @@ async function generateNextSteps(projectId: string, userId: string, supabase: an
   const lastTasks = tasks.slice(-3).map(t => `- ${t.text} (${t.done ? 'Done' : 'Pending'})`).join('\n')
 
   // 2. Prompt Gemini
-  const prompt = `Suggest 3 specific things this person could do next on their project. Start each with a verb. Keep them simple and doable today.
-    
+  const prompt = `Suggest 3 specific things I could do next on my project. Start each with a verb. Keep them doable today.
+
 Project: ${project.title}
 Description: ${project.description || 'No description'}
 
 Recent Activity:
 ${lastTasks || 'No tasks yet'}
 
-Output strictly as a JSON array of strings. Keep each task under 10 words. Start with a verb.
-Example: ["Draft initial outline", "Research competitor pricing", "Email stakeholders"]`
+RULES
+- Real first actions only: cut, drill, flash, commit (with named file path + first content), record, drive, phone, draft (with named output), paint, wire.
+- BANNED verbs (admin disguised as build): "research", "plan", "sketch out", "outline", "decide", "list", "measure", "open settings", "set up", "consider", "review", "think about". If your action starts with one of these, the project isn't actually unblocked — pick a different action.
+- Plain English. Each task under 10 words. No jargon.
+
+Output strictly as a JSON array of strings.
+Bad: ["Research competitor pricing", "Outline the chapter", "Decide on the format"]
+Good: ["Record a 60-second voice memo titled chapter-1-opening", "Phone Mum and ask for her cake recipe", "Commit src/sequencer/step.ts with the 16-step grid stub"]`
 
   const response = await generateText(prompt, { responseFormat: 'json', temperature: 0.4 })
   const suggestedTasks = JSON.parse(response)

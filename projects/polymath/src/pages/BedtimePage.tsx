@@ -93,7 +93,7 @@ export function BedtimePage() {
       if (prompts.length === 0) {
         addToast({
           title: 'Failed to load prompts',
-          description: error instanceof Error ? error.message : 'Unknown error',
+          description: error instanceof Error ? error.message : 'Try again in a moment.',
           variant: 'destructive'
         })
       }
@@ -118,14 +118,14 @@ export function BedtimePage() {
 
       setPrompts(uniquePrompts)
       addToast({
-        title: ' New prompts generated',
-        description: `${uniquePrompts.length} ideas for tonight`,
+        title: 'New prompts ready',
+        description: `${uniquePrompts.length} ideas for tonight.`,
         variant: 'success'
       })
     } catch (error) {
       addToast({
         title: 'Failed to generate',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        description: error instanceof Error ? error.message : 'Try again in a moment.',
         variant: 'destructive'
       })
     } finally {
@@ -210,8 +210,8 @@ export function BedtimePage() {
 
       if (newValue) {
         addToast({
-          title: ' Breakthrough!',
-          description: 'This prompt will help improve future suggestions',
+          title: 'Breakthrough',
+          description: 'Future prompts will steer toward this kind.',
           variant: 'success'
         })
       }
@@ -649,7 +649,7 @@ export function BedtimePage() {
                   {generating ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Generating...
+                      Thinking…
                     </>
                   ) : (
                     <>
@@ -674,7 +674,7 @@ export function BedtimePage() {
           }}
         >
           <p className="text-sm leading-relaxed" style={{ color: "var(--brand-primary)" }}>
-            <strong className="premium-text-platinum">Reflection ritual:</strong> These prompts are designed to spark gentle curiosity before sleep. Let them simmer in your subconscious overnightinsights often arrive in the morning. Try Zen Mode for a peaceful, one-at-a-time experience.
+            <strong className="premium-text-platinum">Reflection ritual:</strong> Quiet prompts for the end of the day. Let them sit overnight — the good answers usually arrive in the morning. Zen Mode shows them one at a time.
           </p>
         </motion.div>
 

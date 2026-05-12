@@ -33,9 +33,9 @@ const DEMO_STORIES: DemoStory[] = [
   },
   {
     voiceNote:
-      "That podcast about ant colonies got me thinking about how teams self-organise…",
+      "Watched ants carry a leaf in shifts. Could the standup format work the same way…",
     project: {
-      title: 'Emergent Systems Essay',
+      title: 'Standup rewrite',
       status: 'draft outline ready',
       color: 'rgb(var(--brand-primary-rgb))',
     },

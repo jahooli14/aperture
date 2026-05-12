@@ -3,7 +3,7 @@
  * Shown to first-time users to explain Aperture and offer demo data
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Brain, Zap, Layers, ArrowRight, X, Lightbulb } from 'lucide-react'
 import { BrandName } from '../BrandName'
@@ -18,6 +18,16 @@ interface WelcomeModalProps {
 export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: WelcomeModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
+
+  // Close on Escape so keyboard users can dismiss the first-run modal.
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [open, onClose])
 
   if (!open) return null
 
@@ -88,10 +98,10 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
               </div>
               <div>
                 <h3 className="font-semibold mb-1" style={{ color: "var(--brand-primary)" }}>
-                  1. Capture Memories
+                  1. Record voice notes
                 </h3>
                 <p className="text-sm" style={{ color: "var(--brand-primary)" }}>
-                  Send voice notes via Audiopen. <BrandName size="sm" /> extracts themes, entities, and insights automatically.
+                  Talk for 30 seconds. <BrandName size="sm" /> transcribes, tidies it up, and gives it a title.
                 </p>
               </div>
             </div>
@@ -111,10 +121,10 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
               </div>
               <div>
                 <h3 className="font-semibold mb-1" style={{ color: "var(--brand-primary)" }}>
-                  2. AI Generates Suggestions
+                  2. See connections you missed
                 </h3>
                 <p className="text-sm" style={{ color: "var(--brand-primary)" }}>
-                  AI spots connections between your thoughts and suggests projects that fit your interests. Connects your different interests in unexpected ways.
+                  <BrandName size="sm" /> spots threads across your notes and projects you didn't notice yourself — and names projects worth starting.
                 </p>
               </div>
             </div>

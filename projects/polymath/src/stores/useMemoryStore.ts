@@ -199,7 +199,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
 
       const queuedCaptures: Memory[] = pendingCaptures.map(pc => ({
         id: `offline_cap_${pc.timestamp}`,
-        title: 'Processing Voice (Offline)',
+        title: 'Saved offline — will sync soon',
         body: pc.transcript || 'Audio note captured while offline.',
         tags: ['offline-pending'],
         created_at: new Date(pc.timestamp).toISOString(),
@@ -643,7 +643,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       // Map pending voice captures
       const queuedCaptures: Memory[] = pendingCaptures.map(pc => ({
         id: `offline_cap_${pc.timestamp}`,
-        title: 'Processing Voice (Offline)',
+        title: 'Saved offline — will sync soon',
         body: pc.transcript || 'Audio note captured while offline.',
         tags: ['offline-pending'],
         created_at: new Date(pc.timestamp).toISOString(),
@@ -758,7 +758,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       id: tempId,
       created_at: now,
       audiopen_id: tempId,
-      title: 'Processing...',
+      title: 'Transcribing…',
       body: transcript,
       orig_transcript: transcript,
       tags: [],

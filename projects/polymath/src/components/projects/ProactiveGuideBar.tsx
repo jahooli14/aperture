@@ -6,7 +6,7 @@
  * "Chat, plan, get unstuck..." with context-aware prompts.
  *
  * The bar adapts based on project phase and recent activity:
- * - Shaping: "Let's figure out what you're really building"
+ * - Shaping: "What is this project, exactly?"
  * - Building: Surfaces the focus suggestion from the session brief
  * - Closing: "3 tasks left — want to plan the finish?"
  * - Stale: "It's been a while. Want to pick this back up?"
@@ -28,7 +28,7 @@ interface ProactiveGuideBarProps {
 }
 
 const PHASE_PROMPTS: Record<Phase, string> = {
-  shaping: "Let's figure out what you're really building",
+  shaping: "What is this project, exactly?",
   building: "What are you working on?",
   closing: "Almost there — plan the finish?",
   stale: "Been a while. One small step to restart?",

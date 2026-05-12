@@ -242,13 +242,13 @@ export function LoginPage() {
                   lineHeight: 1.05,
                 }}
               >
-                Welcome back.
+                Welcome.
               </h2>
               <p
                 className="mb-9 text-[15px] leading-relaxed italic"
                 style={{ fontFamily: 'var(--brand-font-serif)', color: 'var(--brand-text-secondary)' }}
               >
-                Pick up where you left off.
+                We'll email you a sign-in code.
               </p>
 
               {/* Email OTP — primary path */}

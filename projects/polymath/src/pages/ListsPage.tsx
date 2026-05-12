@@ -305,7 +305,7 @@ function ListsPageInner() {
                             className="h-11 px-6 rounded-full border border-[var(--glass-surface-hover)] hover:bg-[var(--glass-surface)] bg-transparent text-[var(--brand-text-primary)] font-bold uppercase tracking-widest text-xs"
                         >
                             <Plus className="h-4 w-4 mr-2" />
-                            Create First Collection
+                            Create a collection
                         </Button>
                     </div>
 

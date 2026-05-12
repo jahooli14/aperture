@@ -87,7 +87,7 @@ export function ArticleConnectionsDialog({
                   </motion.div>
 
                   <h2 className="text-2xl font-bold premium-text-platinum mb-2">
-                    Great read!
+                    Finished.
                   </h2>
 
                   <p className="text-lg mb-6" style={{ color: "var(--brand-primary)" }}>

@@ -22,14 +22,8 @@ export function FoundationalPrompts() {
   const [modalOpen, setModalOpen] = useState(false)
 
   useEffect(() => {
-    console.log('[FoundationalPrompts] Fetching prompts...')
     fetchPrompts()
   }, [fetchPrompts])
-
-  useEffect(() => {
-    console.log('[FoundationalPrompts] requiredPrompts:', requiredPrompts)
-    console.log('[FoundationalPrompts] progress:', progress)
-  }, [requiredPrompts, progress])
 
   const handlePromptClick = (prompt: MemoryPromptWithStatus) => {
     if (prompt.status === 'completed') {
@@ -92,9 +86,9 @@ export function FoundationalPrompts() {
         </div>
         <p className="text-sm mt-2" style={{ color: "var(--brand-primary)" }}>
           {progress?.has_unlocked_projects ? (
-            <span className="font-medium" style={{ color: "var(--brand-primary)" }}> Projects unlocked!</span>
+            <span className="font-medium" style={{ color: "var(--brand-primary)" }}> Projects ready.</span>
           ) : (
-            <>Complete {(progress?.total_required || 5) - (progress?.completed_required || 0)} more to unlock Projects</>
+            <>Answer {(progress?.total_required || 5) - (progress?.completed_required || 0)} more to start Projects</>
           )}
         </p>
         <p className="text-xs mt-1" style={{ color: "var(--brand-primary)" }}>
@@ -106,7 +100,7 @@ export function FoundationalPrompts() {
       <div className="space-y-3">
         {requiredPrompts.length === 0 ? (
           <div className="text-center py-12" style={{ color: "var(--brand-primary)" }}>
-            <p>No prompts found. Check console for errors.</p>
+            <p>No prompts loaded. Refresh the page to try again.</p>
           </div>
         ) : (
           requiredPrompts.map((prompt, index) => {

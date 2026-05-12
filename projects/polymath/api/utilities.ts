@@ -184,8 +184,8 @@ async function handleResetOnboarding(req: VercelRequest, res: VercelResponse) {
     if (projErr) throw projErr
     result.projects = projs?.length || 0
 
-    // 5. Project suggestions saved as "idea" from onboarding (the
-    //    "Try Something New" carousel entries).
+    // 5. Project suggestions saved as "idea" from onboarding (these
+    //    feed Mode 1 of The Moment on Home).
     const { data: sugs, error: sugErr } = await supabase
       .from('project_suggestions')
       .delete()
@@ -399,7 +399,17 @@ Below are their responses to an adaptive onboarding chat — spoken out loud as 
 
 ${transcriptBlock}${coverageHint}${bookBlock}
 
-Your job is to read deeply between the lines — not just summarise what they said, but notice what links up across the different things they talked about — stuff they probably haven't connected themselves yet.
+═══════ HOW TO WRITE ═══════
+Plain English. Short sentences. Words people actually say. One idea per sentence.
+Never use: "leveraging," "synergies," "soundscapes," "narrative substrate," "feature-rich," "unlocking momentum," "psychological defenses," "high-impact," "experiential."
+Never invent hyphenated phrases in scare-quotes ("friction-over-function," "blind-edit"). If a term needs scare-quotes, rewrite it.
+No analyst voice ("Your multifaceted engagement with X reveals..."). Talk like a friend who's been paying attention.
+
+Bad first_insight: "Your multifaceted engagement with both technical systems and emotive craft reveals a creative duality."
+Good first_insight: "There's a thread between your 'I keep drilling down into the same algorithm' and your 'I just want the song to feel right' — both are you refusing to stop until it clicks."
+
+═══════ THE JOB ═══════
+Read deeply between the lines — not just summarise what they said, but notice what links up across the different things they talked about — stuff they probably haven't connected themselves yet.
 
 Return a JSON object with these fields:
 
@@ -630,7 +640,7 @@ async function handleRefineIdea(req: VercelRequest, res: VercelResponse) {
       ? `\n\nShort exact phrases to lean on (grounding):\n${phrases.slice(0, 10).map(p => `- "${p}"`).join('\n')}`
       : ''
 
-    const prompt = `You are a creative catalyst AI helping someone find a project idea that resonates with them.
+    const prompt = `You're a friend helping me reshape a project idea I'm not quite sold on. Keep what worked, change what didn't, lean on words I actually said.
 
 Original idea:
 Title: ${original.title}
@@ -642,13 +652,23 @@ User feedback (attempt ${attempt || 1}): "${feedback}"
 User's themes: ${(context?.themes || []).join(', ')}
 User's capabilities: ${(context?.capabilities || []).join(', ')}${transcriptBlock}${phraseBlock}
 
-Reshape the idea based on their feedback. Keep what they liked, change what didn't resonate. Make it more specific to their context — reference their own words from the transcripts/phrases above where it fits, rather than generic themes.
+Plain English. Short sentences. Words people actually say. One idea per sentence.
+Never use: "leveraging," "synergies," "soundscapes," "narrative substrate," "feature-rich," "unlocking momentum."
+Never invent hyphenated phrases in scare-quotes. If a term needs scare-quotes, rewrite it.
+No coach voice. No "this idea taps into your deep interest in X."
+
+Bad: "A project that leverages your interest in woodwork to unlock fresh creative momentum."
+Good: "Build the case for the Raspberry Pi synth. The woodwork class gave you the skill — use it."
+
+Title is a noun or verb phrase. Think album title, not task description. "Ambient Recipe Engine" not "Build an Ambient Recipe Engine."
+
+Reshape the idea around their feedback. Use their own words from the transcripts/phrases above where they fit. Don't fall back to generic themes.
 
 Respond with JSON only:
 {
-  "title": "concise project title",
-  "description": "1-2 sentences describing the project",
-  "reasoning": "why this is uniquely suited to this person (1 sentence)"
+  "title": "short noun or verb phrase",
+  "description": "1-2 sentences. What it is, in plain English.",
+  "reasoning": "why this fits them specifically — quote one short phrase they actually said if you can"
 }`
 
     const response = await generateText(prompt, { responseFormat: 'json', temperature: 0.7 })

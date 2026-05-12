@@ -98,7 +98,7 @@ export function ConnectionRevealOverlay({
         setNarrative(data.narrative || '')
         setPhase('revealing')
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Something went wrong')
+        setError(err instanceof Error ? err.message : 'Couldn\'t trace this path.')
         setPhase('complete')
       }
     }

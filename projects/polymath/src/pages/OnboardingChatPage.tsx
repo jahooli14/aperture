@@ -44,8 +44,8 @@ interface CapturedItem {
 /** A project the observer caught the user mentioning mid-chat. Two
  *  flavours, routed to different surfaces:
  *   - status: 'idea' — they want to make this. Saved as a
- *     project_suggestion (status pending) so it appears in Home's
- *     "Try Something New" carousel alongside the AI-derived intersections.
+ *     project_suggestion (status pending) so it feeds Mode 1 of The
+ *     Moment alongside the AI-derived intersections.
  *   - status: 'in_progress' — they're already doing this. Saved as a
  *     real Project (status 'active') so it shows up in the Projects
  *     pillar from day one. */
@@ -110,8 +110,8 @@ export function OnboardingChatPage() {
   const capturedItemsRef = useRef<CapturedItem[]>([])
   const [capturedBooks, setCapturedBooks] = useState<BookSearchResult[]>([])
   // Project ideas the user explicitly raised mid-chat. Persisted to
-  // project_suggestions on chat-end so they show up in Home's
-  // "Try Something New" carousel alongside the AI-derived suggestions.
+  // project_suggestions on chat-end so they feed Mode 1 of The Moment
+  // alongside the AI-derived suggestions.
   const capturedProjectsRef = useRef<CapturedProject[]>([])
 
   // ── Bootstrap: fetch a grid (we still need one for the random dot
@@ -305,9 +305,9 @@ export function OnboardingChatPage() {
   const persistedProjectsRef = useRef(false)
 
   // Persist projects the observer caught mid-chat. Routing splits by
-  // status: ideas land in the "Try Something New" carousel via the
-  // existing save-idea endpoint; in-progress projects become real
-  // Projects in the Projects pillar from day one.
+  // status: ideas go to project_suggestions (feeding Mode 1 of The
+  // Moment) via the save-idea endpoint; in-progress projects become
+  // real Projects in the Projects pillar from day one.
   const persistCapturedProjects = useCallback(async () => {
     if (persistedProjectsRef.current) return
     persistedProjectsRef.current = true

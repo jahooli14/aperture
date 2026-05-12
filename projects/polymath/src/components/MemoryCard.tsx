@@ -238,7 +238,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
       } catch (error) {
         addToast({
           title: 'Failed to delete thought',
-          description: error instanceof Error ? error.message : 'An error occurred',
+          description: error instanceof Error ? error.message : 'Try again in a moment.',
           variant: 'destructive',
         })
       }

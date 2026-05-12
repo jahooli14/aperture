@@ -39,7 +39,7 @@ export function ShapingModal({ project, isOpen, onClose }: ShapingModalProps) {
   const [history, setHistory] = useState<ConversationMessage[]>([
     {
       role: 'model',
-      content: `Let's shape "${project.title}".${project.description ? ` You said: "${project.description}".` : ''} Tell me more — what's the real idea here?`,
+      content: `Tell me about "${project.title}".${project.description ? ` You said: "${project.description}".` : ''} What's the real idea here?`,
     },
   ])
   const [chatInput, setChatInput] = useState('')
@@ -60,7 +60,7 @@ export function ShapingModal({ project, isOpen, onClose }: ShapingModalProps) {
       setHistory([
         {
           role: 'model',
-          content: `Let's shape "${project.title}".${project.description ? ` You said: "${project.description}".` : ''} Tell me more — what's the real idea here?`,
+          content: `Tell me about "${project.title}".${project.description ? ` You said: "${project.description}".` : ''} What's the real idea here?`,
         },
       ])
       setChatInput('')
@@ -69,6 +69,17 @@ export function ShapingModal({ project, isOpen, onClose }: ShapingModalProps) {
       setExtracting(false)
     }
   }, [isOpen, project.id])
+
+  // Close on Escape so keyboard users can dismiss the chat without hunting
+  // for the X button.
+  useEffect(() => {
+    if (!isOpen) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [isOpen, onClose])
 
   const handleSend = async () => {
     const message = chatInput.trim()

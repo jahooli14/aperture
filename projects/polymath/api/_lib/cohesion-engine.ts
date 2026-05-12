@@ -47,9 +47,11 @@ export async function getCohesiveSummary(userId: string): Promise<CohesiveSummar
   USER CONTEXT:
   ${context}
 
+  Plain English. Real words a friend would say. No "leveraging," "unlocking," "synergies," "journey," "digital brain," "second brain." Talk to the person, not at them.
+
   Return JSON:
   {
-    "overview": "A cohesive, 1-2 sentence paragraph connecting current activities. Be encouraging and insightful.",
+    "overview": "1-2 sentences naming specifically what they're working on right now. Reference real titles.",
     "flows": [
       {
         "title": "Short title",
@@ -68,8 +70,8 @@ export async function getCohesiveSummary(userId: string): Promise<CohesiveSummar
     })
     const text = result.response.text()
     const jsonMatch = text.match(/\{[\s\S]*\}/)
-    return jsonMatch ? JSON.parse(jsonMatch[0]) : { overview: "Keeping track of your polymath journey.", flows: [] }
+    return jsonMatch ? JSON.parse(jsonMatch[0]) : { overview: "", flows: [] }
   } catch (e) {
-    return { overview: "Building your digital brain...", flows: [] }
+    return { overview: "", flows: [] }
   }
 }

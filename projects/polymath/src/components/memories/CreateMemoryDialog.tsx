@@ -490,7 +490,7 @@ export function CreateMemoryDialog({
           } catch (uploadErr) {
             addToast({
               title: 'Image upload failed',
-              description: uploadErr instanceof Error ? uploadErr.message : 'Unknown error',
+              description: uploadErr instanceof Error ? uploadErr.message : 'Try again in a moment.',
               variant: 'destructive',
             })
           }
@@ -527,14 +527,14 @@ export function CreateMemoryDialog({
         } else if (!isOnline) {
           addToast({
             title: 'Saved offline',
-            description: 'Will sync and get a smart title when back online.',
+            description: 'Will sync once you\'re back online.',
             variant: 'success',
           })
         }
       } catch (error) {
         addToast({
           title: 'Failed to save',
-          description: error instanceof Error ? error.message : 'Unknown error',
+          description: error instanceof Error ? error.message : 'Try again in a moment.',
           variant: 'destructive',
         })
       }

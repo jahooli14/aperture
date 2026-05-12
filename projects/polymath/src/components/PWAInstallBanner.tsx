@@ -97,9 +97,9 @@ export function PWAInstallBanner() {
           <div className="space-y-2 mb-4">
             {[
               'Works offline',
-              'Faster loading',
-              'Home screen shortcut',
-              'No browser chrome'
+              'Loads faster',
+              'Lives on your home screen',
+              'No browser bar'
             ].map((feature, index) => (
               <div key={index} className="flex items-center gap-2 text-sm" style={{ color: "var(--brand-primary)" }}>
                 <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: 'var(--brand-primary)' }} />

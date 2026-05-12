@@ -58,7 +58,7 @@ function BlockerField({ blocker, onSave }: { blocker?: string; onSave: (text: st
           letterSpacing: '0.02em',
         }}
       >
-        what's in the way?
+        what's pausing this?
       </span>
       {editing ? (
         <div className="space-y-2">
@@ -166,8 +166,8 @@ export function ProjectDetailPage() {
         console.log('[ProjectDetailPage] AI enrichment completed, refreshing...')
         loadProjectDetails()
         addToast({
-          title: 'AI suggested new tasks',
-          description: 'New task suggestions have been added',
+          title: 'New task suggestions',
+          description: 'Added below — accept or skip each one.',
           variant: 'default',
         })
       }
@@ -304,7 +304,7 @@ export function ProjectDetailPage() {
       } catch (error) {
         addToast({
           title: 'Failed to delete project',
-          description: error instanceof Error ? error.message : 'Unknown error',
+          description: error instanceof Error ? error.message : 'Try again in a moment.',
           variant: 'destructive',
         })
       }
@@ -335,7 +335,7 @@ export function ProjectDetailPage() {
     } catch (error) {
       addToast({
         title: 'Failed to update title',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        description: error instanceof Error ? error.message : 'Try again in a moment.',
         variant: 'destructive',
       })
     }
@@ -363,7 +363,7 @@ export function ProjectDetailPage() {
     } catch (error) {
       addToast({
         title: 'Failed to update goal',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        description: error instanceof Error ? error.message : 'Try again in a moment.',
         variant: 'destructive',
       })
     }
@@ -381,12 +381,7 @@ export function ProjectDetailPage() {
   }
 
   const addPinnedTask = useCallback(async (text: string) => {
-    console.log('[addPinnedTask] Called with text:', text)
-
-    if (!project) {
-      console.log('[addPinnedTask] No project')
-      return
-    }
+    if (!project) return
 
     const tasks = (project.metadata?.tasks || []) as Task[]
     const newTask = {
@@ -402,15 +397,11 @@ export function ProjectDetailPage() {
       tasks: updatedTasks
     }
 
-    console.log('[addPinnedTask] Adding task:', newTask)
-
     try {
       await updateProject(project.id, { metadata: newMetadata })
-      console.log('[addPinnedTask] Task saved to backend')
       await loadProjectDetails()
       addToast({
-        title: 'Updated!',
-        description: 'Task added to project',
+        title: 'Task added',
         variant: 'success',
       })
     } catch (error) {
@@ -443,8 +434,7 @@ export function ProjectDetailPage() {
       await updateProject(project.id, { metadata: newMetadata })
       await loadProjectDetails()
       addToast({
-        title: 'Updated!',
-        description: 'Task status updated',
+        title: 'Task updated',
         variant: 'success',
       })
     } catch (error) {
@@ -514,7 +504,7 @@ export function ProjectDetailPage() {
     } catch (error) {
       addToast({
         title: 'Failed to update status',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        description: error instanceof Error ? error.message : 'Try again in a moment.',
         variant: 'destructive',
       })
     }
@@ -804,7 +794,7 @@ export function ProjectDetailPage() {
                       onClick={() => {
                         const el = document.querySelector('[data-task-list]')
                         if (el) { window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 120, behavior: 'smooth' }) }
-                        addToast({ title: 'Focus on your hit-list below', variant: 'default' })
+                        addToast({ title: 'Tasks below — work through them', variant: 'default' })
                       }}
                       className="px-5 py-2.5 rounded-xl text-[12px] font-semibold transition-all active:scale-95 flex items-center gap-2"
                       style={{ background: 'rgba(var(--brand-primary-rgb),0.12)', border: '1px solid rgba(var(--brand-primary-rgb),0.2)', color: 'rgb(var(--brand-primary-rgb))' }}
@@ -920,7 +910,7 @@ export function ProjectDetailPage() {
                 {tasks.length > 0 && tasks.every((t: any) => t.done) && (
                   <div className="mb-5 p-5 rounded-2xl text-center" style={{ background: 'rgba(var(--brand-primary-rgb),0.06)', border: '1px solid rgba(var(--brand-primary-rgb),0.12)' }}>
                     <p className="text-[15px] font-bold text-brand-primary mb-1">All tasks complete</p>
-                    <p className="text-[13px] mb-4" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>Every action item is done. Ready to wrap up?</p>
+                    <p className="text-[13px] mb-4" style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}>Every task is done. Mark this project complete?</p>
                     <button
                       onClick={() => handleStatusChange('completed')}
                       className="px-5 py-2.5 rounded-xl text-[12px] font-semibold transition-all active:scale-95"

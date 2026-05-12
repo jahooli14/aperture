@@ -255,7 +255,7 @@ export function VoiceFAB({
         WebkitBackdropFilter: 'blur(16px)',
         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5), 0 0 24px rgba(var(--brand-primary-rgb), 0.35), inset 0 0 10px var(--glass-surface)',
       }}
-      aria-label="Create  tap to record, hold to choose type"
+      aria-label="Create — tap to record, hold to choose type"
     >
       <Plus className="h-6 w-6 text-white transition-transform group-hover:rotate-90" />
       <div className="absolute inset-0 bg-[var(--glass-surface)] opacity-0 group-hover:opacity-100 transition-opacity" />

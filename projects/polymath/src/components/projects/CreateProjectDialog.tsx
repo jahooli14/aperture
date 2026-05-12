@@ -240,7 +240,7 @@ export function CreateProjectDialog({
       })
       addToast({
         title: 'Project saved',
-        description: `"${quickTitle.trim()}" added — shape it to unlock Power Hour.`,
+        description: `"${quickTitle.trim()}" added — shape it, then Power Hour can run on it.`,
         variant: 'success',
       })
       setQuickTitle('')
@@ -251,7 +251,7 @@ export function CreateProjectDialog({
     } catch (error) {
       addToast({
         title: 'Failed to save project',
-        description: error instanceof Error ? error.message : 'An error occurred',
+        description: error instanceof Error ? error.message : 'Try again in a moment.',
         variant: 'destructive',
       })
     } finally {
@@ -302,7 +302,7 @@ export function CreateProjectDialog({
     } catch (error) {
       addToast({
         title: 'Failed to create project',
-        description: error instanceof Error ? error.message : 'An error occurred',
+        description: error instanceof Error ? error.message : 'Try again in a moment.',
         variant: 'destructive',
       })
     } finally {

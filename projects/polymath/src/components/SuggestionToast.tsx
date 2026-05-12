@@ -55,8 +55,8 @@ export function SuggestionToast({ itemId, itemType, itemTitle }: SuggestionToast
       }
     } catch (error) {
       addToast({
-        title: 'Error',
-        description: 'Failed to create connection',
+        title: 'Couldn\'t create connection',
+        description: 'Try again in a moment.',
         variant: 'destructive'
       })
     }

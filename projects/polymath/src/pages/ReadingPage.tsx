@@ -108,21 +108,32 @@ export function ReadingPage() {
 
     // Auto-cleanup: Remove items dismissed more than 90 days ago
     const now = Date.now()
-    const dismissalTimestamps = JSON.parse(localStorage.getItem('rss-dismissed-timestamps') || '{}')
+    const dismissalTimestamps: Record<string, number> = JSON.parse(
+      localStorage.getItem('rss-dismissed-timestamps') || '{}'
+    )
     dismissalTimestamps[guid] = now
 
-    // Filter out old dismissals (90 days)
+    // Filter out old dismissals (90 days). Treat untimestamped legacy entries
+    // as fresh so we don't wipe them on first upgrade.
     const ninetyDaysAgo = now - (90 * 24 * 60 * 60 * 1000)
     const validGuids = Array.from(dismissed).filter(g => {
       const timestamp = dismissalTimestamps[g as string]
-      return timestamp && timestamp > ninetyDaysAgo
+      return timestamp === undefined || timestamp > ninetyDaysAgo
     })
 
     // Keep only the last 1000 dismissed items to prevent localStorage bloat
     const trimmedGuids = validGuids.slice(-1000)
 
+    // Prune the timestamp map to match — otherwise it grows forever as old
+    // guids fall off the trimmed list but their timestamps linger.
+    const trimmedSet = new Set(trimmedGuids)
+    const prunedTimestamps: Record<string, number> = {}
+    for (const [g, ts] of Object.entries(dismissalTimestamps)) {
+      if (trimmedSet.has(g)) prunedTimestamps[g] = ts
+    }
+
     localStorage.setItem('rss-dismissed-items', JSON.stringify(trimmedGuids))
-    localStorage.setItem('rss-dismissed-timestamps', JSON.stringify(dismissalTimestamps))
+    localStorage.setItem('rss-dismissed-timestamps', JSON.stringify(prunedTimestamps))
   }
 
   // Fetch RSS feed items from all enabled feeds
@@ -174,7 +185,7 @@ export function ReadingPage() {
       console.error('Failed to fetch RSS items:', error)
       addToast({
         title: 'Failed to load RSS updates',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        description: error instanceof Error ? error.message : 'Try again in a moment.',
         variant: 'destructive',
       })
     } finally {
@@ -213,8 +224,8 @@ export function ReadingPage() {
               if (status === 'complete') {
                 next.delete(article.id)
                 addToast({
-                  title: ' Graph Updated',
-                  description: `Extracted ${updatedArticle?.entities?.length || 5} new knowledge nodes from "${updatedArticle?.title}"`,
+                  title: 'Article saved',
+                  description: `"${updatedArticle?.title}" extracted and linked.`,
                   variant: 'success',
                 })
                 fetchArticles(undefined, true) // Force refresh for auto-recovery
@@ -277,7 +288,7 @@ export function ReadingPage() {
     } catch (error) {
       addToast({
         title: 'Sync failed',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        description: error instanceof Error ? error.message : 'Try again in a moment.',
         variant: 'destructive',
       })
     }
@@ -287,23 +298,23 @@ export function ReadingPage() {
   const handleSaveRSSItem = async (item: RSSItem) => {
     try {
       addToast({
-        title: ' Fetching article...',
-        description: 'Extracting content with Jina AI',
+        title: 'Fetching article…',
+        description: 'Extracting content.',
         variant: 'default',
       })
 
       const article = await saveArticle({ url: item.link })
 
       addToast({
-        title: 'Injecting Knowledge...',
-        description: `Added "${article.title || 'article'}" to your graph`,
+        title: 'Article saved',
+        description: `"${article.title || 'article'}" added to your reading.`,
         variant: 'success',
       })
       fetchArticles()
     } catch (error) {
       addToast({
         title: 'Failed to save',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        description: error instanceof Error ? error.message : 'Try again in a moment.',
         variant: 'destructive',
       })
     }
@@ -386,8 +397,8 @@ export function ReadingPage() {
               if (status === 'complete') {
                 next.delete(article.id)
                 addToast({
-                  title: 'Article ready!',
-                  description: updatedArticle?.title || 'Content extracted successfully',
+                  title: 'Article ready',
+                  description: updatedArticle?.title || 'Content extracted.',
                   variant: 'success',
                 })
 
@@ -401,8 +412,8 @@ export function ReadingPage() {
               } else if (status === 'failed') {
                 next.delete(article.id)
                 addToast({
-                  title: 'Extraction failed',
-                  description: 'Could not extract content. You can still view the original URL.',
+                  title: 'Couldn\'t extract content',
+                  description: 'The original link still works.',
                   variant: 'destructive',
                 })
                 fetchArticles(undefined, true)
@@ -430,7 +441,7 @@ export function ReadingPage() {
           processingRef.current.delete(shareUrl)
           addToast({
             title: 'Failed to save',
-            description: error instanceof Error ? error.message : 'Unknown error',
+            description: error instanceof Error ? error.message : 'Try again in a moment.',
             variant: 'destructive',
           })
           // Still redirect to article list on error
@@ -469,8 +480,8 @@ export function ReadingPage() {
                 if (status === 'complete') {
                   next.delete(article.id)
                   addToast({
-                    title: 'Article ready!',
-                    description: updatedArticle?.title || 'Content extracted successfully',
+                    title: 'Article ready',
+                    description: updatedArticle?.title || 'Content extracted.',
                     variant: 'success',
                   })
                   if (updatedArticle) {
@@ -482,8 +493,8 @@ export function ReadingPage() {
                 } else if (status === 'failed') {
                   next.delete(article.id)
                   addToast({
-                    title: 'Extraction failed',
-                    description: 'Could not extract content. You can still view the original URL.',
+                    title: 'Couldn\'t extract content',
+                    description: 'The original link still works.',
                     variant: 'destructive',
                   })
                   fetchArticles(undefined, true)
@@ -511,7 +522,7 @@ export function ReadingPage() {
             processingRef.current.delete(sharedUrl)
             addToast({
               title: 'Failed to save',
-              description: error instanceof Error ? error.message : 'Unknown error',
+              description: error instanceof Error ? error.message : 'Try again in a moment.',
               variant: 'destructive',
             })
             if (articleListPath) {
@@ -562,8 +573,8 @@ export function ReadingPage() {
             if (status === 'complete') {
               next.delete(article.id)
               addToast({
-                title: 'Article ready!',
-                description: updatedArticle?.title || 'Content extracted successfully',
+                title: 'Article ready',
+                description: updatedArticle?.title || 'Content extracted.',
                 variant: 'success',
               })
               fetchArticles(undefined, true)
@@ -582,7 +593,7 @@ export function ReadingPage() {
     } catch (error) {
       addToast({
         title: 'Failed to save',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        description: error instanceof Error ? error.message : 'Try again in a moment.',
         variant: 'destructive',
       })
     } finally {
@@ -702,8 +713,8 @@ export function ReadingPage() {
       bulkSelection.exitSelectionMode()
     } catch (error) {
       addToast({
-        title: 'Error',
-        description: 'Failed to archive articles',
+        title: 'Couldn\'t archive articles',
+        description: 'Try again in a moment.',
         variant: 'destructive',
       })
     } finally {
@@ -730,8 +741,8 @@ export function ReadingPage() {
       bulkSelection.exitSelectionMode()
     } catch (error) {
       addToast({
-        title: 'Error',
-        description: 'Failed to delete articles',
+        title: 'Couldn\'t delete articles',
+        description: 'Try again in a moment.',
         variant: 'destructive',
       })
     } finally {
@@ -998,7 +1009,7 @@ export function ReadingPage() {
                     <EmptyState
                       icon={BookOpen}
                       title="No updates yet"
-                      description='Click "Sync Feeds" to fetch latest articles from your RSS feeds'
+                      description='Tap the button to check your feeds for new articles.'
                       action={
                         <button
                           onClick={handleRSSSync}
@@ -1170,8 +1181,8 @@ export function ReadingPage() {
                 if (status === 'complete') {
                   next.delete(articleId)
                   addToast({
-                    title: ' Article ready!',
-                    description: updatedArticle?.title || 'Content extracted successfully',
+                    title: 'Article ready',
+                    description: updatedArticle?.title || 'Content extracted.',
                     variant: 'success',
                   })
                   fetchArticles()
@@ -1180,8 +1191,8 @@ export function ReadingPage() {
                 } else if (status === 'failed') {
                   next.delete(articleId)
                   addToast({
-                    title: 'Extraction failed',
-                    description: 'Could not extract content after retries',
+                    title: 'Couldn\'t extract content',
+                    description: 'Tried a few times. The original link still works.',
                     variant: 'destructive',
                   })
                   fetchArticles()
@@ -1211,8 +1222,8 @@ export function ReadingPage() {
               )
 
               addToast({
-                title: ' Queue flushed!',
-                description: `Deleted ${stuckArticles.length} stuck article(s)`,
+                title: 'Queue cleared',
+                description: `Removed ${stuckArticles.length} stuck article(s).`,
                 variant: 'success',
               })
 
@@ -1220,7 +1231,7 @@ export function ReadingPage() {
             } catch (error) {
               addToast({
                 title: 'Failed to flush',
-                description: error instanceof Error ? error.message : 'Unknown error',
+                description: error instanceof Error ? error.message : 'Try again in a moment.',
                 variant: 'destructive',
               })
             }

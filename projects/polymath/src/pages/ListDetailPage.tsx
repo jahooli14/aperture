@@ -166,7 +166,7 @@ const CompletionCelebration = ({
                             </motion.div>
 
                             <h3 className="text-lg font-black text-[var(--brand-text-primary)] uppercase tracking-tight mb-1">
-                                Marked as done!
+                                Done
                             </h3>
                             <p className="text-sm text-[var(--brand-text-primary)]/40 mb-6 font-mono truncate">{item.content}</p>
 
@@ -1135,7 +1135,7 @@ function ArticleListMode({ list, navigate }: ArticleListModeProps) {
         try {
             await saveArticle({ url })
             await fetchArticles(undefined, true)
-            addToast({ title: 'Saved!', description: 'Article added to your reading queue.', variant: 'success' })
+            addToast({ title: 'Article saved', description: 'Added to your reading queue.', variant: 'success' })
         } catch {
             addToast({ title: 'Failed to save', description: 'Could not save the article. Try again.', variant: 'destructive' })
         } finally {
@@ -1332,11 +1332,15 @@ export default function ListDetailPage() {
         )
         if (missing.length === 0) return
 
+        let cancelled = false
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 8000)
+
         Promise.all(missing.map(async (item) => {
             try {
                 const res = await fetch(
                     `https://openlibrary.org/search.json?title=${encodeURIComponent(item.content)}&limit=1&fields=cover_i`,
-                    { signal: AbortSignal.timeout(8000) }
+                    { signal: controller.signal }
                 )
                 if (!res.ok) return null
                 const data = await res.json()
@@ -1347,12 +1351,19 @@ export default function ListDetailPage() {
                 return null
             }
         })).then(results => {
+            if (cancelled) return
             const overrides: Record<string, string> = {}
             results.forEach(r => { if (r) overrides[r[0]] = r[1] })
             if (Object.keys(overrides).length > 0) {
                 setCoverOverrides(prev => ({ ...prev, ...overrides }))
             }
         })
+
+        return () => {
+            cancelled = true
+            clearTimeout(timeout)
+            controller.abort()
+        }
     }, [displayItems, list?.type])
 
     // Close sort menu on outside click

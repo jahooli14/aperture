@@ -262,8 +262,8 @@ export function ReaderPage() {
       window.getSelection()?.removeAllRanges()
     } catch (error) {
       addToast({
-        title: 'Error',
-        description: 'Failed to save highlight',
+        title: 'Couldn\'t save highlight',
+        description: 'Try again in a moment.',
         variant: 'destructive',
       })
     }
@@ -286,8 +286,8 @@ export function ReaderPage() {
       navigate(-1)
     } catch (error) {
       addToast({
-        title: 'Error',
-        description: 'Failed to archive',
+        title: 'Couldn\'t archive',
+        description: 'Try again in a moment.',
         variant: 'destructive',
       })
     }
@@ -657,14 +657,35 @@ export function ReaderPage() {
             </div>
           </motion.header>
 
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.15 }}
-            className={`reader-content ${settings.article}`}
-            onMouseUp={handleTextSelection}
-            dangerouslySetInnerHTML={{ __html: processedContent || (article.content ? article.content : '<p class="text-brand-text-muted italic">No content available for this article. <a href="' + article.url + '" target="_blank" class="text-[var(--brand-primary)] underline">View Original</a></p>') }}
-          />
+          {processedContent || article.content ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.15 }}
+              className={`reader-content ${settings.article}`}
+              onMouseUp={handleTextSelection}
+              dangerouslySetInnerHTML={{ __html: processedContent || article.content || '' }}
+            />
+          ) : (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.15 }}
+              className={`reader-content ${settings.article}`}
+            >
+              <p className="text-brand-text-muted italic">
+                No content available for this article.{' '}
+                <a
+                  href={article.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[var(--brand-primary)] underline"
+                >
+                  View Original
+                </a>
+              </p>
+            </motion.div>
+          )}
         </main>
 
         {/* Highlight Menu */}
