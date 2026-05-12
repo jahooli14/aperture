@@ -61,19 +61,19 @@
 
 .page-hero {
   font-family: var(--brand-font-serif);
-  font-weight: var(--hero-weight) !important;
-  font-size: clamp(2rem, 6vw, 2.75rem) !important;
-  letter-spacing: var(--hero-letter-spacing) !important;
-  line-height: var(--hero-line-height) !important;
+  font-weight: var(--hero-weight);
+  font-size: clamp(2rem, 6vw, 2.75rem);
+  letter-spacing: var(--hero-letter-spacing);
+  line-height: var(--hero-line-height);
   color: var(--hero-color);
 }
 
 .page-hero-sm {
   font-family: var(--brand-font-serif);
-  font-weight: var(--hero-weight) !important;
-  font-size: clamp(1.75rem, 5vw, 2.4rem) !important;
-  letter-spacing: var(--hero-letter-spacing) !important;
-  line-height: var(--hero-line-height) !important;
+  font-weight: var(--hero-weight);
+  font-size: clamp(1.75rem, 5vw, 2.4rem);
+  letter-spacing: var(--hero-letter-spacing);
+  line-height: var(--hero-line-height);
   color: var(--hero-color);
 }
 
@@ -82,10 +82,10 @@
    Smaller and tighter than a page-hero, but still editorial. */
 .section-title {
   font-family: var(--brand-font-serif);
-  font-weight: 500 !important;
-  font-size: 20px !important;
-  letter-spacing: -0.018em !important;
-  line-height: 1.25 !important;
+  font-weight: 500;
+  font-size: 20px;
+  letter-spacing: -0.018em;
+  line-height: 1.25;
   color: var(--brand-text-primary);
 }
 
