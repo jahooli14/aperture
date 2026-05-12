@@ -18,6 +18,7 @@ import { supabase } from '../../lib/supabase'
 import type { Project, ChatTurn } from '../../types'
 import type { Task } from './TaskList'
 import { useProjectStore } from '../../stores/useProjectStore'
+import { applyOpToTasks, opKey, type TaskOp } from './inlineGuideOps'
 
 const MAX_PERSISTED_TURNS = 40
 
@@ -53,15 +54,6 @@ interface SessionBrief {
   }
 }
 
-interface TaskOp {
-  action: 'complete' | 'uncomplete' | 'delete' | 'edit' | 'add'
-  taskId?: string
-  newText?: string
-  task_type?: 'ignition' | 'core' | 'shutdown'
-  estimated_minutes?: number
-  reasoning?: string
-}
-
 interface GoalUpdate {
   newGoal: string
   reasoning?: string
@@ -88,14 +80,11 @@ interface InlineGuideProps {
     task_type?: 'ignition' | 'core' | 'shutdown'
     estimated_minutes?: number
     reasoning?: string
-  }) => void
+  }) => void | Promise<void>
   onUpdateTasks?: (tasks: Task[]) => Promise<void>
   onUpdateGoal?: (newGoal: string) => Promise<void>
 }
 
-function opKey(op: TaskOp, i: number): string {
-  return `${op.action}:${op.taskId ?? op.newText ?? ''}:${i}`
-}
 
 export function InlineGuide({
   project,
@@ -114,6 +103,15 @@ export function InlineGuide({
   const threadRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const updateProjectMeta = useProjectStore(state => state.updateProject)
+  // Serialize task-op writes so rapid Apply clicks don't read stale state
+  // from each other. Each apply chains onto the previous one's promise.
+  const writeQueue = useRef<Promise<unknown>>(Promise.resolve())
+  // Read the freshest tasks at apply-time, not at render-time. Falls back to
+  // the prop if the store hasn't loaded yet (shouldn't happen in practice).
+  const getLatestTasks = useCallback((): Task[] => {
+    const fresh = useProjectStore.getState().allProjects.find(p => p.id === project.id)
+    return ((fresh?.metadata?.tasks as Task[] | undefined) ?? (project.metadata?.tasks as Task[] | undefined) ?? [])
+  }, [project.id, project.metadata])
 
   const getApiHistory = useCallback(() => {
     return messages
@@ -269,8 +267,20 @@ export function InlineGuide({
 
   const handleAddTask = (task: SuggestedTask) => {
     if (addedTasks.has(task.text)) return
-    onAddTask(task)
+    // Mark immediately so double-taps don't double-add. If the underlying
+    // call throws, we'll roll back below.
     setAddedTasks(prev => new Set(prev).add(task.text))
+    writeQueue.current = writeQueue.current
+      .catch(() => {})
+      .then(() => onAddTask(task))
+      .catch(err => {
+        console.error('[InlineGuide] add suggested task failed:', err)
+        setAddedTasks(prev => {
+          const next = new Set(prev)
+          next.delete(task.text)
+          return next
+        })
+      })
   }
 
   const markOpResolved = (msgIndex: number, key: string) => {
@@ -280,40 +290,65 @@ export function InlineGuide({
     }))
   }
 
+  // Run an update against the latest tasks-from-store, serialized through a
+  // single promise chain so rapid Apply clicks can't race each other.
+  const enqueueTaskUpdate = useCallback(
+    (mutate: (tasks: Task[]) => Task[]): Promise<void> => {
+      if (!onUpdateTasks) return Promise.resolve()
+      const next = writeQueue.current
+        .catch(() => {})
+        .then(() => onUpdateTasks(mutate(getLatestTasks())))
+      writeQueue.current = next
+      return next
+    },
+    [onUpdateTasks, getLatestTasks]
+  )
+
   const applyTaskOp = async (msgIndex: number, op: TaskOp, key: string) => {
-    const currentTasks: Task[] = (project.metadata?.tasks as Task[] | undefined) || []
-    if (op.action === 'add') {
-      if (!op.newText) return
-      onAddTask({
-        text: op.newText,
-        task_type: op.task_type,
-        estimated_minutes: op.estimated_minutes,
-        reasoning: op.reasoning,
-      })
+    if (!onUpdateTasks) return
+    if (op.action === 'add' && !op.newText) return
+    if (op.action !== 'add' && !op.taskId) return
+    try {
+      await enqueueTaskUpdate(tasks => applyOpToTasks(tasks, op))
       markOpResolved(msgIndex, key)
-      return
+    } catch (err) {
+      console.error('[InlineGuide] apply op failed:', err)
     }
-    if (!op.taskId || !onUpdateTasks) return
-    let updated = [...currentTasks]
-    if (op.action === 'complete') {
-      updated = updated.map(t => t.id === op.taskId ? { ...t, done: true, completed_at: new Date().toISOString() } : t)
-    } else if (op.action === 'uncomplete') {
-      updated = updated.map(t => t.id === op.taskId ? { ...t, done: false, completed_at: undefined } : t)
-    } else if (op.action === 'delete') {
-      updated = updated.filter(t => t.id !== op.taskId)
-    } else if (op.action === 'edit' && op.newText) {
-      updated = updated.map(t => t.id === op.taskId ? { ...t, text: op.newText! } : t)
-    } else {
-      return
+  }
+
+  const applyAllOps = async (msgIndex: number, ops: TaskOp[], alreadyResolved: string[]) => {
+    if (!onUpdateTasks) return
+    const remaining = ops
+      .map((op, i) => ({ op, key: opKey(op, i) }))
+      .filter(({ op, key }) => {
+        if (alreadyResolved.includes(key)) return false
+        if (op.action === 'add') return !!op.newText
+        return !!op.taskId
+      })
+    if (remaining.length === 0) return
+    try {
+      await enqueueTaskUpdate(tasks => remaining.reduce((acc, { op }) => applyOpToTasks(acc, op), tasks))
+      setMessages(prev => prev.map((m, i) => {
+        if (i !== msgIndex || m.kind !== 'guide') return m
+        return { ...m, resolvedOpIds: [...(m.resolvedOpIds || []), ...remaining.map(r => r.key)] }
+      }))
+    } catch (err) {
+      console.error('[InlineGuide] apply-all failed:', err)
     }
-    await onUpdateTasks(updated)
-    markOpResolved(msgIndex, key)
   }
 
   const applyGoalUpdate = async (msgIndex: number, goal: GoalUpdate) => {
     if (!onUpdateGoal) return
-    await onUpdateGoal(goal.newGoal)
-    setMessages(prev => prev.map((m, i) => (i === msgIndex && m.kind === 'guide') ? { ...m, resolvedGoal: true } : m))
+    // Chain onto the same queue so a pending tasks update finishes first.
+    writeQueue.current = writeQueue.current
+      .catch(() => {})
+      .then(() => onUpdateGoal(goal.newGoal))
+    try {
+      await writeQueue.current
+      setMessages(prev => prev.map((m, i) => (i === msgIndex && m.kind === 'guide') ? { ...m, resolvedGoal: true } : m))
+    } catch (err) {
+      console.error('[InlineGuide] apply goal failed:', err)
+    }
   }
 
   const dismissGoalUpdate = (msgIndex: number) => {
@@ -395,6 +430,26 @@ export function InlineGuide({
                     {/* Pending task operations (need user confirmation) */}
                     {msg.pendingOps && msg.pendingOps.length > 0 && (
                       <div className="space-y-1.5 pt-1">
+                        {(() => {
+                          const resolvedKeys = msg.resolvedOpIds || []
+                          const unresolved = msg.pendingOps.filter((op, idx) => !resolvedKeys.includes(opKey(op, idx)))
+                          if (unresolved.length < 2) return null
+                          return (
+                            <div className="flex justify-end pb-1">
+                              <button
+                                onClick={() => applyAllOps(i, msg.pendingOps!, resolvedKeys)}
+                                className="flex items-center gap-1 px-3 py-1 rounded-lg transition-all text-[11px] font-bold uppercase tracking-wider"
+                                style={{
+                                  background: 'rgba(var(--brand-primary-rgb),0.12)',
+                                  color: 'rgb(var(--brand-primary-rgb))',
+                                  border: '1px solid rgba(var(--brand-primary-rgb),0.3)',
+                                }}
+                              >
+                                <Check className="h-3 w-3" /> Apply all ({unresolved.length})
+                              </button>
+                            </div>
+                          )
+                        })()}
                         {msg.pendingOps.map((op, j) => {
                           const key = opKey(op, j)
                           const resolved = (msg.resolvedOpIds || []).includes(key)

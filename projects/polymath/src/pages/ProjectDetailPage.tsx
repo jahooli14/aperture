@@ -148,6 +148,7 @@ export function ProjectDetailPage() {
   // Inline guide state
   const [recentCompletions, setRecentCompletions] = useState<string[]>([])
   const prevTasksRef = useRef<{ id: string; done: boolean }[]>([])
+  const seededPrevTasksRef = useRef(false)
 
   // Listen for custom event from FloatingNav to open AddNote dialog
   useEffect(() => {
@@ -196,6 +197,11 @@ export function ProjectDetailPage() {
   useEffect(() => {
     if (project) {
       setContext('project', project.id, project.title, `${project.title}\n\n${project.description || ''}`)
+      if (!seededPrevTasksRef.current) {
+        const tasks = (project.metadata?.tasks as { id: string; done: boolean }[] | undefined) || []
+        prevTasksRef.current = tasks.map(t => ({ id: t.id, done: !!t.done }))
+        seededPrevTasksRef.current = true
+      }
     }
   }, [project])
 
@@ -528,15 +534,24 @@ export function ProjectDetailPage() {
     loadProjectDetails() // Refresh to get updated last_active
   }
 
+  // Read the freshest project from the store at call time. Using props here
+  // means a rapid second click reads stale metadata (the React re-render lags
+  // behind the optimistic store update) and the spread `...project.metadata`
+  // clobbers the change from the first click.
+  const getFreshProject = useCallback((): Project | undefined => {
+    return useProjectStore.getState().allProjects.find(p => p.id === id)
+  }, [id])
+
   const handleChatAddTask = async (taskData: {
     text: string
     task_type?: 'ignition' | 'core' | 'shutdown'
     estimated_minutes?: number
     reasoning?: string
   }) => {
-    if (!project) return
+    const fresh = getFreshProject()
+    if (!fresh) return
     const now = new Date().toISOString()
-    const existingTasks: Task[] = (project.metadata?.tasks as Task[] | undefined) || []
+    const existingTasks: Task[] = (fresh.metadata?.tasks as Task[] | undefined) || []
     const newTask: Task = {
       id: crypto.randomUUID(),
       text: taskData.text,
@@ -549,9 +564,9 @@ export function ProjectDetailPage() {
       estimated_minutes: taskData.estimated_minutes,
     }
     const updatedTasks = [...existingTasks, newTask]
-    await updateProject(project.id, {
+    await updateProject(fresh.id, {
       metadata: {
-        ...project.metadata,
+        ...fresh.metadata,
         tasks: updatedTasks,
         progress: Math.round((updatedTasks.filter(t => t.done).length / updatedTasks.length) * 100) || 0,
       },
@@ -562,10 +577,11 @@ export function ProjectDetailPage() {
   }
 
   const handleChatUpdateGoal = async (newGoal: string) => {
-    if (!project) return
-    await updateProject(project.id, {
+    const fresh = getFreshProject()
+    if (!fresh) return
+    await updateProject(fresh.id, {
       metadata: {
-        ...project.metadata,
+        ...fresh.metadata,
         end_goal: newGoal,
       },
     })
@@ -576,7 +592,8 @@ export function ProjectDetailPage() {
   }
 
   const handleChatUpdateTasks = async (updatedTasks: Task[]) => {
-    if (!project) return
+    const fresh = getFreshProject()
+    if (!fresh) return
     const now = new Date().toISOString()
     const newlyCompleted = updatedTasks.filter(
       t => t.done && !prevTasksRef.current.find(p => p.id === t.id && p.done)
@@ -585,9 +602,9 @@ export function ProjectDetailPage() {
       setRecentCompletions(prev => [...prev, ...newlyCompleted.map(t => t.text)])
     }
     prevTasksRef.current = updatedTasks.map(t => ({ id: t.id, done: t.done }))
-    await updateProject(project.id, {
+    await updateProject(fresh.id, {
       metadata: {
-        ...project.metadata,
+        ...fresh.metadata,
         tasks: updatedTasks,
         progress: Math.round((updatedTasks.filter(t => t.done).length / updatedTasks.length) * 100) || 0,
       },
