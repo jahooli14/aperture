@@ -18,11 +18,12 @@ export function UpNextMini() {
   return (
     <div>
       <h2 className="section-header">up <span>next</span></h2>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 items-start pb-3">
         {shown.map((p, i) => (
           <ProjectMiniCard
             key={p.id}
             project={p}
+            index={i}
             meta={`#${i + 1} in queue`}
           />
         ))}

@@ -232,8 +232,6 @@ export function VoiceFAB({
         scale: (hidden || isMenuOpen) ? 0 : 1,
         opacity: (hidden || isMenuOpen) ? 0 : 1,
         pointerEvents: (hidden || isMenuOpen) ? 'none' : 'auto',
-        backgroundColor: 'var(--brand-primary)',
-        borderColor: 'rgba(255, 255, 255, 0.1)',
       }}
       transition={{ type: 'spring', damping: 20, stiffness: 300 }}
       onPointerDown={onStart}
@@ -251,14 +249,27 @@ export function VoiceFAB({
       )}
       style={{
         bottom: 'calc(env(safe-area-inset-bottom, 0px) + 6rem)',
+        background: 'linear-gradient(135deg, rgb(var(--color-accent-light-rgb)) 0%, rgb(var(--brand-primary-rgb)) 60%, rgb(var(--color-accent-dark-rgb)) 100%)',
+        border: '1px solid rgba(255, 255, 255, 0.22)',
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5), 0 0 24px rgba(var(--brand-primary-rgb), 0.35), inset 0 0 10px var(--glass-surface)',
+        boxShadow:
+          '0 16px 40px -8px rgba(var(--brand-primary-rgb), 0.55),' +
+          '0 8px 24px rgba(0, 0, 0, 0.45),' +
+          '0 0 36px rgba(var(--brand-primary-rgb), 0.45),' +
+          'inset 0 1px 0 rgba(255, 255, 255, 0.35),' +
+          'inset 0 -2px 6px rgba(0, 0, 0, 0.20)',
       }}
       aria-label="New thought — tap to write, hold to record"
     >
-      <Plus className="h-6 w-6 text-white transition-transform group-hover:rotate-90" />
-      <div className="absolute inset-0 bg-[var(--glass-surface)] opacity-0 group-hover:opacity-100 transition-opacity" />
+      <Plus
+        className="h-6 w-6 text-white transition-transform group-hover:rotate-90 relative z-10"
+        style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.30))' }}
+      />
+      <div
+        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
+        style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0))' }}
+      />
     </motion.button>,
     document.body
   )

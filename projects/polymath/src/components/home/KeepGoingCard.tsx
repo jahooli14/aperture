@@ -14,10 +14,8 @@
 import { useEffect, useState } from 'react'
 import { Play, Zap } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { useFocusStore } from '../../stores/useFocusStore'
 import { getTheme } from '../../lib/projectTheme'
-import { haptic } from '../../utils/haptics'
-import { useToast } from '../ui/toast'
+import { useStartProjectSession } from '../../hooks/useStartProjectSession'
 import type { Project } from '../../types'
 
 const SESSION_DURATION_MINUTES = 60
@@ -44,10 +42,8 @@ interface KeepGoingCardProps {
 
 export function KeepGoingCard({ project, heading, emptyState }: KeepGoingCardProps) {
   const navigate = useNavigate()
-  const startSession = useFocusStore(s => s.startSession)
-  const { addToast } = useToast()
   const [plan, setPlan] = useState<any>(null)
-  const [loadingSession, setLoadingSession] = useState(false)
+  const { start, loading: loadingSession } = useStartProjectSession(project?.id)
 
   useEffect(() => {
     if (!project) return
@@ -76,67 +72,7 @@ export function KeepGoingCard({ project, heading, emptyState }: KeepGoingCardPro
     )
   }
 
-  const handleStartSession = async () => {
-    haptic.medium()
-    setLoadingSession(true)
-    try {
-      const seed = plan
-      if (seed) {
-        const tasks = [
-          ...(seed.ignition_tasks || []).map((t: any, i: number) => ({ id: `ign-${i}`, text: t.text })),
-          ...(seed.checklist_items || []).map((t: any, i: number) => ({ id: `core-${i}`, text: t.text })),
-          ...(seed.shutdown_tasks || []).map((t: any, i: number) => ({ id: `shut-${i}`, text: t.text })),
-        ]
-        if (tasks.length > 0) {
-          startSession(project.id, tasks)
-          return
-        }
-      }
-
-      const res = await fetch(`/api/power-hour?projectId=${project.id}&duration=${SESSION_DURATION_MINUTES}`)
-      if (!res.ok) {
-        if (res.status !== 401) {
-          const body = await res.json().catch(() => ({}))
-          addToast({
-            title: "Couldn't plan session",
-            description: body.error || `Power Hour API returned ${res.status}`,
-            variant: 'destructive',
-            action: { label: 'Open project', onClick: () => navigate(`/projects/${project.id}`) },
-          })
-        }
-        return
-      }
-
-      const data = await res.json()
-      const task = data.tasks?.[0]
-      const tasks = task ? [
-        ...(task.ignition_tasks || []).map((t: any, i: number) => ({ id: `ign-${i}`, text: t.text })),
-        ...(task.checklist_items || []).map((t: any, i: number) => ({ id: `core-${i}`, text: t.text })),
-        ...(task.shutdown_tasks || []).map((t: any, i: number) => ({ id: `shut-${i}`, text: t.text })),
-      ] : []
-
-      if (tasks.length > 0) {
-        startSession(project.id, tasks)
-      } else {
-        addToast({
-          title: "Couldn't plan session",
-          description: 'No tasks were generated for this project.',
-          variant: 'destructive',
-          action: { label: 'Open project', onClick: () => navigate(`/projects/${project.id}`) },
-        })
-      }
-    } catch (err) {
-      console.error('[KeepGoingCard] start session failed:', err)
-      addToast({
-        title: "Couldn't plan session",
-        description: err instanceof Error ? err.message : 'Unexpected error',
-        variant: 'destructive',
-        action: { label: 'Open project', onClick: () => navigate(`/projects/${project.id}`) },
-      })
-    } finally {
-      setLoadingSession(false)
-    }
-  }
+  const handleStartSession = () => start({ prefetched: plan })
 
   const theme = getTheme(project.type || 'other', project.title)
   const headline = plan?.task_title || project.metadata?.session_headline

@@ -95,30 +95,35 @@ function ToastItem({ toast, isRemoving, onClose }: { toast: Toast; isRemoving: b
   }, [])
 
   const getVariantStyles = () => {
+    const baseShadow =
+      '0 20px 60px -16px rgba(0,0,0,0.55),' +
+      '0 4px 12px rgba(0,0,0,0.25),' +
+      'inset 0 1px 0 rgba(255,255,255,0.10)'
+
     switch (toast.variant) {
       case "destructive":
         return {
-          backgroundColor: 'rgba(var(--color-error-rgb), 0.1)',
-          color: "var(--brand-text-secondary)",
-          border: '1.5px solid rgba(var(--color-error-rgb), 0.35)',
-          borderRadius: '4px',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
+          background: 'linear-gradient(180deg, rgba(var(--color-error-rgb), 0.20) 0%, rgba(var(--color-error-rgb), 0.08) 100%), rgba(20, 27, 38, 0.65)',
+          color: 'var(--brand-text-primary)',
+          border: '1px solid rgba(var(--color-error-rgb), 0.40)',
+          borderRadius: 'var(--brand-radius)',
+          boxShadow: baseShadow + ', 0 0 28px rgba(var(--color-error-rgb), 0.18)',
         }
       case "success":
         return {
-          backgroundColor: 'rgba(var(--brand-primary-rgb), 0.1)',
+          background: 'linear-gradient(180deg, rgba(var(--brand-primary-rgb), 0.18) 0%, rgba(var(--brand-primary-rgb), 0.06) 100%), rgba(20, 27, 38, 0.65)',
           color: 'var(--brand-text-primary)',
-          border: '1.5px solid rgba(var(--brand-primary-rgb), 0.35)',
-          borderRadius: '4px',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
+          border: '1px solid rgba(var(--brand-primary-rgb), 0.40)',
+          borderRadius: 'var(--brand-radius)',
+          boxShadow: baseShadow + ', 0 0 28px rgba(var(--brand-primary-rgb), 0.18)',
         }
       default:
         return {
-          backgroundColor: 'rgba(20, 27, 38, 0.95)',
+          background: 'linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 35%), rgba(20, 27, 38, 0.72)',
           color: 'var(--brand-text-primary)',
-          border: '1.5px solid rgba(255, 255, 255, 0.15)',
-          borderRadius: '4px',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
+          border: '1px solid rgba(255, 255, 255, 0.18)',
+          borderRadius: 'var(--brand-radius)',
+          boxShadow: baseShadow,
         }
     }
   }

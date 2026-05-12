@@ -110,7 +110,9 @@
     /* Chrome, Safari, Opera */
   }
 
-  /* Premium ambient overlay - subtle metallic gradient */
+  /* Premium ambient overlay — atmospheric depth behind glass surfaces.
+     Two cyan glows offset diagonally + a deep vignette gives every page
+     a sense of place without overpowering content. */
   body::before {
     content: '';
     position: fixed;
@@ -119,11 +121,18 @@
     right: 0;
     bottom: 0;
     pointer-events: none;
-    background: radial-gradient(circle at 20% 30%,
-        rgba(var(--brand-primary-rgb), 0.03) 0%,
-        transparent 40%),
-      radial-gradient(circle at 80% 70%,
-        rgba(229, 231, 235, 0.02) 0%,
+    background:
+      radial-gradient(ellipse 80% 60% at 15% 0%,
+        rgba(var(--brand-primary-rgb), 0.10) 0%,
+        transparent 55%),
+      radial-gradient(ellipse 70% 50% at 90% 110%,
+        rgba(var(--brand-primary-rgb), 0.07) 0%,
+        transparent 60%),
+      radial-gradient(ellipse 100% 80% at 50% 50%,
+        rgba(167, 139, 250, 0.04) 0%,
+        transparent 65%),
+      radial-gradient(circle at 50% 100%,
+        rgba(0, 0, 0, 0.35) 0%,
         transparent 50%);
     z-index: 0;
   }
