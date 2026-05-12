@@ -246,6 +246,12 @@ function getCronUserId(req: VercelRequest): string | null {
   return uid
 }
 
+// Postgres rejects non-UUID strings on `.eq('id', ...)` with code 22P02, which
+// the up-next/set-priority handlers turned into a generic 500 "Database error
+// during project lookup". Validating up front lets us treat these as the stale
+// local rows they almost always are (404 → client refetches).
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 async function internalHandler(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseClient()
   const { resource } = req.query
@@ -356,6 +362,20 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'project_id is required' })
       }
 
+      if (typeof project_id === 'string' && project_id.startsWith('temp-')) {
+        return res.status(409).json({
+          error: 'project_not_synced',
+          message: 'This project hasn\'t synced yet. Try again in a moment.',
+        })
+      }
+
+      if (!UUID_REGEX.test(String(project_id))) {
+        return res.status(404).json({
+          error: 'Project not found',
+          message: 'That project isn\'t on the server. Refresh and try again.',
+        })
+      }
+
       // Look up the target project
       const { data: project, error: projectError } = await supabase
         .from('projects')
@@ -365,6 +385,11 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         .single()
 
       if (projectError) {
+        console.error('[set-priority] lookup error:', projectError, { project_id, userId })
+        // PGRST116 means no rows matched — that's a 404, not a 500.
+        if (projectError.code === 'PGRST116') {
+          return res.status(404).json({ error: 'Project not found' })
+        }
         return res.status(500).json({
           error: 'Database error during project lookup',
           details: projectError.message,
@@ -414,7 +439,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      const { data: updatedProject, error: setError } = await supabase
+      let { data: updatedProject, error: setError } = await supabase
         .from('projects')
         .update(updatePayload)
         .eq('id', project_id)
@@ -422,7 +447,26 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         .select()
         .single()
 
+      // If the up_next_position column isn't in this database (the up-next
+      // migration hasn't been applied yet), the priority toggle still has to
+      // work — fall back to the same update without that field. 42703 is
+      // Postgres' "undefined column" code.
+      if (setError && setError.code === '42703' && 'up_next_position' in updatePayload) {
+        console.warn('[set-priority] up_next_position column missing — retrying without it. Apply migration 20260511_up_next.sql.')
+        const { up_next_position: _drop, ...payloadWithoutUpNext } = updatePayload
+        const retry = await supabase
+          .from('projects')
+          .update(payloadWithoutUpNext)
+          .eq('id', project_id)
+          .eq('user_id', userId)
+          .select()
+          .single()
+        updatedProject = retry.data
+        setError = retry.error
+      }
+
       if (setError) {
+        console.error('[set-priority] update failed:', setError, { project_id, userId })
         return res.status(500).json({
           error: 'Failed to update priority',
           details: setError.message,
@@ -489,6 +533,15 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
           })
         }
 
+        // Any other non-UUID id is a stale local cache entry. Reject early so
+        // Postgres doesn't bounce it back as a generic 500 the user can't act on.
+        if (!UUID_REGEX.test(String(project_id))) {
+          return res.status(404).json({
+            error: 'Project not found',
+            message: 'That project isn\'t on the server. Refresh and try again.',
+          })
+        }
+
         const { data: target, error: lookupError } = await supabase
           .from('projects')
           .select('id, is_priority, up_next_position, metadata')
@@ -496,10 +549,20 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
           .eq('user_id', userId)
           .maybeSingle()
 
-        // PGRST116 (no rows) → genuine 404. Anything else is a real DB error
-        // we shouldn't disguise as "not found".
+        // PGRST116 (no rows) → genuine 404. 42703 (undefined column) means
+        // the up-next migration hasn't been applied to this database — surface
+        // that explicitly so the operator knows what to do, rather than the
+        // useless generic 500 the old code returned.
         if (lookupError && lookupError.code !== 'PGRST116') {
-          console.error('[up-next] add lookup error:', lookupError)
+          console.error('[up-next] add lookup error:', lookupError, { project_id, userId })
+          if (lookupError.code === '42703') {
+            return res.status(503).json({
+              error: 'up_next_not_provisioned',
+              message: 'Up Next isn\'t set up on this database yet. Apply migration 20260511_up_next.sql.',
+              details: lookupError.message,
+              code: lookupError.code,
+            })
+          }
           return res.status(500).json({
             error: 'Database error during project lookup',
             details: lookupError.message,
@@ -604,6 +667,13 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
           })
         }
 
+        if (!UUID_REGEX.test(String(project_id)) || !UUID_REGEX.test(String(replace_id))) {
+          return res.status(404).json({
+            error: 'Project not found',
+            message: 'That project isn\'t on the server. Refresh and try again.',
+          })
+        }
+
         const { data: replaceTarget, error: replaceLookupError } = await supabase
           .from('projects')
           .select('id, up_next_position')
@@ -612,7 +682,15 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
           .maybeSingle()
 
         if (replaceLookupError && replaceLookupError.code !== 'PGRST116') {
-          console.error('[up-next] replace lookup error:', replaceLookupError)
+          console.error('[up-next] replace lookup error:', replaceLookupError, { project_id, replace_id, userId })
+          if (replaceLookupError.code === '42703') {
+            return res.status(503).json({
+              error: 'up_next_not_provisioned',
+              message: 'Up Next isn\'t set up on this database yet. Apply migration 20260511_up_next.sql.',
+              details: replaceLookupError.message,
+              code: replaceLookupError.code,
+            })
+          }
           return res.status(500).json({
             error: 'Database error during project lookup',
             details: replaceLookupError.message,
