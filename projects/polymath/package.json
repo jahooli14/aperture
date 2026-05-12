@@ -20,6 +20,7 @@
     "synthesize": "tsx scripts/polymath/synthesis.ts",
     "strengthen": "tsx scripts/polymath/strengthen-nodes.ts",
     "backfill:embeddings": "tsx scripts/backfill-embeddings.ts",
+    "backfill:tags": "tsx scripts/backfill-thought-tags.ts",
     "deploy": "vercel --prod",
     "deploy:preview": "vercel"
   },

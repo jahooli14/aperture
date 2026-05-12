@@ -12,6 +12,7 @@ import { getCachedInsights } from './_lib/project-genesis.js'
 import { generateCognitiveReplay } from './_lib/cognitive-replay.js'
 import { MODELS } from './_lib/models.js'
 import { CaptureMemoryBody, CaptureTitleResponse, validate, tryValidate } from './_lib/schemas.js'
+import { PLAIN_ENGLISH_RULES } from './_lib/plain-english.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
@@ -2519,15 +2520,24 @@ async function handleRescanTags(req: any, res: any) {
     body: (r.body ?? '').replace(/\s+/g, ' ').trim().slice(0, 280),
   }))
 
-  const prompt = `You are a tag librarian. You will see a list of voice notes from one person + their current tag vocabulary. For each note, assign UP TO 5 tags that genuinely apply. Plain English, lowercase, single words or 2-word kebab-case.
+  const prompt = `You are a tag librarian. You will see a list of voice notes from one person + their current tag vocabulary. For each note, assign 0-3 tags that genuinely apply. Zero is fine — better empty than padded.
+
+${PLAIN_ENGLISH_RULES}
 
 Rules:
+- Tags are short THEMES the user is circling — creative direction, mood, domain. NOT proper nouns, NOT entities, NOT people, places, or brands.
 - Prefer tags from the user's existing vocabulary when they fit. This keeps the system stable.
 - Add a new tag ONLY when no existing tag captures the topic AND the topic recurs (≥2 notes).
-- 5 tags max per note. Better fewer real tags than padded ones.
+- 3 tags MAX per note. Ideally 1-2. Empty array if nothing clearly fits.
 - Tags are about *topic / theme / domain*, not feeling. "philosophy" yes, "thoughtful" no.
 - Avoid generic words: "thought", "note", "idea", "voice", "musing", "reflection", "interesting".
-- Plain English. No invented phrases.
+- Lowercase. Single word or 2-word kebab-case.
+
+ANTI-EXAMPLES (do NOT do this):
+- "Saw Arsenal beat Spurs on BBC" → ["arsenal","spurs","bbc","football"] ❌ Entity dump.
+- Correct: ["football"] only if it's already in the vocabulary below, else [].
+- "Reading Flowers for Algernon" → ["flowers-for-algernon","novel"] ❌
+- Correct: ["reading"] if in vocab, else [].
 
 USER VOCABULARY (existing tags — prefer these):
 ${vocabList.length ? vocabList.map(v => `  - ${v}`).join('\n') : '  (none yet — you can introduce 5-10 broad tags drawn from the notes below)'}
@@ -2573,9 +2583,9 @@ One entry per note shown. Do not omit any.`
       .filter(t => typeof t === 'string')
       .map(t => t.trim().toLowerCase())
       .filter(t => t.length > 0 && t.length <= 32)
-      .slice(0, 5)
+      .slice(0, 3)
     const systemMarkers = (row.tags ?? []).filter(t => t === 'onboarding' || t === 'live-hybrid')
-    const merged = Array.from(new Set([...systemMarkers, ...aiTags])).slice(0, 8)
+    const merged = Array.from(new Set([...systemMarkers, ...aiTags])).slice(0, 5)
 
     // Skip writes that wouldn't change anything.
     const before = (row.tags ?? []).slice().sort().join('|')

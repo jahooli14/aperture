@@ -7,6 +7,7 @@ import { generateText } from './gemini-chat.js'
 import { MODELS } from './models.js'
 import { draftFix } from './fix-queue/drafter.js'
 import { ExtractMetadataResponse, validate } from './schemas.js'
+import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 const supabase = getSupabaseClient()
@@ -16,6 +17,51 @@ const logger = {
   warn: (objOrMsg: any, msg?: string) => console.warn(msg || objOrMsg, typeof objOrMsg === 'object' && msg ? objOrMsg : ''),
   error: (objOrMsg: any, msg?: string) => console.error(msg || objOrMsg, typeof objOrMsg === 'object' && msg ? objOrMsg : ''),
   debug: (objOrMsg: any, msg?: string) => console.debug(msg || objOrMsg, typeof objOrMsg === 'object' && msg ? objOrMsg : ''),
+}
+
+/**
+ * System tags we never present to the user as "preferred vocabulary."
+ * They mark provenance, not theme.
+ */
+const SYSTEM_TAGS = new Set<string>(['onboarding', 'live-hybrid', 'morning-followup', 'bedtime-synthesis'])
+
+/**
+ * Max tags written per thought. The old prompt asked for 3-5 specific
+ * tags per note and never shared the existing vocabulary with the model,
+ * which produced ~50 unique tags across ~50 notes (essentially one tag
+ * per note). We cap at 3 — ideally 1-2 — and insist the model reuse
+ * existing vocabulary before inventing.
+ */
+export const MAX_TAGS_PER_THOUGHT = 3
+
+/**
+ * Pull the user's tag vocabulary (themes only, no system markers, sorted
+ * by use count) so we can hand it to the prompt as the preferred set.
+ */
+export async function fetchTagVocabulary(userId: string, limit = 40): Promise<string[]> {
+  try {
+    const { data } = await supabase
+      .from('memories')
+      .select('tags')
+      .eq('user_id', userId)
+      .range(0, 4999)
+
+    const counts = new Map<string, number>()
+    for (const row of (data ?? []) as Array<{ tags: string[] | null }>) {
+      for (const t of row.tags ?? []) {
+        const norm = (t || '').trim().toLowerCase()
+        if (!norm || SYSTEM_TAGS.has(norm)) continue
+        counts.set(norm, (counts.get(norm) ?? 0) + 1)
+      }
+    }
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([tag]) => tag)
+  } catch (e) {
+    logger.warn({ error: e }, 'Failed to fetch tag vocabulary; proceeding without')
+    return []
+  }
 }
 
 /**
@@ -72,8 +118,11 @@ export async function processMemory(memoryId: string): Promise<void> {
 
     // Preserve format: voice has orig_transcript (→ prose), manual text does not (→ bullets)
     const bodyFormat: 'prose' | 'bullets' = memory.orig_transcript ? 'prose' : 'bullets'
-    logger.info({ memory_id: memoryId }, '🔄 Extracting metadata...')
-    const metadata = await extractMetadata(memory.title, memory.orig_transcript || memory.body, projects || [], bodyFormat)
+    // Fetch the user's existing tag vocabulary so the LLM prefers reusing
+    // a familiar theme rather than inventing a fresh entity-style tag.
+    const tagVocabulary = await fetchTagVocabulary(memory.user_id || 'f2404e61-2010-46c8-8edd-b8a3e702f0fb')
+    logger.info({ memory_id: memoryId, vocab_size: tagVocabulary.length }, '🔄 Extracting metadata...')
+    const metadata = await extractMetadata(memory.title, memory.orig_transcript || memory.body, projects || [], bodyFormat, tagVocabulary)
     logger.info({ memory_id: memoryId, summary_title: metadata.summary_title, triage: metadata.triage?.category }, '✅ Metadata extracted')
 
     // 3. Generate embedding for the processed memory content
@@ -96,8 +145,15 @@ export async function processMemory(memoryId: string): Promise<void> {
         // Merge — keep system markers (e.g. 'onboarding', 'live-hybrid')
         // and any user-added tags; layer the AI's freshly-extracted tags
         // on top. Without this, processing wipes onboarding markers and
-        // any custom tag the user added.
-        tags: Array.from(new Set([...(memory.tags || []), ...(metadata.tags || [])])),
+        // any custom tag the user added. Cap AI tags at MAX_TAGS_PER_THOUGHT
+        // before merging so a model overshoot can't inflate a thought to
+        // 8+ tags.
+        tags: Array.from(
+          new Set([
+            ...(memory.tags || []),
+            ...((metadata.tags || []).slice(0, MAX_TAGS_PER_THOUGHT)),
+          ])
+        ),
         emotional_tone: metadata.emotional_tone,
         triage: metadata.triage,
         embedding,
@@ -411,10 +467,20 @@ export async function processMemory(memoryId: string): Promise<void> {
 /**
  * Extract metadata using Gemini (rationalized to avoid duplication)
  */
-async function extractMetadata(title: string, body: string, projects: any[], bodyFormat: 'prose' | 'bullets' = 'prose'): Promise<ExtractedMetadata> {
+async function extractMetadata(
+  title: string,
+  body: string,
+  projects: any[],
+  bodyFormat: 'prose' | 'bullets' = 'prose',
+  tagVocabulary: string[] = [],
+): Promise<ExtractedMetadata> {
   const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT, generationConfig: { responseMimeType: 'application/json' } })
 
   const projectList = projects.map(p => `- ${p.title} (ID: ${p.id}): ${p.description}`).join('\n')
+
+  const vocabBlock = tagVocabulary.length
+    ? tagVocabulary.map(t => `  - ${t}`).join('\n')
+    : '  (none yet — pick at most one or two short, broad theme words)'
 
   const prompt = `You are a title summarization and content polishing expert.
 
@@ -457,7 +523,7 @@ Return JSON:
     "skills": ["abilities the user has or is developing"]
   },
   "themes": ["1-3 from: career/health/creativity/relationships/learning/family"],
-  "tags": ["3-5 specific tags like 'philosophy', 'biology', 'curiosity', 'nature'. Avoid generic words like 'thought', 'note', 'voice'"],
+  "tags": ["0-3 short THEME tags — see TAG RULES below. Empty array is fine."],
   "emotional_tone": "brief phrase describing the mood",
   "triage": {
     "category": "task_update|list_item|new_thought|reading_lead|new_project_idea|annoyance",
@@ -468,6 +534,23 @@ Return JSON:
     "fix_hint": "brief description of how code could fix this (only if automatable is true)"
   }
 }
+
+TAG RULES (read carefully — wrong tags pollute the whole corpus):
+${PLAIN_ENGLISH_RULES}
+- Tags are short THEMES the user is circling — creative direction, mood, domain. NOT proper nouns, NOT entities, NOT people, places, or brands.
+- 0-3 tags. Ideally 1-2. ZERO is allowed and preferred over inventing weak tags.
+- PREFER an existing tag from the user's vocabulary below. Only invent a new tag if no existing one fits AND the theme is likely to recur.
+- Lowercase. Single word or 2-word kebab-case. No punctuation.
+- Avoid generic words: thought, note, idea, voice, musing, reflection, interesting.
+
+USER'S EXISTING TAG VOCABULARY (prefer these):
+${vocabBlock}
+
+ANTI-EXAMPLES (do NOT do this):
+- Note "Saw Arsenal beat Spurs on BBC" → tags ["arsenal","spurs","bbc","football","match"] ❌ Entity dump.
+- Correct: ["football"] or [] if "football" isn't already a recurring theme.
+- Note "Reading Flowers for Algernon" → tags ["flowers-for-algernon","algernon","novel","reading"] ❌
+- Correct: ["reading"] if it exists in vocab, otherwise [].
 
 TRIAGE CATEGORY GUIDE:
 - task_update: Actionable item that clearly belongs to an EXISTING project listed above.
