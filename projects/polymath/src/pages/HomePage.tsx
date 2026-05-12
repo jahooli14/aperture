@@ -33,12 +33,11 @@ import { KeepGoingCard, KeepGoingEmpty } from '../components/home/KeepGoingCard'
 import { RecentlyActiveMini } from '../components/home/RecentlyActiveMini'
 import { UpNextMini } from '../components/home/UpNextMini'
 import { ThoughtOfTheDay } from '../components/home/ThoughtOfTheDay'
-import { BedtimeFloatingIcon } from '../components/home/BedtimeFloatingIcon'
 import { ProjectIdeasHome } from '../components/home/ProjectIdeasHome'
 import { MomentSurface } from '../components/home/MomentSurface'
 import { UnauthHome } from '../components/onboarding/UnauthHome'
 import { ease, stagger } from '../lib/motion'
-import { AlertCircle, ArrowRight, Film, Music, Monitor, Book, MapPin, Gamepad2, Calendar, FileText, Quote, Box, Search } from 'lucide-react'
+import { AlertCircle, ArrowRight, Film, Music, Monitor, Book, MapPin, Gamepad2, Calendar, FileText, Quote, Box, Search, Moon } from 'lucide-react'
 
 const LIST_TYPE_ICONS: Record<string, React.ElementType> = {
   film: Film, music: Music, tech: Monitor, book: Book, place: MapPin,
@@ -161,6 +160,22 @@ export function HomePage() {
 
   const [error, setError] = useState<string | null>(null)
 
+  // After 9:30pm, surface the bedtime affordance up in the masthead
+  // instead of as a floating FAB. Re-evaluates each minute so it
+  // appears without a reload.
+  const [isAfterBedtime, setIsAfterBedtime] = useState(() => {
+    const n = new Date(); return n.getHours() > 21 || (n.getHours() === 21 && n.getMinutes() >= 30)
+  })
+  useEffect(() => {
+    const tick = () => {
+      const n = new Date()
+      setIsAfterBedtime(n.getHours() > 21 || (n.getHours() === 21 && n.getMinutes() >= 30))
+    }
+    tick()
+    const id = window.setInterval(tick, 60_000)
+    return () => window.clearInterval(id)
+  }, [])
+
   useEffect(() => {
     if (!isAuthenticated) return
     setContext('home', 'home', 'Home')
@@ -239,6 +254,20 @@ export function HomePage() {
             <header className="page-masthead">
               <div className="page-masthead-text" />
               <div className="page-masthead-actions">
+                {isAfterBedtime && (
+                  <button
+                    onClick={() => navigate('/bedtime')}
+                    aria-label="Bedtime — wind down"
+                    className="masthead-action press-spring"
+                    title="Bedtime — wind down"
+                    style={{
+                      background: 'rgba(var(--brand-primary-rgb), 0.12)',
+                      borderColor: 'rgba(var(--brand-primary-rgb), 0.35)',
+                    }}
+                  >
+                    <Moon className="h-5 w-5" />
+                  </button>
+                )}
                 <button
                   onClick={() => navigate('/search')}
                   aria-label="Search everything"
@@ -305,8 +334,9 @@ export function HomePage() {
         </div>
       </div>
 
-      {/* Bedtime floating icon — appears after 9:30pm */}
-      <BedtimeFloatingIcon />
+      {/* The bedtime floating icon has been promoted to a quiet
+          masthead action above (visible only after 9:30pm). The
+          floating FAB was competing visually with the voice FAB. */}
     </motion.div>
   )
 }

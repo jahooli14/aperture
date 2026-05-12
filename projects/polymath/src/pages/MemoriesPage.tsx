@@ -285,9 +285,18 @@ function MemoriesPageInner() {
       } else if (view === 'themes') {
         await loadMemories(true)
         await fetchThemeClusters()
+        // Keep the Resurface tab count fresh while we're on Themes too.
+        fetchResurfacing()
       } else {
         await loadMemories(true)
         fetchOnboardingPrompts() // Load suggested follow-up prompts
+        // Always fetch the resurface queue on page entry so the tab
+        // label shows a real count instead of "(0)" until the user
+        // switches over. Previously the count only ever updated when
+        // you actively visited the Resurface tab, which felt like a
+        // bug — you'd land here with five things to revisit and not
+        // know it.
+        fetchResurfacing()
       }
     }
     loadData()
@@ -713,8 +722,44 @@ function MemoriesPageInner() {
                           ))}
                         </div>
                       ) : (
-                        <div className="p-6 rounded-lg text-center" style={{ background: 'var(--brand-glass-bg)', border: '1px solid var(--glass-surface-hover)', boxShadow: '0 4px 16px rgba(0,0,0,0.6)' }}>
-                          <p className="text-xs" style={{ color: "var(--brand-primary)" }}>No themes yet. Add a few more thoughts and they'll start showing up.</p>
+                        // Empty themes state — show a primer of the canonical
+                        // themes the AI uses so the user knows what to expect
+                        // before their first thoughts get processed. The list
+                        // mirrors the categories enumerated in
+                        // api/_lib/process-memory.ts (career / health /
+                        // creativity / relationships / learning / family).
+                        <div className="rounded-2xl p-6"
+                          style={{ background: 'var(--brand-glass-bg)', border: '1px solid var(--glass-surface-hover)', boxShadow: '0 4px 16px rgba(0,0,0,0.4)' }}>
+                          <p className="page-eyebrow mt-0 mb-3">How themes work</p>
+                          <p className="text-sm leading-relaxed mb-5" style={{ color: 'var(--brand-text-secondary)' }}>
+                            Every thought gets tagged with one or two themes automatically. As you capture more, the themes group your thinking so you can spot what you keep coming back to.
+                          </p>
+                          <p className="text-[11px] tracking-[0.18em] mb-2" style={{ color: 'rgba(var(--brand-primary-rgb), 0.7)' }}>
+                            the six themes
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {[
+                              { name: 'creativity', desc: 'making things' },
+                              { name: 'career', desc: 'work + craft' },
+                              { name: 'learning', desc: 'study + skill' },
+                              { name: 'relationships', desc: 'people in your life' },
+                              { name: 'health', desc: 'body + energy' },
+                              { name: 'family', desc: 'the small core' },
+                            ].map(t => (
+                              <span
+                                key={t.name}
+                                className="inline-flex flex-col px-3 py-1.5 rounded-xl text-xs"
+                                style={{
+                                  background: 'rgba(var(--brand-primary-rgb), 0.08)',
+                                  border: '1px solid rgba(var(--brand-primary-rgb), 0.25)',
+                                  color: 'var(--brand-text-secondary)',
+                                }}
+                              >
+                                <span className="font-medium" style={{ color: 'rgb(var(--brand-primary-rgb))' }}>{t.name}</span>
+                                <span className="opacity-60 text-[10px]">{t.desc}</span>
+                              </span>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </>
