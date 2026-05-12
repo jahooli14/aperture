@@ -246,7 +246,7 @@ export function CreateConnectionDialog({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={handleInputFocus}
-            className="w-full pl-10 pr-4 py-3 rounded-xl border-2 focus:outline-none transition-colors premium-glass"
+            className="w-full pl-10 pr-4 py-3 rounded-xl border-2 focus:outline-none transition-colors glass-card"
             style={{
               borderColor: 'rgba(255, 255, 255, 0.1)',
               color: 'var(--brand-text-primary)',
@@ -384,7 +384,7 @@ function ItemCard({
       transition={{ delay: index * 0.03 }}
       onClick={() => onConnect(item.type, item.id)}
       disabled={creating}
-      className="w-full text-left p-4 rounded-xl border transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed group premium-card"
+      className="w-full text-left p-4 rounded-xl border transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed group glass-card"
       style={{ borderColor: schema.primary + '30' }}
     >
       <div className="flex items-start gap-3">

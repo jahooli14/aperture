@@ -701,10 +701,9 @@ export function OnboardingChatPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.55 }}
-            className="mb-7 max-w-md mx-auto italic"
+            className="mb-7 max-w-md mx-auto italic text-lg"
             style={{
               fontFamily: 'var(--brand-font-serif)',
-              fontSize: '17px',
               lineHeight: 1.55,
               color: 'var(--brand-text-secondary)',
               opacity: 0.85,
@@ -861,10 +860,9 @@ export function OnboardingChatPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.6 }}
-            className="mb-10 italic"
+            className="mb-10 italic text-base"
             style={{
               fontFamily: 'var(--brand-font-serif)',
-              fontSize: '15.5px',
               color: 'var(--brand-text-secondary)',
               opacity: 0.85,
             }}

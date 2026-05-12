@@ -118,9 +118,8 @@ export function LoginPage() {
         {/* Brand mark — quiet, not hero */}
         <div className="mb-10 text-center">
           <h1
-            className="aperture-header"
+            className="aperture-header text-xl"
             style={{
-              fontSize: '1.25rem',
               color: 'rgb(var(--brand-primary-rgb))',
               opacity: 0.9,
               letterSpacing: '-0.02em',
@@ -207,7 +206,7 @@ export function LoginPage() {
                   className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl text-[15px] font-medium transition-all disabled:opacity-40 active:scale-[0.99]"
                   style={{
                     background: 'rgb(var(--brand-primary-rgb))',
-                    color: '#0b1018',
+                    color: 'var(--brand-bg)',
                     boxShadow: '0 8px 24px -8px rgba(var(--brand-primary-rgb), 0.5)',
                   }}
                 >
@@ -283,7 +282,7 @@ export function LoginPage() {
                   className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl text-[15px] font-medium transition-all disabled:opacity-40 active:scale-[0.99]"
                   style={{
                     background: 'rgb(var(--brand-primary-rgb))',
-                    color: '#0b1018',
+                    color: 'var(--brand-bg)',
                     boxShadow: '0 8px 24px -8px rgba(var(--brand-primary-rgb), 0.5)',
                   }}
                 >

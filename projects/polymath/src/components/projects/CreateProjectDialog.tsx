@@ -419,10 +419,9 @@ export function CreateProjectDialog({
                       onFocus={handleInputFocus}
                       onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
                       autoComplete="off"
-                      className="flex-1 border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none"
+                      className="flex-1 border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none text-base"
                       style={{
                         color: 'var(--brand-text-primary)',
-                        fontSize: '15px',
                       }}
                     />
                     <button
@@ -509,8 +508,8 @@ export function CreateProjectDialog({
                   autoComplete="off"
                   autoFocus
                   required
-                  className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none"
-                  style={{ color: 'var(--brand-text-primary)', fontSize: '22px', fontWeight: 700, lineHeight: '1.3' }}
+                  className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none text-2xl"
+                  style={{ color: 'var(--brand-text-primary)', fontWeight: 700, lineHeight: '1.3' }}
                 />
 
                 {/* Description */}
@@ -520,8 +519,8 @@ export function CreateProjectDialog({
                   onChange={e => setFormData({ ...formData, description: e.target.value })}
                   onFocus={handleInputFocus}
                   autoComplete="off"
-                  className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none mt-2"
-                  style={{ color: 'var(--brand-text-secondary)', fontSize: '15px', opacity: formData.description ? 0.7 : 0.4 }}
+                  className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none mt-2 text-base"
+                  style={{ color: 'var(--brand-text-secondary)', opacity: formData.description ? 0.7 : 0.4 }}
                 />
 
                 {/* End goal (completion only) */}
@@ -532,8 +531,8 @@ export function CreateProjectDialog({
                     onChange={e => setFormData({ ...formData, end_goal: e.target.value })}
                     onFocus={handleInputFocus}
                     autoComplete="off"
-                    className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none mt-2"
-                    style={{ color: 'var(--brand-text-secondary)', fontSize: '13px', opacity: 0.5 }}
+                    className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none mt-2 text-sm"
+                    style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
                   />
                 )}
 
@@ -544,8 +543,8 @@ export function CreateProjectDialog({
                   onChange={e => setFormData({ ...formData, first_step: e.target.value })}
                   onFocus={handleInputFocus}
                   autoComplete="off"
-                  className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none mt-2 mb-4"
-                  style={{ color: 'var(--brand-text-secondary)', fontSize: '13px', opacity: 0.5 }}
+                  className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none mt-2 mb-4 text-sm"
+                  style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
                 />
 
                 {/* Toolbar */}
@@ -636,8 +635,8 @@ export function CreateProjectDialog({
                   onFocus={handleInputFocus}
                   autoComplete="off"
                   autoFocus
-                  className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none"
-                  style={{ color: 'var(--brand-text-primary)', fontSize: '22px', fontWeight: 700, lineHeight: '1.3' }}
+                  className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none text-2xl"
+                  style={{ color: 'var(--brand-text-primary)', fontWeight: 700, lineHeight: '1.3' }}
                 />
 
                 <input
@@ -647,8 +646,8 @@ export function CreateProjectDialog({
                   onFocus={handleInputFocus}
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleQuickAdd() } }}
                   autoComplete="off"
-                  className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none mt-2 mb-4"
-                  style={{ color: 'var(--brand-text-secondary)', fontSize: '15px', opacity: quickDesc ? 0.7 : 0.4 }}
+                  className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent appearance-none mt-2 mb-4 text-base"
+                  style={{ color: 'var(--brand-text-secondary)', opacity: quickDesc ? 0.7 : 0.4 }}
                 />
 
                 <p className="text-[12px] mb-3 leading-relaxed" style={{ color: 'rgba(251,191,36,0.85)' }}>

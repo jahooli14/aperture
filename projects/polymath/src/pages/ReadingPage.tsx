@@ -1014,7 +1014,7 @@ export function ReadingPage() {
                         <button
                           onClick={handleRSSSync}
                           disabled={syncing}
-                          className="premium-glass rounded-full px-6 py-3 font-medium inline-flex items-center gap-2 transition-all hover:bg-[rgba(255,255,255,0.1)]"
+                          className="glass-card rounded-full px-6 py-3 font-medium inline-flex items-center gap-2 transition-all hover:bg-[rgba(255,255,255,0.1)]"
                           style={{
                             color: syncing ? 'var(--brand-text-muted)' : 'var(--brand-primary)',
                             opacity: syncing ? 0.5 : 1

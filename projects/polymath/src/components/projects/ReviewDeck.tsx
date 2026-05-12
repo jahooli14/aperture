@@ -56,7 +56,7 @@ export function ReviewDeck({ projects, onClose }: ReviewDeckProps) {
     if (!currentProject) {
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-                <div className="premium-card p-8 max-w-md w-full text-center">
+                <div className="glass-card p-8 max-w-md w-full text-center">
                     <div className="w-16 h-16 rounded-full bg-brand-primary/20 flex items-center justify-center mx-auto mb-4">
                         <Check className="h-8 w-8 text-brand-text-secondary" />
                     </div>

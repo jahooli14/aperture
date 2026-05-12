@@ -18,8 +18,10 @@
  *   .soft-input-lg        — larger variant for search hero pages
  *
  * Surfaces:
- *   .editorial-card       — soft glass card without "premium dark" weight
  *   .post-it              — warm amber paper note (slight tilt, paper shadow)
+ *   (For card surfaces use .glass-card from theme.css — single canonical
+ *    card. .premium-card / .premium-glass in premium-dark.css are legacy;
+ *    don't reach for them in new code.)
  *
  * Eyebrow / metadata:
  *   .meta-caps            — uppercase tracked metadata label
@@ -61,19 +63,19 @@
 
 .page-hero {
   font-family: var(--brand-font-serif);
-  font-weight: var(--hero-weight) !important;
-  font-size: clamp(2rem, 6vw, 2.75rem) !important;
-  letter-spacing: var(--hero-letter-spacing) !important;
-  line-height: var(--hero-line-height) !important;
+  font-weight: var(--hero-weight);
+  font-size: clamp(2rem, 6vw, 2.75rem);
+  letter-spacing: var(--hero-letter-spacing);
+  line-height: var(--hero-line-height);
   color: var(--hero-color);
 }
 
 .page-hero-sm {
   font-family: var(--brand-font-serif);
-  font-weight: var(--hero-weight) !important;
-  font-size: clamp(1.75rem, 5vw, 2.4rem) !important;
-  letter-spacing: var(--hero-letter-spacing) !important;
-  line-height: var(--hero-line-height) !important;
+  font-weight: var(--hero-weight);
+  font-size: clamp(1.75rem, 5vw, 2.4rem);
+  letter-spacing: var(--hero-letter-spacing);
+  line-height: var(--hero-line-height);
   color: var(--hero-color);
 }
 
@@ -82,10 +84,10 @@
    Smaller and tighter than a page-hero, but still editorial. */
 .section-title {
   font-family: var(--brand-font-serif);
-  font-weight: 500 !important;
-  font-size: 20px !important;
-  letter-spacing: -0.018em !important;
-  line-height: 1.25 !important;
+  font-weight: 500;
+  font-size: 20px;
+  letter-spacing: -0.018em;
+  line-height: 1.25;
   color: var(--brand-text-primary);
 }
 
@@ -154,18 +156,6 @@
   padding: 16px 20px;
   font-size: 16px;
   border-radius: 20px;
-}
-
-/* ─── Editorial card ────────────────────────────────────────────── */
-/* Calm glass card. Replaces the "premium-glass shadow-2xl" anti-pattern. */
-
-.editorial-card {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.035), rgba(15, 24, 41, 0.45));
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid var(--soft-border);
-  border-radius: var(--soft-radius);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 /* ─── Post-it note ──────────────────────────────────────────────── */

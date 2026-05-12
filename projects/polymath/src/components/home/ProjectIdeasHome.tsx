@@ -647,7 +647,7 @@ export function ProjectIdeasHome() {
                     style={{
                       color: `rgb(${accent})`,
                       opacity: 0.28,
-                      fontFamily: 'Georgia, "Times New Roman", serif',
+                      fontFamily: 'var(--brand-font-serif)',
                     }}
                   >
                     “
@@ -796,7 +796,7 @@ export function ProjectIdeasHome() {
                     disabled={pendingFeedback === active.id || active.status === 'built'}
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[12px] font-bold tracking-wide transition-all disabled:opacity-60"
                     style={{
-                      color: '#0b1320',
+                      color: 'var(--brand-bg)',
                       background: active.status === 'built'
                         ? `rgba(${accent}, 0.5)`
                         : `linear-gradient(135deg, rgb(${accent}), rgba(${accent}, 0.8))`,

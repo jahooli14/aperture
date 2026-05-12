@@ -1,5 +1,6 @@
 import { getSupabaseClient } from './supabase.js'
 import { generateText } from './gemini-chat.js'
+import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 
 const supabase = getSupabaseClient()
 
@@ -33,7 +34,8 @@ export async function generateZebraReport(project: any): Promise<string> {
   Project Title: "${project.title}"
   Project Description: "${project.description || 'No description provided.'}"
 
-  Plain English. Real words a friend would say. One paragraph. No bullets. No "high-impact," "leveraged," "synergies." BAD: "This bold, multifaceted exploration unlocked considerable creative momentum." GOOD: "The first three weeks went well. You bought the equipment. Once Logic Pro's trial expired you stopped opening it."`
+  ${PLAIN_ENGLISH_RULES}
+  One paragraph. No bullets.`
 
   try {
     const report = await generateText(prompt, { temperature: 0.7, maxTokens: 500 })
@@ -209,8 +211,7 @@ WRITE:
 - evolved_description: ONE sentence (max 18 words). Same core idea, reframed for who they are now. Reference at least one specific thing from the post-original signals if any are present. Don't say "evolved" or "reimagined." Just say what it is.
 - heat_reason: ONE sentence (max 12 words). What recent signal makes this worth revisiting RIGHT NOW. Name the specific item.
 
-PLAIN ENGLISH RULES:
-- Real words a friend would say. NO "leveraging," "reimagined," "evolved," "unlocked," "synergies," "explore," "journey," "essence."
+${PLAIN_ENGLISH_RULES}
 - Don't write a tagline. Write what the project would actually become.
 - BAD: "An evolved exploration of constraint that unlocks your authentic creative voice." GOOD: "A 30-day album recorded only on the train, after the woodworking course taught you what scarcity feels like."
 

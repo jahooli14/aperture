@@ -4,7 +4,6 @@ import { motion } from 'framer-motion'
 import { useAuthContext } from '../contexts/AuthContext'
 import { SignInNudge } from '../components/SignInNudge'
 import { useProjectStore } from '../stores/useProjectStore'
-import { useSuggestionStore } from '../stores/useSuggestionStore'
 import { ProjectsPageCarousel } from '../components/projects/ProjectsPageCarousel'
 import { ForYouToday } from '../components/projects/ForYouToday'
 import { DrawerDigestSheet } from '../components/projects/DrawerDigestSheet'
@@ -154,8 +153,6 @@ function ProjectsPageInner() {
   useEffect(() => {
     fetchProjects()
   }, [])
-
-  const { clearSuggestions } = useSuggestionStore()
 
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [debouncedSelectedTags, setDebouncedSelectedTags] = useState<string[]>([])
@@ -392,7 +389,6 @@ function ProjectsPageInner() {
                   drawerProjects={drawerList}
                   archiveSpotlight={null}
                   loading={loading}
-                  onClearSuggestions={clearSuggestions}
                 />
               </div>
             </div>

@@ -498,6 +498,15 @@ export const useProjectStore = create<ProjectState>()(
         const targetProject = previousAllProjects.find(p => p.id === id)
         if (!targetProject) return
 
+        // Offline-created projects carry a temp id until the queue syncs and
+        // the server assigns a real UUID. Pinning one would 404. Bail with a
+        // friendly error the caller can show in a toast.
+        if (typeof id === 'string' && id.startsWith('temp-')) {
+          const err = new Error('This project hasn\'t synced yet. Try again in a moment.')
+          ;(err as any).code = 'project_not_synced'
+          throw err
+        }
+
         const isPinned = targetProject.up_next_position != null
         const action = isPinned ? 'remove' : 'add'
 
@@ -515,11 +524,24 @@ export const useProjectStore = create<ProjectState>()(
           }
         } catch (error: any) {
           logger.error('Failed to toggle Up Next:', error)
+          // 404 means our local cache has a project the server doesn't —
+          // refetch so the stale tile disappears next render.
+          if (error?.status === 404) {
+            get().fetchProjects().catch(e => logger.warn('Refresh after 404 failed:', e))
+            const friendly = new Error('That project isn\'t on the server. Refreshing your list.')
+            ;(friendly as any).status = 404
+            throw friendly
+          }
           throw error
         }
       },
 
       replaceUpNext: async (newId, replaceId) => {
+        if (typeof newId === 'string' && newId.startsWith('temp-')) {
+          const err = new Error('This project hasn\'t synced yet. Try again in a moment.')
+          ;(err as any).code = 'project_not_synced'
+          throw err
+        }
         try {
           const response = await api.post('projects?resource=up-next', {
             action: 'replace',
@@ -538,6 +560,12 @@ export const useProjectStore = create<ProjectState>()(
           }
         } catch (error: any) {
           logger.error('Failed to replace Up Next slot:', error)
+          if (error?.status === 404) {
+            get().fetchProjects().catch(e => logger.warn('Refresh after 404 failed:', e))
+            const friendly = new Error('That project isn\'t on the server. Refreshing your list.')
+            ;(friendly as any).status = 404
+            throw friendly
+          }
           throw error
         }
       },

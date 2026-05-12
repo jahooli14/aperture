@@ -56,7 +56,7 @@ export function ProjectPickerDialog({
                     initial={{ scale: 0.95, opacity: 0, y: 10 }}
                     animate={{ scale: 1, opacity: 1, y: 0 }}
                     exit={{ scale: 0.95, opacity: 0, y: 10 }}
-                    className="relative w-full max-w-md bg-[#1a1f2e] border border-[var(--glass-surface-hover)] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
+                    className="relative w-full max-w-md bg-[var(--brand-bg)] border border-[var(--glass-surface-hover)] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
                 >
                     {/* Header */}
                     <div className="p-4 border-b border-[var(--glass-surface-hover)] flex items-center justify-between bg-[var(--glass-surface)]">

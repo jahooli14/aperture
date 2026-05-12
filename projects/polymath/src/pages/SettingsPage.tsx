@@ -23,7 +23,7 @@ const fontSizeOptions = [
 
 export function SettingsPage() {
   const navigate = useNavigate()
-  const { accentColor, intensity, fontSize, showBugTracker, showRegenerateInsights, setAccentColor, setIntensity, setFontSize, setShowBugTracker, setShowRegenerateInsights } = useThemeStore()
+  const { accentColor, intensity, fontSize, showBugTracker, setAccentColor, setIntensity, setFontSize, setShowBugTracker } = useThemeStore()
   const { addToast } = useToast()
   const [regenerating, setRegenerating] = useState(false)
   const [tidying, setTidying] = useState(false)
@@ -456,7 +456,7 @@ export function SettingsPage() {
                   <h3 className="font-semibold premium-text-platinum text-sm">
                     Bug Tracker / Debug Panel
                   </h3>
-                  <p style={{ color: 'var(--brand-text-secondary)', fontSize: '0.8rem' }}>
+                  <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
                     Show technical details and debug tools
                   </p>
                 </div>
@@ -465,36 +465,6 @@ export function SettingsPage() {
                     <ToggleRight className="w-6 h-6" style={{ color: "var(--brand-primary)" }} />
                   ) : (
                     <ToggleLeft className="w-6 h-6" style={{ color: "var(--brand-primary)" }} />
-                  )}
-                </div>
-              </button>
-
-              {/* This-week regenerate button */}
-              <button
-                onClick={() => setShowRegenerateInsights(!showRegenerateInsights)}
-                className="w-full flex items-center gap-4 p-4 rounded-xl backdrop-blur-xl transition-all text-left border hover:bg-[var(--glass-surface)]"
-                style={{
-                  background: 'var(--glass-surface)',
-                  borderColor: 'var(--glass-surface)',
-                }}
-              >
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: 'rgba(var(--brand-primary-rgb), 0.15)' }}>
-                  <RefreshCw className="w-5 h-5" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold premium-text-platinum text-sm">
-                    Regenerate “this week” button
-                  </h3>
-                  <p style={{ color: 'var(--brand-text-secondary)', fontSize: '0.8rem' }}>
-                    Show a refresh icon on the home-page deck so you can rebuild it on demand instead of waiting for Monday.
-                  </p>
-                </div>
-                <div>
-                  {showRegenerateInsights ? (
-                    <ToggleRight className="w-6 h-6" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
-                  ) : (
-                    <ToggleLeft className="w-6 h-6" style={{ color: 'var(--brand-text-muted)' }} />
                   )}
                 </div>
               </button>
@@ -516,7 +486,7 @@ export function SettingsPage() {
                   <h3 className="font-semibold premium-text-platinum text-sm">
                     Hand off stuck projects
                   </h3>
-                  <p style={{ color: 'var(--brand-text-secondary)', fontSize: '0.8rem' }}>
+                  <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
                     The weekly digest can suggest giving a dormant project to someone else.
                   </p>
                 </div>
@@ -548,7 +518,7 @@ export function SettingsPage() {
                   <h3 className="font-semibold premium-text-platinum text-sm">
                     Find new connections
                   </h3>
-                  <p style={{ color: 'var(--brand-text-secondary)', fontSize: '0.8rem' }}>
+                  <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
                     Re-scan everything for new links between your ideas.
                   </p>
                 </div>
@@ -573,7 +543,7 @@ export function SettingsPage() {
                   <h3 className="font-semibold premium-text-platinum text-sm">
                     Tidy old thoughts
                   </h3>
-                  <p style={{ color: 'var(--brand-text-secondary)', fontSize: '0.8rem' }}>
+                  <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
                     Strip ums and uhs from voice notes you captured before this update.
                   </p>
                 </div>
@@ -600,7 +570,7 @@ export function SettingsPage() {
                   <h3 className="font-semibold premium-text-platinum text-sm">
                     Rescan tags
                   </h3>
-                  <p style={{ color: 'var(--brand-text-secondary)', fontSize: '0.8rem' }}>
+                  <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
                     Re-tag every thought using your current vocabulary, so old notes pick up tags you've added since.
                   </p>
                 </div>
@@ -624,7 +594,7 @@ export function SettingsPage() {
                     <h3 className="font-semibold premium-text-platinum text-sm">
                       Reset onboarding
                     </h3>
-                    <p style={{ color: 'var(--brand-text-secondary)', fontSize: '0.8rem' }}>
+                    <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
                       Wipe onboarding-created memories, lists, and ideas so you can run it again
                     </p>
                   </div>
@@ -646,7 +616,7 @@ export function SettingsPage() {
                       <h3 className="font-semibold premium-text-platinum text-sm mb-1">
                         Reset onboarding?
                       </h3>
-                      <p style={{ color: 'var(--brand-text-secondary)', fontSize: '0.8rem' }}>
+                      <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
                         This permanently deletes everything the voice chat created — memories, list items, the captured lists (if still empty), projects, and idea suggestions. Items you added manually are kept. Can't be undone.
                       </p>
                       <div className="flex gap-2 mt-3">

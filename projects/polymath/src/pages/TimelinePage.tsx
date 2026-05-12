@@ -74,7 +74,7 @@ export function TimelinePage() {
     return (
       <div className="min-h-screen py-12" style={{ backgroundColor: 'var(--brand-bg)' }}>
         <div className="max-w-6xl mx-auto px-4">
-          <Card className="premium-card">
+          <Card className="glass-card">
             <CardContent className="py-16 text-center">
               {isOffline ? (
                 <>
@@ -116,7 +116,7 @@ export function TimelinePage() {
       <div className="max-w-6xl mx-auto px-4 space-y-6 pb-24">
         {/* Pattern Cards */}
         {patterns.map((pattern, index) => (
-          <Card key={index} className="premium-card">
+          <Card key={index} className="glass-card">
             <CardContent className="pt-6">
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0">
@@ -132,7 +132,7 @@ export function TimelinePage() {
                   <p className="mb-4" style={{ color: "var(--brand-primary)" }}>
                     {pattern.description}
                   </p>
-                  <div className="p-4 rounded-lg premium-glass-subtle">
+                  <div className="p-4 rounded-lg glass-card-subtle">
                     <p className="text-sm font-medium" style={{ color: "var(--brand-primary)" }}>
                        {pattern.insight}
                     </p>
@@ -235,7 +235,7 @@ export function TimelinePage() {
         ))}
 
         {/* Summary Card */}
-        <Card className="premium-card">
+        <Card className="glass-card">
           <CardContent className="pt-6">
             <h3 className="text-lg font-bold mb-3" style={{ color: "var(--brand-primary)" }}>
               What This Means

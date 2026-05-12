@@ -73,7 +73,7 @@ export function VoiceInput({
 
   if (!isSupported) {
     return (
-      <div className="p-6 text-center premium-card border-red-500/30 bg-brand-primary/10">
+      <div className="p-6 text-center glass-card border-red-500/30 bg-brand-primary/10">
         <Mic className="h-10 w-10 mx-auto mb-4 text-brand-text-secondary opacity-50" />
         <p className="text-brand-primary font-medium mb-1">Recording Unsupported</p>
         <p className="text-sm text-brand-primary/70">

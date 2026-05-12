@@ -58,7 +58,7 @@ export function PinOverlay() {
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="fixed inset-x-0 z-30 premium-glass-strong border-t"
+        className="fixed inset-x-0 z-30 glass-card-strong border-t"
         style={{
           bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)',
           borderColor: 'rgba(255, 255, 255, 0.1)',
@@ -118,7 +118,7 @@ export function PinOverlay() {
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="fixed inset-x-0 z-30 premium-glass-strong border-t flex flex-col"
+        className="fixed inset-x-0 z-30 glass-card-strong border-t flex flex-col"
         style={{
           top: viewState === 'maximized' ? '5%' : '50%',
           bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)',

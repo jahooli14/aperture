@@ -306,16 +306,13 @@ function sortItems(items: ListItem[], sort: SortOption): ListItem[] {
 }
 
 // ============================================================================
-// COLOR_SCHEMES for quote cards
+// Quote card accent — cyan only (design system: chrome stays cyan)
 // ============================================================================
 
-const COLOR_SCHEMES = [
-    { primary: 'violet', gradient: 'from-brand-primary/20 via-brand-primary/10 to-brand-primary/20', rgb: '139, 92, 246' },
-    { primary: 'cyan', gradient: 'from-brand-primary/20 via-brand-primary/10 to-brand-primary/20', rgb: '6, 182, 212' },
-    { primary: 'rose', gradient: 'from-brand-primary/20 via-brand-primary/10 to-brand-primary/20', rgb: '244, 63, 94' },
-    { primary: 'amber', gradient: 'from-brand-primary/20 via-brand-primary/10 to-brand-primary/20', rgb: '245, 158, 11' },
-    { primary: 'emerald', gradient: 'from-brand-primary/20 via-brand-primary/10 to-brand-primary/20', rgb: '16, 185, 129' }
-] as const
+// Quote-card variants: all share brand cyan; variety comes from weight,
+// italic, and ornament — not from hue or font family.
+const QUOTE_ACCENT_RGB = '56, 189, 248' // var(--brand-primary-rgb)
+const QUOTE_GRADIENT = 'from-brand-primary/20 via-brand-primary/10 to-brand-primary/20'
 
 const getVariant = (id: string) => {
     const hash = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
@@ -349,7 +346,6 @@ const QuoteCard = memo(({
     const variant = useMemo(() => getVariant(item.id), [item.id])
     const isShort = item.content.length < 80
     const isMedium = item.content.length >= 80 && item.content.length < 150
-    const colors = COLOR_SCHEMES[variant]
 
     const handleSaveAuthor = async (e: React.MouseEvent) => {
         e.stopPropagation()
@@ -380,21 +376,7 @@ const QuoteCard = memo(({
         setIsEditingQuote(false)
     }
 
-    const bgClasses: Record<number, string> = {
-        0: 'from-zinc-900/90 via-brand-primary/20 to-zinc-900/90',
-        1: 'from-zinc-900/90 via-brand-primary/20 to-zinc-900/90',
-        2: 'from-zinc-900/90 via-brand-primary/20 to-zinc-900/90',
-        3: 'from-zinc-900/90 via-brand-primary/20 to-zinc-900/90',
-        4: 'from-zinc-900/90 via-brand-primary/20 to-zinc-900/90',
-    }
-
-    const attributionColors: Record<number, string> = {
-        0: '167, 139, 250',
-        1: '103, 232, 249',
-        2: '251, 113, 133',
-        3: '251, 191, 36',
-        4: '52, 211, 153',
-    }
+    const bgClass = 'from-zinc-900/90 via-brand-primary/20 to-zinc-900/90'
 
     return (
         <motion.div
@@ -405,13 +387,13 @@ const QuoteCard = memo(({
             onClick={() => onItemClick(item.id)}
             className="group relative cursor-pointer"
         >
-            <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${bgClasses[variant]} backdrop-blur-xl border-2 p-8 sm:p-12 hover:border-white/30 transition-all duration-500`}
+            <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${bgClass} backdrop-blur-xl border-2 p-8 sm:p-12 hover:border-white/30 transition-all duration-500`}
                 style={{
-                    borderColor: `rgba(${colors.rgb}, 0.2)`,
-                    boxShadow: `0 20px 40px rgba(${colors.rgb}, 0.05)`
+                    borderColor: `rgba(${QUOTE_ACCENT_RGB}, 0.2)`,
+                    boxShadow: `0 20px 40px rgba(${QUOTE_ACCENT_RGB}, 0.05)`
                 }}>
                 {/* Accent glow */}
-                <div className={`absolute top-0 left-0 w-40 h-40 bg-gradient-to-br ${colors.gradient} rounded-full blur-3xl opacity-30`} />
+                <div className={`absolute top-0 left-0 w-40 h-40 bg-gradient-to-br ${QUOTE_GRADIENT} rounded-full blur-3xl opacity-30`} />
 
                 {variant === 0 && (
                     <div className="absolute top-6 left-6 text-6xl font-serif text-[var(--brand-text-primary)]/[0.03] select-none leading-none">"</div>
@@ -431,7 +413,7 @@ const QuoteCard = memo(({
                                 style={{
                                     backgroundColor: 'rgba(255,255,255,0.07)',
                                     boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.15)',
-                                    fontFamily: variant === 0 ? 'Georgia, serif' : variant === 1 ? 'Palatino, serif' : variant === 2 ? 'Garamond, serif' : variant === 3 ? 'Times New Roman, serif' : 'Georgia, serif',
+                                    fontFamily: 'var(--brand-font-serif)',
                                     minHeight: '80px',
                                 }}
                                 rows={3}
@@ -445,7 +427,7 @@ const QuoteCard = memo(({
                                 <button
                                     onClick={handleSaveQuote}
                                     className="px-3 py-1.5 rounded-xl text-xs font-bold text-black transition-all"
-                                    style={{ background: `rgba(${colors.rgb}, 0.9)` }}
+                                    style={{ background: `rgba(${QUOTE_ACCENT_RGB}, 0.9)` }}
                                 >
                                     Save
                                 </button>
@@ -462,8 +444,8 @@ const QuoteCard = memo(({
                         <div className="group/quote relative">
                             <p className={`${isShort ? 'text-3xl sm:text-4xl md:text-5xl' : isMedium ? 'text-2xl sm:text-3xl md:text-4xl' : 'text-xl sm:text-2xl md:text-3xl'} text-[var(--brand-text-primary)]/95 leading-relaxed tracking-wide ${variant === 0 ? 'font-light' : variant === 1 ? 'font-normal' : variant === 2 ? 'font-light italic' : variant === 3 ? 'font-medium' : 'font-light'}`}
                                 style={{
-                                    fontFamily: variant === 0 ? 'Georgia, serif' : variant === 1 ? 'Palatino, serif' : variant === 2 ? 'Garamond, serif' : variant === 3 ? 'Times New Roman, serif' : 'Georgia, serif',
-                                    textShadow: `0 2px 10px rgba(${colors.rgb}, 0.1)`
+                                    fontFamily: 'var(--brand-font-serif)',
+                                    textShadow: `0 2px 10px rgba(${QUOTE_ACCENT_RGB}, 0.1)`
                                 }}>
                                 {item.content}
                             </p>
@@ -497,7 +479,7 @@ const QuoteCard = memo(({
                         ) : (
                             <>
                                 <p className={`text-sm font-medium tracking-wider ${variant === 2 ? 'italic' : ''}`}
-                                    style={{ color: `rgba(${attributionColors[variant]}, 0.7)` }}>
+                                    style={{ color: `rgba(${QUOTE_ACCENT_RGB}, 0.7)` }}>
                                     {variant === 3 ? '~' : ''} {item.metadata?.specs?.Author || item.metadata?.specs?.Source || item.metadata?.subtitle || 'Me'}
                                 </p>
                                 <button
@@ -538,8 +520,8 @@ const QuoteCard = memo(({
                 {/* Enriching indicator */}
                 {item.enrichment_status === 'pending' && (
                     <div className="absolute bottom-6 right-16 flex items-center gap-2 text-xs"
-                        style={{ color: `rgba(${attributionColors[variant]}, 0.8)` }}>
-                        <div className="h-2 w-2 rounded-full animate-pulse" style={{ background: `rgba(${colors.rgb}, 0.6)` }} />
+                        style={{ color: `rgba(${QUOTE_ACCENT_RGB}, 0.8)` }}>
+                        <div className="h-2 w-2 rounded-full animate-pulse" style={{ background: `rgba(${QUOTE_ACCENT_RGB}, 0.6)` }} />
                         <span className="font-medium">Enriching</span>
                     </div>
                 )}
@@ -570,7 +552,7 @@ const QuoteCard = memo(({
                     <button
                         onClick={(e) => { e.stopPropagation(); onDelete(item.id, item.list_id) }}
                         className="p-2.5 rounded-xl bg-zinc-900/50 backdrop-blur-sm border active:bg-brand-primary/20 active:border-red-500/40 text-brand-text-muted active:text-brand-text-secondary opacity-50 transition-all active:scale-95"
-                        style={{ borderColor: `rgba(${colors.rgb}, 0.2)` }}
+                        style={{ borderColor: `rgba(${QUOTE_ACCENT_RGB}, 0.2)` }}
                         aria-label="Delete phrase"
                     >
                         <Trash2 className="h-4 w-4" />

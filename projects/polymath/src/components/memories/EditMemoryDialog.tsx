@@ -249,10 +249,9 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
             onBlur={() => setBodyFocused(false)}
             required
             autoFocus
-            className="w-full border-0 focus:outline-none focus:ring-0 resize-none appearance-none bg-transparent"
+            className="w-full border-0 focus:outline-none focus:ring-0 resize-none appearance-none bg-transparent text-lg"
             style={{
               color: 'var(--brand-text-primary)',
-              fontSize: '17px',
               lineHeight: '1.65',
               minHeight: '160px',
             }}

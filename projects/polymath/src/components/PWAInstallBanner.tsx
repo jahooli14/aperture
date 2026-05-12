@@ -60,7 +60,7 @@ export function PWAInstallBanner() {
         className="fixed bottom-24 left-4 right-4 z-50 md:left-auto md:right-8 md:w-96"
       >
         <div
-          className="premium-glass-strong border rounded-2xl p-5 shadow-2xl"
+          className="glass-card-strong border rounded-2xl p-5 shadow-2xl"
           style={{ borderColor: 'rgba(var(--brand-primary-rgb), 0.3)' }}
         >
           {/* Close Button */}

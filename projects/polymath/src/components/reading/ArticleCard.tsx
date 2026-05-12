@@ -196,7 +196,7 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
                 <span className="text-sm font-medium text-brand-primary">Extracting...</span>
               </div>
             ) : (
-              <h3 className="text-lg font-black leading-tight text-[#f2f2f7] block break-words">
+              <h3 className="text-lg font-black leading-tight text-[var(--brand-text-primary)] block break-words">
                 {article.title || 'Untitled'}
               </h3>
             )}

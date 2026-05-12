@@ -172,9 +172,9 @@ function ProjectsVisual() {
 
 function ListsVisual() {
   const tiles = [
-    { label: 'books', color: '#F59E0B', icon: BookOpen },
-    { label: 'films', color: '#EC4899', icon: Film },
-    { label: 'places', color: '#10B981', icon: MapPin },
+    { label: 'books', color: 'rgb(var(--project-business-rgb))', icon: BookOpen },
+    { label: 'films', color: 'rgb(var(--project-art-rgb))', icon: Film },
+    { label: 'places', color: 'rgb(var(--project-life-rgb))', icon: MapPin },
   ]
   return (
     <div className="flex flex-col items-center gap-3">
@@ -191,7 +191,7 @@ function ListsVisual() {
       >
         <MiniWaveform />
         <p className="text-xs italic" style={{ color: 'var(--brand-text-secondary)' }}>
-          "…finally reading <span style={{ color: '#F59E0B', fontStyle: 'normal', fontWeight: 600 }}>Dune</span>…"
+          "…finally reading <span style={{ color: 'rgb(var(--project-business-rgb))', fontStyle: 'normal', fontWeight: 600 }}>Dune</span>…"
         </p>
       </motion.div>
 
@@ -217,7 +217,7 @@ function ListsVisual() {
                 opacity: 1,
                 scale: isTarget ? [1, 1.06, 1] : 1,
                 boxShadow: isTarget
-                  ? ['0 0 0px 0px rgba(245,158,11,0)', '0 0 18px 0px rgba(245,158,11,0.45)', '0 0 0px 0px rgba(245,158,11,0)']
+                  ? ['0 0 0px 0px rgba(var(--project-business-rgb),0)', '0 0 18px 0px rgba(var(--project-business-rgb),0.45)', '0 0 0px 0px rgba(var(--project-business-rgb),0)']
                   : 'none',
               }}
               transition={{
@@ -228,7 +228,7 @@ function ListsVisual() {
               className="w-20 h-24 rounded-xl flex flex-col items-center justify-center gap-1.5"
               style={{
                 backgroundColor: 'var(--glass-surface)',
-                border: `1px solid ${isTarget ? 'rgba(245,158,11,0.35)' : 'var(--glass-surface-hover)'}`,
+                border: `1px solid ${isTarget ? 'rgba(var(--project-business-rgb),0.35)' : 'var(--glass-surface-hover)'}`,
               }}
             >
               <Icon className="h-5 w-5" style={{ color: list.color }} />

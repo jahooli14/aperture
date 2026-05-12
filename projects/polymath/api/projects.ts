@@ -479,13 +479,33 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
       if (action === 'add') {
         if (!project_id) return res.status(400).json({ error: 'project_id is required' })
 
-        const { data: target } = await supabase
+        // Guard against temp ids from offline-created projects that haven't
+        // synced yet — these can't possibly match a row, but bare 404
+        // ("Project not found") confuses the user. Tell them why.
+        if (typeof project_id === 'string' && project_id.startsWith('temp-')) {
+          return res.status(409).json({
+            error: 'project_not_synced',
+            message: 'This project hasn\'t synced yet. Try again in a moment.',
+          })
+        }
+
+        const { data: target, error: lookupError } = await supabase
           .from('projects')
           .select('id, is_priority, up_next_position, metadata')
           .eq('id', project_id)
           .eq('user_id', userId)
-          .single()
+          .maybeSingle()
 
+        // PGRST116 (no rows) → genuine 404. Anything else is a real DB error
+        // we shouldn't disguise as "not found".
+        if (lookupError && lookupError.code !== 'PGRST116') {
+          console.error('[up-next] add lookup error:', lookupError)
+          return res.status(500).json({
+            error: 'Database error during project lookup',
+            details: lookupError.message,
+            code: lookupError.code,
+          })
+        }
         if (!target) return res.status(404).json({ error: 'Project not found' })
 
         // Already pinned — no-op
@@ -577,12 +597,28 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
           return res.status(400).json({ error: 'project_id and replace_id are required' })
         }
 
-        const { data: replaceTarget } = await supabase
+        if (typeof project_id === 'string' && project_id.startsWith('temp-')) {
+          return res.status(409).json({
+            error: 'project_not_synced',
+            message: 'This project hasn\'t synced yet. Try again in a moment.',
+          })
+        }
+
+        const { data: replaceTarget, error: replaceLookupError } = await supabase
           .from('projects')
           .select('id, up_next_position')
           .eq('id', replace_id)
           .eq('user_id', userId)
-          .single()
+          .maybeSingle()
+
+        if (replaceLookupError && replaceLookupError.code !== 'PGRST116') {
+          console.error('[up-next] replace lookup error:', replaceLookupError)
+          return res.status(500).json({
+            error: 'Database error during project lookup',
+            details: replaceLookupError.message,
+            code: replaceLookupError.code,
+          })
+        }
 
         if (!replaceTarget?.up_next_position) {
           return res.status(400).json({ error: 'replace_id is not currently pinned' })
