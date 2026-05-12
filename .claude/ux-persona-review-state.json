@@ -1,0 +1,27 @@
+{
+  "personas": ["Jamie", "Mara", "Theo", "Priya", "Ben"],
+  "surfaces": [
+    "Home: Keep Going carousel",
+    "Home: Up Next shelf",
+    "Home: Project Ideas button",
+    "Home: Now Consuming strip",
+    "Home: Thought of the Day",
+    "Home: Header",
+    "Voice capture: FAB + recorder",
+    "Voice capture: onboarding live capture",
+    "Projects list page",
+    "Project detail page",
+    "Context sidebar",
+    "Lists detail / reading"
+  ],
+  "step": 1,
+  "last_run_iso": "2026-05-12T00:00:00Z",
+  "history": [
+    {
+      "step": 0,
+      "persona": "Jamie",
+      "surface": "Home: Keep Going carousel",
+      "change": "Drop the generic 'Continue where you left off' fallback. Hide the session preview block entirely when there is no real headline or incomplete task. Don't fake a next step the system doesn't know."
+    }
+  ]
+}

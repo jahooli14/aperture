@@ -175,7 +175,10 @@ export function KeepGoingCarousel() {
   const plan = current ? sessionPlans[current.id] : null
   const headline = plan?.task_title || current?.metadata?.session_headline
   const pitch = plan?.task_description || current?.metadata?.session_pitch
-  const nextStep = headline || current?.metadata?.tasks?.find((t: any) => !t.done)?.text || 'Continue where you left off'
+  // Only surface a preview when we actually know what's next. A generic
+  // "continue where you left off" fallback is the kind of analyst voice
+  // CLAUDE.md forbids — say nothing when there's nothing real to say.
+  const nextStep = headline || current?.metadata?.tasks?.find((t: any) => !t.done)?.text
 
   // Dormancy signal — drives border/label tint. Thresholds: >7d amber, >28d red.
   const dormancyDays = current
@@ -265,16 +268,20 @@ export function KeepGoingCarousel() {
                 {formatRelativeTime(current.last_active || current.updated_at)}
               </p>
 
-              {/* Session preview */}
-              <div className="flex-1 p-3 rounded-xl mb-4" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--brand-text-secondary)] opacity-40 mb-1">
-                  {headline ? 'This session' : "What's next"}
-                </p>
-                <p className="text-sm text-[var(--brand-text-secondary)] leading-relaxed line-clamp-2 mb-1">{nextStep}</p>
-                {pitch && (
-                  <p className="text-xs text-[var(--brand-text-secondary)] opacity-50 line-clamp-2">{pitch}</p>
-                )}
-              </div>
+              {/* Session preview — only when there's something real to show */}
+              {nextStep ? (
+                <div className="flex-1 p-3 rounded-xl mb-4" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--brand-text-secondary)] opacity-40 mb-1">
+                    {headline ? 'This session' : "What's next"}
+                  </p>
+                  <p className="text-sm text-[var(--brand-text-secondary)] leading-relaxed line-clamp-2 mb-1">{nextStep}</p>
+                  {pitch && (
+                    <p className="text-xs text-[var(--brand-text-secondary)] opacity-50 line-clamp-2">{pitch}</p>
+                  )}
+                </div>
+              ) : (
+                <div className="flex-1" />
+              )}
 
               <button
                 onClick={() => handleStartSession(current.id)}
