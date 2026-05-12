@@ -313,17 +313,18 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
         onPointerLeave={handlePointerUp}
         onPointerCancel={handlePointerUp}
         onClick={handleClick}
-        className="rounded-xl break-inside-avoid cursor-pointer select-none touch-pan-y"
+        className="glass-card break-inside-avoid cursor-pointer select-none touch-pan-y"
         style={{
-          background: 'rgba(30, 38, 56, 0.95)',
+          // glass-card supplies base translucent fill + hairline border + blur.
+          // Pinned/offline only overlay border tint, not the whole surface.
           border: isOfflinePending
             ? '1px solid rgba(255,255,255,0.08)'
             : memory.is_pinned
               ? '1px solid rgba(251,191,36,0.45)'
-              : '1px solid rgba(255,255,255,0.1)',
+              : undefined,
           boxShadow: memory.is_pinned
             ? '0 0 0 1px rgba(251,191,36,0.12), 0 4px 16px rgba(0,0,0,0.5)'
-            : '0 4px 16px rgba(0,0,0,0.45)',
+            : undefined,
         }}
       >
         {/* Title row — pin dot when pinned, no buttons */}

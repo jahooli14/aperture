@@ -570,12 +570,9 @@ export function CreateMemoryDialog({
       {!hideTrigger && (trigger || (
         <button
           onClick={() => setOpen(true)}
-          className="h-11 w-11 rounded-xl flex items-center justify-center transition-all hover:bg-[rgba(255,255,255,0.1)] bg-[var(--glass-surface)]"
-          style={{
-            border: '1px solid rgba(255,255,255,0.1)',
-            color: 'var(--brand-primary)'
-          }}
-          title="New Thought"
+          className="masthead-action press-spring"
+          aria-label="New thought"
+          title="New thought"
         >
           <Plus className="h-5 w-5" />
         </button>

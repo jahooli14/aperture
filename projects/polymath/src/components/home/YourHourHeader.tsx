@@ -1,16 +1,30 @@
 /**
- * YourHourHeader — brand + search.
+ * YourHourHeader — the home page masthead.
+ *
+ * Uses the same .page-masthead pattern as Thoughts / Projects /
+ * Collections so the page title sits at the same y-coordinate across
+ * tab switches. Serif "Aperture." title, cyan eyebrow with today's
+ * weekday, search action on the right.
  */
 
 import { Search } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { BrandName } from '../BrandName'
+
+function todayLabel(): string {
+  // Plain English: weekday name in caps — the eyebrow class handles
+  // tracking + colour. Falls back to "TODAY" if something explodes.
+  try {
+    return new Date().toLocaleDateString(undefined, { weekday: 'long' }).toUpperCase()
+  } catch {
+    return 'TODAY'
+  }
+}
 
 export function YourHourHeader() {
   const navigate = useNavigate()
 
   return (
-    <div className="mb-7 relative">
+    <header className="page-masthead relative">
       {/* Soft brand glow tucked behind the wordmark — gives the header lift */}
       <div
         aria-hidden
@@ -20,26 +34,23 @@ export function YourHourHeader() {
           filter: 'blur(24px)',
         }}
       />
-      <div className="relative flex items-center justify-between">
-        <h1 className="text-xl sm:text-2xl aperture-header" style={{ color: 'var(--brand-text-primary)', opacity: 0.95 }}>
-          <BrandName className="inline" showLogo={true} />
+      <div className="page-masthead-text relative">
+        <h1 className="page-hero">
+          Aper<span style={{ color: 'rgb(var(--brand-primary-rgb))' }}>ture</span>.
         </h1>
+        <div className="page-eyebrow">{todayLabel()}</div>
+      </div>
 
+      <div className="page-masthead-actions relative">
         <button
           onClick={() => navigate('/search')}
           aria-label="Search everything"
-          className="h-11 w-11 sm:h-10 sm:w-10 rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95"
-          style={{
-            background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.15), rgba(var(--brand-primary-rgb),0.04))',
-            border: '1px solid rgba(var(--brand-primary-rgb),0.25)',
-            color: 'rgb(var(--brand-primary-rgb))',
-            boxShadow: '0 4px 14px -4px rgba(var(--brand-primary-rgb),0.4), inset 0 1px 0 rgba(255,255,255,0.06)',
-          }}
+          className="masthead-action press-spring"
           title="Search everything"
         >
-          <Search className="h-[18px] w-[18px] sm:h-4 sm:w-4" />
+          <Search className="h-5 w-5" />
         </button>
       </div>
-    </div>
+    </header>
   )
 }

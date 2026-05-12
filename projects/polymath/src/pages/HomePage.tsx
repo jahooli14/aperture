@@ -220,10 +220,12 @@ export function HomePage() {
     >
       <SubtleBackground />
 
-      <div className="min-h-screen pb-24 pt-6 relative">
+      <div className="min-h-screen pb-24 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
           <motion.div {...stackTransition(0)}>
+            {/* YourHourHeader provides the .page-masthead spacing so the
+                title sits at the same y as the other tabs. */}
             <YourHourHeader />
           </motion.div>
 

@@ -458,29 +458,27 @@ function MemoriesPageInner() {
     <>
       <SubtleBackground />
       {/* Editorial header — Day One language. Serif title, hairline rule,
-          quiet count. Tools sit beside the title, not above it. */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-10 sm:pt-12 pb-2 flex flex-col gap-3">
-          <div className="mb-4 flex items-end justify-between gap-3">
-            <div className="min-w-0 flex-1">
+          quiet count. Tools sit beside the title, not above it.
+          Same .page-masthead spacing as every other tab so the title
+          y-position is locked across tab switches. */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col gap-3">
+          <header className="page-masthead">
+            <div className="page-masthead-text">
               <h1 className="page-hero">Your thoughts.</h1>
               <div className="page-eyebrow">{memories.length} captured</div>
             </div>
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+            <div className="page-masthead-actions">
               {view !== 'resurfacing' && <CreateMemoryDialog />}
               <button
                 onClick={() => navigate('/search')}
-                className="h-10 w-10 rounded-full flex items-center justify-center transition-all hover:scale-105"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.12), rgba(var(--brand-primary-rgb),0.04))',
-                  border: '1px solid rgba(var(--brand-primary-rgb),0.22)',
-                  color: 'rgb(var(--brand-primary-rgb))',
-                }}
+                className="masthead-action press-spring"
+                aria-label="Search everything"
                 title="Search everything"
               >
-                <Search className="h-4 w-4" />
+                <Search className="h-5 w-5" />
               </button>
             </div>
-          </div>
+          </header>
 
           {/* Morning Follow-Up */}
           {showMorningFollowUp && (

@@ -101,13 +101,17 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
   return (
     <Link
       to={`/projects/${project.id}`}
-      className={`group block rounded-xl transition-all duration-300 break-inside-avoid overflow-hidden relative ${prominent ? 'p-4 sm:p-5' : 'p-4'}`}
+      className={`group glass-card glass-card-hover block transition-all duration-300 break-inside-avoid overflow-hidden relative ${prominent ? 'p-4 sm:p-5' : 'p-4'}`}
       style={{
+        // Coloured glow + tinted background overlay on top of the
+        // .glass-card base. Glass surface stays visible (translucent
+        // fill + hairline + blur from theme.css), the type accent
+        // paints a soft ring + wash on top.
         boxShadow: prominent || project.is_priority
-          ? `0 10px 32px rgba(0,0,0,0.5), 0 0 36px rgba(${theme.rgb}, 0.22), inset 0 1px 0 rgba(255,255,255,0.08)`
-          : `0 6px 18px rgba(0,0,0,0.42), 0 0 20px rgba(${theme.rgb}, 0.1), inset 0 1px 0 rgba(255,255,255,0.05)`,
-        border: `1px solid ${prominent || project.is_priority ? `rgba(${theme.rgb}, 0.65)` : `rgba(${theme.rgb}, 0.4)`}`,
-        background: `linear-gradient(165deg, rgba(${theme.rgb}, 0.18) 0%, rgba(${theme.rgb}, 0.06) 45%, rgba(15, 24, 41, 0.75) 100%)`,
+          ? `0 10px 32px rgba(0,0,0,0.45), 0 0 36px rgba(${theme.rgb}, 0.22), inset 0 1px 0 rgba(255,255,255,0.06)`
+          : `0 6px 18px rgba(0,0,0,0.35), 0 0 20px rgba(${theme.rgb}, 0.1), inset 0 1px 0 rgba(255,255,255,0.04)`,
+        border: `1px solid ${prominent || project.is_priority ? `rgba(${theme.rgb}, 0.55)` : `rgba(${theme.rgb}, 0.3)`}`,
+        backgroundImage: `linear-gradient(165deg, rgba(${theme.rgb}, 0.14) 0%, rgba(${theme.rgb}, 0.04) 45%, transparent 100%)`,
         // Block the browser's own long-press menu (Copy link / Share link)
         // on mobile so taps and our buttons aren't ambushed.
         WebkitTouchCallout: 'none',
@@ -119,9 +123,10 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
     >
       {/* Header — title shrinks first, icon cluster stays compact so it
           can't overflow narrow masonry columns. min-w-0 is what lets
-          the h4 actually shrink past its intrinsic width inside flex. */}
+          the h4 actually shrink past its intrinsic width inside flex.
+          Sentence case (no uppercase) — section heading above outranks. */}
       <div className="flex items-start justify-between gap-1.5 mb-3">
-        <h4 className={`min-w-0 flex-1 text-[var(--brand-text-primary)] font-bold leading-tight aperture-header line-clamp-4 break-normal ${prominent ? 'text-[15px] sm:text-base' : 'text-xs'}`}
+        <h4 className={`min-w-0 flex-1 text-[var(--brand-text-primary)] font-semibold leading-snug line-clamp-4 break-normal ${prominent ? 'text-[15px] sm:text-[15px]' : 'text-[13px]'}`}
           style={{ textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
           {project.title}
         </h4>
@@ -340,22 +345,14 @@ export function ProjectsPageCarousel({
       {/* SECTION 1: ACTIVE FOCUS (Grid) */}
       {activeList.length > 0 && (
         <section>
-          <div className="mb-4 px-1 flex items-center gap-2">
-            <span className="w-1 h-1 rounded-full" style={{ background: 'var(--brand-primary)', boxShadow: '0 0 6px rgba(var(--brand-primary-rgb),0.6)' }} />
-            <h3 className="text-[11px] font-bold text-[var(--brand-text-secondary)] uppercase tracking-widest aperture-header">Active Focus</h3>
-          </div>
-
+          <h2 className="section-heading">active <span className="accent">focus</span></h2>
           <MasonryGrid projects={activeList} prominent={true} />
         </section>
       )}
 
       {drawerList.length > 0 && (
         <section>
-          <div className="mb-4 px-1 flex items-center gap-2">
-            <span className="w-1 h-1 rounded-full bg-white/40" />
-            <h3 className="text-[11px] font-bold text-[var(--brand-text-secondary)] uppercase tracking-widest aperture-header">In the Drawer</h3>
-          </div>
-
+          <h2 className="section-heading">in the <span className="accent">drawer</span></h2>
           <MasonryGrid projects={drawerList} />
         </section>
       )}

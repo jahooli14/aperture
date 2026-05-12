@@ -255,14 +255,13 @@ function ProjectsPageInner() {
     <>
       <SubtleBackground />
       <div className="min-h-screen">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 sm:pt-10 pb-4 flex flex-col gap-2">
-          <div className="mb-2 flex items-start justify-between gap-3">
-            <div className="flex items-center gap-2 min-w-0 flex-1">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <header className="page-masthead">
+            <div className="page-masthead-text flex items-start gap-2 min-w-0">
               {showCompleted && (
                 <button
                   onClick={() => setShowCompleted(false)}
-                  className="h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-all bg-[var(--glass-surface)] border border-white/10"
-                  style={{ color: "var(--brand-primary)" }}
+                  className="masthead-action press-spring flex-shrink-0"
                   aria-label="Back to projects"
                   title="Back to projects"
                 >
@@ -278,14 +277,13 @@ function ProjectsPageInner() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+            <div className="page-masthead-actions">
               {!showCompleted && (
                 <>
                   <CreateProjectDialog />
                   <button
                     onClick={() => navigate('/search')}
-                    className="h-11 w-11 rounded-xl flex items-center justify-center transition-all bg-[var(--glass-surface)] border border-white/10"
-                    style={{ color: "var(--brand-primary)" }}
+                    className="masthead-action press-spring"
                     aria-label="Search everything"
                     title="Search everything"
                   >
@@ -293,8 +291,7 @@ function ProjectsPageInner() {
                   </button>
                   <button
                     onClick={() => setShowCompleted(true)}
-                    className="h-11 w-11 rounded-xl flex items-center justify-center transition-all bg-[var(--glass-surface)] border border-white/10"
-                    style={{ color: "var(--brand-primary)" }}
+                    className="masthead-action press-spring"
                     aria-label="View completed projects"
                     title="View completed projects"
                   >
@@ -303,7 +300,7 @@ function ProjectsPageInner() {
                 </>
               )}
             </div>
-          </div>
+          </header>
         </div>
 
         <motion.div
