@@ -31,7 +31,7 @@ export const GlassCard = React.forwardRef<HTMLDivElement, GlassCardProps>(
 
     const commonProps = {
       onClick,
-      className: `group premium-card rounded-xl p-4 sm:p-5 transition-all relative overflow-hidden ${isInteractive ? 'cursor-pointer' : ''} ${className || ''}`,
+      className: `group glass-card rounded-xl p-4 sm:p-5 transition-all relative overflow-hidden ${isInteractive ? 'cursor-pointer' : ''} ${className || ''}`,
       style: {
         ...cardStyles,
         background: currentBg,

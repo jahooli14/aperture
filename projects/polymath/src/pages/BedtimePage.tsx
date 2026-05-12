@@ -359,7 +359,7 @@ export function BedtimePage() {
           </div>
 
           {/* Time indicator */}
-          <div className="premium-glass-subtle rounded-xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="glass-card-subtle rounded-xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <div className="min-w-0">
                 <p className="text-sm font-semibold premium-text-platinum">
@@ -378,7 +378,7 @@ export function BedtimePage() {
                 <>
                   <button
                     onClick={() => setDriftModeOpen(true)}
-                    className="min-h-[44px] px-3 rounded-lg transition-all premium-glass-subtle hover:bg-[rgba(255,255,255,0.1)] flex items-center gap-1.5"
+                    className="min-h-[44px] px-3 rounded-lg transition-all glass-card-subtle hover:bg-[rgba(255,255,255,0.1)] flex items-center gap-1.5"
                     style={{ border: '1px solid rgba(255, 255, 255, 0.1)' }}
                     title="Drift Mode"
                   >
@@ -387,7 +387,7 @@ export function BedtimePage() {
                   </button>
                   <button
                     onClick={() => setZenModeOpen(true)}
-                    className="min-h-[44px] px-3 rounded-lg transition-all premium-glass-subtle hover:bg-[rgba(255,255,255,0.1)] flex items-center gap-1.5"
+                    className="min-h-[44px] px-3 rounded-lg transition-all glass-card-subtle hover:bg-[rgba(255,255,255,0.1)] flex items-center gap-1.5"
                     style={{ border: '1px solid rgba(255, 255, 255, 0.1)' }}
                     title="Zen Mode"
                   >
@@ -399,7 +399,7 @@ export function BedtimePage() {
               <button
                 onClick={generateNew}
                 disabled={generating}
-                className="h-11 w-11 flex items-center justify-center rounded-lg transition-all premium-glass-subtle hover:bg-[rgba(255,255,255,0.1)]"
+                className="h-11 w-11 flex items-center justify-center rounded-lg transition-all glass-card-subtle hover:bg-[rgba(255,255,255,0.1)]"
                 style={{ border: '1px solid rgba(255, 255, 255, 0.1)' }}
                 title="Refresh prompts"
               >
@@ -451,7 +451,7 @@ export function BedtimePage() {
                       ease: "easeOut",
                       scale: { duration: 0.2 }
                     }}
-                    className="premium-card p-4 sm:p-6 relative overflow-hidden group cursor-pointer"
+                    className="glass-card p-4 sm:p-6 relative overflow-hidden group cursor-pointer"
                     style={{
                       border: `2px solid ${getTypeColor(prompt.type)}40`,
                       opacity: isViewed ? 0.6 : 1,
@@ -616,7 +616,7 @@ export function BedtimePage() {
           >
             {isOffline ? (
               <>
-                <div className="p-8 rounded-full premium-glass-subtle inline-flex mb-6">
+                <div className="p-8 rounded-full glass-card-subtle inline-flex mb-6">
                   <WifiOff className="h-12 w-12" style={{ color: "var(--brand-primary)" }} />
                 </div>
                 <h2 className="text-xl font-semibold premium-text-platinum mb-2">
@@ -628,7 +628,7 @@ export function BedtimePage() {
               </>
             ) : (
               <>
-                <div className="p-8 rounded-full premium-glass-subtle inline-flex mb-6">
+                <div className="p-8 rounded-full glass-card-subtle inline-flex mb-6">
                   <Moon className="h-12 w-12" style={{ color: "var(--brand-primary)" }} />
                 </div>
                 <h2 className="text-xl font-semibold premium-text-platinum mb-2">
@@ -667,7 +667,7 @@ export function BedtimePage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: showWelcome ? 1 : 0, y: showWelcome ? 0 : 20 }}
           transition={{ delay: 1, duration: 0.8 }}
-          className="max-w-2xl mx-auto mt-12 p-6 rounded-xl premium-glass-subtle text-center relative z-10 border-2"
+          className="max-w-2xl mx-auto mt-12 p-6 rounded-xl glass-card-subtle text-center relative z-10 border-2"
           style={{
             borderColor: 'rgba(var(--brand-primary-rgb), 0.2)',
             background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb), 0.05), rgba(var(--brand-primary-rgb), 0.05))'

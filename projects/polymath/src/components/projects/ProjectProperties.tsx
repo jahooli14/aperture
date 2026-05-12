@@ -21,7 +21,7 @@ export function ProjectProperties({ project, onUpdate }: ProjectPropertiesProps)
   const currentEnergy = project.energy_level ? energyConfig[project.energy_level] : null
 
   return (
-    <Card className="premium-card">
+    <Card className="glass-card">
       <CardContent className="p-3">
         <div className="flex flex-wrap items-start gap-3">
 

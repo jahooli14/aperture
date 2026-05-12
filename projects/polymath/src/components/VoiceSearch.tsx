@@ -151,7 +151,7 @@ export function VoiceSearch({
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="premium-glass-strong border rounded-2xl p-6 shadow-2xl"
+      className="glass-card-strong border rounded-2xl p-6 shadow-2xl"
       style={{ borderColor: 'rgba(var(--brand-primary-rgb), 0.3)' }}
     >
       {/* Header */}

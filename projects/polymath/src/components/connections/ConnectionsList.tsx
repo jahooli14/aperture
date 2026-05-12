@@ -202,7 +202,7 @@ export function ConnectionsList({ itemType, itemId, itemTitle, onConnectionDelet
             >
               <Link
                 to={getItemUrl(item.type, item.id)}
-                className="group relative overflow-hidden rounded-xl border border-[var(--glass-surface)] bg-[var(--glass-surface)] p-4 block transition-all hover:bg-[rgba(255,255,255,0.1)] hover:border-[var(--glass-surface-hover)] premium-glass-subtle"
+                className="group relative overflow-hidden rounded-xl border border-[var(--glass-surface)] bg-[var(--glass-surface)] p-4 block transition-all hover:bg-[rgba(255,255,255,0.1)] hover:border-[var(--glass-surface-hover)] glass-card-subtle"
               >
                 <div className="flex items-start gap-3">
                   {/* Icon */}

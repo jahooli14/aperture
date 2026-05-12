@@ -229,6 +229,29 @@
     transform: translateY(-1px);
 }
 
+/* Weight variants for floating notifications, install banners, etc.
+   Strong = more present (heavier blur, more opacity); subtle = quieter
+   (lighter blur, less opacity). All three share the cyan/glass palette. */
+.glass-card-strong {
+    background: rgba(20, 27, 38, 0.5);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border-bold);
+    border-radius: var(--brand-radius);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card-subtle {
+    background: rgba(20, 27, 38, 0.2);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--brand-radius);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 .glass-button {
     background: var(--glass-surface);
     border: 1px solid var(--glass-border);

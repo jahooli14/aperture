@@ -416,7 +416,7 @@ export function FloatingNav() {
       >
         <div className="mx-auto max-w-2xl px-2 sm:px-4">
           <div
-            className="premium-glass flex items-center gap-0"
+            className="glass-card flex items-center gap-0"
             style={{
               borderRadius: 'var(--premium-radius-2xl)',
               backgroundColor: 'var(--brand-glass-bg)',

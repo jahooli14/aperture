@@ -70,7 +70,7 @@ export class ErrorBoundary extends Component<Props, State> {
           style={{ backgroundColor: 'var(--brand-bg)' }}
         >
           <div
-            className="max-w-md w-full premium-card p-8 text-center"
+            className="max-w-md w-full glass-card p-8 text-center"
           >
             <div className="inline-flex items-center justify-center mb-4">
               <div
@@ -139,7 +139,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
             <button
               onClick={this.handleReset}
-              className="premium-glass px-6 py-3 rounded-lg font-medium transition-all hover:bg-[rgba(255,255,255,0.1)]"
+              className="glass-card px-6 py-3 rounded-lg font-medium transition-all hover:bg-[rgba(255,255,255,0.1)]"
               style={{ color: "var(--brand-primary)" }}
             >
               Reload Page
