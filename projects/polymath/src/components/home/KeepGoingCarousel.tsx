@@ -164,7 +164,7 @@ export function KeepGoingCarousel() {
             onClick={() => navigate('/projects')}
             className="mt-3 text-xs text-[var(--brand-primary)] opacity-70 hover:opacity-100 transition-opacity underline"
           >
-            Start one
+            Start your first project
           </button>
         </div>
       </div>
@@ -190,7 +190,7 @@ export function KeepGoingCarousel() {
     ? 'rgba(245,158,11,0.55)'
     : null
   const dormancyLabel = dormancyDays >= 28
-    ? 'slipping away'
+    ? 'long quiet'
     : dormancyDays >= 7
     ? 'going quiet'
     : null

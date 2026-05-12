@@ -351,7 +351,10 @@ export function ProjectIdeasHome() {
             Both routes end in the same expanded card. */}
         {!loading && !expanded && !generating && (
           <div className="flex flex-col items-center gap-5 py-2">
-            {earnedTeaser && (
+            {earnedTeaser ? (
+              // Earned teaser is showing — it's the one clear next action.
+              // Suppress the escape-hatch pill so the user isn't presented
+              // with two competing CTAs in the same state.
               <button
                 type="button"
                 onClick={() => { haptic.medium(); setExpanded(true); setActiveIndex(ideas.findIndex(i => i.id === earnedTeaser.idea.id)) }}
@@ -380,28 +383,29 @@ export function ProjectIdeasHome() {
                   there's something i want to show you
                 </span>
               </button>
-            )}
-            <button
-              type="button"
-              onClick={reveal}
-              className="group inline-flex items-center gap-2.5 px-4 py-2 rounded-full transition-all"
-              style={{
-                background: 'rgba(var(--brand-primary-rgb), 0.08)',
-                color: 'var(--brand-text-secondary)',
-                border: '1px solid rgba(var(--brand-primary-rgb), 0.18)',
-              }}
-            >
-              <span
-                aria-hidden
-                className="text-[12px] leading-none opacity-80"
-                style={{ fontFamily: 'var(--brand-font-serif)' }}
+            ) : (
+              <button
+                type="button"
+                onClick={reveal}
+                className="group inline-flex items-center gap-2.5 px-4 py-2 rounded-full transition-all"
+                style={{
+                  background: 'rgba(var(--brand-primary-rgb), 0.08)',
+                  color: 'var(--brand-text-secondary)',
+                  border: '1px solid rgba(var(--brand-primary-rgb), 0.18)',
+                }}
               >
-                ✦
-              </span>
-              <span className="text-[11.5px] tracking-wide">
-                suggest a project
-              </span>
-            </button>
+                <span
+                  aria-hidden
+                  className="text-[12px] leading-none opacity-80"
+                  style={{ fontFamily: 'var(--brand-font-serif)' }}
+                >
+                  ✦
+                </span>
+                <span className="text-[11.5px] tracking-wide">
+                  suggest a project
+                </span>
+              </button>
+            )}
             {insufficientSignals !== null ? (
               <p className="text-[11px] italic opacity-70" style={{ color: 'var(--brand-text-secondary)' }}>
                 {insufficientSignals} signal{insufficientSignals === 1 ? '' : 's'} captured — needs 8 to find patterns

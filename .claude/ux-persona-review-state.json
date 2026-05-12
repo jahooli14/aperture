@@ -14,14 +14,68 @@
     "Context sidebar",
     "Lists detail / reading"
   ],
-  "step": 1,
+  "step": 10,
   "last_run_iso": "2026-05-12T00:00:00Z",
   "history": [
     {
       "step": 0,
       "persona": "Jamie",
       "surface": "Home: Keep Going carousel",
-      "change": "Drop the generic 'Continue where you left off' fallback. Hide the session preview block entirely when there is no real headline or incomplete task. Don't fake a next step the system doesn't know."
+      "change": "Drop the generic 'Continue where you left off' fallback. Hide the session preview block entirely when no real headline or incomplete task exists."
+    },
+    {
+      "step": 1,
+      "persona": "Mara",
+      "surface": "Home: Project Ideas button",
+      "change": "Hide the redundant 'suggest a project' pill when the earned teaser is showing. One CTA per state, not two competing CTAs."
+    },
+    {
+      "step": 2,
+      "persona": "Theo",
+      "surface": "Voice capture: onboarding live capture (UnauthHome)",
+      "change": "Drop the precious 'Aperture listens. The thread between what you said reveals itself.' subline. The hook + animated demo + 'start talking' CTA carry the page; the subline was filler that read as marketing."
+    },
+    {
+      "step": 3,
+      "persona": "Theo",
+      "surface": "Home: Keep Going carousel",
+      "change": "Empty-state button 'Start one' is ambiguous for a brand-new user — change to 'Start your first project'."
+    },
+    {
+      "step": 4,
+      "persona": "Priya",
+      "surface": "Voice capture: FAB + recorder",
+      "change": "Fix the wrong aria-label on the FAB. It said 'tap to record, hold to choose type' but tap actually opens the typed thought sheet and hold records voice. Replaced with 'New thought — tap to write, hold to record'."
+    },
+    {
+      "step": 5,
+      "persona": "Priya",
+      "surface": "Projects list page",
+      "change": "Add aria-label to the three icon-only header buttons (back, search, completed). They had title attributes (hover tooltip) but no aria-label, so screen readers got silence."
+    },
+    {
+      "step": 6,
+      "persona": "Priya",
+      "surface": "Context sidebar",
+      "change": "Add aria-label to the close (X) button. It had no accessible name."
+    },
+    {
+      "step": 7,
+      "persona": "Ben",
+      "surface": "Home: Now Consuming strip",
+      "change": "Section header 'what you're consuming' → 'what you're into'. CLAUDE.md is explicit that lists are identity signals, not consumption logs; 'consuming' was the exact second-brain framing the mantra forbids."
+    },
+    {
+      "step": 8,
+      "persona": "Ben",
+      "surface": "Context sidebar",
+      "change": "Action result header 'Pattern Revealed' → 'Pattern Found'. Parallels 'Thread Traced' / 'Gaps Found' and drops the cinematic flourish."
+    },
+    {
+      "step": 9,
+      "persona": "Ben",
+      "surface": "Home: Keep Going carousel",
+      "change": "Dormancy label 'slipping away' → 'long quiet'. Parallels 'going quiet' and drops the melodrama; 'slipping away' put agency in a weird place."
     }
   ]
 }

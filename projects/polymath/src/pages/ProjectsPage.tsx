@@ -263,6 +263,7 @@ function ProjectsPageInner() {
                   onClick={() => setShowCompleted(false)}
                   className="h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-all bg-[var(--glass-surface)] border border-white/10"
                   style={{ color: "var(--brand-primary)" }}
+                  aria-label="Back to projects"
                   title="Back to projects"
                 >
                   <ArrowLeft className="h-5 w-5" />
@@ -285,6 +286,7 @@ function ProjectsPageInner() {
                     onClick={() => navigate('/search')}
                     className="h-11 w-11 rounded-xl flex items-center justify-center transition-all bg-[var(--glass-surface)] border border-white/10"
                     style={{ color: "var(--brand-primary)" }}
+                    aria-label="Search everything"
                     title="Search everything"
                   >
                     <Search className="h-5 w-5" />
@@ -293,6 +295,7 @@ function ProjectsPageInner() {
                     onClick={() => setShowCompleted(true)}
                     className="h-11 w-11 rounded-xl flex items-center justify-center transition-all bg-[var(--glass-surface)] border border-white/10"
                     style={{ color: "var(--brand-primary)" }}
+                    aria-label="View completed projects"
                     title="View completed projects"
                   >
                     <Check className="h-5 w-5" />

@@ -117,22 +117,13 @@ export function UnauthHome() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.3, duration: 0.5 }}
-        className="text-lg sm:text-xl mb-2 text-center font-medium leading-snug px-4"
+        className="text-lg sm:text-xl mb-10 text-center font-medium leading-snug px-4"
         style={{ color: 'var(--brand-text-primary)', letterSpacing: '-0.01em' }}
       >
         Three minutes of talking.<br />
         <span style={{ color: 'var(--brand-primary)' }}>
           A project you'd never have thought of.
         </span>
-      </motion.p>
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5, duration: 0.5 }}
-        className="text-sm mb-10 text-center px-4"
-        style={{ color: 'var(--brand-text-secondary)', letterSpacing: '-0.01em' }}
-      >
-        Aperture listens. The thread between what you said reveals itself.
       </motion.p>
 
       {/* Animated story card — shows the transformation */}

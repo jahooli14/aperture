@@ -214,6 +214,7 @@ export function ContextSidebar() {
                             </div>
                             <button
                                 onClick={() => toggleSidebar(false)}
+                                aria-label="Close connections sidebar"
                                 className="h-11 w-11 flex items-center justify-center flex-shrink-0 hover:bg-[rgba(255,255,255,0.1)] rounded-lg transition-colors text-[var(--brand-text-secondary)] hover:text-[var(--brand-text-primary)]"
                             >
                                 <X className="h-5 w-5" />
@@ -361,7 +362,7 @@ export function ContextSidebar() {
                                                         {actionResult.type === 'chase-thread' ? 'Thread Traced'
                                                             : actionResult.type === 'find-gaps' ? 'Gaps Found'
                                                             : actionResult.type === 'provoke' ? 'Challenge'
-                                                            : 'Pattern Revealed'}
+                                                            : 'Pattern Found'}
                                                     </span>
                                                     {actionResult.totalContextItems != null && actionResult.totalContextItems > 0 && (
                                                         <span className="text-[10px] text-brand-primary font-medium opacity-70">
