@@ -1,21 +1,21 @@
 /**
- * ProjectIdeasHome — opt-in suggestion button, with a full card on expand.
+ * ProjectIdeasHome — quiet "suggest a project" pill that expands into the
+ * full editorial idea card on click.
  *
- * Lives below Keep Going on the homepage. Default state is a quiet button —
- * the user only ever sees an idea if they ask for one. Two button labels
- * depending on whether the system has a pre-baked idea waiting:
+ * Sits BELOW Up Next on the homepage. This is the escape-hatch / on-demand
+ * surface — the user explicitly asks for an idea here. When a high-confidence
+ * Read idea is queued, the lead surface is `MomentSurface` at the top of the
+ * page; this pill stays available below for additional ideas. Both surfaces
+ * fetch independently and sync via the `polymath:ideas-invalidate` window
+ * event so dismissing on one updates the other.
  *
- *   - "unlock" (instant) — cron has pre-baked an idea (Read or crossover at
- *     full quality) and it's sitting unviewed in the queue. Clicking expands
- *     it inline; no LLM call.
- *   - "suggest a project" (~10s) — queue is empty. Clicking generates one
- *     fresh on demand using the FAST path (Flash-Lite, crossover-only). The
- *     wow ideas (Read mode) only come from the cron-baked queue; on-demand
- *     prioritises speed over depth.
+ * Click flow:
+ *   - Queue has any pending idea → expand inline, no LLM call.
+ *   - Queue empty → generate one fresh on the FAST path (Flash-Lite,
+ *     crossover-only, ~10s). The wow (Read mode) only comes from the
+ *     cron-baked queue.
  *
- * After the user acts on an idea (save / dismiss / build), the card collapses
- * back to the button. If more pre-baked ideas remain, the button stays in
- * "unlock" state. If the queue is now empty, it switches to "suggest."
+ * After save / dismiss / build, the card collapses back to the pill.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -24,6 +24,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { BookmarkPlus, BookmarkCheck, X, Hammer } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
 import { api } from '../../lib/apiClient'
+import { IDEAS_INVALIDATE_EVENT } from './MomentSurface'
 
 interface IdeaEvidence {
   kind: string
@@ -55,11 +56,6 @@ interface ProjectIdea {
    *  button. NULL on crossover (no threshold gate). */
   confidence?: number | null
 }
-
-/** Minimum confidence for the prominent home teaser to fire. Below this,
- *  the surface stays as the small "suggest a project" button — the user
- *  asks if they want one. The wow has to be earned every time. */
-const TEASER_CONFIDENCE_THRESHOLD = 70
 
 interface ProjectIdeasResponse {
   ideas: ProjectIdea[]
@@ -166,7 +162,15 @@ export function ProjectIdeasHome() {
     }
   }, [])
 
-  useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    void load()
+    // MomentSurface fires this after it dismisses / saves the high-conf
+    // Read idea it owns. Refetch so this surface doesn't keep showing
+    // rows that have already been resolved upstream.
+    const handler = () => void load()
+    window.addEventListener(IDEAS_INVALIDATE_EVENT, handler)
+    return () => window.removeEventListener(IDEAS_INVALIDATE_EVENT, handler)
+  }, [load])
 
   // Advance the loading-stage copy while a generation is in flight. Stages
   // are time-anchored to the start of `generating`; on completion the
@@ -306,23 +310,6 @@ export function ProjectIdeasHome() {
     await generate()
   }, [generating, ideas.length, generate])
 
-  // Surface state. Two paths into the expanded card:
-  //   1. The earned teaser. Only fires when a Read idea sits in the queue
-  //      with confidence >= TEASER_CONFIDENCE_THRESHOLD. The teaser is a
-  //      single italic line that says "there's something I want to show
-  //      you" — the wow only appears when the system has earned the click.
-  //   2. The escape hatch button. Always available below the teaser (or
-  //      on its own when nothing's earned). Click → expand the queued
-  //      idea if there is one, or generate fresh in ~10s.
-  // The user-explicit click NEVER respects the threshold — that's just
-  // the auto-surface gate. If the user asks for an idea, we produce one.
-  const earnedTeaser = (() => {
-    const queued = ideas.find(i => i.mode === 'read' && (i.confidence ?? 0) >= TEASER_CONFIDENCE_THRESHOLD)
-    if (!queued) return null
-    const visual = MODE_VISUAL.read
-    return { idea: queued, glyph: visual.glyph, accentRgb: visual.accentRgb }
-  })()
-
   return (
     <section className="relative">
       {/* Container collapses tight when the user hasn't asked for an idea
@@ -340,72 +327,33 @@ export function ProjectIdeasHome() {
           </div>
         )}
 
-        {/* Collapsed state. Two cohabiting surfaces:
-            • Earned teaser — when a high-confidence Read sits in the queue,
-              the home shows a single italic line inviting the click. The
-              pattern itself stays hidden until they tap; the line only
-              promises that something is there.
-            • Escape-hatch button — always present below. The user can ask
-              for an idea even when the system hasn't earned the teaser.
-              On a sparse / low-quality day, the button is the only surface.
-            Both routes end in the same expanded card. */}
+        {/* Collapsed state — the quiet "suggest a project" pill. The high-
+            confidence Read teaser used to live here as a competing surface;
+            MomentSurface at the top of the home owns that case now, so this
+            slot is the single escape-hatch CTA. */}
         {!loading && !expanded && !generating && (
           <div className="flex flex-col items-center gap-5 py-2">
-            {earnedTeaser ? (
-              // Earned teaser is showing — it's the one clear next action.
-              // Suppress the escape-hatch pill so the user isn't presented
-              // with two competing CTAs in the same state.
-              <button
-                type="button"
-                onClick={() => { haptic.medium(); setExpanded(true); setActiveIndex(ideas.findIndex(i => i.id === earnedTeaser.idea.id)) }}
-                className="group flex items-center gap-3 px-2 py-3 rounded-lg transition-all max-w-xl"
-                style={{ color: 'var(--brand-text-primary)' }}
+            <button
+              type="button"
+              onClick={reveal}
+              className="group inline-flex items-center gap-2.5 px-4 py-2 rounded-full transition-all"
+              style={{
+                background: 'rgba(var(--brand-primary-rgb), 0.08)',
+                color: 'var(--brand-text-secondary)',
+                border: '1px solid rgba(var(--brand-primary-rgb), 0.18)',
+              }}
+            >
+              <span
+                aria-hidden
+                className="text-[12px] leading-none opacity-80"
+                style={{ fontFamily: 'var(--brand-font-serif)' }}
               >
-                <span
-                  aria-hidden
-                  className="text-[20px] leading-none flex-shrink-0 transition-transform group-hover:scale-110"
-                  style={{
-                    color: `rgb(${earnedTeaser.accentRgb})`,
-                    fontFamily: 'var(--brand-font-serif)',
-                    textShadow: `0 0 14px rgba(${earnedTeaser.accentRgb}, 0.45)`,
-                  }}
-                >
-                  {earnedTeaser.glyph}
-                </span>
-                <span
-                  className="text-[16px] sm:text-[18px] italic leading-[1.35] text-left"
-                  style={{
-                    color: 'var(--brand-text-primary)',
-                    fontFamily: 'var(--brand-font-serif)',
-                    opacity: 0.92,
-                  }}
-                >
-                  there's something i want to show you
-                </span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={reveal}
-                className="group inline-flex items-center gap-2.5 px-4 py-2 rounded-full transition-all"
-                style={{
-                  background: 'rgba(var(--brand-primary-rgb), 0.08)',
-                  color: 'var(--brand-text-secondary)',
-                  border: '1px solid rgba(var(--brand-primary-rgb), 0.18)',
-                }}
-              >
-                <span
-                  aria-hidden
-                  className="text-[12px] leading-none opacity-80"
-                  style={{ fontFamily: 'var(--brand-font-serif)' }}
-                >
-                  ✦
-                </span>
-                <span className="text-[11.5px] tracking-wide">
-                  suggest a project
-                </span>
-              </button>
-            )}
+                ✦
+              </span>
+              <span className="text-[11.5px] tracking-wide">
+                suggest a project
+              </span>
+            </button>
             {insufficientSignals !== null ? (
               <p className="text-[11px] italic opacity-70" style={{ color: 'var(--brand-text-secondary)' }}>
                 {insufficientSignals} signal{insufficientSignals === 1 ? '' : 's'} captured — needs 8 to find patterns

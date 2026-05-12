@@ -9,6 +9,7 @@ import { PROJECT_COLORS, getTheme } from '../../lib/projectTheme'
 import { getNextTask } from '../../lib/taskUtils'
 import { api } from '../../lib/apiClient'
 import { useToast } from '../ui/toast'
+import { UpNextShelf } from '../home/UpNextShelf'
 
 interface ProjectsPageCarouselProps {
   loading?: boolean
@@ -349,6 +350,12 @@ export function ProjectsPageCarousel({
           <MasonryGrid projects={activeList} prominent={true} />
         </section>
       )}
+
+      {/* SECTION 2: UP NEXT — same ordered queue as the homepage. Reuses
+          the home shelf component so the row UI (drag handle + position
+          badge + unpin X) stays canonical across surfaces. Hidden when
+          nothing is pinned. */}
+      <UpNextShelf />
 
       {drawerList.length > 0 && (
         <section>

@@ -236,17 +236,21 @@ function ProjectsPageInner() {
       .slice(0, FOCUS_CAP)
     const priorityIds = new Set(priorityProjects.map(p => p.id))
 
+    // Active Focus excludes Up Next pinned projects — they have their own
+    // section right below this one (rendered by ProjectsPageCarousel) so
+    // showing them in both is duplication.
     const recentActiveNonPriority = [...nonCompleted]
       .sort((a, b) =>
         new Date(b.last_active || b.created_at).getTime() - new Date(a.last_active || a.created_at).getTime()
       )
-      .filter(p => !p.is_priority && !priorityIds.has(p.id))
+      .filter(p => !p.is_priority && !priorityIds.has(p.id) && p.up_next_position == null)
       .slice(0, Math.max(0, FOCUS_CAP - priorityProjects.length))
 
     const activeList = [...priorityProjects, ...recentActiveNonPriority] as Project[]
     const activeIds = new Set(activeList.map(p => p.id))
-    // Everything not in the focus area goes in the drawer
-    const drawerList = nonCompleted.filter(p => !activeIds.has(p.id))
+    // Drawer is everything that isn't Active Focus and isn't pinned to
+    // Up Next. Up-next projects render in their own shelf in the carousel.
+    const drawerList = nonCompleted.filter(p => !activeIds.has(p.id) && p.up_next_position == null)
 
     return { activeList, drawerList }
   }, [projects])

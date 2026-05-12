@@ -689,26 +689,30 @@ export const useProjectStore = create<ProjectState>()(
 export const useUnshapedProjects = () =>
   useProjectStore(useShallow(state => state.allProjects.filter(p => p.metadata?.is_shaped === false)))
 
-// Keep Going shelf: at most 2 cards — the single priority project (if any)
-// plus the single most-recent active non-pinned, non-Up-Next project.
-// Up Next has its own shelf and is excluded here.
-export const useFocusedProjects = () =>
+// Active, shaped projects only. Up Next has its own shelf; pinned projects
+// are excluded from the "recent" selector so they don't show up twice.
+const isActiveShaped = (p: { status?: string; metadata?: { is_shaped?: boolean } }) =>
+  ['active', 'upcoming'].includes(p.status ?? '') && p.metadata?.is_shaped !== false
+
+// The starred project, if one is set. Drives the "priority" home section.
+export const usePriorityProject = () =>
+  useProjectStore(useShallow(state =>
+    state.allProjects.filter(isActiveShaped).find(p => p.is_priority) ?? null
+  ))
+
+// The most-recently-touched active project that isn't the priority and
+// isn't sitting in Up Next. Drives the "still warm" home section.
+export const useMostRecentNonPriorityProject = () =>
   useProjectStore(useShallow(state => {
-    const active = state.allProjects.filter(p =>
-      ['active', 'upcoming'].includes(p.status) && p.status !== 'graveyard'
-      && p.metadata?.is_shaped !== false
-    )
-    const priority = active.filter(p => p.is_priority).slice(0, 1)
-    const priorityId = priority[0]?.id
-    const recent = active
-      .filter(p => !p.is_priority && p.up_next_position == null && p.id !== priorityId)
+    const active = state.allProjects.filter(isActiveShaped)
+    const priorityId = active.find(p => p.is_priority)?.id
+    return active
+      .filter(p => p.up_next_position == null && p.id !== priorityId)
       .sort((a, b) => {
         const aTime = new Date(a.updated_at || a.last_active || 0).getTime()
         const bTime = new Date(b.updated_at || b.last_active || 0).getTime()
         return bTime - aTime
-      })
-      .slice(0, 1)
-    return [...priority, ...recent]
+      })[0] ?? null
   }))
 
 // Up Next shelf: projects with up_next_position set, sorted by position asc.
