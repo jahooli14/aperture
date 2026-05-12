@@ -108,21 +108,32 @@ export function ReadingPage() {
 
     // Auto-cleanup: Remove items dismissed more than 90 days ago
     const now = Date.now()
-    const dismissalTimestamps = JSON.parse(localStorage.getItem('rss-dismissed-timestamps') || '{}')
+    const dismissalTimestamps: Record<string, number> = JSON.parse(
+      localStorage.getItem('rss-dismissed-timestamps') || '{}'
+    )
     dismissalTimestamps[guid] = now
 
-    // Filter out old dismissals (90 days)
+    // Filter out old dismissals (90 days). Treat untimestamped legacy entries
+    // as fresh so we don't wipe them on first upgrade.
     const ninetyDaysAgo = now - (90 * 24 * 60 * 60 * 1000)
     const validGuids = Array.from(dismissed).filter(g => {
       const timestamp = dismissalTimestamps[g as string]
-      return timestamp && timestamp > ninetyDaysAgo
+      return timestamp === undefined || timestamp > ninetyDaysAgo
     })
 
     // Keep only the last 1000 dismissed items to prevent localStorage bloat
     const trimmedGuids = validGuids.slice(-1000)
 
+    // Prune the timestamp map to match — otherwise it grows forever as old
+    // guids fall off the trimmed list but their timestamps linger.
+    const trimmedSet = new Set(trimmedGuids)
+    const prunedTimestamps: Record<string, number> = {}
+    for (const [g, ts] of Object.entries(dismissalTimestamps)) {
+      if (trimmedSet.has(g)) prunedTimestamps[g] = ts
+    }
+
     localStorage.setItem('rss-dismissed-items', JSON.stringify(trimmedGuids))
-    localStorage.setItem('rss-dismissed-timestamps', JSON.stringify(dismissalTimestamps))
+    localStorage.setItem('rss-dismissed-timestamps', JSON.stringify(prunedTimestamps))
   }
 
   // Fetch RSS feed items from all enabled feeds

@@ -1350,11 +1350,15 @@ export default function ListDetailPage() {
         )
         if (missing.length === 0) return
 
+        let cancelled = false
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 8000)
+
         Promise.all(missing.map(async (item) => {
             try {
                 const res = await fetch(
                     `https://openlibrary.org/search.json?title=${encodeURIComponent(item.content)}&limit=1&fields=cover_i`,
-                    { signal: AbortSignal.timeout(8000) }
+                    { signal: controller.signal }
                 )
                 if (!res.ok) return null
                 const data = await res.json()
@@ -1365,12 +1369,19 @@ export default function ListDetailPage() {
                 return null
             }
         })).then(results => {
+            if (cancelled) return
             const overrides: Record<string, string> = {}
             results.forEach(r => { if (r) overrides[r[0]] = r[1] })
             if (Object.keys(overrides).length > 0) {
                 setCoverOverrides(prev => ({ ...prev, ...overrides }))
             }
         })
+
+        return () => {
+            cancelled = true
+            clearTimeout(timeout)
+            controller.abort()
+        }
     }, [displayItems, list?.type])
 
     // Close sort menu on outside click

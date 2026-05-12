@@ -2207,7 +2207,8 @@ Return JSON only:
   // EVOLUTION FEED RESOURCE — GET recent evolution events for the home feed
   if (resource === 'evolution-feed') {
     if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
-    const limit = parseInt(req.query.limit as string || '10', 10)
+    const parsedLimit = parseInt(req.query.limit as string || '10', 10)
+    const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 100) : 10
     try {
       const { data: events, error } = await supabase
         .from('evolution_events')

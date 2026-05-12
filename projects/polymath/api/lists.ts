@@ -29,49 +29,58 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             if (error) throw error
 
-            // Fetch cover images for all lists in parallel
-            const listsWithCovers = await Promise.all(lists.map(async (list) => {
-                let coverImage = null
+            // Cover images: previously this did N parallel Supabase queries (one
+            // per list). Collapsed to two batched queries — one for quote lists
+            // (need shortest phrase across recent items) and one for everything
+            // else (first item with an image).
+            const quoteListIds = lists.filter(l => l.type === 'quote').map(l => l.id)
+            const nonQuoteListIds = lists.filter(l => l.type !== 'quote').map(l => l.id)
 
-                // For quote lists, get shortest phrase
-                if (list.type === 'quote') {
-                    const { data: items } = await supabase
-                        .from('list_items')
-                        .select('content')
-                        .eq('list_id', list.id)
-                        .eq('user_id', userId)
-                        .order('created_at', { ascending: false })
-                        .limit(50)
+            const [quoteItemsRes, imageItemsRes] = await Promise.all([
+                quoteListIds.length > 0
+                    ? supabase
+                          .from('list_items')
+                          .select('list_id, content, created_at')
+                          .eq('user_id', userId)
+                          .in('list_id', quoteListIds)
+                          .order('created_at', { ascending: false })
+                    : Promise.resolve({ data: [] as Array<{ list_id: string; content: string; created_at: string }> }),
+                nonQuoteListIds.length > 0
+                    ? supabase
+                          .from('list_items')
+                          .select('list_id, metadata, created_at')
+                          .eq('user_id', userId)
+                          .in('list_id', nonQuoteListIds)
+                          .not('metadata->image', 'is', null)
+                          .order('created_at', { ascending: false })
+                    : Promise.resolve({ data: [] as Array<{ list_id: string; metadata: any; created_at: string }> }),
+            ])
 
-                    if (items && items.length > 0) {
-                        const shortestPhrase = items.reduce((shortest, item) =>
-                            !shortest || item.content.length < shortest.content.length ? item : shortest
-                        )
-                        coverImage = shortestPhrase.content
-                    }
-                } else {
-                    // For other lists, get first item with an image
-                    const { data: items } = await supabase
-                        .from('list_items')
-                        .select('metadata')
-                        .eq('list_id', list.id)
-                        .eq('user_id', userId)
-                        .not('metadata->image', 'is', null)
-                        .order('created_at', { ascending: false })
-                        .limit(1)
-
-                    if (items && items.length > 0 && items[0].metadata?.image) {
-                        // Upgrade http:// → https:// for existing rows stored before this fix
-                        coverImage = items[0].metadata.image.replace(/^http:\/\//, 'https://')
-                    }
+            // Build the cover lookup: shortest content per quote list, first
+            // image per non-quote list. Iterating once is O(n) per group.
+            const shortestQuoteByList = new Map<string, string>()
+            for (const row of (quoteItemsRes.data ?? [])) {
+                const current = shortestQuoteByList.get(row.list_id)
+                if (!current || row.content.length < current.length) {
+                    shortestQuoteByList.set(row.list_id, row.content)
                 }
+            }
+            const firstImageByList = new Map<string, string>()
+            for (const row of (imageItemsRes.data ?? [])) {
+                // Results are sorted DESC by created_at; the first row we see
+                // per list is the most recent one with an image.
+                if (firstImageByList.has(row.list_id)) continue
+                const image = (row.metadata as any)?.image
+                if (image) firstImageByList.set(row.list_id, image.replace(/^http:\/\//, 'https://'))
+            }
 
-                return {
-                    ...list,
-                    item_count: list.items ? list.items[0]?.count : 0,
-                    cover_image: coverImage,
-                    items: undefined
-                }
+            const listsWithCovers = lists.map(list => ({
+                ...list,
+                item_count: list.items ? list.items[0]?.count : 0,
+                cover_image: list.type === 'quote'
+                    ? shortestQuoteByList.get(list.id) ?? null
+                    : firstImageByList.get(list.id) ?? null,
+                items: undefined,
             }))
 
             return res.status(200).json(listsWithCovers)
@@ -201,7 +210,8 @@ async function handleListItems(req: VercelRequest, res: VercelResponse) {
         // Returns up to N active items across ALL lists in one query.
         // Used by NowConsumingWidget to avoid N serial fetches.
         if (req.method === 'GET' && resource === 'active-items') {
-            const limit = req.query.limit ? parseInt(req.query.limit as string) : 4
+            const parsedLimit = req.query.limit ? parseInt(req.query.limit as string, 10) : 4
+            const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 100) : 4
             const { data, error } = await supabase
                 .from('list_items')
                 .select('id, content, status, list_id, list:lists!inner(id, title, type)')
@@ -218,7 +228,8 @@ async function handleListItems(req: VercelRequest, res: VercelResponse) {
         // joined with the parent list's type + title so the client can group
         // and label without extra round-trips.
         if (req.method === 'GET' && resource === 'favourites') {
-            const minRating = req.query.min ? parseInt(req.query.min as string) : 4
+            const parsedMin = req.query.min ? parseInt(req.query.min as string, 10) : 4
+            const minRating = Number.isFinite(parsedMin) && parsedMin >= 1 && parsedMin <= 5 ? parsedMin : 4
             const { data, error } = await supabase
                 .from('list_items')
                 .select('*, list:lists!inner(id, title, type)')
@@ -231,7 +242,10 @@ async function handleListItems(req: VercelRequest, res: VercelResponse) {
         }
 
         if (req.method === 'GET' && listId) {
-            const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined
+            const parsedLimit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined
+            const limit = parsedLimit !== undefined && Number.isFinite(parsedLimit) && parsedLimit > 0
+                ? Math.min(parsedLimit, 1000)
+                : undefined
 
             let query = supabase
                 .from('list_items')

@@ -57,11 +57,19 @@ export function ContextSidebar() {
                     totalContextItems: data.totalContextItems,
                     semanticCount: data.semanticCount
                 })
+            } else {
+                console.error('Action request failed:', response.status)
+                addToast({
+                    title: 'Action failed',
+                    description: 'Try again in a moment.',
+                    variant: 'destructive'
+                })
             }
         } catch (error) {
             console.error('Failed to execute action:', error)
             addToast({
                 title: 'Action failed',
+                description: 'Try again in a moment.',
                 variant: 'destructive'
             })
         } finally {
