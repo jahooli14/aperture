@@ -114,11 +114,11 @@ export function OfflineIndicator() {
 
     return (
       <div className="fixed top-4 right-4 z-50">
-        <div className="bg-neutral-800 text-[var(--brand-text-primary)] rounded-lg shadow-lg overflow-hidden">
+        <div className="glass-card text-[var(--brand-text-primary)] rounded-lg shadow-lg overflow-hidden">
           {/* Main notification bar */}
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center gap-3 px-4 py-3 w-full hover:bg-neutral-700 transition-colors"
+            className="flex items-center gap-3 px-4 py-3 w-full hover:bg-[var(--glass-surface-hover)] transition-colors"
           >
             <CloudOff className="h-5 w-5 flex-shrink-0" />
             <span className="font-medium">
@@ -129,18 +129,18 @@ export function OfflineIndicator() {
 
           {/* Expanded actions */}
           {isExpanded && (
-            <div className="border-t border-neutral-700 p-2 space-y-1">
+            <div className="border-t border-[var(--glass-border)] p-2 space-y-1">
               <button
                 onClick={handleSyncNow}
                 disabled={!isOnline}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-[var(--glass-surface-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <RefreshCw className="h-4 w-4" />
                 <span className="text-sm font-medium">Sync now</span>
               </button>
               <button
                 onClick={handleClear}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-brand-primary transition-colors"
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-[var(--glass-surface-hover)] transition-colors"
               >
                 <X className="h-4 w-4" />
                 <span className="text-sm font-medium">Clear queue</span>

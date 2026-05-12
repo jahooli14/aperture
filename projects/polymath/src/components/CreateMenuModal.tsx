@@ -41,7 +41,7 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
                         transition={{ type: 'spring', damping: 36, stiffness: 520, mass: 0.45 }}
                         className="relative w-full z-10 overflow-hidden"
                         style={{
-                            background: 'linear-gradient(to top, #0d0d10, #111116)',
+                            background: 'var(--brand-bg)',
                             borderTop: '1px solid rgba(255,255,255,0.08)',
                             borderRadius: '24px 24px 0 0',
                             paddingBottom: 'env(safe-area-inset-bottom, 20px)',
