@@ -359,12 +359,33 @@ function MemoriesPageInner() {
     await loadMemories(true)
   }, [loadMemories])
 
-  // All unique tags from all memories
-  const allTags = useMemo(() => {
-    const tagSet = new Set<string>()
-    memories.forEach(m => m.tags?.forEach(t => tagSet.add(t)))
-    return Array.from(tagSet).sort()
-  }, [memories])
+  // Tags ranked by how many thoughts use them. The strip only shows the
+  // top slice by default — the full list opens on demand so the corpus
+  // doesn't drown the page in pills.
+  const TAGS_PREVIEW_COUNT = 6
+  const SYSTEM_TAG_SET = useMemo(() => new Set(['onboarding', 'live-hybrid', 'morning-followup', 'bedtime-synthesis']), [])
+  const rankedTags = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const m of memories) {
+      for (const t of m.tags || []) {
+        if (!t || SYSTEM_TAG_SET.has(t)) continue
+        counts.set(t, (counts.get(t) ?? 0) + 1)
+      }
+    }
+    return Array.from(counts.entries())
+      .sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0]))
+      .map(([tag, count]) => ({ tag, count }))
+  }, [memories, SYSTEM_TAG_SET])
+  const [tagsExpanded, setTagsExpanded] = useState(false)
+  // Always keep any active tag visible even when collapsed — so selecting
+  // a rare tag doesn't visually vanish from the strip the moment you pick it.
+  const visibleTags = useMemo(() => {
+    if (tagsExpanded) return rankedTags
+    const preview = rankedTags.slice(0, TAGS_PREVIEW_COUNT)
+    const previewSet = new Set(preview.map(t => t.tag))
+    const stickyActive = rankedTags.filter(t => activeTags.includes(t.tag) && !previewSet.has(t.tag))
+    return [...preview, ...stickyActive]
+  }, [rankedTags, tagsExpanded, activeTags])
 
   // Pick one random memory that's 30+ days old for "Resurface" section
   // Stabilised so it doesn't re-pick on every render  only when the total count changes
@@ -458,29 +479,27 @@ function MemoriesPageInner() {
     <>
       <SubtleBackground />
       {/* Editorial header — Day One language. Serif title, hairline rule,
-          quiet count. Tools sit beside the title, not above it. */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-10 sm:pt-12 pb-2 flex flex-col gap-3">
-          <div className="mb-4 flex items-end justify-between gap-3">
-            <div className="min-w-0 flex-1">
+          quiet count. Tools sit beside the title, not above it.
+          Same .page-masthead spacing as every other tab so the title
+          y-position is locked across tab switches. */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col gap-3">
+          <header className="page-masthead">
+            <div className="page-masthead-text">
               <h1 className="page-hero">Your thoughts.</h1>
               <div className="page-eyebrow">{memories.length} captured</div>
             </div>
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+            <div className="page-masthead-actions">
               {view !== 'resurfacing' && <CreateMemoryDialog />}
               <button
                 onClick={() => navigate('/search')}
-                className="h-10 w-10 rounded-full flex items-center justify-center transition-all hover:scale-105"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb),0.12), rgba(var(--brand-primary-rgb),0.04))',
-                  border: '1px solid rgba(var(--brand-primary-rgb),0.22)',
-                  color: 'rgb(var(--brand-primary-rgb))',
-                }}
+                className="masthead-action press-spring"
+                aria-label="Search everything"
                 title="Search everything"
               >
-                <Search className="h-4 w-4" />
+                <Search className="h-5 w-5" />
               </button>
             </div>
-          </div>
+          </header>
 
           {/* Morning Follow-Up */}
           {showMorningFollowUp && (
@@ -575,10 +594,19 @@ function MemoriesPageInner() {
                   </p>
                 )}
 
-                {/* Tag pills — refined, no shadows or bold caps */}
-                {allTags.length > 0 && (
-                  <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
-                    {allTags.map(tag => {
+                {/* Tag band — contained strip, hairline above & below,
+                    top-6 by usage with a "More" affordance. The earlier
+                    full-corpus scroll bar was eating 60–80px of vertical
+                    space for a list that's almost entirely one-off tags. */}
+                {rankedTags.length > 0 && (
+                  <div
+                    className="py-2 flex flex-wrap items-center gap-2"
+                    style={{
+                      borderTop: '1px solid rgba(255,255,255,0.06)',
+                      borderBottom: '1px solid rgba(255,255,255,0.06)',
+                    }}
+                  >
+                    {visibleTags.map(({ tag, count }) => {
                       const isActive = activeTags.includes(tag)
                       return (
                         <button
@@ -586,22 +614,41 @@ function MemoriesPageInner() {
                           onClick={() => setActiveTags(prev =>
                             isActive ? prev.filter(t => t !== tag) : [...prev, tag]
                           )}
-                          className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] tracking-wide transition-all min-h-[34px]"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] tracking-wide transition-all"
                           style={{
                             background: isActive ? 'rgba(var(--brand-primary-rgb),0.14)' : 'rgba(255,255,255,0.03)',
                             border: isActive ? '1px solid rgba(var(--brand-primary-rgb),0.4)' : '1px solid rgba(255,255,255,0.06)',
                             color: isActive ? 'rgb(var(--brand-primary-rgb))' : 'var(--brand-text-muted)',
                           }}
+                          aria-pressed={isActive}
                         >
                           <Tag className="h-3 w-3" />
-                          {tag}
+                          <span>{tag}</span>
+                          {count > 1 && (
+                            <span className="opacity-50 text-[10px]">{count}</span>
+                          )}
                         </button>
                       )
                     })}
+
+                    {rankedTags.length > TAGS_PREVIEW_COUNT && (
+                      <button
+                        onClick={() => setTagsExpanded(v => !v)}
+                        className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] uppercase tracking-[0.18em] transition-opacity opacity-70 hover:opacity-100"
+                        style={{
+                          background: 'transparent',
+                          border: '1px dashed rgba(var(--brand-primary-rgb),0.25)',
+                          color: 'rgb(var(--brand-primary-rgb))',
+                        }}
+                      >
+                        {tagsExpanded ? 'less' : `more (${rankedTags.length - TAGS_PREVIEW_COUNT})`}
+                      </button>
+                    )}
+
                     {activeTags.length > 0 && (
                       <button
                         onClick={() => setActiveTags([])}
-                        className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] tracking-wide transition-all min-h-[34px] opacity-70 hover:opacity-100"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] uppercase tracking-[0.18em] transition-opacity opacity-70 hover:opacity-100 ml-auto"
                         style={{
                           background: 'rgba(255,255,255,0.03)',
                           border: '1px solid rgba(255,255,255,0.08)',
@@ -609,7 +656,7 @@ function MemoriesPageInner() {
                         }}
                       >
                         <X className="h-3 w-3" />
-                        Clear
+                        clear
                       </button>
                     )}
                   </div>

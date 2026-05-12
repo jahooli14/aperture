@@ -126,34 +126,36 @@
     font-family: var(--brand-font-body);
 }
 
-/* Section header — quiet, editorial. Secondary surfaces label themselves
-   here; The Moment hero owns the loud type. Hairline rule + subtle
-   accent on the highlight word. No gradient text, no glow. */
+/* Section header — legacy alias for .section-heading (design-tokens.css).
+   Same visual language: hairline rule, lowercase, cyan accent on the
+   highlighted word. Kept so older home/projects components keep working.
+   New code should use .section-heading. */
 .section-header {
     position: relative;
-    font-size: clamp(1.25rem, 4.6vw, 1.5rem);
+    font-size: var(--section-heading-size, clamp(1.05rem, 3.2vw, 1.25rem));
     line-height: 1.2;
-    font-weight: 700;
-    color: rgba(255, 255, 255, 0.92);
-    letter-spacing: -0.03em;
+    font-weight: var(--section-heading-weight, 700);
+    color: var(--section-heading-color, rgba(255, 255, 255, 0.92));
+    letter-spacing: var(--section-heading-tracking, -0.015em);
     font-family: var(--brand-font-header);
-    margin-bottom: 1.25rem;
+    text-transform: lowercase;
+    margin: 0 0 1rem;
     display: flex;
     align-items: center;
-    gap: 0.55rem;
+    gap: 0.625rem;
 }
 
 .section-header::before {
     content: '';
-    width: 14px;
+    width: 18px;
     height: 1px;
     background: rgba(var(--brand-primary-rgb), 0.55);
     flex-shrink: 0;
 }
 
-.section-header span {
+.section-header span,
+.section-header .accent {
     color: rgb(var(--brand-primary-rgb));
-    opacity: 0.85;
 }
 
 /* The "Shelf" Separator */

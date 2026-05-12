@@ -230,47 +230,45 @@ function ListsPageInner() {
     }
 
     return (
-        <div className="min-h-screen pb-32 pt-8 sm:pt-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto aperture-shelf overflow-hidden">
-            <div className="flex items-start justify-between gap-3 mb-6 sm:mb-8">
-                <div className="flex flex-col gap-1 min-w-0 flex-1">
+        <div className="min-h-screen pb-32 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto overflow-hidden">
+            <header className="page-masthead">
+                <div className="page-masthead-text">
                     <h1 className="page-hero">Your collections.</h1>
                     <div className="page-eyebrow">Films · books · places · &amp; the rest</div>
                 </div>
-                <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                <div className="page-masthead-actions">
                     <button
                         onClick={() => navigate('/favourites')}
                         title="Favourites"
-                        className="flex items-center justify-center h-11 w-11 rounded-xl hover:bg-[var(--glass-surface)] bg-[var(--glass-surface)] text-[var(--brand-primary)] transition-all"
-                        style={{ border: '1px solid rgba(255,255,255,0.1)' }}
+                        aria-label="Favourites"
+                        className="masthead-action press-spring"
                     >
                         <Star className="h-5 w-5" />
                     </button>
                     {lists.length > 0 && (
                         <button
                             onClick={() => setIsReordering(!isReordering)}
-                            className={`flex items-center justify-center h-11 w-11 rounded-xl transition-all ${
-                                isReordering
-                                    ? 'text-[var(--brand-primary)]'
-                                    : 'text-[var(--brand-text-primary)] hover:bg-[var(--glass-surface)]'
-                            }`}
+                            aria-label={isReordering ? 'Done reordering' : 'Reorder lists'}
+                            title={isReordering ? 'Done reordering' : 'Reorder lists'}
+                            className="masthead-action press-spring"
                             style={isReordering
                                 ? { border: '1px solid rgba(125,211,252,0.5)', background: 'rgba(125,211,252,0.15)' }
-                                : { border: '1px solid rgba(255,255,255,0.1)', background: 'var(--glass-surface)' }
+                                : undefined
                             }
-                            title={isReordering ? 'Done reordering' : 'Reorder lists'}
                         >
                             {isReordering ? <Check className="h-5 w-5" /> : <ListOrdered className="h-5 w-5" />}
                         </button>
                     )}
                     <Button
                         onClick={() => setCreateOpen(true)}
-                        className="h-11 w-11 p-0 rounded-xl hover:bg-[var(--glass-surface)] bg-[var(--glass-surface)] text-[var(--brand-primary)]"
-                        style={{ border: '1px solid rgba(255,255,255,0.1)' }}
+                        aria-label="Create a collection"
+                        title="Create a collection"
+                        className="masthead-action press-spring p-0"
                     >
                         <Plus className="h-5 w-5" />
                     </Button>
                 </div>
-            </div>
+            </header>
 
             {/* Loading State - Show skeleton cards while loading */}
             {initialLoad && loading && lists.length === 0 && (
@@ -405,7 +403,7 @@ function ListsPageInner() {
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
                                     <ListIcon type={list.type} className="h-3 w-3 flex-shrink-0" style={{ color: `rgb(${rgb})` }} />
-                                    <h3 className="text-sm font-black text-[var(--brand-text-primary)] uppercase tracking-tight truncate">
+                                    <h3 className="text-[15px] font-semibold text-[var(--brand-text-primary)] tracking-tight truncate">
                                         {list.title}
                                     </h3>
                                     {recentlyUpdated && (
@@ -413,8 +411,8 @@ function ListsPageInner() {
                                             style={{ backgroundColor: `rgb(${rgb})` }} />
                                     )}
                                 </div>
-                                <p className="text-[9px] font-bold text-[var(--brand-text-primary)]/40 uppercase tracking-widest">
-                                    {list.item_count || 0} ITEMS
+                                <p className="text-[10px] font-medium text-[var(--brand-text-primary)]/40 uppercase tracking-widest">
+                                    {list.item_count || 0} items
                                 </p>
                             </div>
                         </Reorder.Item>
@@ -540,7 +538,7 @@ function ListsPageInner() {
 
                                 <div className="space-y-1.5">
                                     <div className="flex items-center gap-1.5">
-                                        <h3 className="text-sm font-black text-[var(--brand-text-primary)] uppercase tracking-tight leading-tight group-hover:text-brand-primary transition-colors line-clamp-2"
+                                        <h3 className="text-[15px] font-semibold text-[var(--brand-text-primary)] tracking-tight leading-snug group-hover:text-brand-primary transition-colors line-clamp-2"
                                             style={{ textShadow: '0 1px 4px rgba(0,0,0,0.95), 0 0 12px rgba(0,0,0,0.8)' }}>
                                             {list.title}
                                         </h3>
@@ -556,7 +554,7 @@ function ListsPageInner() {
                                     <div className="flex items-center justify-between">
                                         {/* Item count badge */}
                                         <div className="flex items-center gap-1">
-                                            <span className="text-[11px] font-bold uppercase tracking-widest"
+                                            <span className="text-[11px] font-medium uppercase tracking-widest"
                                                 style={{
                                                     color: itemCount > 0 ? `rgb(${rgb})` : 'rgba(255,255,255,0.55)',
                                                     textShadow: '0 1px 3px rgba(0,0,0,0.95)'
@@ -618,11 +616,11 @@ function ListsPageInner() {
                                 <div className="w-10 h-1 rounded-full bg-white/15" />
                             </div>
                             <div className="px-5 pt-3 pb-8">
-                                <p className="text-[9px] font-black uppercase tracking-[0.2em] mb-1"
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-1"
                                     style={{ color: `rgb(${ListColor(actionSheetList.type)})` }}>
                                     {actionSheetList.type}
                                 </p>
-                                <h3 className="text-base font-black text-[var(--brand-text-primary)] uppercase tracking-tight mb-5">
+                                <h3 className="text-lg font-semibold text-[var(--brand-text-primary)] tracking-tight mb-5">
                                     {actionSheetList.title}
                                 </h3>
                                 <div className="space-y-2">

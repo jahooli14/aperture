@@ -316,9 +316,9 @@ export function CreateProjectDialog({
       {!hideTrigger && (trigger || (
         <button
           onClick={() => setOpen(true)}
-          className="h-11 w-11 rounded-xl flex items-center justify-center border transition-all hover:bg-[var(--glass-surface)] bg-[var(--glass-surface)]"
-          style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'var(--brand-primary)' }}
-          title="New Project"
+          className="masthead-action press-spring"
+          aria-label="New project"
+          title="New project"
         >
           <Plus className="h-5 w-5" />
         </button>

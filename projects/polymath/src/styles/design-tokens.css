@@ -5,6 +5,21 @@
  * here and the change cascades. Don't add a new colour, font size, or
  * radius to a page when one of these covers the case.
  *
+ * ─── Type scale (lock this) ───────────────────────────────────────
+ *
+ *   page-hero           — page title (every tab). Serif, ~36–44px.
+ *   page-eyebrow        — uppercase cyan subtitle under the title.
+ *   section-heading     — group label inside a page (e.g. "keep going",
+ *                         "active focus"). Lowercase, ~20px. MUST
+ *                         outrank card titles within the same group.
+ *   card-title          — title of a card inside a section, ~14–15px.
+ *   meta-caps / meta-serif / text-body — sub-card metadata + body.
+ *
+ *   Rule: page-hero > section-heading > card-title > body/meta.
+ *   Section headings render bigger than the cards they group — full
+ *   stop. If a card title looks bigger than the section heading
+ *   above it, something is wrong with the markup.
+ *
  * ─── Token map ─────────────────────────────────────────────────────
  *
  * Page headers (serif editorial):
@@ -12,6 +27,10 @@
  *   .page-hero-sm         — smaller variant for sub-pages
  *   .page-eyebrow         — hairline rule + uppercase tracked label
  *   .page-eyebrow-line    — the hairline rule alone
+ *
+ * Section headings (inside pages):
+ *   .section-heading      — lowercase, weight 700, ~20px. Outranks cards.
+ *   .section-heading .accent — child span for the cyan accent word.
  *
  * Inputs (Dia-leaning soft surfaces):
  *   .soft-input           — rounded-2xl, italic placeholder, cyan focus
@@ -32,6 +51,7 @@
  *   --hero-line-height
  *   --eyebrow-tracking
  *   --soft-radius
+ *   --masthead-pt        — fixed top padding for every page masthead
  * ─────────────────────────────────────────────────────────────────── */
 
 :root {
@@ -46,6 +66,29 @@
   --eyebrow-color: rgba(var(--brand-primary-rgb), 0.7);
   --eyebrow-rule-width: 40px;
 
+  /* Section heading inside a page (groups cards). Must outrank card titles. */
+  --section-heading-size: clamp(1.05rem, 3.2vw, 1.25rem); /* 17–20px */
+  --section-heading-weight: 700;
+  --section-heading-tracking: -0.015em;
+  --section-heading-color: rgba(255, 255, 255, 0.92);
+
+  /* Card title inside a section. Stays below section heading. */
+  --card-title-size: 0.9375rem;       /* 15px */
+  --card-title-size-compact: 0.8125rem; /* 13px */
+
+  /* Masthead — same top padding on every page so the hero title sits
+     at the same y across tab switches. Tweak here, not in pages. */
+  --masthead-pt: 2.25rem;              /* 36px */
+  --masthead-pt-mobile: 2rem;          /* 32px */
+  --masthead-mb: 1.5rem;               /* 24px */
+
+  /* Glass surfaces — used by .glass-card. Listed here so pages can
+     compose ad-hoc surfaces from the same atoms. */
+  --glass-card-bg: linear-gradient(155deg, rgba(255, 255, 255, 0.045), rgba(20, 27, 38, 0.55));
+  --glass-card-border: rgba(255, 255, 255, 0.08);
+  --glass-card-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  --glass-card-shadow: 0 6px 22px rgba(0, 0, 0, 0.32);
+
   /* Surface radii */
   --soft-radius: 16px;
   --soft-radius-sm: 12px;
@@ -57,6 +100,58 @@
   --soft-border: rgba(255, 255, 255, 0.06);
   --soft-border-focus: rgba(var(--brand-primary-rgb), 0.35);
 }
+
+/* ─── Page masthead ─────────────────────────────────────────────── */
+/* Wrapper used at the top of every main tab so the page hero sits at
+   the same y-coordinate when the user switches between tabs. The user
+   noticed jitter — this kills it. Don't override top padding on a
+   page; if you need more breathing room, add a child element below
+   the masthead. */
+
+.page-masthead {
+  padding-top: var(--masthead-pt-mobile);
+  padding-bottom: 0;
+  margin-bottom: var(--masthead-mb);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .page-masthead { padding-top: var(--masthead-pt); }
+}
+
+.page-masthead .page-masthead-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.page-masthead .page-masthead-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Masthead action button — every page's top-right icon row uses this.
+   Lock the size, radius, surface, and accent so the buttons read as a
+   single set across the app. */
+.masthead-action {
+  height: 40px;
+  width: 40px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--glass-surface);
+  border: 1px solid var(--glass-border);
+  color: rgb(var(--brand-primary-rgb));
+  transition: background 0.18s ease, transform 0.12s ease;
+}
+
+.masthead-action:hover { background: var(--glass-surface-hover); }
+.masthead-action:active { transform: scale(0.96); }
 
 /* ─── Page hero ─────────────────────────────────────────────────── */
 /* Serif editorial title used at the top of most full-page surfaces. */
@@ -88,6 +183,56 @@
   font-size: 20px;
   letter-spacing: -0.018em;
   line-height: 1.25;
+  color: var(--brand-text-primary);
+}
+
+/* Section heading — group label inside a page. Lowercase, sans, bold.
+   MUST outrank card titles inside the same group. If you find a card
+   title rendering larger than the section heading above it, the card
+   title is wrong, not the section heading.
+
+   Visual: lowercase + tight tracking + hairline rule prefix + optional
+   cyan accent word via the .accent child. Replaces the historical 11px
+   uppercase micro-caps "Active Focus" / "In the Drawer" markup.
+
+   Usage:
+     <h2 class="section-heading">keep <span class="accent">going</span></h2>
+*/
+.section-heading {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--brand-font-header);
+  font-size: var(--section-heading-size);
+  font-weight: var(--section-heading-weight);
+  letter-spacing: var(--section-heading-tracking);
+  line-height: 1.2;
+  color: var(--section-heading-color);
+  text-transform: lowercase;
+  margin: 0 0 16px;
+}
+
+.section-heading::before {
+  content: '';
+  width: 18px;
+  height: 1px;
+  flex-shrink: 0;
+  background: rgba(var(--brand-primary-rgb), 0.55);
+}
+
+.section-heading .accent {
+  color: rgb(var(--brand-primary-rgb));
+}
+
+/* Card title inside a section. Always smaller than the section heading
+   above. Use sentence case — no SHOUTING. */
+.card-title {
+  font-family: var(--brand-font-body);
+  font-size: var(--card-title-size);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
   color: var(--brand-text-primary);
 }
 
@@ -131,7 +276,10 @@
 
 .soft-input {
   width: 100%;
-  padding: 12px 16px;
+  padding-top: 12px;
+  padding-right: 16px;
+  padding-bottom: 12px;
+  padding-left: 16px;
   border-radius: var(--soft-radius-input);
   background: var(--soft-surface);
   border: 1px solid var(--soft-border);
@@ -153,7 +301,10 @@
 }
 
 .soft-input-lg {
-  padding: 16px 20px;
+  padding-top: 16px;
+  padding-right: 20px;
+  padding-bottom: 16px;
+  padding-left: 20px;
   font-size: 16px;
   border-radius: 20px;
 }
