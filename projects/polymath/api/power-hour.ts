@@ -264,7 +264,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log('[power-hour] Fetching tasks for user:', userId)
 
     const { refresh, projectId, duration } = req.query
-    const isRefresh = refresh === 'true' || !!projectId
+    // Refresh = the caller explicitly asked to regenerate. Passing a
+    // projectId on its own is just "give me the plan for this project" —
+    // it should hit the cache freely, NOT bypass it. Conflating the two
+    // caused a 429 storm on the START SESSION path: KeepGoingCard
+    // prefetched the plan (marked the project as just-regenerated), the
+    // user clicked Start, the second fetch was treated as a refresh and
+    // got rate-limited.
+    const isRefresh = refresh === 'true'
     const targetProject = projectId as string | undefined
     const durationMinutes = duration ? parseInt(duration as string, 10) : 60
 
