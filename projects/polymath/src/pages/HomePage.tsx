@@ -3,37 +3,39 @@
  *
  * Stack (top to bottom):
  *   1. YourHourHeader — brand + duration toggle + search
- *   2. KeepGoingCarousel — focus mode for active projects (the hero)
- *   3. UpNextShelf — user-pinned queue (up to 3); only renders when populated
- *   4. ProjectIdeasHome — quiet button. Expands to a full idea card when
- *      the user wants something new. Two states: an "unlock" prompt when a
- *      pre-baked idea is waiting (instant reveal), or "suggest a project"
- *      when the queue is empty (generates one on demand, fast model).
- *   4. NowConsumingWidget — compact strip of active list items
- *   5. ThoughtOfTheDay — resurfaced memory quote
- *   6. BedtimeFloatingIcon — after 9:30pm
+ *   2. MomentSurface — earned AI idea. Only renders when the cron has
+ *      pre-baked a high-confidence Read idea; otherwise null.
+ *   3. Priority project card — the starred one. Hidden if nothing starred.
+ *   4. Still-warm card — most-recently-touched non-priority project.
+ *   5. UpNextShelf — user-pinned queue. Hidden when empty.
+ *   6. ProjectIdeasHome — "suggest a project" pill. The escape hatch when
+ *      no earned idea is ready; expands to the full editorial card on click.
+ *   7. NowConsumingWidget — compact strip of active list items.
+ *   8. ThoughtOfTheDay — resurfaced memory quote.
+ *   9. BedtimeFloatingIcon — after 9:30pm.
  *
- * The Moment used to live above Keep Going as a hero card. Moved below
- * because Keep Going IS the main loop — the user opens the app to do the
- * thing they're already on, not to be handed a new thing. The new thing
- * is opt-in via the button.
+ * Ordering: the AI moment leads when present (the most-important surface).
+ * Otherwise Keep Going leads — the user opens the app to do the thing
+ * they're already on, and the suggest-pill stays a quiet escape hatch
+ * below Up Next.
  */
 
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { useProjectStore } from '../stores/useProjectStore'
+import { useProjectStore, usePriorityProject, useMostRecentNonPriorityProject } from '../stores/useProjectStore'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { useJourneyStore } from '../stores/useJourneyStore'
 import { useAuthContext } from '../contexts/AuthContext'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { YourHourHeader } from '../components/home/YourHourHeader'
-import { KeepGoingCarousel } from '../components/home/KeepGoingCarousel'
+import { KeepGoingCard, KeepGoingEmpty } from '../components/home/KeepGoingCard'
 import { UpNextShelf } from '../components/home/UpNextShelf'
 import { ThoughtOfTheDay } from '../components/home/ThoughtOfTheDay'
 import { BedtimeFloatingIcon } from '../components/home/BedtimeFloatingIcon'
 import { ProjectIdeasHome } from '../components/home/ProjectIdeasHome'
+import { MomentSurface } from '../components/home/MomentSurface'
 import { UnauthHome } from '../components/onboarding/UnauthHome'
 import { ease, stagger } from '../lib/motion'
 import { AlertCircle, ArrowRight, Film, Music, Monitor, Book, MapPin, Gamepad2, Calendar, FileText, Quote, Box } from 'lucide-react'
@@ -152,6 +154,9 @@ export function HomePage() {
   const setContext = useContextEngineStore(s => s.setContext)
   const onboardingCompletedAt = useJourneyStore(s => s.onboardingCompletedAt)
   const startSession = useJourneyStore(s => s.startSession)
+  const priorityProject = usePriorityProject()
+  const recentProject = useMostRecentNonPriorityProject()
+  const hasAnyFocus = priorityProject || recentProject
 
   const [error, setError] = useState<string | null>(null)
 
@@ -227,31 +232,62 @@ export function HomePage() {
             <YourHourHeader />
           </motion.div>
 
-          {/* Keep Going — the main loop. Active projects, focus mode. */}
+          {/* The Moment — earned AI idea. Renders only when the cron has
+              pre-baked a high-confidence Read idea; otherwise null and the
+              page falls back to Keep Going as the lead. */}
           <motion.div className="mb-10" {...stackTransition(1)}>
-            <KeepGoingCarousel />
+            <MomentSurface />
           </motion.div>
 
+          {/* Priority — the single starred project. Hidden when nothing
+              is starred (the recent-card below carries the page on its own). */}
+          {priorityProject && (
+            <motion.div className="mb-10" {...stackTransition(2)}>
+              <KeepGoingCard
+                project={priorityProject}
+                heading={<>your <span>priority</span></>}
+              />
+            </motion.div>
+          )}
+
+          {/* Still warm — most-recently-touched non-priority active project.
+              Hidden when nothing else is active. Always shows a fallback
+              empty state when nothing is in focus at all (no priority, no
+              recent), so the page doesn't collapse to just the header + pill. */}
+          {recentProject ? (
+            <motion.div className="mb-10" {...stackTransition(3)}>
+              <KeepGoingCard
+                project={recentProject}
+                heading={<>still <span>warm</span></>}
+              />
+            </motion.div>
+          ) : !hasAnyFocus ? (
+            <motion.div className="mb-10" {...stackTransition(3)}>
+              <h2 className="section-header">keep <span>going</span></h2>
+              <KeepGoingEmpty />
+            </motion.div>
+          ) : null}
+
           {/* Up Next — pinned queue. Hidden when empty. */}
-          <motion.div className="mb-10" {...stackTransition(2)}>
+          <motion.div className="mb-10" {...stackTransition(4)}>
             <UpNextShelf />
           </motion.div>
 
-          {/* Project ideas — quiet button until clicked. Reveals a pre-baked
-              idea instantly when the queue has one, or generates on demand
-              when it doesn't. Opt-in: only fires when the user wants something
-              new. Expands to a full hero card while the user is reviewing. */}
-          <motion.div className="mb-10" {...stackTransition(3)}>
+          {/* Suggest a project — the quiet escape-hatch pill. Expands to the
+              full editorial card on click. The earned-teaser case has moved
+              to MomentSurface at the top; this slot is the on-demand
+              generation surface only. */}
+          <motion.div className="mb-10" {...stackTransition(5)}>
             <ProjectIdeasHome />
           </motion.div>
 
           {/* What you're consuming */}
-          <motion.div {...stackTransition(4)}>
+          <motion.div {...stackTransition(6)}>
             <NowConsumingWidget />
           </motion.div>
 
           {/* Thought of the day */}
-          <motion.div {...stackTransition(5)}>
+          <motion.div {...stackTransition(7)}>
             <ThoughtOfTheDay />
           </motion.div>
 
