@@ -26,11 +26,12 @@ export function RecentlyActiveMini() {
   return (
     <div>
       <h2 className="section-header">recently <span>active</span></h2>
-      <div className="grid grid-cols-2 gap-3">
-        {projects.map((p) => (
+      <div className="grid grid-cols-2 gap-3 items-start pb-3">
+        {projects.map((p, i) => (
           <ProjectMiniCard
             key={p.id}
             project={p}
+            index={i}
             meta={relative(p.last_active || p.updated_at)}
           />
         ))}
