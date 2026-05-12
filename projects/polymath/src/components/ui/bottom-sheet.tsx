@@ -121,15 +121,16 @@ const BottomSheetContent = React.forwardRef<
         style={{
           y,
           opacity,
-          backgroundColor: 'var(--premium-surface-card)',
-          boxShadow: 'inset 0 1px 0 var(--glass-surface-hover), 0 -8px 48px rgba(0,0,0,0.5)'
+          background: 'linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 12%), rgba(15, 24, 41, 0.78)',
+          backdropFilter: 'blur(40px) saturate(200%)',
+          WebkitBackdropFilter: 'blur(40px) saturate(200%)',
+          borderTop: '1px solid rgba(255, 255, 255, 0.18)',
+          boxShadow: '0 -28px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.10)',
         }}
         className={cn(
           'fixed inset-x-0 bottom-0 z-[10001]',
           'max-h-[88vh]',
           'rounded-t-3xl',
-          'backdrop-blur-xl',
-          'shadow-2xl',
           'overflow-hidden',
           'flex flex-col',
           'will-change-transform',

@@ -98,20 +98,35 @@
     --color-accent-dark-rgb: 8, 145, 178; /* Cyan-700 darker variant */
 
     /* UI State Surfaces */
-    --glass-surface: rgba(255, 255, 255, 0.06);
-    --glass-surface-hover: rgba(255, 255, 255, 0.1);
-    --glass-surface-active: rgba(255, 255, 255, 0.14);
-    --glass-border: rgba(255, 255, 255, 0.1);
-    --glass-border-bold: rgba(255, 255, 255, 0.18);
+    --glass-surface: rgba(255, 255, 255, 0.08);
+    --glass-surface-hover: rgba(255, 255, 255, 0.14);
+    --glass-surface-active: rgba(255, 255, 255, 0.20);
+    --glass-border: rgba(255, 255, 255, 0.14);
+    --glass-border-bold: rgba(255, 255, 255, 0.24);
 
     /* Layout Standards */
     --brand-border: 1px solid var(--glass-border);
     --brand-border-bold: 1px solid var(--glass-border-bold);
-    --brand-radius: 12px; /* Standardized rounded-xl feel */
-    --brand-radius-lg: 16px;
-    --brand-radius-sm: 8px;
-    --brand-glass-bg: rgba(var(--brand-bg-rgb), 0.4);
-    --brand-glass-blur: blur(12px);
+    --brand-radius: 14px; /* Slightly softer, more modern */
+    --brand-radius-lg: 18px;
+    --brand-radius-sm: 10px;
+
+    /* Glass system — cranked. Stronger blur + saturate gives every surface
+       real depth. A subtle linear-gradient top highlight reads as light
+       catching the upper edge of crystal. Multi-layer shadow + inset rim
+       sells the floating-pane feel. */
+    --brand-glass-bg: rgba(var(--brand-bg-rgb), 0.55);
+    --brand-glass-blur: blur(28px) saturate(180%);
+    --glass-highlight: linear-gradient(180deg, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0.02) 30%, transparent 70%);
+    --glass-edge:
+        inset 0 1px 0 rgba(255, 255, 255, 0.10),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.18);
+    --glass-shadow:
+        0 20px 60px -16px rgba(0, 0, 0, 0.55),
+        0 4px 12px rgba(0, 0, 0, 0.18);
+    --glass-shadow-lifted:
+        0 32px 80px -20px rgba(0, 0, 0, 0.65),
+        0 8px 20px rgba(0, 0, 0, 0.22);
 }
 
 /* Base Styles */
@@ -167,25 +182,45 @@
 
 /* Unified Card - Neon Glass (Attention) */
 .attention-card {
-    background: var(--brand-glass-bg);
-    border: 1px solid rgba(255,255,255,0.15);
+    position: relative;
+    background: var(--glass-highlight), var(--brand-glass-bg);
+    backdrop-filter: var(--brand-glass-blur);
+    -webkit-backdrop-filter: var(--brand-glass-blur);
+    border: 1px solid rgba(255,255,255,0.18);
     border-radius: var(--brand-radius);
-    box-shadow: 0 4px 16px rgba(0,0,0,0.2), 0 0 20px rgba(var(--brand-primary-rgb), 0.06);
+    box-shadow:
+        0 16px 48px -18px rgba(0, 0, 0, 0.55),
+        0 4px 12px rgba(0, 0, 0, 0.18),
+        0 0 28px rgba(var(--brand-primary-rgb), 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.10);
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .attention-card:hover {
-    transform: translateY(-1px);
-    border-color: rgba(255,255,255,0.25);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.3), 0 0 32px rgba(var(--brand-primary-rgb), 0.1);
+    transform: translateY(-2px);
+    border-color: rgba(255,255,255,0.28);
+    box-shadow:
+        0 24px 64px -20px rgba(0, 0, 0, 0.65),
+        0 6px 18px rgba(0, 0, 0, 0.22),
+        0 0 44px rgba(var(--brand-primary-rgb), 0.14),
+        inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
 /* Aperture Hero Card - Neon Glass */
 .aperture-hero-card {
-    background: rgba(0, 0, 0, 0.4);
-    border: 1px solid rgba(255,255,255,0.12);
+    position: relative;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0.01) 30%, transparent 60%),
+        rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(32px) saturate(190%);
+    -webkit-backdrop-filter: blur(32px) saturate(190%);
+    border: 1px solid rgba(255,255,255,0.16);
     border-radius: var(--brand-radius);
-    box-shadow: 0 4px 16px rgba(0,0,0,0.3), 0 0 20px rgba(var(--brand-primary-rgb), 0.05);
+    box-shadow:
+        0 28px 80px -22px rgba(0, 0, 0, 0.7),
+        0 4px 20px rgba(0, 0, 0, 0.22),
+        0 0 36px rgba(var(--brand-primary-rgb), 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
 /* ─── Accessible text utility classes ─────────────────────── */
@@ -217,45 +252,85 @@
 /* ─── Glass System ────────────────────────────────────────── */
 
 .glass-card {
-    background: var(--brand-glass-bg);
+    position: relative;
+    background: var(--glass-highlight), var(--brand-glass-bg);
     backdrop-filter: var(--brand-glass-blur);
+    -webkit-backdrop-filter: var(--brand-glass-blur);
     border: 1px solid var(--glass-border);
     border-radius: var(--brand-radius);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow:
+        0 20px 60px -16px rgba(0, 0, 0, 0.55),
+        0 4px 12px rgba(0, 0, 0, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.10),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.18);
+    transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .glass-card-hover:hover {
-    background: rgba(var(--brand-bg-rgb), 0.6);
+    background: var(--glass-highlight), rgba(var(--brand-bg-rgb), 0.7);
     border-color: var(--glass-border-bold);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-    transform: translateY(-1px);
+    box-shadow:
+        0 32px 80px -20px rgba(0, 0, 0, 0.65),
+        0 8px 20px rgba(0, 0, 0, 0.22),
+        inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    transform: translateY(-2px);
 }
 
 /* Weight variants for floating notifications, install banners, etc.
    Strong = more present (heavier blur, more opacity); subtle = quieter
    (lighter blur, less opacity). All three share the cyan/glass palette. */
 .glass-card-strong {
-    background: rgba(20, 27, 38, 0.5);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    position: relative;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0) 35%),
+        rgba(20, 27, 38, 0.62);
+    backdrop-filter: blur(40px) saturate(200%);
+    -webkit-backdrop-filter: blur(40px) saturate(200%);
     border: 1px solid var(--glass-border-bold);
     border-radius: var(--brand-radius);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+    box-shadow:
+        0 28px 80px -18px rgba(0, 0, 0, 0.7),
+        0 6px 18px rgba(0, 0, 0, 0.24),
+        inset 0 1px 0 rgba(255, 255, 255, 0.14);
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .glass-card-subtle {
-    background: rgba(20, 27, 38, 0.2);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    position: relative;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0) 40%),
+        rgba(20, 27, 38, 0.32);
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
     border: 1px solid var(--glass-border);
     border-radius: var(--brand-radius);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    box-shadow:
+        0 4px 16px rgba(0, 0, 0, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Floating bottom sheets — full-screen presence with strong refraction.
+   Use on the wrapper of any modal sheet that slides up over the navbar. */
+.glass-sheet {
+    position: relative;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 12%),
+        rgba(15, 24, 41, 0.78);
+    backdrop-filter: blur(40px) saturate(200%);
+    -webkit-backdrop-filter: blur(40px) saturate(200%);
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow:
+        0 -28px 80px rgba(0, 0, 0, 0.55),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
 .glass-button {
-    background: var(--glass-surface);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0) 50%),
+        var(--glass-surface);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
     border: 1px solid var(--glass-border);
     border-radius: var(--brand-radius-sm);
     color: var(--brand-text-secondary);
@@ -265,12 +340,20 @@
     justify-content: center;
     gap: 0.5rem;
     padding: 0.5rem 1rem;
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .glass-button:hover {
-    background: var(--glass-surface-hover);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 50%),
+        var(--glass-surface-hover);
     border-color: var(--glass-border-bold);
     color: var(--brand-text-primary);
+    box-shadow:
+        0 4px 14px rgba(0, 0, 0, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 .glass-button:active {
@@ -356,17 +439,22 @@ h6 {
 /* for neon border glow and subtle tinted backgrounds          */
 
 [data-page] .glass-card {
-    border-color: rgba(var(--page-accent-rgb), 0.15);
+    border-color: rgba(var(--page-accent-rgb), 0.18);
     box-shadow:
-        0 4px 12px rgba(0, 0, 0, 0.15),
-        0 0 20px rgba(var(--page-accent-rgb), 0.06);
+        0 20px 60px -16px rgba(0, 0, 0, 0.55),
+        0 4px 12px rgba(0, 0, 0, 0.18),
+        0 0 32px rgba(var(--page-accent-rgb), 0.10),
+        inset 0 1px 0 rgba(255, 255, 255, 0.10),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.18);
 }
 
 [data-page] .glass-card-hover:hover {
-    border-color: rgba(var(--page-accent-rgb), 0.3);
+    border-color: rgba(var(--page-accent-rgb), 0.36);
     box-shadow:
-        0 8px 24px rgba(0, 0, 0, 0.2),
-        0 0 32px rgba(var(--page-accent-rgb), 0.12);
+        0 32px 80px -20px rgba(0, 0, 0, 0.65),
+        0 8px 20px rgba(0, 0, 0, 0.22),
+        0 0 48px rgba(var(--page-accent-rgb), 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
 /* Premium glass containers also get the neon treatment */

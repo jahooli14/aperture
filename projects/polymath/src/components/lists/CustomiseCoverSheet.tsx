@@ -107,17 +107,15 @@ export function CustomiseCoverSheet({ list, isOpen, onClose }: Props) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[10000] bg-black/65 backdrop-blur-md"
           />
           <motion.div
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 400 }}
-            className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl pb-safe"
+            className="fixed bottom-0 left-0 right-0 z-[10001] rounded-t-3xl pb-safe glass-sheet"
             style={{
-              backgroundColor: 'var(--glass-surface)',
-              boxShadow: '0 -20px 60px rgba(0,0,0,0.6), inset 0 1px 0 var(--glass-surface-hover)',
               maxHeight: '85vh',
               overflowY: 'auto',
             }}
@@ -138,33 +136,56 @@ export function CustomiseCoverSheet({ list, isOpen, onClose }: Props) {
                 </div>
                 <button
                   onClick={onClose}
-                  className="h-8 w-8 rounded-full flex items-center justify-center text-[var(--brand-text-muted)] hover:bg-white/5"
+                  className="h-9 w-9 rounded-full flex items-center justify-center text-[var(--brand-text-muted)] hover:text-white transition-all"
+                  style={{
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.10)',
+                    backdropFilter: 'blur(12px) saturate(160%)',
+                    WebkitBackdropFilter: 'blur(12px) saturate(160%)',
+                  }}
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
 
               {/* Tabs */}
-              <div className="flex gap-2 mb-5">
+              <div
+                className="flex gap-1.5 mb-5 p-1 rounded-2xl"
+                style={{
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04), inset 0 -1px 0 rgba(0,0,0,0.20)',
+                }}
+              >
                 {([
                   { id: 'image', label: 'Image', Icon: ImageIcon },
                   { id: 'palette', label: 'Palette', Icon: Palette },
                   { id: 'reset', label: 'Reset', Icon: RefreshCw },
-                ] as const).map(({ id, label, Icon }) => (
-                  <button
-                    key={id}
-                    onClick={() => setTab(id)}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium transition-all"
-                    style={{
-                      background: tab === id ? 'rgba(var(--brand-primary-rgb), 0.14)' : 'rgba(255,255,255,0.04)',
-                      border: `1px solid ${tab === id ? 'rgba(var(--brand-primary-rgb), 0.35)' : 'rgba(255,255,255,0.08)'}`,
-                      color: tab === id ? 'rgb(var(--brand-primary-rgb))' : 'var(--brand-text-secondary)',
-                    }}
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    {label}
-                  </button>
-                ))}
+                ] as const).map(({ id, label, Icon }) => {
+                  const active = tab === id
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => setTab(id)}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium transition-all"
+                      style={{
+                        background: active
+                          ? 'linear-gradient(180deg, rgba(var(--brand-primary-rgb), 0.22), rgba(var(--brand-primary-rgb), 0.10))'
+                          : 'transparent',
+                        border: active
+                          ? '1px solid rgba(var(--brand-primary-rgb), 0.40)'
+                          : '1px solid transparent',
+                        color: active ? 'rgb(var(--brand-primary-rgb))' : 'var(--brand-text-secondary)',
+                        boxShadow: active
+                          ? '0 4px 14px -2px rgba(var(--brand-primary-rgb), 0.30), inset 0 1px 0 rgba(255,255,255,0.10)'
+                          : 'none',
+                      }}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                      {label}
+                    </button>
+                  )
+                })}
               </div>
 
               {/* Image tab */}
@@ -203,10 +224,12 @@ export function CustomiseCoverSheet({ list, isOpen, onClose }: Props) {
                   <button
                     onClick={saveImage}
                     disabled={saving || !draftUrl.trim()}
-                    className="w-full py-3 rounded-xl text-sm font-medium transition-all disabled:opacity-40"
+                    className="w-full py-3.5 rounded-2xl text-sm font-semibold transition-all disabled:opacity-40 active:scale-[0.98]"
                     style={{
-                      background: 'rgb(var(--brand-primary-rgb))',
+                      background: 'linear-gradient(180deg, rgb(var(--color-accent-light-rgb)) 0%, rgb(var(--brand-primary-rgb)) 100%)',
                       color: 'black',
+                      boxShadow: '0 10px 28px -6px rgba(var(--brand-primary-rgb), 0.55), inset 0 1px 0 rgba(255,255,255,0.30), inset 0 -1px 0 rgba(0,0,0,0.20)',
+                      letterSpacing: '0.01em',
                     }}
                   >
                     {saving ? 'Saving…' : 'Use this image'}
@@ -254,8 +277,13 @@ export function CustomiseCoverSheet({ list, isOpen, onClose }: Props) {
                   <button
                     onClick={savePalette}
                     disabled={saving}
-                    className="w-full py-3 rounded-xl text-sm font-medium transition-all disabled:opacity-40"
-                    style={{ background: `rgb(${draftColor})`, color: 'black' }}
+                    className="w-full py-3.5 rounded-2xl text-sm font-semibold transition-all disabled:opacity-40 active:scale-[0.98]"
+                    style={{
+                      background: `linear-gradient(180deg, rgba(${draftColor}, 1) 0%, rgba(${draftColor}, 0.85) 100%)`,
+                      color: 'black',
+                      boxShadow: `0 10px 28px -6px rgba(${draftColor}, 0.55), inset 0 1px 0 rgba(255,255,255,0.30), inset 0 -1px 0 rgba(0,0,0,0.20)`,
+                      letterSpacing: '0.01em',
+                    }}
                   >
                     {saving ? 'Saving…' : 'Use this colour'}
                   </button>
@@ -271,11 +299,14 @@ export function CustomiseCoverSheet({ list, isOpen, onClose }: Props) {
                   <button
                     onClick={resetCover}
                     disabled={saving}
-                    className="w-full py-3 rounded-xl text-sm font-medium transition-all disabled:opacity-40"
+                    className="w-full py-3.5 rounded-2xl text-sm font-semibold transition-all disabled:opacity-40 active:scale-[0.98]"
                     style={{
-                      background: 'rgba(255,255,255,0.08)',
-                      border: '1px solid rgba(255,255,255,0.15)',
+                      background: 'linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%)',
+                      border: '1px solid rgba(255,255,255,0.18)',
                       color: 'var(--brand-text-secondary)',
+                      backdropFilter: 'blur(14px) saturate(160%)',
+                      WebkitBackdropFilter: 'blur(14px) saturate(160%)',
+                      boxShadow: '0 4px 14px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.10)',
                     }}
                   >
                     {saving ? 'Resetting…' : 'Reset to auto'}

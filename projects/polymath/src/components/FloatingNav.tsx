@@ -416,15 +416,21 @@ export function FloatingNav() {
       >
         <div className="mx-auto max-w-2xl px-2 sm:px-4">
           <div
-            className="glass-card flex items-center gap-0"
+            className="flex items-center gap-0"
             style={{
-              borderRadius: 'var(--premium-radius-2xl)',
-              backgroundColor: 'var(--brand-glass-bg)',
-              backdropFilter: 'var(--brand-glass-blur)',
-              WebkitBackdropFilter: 'var(--brand-glass-blur)',
-              padding: '6px 8px',
-              border: '1px solid rgba(56,189,248,0.1)',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.3), 0 0 30px rgba(56,189,248,0.06)',
+              position: 'relative',
+              borderRadius: '999px',
+              background: 'linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.02) 35%, rgba(0,0,0,0.10) 100%), rgba(15, 24, 41, 0.62)',
+              backdropFilter: 'blur(36px) saturate(200%)',
+              WebkitBackdropFilter: 'blur(36px) saturate(200%)',
+              padding: '8px 10px',
+              border: '1px solid rgba(56, 189, 248, 0.18)',
+              boxShadow:
+                '0 20px 60px -16px rgba(0,0,0,0.65),' +
+                '0 8px 24px rgba(0,0,0,0.30),' +
+                '0 0 48px rgba(56,189,248,0.14),' +
+                'inset 0 1px 0 rgba(255,255,255,0.18),' +
+                'inset 0 -1px 0 rgba(0,0,0,0.30)',
             }}
           >
             {/* Nav tabs */}
