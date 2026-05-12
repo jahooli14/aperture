@@ -528,7 +528,7 @@ export function CreateMemoryDialog({
         } else if (!isOnline) {
           addToast({
             title: 'Saved offline',
-            description: 'Will sync and get a smart title when back online.',
+            description: 'Will sync once you\'re back online.',
             variant: 'success',
           })
         }
