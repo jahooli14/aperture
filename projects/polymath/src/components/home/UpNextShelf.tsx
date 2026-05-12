@@ -72,7 +72,10 @@ export function UpNextShelf() {
 
   return (
     <div>
-      <h2 className="section-header">up <span>next</span></h2>
+      <h2 className="section-heading">up <span className="accent">next</span></h2>
+      <p className="text-[12px] mb-4 -mt-2" style={{ color: 'var(--brand-text-muted)' }}>
+        The queue you've committed to. Drag to reorder, ✕ to unpin.
+      </p>
       <Reorder.Group
         axis="y"
         values={displayed}

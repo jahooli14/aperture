@@ -8,9 +8,7 @@ import { ProjectsPageCarousel } from '../components/projects/ProjectsPageCarouse
 import { ForYouToday } from '../components/projects/ForYouToday'
 import { DrawerDigestSheet } from '../components/projects/DrawerDigestSheet'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
-import { Button } from '../components/ui/button'
 import { Search, Check, ArrowLeft } from 'lucide-react'
-import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import { SubtleBackground } from '../components/SubtleBackground'
 import type { Project } from '../types'
@@ -154,77 +152,12 @@ function ProjectsPageInner() {
     fetchProjects()
   }, [])
 
-  const [selectedTags, setSelectedTags] = useState<string[]>([])
-  const [debouncedSelectedTags, setDebouncedSelectedTags] = useState<string[]>([])
-  const [searchQuery, setSearchQuery] = useState('')
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
-  const { addToast } = useToast()
-  const { confirm, dialog: confirmDialog } = useConfirmDialog()
+  const { dialog: confirmDialog } = useConfirmDialog()
 
-  // Debounce tag selection to avoid excessive re-filtering
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setDebouncedSelectedTags(selectedTags)
-    }, 150) // 150ms debounce
-
-    return () => clearTimeout(timeoutId)
-  }, [selectedTags])
-
-  // Debounce search query
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery)
-    }, 150) // 150ms debounce
-
-    return () => clearTimeout(timeoutId)
-  }, [searchQuery])
-
-  // Extract all unique tags from projects
-  const allTags = React.useMemo(() => {
-    const safeProjects = Array.isArray(allProjects) ? allProjects : []
-    if (safeProjects.length === 0) return []
-
-    const tagSet = new Set<string>()
-    safeProjects.forEach(project => {
-      const tags = project.metadata?.tags || []
-      tags.forEach((tag: string) => tagSet.add(tag))
-    })
-    return Array.from(tagSet).sort()
-  }, [allProjects])
-
-  // Filter projects by selected tags and search query (using debounced values)
-  const projects = React.useMemo(() => {
-    // Ensure allProjects is always an array
-    const safeProjects = Array.isArray(allProjects) ? allProjects : []
-    if (safeProjects.length === 0) return []
-
-    let filtered = safeProjects
-
-    // Filter by tags
-    if (debouncedSelectedTags.length > 0) {
-      filtered = filtered.filter(project => {
-        const projectTags = project.metadata?.tags || []
-        return debouncedSelectedTags.every(tag => projectTags.includes(tag))
-      })
-    }
-
-    // Filter by search query
-    if (debouncedSearchQuery.trim()) {
-      const query = debouncedSearchQuery.toLowerCase()
-      filtered = filtered.filter(project =>
-        project.title.toLowerCase().includes(query) ||
-        (project.description && project.description.toLowerCase().includes(query))
-      )
-    }
-
-    return filtered
-  }, [allProjects, debouncedSelectedTags, debouncedSearchQuery])
-
-  const toggleTag = (tag: string) => {
-    setSelectedTags(prev =>
-      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
-    )
-  }
+  // The tag-filter + search controls have moved off this page. All
+  // active projects are shown directly; the global search icon in the
+  // masthead handles look-ups.
+  const projects = React.useMemo(() => Array.isArray(allProjects) ? allProjects : [], [allProjects])
 
   const FOCUS_CAP = 3
   const { activeList, drawerList } = React.useMemo(() => {
@@ -277,7 +210,9 @@ function ProjectsPageInner() {
                   {showCompleted ? 'What you’ve built.' : 'Your projects.'}
                 </h1>
                 <div className="page-eyebrow">
-                  {showCompleted ? 'Archive' : 'In progress'}
+                  {showCompleted
+                    ? `${projects.filter(p => p.status === 'completed').length} finished`
+                    : `${projects.filter(p => p.status !== 'completed' && p.status !== 'graveyard').length} on the go`}
                 </div>
               </div>
             </div>
@@ -327,59 +262,9 @@ function ProjectsPageInner() {
             {/* Open spread */}
             <div className="mb-6">
               <div>
-                {/* Search Box */}
-                <div className="mb-6">
-                  <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 opacity-60" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
-                    <input
-                      type="text"
-                      placeholder="Search projects…"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="soft-input pl-11"
-                    />
-                  </div>
-                  {debouncedSearchQuery && (
-                    <div className="mt-2 text-xs" style={{ color: "var(--brand-primary)" }}>
-                      Found {projects.length} project{projects.length !== 1 ? 's' : ''}
-                    </div>
-                  )}
-                </div>
-
-                {/* Tag Filters */}
-                {allTags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-3 mb-6">
-                    <span className="text-sm font-medium self-center" style={{ color: "var(--brand-primary)" }}>
-                      Tags:
-                    </span>
-                    {allTags.map(tag => (
-                      <Button
-                        key={tag}
-                        variant={selectedTags.includes(tag) ? 'default' : 'outline'}
-                        onClick={() => toggleTag(tag)}
-                        size="sm"
-                        className="whitespace-nowrap px-3 py-1 rounded-lg font-medium transition-all text-xs"
-                        style={{
-                          backgroundColor: selectedTags.includes(tag) ? 'var(--glass-surface)' : 'transparent',
-                          color: selectedTags.includes(tag) ? 'var(--brand-primary)' : 'var(--brand-text-secondary)'
-                        }}
-                      >
-                        #{tag}
-                      </Button>
-                    ))}
-                    {selectedTags.length > 0 && (
-                      <Button
-                        variant="ghost"
-                        onClick={() => setSelectedTags([])}
-                        size="sm"
-                        className="text-xs underline"
-                        style={{ color: "var(--brand-primary)" }}
-                      >
-                        Clear tags
-                      </Button>
-                    )}
-                  </div>
-                )}
+                {/* The in-page search bar + tag filter strip have been
+                    removed. The top-right search icon goes to the global
+                    search; the tab itself is a focused dashboard. */}
 
                 {/* Weekly drawer digest banner — invisible when none unread */}
                 <DrawerDigestSheet />

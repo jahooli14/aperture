@@ -11,6 +11,7 @@ import { useConfirmDialog } from '../ui/confirm-dialog'
 import { haptic } from '../../utils/haptics'
 import { EditMemoryDialog } from './EditMemoryDialog'
 import { TagEditor } from './TagEditor'
+import { ThemeEditor } from './ThemeEditor'
 import { GlassCard } from '../ui/GlassCard'
 import { SmartActionDot } from '../SmartActionDot'
 import { CACHE_TTL } from '../../lib/cacheConfig'
@@ -319,6 +320,7 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
                 )}
               </div>
 
+              <ThemeEditor memoryId={memory.id} initialThemes={(memory as any).themes ?? []} />
               <TagEditor memoryId={memory.id} initialTags={memory.tags ?? []} />
 
               {/* Connected Thoughts (Bridges) */}

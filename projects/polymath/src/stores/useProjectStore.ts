@@ -715,6 +715,22 @@ export const useMostRecentNonPriorityProject = () =>
       })[0] ?? null
   }))
 
+// The N most-recently-touched active projects that aren't the priority
+// and aren't sitting in Up Next. Drives the "recently active" home row.
+export const useRecentNonPriorityProjects = (limit = 2) =>
+  useProjectStore(useShallow(state => {
+    const active = state.allProjects.filter(isActiveShaped)
+    const priorityId = active.find(p => p.is_priority)?.id
+    return active
+      .filter(p => p.up_next_position == null && p.id !== priorityId)
+      .sort((a, b) => {
+        const aTime = new Date(a.updated_at || a.last_active || 0).getTime()
+        const bTime = new Date(b.updated_at || b.last_active || 0).getTime()
+        return bTime - aTime
+      })
+      .slice(0, limit)
+  }))
+
 // Up Next shelf: projects with up_next_position set, sorted by position asc.
 export const useUpNextProjects = () =>
   useProjectStore(useShallow(state =>

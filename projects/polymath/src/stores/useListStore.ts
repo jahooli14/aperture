@@ -522,10 +522,21 @@ export const useListStore = create<ListStore>()(
             updateListItemMetadata: async (itemId, metadata) => {
                 const { isOnline } = useOfflineStore.getState()
 
+                // Mirror metadata.user_rating up to the top-level column on
+                // the optimistic copy too, so the Favourites strip and any
+                // other consumer of item.user_rating updates immediately.
+                const ratingPatch = (item: ListItem) => {
+                    if (metadata && typeof metadata === 'object' && 'user_rating' in (metadata as Record<string, unknown>)) {
+                        const r = (metadata as Record<string, unknown>).user_rating
+                        return { ...item, metadata, user_rating: (typeof r === 'number' ? r : null) as any }
+                    }
+                    return { ...item, metadata }
+                }
+
                 // Optimistic update
                 set(state => {
                     const patch = (items: ListItem[]) =>
-                        items.map(i => i.id === itemId ? { ...i, metadata } : i)
+                        items.map(i => i.id === itemId ? ratingPatch(i) : i)
                     const nextMap: Record<string, ListItem[]> = { ...state.itemsByListId }
                     for (const listId of Object.keys(nextMap)) {
                         if (nextMap[listId].some(i => i.id === itemId)) {

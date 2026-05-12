@@ -65,11 +65,16 @@ const StarRating = memo(({
                         disabled={readonly}
                         onClick={(e) => {
                             e.stopPropagation()
-                            onRate?.(star)
+                            // Re-clicking the same star clears the rating — so
+                            // the user can reset without cycling through every
+                            // star. Any other click sets the new value.
+                            const next = rating === star ? 0 : star
+                            onRate?.(next)
                         }}
                         onMouseEnter={() => !readonly && setHovered(star)}
                         onMouseLeave={() => !readonly && setHovered(null)}
                         className={`transition-all ${readonly ? 'cursor-default' : 'cursor-pointer hover:scale-110'}`}
+                        title={rating === star ? 'Click to clear' : `Rate ${star}`}
                     >
                         <Star
                             className={iconSize}

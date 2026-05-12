@@ -341,12 +341,15 @@ export function ProjectsPageCarousel({
   if (loading) return <div className="p-8 text-center text-[var(--brand-text-muted)] animate-pulse aperture-header uppercase tracking-widest text-xs">Loading dashboard...</div>
 
   return (
-    <div className="space-y-8 pb-20">
+    <div className="space-y-12 pb-20">
 
       {/* SECTION 1: ACTIVE FOCUS (Grid) */}
       {activeList.length > 0 && (
         <section>
           <h2 className="section-heading">active <span className="accent">focus</span></h2>
+          <p className="text-[12px] mb-4 -mt-2" style={{ color: 'var(--brand-text-muted)' }}>
+            The ones currently asking for your attention.
+          </p>
           <MasonryGrid projects={activeList} prominent={true} />
         </section>
       )}
@@ -355,11 +358,16 @@ export function ProjectsPageCarousel({
           the home shelf component so the row UI (drag handle + position
           badge + unpin X) stays canonical across surfaces. Hidden when
           nothing is pinned. */}
-      <UpNextShelf />
+      <section>
+        <UpNextShelf />
+      </section>
 
       {drawerList.length > 0 && (
-        <section>
+        <section className="aperture-shelf">
           <h2 className="section-heading">in the <span className="accent">drawer</span></h2>
+          <p className="text-[12px] mb-4 -mt-2" style={{ color: 'var(--brand-text-muted)' }}>
+            Resting for now. Long-press to revive.
+          </p>
           <MasonryGrid projects={drawerList} />
         </section>
       )}

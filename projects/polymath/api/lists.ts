@@ -337,6 +337,21 @@ async function handleListItems(req: VercelRequest, res: VercelResponse) {
             if (req.body.status) updates.status = req.body.status
             if (req.body.content) updates.content = req.body.content
             if (req.body.metadata) updates.metadata = req.body.metadata
+            // Allow a direct user_rating update so callers don't have to
+            // know the column lives outside metadata. Also mirror any
+            // user_rating embedded inside metadata up to the top-level
+            // column — the Favourites query reads it from there, and
+            // historical code paths wrote it into metadata only.
+            if (typeof req.body.user_rating === 'number' || req.body.user_rating === null) {
+                updates.user_rating = req.body.user_rating
+            } else if (req.body.metadata && typeof req.body.metadata === 'object') {
+                const meta = req.body.metadata as Record<string, unknown>
+                if (typeof meta.user_rating === 'number') {
+                    updates.user_rating = meta.user_rating
+                } else if (meta.user_rating === null) {
+                    updates.user_rating = null
+                }
+            }
 
             const { data, error } = await supabase
                 .from('list_items')

@@ -21,7 +21,7 @@
  */
 
 import React, { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useProjectStore, usePriorityProject, useMostRecentNonPriorityProject } from '../stores/useProjectStore'
 import { useMemoryStore } from '../stores/useMemoryStore'
@@ -29,16 +29,16 @@ import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { useJourneyStore } from '../stores/useJourneyStore'
 import { useAuthContext } from '../contexts/AuthContext'
 import { SubtleBackground } from '../components/SubtleBackground'
-import { YourHourHeader } from '../components/home/YourHourHeader'
 import { KeepGoingCard, KeepGoingEmpty } from '../components/home/KeepGoingCard'
-import { UpNextShelf } from '../components/home/UpNextShelf'
+import { RecentlyActiveMini } from '../components/home/RecentlyActiveMini'
+import { UpNextMini } from '../components/home/UpNextMini'
 import { ThoughtOfTheDay } from '../components/home/ThoughtOfTheDay'
 import { BedtimeFloatingIcon } from '../components/home/BedtimeFloatingIcon'
 import { ProjectIdeasHome } from '../components/home/ProjectIdeasHome'
 import { MomentSurface } from '../components/home/MomentSurface'
 import { UnauthHome } from '../components/onboarding/UnauthHome'
 import { ease, stagger } from '../lib/motion'
-import { AlertCircle, ArrowRight, Film, Music, Monitor, Book, MapPin, Gamepad2, Calendar, FileText, Quote, Box } from 'lucide-react'
+import { AlertCircle, ArrowRight, Film, Music, Monitor, Book, MapPin, Gamepad2, Calendar, FileText, Quote, Box, Search } from 'lucide-react'
 
 const LIST_TYPE_ICONS: Record<string, React.ElementType> = {
   film: Film, music: Music, tech: Monitor, book: Book, place: MapPin,
@@ -148,6 +148,7 @@ function NowConsumingWidget() {
 
 export function HomePage() {
   const { isAuthenticated } = useAuthContext()
+  const navigate = useNavigate()
   const fetchProjects = useProjectStore(s => s.fetchProjects)
   const projects = useProjectStore(s => s.projects)
   const fetchMemories = useMemoryStore(s => s.fetchMemories)
@@ -228,10 +229,26 @@ export function HomePage() {
       <div className="min-h-screen pb-24 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
+          {/* Quiet top bar — just a search affordance on the right.
+              Uses the shared .page-masthead spacing so the first piece of
+              real content (The Moment / priority card) starts at the same
+              y as other tabs' page titles. The wordmark + day-of-week
+              eyebrow has been removed — the home is now an unmediated
+              creative surface. */}
           <motion.div {...stackTransition(0)}>
-            {/* YourHourHeader provides the .page-masthead spacing so the
-                title sits at the same y as the other tabs. */}
-            <YourHourHeader />
+            <header className="page-masthead">
+              <div className="page-masthead-text" />
+              <div className="page-masthead-actions">
+                <button
+                  onClick={() => navigate('/search')}
+                  aria-label="Search everything"
+                  className="masthead-action press-spring"
+                  title="Search everything"
+                >
+                  <Search className="h-5 w-5" />
+                </button>
+              </div>
+            </header>
           </motion.div>
 
           {/* The Moment — earned AI idea. Renders only when the cron has
@@ -241,38 +258,30 @@ export function HomePage() {
             <MomentSurface />
           </motion.div>
 
-          {/* Priority — the single starred project. Hidden when nothing
-              is starred (the recent-card below carries the page on its own). */}
-          {priorityProject && (
+          {/* Priority — the single starred project, full hero card. */}
+          {priorityProject ? (
             <motion.div className="mb-10" {...stackTransition(2)}>
               <KeepGoingCard
                 project={priorityProject}
                 heading={<>your <span>priority</span></>}
               />
             </motion.div>
-          )}
-
-          {/* Still warm — most-recently-touched non-priority active project.
-              Hidden when nothing else is active. Always shows a fallback
-              empty state when nothing is in focus at all (no priority, no
-              recent), so the page doesn't collapse to just the header + pill. */}
-          {recentProject ? (
-            <motion.div className="mb-10" {...stackTransition(3)}>
-              <KeepGoingCard
-                project={recentProject}
-                heading={<>still <span>warm</span></>}
-              />
-            </motion.div>
           ) : !hasAnyFocus ? (
-            <motion.div className="mb-10" {...stackTransition(3)}>
+            <motion.div className="mb-10" {...stackTransition(2)}>
               <h2 className="section-header">keep <span>going</span></h2>
               <KeepGoingEmpty />
             </motion.div>
           ) : null}
 
-          {/* Up Next — pinned queue. Hidden when empty. */}
+          {/* Recently active — two compact side-by-side cards. */}
+          <motion.div className="mb-10" {...stackTransition(3)}>
+            <RecentlyActiveMini />
+          </motion.div>
+
+          {/* Up Next — two compact side-by-side cards. The full
+              reorderable queue lives on the Projects page. */}
           <motion.div className="mb-10" {...stackTransition(4)}>
-            <UpNextShelf />
+            <UpNextMini />
           </motion.div>
 
           {/* Suggest a project — the quiet escape-hatch pill. Expands to the
