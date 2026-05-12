@@ -89,7 +89,7 @@ function NowConsumingWidget() {
 
   return (
     <section className="pb-8">
-      <h2 className="section-header">what you're <span>consuming</span></h2>
+      <h2 className="section-header">what you're <span>into</span></h2>
       <div
         className="relative flex flex-col rounded-2xl overflow-hidden"
         style={{
