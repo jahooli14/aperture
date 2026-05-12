@@ -23,7 +23,7 @@ const fontSizeOptions = [
 
 export function SettingsPage() {
   const navigate = useNavigate()
-  const { accentColor, intensity, fontSize, showBugTracker, showRegenerateInsights, setAccentColor, setIntensity, setFontSize, setShowBugTracker, setShowRegenerateInsights } = useThemeStore()
+  const { accentColor, intensity, fontSize, showBugTracker, setAccentColor, setIntensity, setFontSize, setShowBugTracker } = useThemeStore()
   const { addToast } = useToast()
   const [regenerating, setRegenerating] = useState(false)
   const [tidying, setTidying] = useState(false)
@@ -465,36 +465,6 @@ export function SettingsPage() {
                     <ToggleRight className="w-6 h-6" style={{ color: "var(--brand-primary)" }} />
                   ) : (
                     <ToggleLeft className="w-6 h-6" style={{ color: "var(--brand-primary)" }} />
-                  )}
-                </div>
-              </button>
-
-              {/* This-week regenerate button */}
-              <button
-                onClick={() => setShowRegenerateInsights(!showRegenerateInsights)}
-                className="w-full flex items-center gap-4 p-4 rounded-xl backdrop-blur-xl transition-all text-left border hover:bg-[var(--glass-surface)]"
-                style={{
-                  background: 'var(--glass-surface)',
-                  borderColor: 'var(--glass-surface)',
-                }}
-              >
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: 'rgba(var(--brand-primary-rgb), 0.15)' }}>
-                  <RefreshCw className="w-5 h-5" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold premium-text-platinum text-sm">
-                    Regenerate “this week” button
-                  </h3>
-                  <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
-                    Show a refresh icon on the home-page deck so you can rebuild it on demand instead of waiting for Monday.
-                  </p>
-                </div>
-                <div>
-                  {showRegenerateInsights ? (
-                    <ToggleRight className="w-6 h-6" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
-                  ) : (
-                    <ToggleLeft className="w-6 h-6" style={{ color: 'var(--brand-text-muted)' }} />
                   )}
                 </div>
               </button>

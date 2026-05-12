@@ -22,6 +22,7 @@ import { generateText } from './gemini-chat.js'
 import { cosineSimilarity } from './gemini-embeddings.js'
 import { MODELS } from './models.js'
 import { auditCandidate, validateCandidate } from './intersection-critic.js'
+import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 
 // --- Types matching the frontend contract (WeeklyIntersection.tsx) ---
 
@@ -825,7 +826,8 @@ GOOD hook: "You keep framing the same question in different clothes."
 BAD hook: "If you put these together, you could build a tool that handles both." ← product pitch, banned.
 
 RULES:
-- Plain English. A 14-year-old should understand every word. BANNED words: stochastic, ontological, emergent, heuristic, isomorphism, paradigm, teleological, epistemological, bifurcation, exaptation, orthogonal, dialectical, paradigmatic.
+${PLAIN_ENGLISH_RULES}
+- A 14-year-old should understand every word.
 - No mashups ("combine A and B into AB"). Find the shared mechanism instead.
 - the_pattern MUST name at least 2 of the specific items above by their title/topic.
 - the_experiment MUST start with an imperative verb (Try, Pick, Build, Write, Swap, Open...) and propose exactly ONE action.

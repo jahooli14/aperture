@@ -18,8 +18,10 @@
  *   .soft-input-lg        — larger variant for search hero pages
  *
  * Surfaces:
- *   .editorial-card       — soft glass card without "premium dark" weight
  *   .post-it              — warm amber paper note (slight tilt, paper shadow)
+ *   (For card surfaces use .glass-card from theme.css — single canonical
+ *    card. .premium-card / .premium-glass in premium-dark.css are legacy;
+ *    don't reach for them in new code.)
  *
  * Eyebrow / metadata:
  *   .meta-caps            — uppercase tracked metadata label
@@ -154,18 +156,6 @@
   padding: 16px 20px;
   font-size: 16px;
   border-radius: 20px;
-}
-
-/* ─── Editorial card ────────────────────────────────────────────── */
-/* Calm glass card. Replaces the "premium-glass shadow-2xl" anti-pattern. */
-
-.editorial-card {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.035), rgba(15, 24, 41, 0.45));
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid var(--soft-border);
-  border-radius: var(--soft-radius);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 /* ─── Post-it note ──────────────────────────────────────────────── */

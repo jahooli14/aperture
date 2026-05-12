@@ -7,6 +7,7 @@ import { updateItemConnections } from './_lib/connection-logic.js' // New import
 import { cosineSimilarity, generateEmbedding } from './_lib/gemini-embeddings.js'
 import { MODELS } from './_lib/models.js'
 import { maintainEmbeddings } from './_lib/embeddings-maintenance.js'
+import { PLAIN_ENGLISH_RULES, findVoiceViolations } from './_lib/plain-english.js'
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || ''
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -307,15 +308,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ? allContextItems.map(i => `- ${i.slice(0, 200)}`).join('\n')
           : '(no related items found in knowledge lake)'
 
-        const analysisPrompt = `You've read all of someone's notes, saved articles, and projects. Connect things they haven't connected yet. Be specific. Don't summarize.
+        const analysisPrompt = `You've read all of someone's notes, saved articles, and projects. Connect things they haven't connected yet. Be specific. Don't summarise.
 
-Plain English rules — this is a friend talking, not a consultant:
-- Real words people say. No "leveraging," "unlocking," "soundscapes," "narrative substrate."
-- One idea per sentence. Short sentences.
-- Concrete nouns. "Logic Pro trial expired" beats "your reliance on the 90-day trial."
-- If you can't say it plainly, stay silent.
-BAD: "Your multifaceted engagement with constraint-based creation unlocks transformative potential."
-GOOD: "You keep coming back to limits as a creative tool. This project fits that."
+${PLAIN_ENGLISH_RULES}
 
 FOCUS ITEM:
 ${truncatedSource}
@@ -323,41 +318,62 @@ ${truncatedSource}
 KNOWLEDGE LAKE — ${allContextItems.length} items from their entire corpus (thoughts, articles, projects, lists):
 ${contextBlock}
 
-${allContextItems.length === 0 ? 'NOTE: Fresh item, no prior context yet. Analyze it on its own merits.\n\n' : ''}Output ONLY valid JSON with exactly these 4 keys:
+${allContextItems.length === 0 ? 'NOTE: Fresh item, no prior context yet. Analyse it on its own merits.\n\n' : ''}Output ONLY valid JSON with exactly these 4 keys:
 
-1. "summary": One sentence. Not what the item says — what it means given everything else. What is this person actually working on or moving toward?
+1. "summary": One sentence. Not what the item says — what it means given everything else. What is this person actually working on or moving toward? Name concrete items.
 
-2. "patterns": Array of 2-3 patterns. Each one names specific items from the lake and says WHY the connection matters. Not "both relate to X" — say what it reveals that they couldn't see without all the data in front of them.
+2. "patterns": Array of 2-3 strings. Each one names specific items from the lake and says WHY the connection matters in one sentence. Not "both relate to X" — say what it reveals they couldn't see without all the data in front of them.
 
-3. "insight": One sentence. The thing that would make them stop and say "I hadn't seen it that way." Bold. Specific. Reference real titles.
+3. "insight": One sentence. The thing that would make them stop and say "I hadn't seen it that way." Reference real titles. No hedging.
 
-4. "suggestion": One concrete next step. Name exactly what to make, write, build, or decide. Reference specific items. Not "explore more."
+4. "suggestion": One concrete next step. Name exactly what to make, write, build, or decide tonight. Reference specific items. Never "explore" / "consider" / "reflect on."
 
-Name actual titles. No hedging. No corporate-coach voice.`
+Self-check before answering: does any sentence read like a LinkedIn post or a coach pitching? If yes, rewrite it. No filler.`
 
-        let responseText = ''
-        try {
-          const result = await model.generateContent({
-            contents: [{ role: 'user', parts: [{ text: analysisPrompt }] }],
-            generationConfig: { responseMimeType: 'application/json' },
-          })
-          responseText = result.response.text()
-        } catch (apiError: any) {
-          console.error('[connections] Gemini API Error during analyze:', apiError)
-          return res.status(502).json({ error: 'AI Service unavailable', details: apiError.message })
+        // Up to 2 attempts: if the first response trips voice violations or
+        // fails to parse, regenerate once with the violations called out.
+        let analysis: { summary: string; patterns: string[]; insight: string; suggestion: string } | null = null
+        let lastResponseText = ''
+        const buildContents = (extra?: string) => [{
+          role: 'user' as const,
+          parts: [{ text: extra ? `${analysisPrompt}\n\nPREVIOUS ATTEMPT FAILED voice check: ${extra}. Rewrite now using the rules above.` : analysisPrompt }],
+        }]
+
+        for (let attempt = 0; attempt < 2 && !analysis; attempt++) {
+          try {
+            const result = await model.generateContent({
+              contents: buildContents(attempt > 0 ? lastResponseText.slice(0, 240) : undefined),
+              generationConfig: { responseMimeType: 'application/json' },
+            })
+            lastResponseText = result.response.text()
+          } catch (apiError: any) {
+            console.error('[connections] Gemini API Error during analyze:', apiError)
+            return res.status(502).json({ error: 'AI Service unavailable', details: apiError.message })
+          }
+
+          let parsed: any
+          try {
+            const jsonMatch = lastResponseText.match(/```json\n?([\s\S]*?)\n?```/)
+            parsed = jsonMatch ? JSON.parse(jsonMatch[1]) : JSON.parse(lastResponseText)
+          } catch {
+            continue // Try once more if a parse failure on attempt 0
+          }
+
+          // Voice gate — reject if the output uses any banned phrase. One retry
+          // only; we don't want to burn tokens chasing perfection.
+          const allText = [parsed.summary, parsed.insight, parsed.suggestion, ...(parsed.patterns || [])].filter(Boolean).join(' ')
+          const violations = findVoiceViolations(allText)
+          if (violations.length === 0 || attempt === 1) {
+            analysis = parsed
+          }
         }
 
-        let analysis
-        try {
-          const jsonMatch = responseText.match(/```json\n?([\s\S]*?)\n?```/)
-          analysis = jsonMatch ? JSON.parse(jsonMatch[1]) : JSON.parse(responseText)
-        } catch {
-          console.warn('[connections] Failed to parse JSON analysis, using fallback')
+        if (!analysis) {
           analysis = {
             summary: 'Analysis generated but formatting failed.',
             patterns: [],
-            insight: responseText.slice(0, 200),
-            suggestion: 'Try again.'
+            insight: lastResponseText.slice(0, 200),
+            suggestion: 'Try again.',
           }
         }
 
@@ -559,7 +575,7 @@ Give them ONE next action that is:
 
 Tell them exactly: what to do, why this moment calls for it (based on their corpus), and what it changes. Reference actual titles.
 
-Plain English only. Real words a friend would say. No "leveraging," "unlocking," "high-impact," "synergies." BAD: "This will unlock your highest-leverage creative momentum." GOOD: "Open the Logic Pro session you started in March and bounce one rough mix tonight."`
+${PLAIN_ENGLISH_RULES}`
             break
 
           case 'connect-dots':
@@ -577,7 +593,8 @@ Find the single most surprising, non-obvious connection between this item and th
 2. Show the evidence: trace the pattern through 3 specific items, noting exactly how the idea mutates or deepens each time. Quote or closely paraphrase the specific items.
 3. Why does this synthesis matter? What does it reveal that they couldn't see from inside any single item?
 
-Plain English only. Real words a friend would say. No "leveraging," "unlocking," "synergies." Name what you see in one sharp sentence. Show it in the items. Stop. BAD: "Your multifaceted journey toward creative actualization." GOOD: "Every note about waking up early ends up about your dad."`
+${PLAIN_ENGLISH_RULES}
+Name what you see in one sharp sentence. Show it in the items. Stop.`
             break
 
           case 'chase-thread':
@@ -595,7 +612,8 @@ Find the single most compelling recurring thread — the idea this person keeps 
 2. Track it through at least 3 specific items in the lake, showing exactly how the idea evolves: where it starts hesitant, where it gets confident, where it contradicts itself, where it resurfaces in a new domain.
 3. Where is this thread leading? What's the natural culmination of this preoccupation — the project, idea, or decision that would represent arriving where they've been heading?
 
-Plain English only. Write like a friend who just spotted something you hadn't. Three sentences max. Name the items. No "leveraging," "unlocking," "synergies." BAD: "A biographer would note your evolving relationship with constraint." GOOD: "You keep writing about Logic Pro trial expiring. The May note about a 30-day deadline album says it most directly."`
+${PLAIN_ENGLISH_RULES}
+Three sentences max. Name the items.`
             break
 
           case 'provoke':

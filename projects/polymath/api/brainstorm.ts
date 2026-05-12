@@ -16,6 +16,7 @@ import { createClient } from '@supabase/supabase-js'
 import { getUserId } from './_lib/auth.js'
 import { generateEmbedding, cosineSimilarity } from './_lib/gemini-embeddings.js'
 import { generateText } from './_lib/gemini-chat.js'
+import { PLAIN_ENGLISH_RULES } from './_lib/plain-english.js'
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL || '',
@@ -606,7 +607,8 @@ AUDIT MODE (when list is long or scattered): call it out in the reply. "You've g
 HOW TO TALK
 ═══════════════════════════════════════════════════════════════════
 
-- 2–3 sentences max. Plain English. No buzzwords, no coaching speak, no "as an AI".
+- 2–3 sentences max. No "as an AI".
+${PLAIN_ENGLISH_RULES}
 - Never open with "Great", "Interesting", "Absolutely", "That's a great point".
 - Ask at most ONE question per reply, and only if there's a real decision. Practical, grounded in what they just said. Not philosophical.
 - If you propose ANY taskOps or a goalUpdate, name them plainly in the reply so the user knows what the confirm button will do. "I've queued three tweaks: sharpen 'polish UI' to 'polish homepage hero spacing', delete the duplicate logo task, add 'deploy to Vercel'."

@@ -27,6 +27,7 @@
 import { generateText } from '../gemini-chat.js'
 import { MODELS } from '../models.js'
 import { pickSeedPairs, tokenise, topicalOverlap, type SeedCandidate } from './seed-picker.js'
+import { PLAIN_ENGLISH_RULES } from '../plain-english.js'
 import type { ArrivalKind, CentreKind, GatherResult, GenerationResult, IdeaEvidence, ProjectIdea, SeedPair } from './types.js'
 
 const MIN_SIGNALS = 8
@@ -455,8 +456,7 @@ function buildFastIdeaPrompt(s: Snapshot): string {
 
 ═══════ HOW TO WRITE ═══════
 
-Plain English. The way a friend talks. Short sentences.
-NEVER use: "leveraging," "synergies," "soundscapes," "narrative substrate," "experiential," "feature-rich," "exploring." No scare-quoted phrases.
+${PLAIN_ENGLISH_RULES}
 NEVER use abstract nouns in the title: no "exploration," "study," "series," "directory," "newsletter," "podcast," "zine," "investigation," "meditation on," "in conversation with."
 Concrete. "Cut the beech strip for the synth case" beats "begin work on the woodwork aspect."
 
@@ -838,8 +838,7 @@ Your job today is NOT to find ideas — the system has already proposed candidat
 
 ═══════ HOW TO WRITE ═══════
 
-Plain English. Short sentences. Words people actually say.
-NEVER use: "leveraging," "synergies," "soundscapes," "narrative substrate," "feature-rich," "psychological defenses," "high-impact transition," "creative momentum," "experiential."
+${PLAIN_ENGLISH_RULES}
 NEVER invent a hyphenated phrase in scare-quotes ("friction-over-function," "blind-edit"). If the term needs scare-quotes to be understood, rewrite it.
 NEVER explain to the user what they "are doing" in coach-voice ("You are shifting from a consumer to a producer of..."). Just say what you'd say to a friend.
 ONE idea per sentence. If a sentence has three clauses, it's wrong.
@@ -1097,8 +1096,7 @@ This is not a "give me an idea" exercise. It's a "tell me what you see" exercise
 
 ═══════ HOW TO WRITE ═══════
 
-Plain English. The way a friend talks, not how a product writes.
-NEVER use: "leveraging," "synergies," "soundscapes," "narrative substrate," "feature-rich," "psychological defenses," "high-impact transition," "creative momentum," "experiential."
+${PLAIN_ENGLISH_RULES}
 NEVER invent a hyphenated phrase in scare-quotes ("friction-over-function"). If the term needs scare-quotes to be understood, rewrite it.
 NEVER explain to the user what they "are doing" in coach voice. Show them what you see, the way a friend would: short, specific, grounded in the data they recognise.
 ONE idea per sentence. Three clauses = wrong.
