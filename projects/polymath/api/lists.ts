@@ -162,7 +162,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (title !== undefined) updates.title = title
             if (description !== undefined) updates.description = description
             if (icon !== undefined) updates.icon = icon
-            if (settings !== undefined) updates.settings = settings
+            // Merge settings server-side rather than replacing. Clients only
+            // ever send the keys they're changing, so a wholesale replace
+            // would silently drop status_enabled / status_labels / cover
+            // overrides set elsewhere. Read the existing row, shallow merge.
+            if (settings !== undefined) {
+                const { data: existing } = await supabase
+                    .from('lists')
+                    .select('settings')
+                    .eq('id', id)
+                    .eq('user_id', userId)
+                    .single()
+                updates.settings = { ...(existing?.settings ?? {}), ...(settings ?? {}) }
+            }
 
             const { data, error } = await supabase
                 .from('lists')

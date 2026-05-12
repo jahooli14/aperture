@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Check, X, ChevronRight, Loader2, PenTool, ArrowRight } from 'lucide-react'
+import { Check, X, ChevronRight, Loader2, PenTool, ArrowRight, Bookmark, AlertTriangle } from 'lucide-react'
 import { useFocusStore } from '../../stores/useFocusStore'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useMemoryStore } from '../../stores/useMemoryStore'
@@ -12,6 +12,22 @@ import { FocusSummary } from './FocusSummary'
 const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60)
     return `${m}m`
+}
+
+// Short relative date for the carry-forward "last time" block.
+// "today" / "yesterday" / "3d ago" / "2w ago" / "1mo ago".
+function formatRelativeDate(iso: string): string {
+    try {
+        const ms = Date.now() - new Date(iso).getTime()
+        const days = Math.floor(ms / (1000 * 60 * 60 * 24))
+        if (days <= 0) return 'today'
+        if (days === 1) return 'yesterday'
+        if (days < 7) return `${days}d ago`
+        if (days < 30) return `${Math.floor(days / 7)}w ago`
+        return `${Math.floor(days / 30)}mo ago`
+    } catch {
+        return ''
+    }
 }
 
 // Group tasks by their ID prefix for the overview
@@ -125,6 +141,14 @@ export function FocusSession() {
     // ── Overview Phase ──────────────────────────────────────────
     if (phase === 'overview') {
         const taskGroups = groupTasks(tasks)
+        // Carry forward the last session's bookmark + blocker so the user
+        // lands on the project with a real reminder of where they paused.
+        // This is the through-line that makes Mode 2b reshape work — every
+        // session has something concrete to react to from the last one.
+        const lastBookmark = (project?.metadata?.next_step as string | undefined)?.trim()
+        const lastBlocker = (project?.metadata?.blocker as string | undefined)?.trim()
+        const lastBlockerAt = project?.metadata?.blocker_at as string | undefined
+        const showLastTime = Boolean(lastBookmark || lastBlocker)
 
         return (
             <motion.div
@@ -163,6 +187,49 @@ export function FocusSession() {
                         <p className="text-xs text-[var(--brand-text-muted)] text-center mb-8">
                             {tasks.length} task{tasks.length !== 1 ? 's' : ''} planned
                         </p>
+
+                        {showLastTime && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.12 }}
+                                className="rounded-2xl p-4 mb-8"
+                                style={{
+                                    background: 'rgba(var(--brand-primary-rgb), 0.06)',
+                                    border: '1px solid rgba(var(--brand-primary-rgb), 0.18)',
+                                }}
+                            >
+                                <p className="text-[10px] tracking-[0.2em] mb-3"
+                                   style={{ color: 'rgba(var(--brand-primary-rgb), 0.7)' }}>
+                                    last time
+                                </p>
+                                {lastBookmark && (
+                                    <div className="flex items-start gap-2 mb-2">
+                                        <Bookmark className="h-3.5 w-3.5 mt-0.5 flex-shrink-0"
+                                                  style={{ color: 'rgba(var(--brand-primary-rgb), 0.85)' }} />
+                                        <p className="text-sm leading-snug text-[var(--brand-text-primary)]">
+                                            {lastBookmark}
+                                        </p>
+                                    </div>
+                                )}
+                                {lastBlocker && (
+                                    <div className="flex items-start gap-2">
+                                        <AlertTriangle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0"
+                                                       style={{ color: 'rgba(245, 158, 11, 0.85)' }} />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm leading-snug text-[var(--brand-text-secondary)]">
+                                                {lastBlocker}
+                                            </p>
+                                            {lastBlockerAt && (
+                                                <p className="text-[10px] mt-0.5 opacity-50">
+                                                    {formatRelativeDate(lastBlockerAt)}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </motion.div>
+                        )}
 
                         <div className="space-y-6 mb-10">
                             {taskGroups.map((group, gi) => (

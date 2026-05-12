@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { Reorder, motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, GripVertical, ListOrdered, Check, Star, ArrowUpDown } from 'lucide-react'
+import { Plus, Trash2, GripVertical, ListOrdered, Check, Star, ArrowUpDown, ImageIcon } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthContext } from '../contexts/AuthContext'
 import { SignInNudge } from '../components/SignInNudge'
@@ -8,6 +8,7 @@ import { useListStore } from '../stores/useListStore'
 import { Button } from '../components/ui/button'
 import { CreateListDialog } from '../components/lists/CreateListDialog'
 import { QuickAddSheet } from '../components/lists/QuickAddSheet'
+import { CustomiseCoverSheet } from '../components/lists/CustomiseCoverSheet'
 import { OptimizedImage } from '../components/ui/optimized-image'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import type { ListType, List } from '../types'
@@ -56,6 +57,8 @@ function ListsPageInner() {
     const [quickAddList, setQuickAddList] = useState<List | null>(null)
     // Long-press action sheet state
     const [actionSheetList, setActionSheetList] = useState<List | null>(null)
+    // Customise-cover sheet state
+    const [customiseList, setCustomiseList] = useState<List | null>(null)
 
     const { confirm, dialog: confirmDialog } = useConfirmDialog()
 
@@ -425,9 +428,16 @@ function ListsPageInner() {
             {lists.length > 0 && !isReordering && (
                 <div className="grid gap-3 pb-20" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(140px, calc(50% - 6px)), 1fr))' }}>
                 {lists.map((list) => {
-                    const rgb = ListColor(list.type)
-                    const coverImage = listCovers[list.id]
-                    const quoteCover = quoteCovers[list.id]
+                    const typeRgb = ListColor(list.type)
+                    // User overrides win over the auto-derived cover. Image
+                    // beats palette beats backend-derived. When a palette
+                    // colour is set, swap the type accent for it too so
+                    // chrome on the card (chips, dots) stays consistent.
+                    const overrideUrl = list.settings?.cover_image_url ?? null
+                    const overrideColor = list.settings?.cover_color ?? null
+                    const rgb = overrideColor || typeRgb
+                    const coverImage = overrideUrl || (overrideColor ? null : listCovers[list.id])
+                    const quoteCover = overrideUrl || overrideColor ? null : quoteCovers[list.id]
                     const recentlyUpdated = isRecentlyUpdated(list)
                     const itemCount = list.item_count || 0
 
@@ -653,6 +663,18 @@ function ListsPageInner() {
                                     </button>
                                     <button
                                         onClick={() => {
+                                            const target = actionSheetList
+                                            setActionSheetList(null)
+                                            setCustomiseList(target)
+                                        }}
+                                        className="w-full flex items-center gap-3 px-4 py-4 rounded-xl transition-all hover:bg-[var(--glass-surface)] min-h-[52px]"
+                                        style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface-hover)' }}
+                                    >
+                                        <ImageIcon className="h-4 w-4 text-brand-primary" />
+                                        <span className="text-sm font-bold text-[var(--brand-text-primary)] uppercase tracking-widest">Customise Cover</span>
+                                    </button>
+                                    <button
+                                        onClick={() => {
                                             setActionSheetList(null)
                                             setIsReordering(true)
                                         }}
@@ -688,6 +710,13 @@ function ListsPageInner() {
                     </>
                 )}
             </AnimatePresence>
+
+            {/* Customise Cover Sheet */}
+            <CustomiseCoverSheet
+                list={customiseList}
+                isOpen={!!customiseList}
+                onClose={() => setCustomiseList(null)}
+            />
 
             {confirmDialog}
         </div>
