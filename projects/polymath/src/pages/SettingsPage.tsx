@@ -10,9 +10,9 @@ import { useToast } from '../components/ui/toast'
 import { useNotificationSettings } from '../stores/useNotificationSettings'
 
 const intensityOptions = [
-  { value: 'subtle' as const, label: 'Subtle', description: 'Minimal visual effects' },
-  { value: 'normal' as const, label: 'Balanced', description: 'Default experience' },
-  { value: 'vibrant' as const, label: 'Vibrant', description: 'Enhanced visuals' }
+  { value: 'subtle' as const, label: 'Subtle', description: 'Quiet — less glow, less motion' },
+  { value: 'normal' as const, label: 'Balanced', description: 'The default' },
+  { value: 'vibrant' as const, label: 'Vibrant', description: 'Punchier — more glow, more motion' }
 ]
 
 const fontSizeOptions = [
@@ -250,7 +250,7 @@ export function SettingsPage() {
             {/* Intensity */}
             <div className="mb-8">
               <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider opacity-60 flex items-center gap-2" style={{ color: "var(--brand-primary)" }}>
-                Visual Intensity
+                Visual style
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {intensityOptions.map((option) => {
@@ -281,7 +281,7 @@ export function SettingsPage() {
             {/* Font Size */}
             <div>
               <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider opacity-60 flex items-center gap-2" style={{ color: "var(--brand-primary)" }}>
-                <Type className="h-4 w-4" /> Typography Scale
+                <Type className="h-4 w-4" /> Text Size
               </h3>
               <div className="grid grid-cols-3 gap-3">
                 {fontSizeOptions.map((option) => {

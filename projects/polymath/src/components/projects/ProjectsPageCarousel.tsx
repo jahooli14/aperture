@@ -257,7 +257,7 @@ function ArchivesSpotlightCard({ project }: { project: Project }) {
       addToast({ title: `Resurrected "${project.title}"`, description: 'Back from the archives.', variant: 'success' })
       fetchProjects()
     } catch {
-      addToast({ title: 'Error', description: 'Failed to resurrect project.', variant: 'destructive' })
+      addToast({ title: 'Couldn\'t restore project', description: 'Try again in a moment.', variant: 'destructive' })
     } finally {
       setResurrecting(false)
     }

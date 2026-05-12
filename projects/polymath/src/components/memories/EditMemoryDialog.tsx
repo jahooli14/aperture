@@ -219,7 +219,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
       console.error('[EditMemoryDialog] Update failed:', error)
       addToast({
         title: 'Failed to update thought',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        description: error instanceof Error ? error.message : 'Try again in a moment.',
         variant: 'destructive',
       })
     } finally {

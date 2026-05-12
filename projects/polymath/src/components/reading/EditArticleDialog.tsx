@@ -73,7 +73,7 @@ export function EditArticleDialog({ article, open, onOpenChange }: EditArticleDi
     } catch (error) {
       addToast({
         title: 'Failed to update article',
-        description: error instanceof Error ? error.message : 'An error occurred',
+        description: error instanceof Error ? error.message : 'Try again in a moment.',
         variant: 'destructive',
       })
     } finally {

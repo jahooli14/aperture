@@ -75,7 +75,7 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
         } catch (error) {
             addToast({
                 title: 'Failed to update project',
-                description: error instanceof Error ? error.message : 'An error occurred',
+                description: error instanceof Error ? error.message : 'Try again in a moment.',
                 variant: 'destructive',
             })
         } finally {

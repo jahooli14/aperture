@@ -588,7 +588,7 @@ export function PostOnboardingFlow({ analysis, sparkedSuggestion, transcripts = 
                     whileHover={{ scale: 1.03, boxShadow: `0 8px 32px rgba(${projectColor}, 0.4)` }}
                     whileTap={{ scale: 0.97 }}
                   >
-                    Let's build this
+                    Build this
                     <ArrowRight className="h-5 w-5" />
                   </motion.button>
 

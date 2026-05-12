@@ -307,7 +307,7 @@ export function ProjectDetailPage() {
       } catch (error) {
         addToast({
           title: 'Failed to delete project',
-          description: error instanceof Error ? error.message : 'Unknown error',
+          description: error instanceof Error ? error.message : 'Try again in a moment.',
           variant: 'destructive',
         })
       }
@@ -338,7 +338,7 @@ export function ProjectDetailPage() {
     } catch (error) {
       addToast({
         title: 'Failed to update title',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        description: error instanceof Error ? error.message : 'Try again in a moment.',
         variant: 'destructive',
       })
     }
@@ -366,7 +366,7 @@ export function ProjectDetailPage() {
     } catch (error) {
       addToast({
         title: 'Failed to update goal',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        description: error instanceof Error ? error.message : 'Try again in a moment.',
         variant: 'destructive',
       })
     }
@@ -507,7 +507,7 @@ export function ProjectDetailPage() {
     } catch (error) {
       addToast({
         title: 'Failed to update status',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        description: error instanceof Error ? error.message : 'Try again in a moment.',
         variant: 'destructive',
       })
     }

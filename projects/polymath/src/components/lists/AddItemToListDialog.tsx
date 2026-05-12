@@ -54,8 +54,7 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
                 status: 'pending'
             })
             addToast({
-                title: "Success",
-                description: "Item added to list",
+                title: "Added to list",
                 variant: "success"
             })
             setContent('')
@@ -63,8 +62,8 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
             onOpenChange(false)
         } catch (error) {
             addToast({
-                title: "Error",
-                description: "Failed to add item",
+                title: "Couldn't add item",
+                description: "Try again in a moment.",
                 variant: "destructive"
             })
         } finally {

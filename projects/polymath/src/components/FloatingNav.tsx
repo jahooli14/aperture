@@ -173,8 +173,8 @@ export function FloatingNav() {
 
     // Show immediate feedback
     addToast({
-      title: 'Saving thought...',
-      description: 'Processing your voice note',
+      title: 'Saving thought…',
+      description: 'Transcribing and tidying.',
       variant: 'default',
     })
 
@@ -295,7 +295,7 @@ export function FloatingNav() {
           removeOptimisticMemory(tempId)
           addToast({
             title: 'Failed to save',
-            description: 'Could not queue for offline. Please try again.',
+            description: 'Couldn\'t queue for offline. Try again in a moment.',
             variant: 'destructive',
           })
         }
@@ -305,8 +305,8 @@ export function FloatingNav() {
         addToast({
           title: 'Failed to save',
           description: errorMessage.includes('not available')
-            ? 'API temporarily unavailable. Please try again.'
-            : 'Error saving thought. Please try again.',
+            ? 'Service is briefly unavailable — try again in a moment.'
+            : 'Couldn\'t save the thought — try again in a moment.',
           variant: 'destructive',
         })
       }

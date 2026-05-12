@@ -491,7 +491,7 @@ export function CreateMemoryDialog({
           } catch (uploadErr) {
             addToast({
               title: 'Image upload failed',
-              description: uploadErr instanceof Error ? uploadErr.message : 'Unknown error',
+              description: uploadErr instanceof Error ? uploadErr.message : 'Try again in a moment.',
               variant: 'destructive',
             })
           }
@@ -535,7 +535,7 @@ export function CreateMemoryDialog({
       } catch (error) {
         addToast({
           title: 'Failed to save',
-          description: error instanceof Error ? error.message : 'Unknown error',
+          description: error instanceof Error ? error.message : 'Try again in a moment.',
           variant: 'destructive',
         })
       }

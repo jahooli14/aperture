@@ -68,8 +68,8 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
       setShowConnectionsDialog(true)
     } catch (error) {
       addToast({
-        title: 'Error',
-        description: 'Failed to archive article',
+        title: 'Couldn\'t archive article',
+        description: 'Try again in a moment.',
         variant: 'destructive',
       })
     }
@@ -92,8 +92,8 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
       })
     } catch (error) {
       addToast({
-        title: 'Error',
-        description: 'Failed to delete article',
+        title: 'Couldn\'t delete article',
+        description: 'Try again in a moment.',
         variant: 'destructive',
       })
     }

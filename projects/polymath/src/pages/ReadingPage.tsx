@@ -174,7 +174,7 @@ export function ReadingPage() {
       console.error('Failed to fetch RSS items:', error)
       addToast({
         title: 'Failed to load RSS updates',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        description: error instanceof Error ? error.message : 'Try again in a moment.',
         variant: 'destructive',
       })
     } finally {
@@ -277,7 +277,7 @@ export function ReadingPage() {
     } catch (error) {
       addToast({
         title: 'Sync failed',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        description: error instanceof Error ? error.message : 'Try again in a moment.',
         variant: 'destructive',
       })
     }
@@ -287,8 +287,8 @@ export function ReadingPage() {
   const handleSaveRSSItem = async (item: RSSItem) => {
     try {
       addToast({
-        title: ' Fetching article...',
-        description: 'Extracting content with Jina AI',
+        title: 'Fetching article…',
+        description: 'Extracting content.',
         variant: 'default',
       })
 
@@ -303,7 +303,7 @@ export function ReadingPage() {
     } catch (error) {
       addToast({
         title: 'Failed to save',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        description: error instanceof Error ? error.message : 'Try again in a moment.',
         variant: 'destructive',
       })
     }
@@ -430,7 +430,7 @@ export function ReadingPage() {
           processingRef.current.delete(shareUrl)
           addToast({
             title: 'Failed to save',
-            description: error instanceof Error ? error.message : 'Unknown error',
+            description: error instanceof Error ? error.message : 'Try again in a moment.',
             variant: 'destructive',
           })
           // Still redirect to article list on error
@@ -511,7 +511,7 @@ export function ReadingPage() {
             processingRef.current.delete(sharedUrl)
             addToast({
               title: 'Failed to save',
-              description: error instanceof Error ? error.message : 'Unknown error',
+              description: error instanceof Error ? error.message : 'Try again in a moment.',
               variant: 'destructive',
             })
             if (articleListPath) {
@@ -582,7 +582,7 @@ export function ReadingPage() {
     } catch (error) {
       addToast({
         title: 'Failed to save',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        description: error instanceof Error ? error.message : 'Try again in a moment.',
         variant: 'destructive',
       })
     } finally {
@@ -1211,8 +1211,8 @@ export function ReadingPage() {
               )
 
               addToast({
-                title: ' Queue flushed!',
-                description: `Deleted ${stuckArticles.length} stuck article(s)`,
+                title: 'Queue cleared',
+                description: `Removed ${stuckArticles.length} stuck article(s).`,
                 variant: 'success',
               })
 
@@ -1220,7 +1220,7 @@ export function ReadingPage() {
             } catch (error) {
               addToast({
                 title: 'Failed to flush',
-                description: error instanceof Error ? error.message : 'Unknown error',
+                description: error instanceof Error ? error.message : 'Try again in a moment.',
                 variant: 'destructive',
               })
             }

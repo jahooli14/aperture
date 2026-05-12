@@ -100,7 +100,7 @@ export function FoundationalPrompts() {
       <div className="space-y-3">
         {requiredPrompts.length === 0 ? (
           <div className="text-center py-12" style={{ color: "var(--brand-primary)" }}>
-            <p>No prompts found. Check console for errors.</p>
+            <p>No prompts loaded. Refresh the page to try again.</p>
           </div>
         ) : (
           requiredPrompts.map((prompt, index) => {

@@ -552,7 +552,7 @@ export const LiveVoiceCapture = forwardRef<LiveVoiceCaptureHandle, LiveVoiceCapt
               onerror: (e: any) => {
                 const detail = e?.message || e?.reason || e?.code || (typeof e === 'string' ? e : '')
                 diag(`socket-error: ${detail || 'unknown'}`)
-                handleError(detail ? `Live error: ${detail}` : 'Live session error (check console)')
+                handleError(detail ? `Voice connection error: ${detail}` : 'Voice connection error — try refreshing.')
               },
               onclose: (e: any) => {
                 const reason = e?.reason || e?.code || ''

@@ -173,7 +173,7 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
     } catch (error) {
       addToast({
         title: 'Failed to save note',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        description: error instanceof Error ? error.message : 'Try again in a moment.',
         variant: 'destructive',
       })
     } finally {

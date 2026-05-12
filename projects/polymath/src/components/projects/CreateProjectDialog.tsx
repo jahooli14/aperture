@@ -251,7 +251,7 @@ export function CreateProjectDialog({
     } catch (error) {
       addToast({
         title: 'Failed to save project',
-        description: error instanceof Error ? error.message : 'An error occurred',
+        description: error instanceof Error ? error.message : 'Try again in a moment.',
         variant: 'destructive',
       })
     } finally {
@@ -302,7 +302,7 @@ export function CreateProjectDialog({
     } catch (error) {
       addToast({
         title: 'Failed to create project',
-        description: error instanceof Error ? error.message : 'An error occurred',
+        description: error instanceof Error ? error.message : 'Try again in a moment.',
         variant: 'destructive',
       })
     } finally {

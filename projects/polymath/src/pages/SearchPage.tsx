@@ -209,7 +209,7 @@ export function SearchPage() {
       console.error('Search error:', error)
       addToast({
         title: 'Search failed',
-        description: 'Failed to search content. Please try again.',
+        description: 'Try again in a moment.',
         variant: 'destructive'
       })
     } finally {
@@ -433,8 +433,8 @@ export function SearchPage() {
               {results.results.length === 0 ? (
                 <EmptyState
                   icon={Search}
-                  title="No results found"
-                  description="Try a different search term or use voice search"
+                  title="No matches"
+                  description="Try a different word, or tap the mic."
                 />
               ) : (
                 <div className="space-y-3">
@@ -513,8 +513,8 @@ export function SearchPage() {
           {!loading && !results && query && (
             <EmptyState
               icon={Search}
-              title="Ready to search"
-              description="Enter a search term or use voice search to get started"
+              title="Search your stuff"
+              description="Type a query or tap the mic."
             />
           )}
         </div>

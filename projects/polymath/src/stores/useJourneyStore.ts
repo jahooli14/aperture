@@ -69,7 +69,7 @@ export const JOURNEY_CHALLENGES: DayChallenge[] = [
     title: 'Ship something small',
     description: 'Complete one task on your project. Small wins compound.',
     action: 'complete_task',
-    reward: 'Momentum started — streaks unlock tomorrow',
+    reward: 'Momentum\'s started — streaks start tomorrow',
     celebrationText: 'First task shipped. The project is moving.',
   },
   {
@@ -78,7 +78,7 @@ export const JOURNEY_CHALLENGES: DayChallenge[] = [
     description: 'Record another thought — watch how your suggestions sharpen.',
     action: 'voice_note',
     reward: 'Your suggestions just got more specific',
-    celebrationText: 'More data, sharper ideas. The flywheel is spinning.',
+    celebrationText: 'More data, sharper ideas.',
   },
   {
     day: 6,
