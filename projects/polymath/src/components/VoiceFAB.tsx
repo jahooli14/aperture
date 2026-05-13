@@ -222,60 +222,78 @@ export function VoiceFAB({
   // --- Pill positions (measured from actual FAB rect, so they work with any safe-area-inset) ---
   const stripOverlay = null; // Removed strip menu
 
+  // Position wrapper holds the centering transform so framer-motion's inline
+  // `transform` (driven by scale/opacity animations on the button) doesn't
+  // clobber `-translate-x-1/2` and shove the FAB right of centre.
   const fabButton = createPortal(
-    <motion.button
-      id="global-voice-fab"
-      ref={fabRef}
-      key="fab-button"
-      initial={{ scale: 0, opacity: 0 }}
-      animate={{
-        scale: (hidden || isMenuOpen) ? 0 : 1,
-        opacity: (hidden || isMenuOpen) ? 0 : 1,
-        pointerEvents: (hidden || isMenuOpen) ? 'none' : 'auto',
-      }}
-      transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-      onPointerDown={onStart}
-      onPointerMove={onMove}
-      onPointerUp={onEnd}
-      onPointerLeave={onLeave}
-      onPointerCancel={onSystemCancel}
-      className={cn(
-        'fixed z-[25001]',
-        // Centered above the nav — the raised middle slot. The right-edge
-        // orphan position has been retired; the FAB now belongs to the nav
-        // visually, not the page corner.
-        'left-1/2 -translate-x-1/2',
-        'h-14 w-14 md:h-16 md:w-16 rounded-full',
-        'flex items-center justify-center',
-        'transition-all duration-200',
-        'group overflow-hidden touch-none',
-      )}
+    <div
+      className="fixed left-1/2 -translate-x-1/2 z-[25001] pointer-events-none"
       style={{
-        // Sit raised over the centered spacer in the nav pill, peeking
-        // ~16-20px above the nav's top edge.
-        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 3.75rem)',
-        background: 'linear-gradient(135deg, rgb(var(--color-accent-light-rgb)) 0%, rgb(var(--brand-primary-rgb)) 60%, rgb(var(--color-accent-dark-rgb)) 100%)',
-        border: '1px solid rgba(255, 255, 255, 0.22)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        boxShadow:
-          '0 16px 40px -8px rgba(var(--brand-primary-rgb), 0.55),' +
-          '0 8px 24px rgba(0, 0, 0, 0.45),' +
-          '0 0 36px rgba(var(--brand-primary-rgb), 0.45),' +
-          'inset 0 1px 0 rgba(255, 255, 255, 0.35),' +
-          'inset 0 -2px 6px rgba(0, 0, 0, 0.20)',
+        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 3.5rem)',
       }}
-      aria-label="New thought — tap to write, hold to record"
     >
-      <Plus
-        className="h-6 w-6 text-white transition-transform group-hover:rotate-90 relative z-10"
-        style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.30))' }}
-      />
+      {/* Soft halo behind the FAB — sells the "raised hero action" feel. */}
       <div
-        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
-        style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0))' }}
+        aria-hidden
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
+        style={{
+          width: '112px',
+          height: '112px',
+          background:
+            'radial-gradient(circle, rgba(var(--brand-primary-rgb), 0.28) 0%, rgba(var(--brand-primary-rgb), 0.12) 35%, rgba(var(--brand-primary-rgb), 0) 70%)',
+          filter: 'blur(2px)',
+          opacity: hidden || isMenuOpen ? 0 : 1,
+          transition: 'opacity 200ms ease-out',
+        }}
       />
-    </motion.button>,
+      <motion.button
+        id="global-voice-fab"
+        ref={fabRef}
+        key="fab-button"
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{
+          scale: (hidden || isMenuOpen) ? 0 : 1,
+          opacity: (hidden || isMenuOpen) ? 0 : 1,
+          pointerEvents: (hidden || isMenuOpen) ? 'none' : 'auto',
+        }}
+        transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+        onPointerDown={onStart}
+        onPointerMove={onMove}
+        onPointerUp={onEnd}
+        onPointerLeave={onLeave}
+        onPointerCancel={onSystemCancel}
+        className={cn(
+          'relative',
+          'h-16 w-16 md:h-[68px] md:w-[68px] rounded-full',
+          'flex items-center justify-center',
+          'group overflow-hidden touch-none',
+        )}
+        style={{
+          background:
+            'radial-gradient(circle at 30% 25%, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 40%),' +
+            'linear-gradient(155deg, rgb(var(--color-accent-light-rgb)) 0%, rgb(var(--brand-primary-rgb)) 55%, rgb(var(--color-accent-dark-rgb)) 100%)',
+          border: '1px solid rgba(255, 255, 255, 0.28)',
+          boxShadow:
+            '0 18px 40px -10px rgba(var(--brand-primary-rgb), 0.65),' +
+            '0 10px 28px rgba(0, 0, 0, 0.50),' +
+            '0 0 0 1px rgba(var(--brand-primary-rgb), 0.35),' +
+            '0 0 38px rgba(var(--brand-primary-rgb), 0.40),' +
+            'inset 0 1px 0 rgba(255, 255, 255, 0.45),' +
+            'inset 0 -3px 8px rgba(0, 0, 0, 0.25)',
+        }}
+        aria-label="New thought — tap to write, hold to record"
+      >
+        <Plus
+          className="h-7 w-7 text-white transition-transform duration-300 group-hover:rotate-90 relative z-10"
+          strokeWidth={2.5}
+          style={{ filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.35))' }}
+        />
+        <div
+          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
+          style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.22), rgba(255,255,255,0))' }}
+        />
+      </motion.button>
+    </div>,
     document.body
   )
 
