@@ -343,29 +343,37 @@ export function HomePage() {
             </motion.div>
           ) : null}
 
-          {/* Recently active — 2-up glass cards. The seam above it tells
-              the eye "different group" without a heading. */}
-          <div className="section-seam" aria-hidden />
+          {/* Recently active — 2-up glass cards. Kicker above the seam
+              names the concept so the eye isn't asked to guess. */}
+          <div className="section-seam-labelled">
+            <span className="section-seam-kicker">lately</span>
+          </div>
           <motion.div {...stackTransition(3)}>
             <RecentlyActiveMini />
           </motion.div>
 
           {/* Up Next — 2-up ghost cards. Quieter material than the glass
               row above, so it reads as further away. */}
-          <div className="section-seam" aria-hidden />
+          <div className="section-seam-labelled">
+            <span className="section-seam-kicker">later</span>
+          </div>
           <motion.div {...stackTransition(4)}>
             <UpNextMini />
           </motion.div>
 
           {/* Suggest a project — quiet escape-hatch pill for on-demand
               generation when nothing higher-up has earned the page. */}
-          <div className="section-seam" aria-hidden />
+          <div className="section-seam-labelled">
+            <span className="section-seam-kicker">new idea</span>
+          </div>
           <motion.div {...stackTransition(5)}>
             <ProjectIdeasHome />
           </motion.div>
 
           {/* What you're consuming — identity layer. */}
-          <div className="section-seam" aria-hidden />
+          <div className="section-seam-labelled">
+            <span className="section-seam-kicker">now consuming</span>
+          </div>
           <motion.div {...stackTransition(6)}>
             <NowConsumingWidget />
           </motion.div>

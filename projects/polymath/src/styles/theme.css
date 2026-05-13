@@ -707,6 +707,45 @@ h6 {
     border: 0;
 }
 
+/* Seam with a kicker — same hairline, split by a tiny lowercase label
+   that names the concept of the section below it. Quieter than
+   .section-header; just enough so the eye doesn't have to guess. */
+.section-seam-labelled {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 40px 0;
+}
+.section-seam-labelled::before,
+.section-seam-labelled::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.06) 50%,
+        rgba(255, 255, 255, 0.12) 100%
+    );
+}
+.section-seam-labelled::after {
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.12) 0%,
+        rgba(255, 255, 255, 0.06) 50%,
+        transparent 100%
+    );
+}
+.section-seam-kicker {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.32);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
 /* Mode register — small two-line chip in the top-left of the home
    masthead. Names what The Moment is firing in. Replaces the dead
    space left when the wordmark eyebrow was removed. */
