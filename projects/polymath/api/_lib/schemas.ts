@@ -30,6 +30,7 @@ const triageCategory = z.enum([
   'new_project_idea',
   'list_item',
   'annoyance',
+  'taste_signal',
 ])
 const severity = z.enum(['critical', 'annoying', 'minor'])
 
