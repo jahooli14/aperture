@@ -7,6 +7,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getSupabaseClient } from './supabase.js'
 import { MODELS } from './models.js'
+import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 
 const supabase = getSupabaseClient()
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
@@ -343,7 +344,9 @@ async function generateCatalystPromptsWithAI(
 **INPUTS:**
 ${inputsList}
 
-**YOUR JOB:** Find the non-obvious insight hiding in the intersection of these items.
+**YOUR JOB:** Each prompt names one specific pair from the inputs and asks a concrete question that only makes sense for that pair. No "the intersection of," no "the synthesis between." Use real titles.
+
+${PLAIN_ENGLISH_RULES}
 
 Return JSON array:
 [
@@ -470,6 +473,10 @@ Select strategies based on the inputs to generate 3-4 prompts.
 - **prompt**: The specific question or insight shown AFTER waking from the drift. This should be sharp and actionable — the "aha" moment.
 - **Metaphor**: Provide a simple, concrete visual metaphor (optional).
 - **Type**: Must be one of: 'connection', 'divergent', 'revisit', 'transform'.
+
+${PLAIN_ENGLISH_RULES}
+BAD: "Reflect on how the essence of your creative journey leverages constraint."
+GOOD: "The Logic Pro trial expires Friday. Which song gets the 90 minutes?"
 
 Prompt type distribution preference (higher = generate more of this type):
 ${Object.entries(typeDistribution || { connection: 0.25, divergent: 0.25, revisit: 0.25, transform: 0.25 }).map(([type, score]) => `- ${type}: ${(score * 100).toFixed(0)}%`).join('\n')}
