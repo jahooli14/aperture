@@ -14,7 +14,6 @@
 import { useEffect, useState } from 'react'
 import { Play, Zap } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { getTheme } from '../../lib/projectTheme'
 import { useStartProjectSession } from '../../hooks/useStartProjectSession'
 import type { Project } from '../../types'
 
@@ -75,7 +74,6 @@ export function KeepGoingCard({ project, heading, emptyState }: KeepGoingCardPro
 
   const handleStartSession = () => start({ prefetched: plan })
 
-  const theme = getTheme(project.type || 'other', project.title)
   const headline = plan?.task_title || project.metadata?.session_headline
   const pitch = plan?.task_description || project.metadata?.session_pitch
   // Only surface a preview when we actually know what's next. Generic
@@ -104,30 +102,33 @@ export function KeepGoingCard({ project, heading, emptyState }: KeepGoingCardPro
         className="rounded-2xl p-5 flex flex-col overflow-hidden relative transition-all duration-700 cursor-pointer"
         onClick={() => navigate(`/projects/${project.id}`)}
         style={{
-          // Hero card breathes the project's accent — soft ambient wash
-          // from one corner, deepening into the dark surface. The only
-          // saturated card on the home; everything below recedes from this.
-          background:
-            `radial-gradient(circle at 0% 0%, rgba(${theme.rgb}, 0.18) 0%, transparent 55%),` +
-            `linear-gradient(135deg, rgba(${theme.rgb}, 0.10) 0%, rgba(15,24,41,0.55) 70%)`,
+          // Single restrained palette — mirrors ThoughtOfTheDay. Hero card
+          // reads as editorial, not a coloured spotlight.
+          background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.08) 0%, rgba(15,24,41,0.65) 60%)',
           backdropFilter: 'blur(18px)',
-          border: `1px solid ${dormancyColor ?? `rgba(${theme.rgb}, 0.28)`}`,
+          border: `1px solid ${dormancyColor ?? 'rgba(var(--brand-primary-rgb),0.14)'}`,
           boxShadow: dormancyColor
             ? `0 0 28px ${dormancyColor.replace('0.55', '0.08')}, 0 12px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05)`
-            : `0 0 40px -8px rgba(${theme.rgb}, 0.22), 0 12px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05)`,
+            : '0 0 48px -14px rgba(var(--brand-primary-rgb),0.14), 0 12px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04)',
           minHeight: '260px',
         }}
       >
-        {/* Single hairline at the top in the project accent. This is the
-            only "progress bar"-shaped element — semantic (project accent),
-            not decorative. The previous standalone h-1 strip is gone. */}
+        {/* Top hairline glow — same brand-primary cue used on ThoughtOfTheDay. */}
         <div
           className="absolute top-0 left-0 right-0 h-px"
-          style={{ background: `linear-gradient(90deg, transparent, rgba(${theme.rgb}, 0.5), transparent)` }}
+          style={{ background: 'linear-gradient(90deg, transparent, rgba(var(--brand-primary-rgb),0.45), transparent)' }}
         />
 
         <div className="flex items-start justify-between gap-2 mb-1 mt-1">
-          <h3 className="text-lg font-bold text-[var(--brand-text-primary)] leading-tight aperture-header line-clamp-2 flex-1">
+          <h3
+            className="text-xl leading-tight line-clamp-2 flex-1"
+            style={{
+              color: 'var(--brand-text-primary)',
+              fontFamily: 'var(--brand-font-serif)',
+              fontWeight: 500,
+              opacity: 0.96,
+            }}
+          >
             {project.title}
           </h3>
           {dormancyLabel && (
@@ -139,12 +140,12 @@ export function KeepGoingCard({ project, heading, emptyState }: KeepGoingCardPro
             </span>
           )}
         </div>
-        <p
-          className="text-[11px] mb-3"
-          style={{ color: dormancyColor ?? 'var(--brand-text-secondary)', opacity: dormancyColor ? 0.8 : 0.4 }}
+        <span
+          className="text-[10px] uppercase tracking-[0.32em] font-semibold mb-3 inline-block"
+          style={{ color: dormancyColor ?? 'rgba(var(--brand-primary-rgb),0.7)' }}
         >
           {formatRelativeTime(project.last_active || project.updated_at)}
-        </p>
+        </span>
 
         {nextStep ? (
           <div className="flex-1 p-3 rounded-xl mb-4" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
@@ -163,8 +164,13 @@ export function KeepGoingCard({ project, heading, emptyState }: KeepGoingCardPro
         <button
           onClick={(e) => { e.stopPropagation(); handleStartSession() }}
           disabled={loadingSession}
-          className="w-full py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all hover:brightness-110 disabled:opacity-50"
-          style={{ background: theme.text, color: 'black', boxShadow: `0 4px 16px rgba(${theme.rgb},0.2)` }}
+          className="w-full py-2.5 rounded-xl font-semibold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all hover:brightness-110 disabled:opacity-50"
+          style={{
+            background: 'rgba(var(--brand-primary-rgb), 0.12)',
+            border: '1px solid rgba(var(--brand-primary-rgb), 0.32)',
+            color: 'rgb(var(--brand-primary-rgb))',
+            boxShadow: '0 4px 16px -4px rgba(var(--brand-primary-rgb), 0.18)',
+          }}
         >
           {loadingSession ? (
             <span className="animate-pulse">Planning session...</span>

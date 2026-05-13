@@ -188,12 +188,12 @@ export function VoiceFAB({
       return
     }
 
-    // Short tap — open thought capture immediately (Keep-style direct path).
-    // Other types (project/article/list) are reachable from the "switch type"
-    // button inside the thought sheet header.
+    // Short tap — open the create menu so the user picks thought / project
+    // / list item. Hold is still the voice path. Direct thought capture
+    // moved into the menu's first card.
     if (duration < LONG_PRESS_DELAY) {
       haptic.light()
-      setShowThoughtDialog(true)
+      setIsMenuOpen(true)
     }
   }, [isLongPressRecording])
 
@@ -229,18 +229,21 @@ export function VoiceFAB({
     <div
       className="fixed left-1/2 -translate-x-1/2 z-[25001] pointer-events-none"
       style={{
-        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 3.5rem)',
+        // Nested into the navbar — only the top edge of the FAB peeks above
+        // the pill. Lower position means the halo doesn't bleed up the page.
+        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)',
       }}
     >
-      {/* Soft halo behind the FAB — sells the "raised hero action" feel. */}
+      {/* Soft halo behind the FAB — kept tight so it doesn't bloom above
+          the nav now that the FAB sits nestled inside it. */}
       <div
         aria-hidden
         className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
         style={{
-          width: '112px',
-          height: '112px',
+          width: '88px',
+          height: '88px',
           background:
-            'radial-gradient(circle, rgba(var(--brand-primary-rgb), 0.28) 0%, rgba(var(--brand-primary-rgb), 0.12) 35%, rgba(var(--brand-primary-rgb), 0) 70%)',
+            'radial-gradient(circle, rgba(var(--brand-primary-rgb), 0.22) 0%, rgba(var(--brand-primary-rgb), 0.08) 40%, rgba(var(--brand-primary-rgb), 0) 70%)',
           filter: 'blur(2px)',
           opacity: hidden || isMenuOpen ? 0 : 1,
           transition: 'opacity 200ms ease-out',

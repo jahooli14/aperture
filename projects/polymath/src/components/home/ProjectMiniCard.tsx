@@ -14,8 +14,8 @@
 import { useNavigate } from 'react-router-dom'
 import {
   Play, PenLine, Cpu, Palette, Music, Briefcase, Sparkles, Wand2, BookOpen, Box,
+  type LucideIcon,
 } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
 import { getTheme } from '../../lib/projectTheme'
 import { haptic } from '../../utils/haptics'
 import { useStartProjectSession } from '../../hooks/useStartProjectSession'
@@ -43,10 +43,6 @@ interface ProjectMiniCardProps {
   project: Project
   /** Mode-framing sub-line ("from your note last night", "#1 in queue", "3w ago"). */
   meta?: string
-  /** Zero-based index within its row. Drives the corner vignette side — even
-   *  cards vignette top-left, odd cards top-right. Subtle, but each card
-   *  breathes in its own direction. */
-  index?: number
   /** Visual weight. Glass = filled (recent). Ghost = outline (soon). */
   variant?: MiniCardVariant
 }
@@ -54,52 +50,42 @@ interface ProjectMiniCardProps {
 export function ProjectMiniCard({
   project,
   meta,
-  index = 0,
   variant = 'glass',
 }: ProjectMiniCardProps) {
   const navigate = useNavigate()
   const theme = getTheme(project.type || 'other', project.title)
   const { start, loading } = useStartProjectSession(project.id)
-  const TypeIcon = iconForType(project.type)
+  const TypeIcon = iconForType(project.type ?? undefined)
 
-  const isOdd = index % 2 === 1
   const isGhost = variant === 'ghost'
 
-  // Surface treatment: glass = filled with project ambient + vignette.
-  // Ghost = nearly transparent, hairline border only. Same anatomy
-  // inside, different material outside.
+  // Single restrained palette — mirrors ThoughtOfTheDay. Project identity
+  // shows up only in the tiny accent dot. Cards read as one cohesive
+  // editorial set, not a kaleidoscope.
   const surface = isGhost
     ? {
         background: 'rgba(15, 24, 41, 0.30)',
-        border: `1px solid rgba(${theme.rgb}, 0.18)`,
-        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.025)`,
+        border: '1px solid rgba(var(--brand-primary-rgb), 0.10)',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.025)',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
       }
     : {
-        background: `linear-gradient(155deg, rgba(${theme.rgb}, 0.11) 0%, rgba(15,24,41,0.55) 70%)`,
-        border: `1px solid rgba(${theme.rgb}, 0.28)`,
+        background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.08) 0%, rgba(15,24,41,0.65) 60%)',
+        border: '1px solid rgba(var(--brand-primary-rgb),0.14)',
         boxShadow:
-          `0 10px 26px -12px rgba(0,0,0,0.5),` +
-          `0 0 22px rgba(${theme.rgb}, 0.10),` +
-          `inset 0 1px 0 rgba(255,255,255,0.05)`,
+          '0 0 48px -14px rgba(var(--brand-primary-rgb),0.14),' +
+          '0 8px 28px -12px rgba(0,0,0,0.55),' +
+          'inset 0 1px 0 rgba(255,255,255,0.04)',
         backdropFilter: 'blur(14px) saturate(140%)',
         WebkitBackdropFilter: 'blur(14px) saturate(140%)',
       }
-
-  // Alternating corner vignette — top-left on even cards, top-right on odd.
-  // Subtle radial wash in the project accent. Read as "lit from a corner"
-  // rather than a flat panel. Skipped on ghost cards (they're meant quiet).
-  const vignetteCorner = isOdd ? '100% 0%' : '0% 0%'
-  const vignette = isGhost
-    ? null
-    : `radial-gradient(circle at ${vignetteCorner}, rgba(${theme.rgb}, 0.16) 0%, transparent 55%)`
 
   return (
     <button
       type="button"
       onClick={() => { haptic.light(); navigate(`/projects/${project.id}`) }}
-      className="group relative w-full text-left transition-all hover:-translate-y-0.5 active:scale-[0.99]"
+      className="group relative w-full text-left transition-all hover:-translate-y-0.5 active:scale-[0.99] overflow-hidden"
       style={{
         ...surface,
         borderRadius: '18px',
@@ -107,57 +93,58 @@ export function ProjectMiniCard({
         minHeight: '120px',
       }}
     >
-      {/* Corner vignette — only on glass variant. */}
-      {vignette && (
+      {/* Top hairline glow — single editorial cue, mirrors ThoughtOfTheDay. */}
+      {!isGhost && (
         <span
           aria-hidden
-          className="absolute pointer-events-none"
-          style={{ inset: 0, background: vignette, borderRadius: '18px' }}
+          className="absolute top-0 left-0 right-0 h-px"
+          style={{ background: 'linear-gradient(90deg, transparent, rgba(var(--brand-primary-rgb),0.45), transparent)' }}
         />
       )}
 
       <div className="relative z-10 flex flex-col gap-1.5 h-full min-h-[92px]">
-        {/* Top row: accent dot (left), type icon (right). */}
+        {/* Top row: tiny project-accent dot (left), type icon (right). */}
         <div className="flex items-center justify-between">
           <span
             aria-hidden
             className="block rounded-full"
             style={{
-              width: '6px',
-              height: '6px',
-              background: `rgb(${theme.rgb})`,
-              boxShadow: isGhost ? 'none' : `0 0 8px rgba(${theme.rgb}, 0.6)`,
+              width: '5px',
+              height: '5px',
+              background: `rgba(${theme.rgb}, 0.7)`,
             }}
           />
           <TypeIcon
             className="h-3.5 w-3.5"
-            style={{ color: `rgba(${theme.rgb}, ${isGhost ? 0.45 : 0.6})` }}
-            strokeWidth={1.75}
+            style={{ color: 'rgba(var(--brand-primary-rgb), 0.55)' }}
+            strokeWidth={1.5}
           />
         </div>
 
-        {/* Title. */}
+        {/* Title — editorial serif, mirrors ThoughtOfTheDay text. */}
         <h4
-          className="text-[13px] font-bold leading-snug line-clamp-3 text-[var(--brand-text-primary)] mt-0.5"
+          className="text-[14px] leading-snug line-clamp-3 mt-0.5"
           style={{
-            textShadow: isGhost ? 'none' : '0 1px 2px rgba(0,0,0,0.4)',
-            opacity: isGhost ? 0.85 : 1,
+            color: 'var(--brand-text-primary)',
+            fontFamily: 'var(--brand-font-serif)',
+            fontWeight: 500,
+            opacity: isGhost ? 0.82 : 0.96,
           }}
         >
           {project.title}
         </h4>
 
-        {/* Mode framing sub-line. Plain — no italic, no serif. */}
+        {/* Mode framing sub-line — uppercase tracked caps, single tone. */}
         {meta && (
-          <p
-            className="text-[10.5px] font-medium leading-snug"
-            style={{ color: 'rgba(255,255,255,0.55)' }}
+          <span
+            className="text-[9.5px] uppercase tracking-[0.24em] font-semibold mt-1"
+            style={{ color: 'rgba(var(--brand-primary-rgb), 0.6)' }}
           >
             {meta}
-          </p>
+          </span>
         )}
 
-        {/* Bottom row: small play glyph. Inherits project accent. */}
+        {/* Bottom row: refined play glyph in brand-primary, single tone. */}
         <div className="mt-auto flex items-center justify-end pt-1">
           <button
             type="button"
@@ -165,24 +152,16 @@ export function ProjectMiniCard({
             disabled={loading}
             aria-label={`Start session for ${project.title}`}
             className="h-7 w-7 rounded-full flex items-center justify-center transition-transform hover:scale-110 active:scale-95 disabled:opacity-60"
-            style={isGhost
-              ? {
-                  background: 'transparent',
-                  border: `1px solid rgba(${theme.rgb}, 0.45)`,
-                  color: `rgb(${theme.rgb})`,
-                }
-              : {
-                  background: `linear-gradient(135deg, rgba(${theme.rgb}, 0.95), rgba(${theme.rgb}, 0.70))`,
-                  boxShadow: `0 4px 12px -2px rgba(${theme.rgb}, 0.45), inset 0 1px 0 rgba(255,255,255,0.22)`,
-                  border: `1px solid rgba(${theme.rgb}, 0.45)`,
-                  color: '#0b0f1a',
-                }
-            }
+            style={{
+              background: 'rgba(var(--brand-primary-rgb), 0.10)',
+              border: '1px solid rgba(var(--brand-primary-rgb), 0.32)',
+              color: 'rgb(var(--brand-primary-rgb))',
+            }}
           >
             {loading ? (
               <span
                 className="block w-2 h-2 rounded-full animate-pulse"
-                style={{ background: isGhost ? `rgb(${theme.rgb})` : '#0b0f1a' }}
+                style={{ background: 'rgb(var(--brand-primary-rgb))' }}
               />
             ) : (
               <Play className="h-3 w-3 fill-current" style={{ marginLeft: '1px' }} />
