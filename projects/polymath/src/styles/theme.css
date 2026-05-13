@@ -707,43 +707,33 @@ h6 {
     border: 0;
 }
 
-/* Seam with a kicker — same hairline, split by a tiny lowercase label
-   that names the concept of the section below it. Quieter than
-   .section-header; just enough so the eye doesn't have to guess. */
-.section-seam-labelled {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin: 40px 0;
+/* Seam with a kicker — single hairline above, quiet lowercase label
+   below. Names the concept of the section that follows so the eye
+   doesn't have to guess. Quieter than .section-header; doesn't echo
+   the uppercase mode-register chip at the top of the page. */
+.section-break {
+    margin: 44px 0 22px;
 }
-.section-seam-labelled::before,
-.section-seam-labelled::after {
-    content: '';
-    flex: 1;
+.section-break-rule {
     height: 1px;
     background: linear-gradient(
         90deg,
         transparent 0%,
-        rgba(255, 255, 255, 0.06) 50%,
-        rgba(255, 255, 255, 0.12) 100%
-    );
-}
-.section-seam-labelled::after {
-    background: linear-gradient(
-        90deg,
-        rgba(255, 255, 255, 0.12) 0%,
-        rgba(255, 255, 255, 0.06) 50%,
+        rgba(255, 255, 255, 0.04) 25%,
+        rgba(255, 255, 255, 0.10) 50%,
+        rgba(255, 255, 255, 0.04) 75%,
         transparent 100%
     );
 }
-.section-seam-kicker {
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.32);
-    white-space: nowrap;
-    flex-shrink: 0;
+.section-break-kicker {
+    margin-top: 14px;
+    font-family: var(--brand-font-header);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: rgba(255, 255, 255, 0.42);
+    text-transform: lowercase;
+    line-height: 1;
 }
 
 /* Mode register — small two-line chip in the top-left of the home
