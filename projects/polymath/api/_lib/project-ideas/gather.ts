@@ -164,13 +164,16 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       user_rating: typeof li.user_rating === 'number' ? li.user_rating : null,
     }))
 
+  const pickString = (v: unknown) => (typeof v === 'string' && v.trim().length > 0) ? v.trim() : null
+
   const active_projects = (activeProjectsRes.data ?? []).map((p: any) => ({
     id: p.id as string,
     title: (p.title as string | null) ?? '(untitled)',
     description: p.description as string | null,
     status: p.status as string,
     tags: Array.isArray(p.metadata?.tags) ? (p.metadata.tags as string[]) : [],
-    blocker: typeof p.metadata?.blocker === 'string' && p.metadata.blocker.trim().length > 0 ? (p.metadata.blocker as string).trim() : null,
+    blocker: pickString(p.metadata?.blocker),
+    last_bookmark: pickString(p.metadata?.next_step),
     updated_at: (p.updated_at as string) ?? '',
   }))
 
@@ -179,7 +182,8 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
     title: (p.title as string | null) ?? '(untitled)',
     description: p.description as string | null,
     status: p.status as string,
-    blocker: typeof p.metadata?.blocker === 'string' && p.metadata.blocker.trim().length > 0 ? (p.metadata.blocker as string).trim() : null,
+    blocker: pickString(p.metadata?.blocker),
+    last_bookmark: pickString(p.metadata?.next_step),
     updated_at: (p.updated_at as string) ?? '',
   }))
 

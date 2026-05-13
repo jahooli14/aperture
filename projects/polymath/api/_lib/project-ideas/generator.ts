@@ -1034,11 +1034,13 @@ function buildReadPrompt(g: GatherResult): string {
   // these states (started but never finished; shape that always stalls).
   const activeProjBlock = g.active_projects.slice(0, 15).map(p => {
     const blockerLine = p.blocker ? `\n      BLOCKER (their own words): "${truncate(p.blocker, 200)}"` : ''
-    return `  project_active#${p.id} "${p.title}" — last touched ${isoDate(p.updated_at)}${p.description ? `; ${truncate(p.description, 160)}` : ''}${blockerLine}`
+    const bookmarkLine = p.last_bookmark ? `\n      LAST BOOKMARK (where they left off after the last focus session): "${truncate(p.last_bookmark, 200)}"` : ''
+    return `  project_active#${p.id} "${p.title}" — last touched ${isoDate(p.updated_at)}${p.description ? `; ${truncate(p.description, 160)}` : ''}${blockerLine}${bookmarkLine}`
   }).join('\n')
   const dormantProjBlock = g.dormant_projects.slice(0, 15).map(p => {
     const blockerLine = p.blocker ? `\n      BLOCKER (their own words at the moment they paused): "${truncate(p.blocker, 200)}"` : ''
-    return `  project_dormant#${p.id} [${p.status}] "${p.title}" — last touched ${isoDate(p.updated_at)}${p.description ? `; ${truncate(p.description, 160)}` : ''}${blockerLine}`
+    const bookmarkLine = p.last_bookmark ? `\n      LAST BOOKMARK (where they left off — the pickup move sits here): "${truncate(p.last_bookmark, 200)}"` : ''
+    return `  project_dormant#${p.id} [${p.status}] "${p.title}" — last touched ${isoDate(p.updated_at)}${p.description ? `; ${truncate(p.description, 160)}` : ''}${blockerLine}${bookmarkLine}`
   }).join('\n')
 
   // PRIOR IDEA OUTCOMES — what the system has already proposed and what the
@@ -1114,7 +1116,7 @@ Pattern must be REAL. It must be visible across at least 3 separate captures or 
   - A repeating TASTE: "everything you keep is small, physical, made by one person, and resists being sold."
   - A drift in IDENTITY: "you used to read about systems; this year you read about hands."
   - A circle: "you've named [thing] in three different ways across two years and never started it."
-  - A RECENT FORGOTTEN thread (project last touched 3–16 weeks ago + recent captures resonate with it): "you stopped touching [Project] 6 weeks ago, and the last three voice notes are about exactly what blocked you." The "project" you write up is the pickup move on that dormant project, not a new one.
+  - A RECENT FORGOTTEN thread (project last touched 3–16 weeks ago + recent captures resonate with it): "you stopped touching [Project] 6 weeks ago, and the last three voice notes are about exactly what blocked you." The "project" you write up is the pickup move on that dormant project, not a new one. If the project carries a LAST BOOKMARK line, the next_step is literally that bookmark — don't invent a different opening move.
   - A LONG-DORMANT RESHAPE (project last touched 4+ months ago + you've changed since): "[Project] from a year ago — the version that fits who you are now is [reshape]." Honour the original capture; the reshape uses what they've acquired since (skills, reading, taste). If the project carries a BLOCKER line, the reshape must directly answer or sidestep that blocker — don't propose a version that hits the same wall.
   - An EXTEND (a recent capture, ≤30 days, points at a concrete new direction for one active or recently-dormant project): "the voice note from Tuesday says exactly the feature [Project] is missing." The "project" you write up is that named extension.
 
