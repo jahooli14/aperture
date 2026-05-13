@@ -2,6 +2,7 @@
 import { getSupabaseClient } from './supabase.js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { MODELS } from './models.js'
+import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
@@ -346,12 +347,14 @@ ${sessionPhilosophy}
 === AVAILABLE PROJECTS ===
 ${projectsContext}
 
-=== SHERPA GUIDELINES (CRITICAL) ===
+=== VOICE RULES (CRITICAL) ===
+
+${PLAIN_ENGLISH_RULES}
 
 1. 🚫 NO "PROJECT MANAGER" SPEAK
    - BAD: "Acquire materials", "Conduct research", "Execute phase 1", "Validate color palette", "Refine the architecture", "Scope the MVP", "Iterate on the core flow", "Align on requirements", "Surface key insights"
    - GOOD: "Buy the paints", "Look up 3 comparable apps", "Write the first paragraph", "Check if the red looks good", "Sketch the login screen", "Ask 2 people if they'd use this"
-   - Write like a smart friend suggesting a plan. Simple, direct verbs.
+   - Simple, direct verbs. No "journey," no "essence," no "unlock," no "leverage."
 
 2. 🎯 VALUE OVER VOLUME
    - Don't just list "tasks". List "Achievements".
@@ -379,7 +382,7 @@ ${durationMinutes === 25 ? `Pick 8 projects with clear 'Quick Wins'.` : `Priorit
       "project_title": "string",
       "task_title": "string (The 'Headline' of the session - e.g. 'Fixing the Login Bug' or 'Painting the Sky')",
       "task_description": "string (One sentence pitch: 'By the end of this hour, users will be able to log in.')",
-      "session_summary": "string (Joyful summary: 'You're going to squash that bug and feel great.')",
+      "session_summary": "string (Flat, plain summary of what they'll have at the end. Example: 'Login works on the test phone.' NOT 'You're going to squash that bug and feel great.')",
       "overhead_type": "Mental" | "Physical" | "Tech" | "Digital",
       "ignition_tasks": [ { "text": "string (Quick warm up)", "is_new": true, "estimated_minutes": number } ],
       "checklist_items": [ { "text": "string (The Core Work - PLAIN ENGLISH)", "is_new": boolean, "estimated_minutes": number } ],
