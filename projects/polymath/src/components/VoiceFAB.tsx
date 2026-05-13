@@ -229,9 +229,10 @@ export function VoiceFAB({
     <div
       className="fixed left-1/2 -translate-x-1/2 z-[25001] pointer-events-none"
       style={{
-        // Nested into the navbar — only the top edge of the FAB peeks above
-        // the pill. Lower position means the halo doesn't bleed up the page.
-        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)',
+        // Raised middle slot — sits above the nav pill so the + reads as
+        // elevated. Uses the same safe-area var as FloatingNav's padding
+        // so the FAB stays in lockstep with the bar across devices.
+        bottom: 'calc(var(--safe-area-inset-bottom, 20px) + 1.75rem)',
       }}
     >
       {/* Soft halo behind the FAB — tightened so it reads as a glow, not a bloom. */}
