@@ -343,11 +343,10 @@ export function HomePage() {
             </motion.div>
           ) : null}
 
-          {/* Recently active — 2-up glass cards. Kicker below the seam
-              names the concept so the eye isn't asked to guess. */}
+          {/* Recently active — 2-up glass cards. */}
           <div className="section-break">
+            <div className="section-break-kicker">Still warm</div>
             <div className="section-break-rule" aria-hidden />
-            <div className="section-break-kicker">still warm</div>
           </div>
           <motion.div {...stackTransition(3)}>
             <RecentlyActiveMini />
@@ -356,8 +355,8 @@ export function HomePage() {
           {/* Up Next — 2-up ghost cards. Quieter material than the glass
               row above, so it reads as further away. */}
           <div className="section-break">
+            <div className="section-break-kicker">The queue</div>
             <div className="section-break-rule" aria-hidden />
-            <div className="section-break-kicker">the queue</div>
           </div>
           <motion.div {...stackTransition(4)}>
             <UpNextMini />
@@ -366,8 +365,8 @@ export function HomePage() {
           {/* Suggest a project — quiet escape-hatch pill for on-demand
               generation when nothing higher-up has earned the page. */}
           <div className="section-break">
+            <div className="section-break-kicker">Try something new</div>
             <div className="section-break-rule" aria-hidden />
-            <div className="section-break-kicker">or try something new</div>
           </div>
           <motion.div {...stackTransition(5)}>
             <ProjectIdeasHome />
@@ -375,8 +374,8 @@ export function HomePage() {
 
           {/* What you're consuming — identity layer. */}
           <div className="section-break">
+            <div className="section-break-kicker">Now consuming</div>
             <div className="section-break-rule" aria-hidden />
-            <div className="section-break-kicker">now consuming</div>
           </div>
           <motion.div {...stackTransition(6)}>
             <NowConsumingWidget />
