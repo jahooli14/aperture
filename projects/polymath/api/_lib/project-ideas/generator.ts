@@ -1111,6 +1111,9 @@ Pattern must be REAL. It must be visible across at least 3 separate captures or 
   - A repeating TASTE: "everything you keep is small, physical, made by one person, and resists being sold."
   - A drift in IDENTITY: "you used to read about systems; this year you read about hands."
   - A circle: "you've named [thing] in three different ways across two years and never started it."
+  - A RECENT FORGOTTEN thread (project last touched 3–16 weeks ago + recent captures resonate with it): "you stopped touching [Project] 6 weeks ago, and the last three voice notes are about exactly what blocked you." The "project" you write up is the pickup move on that dormant project, not a new one.
+  - A LONG-DORMANT RESHAPE (project last touched 4+ months ago + you've changed since): "[Project] from a year ago — the version that fits who you are now is [reshape]." Honour the original capture; the reshape uses what they've acquired since (skills, reading, taste).
+  - An EXTEND (a recent capture, ≤30 days, points at a concrete new direction for one active or recently-dormant project): "the voice note from Tuesday says exactly the feature [Project] is missing." The "project" you write up is that named extension.
 
 If you cannot point at the specific captures that prove the pattern, OUTPUT NULL. There is no consolation prize. A weak pattern read is worse than silence — it makes the whole surface untrustworthy.
 
@@ -1122,10 +1125,13 @@ Once the pattern is real, name the ONE project that is the consequence of it:
   - Honours the taste (if the pattern is a fingerprint)
   - Makes the next-self real (if the pattern is a drift)
   - Names the unnamed circle (if the pattern is a recurring near-start)
+  - Picks up the recent forgotten (if the pattern is a RECENT FORGOTTEN thread — the title is the pickup, e.g. "Cadence playlist: 3 tracks tonight")
+  - Reshapes the long-dormant (if the pattern is a LONG-DORMANT RESHAPE — the title is the reshaped version, e.g. "Synth book: one page a day")
+  - Names the extension (if the pattern is an EXTEND — the title is the specific NEW output for the existing project, e.g. "Logic Pro project: add the cadence track")
 
 The project must be specific, artefact-shaped, and small enough that the first move can happen today. ≤6 words for the title. NO abstract nouns: no "exploration," "study," "series," "directory," "newsletter," "podcast," "zine," "investigation," "meditation on," "in conversation with."
 
-═══════ ACTIVE PROJECTS (already on Keep Going — never propose "finish / ship / complete / continue X" against any of these) ═══════
+═══════ ACTIVE PROJECTS (already on Keep Going — never propose vague "finish / ship / complete / continue X." You MAY propose a specific NEW output or direction for an active project, but only as an EXTEND pattern when a recent capture clearly names the new thing — and the title must name that new thing, not the parent project.) ═══════
 ${activeProjBlock || '  (none)'}
 
 ═══════ DORMANT / ON-HOLD / ARCHIVED PROJECTS ═══════
