@@ -308,31 +308,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ? allContextItems.map(i => `- ${i.slice(0, 200)}`).join('\n')
           : '(no related items found in knowledge lake)'
 
-        const analysisPrompt = `You've read all of someone's notes, saved articles, and projects. Connect things they haven't connected yet. Be specific. Don't summarise.
+        const analysisPrompt = `You've read this person's notes, saved articles, and projects. Point at the things they've put next to each other without realising. Don't interpret. Don't summarise. Don't pose as an oracle.
 
 ${PLAIN_ENGLISH_RULES}
 
 FOCUS ITEM:
 ${truncatedSource}
 
-KNOWLEDGE LAKE — ${allContextItems.length} items from their entire corpus (thoughts, articles, projects, lists):
+KNOWLEDGE LAKE — ${allContextItems.length} items from their corpus (thoughts, articles, projects, lists):
 ${contextBlock}
 
-${allContextItems.length === 0 ? 'NOTE: Fresh item, no prior context yet. Analyse it on its own merits.\n\n' : ''}Output ONLY valid JSON with exactly these 4 keys:
+${allContextItems.length === 0 ? 'NOTE: Fresh item, no prior context yet. Read it on its own. Keep all four fields short. Skip patterns if you can\'t name two real items.\n\n' : ''}Return ONLY valid JSON with these 4 keys. Every sentence must name a real title from the lake (quoted exactly) or stay quiet.
 
-1. "summary": One sentence. Not what the item says — what it means given everything else. What is this person actually working on or moving toward? Name concrete items.
+1. "summary": One short sentence. What the focus item is about, in their own words, plus the one nearest neighbour in the lake. Format: "X, like Y." or "X — pairs with Y." No "what this reveals," no "what you're moving toward."
 
-2. "patterns": Array of 2-3 strings. Each one names specific items from the lake and says WHY the connection matters in one sentence. Not "both relate to X" — say what it reveals they couldn't see without all the data in front of them.
+2. "patterns": Array of 2-3 short strings. Each names 2+ specific titles and the plain-English thing they share — a noun, not a thesis. Skip anything you can't anchor in titles. Empty array if nothing real lines up.
 
-3. "insight": One sentence. The thing that would make them stop and say "I hadn't seen it that way." Reference real titles. No hedging.
+3. "insight": One short sentence OR empty string. A flat observation only — no "the thing you couldn't see," no "the lens that," no causal claims about "this makes X possible." If you don't have one, return "". Saying nothing is fine.
 
-4. "suggestion": One concrete next step. Name exactly what to make, write, build, or decide tonight. Reference specific items. Never "explore" / "consider" / "reflect on."
+4. "next_step": One concrete next move OR empty string. A tool against a workpiece (cut, write, record, commit, call, send, drive, open file X). Names a specific item. Never "explore" / "consider" / "reflect on" / "research" / "create a file named." If nothing concrete, return "".
 
-Self-check before answering: does any sentence read like a LinkedIn post or a coach pitching? If yes, rewrite it. No filler.`
+BAD (analyst pose, vague nouns, oracle voice):
+{"summary": "Your engagement with constraint reveals a transformative creative trajectory.", "patterns": ["The thread of limitation runs through your work, an emergent ontology of structure."], "insight": "The moment when constraint makes freedom possible.", "suggestion": "Reflect on how these themes resonate."}
+
+GOOD (concrete nouns, real titles, no thesis):
+{"summary": "Tonight's note about cycling cadence — pairs with the Logic Pro tempo experiment from March.", "patterns": ["Cadence note, Logic Pro tempo experiment, the Steve Reich book — all about steady pulse.", "Bedtime By Ten note and the running playlist project — same shape: pick the limit before you start."], "insight": "", "next_step": "Open the Logic Pro project and try the cadence number (88 bpm) on the running playlist sketch."}
+
+Self-check: any sentence sound like LinkedIn or a coach pitching? Rewrite or drop it.`
 
         // Up to 2 attempts: if the first response trips voice violations or
         // fails to parse, regenerate once with the violations called out.
-        let analysis: { summary: string; patterns: string[]; insight: string; suggestion: string } | null = null
+        let analysis: { summary: string; patterns: string[]; insight: string; next_step: string } | null = null
         let lastResponseText = ''
         const buildContents = (extra?: string) => [{
           role: 'user' as const,
@@ -361,7 +367,13 @@ Self-check before answering: does any sentence read like a LinkedIn post or a co
 
           // Voice gate — reject if the output uses any banned phrase. One retry
           // only; we don't want to burn tokens chasing perfection.
-          const allText = [parsed.summary, parsed.insight, parsed.suggestion, ...(parsed.patterns || [])].filter(Boolean).join(' ')
+          // Some models keep emitting the old key name; accept both so we
+          // don't lose a clean response on a field-name mismatch.
+          if (parsed.suggestion && !parsed.next_step) {
+            parsed.next_step = parsed.suggestion
+            delete parsed.suggestion
+          }
+          const allText = [parsed.summary, parsed.insight, parsed.next_step, ...(parsed.patterns || [])].filter(Boolean).join(' ')
           const violations = findVoiceViolations(allText)
           if (violations.length === 0 || attempt === 1) {
             analysis = parsed
@@ -373,7 +385,7 @@ Self-check before answering: does any sentence read like a LinkedIn post or a co
             summary: 'Analysis generated but formatting failed.',
             patterns: [],
             insight: lastResponseText.slice(0, 200),
-            suggestion: 'Try again.',
+            next_step: 'Try again.',
           }
         }
 
