@@ -22,7 +22,6 @@ export function UpNextMini() {
         <ProjectMiniCard
           key={p.id}
           project={p}
-          index={i}
           variant="ghost"
           meta={`#${i + 1} in queue`}
         />

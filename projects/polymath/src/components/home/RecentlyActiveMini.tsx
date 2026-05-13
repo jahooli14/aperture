@@ -27,11 +27,10 @@ export function RecentlyActiveMini() {
 
   return (
     <div className="grid grid-cols-2 gap-3 items-stretch">
-      {projects.map((p, i) => (
+      {projects.map((p) => (
         <ProjectMiniCard
           key={p.id}
           project={p}
-          index={i}
           variant="glass"
           meta={relative(p.last_active || p.updated_at)}
         />

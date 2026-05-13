@@ -1,7 +1,5 @@
-import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Brain, Layers, BookmarkPlus, ListPlus, X } from 'lucide-react'
-import { cn } from '../lib/utils'
+import { Brain, Layers, ListPlus, X } from 'lucide-react'
 
 interface CreateMenuModalProps {
     isOpen: boolean
@@ -12,10 +10,9 @@ interface CreateMenuModalProps {
 // All actions share the brand cyan accent — icon + label do the work of
 // distinguishing them. Per design system: cyan-only chrome.
 const creationActions = [
-    { id: 'thought', label: 'Thought',    description: 'Write down a thought',         icon: Brain },
-    { id: 'project', label: 'Project',    description: 'Start something new',          icon: Layers },
-    { id: 'article', label: 'Short Read', description: 'Save a link to read later',    icon: BookmarkPlus },
-    { id: 'list',    label: 'List Item',  description: 'Add to one of your lists',     icon: ListPlus },
+    { id: 'thought', label: 'Thought',   description: 'Write down a thought',  icon: Brain },
+    { id: 'project', label: 'Project',   description: 'Start something new',   icon: Layers },
+    { id: 'list',    label: 'List Item', description: 'Add to one of your lists', icon: ListPlus },
 ] as const
 
 export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalProps) {
@@ -52,72 +49,92 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
                             <div className="w-10 h-1 rounded-full bg-white/20" />
                         </div>
 
-                        {/* Header */}
+                        {/* Header — editorial serif, mirrors the refined home cards. */}
                         <div className="flex items-center justify-between gap-3 px-5 pt-3 pb-5">
                             <div className="min-w-0 flex-1">
-                                <h2 className="text-lg font-black uppercase tracking-tighter text-white">
-                                    Create New
+                                <h2
+                                    className="text-2xl leading-tight"
+                                    style={{
+                                        color: 'var(--brand-text-primary)',
+                                        fontFamily: 'var(--brand-font-serif)',
+                                        fontWeight: 500,
+                                    }}
+                                >
+                                    What are you adding?
                                 </h2>
-                                <p className="text-xs text-white/60 font-medium mt-0.5">What would you like to add?</p>
+                                <span
+                                    className="text-[10px] uppercase tracking-[0.32em] font-semibold mt-1.5 inline-block"
+                                    style={{ color: 'rgba(var(--brand-primary-rgb),0.7)' }}
+                                >
+                                    pick one
+                                </span>
                             </div>
                             <button
                                 onClick={onClose}
                                 className="h-11 w-11 rounded-full flex items-center justify-center transition-all flex-shrink-0"
-                                style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.12)' }}
+                                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)' }}
                             >
                                 <X className="h-5 w-5 text-white/80" />
                             </button>
                         </div>
 
-                        {/* 2×2 Action Grid */}
-                        <div className="grid grid-cols-2 gap-3 px-4 pb-5">
+                        {/* Row-stacked options — single column so list-item doesn't
+                            orphan in a 2-col grid. Each row is full-width with icon left,
+                            text right. */}
+                        <div className="flex flex-col gap-2.5 px-4 pb-5">
                             {creationActions.map((action, i) => {
                                 const Icon = action.icon
                                 return (
                                     <motion.button
                                         key={action.id}
-                                        initial={{ opacity: 0, y: 12 }}
+                                        initial={{ opacity: 0, y: 8 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: i * 0.02, type: 'spring', damping: 24, stiffness: 420 }}
+                                        transition={{ delay: i * 0.04, type: 'spring', damping: 24, stiffness: 420 }}
                                         onClick={() => {
                                             onAction(action.id as any)
                                             onClose()
                                         }}
-                                        className="relative flex flex-col items-start gap-3 p-4 rounded-2xl text-left overflow-hidden active:scale-[0.97] transition-transform min-h-[110px]"
+                                        className="relative flex items-center gap-4 p-4 rounded-2xl text-left overflow-hidden active:scale-[0.99] transition-transform"
                                         style={{
-                                            background: 'rgba(var(--brand-primary-rgb), 0.10)',
-                                            border: '1px solid rgba(var(--brand-primary-rgb), 0.28)',
-                                            boxShadow: '0 4px 16px rgba(var(--brand-primary-rgb), 0.08)',
+                                            background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.08) 0%, rgba(15,24,41,0.55) 70%)',
+                                            border: '1px solid rgba(var(--brand-primary-rgb),0.14)',
+                                            boxShadow:
+                                                '0 0 24px -10px rgba(var(--brand-primary-rgb),0.12),' +
+                                                'inset 0 1px 0 rgba(255,255,255,0.04)',
                                         }}
                                     >
-                                        {/* Icon */}
+                                        {/* Top hairline glow — same editorial cue as the home cards. */}
+                                        <span
+                                            aria-hidden
+                                            className="absolute top-0 left-0 right-0 h-px pointer-events-none"
+                                            style={{ background: 'linear-gradient(90deg, transparent, rgba(var(--brand-primary-rgb),0.45), transparent)' }}
+                                        />
+
                                         <div
-                                            className="h-11 w-11 rounded-xl flex items-center justify-center"
+                                            className="h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0"
                                             style={{
-                                                background: 'rgba(var(--brand-primary-rgb), 0.18)',
+                                                background: 'rgba(var(--brand-primary-rgb), 0.10)',
                                                 border: '1px solid rgba(var(--brand-primary-rgb), 0.28)',
                                             }}
                                         >
                                             <Icon className="h-5 w-5" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
                                         </div>
 
-                                        {/* Text */}
-                                        <div>
-                                            <p className="text-sm font-black uppercase tracking-tight text-white leading-tight">
+                                        <div className="min-w-0 flex-1">
+                                            <p
+                                                className="text-[15px] leading-tight"
+                                                style={{
+                                                    color: 'var(--brand-text-primary)',
+                                                    fontFamily: 'var(--brand-font-serif)',
+                                                    fontWeight: 500,
+                                                }}
+                                            >
                                                 {action.label}
                                             </p>
-                                            <p className="text-xs text-white/70 mt-0.5 leading-snug">
+                                            <p className="text-[11.5px] text-white/55 mt-0.5 leading-snug">
                                                 {action.description}
                                             </p>
                                         </div>
-
-                                        {/* Corner glow */}
-                                        <div
-                                            className="absolute top-0 right-0 w-16 h-16 rounded-full opacity-40 pointer-events-none"
-                                            style={{
-                                                background: 'radial-gradient(circle at top right, rgba(var(--brand-primary-rgb), 0.55), transparent 70%)',
-                                            }}
-                                        />
                                     </motion.button>
                                 )
                             })}
