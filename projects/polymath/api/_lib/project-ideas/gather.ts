@@ -76,7 +76,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       .limit(15),
     supabase
       .from('projects')
-      .select('id, title, description, status, updated_at')
+      .select('id, title, description, status, metadata, updated_at')
       .eq('user_id', userId)
       .in('status', ['dormant', 'on-hold', 'archived', 'abandoned'])
       .order('updated_at', { ascending: false })
@@ -170,6 +170,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
     description: p.description as string | null,
     status: p.status as string,
     tags: Array.isArray(p.metadata?.tags) ? (p.metadata.tags as string[]) : [],
+    blocker: typeof p.metadata?.blocker === 'string' && p.metadata.blocker.trim().length > 0 ? (p.metadata.blocker as string).trim() : null,
     updated_at: (p.updated_at as string) ?? '',
   }))
 
@@ -178,6 +179,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
     title: (p.title as string | null) ?? '(untitled)',
     description: p.description as string | null,
     status: p.status as string,
+    blocker: typeof p.metadata?.blocker === 'string' && p.metadata.blocker.trim().length > 0 ? (p.metadata.blocker as string).trim() : null,
     updated_at: (p.updated_at as string) ?? '',
   }))
 

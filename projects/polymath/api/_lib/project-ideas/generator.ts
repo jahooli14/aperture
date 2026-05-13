@@ -1032,12 +1032,14 @@ function buildReadPrompt(g: GatherResult): string {
   // is what no other tool sees: started / shipped / abandoned, with the
   // user's words still attached. The pattern hides in the deltas between
   // these states (started but never finished; shape that always stalls).
-  const activeProjBlock = g.active_projects.slice(0, 15).map(p =>
-    `  project_active#${p.id} "${p.title}" — last touched ${isoDate(p.updated_at)}${p.description ? `; ${truncate(p.description, 160)}` : ''}`
-  ).join('\n')
-  const dormantProjBlock = g.dormant_projects.slice(0, 15).map(p =>
-    `  project_dormant#${p.id} [${p.status}] "${p.title}" — last touched ${isoDate(p.updated_at)}${p.description ? `; ${truncate(p.description, 160)}` : ''}`
-  ).join('\n')
+  const activeProjBlock = g.active_projects.slice(0, 15).map(p => {
+    const blockerLine = p.blocker ? `\n      BLOCKER (their own words): "${truncate(p.blocker, 200)}"` : ''
+    return `  project_active#${p.id} "${p.title}" — last touched ${isoDate(p.updated_at)}${p.description ? `; ${truncate(p.description, 160)}` : ''}${blockerLine}`
+  }).join('\n')
+  const dormantProjBlock = g.dormant_projects.slice(0, 15).map(p => {
+    const blockerLine = p.blocker ? `\n      BLOCKER (their own words at the moment they paused): "${truncate(p.blocker, 200)}"` : ''
+    return `  project_dormant#${p.id} [${p.status}] "${p.title}" — last touched ${isoDate(p.updated_at)}${p.description ? `; ${truncate(p.description, 160)}` : ''}${blockerLine}`
+  }).join('\n')
 
   // PRIOR IDEA OUTCOMES — what the system has already proposed and what the
   // user did with each. Built / saved / rejected outcomes are the strongest
@@ -1113,7 +1115,7 @@ Pattern must be REAL. It must be visible across at least 3 separate captures or 
   - A drift in IDENTITY: "you used to read about systems; this year you read about hands."
   - A circle: "you've named [thing] in three different ways across two years and never started it."
   - A RECENT FORGOTTEN thread (project last touched 3–16 weeks ago + recent captures resonate with it): "you stopped touching [Project] 6 weeks ago, and the last three voice notes are about exactly what blocked you." The "project" you write up is the pickup move on that dormant project, not a new one.
-  - A LONG-DORMANT RESHAPE (project last touched 4+ months ago + you've changed since): "[Project] from a year ago — the version that fits who you are now is [reshape]." Honour the original capture; the reshape uses what they've acquired since (skills, reading, taste).
+  - A LONG-DORMANT RESHAPE (project last touched 4+ months ago + you've changed since): "[Project] from a year ago — the version that fits who you are now is [reshape]." Honour the original capture; the reshape uses what they've acquired since (skills, reading, taste). If the project carries a BLOCKER line, the reshape must directly answer or sidestep that blocker — don't propose a version that hits the same wall.
   - An EXTEND (a recent capture, ≤30 days, points at a concrete new direction for one active or recently-dormant project): "the voice note from Tuesday says exactly the feature [Project] is missing." The "project" you write up is that named extension.
 
 If you cannot point at the specific captures that prove the pattern, OUTPUT NULL. There is no consolation prize. A weak pattern read is worse than silence — it makes the whole surface untrustworthy.
