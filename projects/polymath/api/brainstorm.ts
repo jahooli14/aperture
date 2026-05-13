@@ -148,10 +148,11 @@ async function handleChat(
 
 Respond to what they just said. One response: an observation, a connection, something that moves the thinking forward. Not a list. Not encouragement.
 
+${PLAIN_ENGLISH_RULES}
+
 Rules for your reply:
 - Short. 2-4 sentences.
 - No filler: never start with "Great", "Interesting", "That sounds exciting", "I see", or any variant.
-- Plain language. Short sentences. Say the thing directly.
 - If you spot something in their knowledge lake that connects, name it: "You wrote about X" or "You have a project called Y".
 - If there's an existing project in the same territory, ask whether this is the same thing or something new.
 - If nothing connects, say nothing about the lake.
@@ -217,6 +218,8 @@ async function handleShaping(
     : ''
 
   const prompt = `You are shaping a creative project with someone. Your job is to help them turn a vague impulse into something they can actually build. You're a thoughtful collaborator — curious, engaged, focused on their idea.
+
+${PLAIN_ENGLISH_RULES}
 
 Your goal: help them get to the core of what this project really is. Ask the questions they haven't thought to ask themselves.
 
@@ -369,7 +372,7 @@ Do three things:
 
 2. Write 3 "provocations" — specific, pointed observations or questions targeted at this exact draft. Not generic writing advice. Think: a brilliant editor's marginalia. Name assumptions they're making, gaps in the argument, the thing they're circling without quite saying. Be uncomfortable.
 
-   Plain English. Real words. No "leveraging," "unlocking," "synergies," "narrative substrate," "creative momentum." No analyst voice. One idea per sentence.
+${PLAIN_ENGLISH_RULES}
    BAD provocation: "Your text exhibits an unresolved tension between narrative substrate and emergent thematic actualization."
    GOOD provocation: "You say the project is about constraint, but every example you cite is about freedom. Which is it?"
 
@@ -719,12 +722,11 @@ Write a 2-3 sentence statement that explains why THIS person is the right person
 - If their knowledge lake has relevant entries, name one ("You've already been thinking about X")
 - Make it feel like a revelation — something they half-knew but hadn't articulated
 
-Rules:
+${PLAIN_ENGLISH_RULES}
+
+Additional rules:
 - No filler, no "Great job", no "This is exciting"
-- Plain English. Short punchy sentences. One thought per sentence.
 - Write like a sharp friend who sees you clearly, not a motivational poster
-- Never use: "leveraging," "synergies," "unlocking," "narrative substrate," "feature-rich," "creative momentum," "psychological defenses," "experiential," "high-impact."
-- Never invent hyphenated phrases in scare-quotes ("friction-over-function," "blind-edit"). If it needs scare-quotes, rewrite it.
 - Second person ("you"). Do NOT start with "You" — vary the opening.
 - The tone is: knowing, warm, precise.
 

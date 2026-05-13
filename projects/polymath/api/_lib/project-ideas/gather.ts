@@ -54,7 +54,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
   ] = await Promise.all([
     supabase
       .from('memories')
-      .select('id, title, body, themes, memory_type, created_at')
+      .select('id, title, body, themes, memory_type, triage, created_at')
       .eq('user_id', userId)
       .gte('created_at', anchorSince)
       .order('created_at', { ascending: false })
@@ -76,7 +76,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       .limit(15),
     supabase
       .from('projects')
-      .select('id, title, description, status, updated_at')
+      .select('id, title, description, status, metadata, updated_at')
       .eq('user_id', userId)
       .in('status', ['dormant', 'on-hold', 'archived', 'abandoned'])
       .order('updated_at', { ascending: false })
@@ -147,6 +147,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       body: (m.body as string).trim(),
       themes: Array.isArray(m.themes) ? (m.themes as string[]) : [],
       memory_type: m.memory_type as string | null,
+      triage_category: (m.triage?.category as string | undefined) ?? null,
       created_at: m.created_at as string,
     }))
 
@@ -163,12 +164,16 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       user_rating: typeof li.user_rating === 'number' ? li.user_rating : null,
     }))
 
+  const pickString = (v: unknown) => (typeof v === 'string' && v.trim().length > 0) ? v.trim() : null
+
   const active_projects = (activeProjectsRes.data ?? []).map((p: any) => ({
     id: p.id as string,
     title: (p.title as string | null) ?? '(untitled)',
     description: p.description as string | null,
     status: p.status as string,
     tags: Array.isArray(p.metadata?.tags) ? (p.metadata.tags as string[]) : [],
+    blocker: pickString(p.metadata?.blocker),
+    last_bookmark: pickString(p.metadata?.next_step),
     updated_at: (p.updated_at as string) ?? '',
   }))
 
@@ -177,6 +182,8 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
     title: (p.title as string | null) ?? '(untitled)',
     description: p.description as string | null,
     status: p.status as string,
+    blocker: pickString(p.metadata?.blocker),
+    last_bookmark: pickString(p.metadata?.next_step),
     updated_at: (p.updated_at as string) ?? '',
   }))
 

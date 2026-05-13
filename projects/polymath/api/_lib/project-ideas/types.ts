@@ -40,6 +40,17 @@ export interface SeedPair {
 
 export type IdeaMode = 'crossover' | 'read'
 
+/** Read mode self-tags which of CLAUDE.md's four Moment shapes the
+ *  pattern fired in. Lets the surface render different eyebrows /
+ *  copy per shape rather than collapsing all four into one visual.
+ *
+ *    coalescing       — Mode 1, NEW IDEA COALESCING
+ *    recent_forgotten — Mode 2a, RECENT FORGOTTEN PROJECT
+ *    reshape          — Mode 2b, LONG-DORMANT RESHAPE
+ *    extend           — Mode 3, EXTEND
+ */
+export type IdeaShape = 'coalescing' | 'recent_forgotten' | 'reshape' | 'extend'
+
 export interface ProjectIdea {
   rank: number
   title: string
@@ -62,6 +73,9 @@ export interface ProjectIdea {
    *  idea sits in the queue and is reached for via the button. NULL on
    *  crossover rows (those don't gate behind a threshold). */
   confidence?: number | null
+  /** Read mode only: which of the four Moment shapes this pattern lands in.
+   *  NULL on crossover, permissive fallback, and template fallback rows. */
+  shape?: IdeaShape | null
 }
 
 export interface StoredProjectIdea extends ProjectIdea {
@@ -74,10 +88,10 @@ export interface StoredProjectIdea extends ProjectIdea {
 }
 
 export interface GatherResult {
-  memories: Array<{ id: string; title: string | null; body: string; themes: string[]; memory_type: string | null; created_at: string }>
+  memories: Array<{ id: string; title: string | null; body: string; themes: string[]; memory_type: string | null; triage_category?: string | null; created_at: string }>
   list_items: Array<{ id: string; content: string; list_type: string; list_title: string | null; status: string; created_at: string; reaction: 'sparked' | 'off' | 'make' | null; user_rating: number | null }>
-  active_projects: Array<{ id: string; title: string; description: string | null; status: string; tags: string[]; updated_at: string }>
-  dormant_projects: Array<{ id: string; title: string; description: string | null; status: string; updated_at: string }>
+  active_projects: Array<{ id: string; title: string; description: string | null; status: string; tags: string[]; blocker?: string | null; last_bookmark?: string | null; updated_at: string }>
+  dormant_projects: Array<{ id: string; title: string; description: string | null; status: string; blocker?: string | null; last_bookmark?: string | null; updated_at: string }>
   reading: Array<{ id: string; title: string | null; excerpt: string | null; source: string | null; created_at: string }>
   highlights: Array<{ id: string; quote: string; article_title: string | null; created_at: string }>
   prior_suggestions: Array<{ id: string; title: string; status: string }>

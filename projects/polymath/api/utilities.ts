@@ -34,6 +34,7 @@ import {
   SLOT_CATALOGUE,
 } from './_lib/onboarding/coverage.js'
 import { MODELS } from './_lib/models.js'
+import { PLAIN_ENGLISH_RULES } from './_lib/plain-english.js'
 import type { CoverageGrid, CoverageSlotId } from '../src/types'
 
 export const config = {
@@ -400,8 +401,7 @@ Below are their responses to an adaptive onboarding chat — spoken out loud as 
 ${transcriptBlock}${coverageHint}${bookBlock}
 
 ═══════ HOW TO WRITE ═══════
-Plain English. Short sentences. Words people actually say. One idea per sentence.
-Never use: "leveraging," "synergies," "soundscapes," "narrative substrate," "feature-rich," "unlocking momentum," "psychological defenses," "high-impact," "experiential."
+${PLAIN_ENGLISH_RULES}
 Never invent hyphenated phrases in scare-quotes ("friction-over-function," "blind-edit"). If a term needs scare-quotes, rewrite it.
 No analyst voice ("Your multifaceted engagement with X reveals..."). Talk like a friend who's been paying attention.
 
@@ -652,8 +652,7 @@ User feedback (attempt ${attempt || 1}): "${feedback}"
 User's themes: ${(context?.themes || []).join(', ')}
 User's capabilities: ${(context?.capabilities || []).join(', ')}${transcriptBlock}${phraseBlock}
 
-Plain English. Short sentences. Words people actually say. One idea per sentence.
-Never use: "leveraging," "synergies," "soundscapes," "narrative substrate," "feature-rich," "unlocking momentum."
+${PLAIN_ENGLISH_RULES}
 Never invent hyphenated phrases in scare-quotes. If a term needs scare-quotes, rewrite it.
 No coach voice. No "this idea taps into your deep interest in X."
 
@@ -1351,7 +1350,7 @@ async function handleProjectIdeasGet(req: VercelRequest, res: VercelResponse) {
     const [activeRes, anyRes, projectsRes] = await Promise.all([
       supabase
         .from('project_ideas')
-        .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, status, user_feedback, generated_at, acted_on_at, mode, pattern, confidence')
+        .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, status, user_feedback, generated_at, acted_on_at, mode, pattern, confidence, shape')
         .eq('user_id', userId)
         .in('status', ['pending', 'saved', 'built'])
         .order('generated_at', { ascending: false })
@@ -1506,7 +1505,7 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
     if (!viaCron) {
       const { data: queued } = await supabase
         .from('project_ideas')
-        .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, mode, pattern, confidence, seed_pair, status, user_feedback, generated_at, acted_on_at')
+        .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, mode, pattern, confidence, shape, seed_pair, status, user_feedback, generated_at, acted_on_at')
         .eq('user_id', userId)
         .eq('status', 'pending')
         .order('generated_at', { ascending: false })
@@ -1569,9 +1568,18 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
     // Flash-Lite, ~5–10s. The cron path keeps the full pipeline (Read +
     // crossover, full Flash) — cron pre-bakes the wow ideas that user
     // clicks unlock instantly via the queue short-circuit above.
+    //
+    // Session feeling — when the user has tapped focused/scattered/restless
+    // before re-rolling, pass it to the generator so the prompt knows what
+    // kind of idea is right for right now (a focused user can take on
+    // something demanding; a scattered user wants a small concrete next
+    // move; a restless user wants something with a different texture).
+    const rawFeeling = typeof req.body === 'object' && req.body && typeof (req.body as any).feeling === 'string' ? (req.body as any).feeling : null
+    const feeling = (rawFeeling === 'focused' || rawFeeling === 'scattered' || rawFeeling === 'restless') ? rawFeeling : null
     const result = await generateProjectIdeas(gathered, {
       force: !viaCron,
       fast: !viaCron,
+      feeling,
     })
     console.log(`[generate-project-ideas] generation finished in ${Date.now() - tLlmStart}ms: ${result.ideas.length} ideas, reason=${result.reason ?? 'ok'}`)
 
@@ -1620,6 +1628,9 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
       // home auto-surface threshold is 70. Crossover rows are NULL; the UI
       // doesn't gate them behind a threshold (they show via the button).
       confidence: idea.confidence ?? null,
+      // Shape — Read mode self-tags which of the four Moment sub-shapes
+      // fired. NULL on crossover, permissive fallback, and template rows.
+      shape: idea.shape ?? null,
       status: 'pending' as const,
       generated_at,
     }))
@@ -1627,7 +1638,7 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
     const { data: inserted, error: insertErr } = await supabase
       .from('project_ideas')
       .insert(rows)
-      .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, seed_pair, mode, pattern, status, user_feedback, generated_at, acted_on_at')
+      .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, seed_pair, mode, pattern, shape, status, user_feedback, generated_at, acted_on_at')
 
     if (insertErr) {
       console.error('[generate-project-ideas] insert failed:', insertErr)

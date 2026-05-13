@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Brain, Users, Hash, Heart, X, Lightbulb, BookOpen, ListPlus, Wrench, ArrowRight } from 'lucide-react'
+import { Brain, Users, Hash, Heart, X, Lightbulb, BookOpen, ListPlus, Wrench, ArrowRight, Sparkles } from 'lucide-react'
 import { useJourneyStore } from '../../stores/useJourneyStore'
 import { useProjectStore } from '../../stores/useProjectStore'
 
@@ -195,6 +195,16 @@ export function ExtractionSummary() {
                 <div className="w-full text-left flex items-center gap-2 flex-wrap">
                   <Wrench className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
                   <span className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>Logged a frustration.</span>
+                </div>
+              </>
+            )}
+
+            {extraction.triageCategory === 'taste_signal' && (
+              <>
+                <div className="h-px bg-[rgba(255,255,255,0.07)] my-2.5" />
+                <div className="w-full text-left flex items-center gap-2 flex-wrap">
+                  <Sparkles className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
+                  <span className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>Kept as a taste signal.</span>
                 </div>
               </>
             )}

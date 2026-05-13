@@ -28,6 +28,8 @@ const TEASER_CONFIDENCE_THRESHOLD = 70
 
 export const IDEAS_INVALIDATE_EVENT = 'polymath:ideas-invalidate'
 
+type IdeaShape = 'coalescing' | 'recent_forgotten' | 'reshape' | 'extend'
+
 interface ProjectIdea {
   id: string
   title: string
@@ -37,12 +39,41 @@ interface ProjectIdea {
   mode?: 'crossover' | 'read'
   pattern?: string | null
   confidence?: number | null
+  shape?: IdeaShape | null
 }
 
-const READ_VISUAL = {
+/** Per-shape visual treatment. The accent stays in the rose family so the
+ *  Read teaser still reads as one surface, but the eyebrow names which of
+ *  CLAUDE.md's four Moment shapes the pattern fired in. Falls back to the
+ *  generic Read eyebrow when shape is null (older rows + when the model
+ *  declined to tag). */
+const READ_VISUAL_DEFAULT = {
   glyph: '◉',
   accentRgb: '244, 114, 182',
   eyebrow: 'what i see across your work',
+}
+
+const SHAPE_VISUALS: Record<IdeaShape, { glyph: string; accentRgb: string; eyebrow: string }> = {
+  coalescing: {
+    glyph: '◉',
+    accentRgb: '244, 114, 182',
+    eyebrow: 'something you keep circling',
+  },
+  recent_forgotten: {
+    glyph: '◐',
+    accentRgb: '251, 146, 60',
+    eyebrow: 'you forgot about this',
+  },
+  reshape: {
+    glyph: '◍',
+    accentRgb: '167, 139, 250',
+    eyebrow: 'the version that fits you now',
+  },
+  extend: {
+    glyph: '◎',
+    accentRgb: '52, 211, 153',
+    eyebrow: 'where this project goes next',
+  },
 }
 
 export function MomentSurface() {
@@ -99,7 +130,8 @@ export function MomentSurface() {
 
   if (!idea) return null
 
-  const accent = READ_VISUAL.accentRgb
+  const visual = (idea.shape && SHAPE_VISUALS[idea.shape]) || READ_VISUAL_DEFAULT
+  const accent = visual.accentRgb
 
   return (
     <motion.section
@@ -130,7 +162,7 @@ export function MomentSurface() {
             textShadow: `0 0 18px rgba(${accent}, 0.45)`,
           }}
         >
-          {READ_VISUAL.glyph}
+          {visual.glyph}
         </span>
         <span
           className="h-px w-8 flex-shrink-0"
@@ -140,7 +172,7 @@ export function MomentSurface() {
           className="text-[10px] uppercase tracking-[0.32em] font-semibold flex-1 truncate"
           style={{ color: `rgb(${accent})`, opacity: 0.85 }}
         >
-          {READ_VISUAL.eyebrow}
+          {visual.eyebrow}
         </span>
       </div>
 

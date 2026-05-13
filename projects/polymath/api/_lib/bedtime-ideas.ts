@@ -7,16 +7,10 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getSupabaseClient } from './supabase.js'
 import { MODELS } from './models.js'
+import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 
 const supabase = getSupabaseClient()
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
-
-export interface MorningBriefing {
-  greeting: string
-  focus_project: { id: string, title: string, next_step: string, unblocker?: string } | null
-  quick_win: { id: string, title: string } | null
-  forgotten_gem: { type: 'article' | 'thought', title: string, snippet: string, relevance: string } | null
-}
 
 export interface BedtimePrompt {
   prompt: string
@@ -350,7 +344,9 @@ async function generateCatalystPromptsWithAI(
 **INPUTS:**
 ${inputsList}
 
-**YOUR JOB:** Find the non-obvious insight hiding in the intersection of these items.
+**YOUR JOB:** Each prompt names one specific pair from the inputs and asks a concrete question that only makes sense for that pair. No "the intersection of," no "the synthesis between." Use real titles.
+
+${PLAIN_ENGLISH_RULES}
 
 Return JSON array:
 [
@@ -478,6 +474,10 @@ Select strategies based on the inputs to generate 3-4 prompts.
 - **Metaphor**: Provide a simple, concrete visual metaphor (optional).
 - **Type**: Must be one of: 'connection', 'divergent', 'revisit', 'transform'.
 
+${PLAIN_ENGLISH_RULES}
+BAD: "Reflect on how the essence of your creative journey leverages constraint."
+GOOD: "The Logic Pro trial expires Friday. Which song gets the 90 minutes?"
+
 Prompt type distribution preference (higher = generate more of this type):
 ${Object.entries(typeDistribution || { connection: 0.25, divergent: 0.25, revisit: 0.25, transform: 0.25 }).map(([type, score]) => `- ${type}: ${(score * 100).toFixed(0)}%`).join('\n')}
 Respect these proportions when choosing prompt types. Minimum 1 of each type if generating 4+ prompts.
@@ -516,47 +516,4 @@ async function storePrompts(_userId: string, _prompts: BedtimePrompt[]) {
 
 async function getPromptPerformance(_userId: string) {
   return {}
-}
-
-export async function generateMorningBriefing(userId: string): Promise<MorningBriefing> {
-      const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
-
-  const projects = await getActiveProjects(userId)
-  const projectContext = projects.map((p: any) => `${p.title} (${p.status})`).join(', ')
-
-  const prompt = `Generate a morning briefing for a creator.
-  Projects: ${projectContext}
-  
-  Return JSON matching this structure:
-  {
-    "greeting": "Good morning...",
-    "focus_project": { "id": "...", "title": "...", "next_step": "...", "unblocker": "..." },
-    "quick_win": { "id": "...", "title": "..." },
-    "forgotten_gem": null
-  }`
-
-  try {
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: { responseMimeType: 'application/json' },
-    })
-    const text = result.response.text()
-    const jsonMatch = text.match(/\{[\s\S]*\}/) // Corrected escape for regex
-    if (!jsonMatch) throw new Error('Invalid JSON')
-
-    const data = JSON.parse(jsonMatch[0])
-    return data
-  } catch (e) {
-    return {
-      greeting: "Good morning!",
-      focus_project: projects[0] ? {
-        id: projects[0].id,
-        title: projects[0].title,
-        next_step: "Review current status",
-        unblocker: "Break it down"
-      } : null,
-      quick_win: null,
-      forgotten_gem: null
-    }
-  }
 }

@@ -12,6 +12,7 @@ import { COST_OPTS } from './optimization-config.js'
 import { batchGenerateEmbeddings, cosineSimilarity } from './gemini-embeddings.js'
 import { MODELS } from './models.js'
 import { auditCandidate } from './intersection-critic.js'
+import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 
 const logger = {
   info: (objOrMsg: any, msg?: string) => console.log(msg || objOrMsg, typeof objOrMsg === 'object' && msg ? objOrMsg : ''),
@@ -461,13 +462,15 @@ This output ships next to cards from another engine, rendered identically. The s
   - the_experiment   (1-2 sentences, ONE concrete action, starts with an imperative verb, names a specific project/note/list item they already have)
   - first_steps      (3 imperative-verb actions, 8-14 words each, each naming a specific item from the input)
 
+${PLAIN_ENGLISH_RULES}
+
 RULES (enforced server-side — violations get dropped):
 
 1. OBSERVATION, not product. If the card only makes sense as "combine A with B to make AB", it's a mashup — drop it. A real observation would still land with one of the sources removed.
 
 2. REQUIRED HOOK OPENING: Start with "You" + a present-tense verb. Good: "You keep…", "You already…", "You treat…", "You notice…", "You've been…". BANNED: "Your" (possessive), "You're", "You could/should/would", "I'm looking at", "It feels like", "Imagine", "Picture", "Here's".
 
-3. BANNED PHRASES anywhere: "massive flex", "deeply fascinated", "at the intersection of", "directly combines your X with your Y", "fuses your", "mashes together", "truly beautiful", "quietly brilliant", "leverage", "synergize", "unlock potential", "game-changer", "actionable", "paradigm", "stochastic", "orthogonal", "emergent", "heuristic", "ontological", "epistemological", "isomorphism".
+3. SYNTHESIS-SPECIFIC BANNED PHRASES (in addition to the plain-English rules above — these target the forced-mashup failure mode): "massive flex", "deeply fascinated", "at the intersection of", "directly combines your X with your Y", "fuses your", "mashes together", "truly beautiful", "quietly brilliant", "synergize", "unlock potential", "game-changer", "actionable".
 
 4. NAME SPECIFIC ITEMS. Every reference to a memory/note/project/list item must use its actual title or a direct quote — never "your notes", "your projects", "your list", "one of your X". If you can't name a specific item, you don't have enough signal — drop the card.
 

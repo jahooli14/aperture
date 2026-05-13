@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { cosineSimilarity } from './gemini-embeddings.js'
 import { generateText } from './gemini-chat.js'
+import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 
 // Drawer-tier project statuses (not active, not priority, not dead).
 export const DRAWER_STATUSES = ['upcoming', 'dormant', 'on-hold', 'maintaining'] as const
@@ -380,8 +381,7 @@ MODES (pick ONE that fits best)
 - snapshot: propose capturing current state as a standalone artifact (essay, note, sketch) and retiring the full project${allowHandoff ? '\n- handoff: propose handing off to someone else' : ''}
 
 HOW TO WRITE
-- Plain English. Short sentences. Words people actually say.
-- Never use: "leveraging," "synergies," "narrative substrate," "unlocking momentum," "creative momentum," "feature-rich," "high-impact."
+${PLAIN_ENGLISH_RULES}
 - No invented hyphenated phrases in scare-quotes. No coach voice ("you are shifting from X to Y").
 - The proposal must cite the provided evidence. If you can't, return mode='none'.
 - Bad: "Reframe to leverage the synergies between your recent reading and the project's core thesis."
@@ -454,8 +454,7 @@ Project: ${project.title}
 Description: ${project.description || 'No description'}
 Current notes: ${JSON.stringify((project.metadata as any)?.tasks?.slice(0, 3) || [])}
 
-Plain English. Short sentences. Words people actually say. One idea per sentence.
-Never use: "leveraging," "synergies," "soundscapes," "narrative substrate," "feature-rich," "high-impact," "creative momentum," "unlocking."
+${PLAIN_ENGLISH_RULES}
 Never invent hyphenated phrases in scare-quotes ("friction-over-function," "blind-edit"). If a term needs scare-quotes, rewrite it.
 No coach voice ("you are shifting from X to Y"). Talk to me, not at me.
 

@@ -32,6 +32,8 @@ import type { ArrivalKind, CentreKind, GatherResult, GenerationResult, IdeaEvide
 
 const MIN_SIGNALS = 8
 
+export type SessionFeeling = 'focused' | 'scattered' | 'restless'
+
 export interface GenerateOptions {
   /** force=true falls back to the permissive prompt when the seed-pair
    *  pass returns nothing. Used by the manual "show me ideas" button —
@@ -44,6 +46,10 @@ export interface GenerateOptions {
    *  not a smaller model. Lands in ~10s instead of ~30s. Cron keeps the
    *  full pipeline because cron has no user waiting. */
   fast?: boolean
+  /** Session feeling captured by FeelingPill at app open — calibrates
+   *  the on-demand fast path to right-now state. The cron path doesn't
+   *  use this (cron has no user; runs against a population). */
+  feeling?: SessionFeeling | null
 }
 
 export async function generateProjectIdeas(
@@ -72,8 +78,8 @@ export async function generateProjectIdeas(
     //      fallback synthesises an idea from the gathered data without an
     //      LLM call. The button NEVER returns empty.
     // Target end-to-end: ~6–8s. The fallback adds ~10ms on top.
-    console.log('[project-ideas] fast path: two-stage Lite→Flash')
-    const fastIdea = await runFastTwoStage(gathered)
+    console.log(`[project-ideas] fast path: two-stage Lite→Flash${opts.feeling ? ` (feeling=${opts.feeling})` : ''}`)
+    const fastIdea = await runFastTwoStage(gathered, opts.feeling ?? null)
     if (fastIdea) {
       return { ideas: [{ ...fastIdea, mode: 'crossover' }], attempts: 1 }
     }
@@ -208,17 +214,17 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
  *      temperature. Two clean attempts before we even consider bailing.
  *
  *  Returns null only if both Stage 2 attempts fail. */
-async function runFastTwoStage(gathered: GatherResult): Promise<ProjectIdea | null> {
+async function runFastTwoStage(gathered: GatherResult, feeling: SessionFeeling | null): Promise<ProjectIdea | null> {
   // ── Stage 1: Lite reads everything and digests it ─────────────────
   const snapshot = await runStage1Snapshot(gathered)
 
   // ── Stage 2: Flash writes the idea from the snapshot ──────────────
-  const first = await runStage2Idea(snapshot, gathered, { attempt: 1, temperature: 0.85 })
+  const first = await runStage2Idea(snapshot, gathered, { attempt: 1, temperature: 0.85, feeling })
   if (first) return first
   // Same snapshot, slightly hotter temperature so the second attempt
   // doesn't reproduce the same parse-fail. Cheap insurance — one extra
   // ~3–5s call to keep the LLM idea on screen instead of the template.
-  const second = await runStage2Idea(snapshot, gathered, { attempt: 2, temperature: 0.95 })
+  const second = await runStage2Idea(snapshot, gathered, { attempt: 2, temperature: 0.95, feeling })
   return second
 }
 
@@ -261,9 +267,9 @@ async function runStage1Snapshot(gathered: GatherResult): Promise<Snapshot> {
 async function runStage2Idea(
   snapshot: Snapshot,
   gathered: GatherResult,
-  opts: { attempt: number; temperature: number },
+  opts: { attempt: number; temperature: number; feeling: SessionFeeling | null },
 ): Promise<ProjectIdea | null> {
-  const ideaPrompt = buildFastIdeaPrompt(snapshot)
+  const ideaPrompt = buildFastIdeaPrompt(snapshot, opts.feeling)
   console.log(`[project-ideas] fast/stage-2 (Flash) idea prompt: ${ideaPrompt.length} chars; attempt=${opts.attempt}`)
   const t2 = Date.now()
   let ideaRaw: string
@@ -451,7 +457,14 @@ function parseSnapshot(raw: string): Snapshot | null {
  *  can spend its time on the writing, not on parsing context. Asks for ONE
  *  idea, plain text fields, no evidence citations (we'll synthesise those
  *  ourselves to keep the model fast). */
-function buildFastIdeaPrompt(s: Snapshot): string {
+const FEELING_GUIDANCE: Record<SessionFeeling, string> = {
+  focused: 'They are FOCUSED right now — they can take on something demanding. Pick the project that needs their full attention; the next_step can ask for an hour of real work.',
+  scattered: 'They are SCATTERED right now — short attention, hard to commit. Pick a project where the next_step is a 10-minute concrete move that produces a visible artefact. Nothing that asks them to "decide" or "plan."',
+  restless: 'They are RESTLESS right now — they want a change of texture. Prefer a project that uses a different sense or tool than the obvious one (away from the screen if they\'ve been on it; back to a screen if they\'ve been in the workshop). The next_step should physically move them.',
+}
+
+function buildFastIdeaPrompt(s: Snapshot, feeling: SessionFeeling | null): string {
+  const feelingBlock = feeling ? `\n═══════ HOW THEY'RE FEELING RIGHT NOW ═══════\n${FEELING_GUIDANCE[feeling]}\n` : ''
   return `You are a friend who has been paying attention to someone's creative life. They opened the app and asked: "give me one project to work on today." Your job: ONE idea, written like you actually know them.
 
 ═══════ HOW TO WRITE ═══════
@@ -459,6 +472,7 @@ function buildFastIdeaPrompt(s: Snapshot): string {
 ${PLAIN_ENGLISH_RULES}
 NEVER use abstract nouns in the title: no "exploration," "study," "series," "directory," "newsletter," "podcast," "zine," "investigation," "meditation on," "in conversation with."
 Concrete. "Cut the beech strip for the synth case" beats "begin work on the woodwork aspect."
+${feelingBlock}
 
 ═══════ WHO THEY ARE ═══════
 
@@ -1032,12 +1046,16 @@ function buildReadPrompt(g: GatherResult): string {
   // is what no other tool sees: started / shipped / abandoned, with the
   // user's words still attached. The pattern hides in the deltas between
   // these states (started but never finished; shape that always stalls).
-  const activeProjBlock = g.active_projects.slice(0, 15).map(p =>
-    `  project_active#${p.id} "${p.title}" — last touched ${isoDate(p.updated_at)}${p.description ? `; ${truncate(p.description, 160)}` : ''}`
-  ).join('\n')
-  const dormantProjBlock = g.dormant_projects.slice(0, 15).map(p =>
-    `  project_dormant#${p.id} [${p.status}] "${p.title}" — last touched ${isoDate(p.updated_at)}${p.description ? `; ${truncate(p.description, 160)}` : ''}`
-  ).join('\n')
+  const activeProjBlock = g.active_projects.slice(0, 15).map(p => {
+    const blockerLine = p.blocker ? `\n      BLOCKER (their own words): "${truncate(p.blocker, 200)}"` : ''
+    const bookmarkLine = p.last_bookmark ? `\n      LAST BOOKMARK (where they left off after the last focus session): "${truncate(p.last_bookmark, 200)}"` : ''
+    return `  project_active#${p.id} "${p.title}" — last touched ${isoDate(p.updated_at)}${p.description ? `; ${truncate(p.description, 160)}` : ''}${blockerLine}${bookmarkLine}`
+  }).join('\n')
+  const dormantProjBlock = g.dormant_projects.slice(0, 15).map(p => {
+    const blockerLine = p.blocker ? `\n      BLOCKER (their own words at the moment they paused): "${truncate(p.blocker, 200)}"` : ''
+    const bookmarkLine = p.last_bookmark ? `\n      LAST BOOKMARK (where they left off — the pickup move sits here): "${truncate(p.last_bookmark, 200)}"` : ''
+    return `  project_dormant#${p.id} [${p.status}] "${p.title}" — last touched ${isoDate(p.updated_at)}${p.description ? `; ${truncate(p.description, 160)}` : ''}${blockerLine}${bookmarkLine}`
+  }).join('\n')
 
   // PRIOR IDEA OUTCOMES — what the system has already proposed and what the
   // user did with each. Built / saved / rejected outcomes are the strongest
@@ -1055,9 +1073,10 @@ function buildReadPrompt(g: GatherResult): string {
   )
   const memBlock = Array.from(memoriesByQuarter.entries())
     .map(([q, items]) => {
-      const lines = items.slice(0, 12).map(m =>
-        `    memory#${m.id} (${isoDate(m.created_at)}) — "${truncate(m.body, 220)}"`
-      ).join('\n')
+      const lines = items.slice(0, 12).map(m => {
+        const tasteMarker = m.triage_category === 'taste_signal' ? ' [TASTE SIGNAL]' : ''
+        return `    memory#${m.id} (${isoDate(m.created_at)})${tasteMarker} — "${truncate(m.body, 220)}"`
+      }).join('\n')
       return `  ${q}:\n${lines}`
     })
     .join('\n')
@@ -1111,6 +1130,9 @@ Pattern must be REAL. It must be visible across at least 3 separate captures or 
   - A repeating TASTE: "everything you keep is small, physical, made by one person, and resists being sold."
   - A drift in IDENTITY: "you used to read about systems; this year you read about hands."
   - A circle: "you've named [thing] in three different ways across two years and never started it."
+  - A RECENT FORGOTTEN thread (project last touched 3–16 weeks ago + recent captures resonate with it): "you stopped touching [Project] 6 weeks ago, and the last three voice notes are about exactly what blocked you." The "project" you write up is the pickup move on that dormant project, not a new one. If the project carries a LAST BOOKMARK line, the next_step is literally that bookmark — don't invent a different opening move.
+  - A LONG-DORMANT RESHAPE (project last touched 4+ months ago + you've changed since): "[Project] from a year ago — the version that fits who you are now is [reshape]." Honour the original capture; the reshape uses what they've acquired since (skills, reading, taste). If the project carries a BLOCKER line, the reshape must directly answer or sidestep that blocker — don't propose a version that hits the same wall.
+  - An EXTEND (a recent capture, ≤30 days, points at a concrete new direction for one active or recently-dormant project): "the voice note from Tuesday says exactly the feature [Project] is missing." The "project" you write up is that named extension.
 
 If you cannot point at the specific captures that prove the pattern, OUTPUT NULL. There is no consolation prize. A weak pattern read is worse than silence — it makes the whole surface untrustworthy.
 
@@ -1122,10 +1144,13 @@ Once the pattern is real, name the ONE project that is the consequence of it:
   - Honours the taste (if the pattern is a fingerprint)
   - Makes the next-self real (if the pattern is a drift)
   - Names the unnamed circle (if the pattern is a recurring near-start)
+  - Picks up the recent forgotten (if the pattern is a RECENT FORGOTTEN thread — the title is the pickup, e.g. "Cadence playlist: 3 tracks tonight")
+  - Reshapes the long-dormant (if the pattern is a LONG-DORMANT RESHAPE — the title is the reshaped version, e.g. "Synth book: one page a day")
+  - Names the extension (if the pattern is an EXTEND — the title is the specific NEW output for the existing project, e.g. "Logic Pro project: add the cadence track")
 
 The project must be specific, artefact-shaped, and small enough that the first move can happen today. ≤6 words for the title. NO abstract nouns: no "exploration," "study," "series," "directory," "newsletter," "podcast," "zine," "investigation," "meditation on," "in conversation with."
 
-═══════ ACTIVE PROJECTS (already on Keep Going — never propose "finish / ship / complete / continue X" against any of these) ═══════
+═══════ ACTIVE PROJECTS (already on Keep Going — never propose vague "finish / ship / complete / continue X." You MAY propose a specific NEW output or direction for an active project, but only as an EXTEND pattern when a recent capture clearly names the new thing — and the title must name that new thing, not the parent project.) ═══════
 ${activeProjBlock || '  (none)'}
 
 ═══════ DORMANT / ON-HOLD / ARCHIVED PROJECTS ═══════
@@ -1140,7 +1165,7 @@ ${priorSaved || '  (none)'}
 ═══════ PRIOR IDEAS — REJECTED (with reasons — these tell you what they're sick of) ═══════
 ${priorRejected || '  (none)'}
 
-═══════ VOICE NOTES BY QUARTER (oldest first — drift over time matters here) ═══════
+═══════ VOICE NOTES BY QUARTER (oldest first — drift over time matters here. Notes marked [TASTE SIGNAL] are the user's identity signals — small things they reacted to or noticed. Weight them heavily for taste-fingerprint patterns and lightly for action-shape patterns.) ═══════
 ${memBlock || '  (none)'}
 
 ═══════ THINGS THEY EXPLICITLY WANT TO MAKE OR FELT SPARKED BY ═══════
@@ -1167,6 +1192,7 @@ ${justShownBlock || '  (none)'}
 When the pattern is real, the idea object is:
 {
   "pattern": "ONE sentence in the user's frame, naming the through-line. ≤24 words. The wow line — what makes them say 'huh, that's me.' Concrete, not abstract.",
+  "shape": "<one of: coalescing | recent_forgotten | reshape | extend — see below>",
   "title": "≤6 words. The project the pattern points to. Names the artefact or the action.",
   "pitch": "2 sentences. Sentence 1 = how the project breaks / honours / completes the pattern. Sentence 2 = what done looks like, in one observable test.",
   "why_now": "ONE sentence. The single most recent capture or completed project that proves the pattern is current, not historical.",
@@ -1176,6 +1202,15 @@ When the pattern is real, the idea object is:
   ],
   "confidence": <integer 0–100, see below>
 }
+
+SHAPE — pick the one that best matches which shape from the "Real shapes" list fired. The surface uses this to render a different eyebrow per shape so the user can tell at a glance what they're looking at:
+
+  - coalescing       — Mode 1 NEW IDEA COALESCING. The user is quietly circling a new idea across multiple captures and you're naming it for the first time.
+  - recent_forgotten — Mode 2a RECENT FORGOTTEN. A 3–16 week dormant project whose pickup move is now obvious from recent captures.
+  - reshape          — Mode 2b LONG-DORMANT RESHAPE. A 4+ month dormant project that needs the version-for-who-they-are-now treatment.
+  - extend           — Mode 3 EXTEND. A recent capture names a specific new direction for an existing active or dormant project.
+
+If none of these match cleanly — for example the pattern is a recurring taste / drift / block that doesn't map onto a project pickup — use "coalescing" since the resulting project is a new artefact.
 
 Evidence rules: 3–6 items. Each excerpt MUST be a verbatim substring of a body shown above (will be substring-checked; fabrications are dropped). Together the evidence proves the pattern.
 
@@ -1424,18 +1459,27 @@ function parseRead(raw: string, gathered: GatherResult): ProjectIdea[] {
   if (typeof item.confidence === 'number' && Number.isFinite(item.confidence)) {
     confidence = Math.max(0, Math.min(100, Math.round(item.confidence)))
   }
-  console.log(`[project-ideas] read produced "${base.title}" — confidence=${confidence}`)
+  // Shape — the model's self-tag for which of the four Moment sub-shapes
+  // fired. Default null when the model omits or returns an unknown value;
+  // the UI gracefully falls back to the generic Read eyebrow.
+  const VALID_SHAPES = new Set(['coalescing', 'recent_forgotten', 'reshape', 'extend'])
+  const shape = typeof item.shape === 'string' && VALID_SHAPES.has(item.shape)
+    ? (item.shape as 'coalescing' | 'recent_forgotten' | 'reshape' | 'extend')
+    : null
+  console.log(`[project-ideas] read produced "${base.title}" — confidence=${confidence}, shape=${shape ?? 'untagged'}`)
   return [{
     ...base,
     mode: 'read',
     pattern: item.pattern.trim().slice(0, 280),
     confidence,
+    shape,
   }]
 }
 
 interface RawReadIdea extends RawIdea {
   pattern?: string
   confidence?: number
+  shape?: string
 }
 
 const CENTRE_KINDS: ReadonlySet<CentreKind> = new Set(['project_dormant', 'project_active', 'memory'])

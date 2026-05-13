@@ -33,6 +33,7 @@ import { UpNextMini } from '../components/home/UpNextMini'
 import { ThoughtOfTheDay } from '../components/home/ThoughtOfTheDay'
 import { ProjectIdeasHome } from '../components/home/ProjectIdeasHome'
 import { MomentSurface } from '../components/home/MomentSurface'
+import { FeelingPill } from '../components/home/FeelingPill'
 import { UnauthHome } from '../components/onboarding/UnauthHome'
 import { ease, stagger } from '../lib/motion'
 import { AlertCircle, ArrowRight, Film, Music, Monitor, Book, MapPin, Gamepad2, Calendar, FileText, Quote, Box, Search, Moon } from 'lucide-react'
@@ -313,6 +314,16 @@ export function HomePage() {
                 </button>
               </div>
             </header>
+          </motion.div>
+
+          {/* Session context — one-tap "how are you feeling right now" so
+              downstream surfaces (idea re-roll, Keep Going filtering) can
+              calibrate to today. CLAUDE.md §Inputs #1. Persisted to
+              sessionStorage so a stale state from yesterday doesn't shape
+              today's home. Stays compact and dismissable — tapping the
+              same chip again clears the selection. */}
+          <motion.div {...stackTransition(0)} className="flex justify-center">
+            <FeelingPill />
           </motion.div>
 
           {/* The Moment — earned AI idea. Renders only when the cron has

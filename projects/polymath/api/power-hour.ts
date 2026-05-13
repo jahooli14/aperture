@@ -152,9 +152,9 @@ interface PerspectiveResult {
 
 function buildProjectPrompt(persona: PersonaConfig, context: {
     projectTitle: string; projectDescription: string; recentActivity: string[]
-    openTodos: string[]; relatedMemories: string[]; knowledgeLake: KnowledgeLakeContext | null
+    relatedMemories: string[]; knowledgeLake: KnowledgeLakeContext | null
 }): string {
-    const { projectTitle, projectDescription, recentActivity, openTodos, relatedMemories, knowledgeLake } = context
+    const { projectTitle, projectDescription, recentActivity, relatedMemories, knowledgeLake } = context
     let knowledgeLakeSection = ''
     if (knowledgeLake) {
         const { relatedMemories: lakeMems, relatedArticles, relatedProjects, capabilities, topThemes } = knowledgeLake
@@ -164,12 +164,12 @@ function buildProjectPrompt(persona: PersonaConfig, context: {
         knowledgeLakeSection = `\nKNOWLEDGE LAKE CONTEXT (from the user's full corpus):\n\nRelated notes & memories (${lakeMems.length} semantic matches):\n${memLines}\n\nArticles they've been reading (${relatedArticles.length} semantic matches):\n${articleLines}\n\nRelated projects in their portfolio (${relatedProjects.length} matches):\n${projectLines}\n\n${capabilities.length > 0 ? `Tracked capabilities: ${capabilities.slice(0, 10).join(', ')}` : ''}${topThemes.length > 0 ? `\nRecurring themes across their knowledge base: ${topThemes.join(', ')}` : ''}\n`
     }
     const legacyMemories = relatedMemories.length > 0 ? relatedMemories.map(m => `- ${m}`).join('\n') : ''
-    return `${persona.systemPrompt}\n\n---\n\nPROJECT: ${projectTitle}\nDESCRIPTION: ${projectDescription || 'No description provided'}\n\nRECENT COMPLETED ACTIVITY:\n${recentActivity.length > 0 ? recentActivity.map(a => `- ${a}`).join('\n') : '- No recent activity'}\n\nCURRENT OPEN TODOS:\n${openTodos.length > 0 ? openTodos.map(t => `- ${t}`).join('\n') : '- No open todos'}\n\n${legacyMemories ? `ADDITIONAL CONTEXT:\n${legacyMemories}\n` : ''}${knowledgeLakeSection}---\n\nAs ${persona.persona}, give ONE specific next-step suggestion for this project.\n${knowledgeLake ? 'You MUST draw from the knowledge lake above. Reference at least one specific note, article, or project by name. Generic advice is failure.' : ''}\n\nRespond with a JSON object in this exact format:\n{\n  "suggestion": "Your specific, actionable suggestion (2-3 sentences max). If you referenced knowledge lake items, name them directly in the suggestion.",\n  "confidence": "high" or "medium",\n  "sourcesCited": ["Title of memory or article you drew from", "..."]\n}\n\n"sourcesCited" should be an array of 0-3 titles from the knowledge lake context that most informed your suggestion. Empty array if no lake context available. Be specific to THIS project. Generic advice is failure.`
+    return `${persona.systemPrompt}\n\n---\n\nPROJECT: ${projectTitle}\nDESCRIPTION: ${projectDescription || 'No description provided'}\n\nRECENT COMPLETED ACTIVITY:\n${recentActivity.length > 0 ? recentActivity.map(a => `- ${a}`).join('\n') : '- No recent activity'}\n\n${legacyMemories ? `ADDITIONAL CONTEXT:\n${legacyMemories}\n` : ''}${knowledgeLakeSection}---\n\nAs ${persona.persona}, give ONE specific next-step suggestion for this project.\n${knowledgeLake ? 'You MUST draw from the knowledge lake above. Reference at least one specific note, article, or project by name. Generic advice is failure.' : ''}\n\nRespond with a JSON object in this exact format:\n{\n  "suggestion": "Your specific, actionable suggestion (2-3 sentences max). If you referenced knowledge lake items, name them directly in the suggestion.",\n  "confidence": "high" or "medium",\n  "sourcesCited": ["Title of memory or article you drew from", "..."]\n}\n\n"sourcesCited" should be an array of 0-3 titles from the knowledge lake context that most informed your suggestion. Empty array if no lake context available. Be specific to THIS project. Generic advice is failure.`
 }
 
 async function callPersona(persona: PersonaConfig, context: {
     projectTitle: string; projectDescription: string; recentActivity: string[]
-    openTodos: string[]; relatedMemories: string[]; knowledgeLake: KnowledgeLakeContext | null
+    relatedMemories: string[]; knowledgeLake: KnowledgeLakeContext | null
 }): Promise<PerspectiveResult> {
     const model = genAI.getGenerativeModel({
         model: MODEL_ID,
@@ -214,7 +214,7 @@ async function handleMultiPerspective(req: VercelRequest, res: VercelResponse) {
     if (!userId) return res.status(401).json({ error: 'Sign in to access your data' })
     if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'dummy-key') return res.status(500).json({ error: 'GEMINI_API_KEY is not configured' })
 
-    const { projectId, projectTitle, projectDescription, recentActivity = [], openTodos = [], relatedMemories = [] } = req.body
+    const { projectId, projectTitle, projectDescription, recentActivity = [], relatedMemories = [] } = req.body
     if (!projectId || !projectTitle) return res.status(400).json({ error: 'projectId and projectTitle are required' })
 
     const [knowledgeLake] = await Promise.all([
@@ -224,7 +224,6 @@ async function handleMultiPerspective(req: VercelRequest, res: VercelResponse) {
     const context = {
         projectTitle: String(projectTitle), projectDescription: String(projectDescription || ''),
         recentActivity: Array.isArray(recentActivity) ? recentActivity.slice(0, 5) : [],
-        openTodos: Array.isArray(openTodos) ? openTodos.slice(0, 10) : [],
         relatedMemories: Array.isArray(relatedMemories) ? relatedMemories.slice(0, 5) : [],
         knowledgeLake
     }

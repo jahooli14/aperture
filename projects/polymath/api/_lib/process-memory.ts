@@ -526,7 +526,7 @@ Return JSON:
   "tags": ["0-3 short THEME tags — see TAG RULES below. Empty array is fine."],
   "emotional_tone": "brief phrase describing the mood",
   "triage": {
-    "category": "task_update|list_item|new_thought|reading_lead|new_project_idea|annoyance",
+    "category": "task_update|list_item|new_thought|reading_lead|new_project_idea|annoyance|taste_signal",
     "project_id": "uuid of matching project or null",
     "confidence": 0.0-1.0,
     "severity": "critical|annoying|minor (only for annoyance category)",
@@ -559,6 +559,7 @@ TRIAGE CATEGORY GUIDE:
 - new_project_idea: A large, multi-step goal that could become a new project.
 - new_thought: Default for insights, musings, or memories without immediate action. Use this for standalone actionable items too — there is no separate todo surface.
 - annoyance: A frustration, recurring problem, or friction point in daily life. Things that bug the user — broken stuff, inefficiencies, things that should work better. If a cron job, notification, API call, or smart home automation could fix it, mark automatable=true and provide a fix_hint.
+- taste_signal: A note about something the user noticed, reacted to, or wants more of — a texture, a vibe, a quality of work they admire. Not a project, not an annoyance, not actionable. "The bass on that track is exactly the texture I want." "The wood grain on the table was perfect." "I love how that book ends mid-sentence." These shape who the user is becoming as a maker and feed the long-arc pattern reader. Use this when the note is an identity signal, not a plan.
 
 Return only valid JSON.`
 

@@ -9,7 +9,7 @@ interface AIAnalysis {
     summary: string
     patterns: string[]
     insight: string
-    suggestion: string
+    next_step: string
 }
 
 interface AnalysisData {
@@ -291,11 +291,11 @@ export function ContextSidebar() {
                                                 </div>
                                             )}
 
-                                            {/* Suggestion */}
-                                            {analysisData.analysis.suggestion && (
+                                            {/* Next step */}
+                                            {analysisData.analysis.next_step && (
                                                 <div className="pt-2">
                                                     <p className="text-xs text-brand-primary">
-                                                         {analysisData.analysis.suggestion}
+                                                         {analysisData.analysis.next_step}
                                                     </p>
                                                 </div>
                                             )}
