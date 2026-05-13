@@ -358,12 +358,11 @@ export function FloatingNav() {
                       className="flex flex-col items-center justify-center relative min-w-0"
                       style={{
                         flex: '1 1 0px',
-                        paddingTop: '8px',
-                        paddingBottom: '8px',
-                        gap: '4px',
+                        paddingTop: '10px',
+                        paddingBottom: '10px',
                       }}
                     >
-                      <div className="relative z-10">
+                      <div className="relative z-10 flex items-center justify-center" style={{ width: '20px', height: '20px' }}>
                         <motion.div
                           animate={{ scale: active ? 1.1 : 1 }}
                           transition={{ type: 'spring', stiffness: 400, damping: 25 }}
@@ -392,8 +391,9 @@ export function FloatingNav() {
                       {active && (
                         <motion.div
                           layoutId="floatingNavActiveDot"
-                          className="w-1 h-1 rounded-full"
+                          className="absolute w-1 h-1 rounded-full"
                           style={{
+                            bottom: '4px',
                             background: colors.primary,
                             boxShadow: `0 0 8px ${colors.glow}, 0 0 16px ${colors.glow}`,
                           }}
@@ -408,7 +408,7 @@ export function FloatingNav() {
                     {NAV_OPTIONS.slice(0, 2).map(renderTab)}
                     {/* Spacer for the raised voice FAB that sits above the
                         nav center. Keeps tap targets on either side of it. */}
-                    <div aria-hidden style={{ width: '68px', flexShrink: 0 }} />
+                    <div aria-hidden style={{ width: '64px', flexShrink: 0 }} />
                     {NAV_OPTIONS.slice(2).map(renderTab)}
                   </>
                 )

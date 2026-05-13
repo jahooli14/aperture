@@ -234,17 +234,15 @@ export function VoiceFAB({
         bottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)',
       }}
     >
-      {/* Soft halo behind the FAB — kept tight so it doesn't bloom above
-          the nav now that the FAB sits nestled inside it. */}
+      {/* Soft halo behind the FAB — tightened so it reads as a glow, not a bloom. */}
       <div
         aria-hidden
         className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
         style={{
-          width: '88px',
-          height: '88px',
+          width: '72px',
+          height: '72px',
           background:
-            'radial-gradient(circle, rgba(var(--brand-primary-rgb), 0.22) 0%, rgba(var(--brand-primary-rgb), 0.08) 40%, rgba(var(--brand-primary-rgb), 0) 70%)',
-          filter: 'blur(2px)',
+            'radial-gradient(circle, rgba(var(--brand-primary-rgb), 0.16) 0%, rgba(var(--brand-primary-rgb), 0.05) 45%, rgba(var(--brand-primary-rgb), 0) 72%)',
           opacity: hidden || isMenuOpen ? 0 : 1,
           transition: 'opacity 200ms ease-out',
         }}
@@ -267,33 +265,32 @@ export function VoiceFAB({
         onPointerCancel={onSystemCancel}
         className={cn(
           'relative',
-          'h-16 w-16 md:h-[68px] md:w-[68px] rounded-full',
+          'h-[54px] w-[54px] md:h-[58px] md:w-[58px] rounded-full',
           'flex items-center justify-center',
           'group overflow-hidden touch-none',
         )}
         style={{
           background:
-            'radial-gradient(circle at 30% 25%, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 40%),' +
-            'linear-gradient(155deg, rgb(var(--color-accent-light-rgb)) 0%, rgb(var(--brand-primary-rgb)) 55%, rgb(var(--color-accent-dark-rgb)) 100%)',
-          border: '1px solid rgba(255, 255, 255, 0.28)',
+            'radial-gradient(circle at 32% 28%, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0) 45%),' +
+            'linear-gradient(160deg, rgb(var(--color-accent-light-rgb)) 0%, rgb(var(--brand-primary-rgb)) 60%, rgb(var(--color-accent-dark-rgb)) 100%)',
+          border: '1px solid rgba(255, 255, 255, 0.22)',
           boxShadow:
-            '0 18px 40px -10px rgba(var(--brand-primary-rgb), 0.65),' +
-            '0 10px 28px rgba(0, 0, 0, 0.50),' +
-            '0 0 0 1px rgba(var(--brand-primary-rgb), 0.35),' +
-            '0 0 38px rgba(var(--brand-primary-rgb), 0.40),' +
-            'inset 0 1px 0 rgba(255, 255, 255, 0.45),' +
-            'inset 0 -3px 8px rgba(0, 0, 0, 0.25)',
+            '0 10px 24px -8px rgba(var(--brand-primary-rgb), 0.55),' +
+            '0 6px 16px rgba(0, 0, 0, 0.40),' +
+            '0 0 18px rgba(var(--brand-primary-rgb), 0.22),' +
+            'inset 0 1px 0 rgba(255, 255, 255, 0.32),' +
+            'inset 0 -2px 6px rgba(0, 0, 0, 0.22)',
         }}
         aria-label="New thought — tap to write, hold to record"
       >
         <Plus
-          className="h-7 w-7 text-white transition-transform duration-300 group-hover:rotate-90 relative z-10"
-          strokeWidth={2.5}
-          style={{ filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.35))' }}
+          className="h-6 w-6 text-white transition-transform duration-300 group-hover:rotate-90 relative z-10"
+          strokeWidth={2.25}
+          style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.30))' }}
         />
         <div
           className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
-          style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.22), rgba(255,255,255,0))' }}
+          style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0))' }}
         />
       </motion.button>
     </div>,
