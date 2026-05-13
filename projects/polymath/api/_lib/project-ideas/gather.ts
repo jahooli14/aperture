@@ -54,7 +54,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
   ] = await Promise.all([
     supabase
       .from('memories')
-      .select('id, title, body, themes, memory_type, created_at')
+      .select('id, title, body, themes, memory_type, triage, created_at')
       .eq('user_id', userId)
       .gte('created_at', anchorSince)
       .order('created_at', { ascending: false })
@@ -147,6 +147,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       body: (m.body as string).trim(),
       themes: Array.isArray(m.themes) ? (m.themes as string[]) : [],
       memory_type: m.memory_type as string | null,
+      triage_category: (m.triage?.category as string | undefined) ?? null,
       created_at: m.created_at as string,
     }))
 

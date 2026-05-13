@@ -74,7 +74,7 @@ export interface StoredProjectIdea extends ProjectIdea {
 }
 
 export interface GatherResult {
-  memories: Array<{ id: string; title: string | null; body: string; themes: string[]; memory_type: string | null; created_at: string }>
+  memories: Array<{ id: string; title: string | null; body: string; themes: string[]; memory_type: string | null; triage_category?: string | null; created_at: string }>
   list_items: Array<{ id: string; content: string; list_type: string; list_title: string | null; status: string; created_at: string; reaction: 'sparked' | 'off' | 'make' | null; user_rating: number | null }>
   active_projects: Array<{ id: string; title: string; description: string | null; status: string; tags: string[]; updated_at: string }>
   dormant_projects: Array<{ id: string; title: string; description: string | null; status: string; updated_at: string }>

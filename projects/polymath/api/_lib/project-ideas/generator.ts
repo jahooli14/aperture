@@ -1055,9 +1055,10 @@ function buildReadPrompt(g: GatherResult): string {
   )
   const memBlock = Array.from(memoriesByQuarter.entries())
     .map(([q, items]) => {
-      const lines = items.slice(0, 12).map(m =>
-        `    memory#${m.id} (${isoDate(m.created_at)}) — "${truncate(m.body, 220)}"`
-      ).join('\n')
+      const lines = items.slice(0, 12).map(m => {
+        const tasteMarker = m.triage_category === 'taste_signal' ? ' [TASTE SIGNAL]' : ''
+        return `    memory#${m.id} (${isoDate(m.created_at)})${tasteMarker} — "${truncate(m.body, 220)}"`
+      }).join('\n')
       return `  ${q}:\n${lines}`
     })
     .join('\n')
@@ -1146,7 +1147,7 @@ ${priorSaved || '  (none)'}
 ═══════ PRIOR IDEAS — REJECTED (with reasons — these tell you what they're sick of) ═══════
 ${priorRejected || '  (none)'}
 
-═══════ VOICE NOTES BY QUARTER (oldest first — drift over time matters here) ═══════
+═══════ VOICE NOTES BY QUARTER (oldest first — drift over time matters here. Notes marked [TASTE SIGNAL] are the user's identity signals — small things they reacted to or noticed. Weight them heavily for taste-fingerprint patterns and lightly for action-shape patterns.) ═══════
 ${memBlock || '  (none)'}
 
 ═══════ THINGS THEY EXPLICITLY WANT TO MAKE OR FELT SPARKED BY ═══════
