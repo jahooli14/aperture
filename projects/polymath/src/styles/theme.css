@@ -707,33 +707,35 @@ h6 {
     border: 0;
 }
 
-/* Seam with a kicker — single hairline above, quiet lowercase label
-   below. Names the concept of the section that follows so the eye
-   doesn't have to guess. Quieter than .section-header; doesn't echo
-   the uppercase mode-register chip at the top of the page. */
+/* Section divider — label-led header for the block that follows.
+   Brand-tinted uppercase label anchors the left, with a hairline
+   accent extending to the right edge. Reads cleanly without
+   shouting. */
 .section-break {
-    margin: 44px 0 22px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 32px 0 18px;
+}
+.section-break-kicker {
+    flex-shrink: 0;
+    font-family: var(--brand-font-header);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    color: rgba(var(--brand-primary-rgb), 0.78);
+    text-transform: uppercase;
+    line-height: 1;
 }
 .section-break-rule {
+    flex: 1;
     height: 1px;
     background: linear-gradient(
         90deg,
-        transparent 0%,
-        rgba(255, 255, 255, 0.04) 25%,
-        rgba(255, 255, 255, 0.10) 50%,
-        rgba(255, 255, 255, 0.04) 75%,
+        rgba(var(--brand-primary-rgb), 0.28) 0%,
+        rgba(var(--brand-primary-rgb), 0.10) 60%,
         transparent 100%
     );
-}
-.section-break-kicker {
-    margin-top: 14px;
-    font-family: var(--brand-font-header);
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.04em;
-    color: rgba(255, 255, 255, 0.42);
-    text-transform: lowercase;
-    line-height: 1;
 }
 
 /* Mode register — small two-line chip in the top-left of the home

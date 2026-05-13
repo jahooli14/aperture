@@ -709,8 +709,8 @@ export const useMostRecentNonPriorityProject = () =>
     return active
       .filter(p => p.up_next_position == null && p.id !== priorityId)
       .sort((a, b) => {
-        const aTime = new Date(a.updated_at || a.last_active || 0).getTime()
-        const bTime = new Date(b.updated_at || b.last_active || 0).getTime()
+        const aTime = new Date(a.last_active || a.updated_at || 0).getTime()
+        const bTime = new Date(b.last_active || b.updated_at || 0).getTime()
         return bTime - aTime
       })[0] ?? null
   }))
@@ -724,8 +724,8 @@ export const useRecentNonPriorityProjects = (limit = 2) =>
     return active
       .filter(p => p.up_next_position == null && p.id !== priorityId)
       .sort((a, b) => {
-        const aTime = new Date(a.updated_at || a.last_active || 0).getTime()
-        const bTime = new Date(b.updated_at || b.last_active || 0).getTime()
+        const aTime = new Date(a.last_active || a.updated_at || 0).getTime()
+        const bTime = new Date(b.last_active || b.updated_at || 0).getTime()
         return bTime - aTime
       })
       .slice(0, limit)
