@@ -241,14 +241,6 @@ function ListsPageInner() {
                 </div>
                 <div className="page-masthead-actions">
                     <button
-                        onClick={() => navigate('/search')}
-                        title="Search"
-                        aria-label="Search lists"
-                        className="masthead-action press-spring"
-                    >
-                        <Search className="h-5 w-5" />
-                    </button>
-                    <button
                         onClick={() => navigate('/favourites')}
                         title="Favourites"
                         aria-label="Favourites"
@@ -278,6 +270,14 @@ function ListsPageInner() {
                     >
                         <Plus className="h-5 w-5" />
                     </Button>
+                    <button
+                        onClick={() => navigate('/search')}
+                        title="Search"
+                        aria-label="Search lists"
+                        className="masthead-action press-spring"
+                    >
+                        <Search className="h-5 w-5" />
+                    </button>
                 </div>
             </header>
 

@@ -219,6 +219,14 @@ function ProjectsPageInner() {
             <div className="page-masthead-actions">
               {!showCompleted && (
                 <>
+                  <button
+                    onClick={() => setShowCompleted(true)}
+                    className="masthead-action press-spring"
+                    aria-label="View completed projects"
+                    title="View completed projects"
+                  >
+                    <Check className="h-5 w-5" />
+                  </button>
                   <CreateProjectDialog />
                   <button
                     onClick={() => navigate('/search')}
@@ -227,14 +235,6 @@ function ProjectsPageInner() {
                     title="Search everything"
                   >
                     <Search className="h-5 w-5" />
-                  </button>
-                  <button
-                    onClick={() => setShowCompleted(true)}
-                    className="masthead-action press-spring"
-                    aria-label="View completed projects"
-                    title="View completed projects"
-                  >
-                    <Check className="h-5 w-5" />
                   </button>
                 </>
               )}
