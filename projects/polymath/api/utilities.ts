@@ -34,6 +34,7 @@ import {
   SLOT_CATALOGUE,
 } from './_lib/onboarding/coverage.js'
 import { MODELS } from './_lib/models.js'
+import { PLAIN_ENGLISH_RULES } from './_lib/plain-english.js'
 import type { CoverageGrid, CoverageSlotId } from '../src/types'
 
 export const config = {
@@ -400,8 +401,7 @@ Below are their responses to an adaptive onboarding chat — spoken out loud as 
 ${transcriptBlock}${coverageHint}${bookBlock}
 
 ═══════ HOW TO WRITE ═══════
-Plain English. Short sentences. Words people actually say. One idea per sentence.
-Never use: "leveraging," "synergies," "soundscapes," "narrative substrate," "feature-rich," "unlocking momentum," "psychological defenses," "high-impact," "experiential."
+${PLAIN_ENGLISH_RULES}
 Never invent hyphenated phrases in scare-quotes ("friction-over-function," "blind-edit"). If a term needs scare-quotes, rewrite it.
 No analyst voice ("Your multifaceted engagement with X reveals..."). Talk like a friend who's been paying attention.
 
@@ -652,8 +652,7 @@ User feedback (attempt ${attempt || 1}): "${feedback}"
 User's themes: ${(context?.themes || []).join(', ')}
 User's capabilities: ${(context?.capabilities || []).join(', ')}${transcriptBlock}${phraseBlock}
 
-Plain English. Short sentences. Words people actually say. One idea per sentence.
-Never use: "leveraging," "synergies," "soundscapes," "narrative substrate," "feature-rich," "unlocking momentum."
+${PLAIN_ENGLISH_RULES}
 Never invent hyphenated phrases in scare-quotes. If a term needs scare-quotes, rewrite it.
 No coach voice. No "this idea taps into your deep interest in X."
 

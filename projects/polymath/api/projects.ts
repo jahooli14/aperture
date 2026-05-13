@@ -10,6 +10,7 @@ import { z } from 'zod'
 import { generateEmbedding, cosineSimilarity } from './_lib/gemini-embeddings.js'
 import { generateText } from './_lib/gemini-chat.js'
 import { MODELS } from './_lib/models.js'
+import { PLAIN_ENGLISH_RULES } from './_lib/plain-english.js'
 import { generateBedtimePrompts, generateCatalystPrompts, generateBreakPrompts } from './_lib/bedtime-ideas.js'
 import { extractCapabilities } from './_lib/capabilities-extraction.js'
 import { analyzeTaskEnergy } from './_lib/task-energy-analyzer.js'
@@ -921,8 +922,7 @@ MODES (pick ONE that fits best)
 - snapshot: propose capturing current state as a standalone artifact (essay, note, sketch) and retiring the full project${allowHandoff ? '\n- handoff: propose handing off to someone else' : ''}
 
 HOW TO WRITE
-- Plain English. Short sentences. Words people actually say.
-- Never use: "leveraging," "synergies," "narrative substrate," "unlocking momentum," "creative momentum," "feature-rich," "high-impact."
+${PLAIN_ENGLISH_RULES}
 - No invented hyphenated phrases in scare-quotes. No coach voice ("you are shifting from X to Y").
 - The proposal must cite the provided evidence. If you can't, return mode='none'.
 - Bad: "Reframe to leverage the synergies between your recent reading and the project's core thesis."
@@ -2376,8 +2376,7 @@ Project: ${project.title}
 Description: ${project.description || 'No description'}
 Current notes: ${JSON.stringify(project.metadata?.tasks?.slice(0, 3) || [])}
 
-Plain English. Short sentences. Words people actually say. One idea per sentence.
-Never use: "leveraging," "synergies," "soundscapes," "narrative substrate," "feature-rich," "high-impact," "creative momentum," "unlocking."
+${PLAIN_ENGLISH_RULES}
 Never invent hyphenated phrases in scare-quotes ("friction-over-function," "blind-edit"). If a term needs scare-quotes, rewrite it.
 No coach voice ("you are shifting from X to Y"). Talk to me, not at me.
 
