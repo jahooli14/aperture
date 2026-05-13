@@ -229,23 +229,9 @@ export function VoiceFAB({
     <div
       className="fixed left-1/2 -translate-x-1/2 z-[25001] pointer-events-none"
       style={{
-        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 3.5rem)',
+        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.75rem)',
       }}
     >
-      {/* Soft halo behind the FAB — sells the "raised hero action" feel. */}
-      <div
-        aria-hidden
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
-        style={{
-          width: '112px',
-          height: '112px',
-          background:
-            'radial-gradient(circle, rgba(var(--brand-primary-rgb), 0.28) 0%, rgba(var(--brand-primary-rgb), 0.12) 35%, rgba(var(--brand-primary-rgb), 0) 70%)',
-          filter: 'blur(2px)',
-          opacity: hidden || isMenuOpen ? 0 : 1,
-          transition: 'opacity 200ms ease-out',
-        }}
-      />
       <motion.button
         id="global-voice-fab"
         ref={fabRef}
