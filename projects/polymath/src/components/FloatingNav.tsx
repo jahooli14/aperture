@@ -321,7 +321,7 @@ export function FloatingNav() {
           isolation: 'isolate'
         }}
       >
-        <div className="mx-auto max-w-2xl px-2 sm:px-4">
+        <div className="mx-auto max-w-2xl px-2 sm:px-4 relative">
           <div
             className="flex items-center gap-0"
             style={{
@@ -338,6 +338,12 @@ export function FloatingNav() {
                 '0 0 48px rgba(56,189,248,0.14),' +
                 'inset 0 1px 0 rgba(255,255,255,0.18),' +
                 'inset 0 -1px 0 rgba(0,0,0,0.30)',
+              // Semicircular cradle at the top-center so the raised FAB
+              // reads as nested into the bar, not floating in front of it.
+              maskImage:
+                'radial-gradient(circle 36px at 50% 0%, transparent 36px, #000 37px)',
+              WebkitMaskImage:
+                'radial-gradient(circle 36px at 50% 0%, transparent 36px, #000 37px)',
             }}
           >
             {/* Four equal-flex tabs with a centered spacer for the raised
@@ -415,6 +421,37 @@ export function FloatingNav() {
               })()}
             </div>
           </div>
+          {/* Cradle outline — traces the cutaway arc so the notch keeps
+              the brand border and inner highlight that the mask clips
+              off the pill itself. Sits below the FAB (which is in a
+              z-[25001] portal) so the + still pops above. */}
+          <svg
+            aria-hidden
+            width="74"
+            height="38"
+            viewBox="0 0 74 38"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              pointerEvents: 'none',
+              overflow: 'visible',
+            }}
+          >
+            <path
+              d="M 1 0 A 36 36 0 0 1 73 0"
+              fill="none"
+              stroke="rgba(56, 189, 248, 0.22)"
+              strokeWidth="1"
+            />
+            <path
+              d="M 2 1 A 35 35 0 0 1 72 1"
+              fill="none"
+              stroke="rgba(255, 255, 255, 0.10)"
+              strokeWidth="1"
+            />
+          </svg>
         </div>
       </motion.nav>
     </>
