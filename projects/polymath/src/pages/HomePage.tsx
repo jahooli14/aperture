@@ -334,39 +334,27 @@ export function HomePage() {
           ) : null}
 
           {/* Recently active — 2-up glass cards. */}
-          <div className="section-break">
-            <div className="section-break-kicker">Still warm</div>
-            <div className="section-break-rule" aria-hidden />
-          </div>
+          <h2 className="section-header" style={{ margin: '32px 0 18px' }}>still <span>warm</span></h2>
           <motion.div {...stackTransition(3)}>
             <RecentlyActiveMini />
           </motion.div>
 
           {/* Up Next — 2-up ghost cards. Quieter material than the glass
               row above, so it reads as further away. */}
-          <div className="section-break">
-            <div className="section-break-kicker">The queue</div>
-            <div className="section-break-rule" aria-hidden />
-          </div>
+          <h2 className="section-header" style={{ margin: '32px 0 18px' }}>the <span>queue</span></h2>
           <motion.div {...stackTransition(4)}>
             <UpNextMini />
           </motion.div>
 
           {/* Suggest a project — quiet escape-hatch pill for on-demand
               generation when nothing higher-up has earned the page. */}
-          <div className="section-break">
-            <div className="section-break-kicker">Try something new</div>
-            <div className="section-break-rule" aria-hidden />
-          </div>
+          <h2 className="section-header" style={{ margin: '32px 0 18px' }}>try something <span>new</span></h2>
           <motion.div {...stackTransition(5)}>
             <ProjectIdeasHome />
           </motion.div>
 
           {/* What you're consuming — identity layer. */}
-          <div className="section-break">
-            <div className="section-break-kicker">Now consuming</div>
-            <div className="section-break-rule" aria-hidden />
-          </div>
+          <h2 className="section-header" style={{ margin: '32px 0 18px' }}>now <span>consuming</span></h2>
           <motion.div {...stackTransition(6)}>
             <NowConsumingWidget />
           </motion.div>
