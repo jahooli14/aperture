@@ -25,6 +25,7 @@ import { BookmarkPlus, BookmarkCheck, X, Hammer } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
 import { api } from '../../lib/apiClient'
 import { IDEAS_INVALIDATE_EVENT } from './MomentSurface'
+import { useSessionContextStore } from '../../stores/useSessionContextStore'
 
 interface IdeaEvidence {
   kind: string
@@ -208,9 +209,13 @@ export function ProjectIdeasHome() {
       // Server short-circuits to the queue when one exists (instant); only
       // hits the LLM when the queue is empty. Fast path is ~10s; allow 40s
       // so a slightly slow tail doesn't abort.
+      // Pass the session feeling (focused / scattered / restless) when
+      // the user has picked one — the backend folds it into the generator
+      // prompt so the on-demand re-roll calibrates to right-now state.
+      const feeling = useSessionContextStore.getState().feeling
       const res = await api.post(
         'utilities?resource=generate-project-ideas',
-        {},
+        feeling ? { feeling } : {},
         { timeout: 40_000 },
       ) as GenerateResponse
       if (!res.ideas || res.ideas.length === 0) {

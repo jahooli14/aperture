@@ -1568,9 +1568,18 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
     // Flash-Lite, ~5–10s. The cron path keeps the full pipeline (Read +
     // crossover, full Flash) — cron pre-bakes the wow ideas that user
     // clicks unlock instantly via the queue short-circuit above.
+    //
+    // Session feeling — when the user has tapped focused/scattered/restless
+    // before re-rolling, pass it to the generator so the prompt knows what
+    // kind of idea is right for right now (a focused user can take on
+    // something demanding; a scattered user wants a small concrete next
+    // move; a restless user wants something with a different texture).
+    const rawFeeling = typeof req.body === 'object' && req.body && typeof (req.body as any).feeling === 'string' ? (req.body as any).feeling : null
+    const feeling = (rawFeeling === 'focused' || rawFeeling === 'scattered' || rawFeeling === 'restless') ? rawFeeling : null
     const result = await generateProjectIdeas(gathered, {
       force: !viaCron,
       fast: !viaCron,
+      feeling,
     })
     console.log(`[generate-project-ideas] generation finished in ${Date.now() - tLlmStart}ms: ${result.ideas.length} ideas, reason=${result.reason ?? 'ok'}`)
 

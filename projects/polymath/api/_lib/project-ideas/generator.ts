@@ -32,6 +32,8 @@ import type { ArrivalKind, CentreKind, GatherResult, GenerationResult, IdeaEvide
 
 const MIN_SIGNALS = 8
 
+export type SessionFeeling = 'focused' | 'scattered' | 'restless'
+
 export interface GenerateOptions {
   /** force=true falls back to the permissive prompt when the seed-pair
    *  pass returns nothing. Used by the manual "show me ideas" button —
@@ -44,6 +46,10 @@ export interface GenerateOptions {
    *  not a smaller model. Lands in ~10s instead of ~30s. Cron keeps the
    *  full pipeline because cron has no user waiting. */
   fast?: boolean
+  /** Session feeling captured by FeelingPill at app open — calibrates
+   *  the on-demand fast path to right-now state. The cron path doesn't
+   *  use this (cron has no user; runs against a population). */
+  feeling?: SessionFeeling | null
 }
 
 export async function generateProjectIdeas(
@@ -72,8 +78,8 @@ export async function generateProjectIdeas(
     //      fallback synthesises an idea from the gathered data without an
     //      LLM call. The button NEVER returns empty.
     // Target end-to-end: ~6–8s. The fallback adds ~10ms on top.
-    console.log('[project-ideas] fast path: two-stage Lite→Flash')
-    const fastIdea = await runFastTwoStage(gathered)
+    console.log(`[project-ideas] fast path: two-stage Lite→Flash${opts.feeling ? ` (feeling=${opts.feeling})` : ''}`)
+    const fastIdea = await runFastTwoStage(gathered, opts.feeling ?? null)
     if (fastIdea) {
       return { ideas: [{ ...fastIdea, mode: 'crossover' }], attempts: 1 }
     }
@@ -208,17 +214,17 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
  *      temperature. Two clean attempts before we even consider bailing.
  *
  *  Returns null only if both Stage 2 attempts fail. */
-async function runFastTwoStage(gathered: GatherResult): Promise<ProjectIdea | null> {
+async function runFastTwoStage(gathered: GatherResult, feeling: SessionFeeling | null): Promise<ProjectIdea | null> {
   // ── Stage 1: Lite reads everything and digests it ─────────────────
   const snapshot = await runStage1Snapshot(gathered)
 
   // ── Stage 2: Flash writes the idea from the snapshot ──────────────
-  const first = await runStage2Idea(snapshot, gathered, { attempt: 1, temperature: 0.85 })
+  const first = await runStage2Idea(snapshot, gathered, { attempt: 1, temperature: 0.85, feeling })
   if (first) return first
   // Same snapshot, slightly hotter temperature so the second attempt
   // doesn't reproduce the same parse-fail. Cheap insurance — one extra
   // ~3–5s call to keep the LLM idea on screen instead of the template.
-  const second = await runStage2Idea(snapshot, gathered, { attempt: 2, temperature: 0.95 })
+  const second = await runStage2Idea(snapshot, gathered, { attempt: 2, temperature: 0.95, feeling })
   return second
 }
 
@@ -261,9 +267,9 @@ async function runStage1Snapshot(gathered: GatherResult): Promise<Snapshot> {
 async function runStage2Idea(
   snapshot: Snapshot,
   gathered: GatherResult,
-  opts: { attempt: number; temperature: number },
+  opts: { attempt: number; temperature: number; feeling: SessionFeeling | null },
 ): Promise<ProjectIdea | null> {
-  const ideaPrompt = buildFastIdeaPrompt(snapshot)
+  const ideaPrompt = buildFastIdeaPrompt(snapshot, opts.feeling)
   console.log(`[project-ideas] fast/stage-2 (Flash) idea prompt: ${ideaPrompt.length} chars; attempt=${opts.attempt}`)
   const t2 = Date.now()
   let ideaRaw: string
@@ -451,7 +457,14 @@ function parseSnapshot(raw: string): Snapshot | null {
  *  can spend its time on the writing, not on parsing context. Asks for ONE
  *  idea, plain text fields, no evidence citations (we'll synthesise those
  *  ourselves to keep the model fast). */
-function buildFastIdeaPrompt(s: Snapshot): string {
+const FEELING_GUIDANCE: Record<SessionFeeling, string> = {
+  focused: 'They are FOCUSED right now — they can take on something demanding. Pick the project that needs their full attention; the next_step can ask for an hour of real work.',
+  scattered: 'They are SCATTERED right now — short attention, hard to commit. Pick a project where the next_step is a 10-minute concrete move that produces a visible artefact. Nothing that asks them to "decide" or "plan."',
+  restless: 'They are RESTLESS right now — they want a change of texture. Prefer a project that uses a different sense or tool than the obvious one (away from the screen if they\'ve been on it; back to a screen if they\'ve been in the workshop). The next_step should physically move them.',
+}
+
+function buildFastIdeaPrompt(s: Snapshot, feeling: SessionFeeling | null): string {
+  const feelingBlock = feeling ? `\n═══════ HOW THEY'RE FEELING RIGHT NOW ═══════\n${FEELING_GUIDANCE[feeling]}\n` : ''
   return `You are a friend who has been paying attention to someone's creative life. They opened the app and asked: "give me one project to work on today." Your job: ONE idea, written like you actually know them.
 
 ═══════ HOW TO WRITE ═══════
@@ -459,6 +472,7 @@ function buildFastIdeaPrompt(s: Snapshot): string {
 ${PLAIN_ENGLISH_RULES}
 NEVER use abstract nouns in the title: no "exploration," "study," "series," "directory," "newsletter," "podcast," "zine," "investigation," "meditation on," "in conversation with."
 Concrete. "Cut the beech strip for the synth case" beats "begin work on the woodwork aspect."
+${feelingBlock}
 
 ═══════ WHO THEY ARE ═══════
 
