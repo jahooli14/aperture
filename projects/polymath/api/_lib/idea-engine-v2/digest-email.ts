@@ -111,6 +111,7 @@ export async function sendDailyDigest(userId: string, ideas: Idea[]) {
   const total = progress.today.approved;
   const ofTotal = total > n ? ` of ${total}` : '';
 
+  const approvedToday = progress.today.approved;
   const subject = n > 0
     ? pick([
         `${n} highlight${n === 1 ? '' : 's'}${ofTotal} cleared the high-signal bar`,
@@ -119,15 +120,21 @@ export async function sendDailyDigest(userId: string, ideas: Idea[]) {
         `Today's headliners: ${n} high-signal concept${n === 1 ? '' : 's'}`,
         `${n} idea${n === 1 ? '' : 's'} earned the spotlight today`,
       ])
-    : pick([
-        'Quiet day on the frontier — here\'s one from the vault',
-        'The engine is thinking — catch up on a past gem',
-        'Nothing high-signal today, but your archive has depth',
-        'Rest day for the frontier — revisit a past favourite',
-        'Nothing stood out — the bar stays high',
-        'The machine hums on — a look back while it works',
-        'Selectivity wins — plus a throwback idea',
-      ]);
+    : approvedToday > 0
+      ? pick([
+          `${approvedToday} approved today — none headlined, all in the UI`,
+          `${approvedToday} cleared review today — see them in the UI`,
+          `${approvedToday} approval${approvedToday === 1 ? '' : 's'} landed — none hit the headline bar`,
+        ])
+      : pick([
+          'Quiet day on the frontier — here\'s one from the vault',
+          'The engine is thinking — catch up on a past gem',
+          'Nothing high-signal today, but your archive has depth',
+          'Rest day for the frontier — revisit a past favourite',
+          'Nothing stood out — the bar stays high',
+          'The machine hums on — a look back while it works',
+          'Selectivity wins — plus a throwback idea',
+        ]);
 
   const { data, error } = await resend.emails.send({
     from: 'Idea Engine <onboarding@resend.dev>',
@@ -263,13 +270,14 @@ function generateDigestHTML(ideas: Idea[], progress: ProgressStats): string {
 function generateEmptyDigestHTML(progress: ProgressStats, vaultIdea: Idea | null): string {
   const someApproved = progress.today.approved > 0;
 
+  const n = progress.today.approved;
+  const s = n === 1 ? '' : 's';
   const headline = someApproved
     ? pick([
-        `${progress.today.approved} approved, none stood out`,
-        'Approvals landed but nothing pushed the frontier hard',
-        'Solid day, no headliners',
-        'The bar held firm — see the UI for the full list',
-        'Approvals are in the UI; nothing earned the spotlight',
+        `${n} approved today — none headlined`,
+        `${n} approval${s} landed, none pushed the frontier`,
+        `${n} cleared review — see the UI for the full list`,
+        `${n} approved today — all in the UI, none earned the spotlight`,
       ])
     : pick([
         'Quiet day on the frontier',
@@ -283,9 +291,9 @@ function generateEmptyDigestHTML(progress: ProgressStats, vaultIdea: Idea | null
 
   const blurb = someApproved
     ? pick([
-        `${progress.today.approved} ideas cleared review, but none scored high enough on the frontier-advancement bar to feature here. They\'re still in the UI as building blocks.`,
-        'Approvals happened, but nothing broke new ground today. The engine still grew — just quietly.',
-        'Today\'s approvals strengthened the existing frontier rather than pushing it. Browse the UI to see them all.',
+        `${n} idea${s} cleared review today. None scored high enough to headline, but they're in the UI as building blocks.`,
+        `${n} approval${s} landed today. None broke new ground, but the frontier still grew — see them in the UI.`,
+        `Today's ${n} approval${s} strengthened the existing frontier rather than pushing it. Browse the UI to see them all.`,
       ])
     : pick([
         'Not every sweep finds gold, and that\'s how it should work. High standards keep the signal strong.',
@@ -309,18 +317,26 @@ function generateEmptyDigestHTML(progress: ProgressStats, vaultIdea: Idea | null
         </div>`
       : '';
 
+  const vaultPreface = someApproved
+    ? pick([
+        'While today\'s approvals settle in the UI, here\'s an older one worth a second look:',
+        'Alongside today\'s approvals, a past favourite worth revisiting:',
+        'And from the archive — one that earned the spotlight before:',
+      ])
+    : pick([
+        'While the engine searches for new ground, here\'s one that made the cut before:',
+        'Nothing new today, but this past approval is worth another look:',
+        'A different idea to chew on while the frontier recharges:',
+        'Sometimes the best move is revisiting what you already have:',
+      ]);
+
   const vaultHTML = vaultIdea
     ? `<div style="margin-bottom: 24px;">
         <h2 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: #0f172a;">
           ${pick(['From the Vault', 'Revisit', 'Past Gem', 'One to Reconsider', 'From the Archive'])}
         </h2>
         <p style="margin: 0 0 12px 0; font-size: 14px; color: #94a3b8;">
-          ${pick([
-            'While the engine searches for new ground, here\'s one that made the cut before:',
-            'Nothing new today, but this past approval is worth another look:',
-            'A different idea to chew on while the frontier recharges:',
-            'Sometimes the best move is revisiting what you already have:',
-          ])}
+          ${vaultPreface}
         </p>
         ${ideaCardHTML(vaultIdea)}
       </div>`
