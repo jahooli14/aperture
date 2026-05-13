@@ -338,12 +338,14 @@ export function FloatingNav() {
                 '0 0 48px rgba(56,189,248,0.14),' +
                 'inset 0 1px 0 rgba(255,255,255,0.18),' +
                 'inset 0 -1px 0 rgba(0,0,0,0.30)',
-              // Semicircular cradle at the top-center so the raised FAB
-              // reads as nested into the bar, not floating in front of it.
+              // Shallow dimple at the top centre — just enough to follow
+              // the FAB's lower curve where it intrudes into the bar
+              // (~14px). Centre is set above the pill top so the cut is
+              // a sliver, not a bowl.
               maskImage:
-                'radial-gradient(circle 36px at 50% 0%, transparent 36px, #000 37px)',
+                'radial-gradient(circle 32px at 50% -18px, transparent 32px, #000 33px)',
               WebkitMaskImage:
-                'radial-gradient(circle 36px at 50% 0%, transparent 36px, #000 37px)',
+                'radial-gradient(circle 32px at 50% -18px, transparent 32px, #000 33px)',
             }}
           >
             {/* Four equal-flex tabs with a centered spacer for the raised
@@ -421,15 +423,15 @@ export function FloatingNav() {
               })()}
             </div>
           </div>
-          {/* Cradle outline — traces the cutaway arc so the notch keeps
-              the brand border and inner highlight that the mask clips
-              off the pill itself. Sits below the FAB (which is in a
-              z-[25001] portal) so the + still pops above. */}
+          {/* Dimple outline — traces the shallow cutaway so it keeps the
+              pill's brand border and inner highlight where the mask
+              clips them off. Geometry matches the mask above (radius
+              32 at 50% -18px → ~53px chord, ~14px sag). */}
           <svg
             aria-hidden
-            width="74"
-            height="38"
-            viewBox="0 0 74 38"
+            width="54"
+            height="16"
+            viewBox="0 0 54 16"
             style={{
               position: 'absolute',
               top: 0,
@@ -440,13 +442,13 @@ export function FloatingNav() {
             }}
           >
             <path
-              d="M 1 0 A 36 36 0 0 1 73 0"
+              d="M 0.5 0 A 32 32 0 0 1 53.5 0"
               fill="none"
               stroke="rgba(56, 189, 248, 0.22)"
               strokeWidth="1"
             />
             <path
-              d="M 2 1 A 35 35 0 0 1 72 1"
+              d="M 1.5 1 A 31 31 0 0 1 52.5 1"
               fill="none"
               stroke="rgba(255, 255, 255, 0.10)"
               strokeWidth="1"
