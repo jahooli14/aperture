@@ -42,33 +42,24 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
         l.title.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
-    const handleSubmit = async (e?: React.FormEvent) => {
+    const handleSubmit = (e?: React.FormEvent) => {
         e?.preventDefault()
-        if (!selectedListId || !content.trim()) return
+        if (!selectedListId || !content.trim() || isSubmitting) return
 
+        // Fire-and-forget: the store applies the optimistic add
+        // synchronously, so the new item is visible the moment the dialog
+        // closes — works the same whether we're online or offline.
         setIsSubmitting(true)
-        try {
-            await addListItem({
-                list_id: selectedListId,
-                content: content.trim(),
-                status: 'pending'
-            })
-            addToast({
-                title: "Added to list",
-                variant: "success"
-            })
-            setContent('')
-            setSelectedListId(null)
-            onOpenChange(false)
-        } catch (error) {
-            addToast({
-                title: "Couldn't add item",
-                description: "Try again in a moment.",
-                variant: "destructive"
-            })
-        } finally {
-            setIsSubmitting(false)
-        }
+        void addListItem({
+            list_id: selectedListId,
+            content: content.trim(),
+            status: 'pending'
+        }).finally(() => setIsSubmitting(false))
+
+        addToast({ title: "Added to list", variant: "success" })
+        setContent('')
+        setSelectedListId(null)
+        onOpenChange(false)
     }
 
     const selectedList = lists.find(l => l.id === selectedListId)

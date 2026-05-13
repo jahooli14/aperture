@@ -1522,11 +1522,14 @@ export default function ListDetailPage() {
         await updateListItemMetadata(itemId, { ...item.metadata, user_rating: rating })
     }, [displayItems, updateListItemMetadata])
 
-    // React to an item — stores in metadata.reaction
-    const handleReact = useCallback(async (itemId: string, reaction: ItemReaction | null) => {
+    // React to an item — stores in metadata.reaction.
+    // Fire-and-forget so the tap feels instant; the store's optimistic
+    // update has already applied synchronously by the time this returns.
+    const handleReact = useCallback((itemId: string, reaction: ItemReaction | null) => {
         const item = displayItems.find(i => i.id === itemId)
         if (!item) return
-        await updateListItemMetadata(itemId, { ...item.metadata, reaction: reaction ?? undefined })
+        haptic.light()
+        void updateListItemMetadata(itemId, { ...item.metadata, reaction: reaction ?? undefined })
     }, [displayItems, updateListItemMetadata])
 
     // Rate from celebration

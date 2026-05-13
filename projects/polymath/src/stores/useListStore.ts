@@ -396,8 +396,9 @@ export const useListStore = create<ListStore>()(
                     return
                 }
 
+                let response: Response
                 try {
-                    const response = await fetch(`/api/lists?scope=items&listId=${input.list_id}`, {
+                    response = await fetch(`/api/lists?scope=items&listId=${input.list_id}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -405,39 +406,28 @@ export const useListStore = create<ListStore>()(
                             ...(input.metadata ? { metadata: input.metadata } : {}),
                         })
                     })
-
-                    if (!response.ok) throw new Error('Failed to add item')
-
-                    const realItem = await response.json()
-
-                    // Replace optimistic item with real one
-                    set(state => {
-                        const replace = (items: ListItem[]) =>
-                            items.map(i => i.id === tempId ? realItem : i)
-                        const listItems = state.itemsByListId[input.list_id]
-                        return {
-                            currentListItems: replace(state.currentListItems),
-                            itemsByListId: listItems
-                                ? { ...state.itemsByListId, [input.list_id]: replace(listItems) }
-                                : state.itemsByListId,
-                        }
+                } catch (networkError) {
+                    // fetch() throws only on network failure (DNS, TLS, offline).
+                    // Server reachability problems aren't the user's mistake —
+                    // queue the add and let the sync manager retry rather than
+                    // making the item vanish from the UI.
+                    await queueOperation('add_list_item', {
+                        id: tempId,
+                        list_id: input.list_id,
+                        content: input.content,
+                        status: input.status || 'pending',
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
                     })
-                } catch (error: any) {
-                    // If network error, queue for later
-                    if (!navigator.onLine) {
-                        await queueOperation('add_list_item', {
-                            id: tempId,
-                            list_id: input.list_id,
-                            content: input.content,
-                            status: input.status || 'pending',
-                            created_at: new Date().toISOString(),
-                            updated_at: new Date().toISOString()
-                        })
-                        await useOfflineStore.getState().updateQueueSize()
-                        console.log('[ListStore] Queued add_list_item after failed attempt')
-                        return
-                    }
-                    // Revert
+                    await useOfflineStore.getState().updateQueueSize()
+                    console.log('[ListStore] Queued add_list_item after network error:', networkError)
+                    return
+                }
+
+                if (!response.ok) {
+                    // Server reachable but rejected the write (4xx/5xx). Revert
+                    // so the user sees the failure and can retry — queueing a
+                    // structurally bad item would just loop forever.
                     set(state => {
                         const remove = (items: ListItem[]) => items.filter(i => i.id !== tempId)
                         const listItems = state.itemsByListId[input.list_id]
@@ -446,8 +436,7 @@ export const useListStore = create<ListStore>()(
                             itemsByListId: listItems
                                 ? { ...state.itemsByListId, [input.list_id]: remove(listItems) }
                                 : state.itemsByListId,
-                            error: error.message,
-                            // Revert count
+                            error: `Server rejected item (${response.status})`,
                             lists: state.lists.map(l =>
                                 l.id === input.list_id
                                     ? { ...l, item_count: Math.max(0, (l.item_count || 1) - 1) }
@@ -455,7 +444,23 @@ export const useListStore = create<ListStore>()(
                             )
                         }
                     })
+                    return
                 }
+
+                const realItem = await response.json()
+
+                // Replace optimistic item with real one
+                set(state => {
+                    const replace = (items: ListItem[]) =>
+                        items.map(i => i.id === tempId ? realItem : i)
+                    const listItems = state.itemsByListId[input.list_id]
+                    return {
+                        currentListItems: replace(state.currentListItems),
+                        itemsByListId: listItems
+                            ? { ...state.itemsByListId, [input.list_id]: replace(listItems) }
+                            : state.itemsByListId,
+                    }
+                })
             },
 
             updateListItemStatus: async (itemId, status) => {
@@ -565,30 +570,22 @@ export const useListStore = create<ListStore>()(
                         body: JSON.stringify({ metadata })
                     })
 
-                    if (!response.ok) {
-                        throw new Error('Failed to update item metadata')
-                    }
+                    if (!response.ok) throw new Error('Failed to update item metadata')
 
-                    const updatedItem = await response.json()
-
-                    // Update with server response
-                    set(state => {
-                        const replace = (items: ListItem[]) =>
-                            items.map(i => i.id === itemId ? updatedItem : i)
-                        const nextMap: Record<string, ListItem[]> = { ...state.itemsByListId }
-                        for (const listId of Object.keys(nextMap)) {
-                            if (nextMap[listId].some(i => i.id === itemId)) {
-                                nextMap[listId] = replace(nextMap[listId])
-                            }
-                        }
-                        return {
-                            currentListItems: replace(state.currentListItems),
-                            itemsByListId: nextMap,
-                        }
-                    })
+                    // Intentionally do NOT replace the local item with the
+                    // server response. The optimistic state already reflects
+                    // the user's intent; replacing here clobbers rapid
+                    // follow-up taps (rating, reaction toggles) that landed
+                    // while this request was in flight.
                 } catch (error) {
+                    // Network blip → queue instead of throwing, so a slow
+                    // connection doesn't lose the reaction/rating.
+                    if (!navigator.onLine || error instanceof TypeError) {
+                        await queueOperation('update_list_item', { id: itemId, metadata })
+                        await useOfflineStore.getState().updateQueueSize()
+                        return
+                    }
                     console.error('[ListStore] Failed to update metadata:', error)
-                    throw error
                 }
             },
 

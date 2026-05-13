@@ -430,28 +430,32 @@ export const useReadingStore = create<ReadingState>((set, get) => {
     },
 
     updateArticle: async (id: string, updates: Partial<Article>) => {
-      // Optimistic update
-      const previousArticles = get().articles
-      const updatedArticle = previousArticles.find(a => a.id === id)
+      // Optimistic update — applied synchronously so taps feel instant.
+      const updatedArticle = get().articles.find(a => a.id === id)
+      if (!updatedArticle) return
 
-      if (updatedArticle) {
-        const newArticle = { ...updatedArticle, ...updates }
-        set((state) => ({
-          articles: state.articles.map((a) =>
-            a.id === id ? newArticle : a
-          ),
-        }))
+      const newArticle = { ...updatedArticle, ...updates }
+      set((state) => ({
+        articles: state.articles.map((a) => (a.id === id ? newArticle : a)),
+      }))
 
-        // Update cache optimistically
-        try {
-          const { readingDb } = await import('../lib/db')
-          const cached = await readingDb.articles.get(id)
-          if (cached) {
-            await readingDb.articles.put({ ...cached, ...updates })
-          }
-        } catch (cacheError) {
-          logger.warn('[ReadingStore] Failed to update cached article:', cacheError)
+      // Mirror to Dexie so a reload (or offline open) keeps the new state.
+      try {
+        const { readingDb } = await import('../lib/db')
+        const cached = await readingDb.articles.get(id)
+        if (cached) {
+          await readingDb.articles.put({ ...cached, ...updates })
         }
+      } catch (cacheError) {
+        logger.warn('[ReadingStore] Failed to update cached article:', cacheError)
+      }
+
+      // Offline → queue and stop. The optimistic state stays as the source of truth.
+      const { isOnline } = useOfflineStore.getState()
+      if (!isOnline) {
+        await queueOperation('update_article', { id, ...updates })
+        await useOfflineStore.getState().updateQueueSize()
+        return
       }
 
       try {
@@ -461,36 +465,21 @@ export const useReadingStore = create<ReadingState>((set, get) => {
           body: JSON.stringify({ id, ...updates }),
         })
 
-        if (!response.ok) {
-          throw new Error('Failed to update article')
-        }
+        if (!response.ok) throw new Error('Failed to update article')
 
-        const { article } = await response.json()
-
-        // Update cache with server response
-        try {
-          const { readingDb } = await import('../lib/db')
-          const cached = await readingDb.articles.get(id)
-          if (cached) {
-            await readingDb.articles.put({ ...cached, ...article })
-          }
-        } catch (cacheError) {
-          logger.warn('[ReadingStore] Failed to update cached article from server:', cacheError)
-        }
-
-        // Replace with server data
-        set((state) => ({
-          articles: state.articles.map((a) =>
-            a.id === id ? article : a
-          ),
-        }))
+        // Intentionally do NOT replace the local article with the server
+        // response. The optimistic update already reflects the user's
+        // intent; a server replace here clobbers rapid follow-up taps
+        // (e.g. switching reactions twice in 200ms) and causes flicker.
       } catch (error) {
-        // Rollback on error
-        set({ articles: previousArticles })
-        // Revert cache if possible (complex, maybe skip for now or re-fetch)
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-        set({ error: errorMessage })
-        throw error
+        // Network blip: queue rather than rolling back — the user's
+        // intent shouldn't disappear because the request timed out.
+        if (!navigator.onLine || error instanceof TypeError) {
+          await queueOperation('update_article', { id, ...updates })
+          await useOfflineStore.getState().updateQueueSize()
+          return
+        }
+        logger.warn('[ReadingStore] updateArticle failed:', error)
       }
     },
 
