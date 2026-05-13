@@ -11,6 +11,7 @@ declare const process: { env: Record<string, string | undefined> };
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getSupabaseClient } from './supabase.js'
 import { MODELS } from './models.js'
+import { PLAIN_ENGLISH_RULES } from './plain-english.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 const supabase = getSupabaseClient()
@@ -33,7 +34,7 @@ export async function generateCognitiveReplay(
   endDate: string
 ): Promise<ReplayChapter> {
   // Load all data for the time window in parallel
-  const [memoriesResult, articlesResult, projectsResult, todosResult] = await Promise.all([
+  const [memoriesResult, articlesResult, projectsResult] = await Promise.all([
     supabase
       .from('memories')
       .select('id, title, body, themes, tags, emotional_tone, triage, created_at')
@@ -53,18 +54,11 @@ export async function generateCognitiveReplay(
       .from('projects')
       .select('id, title, description, status, last_active, created_at, metadata')
       .eq('user_id', userId),
-    supabase
-      .from('todos')
-      .select('id, text, done, completed_at, created_at')
-      .eq('user_id', userId)
-      .gte('created_at', startDate)
-      .lte('created_at', endDate),
   ])
 
   const memories = memoriesResult.data || []
   const articles = articlesResult.data || []
   const projects = projectsResult.data || []
-  const todos = todosResult.data || []
 
   // Build emotional arc from memories
   const emotionalArc = memories
@@ -172,8 +166,6 @@ export async function generateCognitiveReplay(
     .map(p => `- "${p.title}" (${p.status}, momentum: ${p.momentum})`)
     .join('\n')
 
-  const todoSummary = `${todos.length} tasks created, ${todos.filter(t => t.done).length} completed`
-
   const prompt = `You are writing one chapter of someone's intellectual autobiography. This chapter covers ${startDate} to ${endDate}.
 
 You have their raw notes, saved articles, and project status from this exact period. Your job is to write a narrative that reconstructs what they were THINKING — not just what they did.
@@ -186,8 +178,6 @@ ${articlesSummary || 'None'}
 
 PROJECTS ACTIVE IN THIS PERIOD:
 ${projectContext || 'None tracked'}
-
-TASK ACTIVITY: ${todoSummary}
 ${breakthroughs.length > 0 ? `\nBREAKTHROUGH MOMENTS:\n${breakthroughs.map(b => `- ${b}`).join('\n')}` : ''}
 
 ---
@@ -199,13 +189,14 @@ Write a narrative chapter (3-5 paragraphs) that:
 4. Connects the dots between their notes and their reading — what were they searching for?
 5. Ends with where their mind was pointing at the close of this window
 
+${PLAIN_ENGLISH_RULES}
+
 RULES:
 - Write in second person ("you were...")
 - Use specific dates and titles from their notes — not vague references
 - No bullet points — this is narrative prose
-- No consultant speak or productivity advice
 - Be honest about fallow periods — if they stopped capturing, say what that might mean
-- The title should capture the essence of this period in 3-6 words
+- The title names the actual thing they were circling in 3-6 words. Use a real noun from their notes — never a flowery abstraction.
 
 Return ONLY valid JSON:
 {
