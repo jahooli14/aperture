@@ -1178,6 +1178,7 @@ ${justShownBlock || '  (none)'}
 When the pattern is real, the idea object is:
 {
   "pattern": "ONE sentence in the user's frame, naming the through-line. ≤24 words. The wow line — what makes them say 'huh, that's me.' Concrete, not abstract.",
+  "shape": "<one of: coalescing | recent_forgotten | reshape | extend — see below>",
   "title": "≤6 words. The project the pattern points to. Names the artefact or the action.",
   "pitch": "2 sentences. Sentence 1 = how the project breaks / honours / completes the pattern. Sentence 2 = what done looks like, in one observable test.",
   "why_now": "ONE sentence. The single most recent capture or completed project that proves the pattern is current, not historical.",
@@ -1187,6 +1188,15 @@ When the pattern is real, the idea object is:
   ],
   "confidence": <integer 0–100, see below>
 }
+
+SHAPE — pick the one that best matches which shape from the "Real shapes" list fired. The surface uses this to render a different eyebrow per shape so the user can tell at a glance what they're looking at:
+
+  - coalescing       — Mode 1 NEW IDEA COALESCING. The user is quietly circling a new idea across multiple captures and you're naming it for the first time.
+  - recent_forgotten — Mode 2a RECENT FORGOTTEN. A 3–16 week dormant project whose pickup move is now obvious from recent captures.
+  - reshape          — Mode 2b LONG-DORMANT RESHAPE. A 4+ month dormant project that needs the version-for-who-they-are-now treatment.
+  - extend           — Mode 3 EXTEND. A recent capture names a specific new direction for an existing active or dormant project.
+
+If none of these match cleanly — for example the pattern is a recurring taste / drift / block that doesn't map onto a project pickup — use "coalescing" since the resulting project is a new artefact.
 
 Evidence rules: 3–6 items. Each excerpt MUST be a verbatim substring of a body shown above (will be substring-checked; fabrications are dropped). Together the evidence proves the pattern.
 
@@ -1435,18 +1445,27 @@ function parseRead(raw: string, gathered: GatherResult): ProjectIdea[] {
   if (typeof item.confidence === 'number' && Number.isFinite(item.confidence)) {
     confidence = Math.max(0, Math.min(100, Math.round(item.confidence)))
   }
-  console.log(`[project-ideas] read produced "${base.title}" — confidence=${confidence}`)
+  // Shape — the model's self-tag for which of the four Moment sub-shapes
+  // fired. Default null when the model omits or returns an unknown value;
+  // the UI gracefully falls back to the generic Read eyebrow.
+  const VALID_SHAPES = new Set(['coalescing', 'recent_forgotten', 'reshape', 'extend'])
+  const shape = typeof item.shape === 'string' && VALID_SHAPES.has(item.shape)
+    ? (item.shape as 'coalescing' | 'recent_forgotten' | 'reshape' | 'extend')
+    : null
+  console.log(`[project-ideas] read produced "${base.title}" — confidence=${confidence}, shape=${shape ?? 'untagged'}`)
   return [{
     ...base,
     mode: 'read',
     pattern: item.pattern.trim().slice(0, 280),
     confidence,
+    shape,
   }]
 }
 
 interface RawReadIdea extends RawIdea {
   pattern?: string
   confidence?: number
+  shape?: string
 }
 
 const CENTRE_KINDS: ReadonlySet<CentreKind> = new Set(['project_dormant', 'project_active', 'memory'])

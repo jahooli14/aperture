@@ -1350,7 +1350,7 @@ async function handleProjectIdeasGet(req: VercelRequest, res: VercelResponse) {
     const [activeRes, anyRes, projectsRes] = await Promise.all([
       supabase
         .from('project_ideas')
-        .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, status, user_feedback, generated_at, acted_on_at, mode, pattern, confidence')
+        .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, status, user_feedback, generated_at, acted_on_at, mode, pattern, confidence, shape')
         .eq('user_id', userId)
         .in('status', ['pending', 'saved', 'built'])
         .order('generated_at', { ascending: false })
@@ -1505,7 +1505,7 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
     if (!viaCron) {
       const { data: queued } = await supabase
         .from('project_ideas')
-        .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, mode, pattern, confidence, seed_pair, status, user_feedback, generated_at, acted_on_at')
+        .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, mode, pattern, confidence, shape, seed_pair, status, user_feedback, generated_at, acted_on_at')
         .eq('user_id', userId)
         .eq('status', 'pending')
         .order('generated_at', { ascending: false })
@@ -1619,6 +1619,9 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
       // home auto-surface threshold is 70. Crossover rows are NULL; the UI
       // doesn't gate them behind a threshold (they show via the button).
       confidence: idea.confidence ?? null,
+      // Shape — Read mode self-tags which of the four Moment sub-shapes
+      // fired. NULL on crossover, permissive fallback, and template rows.
+      shape: idea.shape ?? null,
       status: 'pending' as const,
       generated_at,
     }))
@@ -1626,7 +1629,7 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
     const { data: inserted, error: insertErr } = await supabase
       .from('project_ideas')
       .insert(rows)
-      .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, seed_pair, mode, pattern, status, user_feedback, generated_at, acted_on_at')
+      .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, seed_pair, mode, pattern, shape, status, user_feedback, generated_at, acted_on_at')
 
     if (insertErr) {
       console.error('[generate-project-ideas] insert failed:', insertErr)
