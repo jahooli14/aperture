@@ -11,13 +11,6 @@ import { MODELS } from './models.js'
 const supabase = getSupabaseClient()
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
-export interface MorningBriefing {
-  greeting: string
-  focus_project: { id: string, title: string, next_step: string, unblocker?: string } | null
-  quick_win: { id: string, title: string } | null
-  forgotten_gem: { type: 'article' | 'thought', title: string, snippet: string, relevance: string } | null
-}
-
 export interface BedtimePrompt {
   prompt: string
   type: 'connection' | 'divergent' | 'revisit' | 'transform'
@@ -516,47 +509,4 @@ async function storePrompts(_userId: string, _prompts: BedtimePrompt[]) {
 
 async function getPromptPerformance(_userId: string) {
   return {}
-}
-
-export async function generateMorningBriefing(userId: string): Promise<MorningBriefing> {
-      const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
-
-  const projects = await getActiveProjects(userId)
-  const projectContext = projects.map((p: any) => `${p.title} (${p.status})`).join(', ')
-
-  const prompt = `Generate a morning briefing for a creator.
-  Projects: ${projectContext}
-  
-  Return JSON matching this structure:
-  {
-    "greeting": "Good morning...",
-    "focus_project": { "id": "...", "title": "...", "next_step": "...", "unblocker": "..." },
-    "quick_win": { "id": "...", "title": "..." },
-    "forgotten_gem": null
-  }`
-
-  try {
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: { responseMimeType: 'application/json' },
-    })
-    const text = result.response.text()
-    const jsonMatch = text.match(/\{[\s\S]*\}/) // Corrected escape for regex
-    if (!jsonMatch) throw new Error('Invalid JSON')
-
-    const data = JSON.parse(jsonMatch[0])
-    return data
-  } catch (e) {
-    return {
-      greeting: "Good morning!",
-      focus_project: projects[0] ? {
-        id: projects[0].id,
-        title: projects[0].title,
-        next_step: "Review current status",
-        unblocker: "Break it down"
-      } : null,
-      quick_win: null,
-      forgotten_gem: null
-    }
-  }
 }
