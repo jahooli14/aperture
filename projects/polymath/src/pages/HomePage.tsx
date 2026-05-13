@@ -22,7 +22,6 @@ import React, { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useProjectStore, usePriorityProject, useMostRecentNonPriorityProject } from '../stores/useProjectStore'
-import { getTheme } from '../lib/projectTheme'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { useJourneyStore } from '../stores/useJourneyStore'
@@ -72,20 +71,13 @@ const LIST_TYPE_ACCENT: Record<string, string> = {
 function ModeRegister({
   label,
   detail,
-  rgb,
 }: {
   label: string
   detail?: string
-  rgb?: string
 }) {
   return (
     <div className="mode-register">
-      <span
-        className="mode-register-label"
-        style={{ color: rgb ? `rgb(${rgb})` : 'rgba(255,255,255,0.78)' }}
-      >
-        {label}
-      </span>
+      <span className="mode-register-label">{label}</span>
       {detail && <span className="mode-register-detail">{detail}</span>}
     </div>
   )
@@ -266,7 +258,6 @@ export function HomePage() {
   // then a quiet "no focus" state. When MomentSurface starts surfacing
   // explicit modes (new idea / reshape / extend), wire them in here.
   const leadProject = priorityProject || recentProject
-  const leadTheme = leadProject ? getTheme(leadProject.type || 'other', leadProject.title) : null
   const modeLabel = priorityProject ? 'priority' : recentProject ? 'keep going' : 'quiet'
   const modeDetail = leadProject?.title
 
@@ -294,7 +285,6 @@ export function HomePage() {
                   <ModeRegister
                     label={modeLabel}
                     detail={modeDetail}
-                    rgb={leadTheme?.rgb}
                   />
                 )}
               </div>
