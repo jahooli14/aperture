@@ -59,15 +59,12 @@
   body {
     @apply antialiased;
     background-color: var(--premium-surface-base);
-    /* Cool deep-ocean canvas — vertical gradient gives every page a sense of
-       atmosphere instead of flat darkness. Top sits a touch lifted, middle
-       carries a faint indigo depth, bottom settles into deep blue (not
-       black). Fixed so it doesn't repeat on long pages. */
+    /* Whisper of a gradient — top a hair lifted, bottom a hair deeper.
+       Felt, not seen. The base colour does the heavy lifting. */
     background-image: linear-gradient(180deg,
-      #101b30 0%,
-      #0f1829 30%,
-      #0d1626 65%,
-      #0a1322 100%);
+      #111a2c 0%,
+      #0f1829 50%,
+      #0d1525 100%);
     background-attachment: fixed;
     color: var(--premium-text-primary);
     font-family: var(--premium-font-body);
@@ -135,16 +132,16 @@
     pointer-events: none;
     background:
       radial-gradient(ellipse 80% 60% at 12% -5%,
-        rgba(var(--brand-primary-rgb), 0.11) 0%,
+        rgba(var(--brand-primary-rgb), 0.06) 0%,
         transparent 55%),
       radial-gradient(ellipse 70% 55% at 92% 108%,
-        rgba(var(--brand-primary-rgb), 0.08) 0%,
+        rgba(var(--brand-primary-rgb), 0.04) 0%,
         transparent 60%),
       radial-gradient(ellipse 95% 70% at 50% 55%,
-        rgba(99, 102, 241, 0.05) 0%,
+        rgba(99, 102, 241, 0.03) 0%,
         transparent 65%),
       radial-gradient(ellipse 100% 18% at 50% 102%,
-        rgba(0, 0, 0, 0.22) 0%,
+        rgba(0, 0, 0, 0.15) 0%,
         transparent 60%);
     z-index: 0;
   }
