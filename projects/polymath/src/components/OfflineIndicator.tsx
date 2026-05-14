@@ -30,17 +30,26 @@ export function OfflineIndicator() {
     return null
   }
 
-  // Show Pulling (Updating) Status — subtle pulsing dot + label. The previous
-  // `invisible group-hover:visible` was dead on touch (no hover) and broken on
-  // desktop too (no group parent), so the label never showed. Keep it low
-  // opacity so it's zen but readable.
+  // Pulling status — a single quiet pulsing dot tucked into the top-right
+  // corner. No chip, no label: it shouldn't compete with the masthead.
   if (isPulling && isOnline) {
     return (
-      <div className="fixed top-2 right-2 z-50 pointer-events-none">
-        <div className="flex items-center gap-1.5 px-2 py-1 bg-[var(--glass-surface)] backdrop-blur-sm rounded-full border border-[var(--glass-surface)]">
-          <div className="w-1.5 h-1.5 rounded-full bg-brand-primary/60 animate-pulse transition-opacity" />
-          <span className="text-[9px] font-bold text-[var(--brand-text-primary)]/45 uppercase tracking-widest">Sync</span>
-        </div>
+      <div
+        className="fixed z-40 pointer-events-none"
+        style={{
+          top: 'calc(env(safe-area-inset-top) + 14px)',
+          right: '14px',
+        }}
+        role="status"
+        aria-label="Syncing"
+      >
+        <div
+          className="h-1.5 w-1.5 rounded-full animate-pulse"
+          style={{
+            background: 'rgba(var(--brand-primary-rgb), 0.55)',
+            boxShadow: '0 0 6px rgba(var(--brand-primary-rgb), 0.4)',
+          }}
+        />
       </div>
     )
   }
