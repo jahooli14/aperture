@@ -105,21 +105,16 @@ export function ProjectMiniCard({
       )}
 
       <div className="relative z-10 flex flex-col gap-1.5 h-full min-h-[92px]">
-        {/* Top row: tiny project-accent dot (left), type icon (right). */}
-        <div className="flex items-center justify-between">
-          <span
-            aria-hidden
-            className="block rounded-full"
-            style={{
-              width: '5px',
-              height: '5px',
-              background: `rgba(${theme.rgb}, 0.7)`,
-            }}
-          />
+        {/* Top row: type icon carries the project-accent identity — it
+            glows in the project's colour instead of an extra colour dot. */}
+        <div className="flex items-center justify-end">
           <TypeIcon
-            className="h-3.5 w-3.5"
-            style={{ color: 'rgba(var(--brand-primary-rgb), 0.55)' }}
-            strokeWidth={1.5}
+            className="h-4 w-4"
+            style={{
+              color: `rgb(${theme.rgb})`,
+              filter: `drop-shadow(0 0 6px rgba(${theme.rgb}, 0.55))`,
+            }}
+            strokeWidth={1.75}
           />
         </div>
 
