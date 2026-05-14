@@ -104,12 +104,12 @@ export function KeepGoingCard({ project, heading, emptyState }: KeepGoingCardPro
         style={{
           // Single restrained palette — mirrors ThoughtOfTheDay. Hero card
           // reads as editorial, not a coloured spotlight.
-          background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.08) 0%, rgba(15,24,41,0.65) 60%)',
+          background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.10) 0%, rgba(15,24,41,0.65) 60%)',
           backdropFilter: 'blur(18px)',
-          border: `1px solid ${dormancyColor ?? 'rgba(var(--brand-primary-rgb),0.14)'}`,
+          border: `1px solid ${dormancyColor ?? 'rgba(var(--brand-primary-rgb),0.35)'}`,
           boxShadow: dormancyColor
-            ? `0 0 28px ${dormancyColor.replace('0.55', '0.08')}, 0 12px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05)`
-            : '0 0 48px -14px rgba(var(--brand-primary-rgb),0.14), 0 12px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04)',
+            ? `0 0 36px ${dormancyColor.replace('0.55', '0.22')}, 0 12px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)`
+            : '0 0 42px rgba(var(--brand-primary-rgb),0.22), 0 12px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)',
           minHeight: '260px',
         }}
       >

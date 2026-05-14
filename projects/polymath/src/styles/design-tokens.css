@@ -221,11 +221,13 @@
   width: 18px;
   height: 1px;
   flex-shrink: 0;
-  background: rgba(var(--brand-primary-rgb), 0.55);
+  background: rgba(var(--brand-primary-rgb), 0.7);
+  box-shadow: 0 0 8px rgba(var(--brand-primary-rgb), 0.6);
 }
 
 .section-heading .accent {
   color: rgb(var(--brand-primary-rgb));
+  text-shadow: 0 0 14px rgba(var(--brand-primary-rgb), 0.55), 0 0 4px rgba(var(--brand-primary-rgb), 0.35);
 }
 
 /* Card title inside a section. Always smaller than the section heading

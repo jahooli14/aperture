@@ -42,9 +42,9 @@ export function ThoughtOfTheDay() {
         transition={{ duration: 0.55, ease: 'easeOut' }}
         className="relative overflow-hidden rounded-2xl"
         style={{
-          background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.08) 0%, rgba(15,24,41,0.65) 60%)',
-          border: '1px solid rgba(var(--brand-primary-rgb),0.14)',
-          boxShadow: '0 0 48px -14px rgba(var(--brand-primary-rgb),0.14), 0 8px 28px -12px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.04)',
+          background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.10) 0%, rgba(15,24,41,0.65) 60%)',
+          border: '1px solid rgba(var(--brand-primary-rgb),0.32)',
+          boxShadow: '0 0 36px rgba(var(--brand-primary-rgb),0.20), 0 8px 28px -10px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05)',
         }}
       >
         {/* Top hairline glow */}
