@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useRef, useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Star, ArrowRight, CheckCircle2, Clock, Snowflake, Archive, Sprout, Loader2, ListOrdered } from 'lucide-react'
@@ -10,6 +10,7 @@ import { getNextTask } from '../../lib/taskUtils'
 import { api } from '../../lib/apiClient'
 import { useToast } from '../ui/toast'
 import { UpNextShelf } from '../home/UpNextShelf'
+import { haptic } from '../../utils/haptics'
 
 interface ProjectsPageCarouselProps {
   loading?: boolean
@@ -41,6 +42,54 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
 
 
   const theme = getTheme(project.type || 'other', project.title)
+
+  // Long-press reveal for the favourite + up-next buttons. The card is
+  // a Link, so we have to suppress the click that follows a long press
+  // (otherwise the user holds, sees the buttons, and the page navigates
+  // anyway). Auto-hides after 4s so the card returns to its calm state.
+  const [actionsRevealed, setActionsRevealed] = useState(false)
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressFired = useRef(false)
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const startLongPress = () => {
+    longPressFired.current = false
+    if (longPressTimer.current) clearTimeout(longPressTimer.current)
+    longPressTimer.current = setTimeout(() => {
+      longPressFired.current = true
+      setActionsRevealed(true)
+      haptic.medium()
+    }, 450)
+  }
+
+  const cancelLongPress = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+  }
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    if (longPressFired.current) {
+      e.preventDefault()
+      e.stopPropagation()
+      longPressFired.current = false
+    }
+  }
+
+  useEffect(() => {
+    if (!actionsRevealed) return
+    if (hideTimer.current) clearTimeout(hideTimer.current)
+    hideTimer.current = setTimeout(() => setActionsRevealed(false), 4000)
+    return () => {
+      if (hideTimer.current) clearTimeout(hideTimer.current)
+    }
+  }, [actionsRevealed])
+
+  useEffect(() => () => {
+    if (longPressTimer.current) clearTimeout(longPressTimer.current)
+    if (hideTimer.current) clearTimeout(hideTimer.current)
+  }, [])
 
   const handleAnalyze = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -121,6 +170,14 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
       }}
       onContextMenu={(e) => e.preventDefault()}
       draggable={false}
+      onTouchStart={startLongPress}
+      onTouchEnd={cancelLongPress}
+      onTouchMove={cancelLongPress}
+      onTouchCancel={cancelLongPress}
+      onMouseDown={startLongPress}
+      onMouseUp={cancelLongPress}
+      onMouseLeave={cancelLongPress}
+      onClick={handleCardClick}
     >
       {/* Header — title shrinks first, icon cluster stays compact so it
           can't overflow narrow masonry columns. min-w-0 is what lets
@@ -139,35 +196,39 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
           >
             <span className="block w-2 h-2 rounded-full" style={{ backgroundColor: theme.textColor, opacity: 0.75 }} />
           </button>
-          <button
-            onClick={handleToggleUpNext}
-            className="h-7 w-7 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
-            title={project.up_next_position != null ? `In Up Next (#${project.up_next_position})` : 'Add to Up Next'}
-          >
-            <ListOrdered
-              className="h-4 w-4"
-              style={{
-                color: project.up_next_position != null ? 'var(--brand-primary)' : 'rgba(255,255,255,0.35)',
-              }}
-            />
-          </button>
-          <button
-            onClick={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              setPriority(project.id)
-            }}
-            className="h-7 w-7 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
-            title={project.is_priority ? 'Remove priority' : 'Set as priority'}
-          >
-            <Star
-              className="h-4 w-4"
-              style={{
-                color: project.is_priority ? 'var(--brand-primary)' : 'rgba(255,255,255,0.35)',
-                fill: project.is_priority ? 'var(--brand-primary)' : 'none'
-              }}
-            />
-          </button>
+          {actionsRevealed && (
+            <>
+              <button
+                onClick={handleToggleUpNext}
+                className="h-7 w-7 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
+                title={project.up_next_position != null ? `In Up Next (#${project.up_next_position})` : 'Add to Up Next'}
+              >
+                <ListOrdered
+                  className="h-4 w-4"
+                  style={{
+                    color: project.up_next_position != null ? 'var(--brand-primary)' : 'rgba(255,255,255,0.35)',
+                  }}
+                />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setPriority(project.id)
+                }}
+                className="h-7 w-7 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
+                title={project.is_priority ? 'Remove priority' : 'Set as priority'}
+              >
+                <Star
+                  className="h-4 w-4"
+                  style={{
+                    color: project.is_priority ? 'var(--brand-primary)' : 'rgba(255,255,255,0.35)',
+                    fill: project.is_priority ? 'var(--brand-primary)' : 'none'
+                  }}
+                />
+              </button>
+            </>
+          )}
         </div>
       </div>
 
