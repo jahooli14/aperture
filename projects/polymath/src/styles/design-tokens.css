@@ -363,7 +363,7 @@
 }
 
 .meta-serif {
-  font-family: var(--brand-font-serif);
+  font-family: var(--brand-font-body);
   font-style: italic;
   font-size: 14px;
   line-height: 1.55;

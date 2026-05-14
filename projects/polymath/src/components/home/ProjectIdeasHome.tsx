@@ -354,7 +354,7 @@ export function ProjectIdeasHome() {
               <span
                 aria-hidden
                 className="text-[12px] leading-none opacity-80"
-                style={{ fontFamily: 'var(--brand-font-serif)' }}
+                style={{ fontFamily: 'var(--brand-font-body)' }}
               >
                 ✦
               </span>
@@ -465,7 +465,7 @@ export function ProjectIdeasHome() {
                     className="text-[24px] leading-none flex-shrink-0"
                     style={{
                       color: `rgb(${accent})`,
-                      fontFamily: 'var(--brand-font-serif)',
+                      fontFamily: 'var(--brand-font-body)',
                       textShadow: `0 0 18px rgba(${accent}, 0.45)`,
                     }}
                   >
@@ -505,7 +505,7 @@ export function ProjectIdeasHome() {
                       className="relative text-[26px] sm:text-[36px] leading-[1.18] italic mb-6"
                       style={{
                         color: 'var(--brand-text-primary)',
-                        fontFamily: 'var(--brand-font-serif)',
+                        fontFamily: 'var(--brand-font-body)',
                         fontWeight: 400,
                         letterSpacing: '-0.018em',
                       }}
@@ -529,7 +529,7 @@ export function ProjectIdeasHome() {
                   className={`relative leading-[1.05] mb-3 ${mode === 'read' ? 'text-[22px] sm:text-[28px]' : 'text-[30px] sm:text-[42px]'}`}
                   style={{
                     color: 'var(--brand-text-primary)',
-                    fontFamily: 'var(--brand-font-serif)',
+                    fontFamily: 'var(--brand-font-body)',
                     fontWeight: 500,
                     letterSpacing: '-0.022em',
                   }}
@@ -552,7 +552,7 @@ export function ProjectIdeasHome() {
                   className="relative text-[15.5px] sm:text-[17px] leading-[1.7] mb-10"
                   style={{
                     color: 'var(--brand-text-primary)',
-                    fontFamily: 'var(--brand-font-serif)',
+                    fontFamily: 'var(--brand-font-body)',
                     fontWeight: 400,
                     opacity: 0.95,
                   }}
@@ -564,7 +564,7 @@ export function ProjectIdeasHome() {
                         className="float-left mr-2 mt-1 text-[58px] sm:text-[68px] leading-[0.85] font-medium select-none"
                         style={{
                           color: `rgb(${accent})`,
-                          fontFamily: 'var(--brand-font-serif)',
+                          fontFamily: 'var(--brand-font-body)',
                           textShadow: `0 0 24px rgba(${accent}, 0.35)`,
                         }}
                       >
@@ -588,7 +588,7 @@ export function ProjectIdeasHome() {
                   />
                   <span
                     className="text-[14px] leading-none"
-                    style={{ color: `rgb(${accent})`, opacity: 0.7, fontFamily: 'var(--brand-font-serif)' }}
+                    style={{ color: `rgb(${accent})`, opacity: 0.7, fontFamily: 'var(--brand-font-body)' }}
                   >
                     {glyph}
                   </span>
@@ -607,7 +607,7 @@ export function ProjectIdeasHome() {
                     style={{
                       color: `rgb(${accent})`,
                       opacity: 0.28,
-                      fontFamily: 'var(--brand-font-serif)',
+                      fontFamily: 'var(--brand-font-body)',
                     }}
                   >
                     “
@@ -616,7 +616,7 @@ export function ProjectIdeasHome() {
                     className="relative pl-7 text-[15px] sm:text-[17px] leading-[1.65] italic"
                     style={{
                       color: 'var(--brand-text-primary)',
-                      fontFamily: 'var(--brand-font-serif)',
+                      fontFamily: 'var(--brand-font-body)',
                       opacity: 0.92,
                     }}
                   >
@@ -646,7 +646,7 @@ export function ProjectIdeasHome() {
                   <span
                     aria-hidden
                     className="absolute top-3 right-4 text-[32px] leading-none opacity-15 select-none"
-                    style={{ color: `rgb(${accent})`, fontFamily: 'var(--brand-font-serif)' }}
+                    style={{ color: `rgb(${accent})`, fontFamily: 'var(--brand-font-body)' }}
                   >
                     {glyph}
                   </span>
@@ -660,7 +660,7 @@ export function ProjectIdeasHome() {
                     className="text-[16px] sm:text-[19px] leading-[1.45] font-medium pr-8"
                     style={{
                       color: 'var(--brand-text-primary)',
-                      fontFamily: 'var(--brand-font-serif)',
+                      fontFamily: 'var(--brand-font-body)',
                     }}
                   >
                     {active.next_step}
@@ -703,7 +703,7 @@ export function ProjectIdeasHome() {
                           {e.excerpt && (
                             <span
                               className="block italic opacity-85"
-                              style={{ fontFamily: 'var(--brand-font-serif)' }}
+                              style={{ fontFamily: 'var(--brand-font-body)' }}
                             >
                               “{e.excerpt}”
                             </span>

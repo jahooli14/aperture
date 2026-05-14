@@ -253,7 +253,9 @@ export function HomePage() {
               so the page reads as one editorial stack. */}
           <motion.div {...stackTransition(0)}>
             <header className="page-masthead">
-              <div className="page-masthead-text" aria-hidden />
+              <div className="page-masthead-text">
+                <h1 className="page-hero">aperture</h1>
+              </div>
               <div className="page-masthead-actions">
                 {isAfterBedtime && (
                   <button

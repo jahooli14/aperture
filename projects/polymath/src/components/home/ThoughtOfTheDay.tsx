@@ -60,7 +60,7 @@ export function ThoughtOfTheDay() {
           className="absolute -top-6 -left-3 text-[160px] leading-none select-none pointer-events-none"
           style={{
             color: 'rgba(var(--brand-primary-rgb), 0.11)',
-            fontFamily: 'var(--brand-font-serif)',
+            fontFamily: 'var(--brand-font-body)',
             fontWeight: 700,
           }}
         >
@@ -72,7 +72,7 @@ export function ThoughtOfTheDay() {
             className="mb-5 leading-[1.55] text-[16.5px] sm:text-[19px] italic"
             style={{
               color: 'var(--brand-text-primary)',
-              fontFamily: 'var(--brand-font-serif)',
+              fontFamily: 'var(--brand-font-body)',
               fontWeight: 400,
               opacity: 0.96,
             }}

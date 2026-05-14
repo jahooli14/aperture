@@ -236,8 +236,8 @@ function ListsPageInner() {
         <div className="min-h-screen pb-32 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto overflow-hidden">
             <header className="page-masthead">
                 <div className="page-masthead-text">
-                    <h1 className="page-hero">Your collections.</h1>
-                    <div className="page-eyebrow">{lists.length} {lists.length === 1 ? 'list' : 'lists'}</div>
+                    <h1 className="page-hero">Your lists</h1>
+                    <div className="page-eyebrow">{lists.length} {lists.length === 1 ? 'collection' : 'collections'}</div>
                 </div>
                 <div className="page-masthead-actions">
                     <button
@@ -399,7 +399,7 @@ function ListsPageInner() {
                                     />
                                 ) : quoteCover ? (
                                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-zinc-950 via-zinc-900 to-black p-1">
-                                        <p className="text-[var(--brand-text-primary)]/60 text-[8px] font-light text-center line-clamp-4" style={{ fontFamily: 'var(--brand-font-serif)' }}>
+                                        <p className="text-[var(--brand-text-primary)]/60 text-[8px] font-light text-center line-clamp-4" style={{ fontFamily: 'var(--brand-font-body)' }}>
                                             {quoteCover}
                                         </p>
                                     </div>
@@ -486,7 +486,7 @@ function ListsPageInner() {
                                         <div className="relative z-10 flex flex-col items-center justify-center text-center">
                                             <p className="text-[var(--brand-text-primary)]/90 font-light text-lg sm:text-xl leading-relaxed tracking-wide px-2"
                                                 style={{
-                                                    fontFamily: 'var(--brand-font-serif)',
+                                                    fontFamily: 'var(--brand-font-body)',
                                                     textShadow: `0 2px 20px rgba(${rgb}, 0.3)`,
                                                     display: '-webkit-box',
                                                     WebkitLineClamp: 6,
@@ -529,7 +529,7 @@ function ListsPageInner() {
                                             <p
                                                 className="text-[var(--brand-text-primary)] leading-tight"
                                                 style={{
-                                                    fontFamily: 'var(--brand-font-serif)',
+                                                    fontFamily: 'var(--brand-font-body)',
                                                     fontSize: 'clamp(18px, 4.5vw, 24px)',
                                                     fontStyle: 'italic',
                                                     textShadow: '0 2px 12px rgba(0,0,0,0.6)',
