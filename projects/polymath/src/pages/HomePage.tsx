@@ -254,7 +254,7 @@ export function HomePage() {
           <motion.div {...stackTransition(0)}>
             <header className="page-masthead">
               <div className="page-masthead-text">
-                <h1 className="page-hero">aperture</h1>
+                <h1 className="page-hero">Aperture.</h1>
               </div>
               <div className="page-masthead-actions">
                 {isAfterBedtime && (

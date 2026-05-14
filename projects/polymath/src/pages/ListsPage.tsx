@@ -236,7 +236,7 @@ function ListsPageInner() {
         <div className="min-h-screen pb-32 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto overflow-hidden">
             <header className="page-masthead">
                 <div className="page-masthead-text">
-                    <h1 className="page-hero">Your lists</h1>
+                    <h1 className="page-hero">Your lists.</h1>
                     <div className="page-eyebrow">{lists.length} {lists.length === 1 ? 'collection' : 'collections'}</div>
                 </div>
                 <div className="page-masthead-actions">
