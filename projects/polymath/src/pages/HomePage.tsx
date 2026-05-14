@@ -7,9 +7,9 @@
  *
  * Section order:
  *   1. Your priority     — KeepGoingCard for the starred project (hero)
- *   2. Try something new — ProjectIdeasHome (on-demand suggestion)
- *   3. Still warm        — RecentlyActiveMini (2-up glass)
- *   4. The queue         — UpNextMini (2-up ghost)
+ *   2. Still warm        — RecentlyActiveMini (2-up glass)
+ *   3. The queue         — UpNextMini (2-up ghost)
+ *   4. Try something new — ProjectIdeasHome (compact on-demand suggestion)
  *   5. Now consuming     — NowConsumingWidget (identity layer)
  *   6. Thought of the day — ThoughtOfTheDay (editorial pull-quote)
  *
@@ -36,7 +36,6 @@ import { UpNextMini } from '../components/home/UpNextMini'
 import { ThoughtOfTheDay } from '../components/home/ThoughtOfTheDay'
 import { ProjectIdeasHome } from '../components/home/ProjectIdeasHome'
 import { MomentSurface } from '../components/home/MomentSurface'
-import { FeelingPill } from '../components/home/FeelingPill'
 import { UnauthHome } from '../components/onboarding/UnauthHome'
 import { ease, stagger } from '../lib/motion'
 import { AlertCircle, ArrowRight, Film, Music, Monitor, Book, MapPin, Gamepad2, Calendar, FileText, Quote, Box, Search, Moon } from 'lucide-react'
@@ -282,16 +281,6 @@ export function HomePage() {
             </header>
           </motion.div>
 
-          {/* Session context — one-tap "how are you feeling right now" so
-              downstream surfaces (idea re-roll, Keep Going filtering) can
-              calibrate to today. CLAUDE.md §Inputs #1. Persisted to
-              sessionStorage so a stale state from yesterday doesn't shape
-              today's home. Stays compact and dismissable — tapping the
-              same chip again clears the selection. */}
-          <motion.div {...stackTransition(0)} className="flex justify-center">
-            <FeelingPill />
-          </motion.div>
-
           {/* The Moment — earned AI idea. Renders only when the cron has
               pre-baked a high-confidence Read idea; otherwise null and the
               page falls back to the priority hero. */}
@@ -299,51 +288,49 @@ export function HomePage() {
             <MomentSurface />
           </motion.div>
 
-          {/* Section 1 — Priority. Heading in the same editorial style
-              as "thought of the day" so the home reads as a labelled stack
-              of sections rather than a single continuous surface. */}
+          {/* Section 1 — Priority. */}
           {priorityProject ? (
             <motion.div {...stackTransition(2)}>
-              <h2 className="section-header" style={{ margin: '0 0 18px' }}>your <span>priority</span></h2>
+              <h2 className="section-header" style={{ margin: '0 0 10px' }}>your <span>priority</span></h2>
               <KeepGoingCard project={priorityProject} />
             </motion.div>
           ) : !hasAnyFocus ? (
             <motion.div {...stackTransition(2)}>
-              <h2 className="section-header" style={{ margin: '0 0 18px' }}>your <span>priority</span></h2>
+              <h2 className="section-header" style={{ margin: '0 0 10px' }}>your <span>priority</span></h2>
               <KeepGoingEmpty />
             </motion.div>
           ) : null}
 
           <div className="section-seam" aria-hidden />
 
-          {/* Section 2 — Try something new. Quiet escape-hatch for
-              on-demand idea generation, promoted up the stack so the
-              user always has a path forward right after priority. */}
-          <h2 className="section-header" style={{ margin: '0 0 18px' }}>try something <span>new</span></h2>
+          {/* Section 2 — Recently active. 2-up glass cards. */}
+          <h2 className="section-header" style={{ margin: '0 0 10px' }}>still <span>warm</span></h2>
           <motion.div {...stackTransition(3)}>
-            <ProjectIdeasHome />
-          </motion.div>
-
-          <div className="section-seam" aria-hidden />
-
-          {/* Section 3 — Recently active. 2-up glass cards. */}
-          <h2 className="section-header" style={{ margin: '0 0 18px' }}>still <span>warm</span></h2>
-          <motion.div {...stackTransition(4)}>
             <RecentlyActiveMini />
           </motion.div>
 
           <div className="section-seam" aria-hidden />
 
-          {/* Section 4 — Up Next. 2-up ghost cards, quieter material. */}
-          <h2 className="section-header" style={{ margin: '0 0 18px' }}>the <span>queue</span></h2>
-          <motion.div {...stackTransition(5)}>
+          {/* Section 3 — Up Next. 2-up ghost cards, quieter material. */}
+          <h2 className="section-header" style={{ margin: '0 0 10px' }}>the <span>queue</span></h2>
+          <motion.div {...stackTransition(4)}>
             <UpNextMini />
           </motion.div>
 
           <div className="section-seam" aria-hidden />
 
+          {/* Section 4 — Try something new. Compact escape-hatch for
+              on-demand idea generation. Sits below the project lists so
+              the user sees what they're already working on first. */}
+          <h2 className="section-header" style={{ margin: '0 0 10px' }}>try something <span>new</span></h2>
+          <motion.div {...stackTransition(5)}>
+            <ProjectIdeasHome />
+          </motion.div>
+
+          <div className="section-seam" aria-hidden />
+
           {/* Section 5 — Now consuming. Identity layer. */}
-          <h2 className="section-header" style={{ margin: '0 0 18px' }}>now <span>consuming</span></h2>
+          <h2 className="section-header" style={{ margin: '0 0 10px' }}>now <span>consuming</span></h2>
           <motion.div {...stackTransition(6)}>
             <NowConsumingWidget />
           </motion.div>

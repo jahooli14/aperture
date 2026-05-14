@@ -156,8 +156,9 @@ export function ProjectIdeasHome() {
       const active = (res.ideas ?? []).slice(0, 3)
       setIdeas(active)
       setActiveIndex(0)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load ideas')
+    } catch {
+      // Swallow load errors quietly — the collapsed pill remains usable.
+      // Raw DB / network messages have no place in this surface.
     } finally {
       setLoading(false)
     }
@@ -240,7 +241,9 @@ export function ProjectIdeasHome() {
         const retryS = Math.ceil((e.details?.retry_after_ms ?? 60_000) / 1000)
         setError(e.details?.message ?? `Just generated — try again in ~${retryS}s.`)
       } else {
-        setError(err instanceof Error ? err.message : 'Generation failed')
+        // Don't leak raw DB / stack messages into the UI. Anything we can't
+        // classify reads as a generic "try again" line.
+        setError("Couldn't suggest one right now — try again in a moment.")
       }
     } finally {
       setGenerating(false)
@@ -320,9 +323,9 @@ export function ProjectIdeasHome() {
       {/* Container collapses tight when the user hasn't asked for an idea
           yet — the surface is a button, not a hero. Expands when an idea
           is being viewed or generated. */}
-      <div className={`relative px-2 sm:px-6 ${expanded || generating ? 'py-8 sm:py-10 min-h-[260px]' : 'py-3'}`}>
+      <div className={`relative px-2 sm:px-6 ${expanded || generating ? 'py-8 sm:py-10 min-h-[260px]' : 'py-1'}`}>
         {loading && (
-          <div className="flex items-center justify-center py-3">
+          <div className="flex items-center justify-center py-1">
             <span
               className="text-[10px] uppercase tracking-[0.28em] italic opacity-50"
               style={{ color: 'var(--brand-text-muted)' }}
@@ -337,7 +340,7 @@ export function ProjectIdeasHome() {
             MomentSurface at the top of the home owns that case now, so this
             slot is the single escape-hatch CTA. */}
         {!loading && !expanded && !generating && (
-          <div className="flex flex-col items-center gap-5 py-2">
+          <div className="flex flex-col items-center gap-2">
             <button
               type="button"
               onClick={reveal}
