@@ -120,15 +120,7 @@ export function KeepGoingCard({ project, heading, emptyState }: KeepGoingCardPro
         />
 
         <div className="flex items-start justify-between gap-2 mb-1 mt-1">
-          <h3
-            className="text-xl leading-tight line-clamp-2 flex-1"
-            style={{
-              color: 'var(--brand-text-primary)',
-              fontFamily: 'var(--brand-font-serif)',
-              fontWeight: 500,
-              opacity: 0.96,
-            }}
-          >
+          <h3 className="card-title-lg line-clamp-2 flex-1">
             {project.title}
           </h3>
           {dormancyLabel && (

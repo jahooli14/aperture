@@ -123,16 +123,11 @@ export function ProjectMiniCard({
           />
         </div>
 
-        {/* Title — editorial serif, mirrors ThoughtOfTheDay text. */}
-        <h4
-          className="text-[14px] leading-snug line-clamp-3 mt-0.5"
-          style={{
-            color: 'var(--brand-text-primary)',
-            fontFamily: 'var(--brand-font-serif)',
-            fontWeight: 500,
-            opacity: isGhost ? 0.82 : 0.96,
-          }}
-        >
+        {/* Title — canonical .card-title (serif, full primary). Ghost
+            variant used to fade to 0.82 opacity which dropped contrast
+            below readable on the outline surface; both variants now share
+            the same spec. */}
+        <h4 className="card-title line-clamp-3 mt-0.5">
           {project.title}
         </h4>
 
