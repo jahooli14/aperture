@@ -265,7 +265,7 @@ export function CustomiseCoverSheet({ list, isOpen, onClose }: Props) {
                             </div>
                           )}
                           <div className="absolute inset-0 flex items-center justify-center px-2">
-                            <p className="text-xs text-white/95 italic text-center" style={{ fontFamily: 'var(--brand-font-serif)', textShadow: '0 1px 6px rgba(0,0,0,0.6)' }}>
+                            <p className="text-xs text-white/95 italic text-center" style={{ fontFamily: 'var(--brand-font-body)', textShadow: '0 1px 6px rgba(0,0,0,0.6)' }}>
                               {p.label}
                             </p>
                           </div>

@@ -418,7 +418,7 @@ const QuoteCard = memo(({
                                 style={{
                                     backgroundColor: 'rgba(255,255,255,0.07)',
                                     boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.15)',
-                                    fontFamily: 'var(--brand-font-serif)',
+                                    fontFamily: 'var(--brand-font-body)',
                                     minHeight: '80px',
                                 }}
                                 rows={3}
@@ -449,7 +449,7 @@ const QuoteCard = memo(({
                         <div className="group/quote relative">
                             <p className={`${isShort ? 'text-3xl sm:text-4xl md:text-5xl' : isMedium ? 'text-2xl sm:text-3xl md:text-4xl' : 'text-xl sm:text-2xl md:text-3xl'} text-[var(--brand-text-primary)]/95 leading-relaxed tracking-wide ${variant === 0 ? 'font-light' : variant === 1 ? 'font-normal' : variant === 2 ? 'font-light italic' : variant === 3 ? 'font-medium' : 'font-light'}`}
                                 style={{
-                                    fontFamily: 'var(--brand-font-serif)',
+                                    fontFamily: 'var(--brand-font-body)',
                                     textShadow: `0 2px 10px rgba(${QUOTE_ACCENT_RGB}, 0.1)`
                                 }}>
                                 {item.content}

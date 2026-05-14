@@ -158,7 +158,7 @@ export function MomentSurface() {
           className="text-[24px] leading-none flex-shrink-0"
           style={{
             color: `rgb(${accent})`,
-            fontFamily: 'var(--brand-font-serif)',
+            fontFamily: 'var(--brand-font-body)',
             textShadow: `0 0 18px rgba(${accent}, 0.45)`,
           }}
         >
@@ -181,7 +181,7 @@ export function MomentSurface() {
           className="text-[24px] sm:text-[32px] leading-[1.18] italic mb-4"
           style={{
             color: 'var(--brand-text-primary)',
-            fontFamily: 'var(--brand-font-serif)',
+            fontFamily: 'var(--brand-font-body)',
             fontWeight: 400,
             letterSpacing: '-0.018em',
           }}
@@ -201,7 +201,7 @@ export function MomentSurface() {
         className="text-[22px] sm:text-[28px] leading-[1.05] mb-3"
         style={{
           color: 'var(--brand-text-primary)',
-          fontFamily: 'var(--brand-font-serif)',
+          fontFamily: 'var(--brand-font-body)',
           fontWeight: 500,
           letterSpacing: '-0.022em',
         }}
@@ -222,7 +222,7 @@ export function MomentSurface() {
         className="text-[15px] leading-[1.6] mb-5 line-clamp-3"
         style={{
           color: 'var(--brand-text-primary)',
-          fontFamily: 'var(--brand-font-serif)',
+          fontFamily: 'var(--brand-font-body)',
           fontWeight: 400,
           opacity: 0.92,
         }}
@@ -246,7 +246,7 @@ export function MomentSurface() {
         </span>
         <p
           className="text-[15px] sm:text-[17px] leading-[1.45] font-medium"
-          style={{ color: 'var(--brand-text-primary)', fontFamily: 'var(--brand-font-serif)' }}
+          style={{ color: 'var(--brand-text-primary)', fontFamily: 'var(--brand-font-body)' }}
         >
           {idea.next_step}
         </p>

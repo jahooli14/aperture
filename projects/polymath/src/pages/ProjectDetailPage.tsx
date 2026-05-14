@@ -53,7 +53,7 @@ function BlockerField({ blocker, onSave }: { blocker?: string; onSave: (text: st
       <span
         className="block mb-2 italic text-xs"
         style={{
-          fontFamily: 'var(--brand-font-serif)',
+          fontFamily: 'var(--brand-font-body)',
           color: 'rgba(252,211,77,0.75)',
           letterSpacing: '0.02em',
         }}
@@ -69,7 +69,7 @@ function BlockerField({ blocker, onSave }: { blocker?: string; onSave: (text: st
             placeholder="One sentence."
             className="w-full bg-black/20 rounded-xl p-3 resize-none focus:outline-none border text-base"
             style={{
-              fontFamily: 'var(--brand-font-serif)',
+              fontFamily: 'var(--brand-font-body)',
               lineHeight: 1.55,
               color: 'var(--brand-text-primary)',
               borderColor: 'rgba(252,211,77,0.18)',
@@ -84,7 +84,7 @@ function BlockerField({ blocker, onSave }: { blocker?: string; onSave: (text: st
             <button
               onClick={() => { setText(blocker ?? ''); setEditing(false) }}
               className="px-3 py-1.5 text-[11px] rounded-full hover:bg-white/[0.05] transition-colors italic"
-              style={{ fontFamily: 'var(--brand-font-serif)', color: 'var(--brand-text-secondary)', opacity: 0.6 }}
+              style={{ fontFamily: 'var(--brand-font-body)', color: 'var(--brand-text-secondary)', opacity: 0.6 }}
             >
               Cancel
             </button>
@@ -102,7 +102,7 @@ function BlockerField({ blocker, onSave }: { blocker?: string; onSave: (text: st
         <p
           className="cursor-pointer hover:opacity-95 transition-opacity text-base"
           style={{
-            fontFamily: 'var(--brand-font-serif)',
+            fontFamily: 'var(--brand-font-body)',
             fontStyle: blocker ? 'normal' : 'italic',
             lineHeight: 1.55,
             color: 'var(--brand-text-primary)',
@@ -866,7 +866,7 @@ export function ProjectDetailPage() {
                   <span className="text-[11px] font-medium tracking-wide block mb-2 lowercase" style={{ color: 'rgba(var(--brand-primary-rgb),0.7)' }}>
                     a new angle
                   </span>
-                  <p className="text-[15px] leading-relaxed italic" style={{ color: 'var(--brand-text-primary)', fontFamily: 'var(--brand-font-serif)' }}>
+                  <p className="text-[15px] leading-relaxed italic" style={{ color: 'var(--brand-text-primary)', fontFamily: 'var(--brand-font-body)' }}>
                     {project.metadata.evolved_description as string}
                   </p>
                   {project.heat_reason && (

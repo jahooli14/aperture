@@ -56,7 +56,7 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
                                     className="text-2xl leading-tight"
                                     style={{
                                         color: 'var(--brand-text-primary)',
-                                        fontFamily: 'var(--brand-font-serif)',
+                                        fontFamily: 'var(--brand-font-body)',
                                         fontWeight: 500,
                                     }}
                                 >
@@ -125,7 +125,7 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
                                                 className="text-[15px] leading-tight"
                                                 style={{
                                                     color: 'var(--brand-text-primary)',
-                                                    fontFamily: 'var(--brand-font-serif)',
+                                                    fontFamily: 'var(--brand-font-body)',
                                                     fontWeight: 500,
                                                 }}
                                             >

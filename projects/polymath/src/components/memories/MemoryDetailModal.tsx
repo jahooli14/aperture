@@ -208,7 +208,7 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
                   className="mb-5 text-sm italic leading-relaxed pr-2"
                   style={{
                     color: 'var(--brand-text-secondary)',
-                    fontFamily: 'var(--brand-font-serif)',
+                    fontFamily: 'var(--brand-font-body)',
                   }}
                 >
                   {memory.triage.bridge_insight}
