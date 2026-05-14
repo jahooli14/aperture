@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { Palette, Bug, ToggleRight, ToggleLeft, Zap, RefreshCw, Search, Type, Bell, GitBranch, RotateCcw } from 'lucide-react'
+import { Palette, Check, Bug, ToggleRight, ToggleLeft, Zap, RefreshCw, Search, Type, Bell, GitBranch, RotateCcw } from 'lucide-react'
 import { api } from '../lib/apiClient'
 import { useThemeStore, DEFAULT_ACCENT_COLOR, DEFAULT_BG_ACCENT_COLOR } from '../stores/useThemeStore'
 import { SubtleBackground } from '../components/SubtleBackground'
@@ -242,14 +242,14 @@ export function SettingsPage() {
                   Reset
                 </button>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <ColorPickerRow
+              <div className="grid grid-cols-1 gap-3">
+                <ColorSwatchRow
                   label="Primary accent"
                   description="Cards, buttons, glows, links"
                   value={accentColor}
                   onChange={setAccentColor}
                 />
-                <ColorPickerRow
+                <ColorSwatchRow
                   label="Background tint"
                   description="Cool depth behind every page"
                   value={bgAccentColor}
@@ -666,39 +666,67 @@ export function SettingsPage() {
   )
 }
 
-interface ColorPickerRowProps {
+// Curated palette — twelve well-spaced hues that all look good against
+// dark glass. Tap one to pick. No sliders, no native picker UI.
+const THEME_COLORS: { hex: string; name: string }[] = [
+  { hex: '#38bdf8', name: 'cyan' },
+  { hex: '#0ea5e9', name: 'sky' },
+  { hex: '#3b82f6', name: 'blue' },
+  { hex: '#6366f1', name: 'indigo' },
+  { hex: '#8b5cf6', name: 'violet' },
+  { hex: '#ec4899', name: 'pink' },
+  { hex: '#f43f5e', name: 'rose' },
+  { hex: '#f97316', name: 'orange' },
+  { hex: '#eab308', name: 'amber' },
+  { hex: '#84cc16', name: 'lime' },
+  { hex: '#10b981', name: 'emerald' },
+  { hex: '#14b8a6', name: 'teal' },
+]
+
+interface ColorSwatchRowProps {
   label: string
   description: string
   value: string
   onChange: (color: string) => void
 }
 
-function ColorPickerRow({ label, description, value, onChange }: ColorPickerRowProps) {
+function ColorSwatchRow({ label, description, value, onChange }: ColorSwatchRowProps) {
+  const normalised = value.toLowerCase()
   return (
-    <label
-      className="flex items-center gap-4 p-3 rounded-xl cursor-pointer transition-all hover:bg-[var(--glass-surface-hover)]"
+    <div
+      className="p-4 rounded-xl"
       style={{
         background: 'var(--glass-surface)',
         border: '1px solid var(--glass-surface-hover)',
       }}
     >
-      <div className="relative h-12 w-12 rounded-lg flex-shrink-0 overflow-hidden" style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.12), 0 2px 8px rgba(0,0,0,0.3)' }}>
-        <div className="absolute inset-0" style={{ background: value }} />
-        <input
-          type="color"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="absolute inset-0 opacity-0 cursor-pointer"
-          aria-label={label}
-        />
-      </div>
-      <div className="flex-1 min-w-0">
+      <div className="mb-3">
         <div className="text-sm font-semibold premium-text-platinum">{label}</div>
         <div className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>{description}</div>
       </div>
-      <div className="text-xs font-mono uppercase flex-shrink-0" style={{ color: 'var(--brand-text-secondary)' }}>
-        {value}
+      <div className="flex flex-wrap gap-2.5">
+        {THEME_COLORS.map(({ hex, name }) => {
+          const isSelected = normalised === hex.toLowerCase()
+          return (
+            <button
+              key={hex}
+              onClick={() => onChange(hex)}
+              aria-label={`${name} ${hex}`}
+              className="relative h-9 w-9 rounded-full transition-all press-spring"
+              style={{
+                background: hex,
+                boxShadow: isSelected
+                  ? `0 0 0 2px var(--brand-bg), 0 0 0 4px ${hex}, 0 0 14px ${hex}88`
+                  : 'inset 0 0 0 1px rgba(255,255,255,0.12), 0 1px 3px rgba(0,0,0,0.3)',
+              }}
+            >
+              {isSelected && (
+                <Check className="h-4 w-4 absolute inset-0 m-auto text-white drop-shadow-md" strokeWidth={3} />
+              )}
+            </button>
+          )
+        })}
       </div>
-    </label>
+    </div>
   )
 }
