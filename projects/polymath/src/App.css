@@ -121,9 +121,10 @@
   }
 
   /* Premium ambient overlay — atmospheric depth behind glass surfaces.
-     Cyan glows in the corners + a faint indigo lift mid-page + a bottom
-     horizon glow give every page a sense of place. No darkening vignette:
-     the canvas should feel like an open horizon, not a void. */
+     Cyan glows in the corners + a faint indigo lift mid-page give every
+     page a sense of place. The bottom keeps a soft dark wash so the
+     FloatingNav has contrast to float against — no cyan in the nav's
+     lane (it has its own glow). */
   body::before {
     content: '';
     position: fixed;
@@ -134,17 +135,17 @@
     pointer-events: none;
     background:
       radial-gradient(ellipse 80% 60% at 12% -5%,
-        rgba(var(--brand-primary-rgb), 0.14) 0%,
+        rgba(var(--brand-primary-rgb), 0.11) 0%,
         transparent 55%),
       radial-gradient(ellipse 70% 55% at 92% 108%,
-        rgba(var(--brand-primary-rgb), 0.10) 0%,
+        rgba(var(--brand-primary-rgb), 0.08) 0%,
         transparent 60%),
       radial-gradient(ellipse 95% 70% at 50% 55%,
         rgba(99, 102, 241, 0.05) 0%,
         transparent 65%),
-      radial-gradient(ellipse 120% 30% at 50% 100%,
-        rgba(var(--brand-primary-rgb), 0.06) 0%,
-        transparent 70%);
+      radial-gradient(ellipse 100% 18% at 50% 102%,
+        rgba(0, 0, 0, 0.22) 0%,
+        transparent 60%);
     z-index: 0;
   }
 
