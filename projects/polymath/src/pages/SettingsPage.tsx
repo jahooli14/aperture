@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { Settings, Palette, Check, Bug, ToggleRight, ToggleLeft, Zap, RefreshCw, Search, Type, Bell, GitBranch, RotateCcw } from 'lucide-react'
+import { Palette, Bug, ToggleRight, ToggleLeft, Zap, RefreshCw, Search, Type, Bell, GitBranch, RotateCcw } from 'lucide-react'
 import { api } from '../lib/apiClient'
-import { useThemeStore } from '../stores/useThemeStore'
-import { getAvailableColors, getColorPreview } from '../lib/theme'
+import { useThemeStore, DEFAULT_ACCENT_COLOR, DEFAULT_BG_ACCENT_COLOR } from '../stores/useThemeStore'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { useToast } from '../components/ui/toast'
 import { useNotificationSettings } from '../stores/useNotificationSettings'
@@ -23,7 +22,14 @@ const fontSizeOptions = [
 
 export function SettingsPage() {
   const navigate = useNavigate()
-  const { accentColor, intensity, fontSize, showBugTracker, setAccentColor, setIntensity, setFontSize, setShowBugTracker } = useThemeStore()
+  const {
+    accentColor, bgAccentColor, intensity, fontSize, showBugTracker,
+    setAccentColor, setBgAccentColor, resetThemeColors,
+    setIntensity, setFontSize, setShowBugTracker,
+  } = useThemeStore()
+  const colorsAtDefault =
+    accentColor.toLowerCase() === DEFAULT_ACCENT_COLOR &&
+    bgAccentColor.toLowerCase() === DEFAULT_BG_ACCENT_COLOR
   const { addToast } = useToast()
   const [regenerating, setRegenerating] = useState(false)
   const [tidying, setTidying] = useState(false)
@@ -215,35 +221,40 @@ export function SettingsPage() {
               </h2>
             </div>
 
-            {/* Accent Color */}
+            {/* Look & feel — pick the primary accent and the cool depth
+                tone used in the background atmosphere. */}
             <div className="mb-8">
-              <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider opacity-60 flex items-center gap-2" style={{ color: "var(--brand-primary)" }}>
-                Accent Color
-              </h3>
-              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2.5 sm:gap-3">
-                {getAvailableColors().map((color) => {
-                  const preview = getColorPreview(color)
-                  const isSelected = accentColor === color
-                  return (
-                    <button
-                      key={color}
-                      onClick={() => setAccentColor(color)}
-                      className={`relative aspect-square rounded-xl transition-all duration-300 min-h-[44px] ${isSelected ? 'scale-105 ring-2 ring-offset-2 ring-offset-black/50' : 'hover:scale-105'}`}
-                      style={{
-                        background: `linear-gradient(135deg, ${preview.primary}, ${preview.light})`,
-                        boxShadow: isSelected ? `0 0 20px ${preview.primary}60` : '0 2px 8px rgba(0,0,0,0.3)',
-                        borderColor: isSelected ? preview.primary : 'transparent'
-                      }}
-                    >
-                      {isSelected && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <Check className="h-6 w-6 text-[var(--brand-text-primary)] drop-shadow-md" />
-                        </div>
-                      )}
-                      <div className="sr-only">{color}</div>
-                    </button>
-                  )
-                })}
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold uppercase tracking-wider opacity-60" style={{ color: 'var(--brand-primary)' }}>
+                  Look &amp; feel
+                </h3>
+                <button
+                  onClick={resetThemeColors}
+                  disabled={colorsAtDefault}
+                  className="text-xs px-2.5 py-1 rounded-md transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                  style={{
+                    background: 'var(--glass-surface)',
+                    color: 'var(--brand-text-secondary)',
+                    border: '1px solid var(--glass-surface-hover)',
+                  }}
+                  title="Reset both colours to default"
+                >
+                  Reset
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <ColorPickerRow
+                  label="Primary accent"
+                  description="Cards, buttons, glows, links"
+                  value={accentColor}
+                  onChange={setAccentColor}
+                />
+                <ColorPickerRow
+                  label="Background tint"
+                  description="Cool depth behind every page"
+                  value={bgAccentColor}
+                  onChange={setBgAccentColor}
+                />
               </div>
             </div>
 
@@ -652,5 +663,42 @@ export function SettingsPage() {
         </section>
       </div>
     </motion.div>
+  )
+}
+
+interface ColorPickerRowProps {
+  label: string
+  description: string
+  value: string
+  onChange: (color: string) => void
+}
+
+function ColorPickerRow({ label, description, value, onChange }: ColorPickerRowProps) {
+  return (
+    <label
+      className="flex items-center gap-4 p-3 rounded-xl cursor-pointer transition-all hover:bg-[var(--glass-surface-hover)]"
+      style={{
+        background: 'var(--glass-surface)',
+        border: '1px solid var(--glass-surface-hover)',
+      }}
+    >
+      <div className="relative h-12 w-12 rounded-lg flex-shrink-0 overflow-hidden" style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.12), 0 2px 8px rgba(0,0,0,0.3)' }}>
+        <div className="absolute inset-0" style={{ background: value }} />
+        <input
+          type="color"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="absolute inset-0 opacity-0 cursor-pointer"
+          aria-label={label}
+        />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-semibold premium-text-platinum">{label}</div>
+        <div className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>{description}</div>
+      </div>
+      <div className="text-xs font-mono uppercase flex-shrink-0" style={{ color: 'var(--brand-text-secondary)' }}>
+        {value}
+      </div>
+    </label>
   )
 }

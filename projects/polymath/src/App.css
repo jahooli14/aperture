@@ -59,6 +59,13 @@
   body {
     @apply antialiased;
     background-color: var(--premium-surface-base);
+    /* Whisper of a gradient — top a hair lifted, bottom a hair deeper.
+       Felt, not seen. The base colour does the heavy lifting. */
+    background-image: linear-gradient(180deg,
+      #111a2c 0%,
+      #0f1829 50%,
+      #0d1525 100%);
+    background-attachment: fixed;
     color: var(--premium-text-primary);
     font-family: var(--premium-font-body);
     font-size: var(--premium-text-body-lg);
@@ -110,9 +117,13 @@
     /* Chrome, Safari, Opera */
   }
 
-  /* Premium ambient overlay — atmospheric depth behind glass surfaces.
-     Two cyan glows offset diagonally + a deep vignette gives every page
-     a sense of place without overpowering content. */
+  /* Three layers, each earning its place:
+       1. cyan upper-left — brand light source
+       2. indigo off-centre — cool depth, the only non-cyan hue in the
+          system, kept local so it actually registers somewhere
+       3. soft dark wash at the floor — gives the FloatingNav contrast
+          to float against
+     A diagonal composition, not symmetric chrome. */
   body::before {
     content: '';
     position: fixed;
@@ -122,18 +133,15 @@
     bottom: 0;
     pointer-events: none;
     background:
-      radial-gradient(ellipse 80% 60% at 15% 0%,
-        rgba(var(--brand-primary-rgb), 0.10) 0%,
+      radial-gradient(ellipse 75% 55% at 10% -2%,
+        rgba(var(--brand-primary-rgb), 0.06) 0%,
         transparent 55%),
-      radial-gradient(ellipse 70% 50% at 90% 110%,
-        rgba(var(--brand-primary-rgb), 0.07) 0%,
-        transparent 60%),
-      radial-gradient(ellipse 100% 80% at 50% 50%,
-        rgba(167, 139, 250, 0.04) 0%,
+      radial-gradient(ellipse 55% 45% at 68% 52%,
+        rgba(var(--bg-accent-rgb), 0.04) 0%,
         transparent 65%),
-      radial-gradient(circle at 50% 100%,
-        rgba(0, 0, 0, 0.35) 0%,
-        transparent 50%);
+      radial-gradient(ellipse 100% 18% at 50% 102%,
+        rgba(0, 0, 0, 0.15) 0%,
+        transparent 60%);
     z-index: 0;
   }
 

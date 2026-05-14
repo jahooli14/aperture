@@ -29,9 +29,12 @@
  * ──────────────────────────────────────────────────────────────────── */
 
 :root {
-    /* Brand Core */
+    /* Brand Core — overridable from Settings (look & feel pickers).
+       --brand-primary-rgb is the app-wide accent; --bg-accent-rgb is the
+       cool depth tone used in the body atmosphere overlay. */
     --brand-primary-rgb: 56, 189, 248;   /* #38bdf8 */
     --brand-primary: rgb(var(--brand-primary-rgb));
+    --bg-accent-rgb: 99, 102, 241;       /* #6366f1 */
     --brand-bg: #0f1829;
     --brand-bg-rgb: 15, 24, 41;
 
