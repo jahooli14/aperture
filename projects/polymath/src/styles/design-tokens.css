@@ -233,27 +233,27 @@
 /* Card title inside a section. Always smaller than the section heading
    above. Use sentence case — no SHOUTING.
 
-   Editorial serif (Playfair) matches the content voice — theme.css uses
-   --brand-font-serif for titles + body. Every home card was reinventing
-   this inline; this class is the single spec. No opacity fade — readability
-   on dark glass needs full primary. Use .card-title-lg on the
+   Sans (Inter) — Playfair's high stroke contrast looks elegant in the
+   page hero but hairs out at 14–18px on dark glass, hurting readability.
+   Cards are UI surfaces; treat their titles as UI, not editorial copy.
+   Full primary colour (no opacity fade). Use .card-title-lg on the
    hero-of-a-row card (e.g. KeepGoing focus); plain .card-title for the
    compact mini-cards. */
 .card-title {
-  font-family: var(--brand-font-serif);
+  font-family: var(--brand-font-body);
   font-size: var(--card-title-size);
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.3;
-  letter-spacing: -0.018em;
+  letter-spacing: -0.01em;
   color: var(--brand-text-primary);
 }
 
 .card-title-lg {
-  font-family: var(--brand-font-serif);
+  font-family: var(--brand-font-body);
   font-size: 1.125rem;             /* 18px */
-  font-weight: 500;
-  line-height: 1.2;
-  letter-spacing: -0.022em;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
   color: var(--brand-text-primary);
 }
 
