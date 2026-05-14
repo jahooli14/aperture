@@ -8,11 +8,11 @@ import { useThemeStore } from '../stores/useThemeStore'
 import { applyTheme } from '../lib/theme'
 
 export function useTheme() {
-  const { accentColor, intensity, fontSize } = useThemeStore()
+  const { accentColor, bgAccentColor, intensity, fontSize } = useThemeStore()
 
   useEffect(() => {
-    applyTheme(accentColor, intensity, fontSize)
-  }, [accentColor, intensity, fontSize])
+    applyTheme(accentColor, bgAccentColor, intensity, fontSize)
+  }, [accentColor, bgAccentColor, intensity, fontSize])
 
-  return { accentColor, intensity, fontSize }
+  return { accentColor, bgAccentColor, intensity, fontSize }
 }

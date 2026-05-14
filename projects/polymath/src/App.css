@@ -137,7 +137,7 @@
         rgba(var(--brand-primary-rgb), 0.06) 0%,
         transparent 55%),
       radial-gradient(ellipse 55% 45% at 68% 52%,
-        rgba(99, 102, 241, 0.04) 0%,
+        rgba(var(--bg-accent-rgb), 0.04) 0%,
         transparent 65%),
       radial-gradient(ellipse 100% 18% at 50% 102%,
         rgba(0, 0, 0, 0.15) 0%,
