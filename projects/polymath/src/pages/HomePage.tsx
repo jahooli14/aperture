@@ -38,7 +38,7 @@ import { ProjectIdeasHome } from '../components/home/ProjectIdeasHome'
 import { MomentSurface } from '../components/home/MomentSurface'
 import { UnauthHome } from '../components/onboarding/UnauthHome'
 import { ease, stagger } from '../lib/motion'
-import { AlertCircle, ArrowRight, Film, Music, Monitor, Book, MapPin, Gamepad2, Calendar, FileText, Quote, Box, Search, Moon } from 'lucide-react'
+import { AlertCircle, ArrowRight, Film, Music, Monitor, Book, MapPin, Gamepad2, Calendar, FileText, Quote, Box, Search, Moon, Settings } from 'lucide-react'
 
 const LIST_TYPE_ICONS: Record<string, React.ElementType> = {
   film: Film, music: Music, tech: Monitor, book: Book, place: MapPin,
@@ -341,6 +341,21 @@ export function HomePage() {
               section-header internally. */}
           <motion.div {...stackTransition(7)}>
             <ThoughtOfTheDay />
+          </motion.div>
+
+          {/* Quiet exit to Settings — small, centred, low-contrast.
+              Lives at the very bottom so it never competes with content. */}
+          <motion.div {...stackTransition(8)}>
+            <div className="pt-10 pb-2 flex justify-center">
+              <button
+                onClick={() => navigate('/settings')}
+                className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] opacity-40 hover:opacity-80 transition-opacity press-spring"
+                style={{ color: 'var(--brand-text-muted)' }}
+              >
+                <Settings className="h-3.5 w-3.5" />
+                Settings
+              </button>
+            </div>
           </motion.div>
 
         </div>
