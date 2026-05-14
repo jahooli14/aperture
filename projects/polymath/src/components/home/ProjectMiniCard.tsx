@@ -65,18 +65,20 @@ export function ProjectMiniCard({
   const surface = isGhost
     ? {
         background: 'rgba(15, 24, 41, 0.30)',
-        border: '1px solid rgba(var(--brand-primary-rgb), 0.10)',
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.025)',
+        border: '1px solid rgba(var(--brand-primary-rgb), 0.18)',
+        boxShadow:
+          '0 0 22px rgba(var(--brand-primary-rgb), 0.10),' +
+          'inset 0 1px 0 rgba(255,255,255,0.03)',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
       }
     : {
-        background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.08) 0%, rgba(15,24,41,0.65) 60%)',
-        border: '1px solid rgba(var(--brand-primary-rgb),0.14)',
+        background: 'linear-gradient(155deg, rgba(var(--brand-primary-rgb),0.10) 0%, rgba(15,24,41,0.65) 60%)',
+        border: '1px solid rgba(var(--brand-primary-rgb),0.32)',
         boxShadow:
-          '0 0 48px -14px rgba(var(--brand-primary-rgb),0.14),' +
-          '0 8px 28px -12px rgba(0,0,0,0.55),' +
-          'inset 0 1px 0 rgba(255,255,255,0.04)',
+          '0 0 32px rgba(var(--brand-primary-rgb),0.20),' +
+          '0 8px 24px -10px rgba(0,0,0,0.55),' +
+          'inset 0 1px 0 rgba(255,255,255,0.05)',
         backdropFilter: 'blur(14px) saturate(140%)',
         WebkitBackdropFilter: 'blur(14px) saturate(140%)',
       }

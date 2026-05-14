@@ -63,30 +63,6 @@ const LIST_TYPE_ACCENT: Record<string, string> = {
   generic: '156, 163, 175', // slate
 }
 
-/**
- * Mode register chip — small two-line label in the top-left of the home
- * masthead. Names what the lead card is firing in, and tints itself in
- * that project's accent colour so the chip echoes the hero downscreen.
- *
- * For now the chip reads off the priority / recent state we already have.
- * When MomentSurface lifts its mode (new idea / reshape / extend) into
- * shared state, this is where it should land.
- */
-function ModeRegister({
-  label,
-  detail,
-}: {
-  label: string
-  detail?: string
-}) {
-  return (
-    <div className="mode-register">
-      <span className="mode-register-label">{label}</span>
-      {detail && <span className="mode-register-detail">{detail}</span>}
-    </div>
-  )
-}
-
 function NowConsumingWidget() {
   const [activeItems, setActiveItems] = useState<{ listId: string; listTitle: string; listType: string; itemId: string; itemContent: string }[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -257,14 +233,6 @@ export function HomePage() {
     transition: { ...ease.editorial, delay: 0.04 + i * stagger.list },
   })
 
-  // Mode register copy + accent. Reads off the data we already have —
-  // priority project takes the chip, falling back to the still-warm card,
-  // then a quiet "no focus" state. When MomentSurface starts surfacing
-  // explicit modes (new idea / reshape / extend), wire them in here.
-  const leadProject = priorityProject || recentProject
-  const modeLabel = priorityProject ? 'priority' : recentProject ? 'keep going' : 'quiet'
-  const modeDetail = leadProject?.title
-
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -281,17 +249,12 @@ export function HomePage() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative" style={{ zIndex: 1 }}>
 
-          {/* Masthead: mode register chip (left) + bedtime/search (right). */}
+          {/* Masthead: bedtime/search actions (right). The mode label lives
+              with each section header below ("your priority", "still warm")
+              so the page reads as one editorial stack. */}
           <motion.div {...stackTransition(0)}>
             <header className="page-masthead">
-              <div className="page-masthead-text">
-                {leadProject && (
-                  <ModeRegister
-                    label={modeLabel}
-                    detail={modeDetail}
-                  />
-                )}
-              </div>
+              <div className="page-masthead-text" aria-hidden />
               <div className="page-masthead-actions">
                 {isAfterBedtime && (
                   <button

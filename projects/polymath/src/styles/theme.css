@@ -164,13 +164,15 @@
     content: '';
     width: 18px;
     height: 1px;
-    background: rgba(var(--brand-primary-rgb), 0.55);
+    background: rgba(var(--brand-primary-rgb), 0.7);
+    box-shadow: 0 0 8px rgba(var(--brand-primary-rgb), 0.6);
     flex-shrink: 0;
 }
 
 .section-header span,
 .section-header .accent {
     color: rgb(var(--brand-primary-rgb));
+    text-shadow: 0 0 14px rgba(var(--brand-primary-rgb), 0.55), 0 0 4px rgba(var(--brand-primary-rgb), 0.35);
 }
 
 /* The "Shelf" Separator */
@@ -738,29 +740,3 @@ h6 {
     );
 }
 
-/* Mode register — small two-line chip in the top-left of the home
-   masthead. Names what The Moment is firing in. Replaces the dead
-   space left when the wordmark eyebrow was removed. */
-.mode-register {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    line-height: 1.1;
-}
-.mode-register-label {
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: rgba(var(--brand-primary-rgb), 0.78);
-}
-.mode-register-detail {
-    font-size: 11.5px;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.55);
-    letter-spacing: -0.005em;
-    max-width: 180px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
