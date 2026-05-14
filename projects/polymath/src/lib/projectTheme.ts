@@ -3,6 +3,27 @@
  * Shared color/theme utilities for project cards and components
  */
 
+import {
+  PenLine, Cpu, Palette, Music, Briefcase, Sparkles, Wand2, BookOpen, Box,
+  type LucideIcon,
+} from 'lucide-react'
+
+const TYPE_ICONS: Record<string, LucideIcon> = {
+  writing: PenLine,
+  tech: Cpu,
+  art: Palette,
+  music: Music,
+  business: Briefcase,
+  life: Sparkles,
+  creative: Wand2,
+  learning: BookOpen,
+}
+
+export function iconForType(type?: string | null): LucideIcon {
+  const t = (type || '').toLowerCase().trim()
+  return TYPE_ICONS[t] || Box
+}
+
 export const PROJECT_COLORS: Record<string, string> = {
   tech: 'var(--project-tech-rgb)',
   art: 'var(--project-art-rgb)',

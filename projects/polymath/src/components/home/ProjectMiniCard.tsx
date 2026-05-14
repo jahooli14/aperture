@@ -12,30 +12,11 @@
  */
 
 import { useNavigate } from 'react-router-dom'
-import {
-  Play, PenLine, Cpu, Palette, Music, Briefcase, Sparkles, Wand2, BookOpen, Box,
-  type LucideIcon,
-} from 'lucide-react'
-import { getTheme } from '../../lib/projectTheme'
+import { Play } from 'lucide-react'
+import { getTheme, iconForType } from '../../lib/projectTheme'
 import { haptic } from '../../utils/haptics'
 import { useStartProjectSession } from '../../hooks/useStartProjectSession'
 import type { Project } from '../../types'
-
-const TYPE_ICONS: Record<string, LucideIcon> = {
-  writing: PenLine,
-  tech: Cpu,
-  art: Palette,
-  music: Music,
-  business: Briefcase,
-  life: Sparkles,
-  creative: Wand2,
-  learning: BookOpen,
-}
-
-function iconForType(type?: string): LucideIcon {
-  const t = (type || '').toLowerCase().trim()
-  return TYPE_ICONS[t] || Box
-}
 
 export type MiniCardVariant = 'glass' | 'ghost'
 
@@ -105,17 +86,27 @@ export function ProjectMiniCard({
       )}
 
       <div className="relative z-10 flex flex-col gap-1.5 h-full min-h-[92px]">
-        {/* Top row: type icon carries the project-accent identity — it
-            glows in the project's colour instead of an extra colour dot. */}
+        {/* Top row: type icon sits inside a soft project-coloured halo.
+            The area glows, not the icon — feels like ambient identity
+            instead of a coloured pin. */}
         <div className="flex items-center justify-end">
-          <TypeIcon
-            className="h-4 w-4"
-            style={{
-              color: `rgb(${theme.rgb})`,
-              filter: `drop-shadow(0 0 6px rgba(${theme.rgb}, 0.55))`,
-            }}
-            strokeWidth={1.75}
-          />
+          <div className="relative">
+            <span
+              aria-hidden
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none rounded-full"
+              style={{
+                width: '40px',
+                height: '40px',
+                background: `radial-gradient(circle, rgba(${theme.rgb}, 0.38) 0%, rgba(${theme.rgb}, 0.14) 45%, transparent 75%)`,
+                filter: 'blur(4px)',
+              }}
+            />
+            <TypeIcon
+              className="relative h-4 w-4"
+              style={{ color: 'rgba(255, 255, 255, 0.85)' }}
+              strokeWidth={1.75}
+            />
+          </div>
         </div>
 
         {/* Title — canonical .card-title (serif, full primary). Ghost

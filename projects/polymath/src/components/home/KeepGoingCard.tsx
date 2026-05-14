@@ -15,6 +15,7 @@ import { useEffect, useState } from 'react'
 import { Play, Zap } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useStartProjectSession } from '../../hooks/useStartProjectSession'
+import { getTheme, iconForType } from '../../lib/projectTheme'
 import type { Project } from '../../types'
 
 const SESSION_DURATION_MINUTES = 60
@@ -73,6 +74,8 @@ export function KeepGoingCard({ project, heading, emptyState }: KeepGoingCardPro
   }
 
   const handleStartSession = () => start({ prefetched: plan })
+  const TypeIcon = iconForType(project.type)
+  const theme = getTheme(project.type || 'other', project.title)
 
   const headline = plan?.task_title || project.metadata?.session_headline
   const pitch = plan?.task_description || project.metadata?.session_pitch
@@ -131,6 +134,26 @@ export function KeepGoingCard({ project, heading, emptyState }: KeepGoingCardPro
               {dormancyLabel}
             </span>
           )}
+          {/* Type icon with project-coloured area glow (same treatment
+              as ProjectMiniCard). The area carries identity; the icon
+              itself stays neutral. */}
+          <div className="relative flex-shrink-0 mt-0.5">
+            <span
+              aria-hidden
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none rounded-full"
+              style={{
+                width: '48px',
+                height: '48px',
+                background: `radial-gradient(circle, rgba(${theme.rgb}, 0.42) 0%, rgba(${theme.rgb}, 0.16) 45%, transparent 75%)`,
+                filter: 'blur(5px)',
+              }}
+            />
+            <TypeIcon
+              className="relative h-[18px] w-[18px]"
+              style={{ color: 'rgba(255, 255, 255, 0.88)' }}
+              strokeWidth={1.75}
+            />
+          </div>
         </div>
         <span
           className="text-[10px] uppercase tracking-[0.32em] font-semibold mb-3 inline-block"
