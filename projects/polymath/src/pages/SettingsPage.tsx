@@ -84,8 +84,9 @@ export function SettingsPage() {
       setSavedBrief(res.prompt)
       if (res.prompt === null) setDraftBrief(defaultBrief)
       addToast({ title: 'Brief saved', variant: 'success' })
-    } catch {
-      addToast({ title: 'Save failed', description: 'Try again in a moment.', variant: 'destructive' })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Try again in a moment.'
+      addToast({ title: 'Save failed', description: msg, variant: 'destructive' })
     } finally {
       setBriefSaving(false)
     }
@@ -98,8 +99,9 @@ export function SettingsPage() {
       setSavedBrief(null)
       setDraftBrief(defaultBrief)
       addToast({ title: 'Reset to default', variant: 'success' })
-    } catch {
-      addToast({ title: 'Reset failed', description: 'Try again in a moment.', variant: 'destructive' })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Try again in a moment.'
+      addToast({ title: 'Reset failed', description: msg, variant: 'destructive' })
     } finally {
       setBriefSaving(false)
     }
