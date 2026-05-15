@@ -28,6 +28,7 @@ import { generateText } from '../gemini-chat.js'
 import { MODELS } from '../models.js'
 import { pickSeedPairs, tokenise, topicalOverlap, type SeedCandidate } from './seed-picker.js'
 import { PLAIN_ENGLISH_RULES } from '../plain-english.js'
+import { DEFAULT_IDEA_BRIEF } from './default-prompt.js'
 import type { ArrivalKind, CentreKind, GatherResult, GenerationResult, IdeaEvidence, ProjectIdea, SeedPair } from './types.js'
 
 const MIN_SIGNALS = 8
@@ -50,6 +51,11 @@ export interface GenerateOptions {
    *  the on-demand fast path to right-now state. The cron path doesn't
    *  use this (cron has no user; runs against a population). */
   feeling?: SessionFeeling | null
+  /** User-customised editorial brief for the fast-path idea prompt. NULL
+   *  or empty string → use DEFAULT_IDEA_BRIEF. Lives on user_settings.
+   *  Only the fast path uses it today — cron stays on the locked-pair
+   *  pipeline so the longitudinal Read mode keeps its full structure. */
+  brief?: string | null
 }
 
 export async function generateProjectIdeas(
@@ -78,8 +84,8 @@ export async function generateProjectIdeas(
     //      fallback synthesises an idea from the gathered data without an
     //      LLM call. The button NEVER returns empty.
     // Target end-to-end: ~6–8s. The fallback adds ~10ms on top.
-    console.log(`[project-ideas] fast path: two-stage Lite→Flash${opts.feeling ? ` (feeling=${opts.feeling})` : ''}`)
-    const fastIdea = await runFastTwoStage(gathered, opts.feeling ?? null)
+    console.log(`[project-ideas] fast path: two-stage Lite→Flash${opts.feeling ? ` (feeling=${opts.feeling})` : ''}${opts.brief ? ' (custom brief)' : ''}`)
+    const fastIdea = await runFastTwoStage(gathered, opts.feeling ?? null, opts.brief ?? null)
     if (fastIdea) {
       return { ideas: [{ ...fastIdea, mode: 'crossover' }], attempts: 1 }
     }
@@ -214,17 +220,21 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
  *      temperature. Two clean attempts before we even consider bailing.
  *
  *  Returns null only if both Stage 2 attempts fail. */
-async function runFastTwoStage(gathered: GatherResult, feeling: SessionFeeling | null): Promise<ProjectIdea | null> {
+async function runFastTwoStage(
+  gathered: GatherResult,
+  feeling: SessionFeeling | null,
+  brief: string | null,
+): Promise<ProjectIdea | null> {
   // ── Stage 1: Lite reads everything and digests it ─────────────────
   const snapshot = await runStage1Snapshot(gathered)
 
   // ── Stage 2: Flash writes the idea from the snapshot ──────────────
-  const first = await runStage2Idea(snapshot, gathered, { attempt: 1, temperature: 0.85, feeling })
+  const first = await runStage2Idea(snapshot, gathered, { attempt: 1, temperature: 0.85, feeling, brief })
   if (first) return first
   // Same snapshot, slightly hotter temperature so the second attempt
   // doesn't reproduce the same parse-fail. Cheap insurance — one extra
   // ~3–5s call to keep the LLM idea on screen instead of the template.
-  const second = await runStage2Idea(snapshot, gathered, { attempt: 2, temperature: 0.95, feeling })
+  const second = await runStage2Idea(snapshot, gathered, { attempt: 2, temperature: 0.95, feeling, brief })
   return second
 }
 
@@ -267,9 +277,9 @@ async function runStage1Snapshot(gathered: GatherResult): Promise<Snapshot> {
 async function runStage2Idea(
   snapshot: Snapshot,
   gathered: GatherResult,
-  opts: { attempt: number; temperature: number; feeling: SessionFeeling | null },
+  opts: { attempt: number; temperature: number; feeling: SessionFeeling | null; brief: string | null },
 ): Promise<ProjectIdea | null> {
-  const ideaPrompt = buildFastIdeaPrompt(snapshot, opts.feeling)
+  const ideaPrompt = buildFastIdeaPrompt(snapshot, opts.feeling, opts.brief)
   console.log(`[project-ideas] fast/stage-2 (Flash) idea prompt: ${ideaPrompt.length} chars; attempt=${opts.attempt}`)
   const t2 = Date.now()
   let ideaRaw: string
@@ -463,17 +473,20 @@ const FEELING_GUIDANCE: Record<SessionFeeling, string> = {
   restless: 'They are RESTLESS right now — they want a change of texture. Prefer a project that uses a different sense or tool than the obvious one (away from the screen if they\'ve been on it; back to a screen if they\'ve been in the workshop). The next_step should physically move them.',
 }
 
-function buildFastIdeaPrompt(s: Snapshot, feeling: SessionFeeling | null): string {
+function buildFastIdeaPrompt(s: Snapshot, feeling: SessionFeeling | null, brief: string | null): string {
   const feelingBlock = feeling ? `\n═══════ HOW THEY'RE FEELING RIGHT NOW ═══════\n${FEELING_GUIDANCE[feeling]}\n` : ''
-  return `You are a friend who has been paying attention to someone's creative life. They opened the app and asked: "give me one project to work on today." Your job: ONE idea, written like you actually know them.
+  // The editorial brief is user-editable in Settings. NULL or empty
+  // string → fall back to the built-in default. The user's text replaces
+  // the brief verbatim — they get to set the editorial discipline (which
+  // moves are allowed, what the title can look like, what the next step
+  // must be). Plain-English rules and JSON structure stay non-editable.
+  const ideaBrief = (brief && brief.trim()) ? brief.trim() : DEFAULT_IDEA_BRIEF
+  return `You are writing one project suggestion for someone who just opened the app and asked "give me one project to work on today."
 
-═══════ HOW TO WRITE ═══════
+═══════ VOICE RULES (non-negotiable) ═══════
 
 ${PLAIN_ENGLISH_RULES}
-NEVER use abstract nouns in the title: no "exploration," "study," "series," "directory," "newsletter," "podcast," "zine," "investigation," "meditation on," "in conversation with."
-Concrete. "Cut the beech strip for the synth case" beats "begin work on the woodwork aspect."
 ${feelingBlock}
-
 ═══════ WHO THEY ARE ═══════
 
 ${s.taste}
@@ -481,7 +494,7 @@ ${s.taste}
 ═══════ DORMANT PROJECTS (preferred ground — revive the right one) ═══════
 ${s.dormant.length ? s.dormant.map(d => `  • "${d.title}" (last touched ${d.last_touched})${d.description ? ` — ${d.description}` : ''}`).join('\n') : '  (none yet)'}
 
-═══════ RECENT THEMES (what they've been circling) ═══════
+═══════ RECENT THEMES (what they've been circling — MOTIFS, not project material) ═══════
 ${s.recent_themes.length ? s.recent_themes.map(t => `  • ${t}`).join('\n') : '  (none yet)'}
 
 ═══════ RECENT VOICE NOTES ═══════
@@ -493,19 +506,20 @@ ${s.reactions_make.length ? s.reactions_make.map(r => `  • ${r}`).join('\n') :
 ═══════ THINGS THAT SPARKED THEM ═══════
 ${s.reactions_sparked.length ? s.reactions_sparked.map(r => `  • ${r}`).join('\n') : '  (none yet)'}
 
-═══════ THE IDEA ═══════
+═══════ THE BRIEF (the user wrote this themselves — follow it) ═══════
 
-Pick the ONE project that makes the most sense for this person to start today. Prefer reviving a dormant project when one fits the recent themes. If no dormant project fits, propose a new project rooted in their taste + recent themes. NEVER propose "finish/ship/complete/continue X" against an active project. NEVER use abstract framings.
+${ideaBrief}
 
-═══════ OUTPUT (strict JSON, no markdown fences) ═══════
+═══════ OUTPUT (strict JSON, no markdown fences, no extra fields) ═══════
 {
+  "move": "revive | extend | name",
   "title": "≤6 words. Names the artefact or the action.",
   "pitch": "2 sentences. Sentence 1 = what the project IS. Sentence 2 = what done looks like in one observable test.",
   "why_now": "ONE sentence. What in their data makes this the right one right now.",
   "next_step": "ONE physical action they can do TODAY. Cut, drill, flash, commit a named file with named first content, drive, phone. NOT 'research,' 'plan,' 'sketch,' 'outline,' 'decide.'"
 }
 
-No extra fields. No commentary. No evidence array — we'll build that ourselves from the snapshot.`
+Decide the move FIRST, then write the rest from inside that move. If the brief and the data don't line up on any move cleanly, pick the move that the brief favours and write that one — don't smash two together.`
 }
 
 /** Parses the Flash idea response, synthesises evidence from the snapshot
