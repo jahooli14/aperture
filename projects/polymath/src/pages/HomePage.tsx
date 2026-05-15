@@ -35,7 +35,6 @@ import { RecentlyActiveMini } from '../components/home/RecentlyActiveMini'
 import { UpNextMini } from '../components/home/UpNextMini'
 import { ThoughtOfTheDay } from '../components/home/ThoughtOfTheDay'
 import { ProjectIdeasHome } from '../components/home/ProjectIdeasHome'
-import { MomentSurface } from '../components/home/MomentSurface'
 import { UnauthHome } from '../components/onboarding/UnauthHome'
 import { ease, stagger } from '../lib/motion'
 import { AlertCircle, ArrowRight, Film, Music, Monitor, Book, MapPin, Gamepad2, Calendar, FileText, Quote, Box, Search, Moon, Settings } from 'lucide-react'
@@ -281,13 +280,6 @@ export function HomePage() {
                 </button>
               </div>
             </header>
-          </motion.div>
-
-          {/* The Moment — earned AI idea. Renders only when the cron has
-              pre-baked a high-confidence Read idea; otherwise null and the
-              page falls back to the priority hero. */}
-          <motion.div {...stackTransition(1)}>
-            <MomentSurface />
           </motion.div>
 
           {/* Section 1 — Priority. */}
