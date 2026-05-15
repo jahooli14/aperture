@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { Palette, Check, Bug, ToggleRight, ToggleLeft, Zap, RefreshCw, Search, Type, Bell, GitBranch, RotateCcw } from 'lucide-react'
+import { Palette, Check, Bug, ToggleRight, ToggleLeft, Zap, RefreshCw, Search, Type, Bell, GitBranch, RotateCcw, Lightbulb } from 'lucide-react'
 import { api } from '../lib/apiClient'
 import { useThemeStore, DEFAULT_ACCENT_COLOR, DEFAULT_BG_ACCENT_COLOR } from '../stores/useThemeStore'
 import { SubtleBackground } from '../components/SubtleBackground'
@@ -37,6 +37,73 @@ export function SettingsPage() {
   const [allowHandoff, setAllowHandoff] = useState(false)
   const [resetConfirm, setResetConfirm] = useState(false)
   const [resetting, setResetting] = useState(false)
+
+  // Customisable "suggest a project" editorial brief. Loaded on mount;
+  // null prompt means the user is on the built-in default. The textarea
+  // shows defaultBrief when prompt is null so the user can see what
+  // they'd be editing before they commit to overriding it.
+  const [defaultBrief, setDefaultBrief] = useState<string>('')
+  const [draftBrief, setDraftBrief] = useState<string>('')
+  const [savedBrief, setSavedBrief] = useState<string | null>(null)
+  const [briefLoaded, setBriefLoaded] = useState(false)
+  const [briefSaving, setBriefSaving] = useState(false)
+
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const res = (await api.get('utilities?resource=idea-prompt')) as {
+          prompt: string | null
+          default: string
+        } | null
+        if (!res) return
+        setDefaultBrief(res.default)
+        setSavedBrief(res.prompt)
+        setDraftBrief(res.prompt ?? res.default)
+      } catch {
+        // Silent — section just stays empty until the user retries.
+      } finally {
+        setBriefLoaded(true)
+      }
+    })()
+  }, [])
+
+  const briefDirty = briefLoaded && draftBrief.trim() !== (savedBrief ?? defaultBrief).trim()
+  const briefIsDefault = (savedBrief ?? '').trim().length === 0
+
+  const handleSaveBrief = async () => {
+    setBriefSaving(true)
+    try {
+      const trimmed = draftBrief.trim()
+      // Treat "exactly equals the default" as a reset so the user can't
+      // end up with a stored copy of the default that drifts from later
+      // server-side updates.
+      const next = trimmed === defaultBrief.trim() || trimmed.length === 0 ? null : draftBrief
+      const res = (await api.post('utilities?resource=idea-prompt', { prompt: next })) as {
+        prompt: string | null
+      }
+      setSavedBrief(res.prompt)
+      if (res.prompt === null) setDraftBrief(defaultBrief)
+      addToast({ title: 'Brief saved', variant: 'success' })
+    } catch {
+      addToast({ title: 'Save failed', description: 'Try again in a moment.', variant: 'destructive' })
+    } finally {
+      setBriefSaving(false)
+    }
+  }
+
+  const handleResetBrief = async () => {
+    setBriefSaving(true)
+    try {
+      await api.post('utilities?resource=idea-prompt', { prompt: null })
+      setSavedBrief(null)
+      setDraftBrief(defaultBrief)
+      addToast({ title: 'Reset to default', variant: 'success' })
+    } catch {
+      addToast({ title: 'Reset failed', description: 'Try again in a moment.', variant: 'destructive' })
+    } finally {
+      setBriefSaving(false)
+    }
+  }
 
   useEffect(() => {
     ;(async () => {
@@ -314,6 +381,84 @@ export function SettingsPage() {
                     </button>
                   )
                 })}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Suggest-an-idea brief — user-editable prompt that shapes what the
+            home "suggest a project" button produces. Plain English, free
+            text, saved per-user. NULL in the DB means "use the default";
+            saving the unchanged default behaves the same as a reset. */}
+        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+          <div className="p-6 rounded-xl backdrop-blur-xl" style={{
+            background: 'var(--brand-glass-bg)',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+          }}>
+            <div className="flex items-center gap-3 mb-4 border-b border-[var(--glass-surface)] pb-4">
+              <Lightbulb className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
+              <h2 className="text-xl font-bold" style={{ color: 'var(--brand-primary)' }}>
+                Suggest-an-idea brief
+              </h2>
+            </div>
+
+            <p className="text-sm mb-4" style={{ color: 'var(--brand-text-secondary)' }}>
+              This is what the home "suggest a project" button asks the model. Rewrite it in your own words — what kind of idea you want, what to avoid, how to phrase it. Leave it blank to use the default. Voice notes, projects, and the JSON output stay structural; only this brief is editable.
+            </p>
+
+            <div
+              className="rounded-xl p-1"
+              style={{
+                background: 'var(--glass-surface)',
+                border: briefDirty ? '1px solid rgba(var(--brand-primary-rgb), 0.4)' : '1px solid var(--glass-surface-hover)',
+              }}
+            >
+              <textarea
+                value={draftBrief}
+                onChange={(e) => setDraftBrief(e.target.value)}
+                disabled={!briefLoaded || briefSaving}
+                placeholder={briefLoaded ? '' : 'Loading…'}
+                spellCheck={false}
+                rows={16}
+                className="w-full p-3 rounded-lg text-sm leading-relaxed font-mono resize-y outline-none bg-transparent"
+                style={{
+                  color: 'var(--brand-text-primary)',
+                  minHeight: '320px',
+                }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-3 mt-4 flex-wrap">
+              <div className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
+                {briefIsDefault ? 'On the default brief.' : 'Using your custom brief.'}
+                {' '}
+                {draftBrief.length} chars
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleResetBrief}
+                  disabled={!briefLoaded || briefSaving || briefIsDefault}
+                  className="px-4 py-2 rounded-lg text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{
+                    background: 'var(--glass-surface)',
+                    color: 'var(--brand-text-secondary)',
+                    border: '1px solid var(--glass-surface-hover)',
+                  }}
+                  title="Throw away your changes and go back to the default brief"
+                >
+                  Reset to default
+                </button>
+                <button
+                  onClick={handleSaveBrief}
+                  disabled={!briefLoaded || briefSaving || !briefDirty}
+                  className="px-4 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{
+                    background: briefDirty ? 'rgb(var(--brand-primary-rgb))' : 'var(--glass-surface)',
+                    color: briefDirty ? 'white' : 'var(--brand-text-secondary)',
+                  }}
+                >
+                  {briefSaving ? 'Saving…' : 'Save'}
+                </button>
               </div>
             </div>
           </div>

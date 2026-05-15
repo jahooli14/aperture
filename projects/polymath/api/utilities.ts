@@ -16,6 +16,8 @@
  *   GET  ?resource=project-ideas             — Latest batch of generated project ideas
  *   POST ?resource=project-ideas-feedback    — Mark an idea saved/rejected/built
  *   POST ?resource=generate-project-ideas    — Generate a fresh batch (cron + manual)
+ *   GET  ?resource=idea-prompt               — User's custom "suggest an idea" brief (+ default)
+ *   POST ?resource=idea-prompt               — Update or reset the brief (null/empty = reset)
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
@@ -35,6 +37,7 @@ import {
 } from './_lib/onboarding/coverage.js'
 import { MODELS } from './_lib/models.js'
 import { PLAIN_ENGLISH_RULES } from './_lib/plain-english.js'
+import { DEFAULT_IDEA_BRIEF } from './_lib/project-ideas/default-prompt.js'
 import type { CoverageGrid, CoverageSlotId } from '../src/types'
 
 export const config = {
@@ -102,6 +105,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'POST' && resource === 'generate-project-ideas') {
     return handleGenerateProjectIdeas(req, res)
+  }
+
+  if (resource === 'idea-prompt') {
+    return handleIdeaPrompt(req, res)
   }
 
   return res.status(404).json({ error: 'Not found' })
@@ -1474,6 +1481,67 @@ async function handleProjectIdeasFeedback(req: VercelRequest, res: VercelRespons
 // frustrating dismiss-then-regenerate. Cron is exempt.
 const GENERATION_COOLDOWN_MS = 5_000
 
+// Hard cap so a runaway paste can't blow past Gemini's input window. The
+// default brief is ~1.6KB; this lets the user write a couple of pages
+// before we refuse the save.
+const MAX_IDEA_PROMPT_LEN = 8000
+
+/** GET/POST handler for the user-editable "suggest a project" brief.
+ *  GET returns { prompt, default, is_custom } — prompt is the user's
+ *  override or null, default is the built-in fallback so the UI can
+ *  pre-fill the textarea on first edit. POST takes { prompt: string|null }
+ *  and stores / clears the override. */
+async function handleIdeaPrompt(req: VercelRequest, res: VercelResponse) {
+  const userId = await getUserId(req)
+  if (!userId) return res.status(401).json({ error: 'Sign in to edit the brief' })
+  const supabase = getSupabaseClient()
+
+  if (req.method === 'GET') {
+    const { data, error } = await supabase
+      .from('user_settings')
+      .select('idea_prompt')
+      .eq('user_id', userId)
+      .maybeSingle()
+    if (error) return res.status(500).json({ error: error.message })
+    const raw = data?.idea_prompt
+    const prompt = typeof raw === 'string' && raw.trim().length > 0 ? raw : null
+    return res.status(200).json({
+      prompt,
+      default: DEFAULT_IDEA_BRIEF,
+      is_custom: prompt !== null,
+    })
+  }
+
+  if (req.method === 'POST' || req.method === 'PUT') {
+    const body = (typeof req.body === 'object' && req.body) ? req.body as { prompt?: unknown } : {}
+    const incoming = body.prompt
+    // null OR empty/whitespace-only string both reset to default.
+    let next: string | null
+    if (incoming === null || incoming === undefined) {
+      next = null
+    } else if (typeof incoming !== 'string') {
+      return res.status(400).json({ error: 'prompt must be a string or null' })
+    } else if (incoming.trim().length === 0) {
+      next = null
+    } else if (incoming.length > MAX_IDEA_PROMPT_LEN) {
+      return res.status(400).json({ error: `prompt must be ${MAX_IDEA_PROMPT_LEN} characters or fewer` })
+    } else {
+      next = incoming
+    }
+    const { error } = await supabase
+      .from('user_settings')
+      .upsert({ user_id: userId, idea_prompt: next }, { onConflict: 'user_id' })
+    if (error) return res.status(500).json({ error: error.message })
+    return res.status(200).json({
+      prompt: next,
+      default: DEFAULT_IDEA_BRIEF,
+      is_custom: next !== null,
+    })
+  }
+
+  return res.status(405).json({ error: 'Method not allowed' })
+}
+
 async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelResponse) {
   const started = Date.now()
   try {
@@ -1576,10 +1644,28 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
     // move; a restless user wants something with a different texture).
     const rawFeeling = typeof req.body === 'object' && req.body && typeof (req.body as any).feeling === 'string' ? (req.body as any).feeling : null
     const feeling = (rawFeeling === 'focused' || rawFeeling === 'scattered' || rawFeeling === 'restless') ? rawFeeling : null
+
+    // Custom editorial brief for the fast path — settable per-user from
+    // the Settings page. NULL / empty → generator falls back to its
+    // built-in default. Only the user path uses this; cron stays on the
+    // strict locked-pair pipeline so longitudinal Read mode keeps its
+    // full structure.
+    let brief: string | null = null
+    if (!viaCron) {
+      const { data: prefs } = await supabase
+        .from('user_settings')
+        .select('idea_prompt')
+        .eq('user_id', userId)
+        .maybeSingle()
+      const raw = prefs?.idea_prompt
+      if (typeof raw === 'string' && raw.trim().length > 0) brief = raw.trim()
+    }
+
     const result = await generateProjectIdeas(gathered, {
       force: !viaCron,
       fast: !viaCron,
       feeling,
+      brief,
     })
     console.log(`[generate-project-ideas] generation finished in ${Date.now() - tLlmStart}ms: ${result.ideas.length} ideas, reason=${result.reason ?? 'ok'}`)
 

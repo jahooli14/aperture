@@ -2,12 +2,8 @@
  * ProjectIdeasHome — quiet "suggest a project" pill that expands into the
  * full editorial idea card on click.
  *
- * Sits BELOW Up Next on the homepage. This is the escape-hatch / on-demand
- * surface — the user explicitly asks for an idea here. When a high-confidence
- * Read idea is queued, the lead surface is `MomentSurface` at the top of the
- * page; this pill stays available below for additional ideas. Both surfaces
- * fetch independently and sync via the `polymath:ideas-invalidate` window
- * event so dismissing on one updates the other.
+ * Sits BELOW Up Next on the homepage. This is the on-demand surface — the
+ * user explicitly asks for an idea here. Nothing surfaces uninvited.
  *
  * Click flow:
  *   - Queue has any pending idea → expand inline, no LLM call.
@@ -24,7 +20,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { BookmarkPlus, BookmarkCheck, X, Hammer } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
 import { api } from '../../lib/apiClient'
-import { IDEAS_INVALIDATE_EVENT } from './MomentSurface'
 import { useSessionContextStore } from '../../stores/useSessionContextStore'
 
 interface IdeaEvidence {
@@ -166,12 +161,6 @@ export function ProjectIdeasHome() {
 
   useEffect(() => {
     void load()
-    // MomentSurface fires this after it dismisses / saves the high-conf
-    // Read idea it owns. Refetch so this surface doesn't keep showing
-    // rows that have already been resolved upstream.
-    const handler = () => void load()
-    window.addEventListener(IDEAS_INVALIDATE_EVENT, handler)
-    return () => window.removeEventListener(IDEAS_INVALIDATE_EVENT, handler)
   }, [load])
 
   // Advance the loading-stage copy while a generation is in flight. Stages
@@ -335,10 +324,8 @@ export function ProjectIdeasHome() {
           </div>
         )}
 
-        {/* Collapsed state — the quiet "suggest a project" pill. The high-
-            confidence Read teaser used to live here as a competing surface;
-            MomentSurface at the top of the home owns that case now, so this
-            slot is the single escape-hatch CTA. */}
+        {/* Collapsed state — the quiet "suggest a project" pill. This is the
+            only idea surface on the home; nothing surfaces uninvited. */}
         {!loading && !expanded && !generating && (
           <div className="flex flex-col items-center gap-2">
             <button
