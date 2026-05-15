@@ -54,14 +54,16 @@ export function ThoughtOfTheDay() {
           style={{ background: 'linear-gradient(90deg, transparent, rgba(var(--brand-primary-rgb),0.45), transparent)' }}
         />
 
-        {/* Decorative giant quotation glyph in corner */}
+        {/* Decorative giant quotation glyph in corner — Playfair for proper
+            book-jacket curl rather than a sans-serif tick. */}
         <span
           aria-hidden
-          className="absolute -top-6 -left-3 text-[160px] leading-none select-none pointer-events-none"
+          className="absolute -top-10 -left-2 text-[200px] leading-none select-none pointer-events-none"
           style={{
-            color: 'rgba(var(--brand-primary-rgb), 0.11)',
-            fontFamily: 'var(--brand-font-body)',
+            color: 'rgba(var(--brand-primary-rgb), 0.14)',
+            fontFamily: 'var(--brand-font-serif)',
             fontWeight: 700,
+            fontStyle: 'italic',
           }}
         >
           “
@@ -69,10 +71,10 @@ export function ThoughtOfTheDay() {
 
         <div className="relative z-10 p-7 sm:p-8 pl-12 sm:pl-14">
           <p
-            className="mb-5 leading-[1.55] text-[16.5px] sm:text-[19px] italic"
+            className="mb-5 leading-[1.45] text-[19px] sm:text-[22px] italic"
             style={{
               color: 'var(--brand-text-primary)',
-              fontFamily: 'var(--brand-font-body)',
+              fontFamily: 'var(--brand-font-serif)',
               fontWeight: 400,
               opacity: 0.96,
             }}

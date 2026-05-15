@@ -73,6 +73,14 @@ export function OptimizedImage({
     onError?.()
   }
 
+  // If the image is already in the browser cache, `complete` is true on the
+  // very first render — skip the fade so cached covers paint instantly.
+  useEffect(() => {
+    if (imgRef.current?.complete && imgRef.current.naturalWidth > 0) {
+      setIsLoaded(true)
+    }
+  }, [isInView, src])
+
   return (
     <div
       ref={containerRef}
@@ -115,7 +123,7 @@ export function OptimizedImage({
           onLoad={handleLoad}
           onError={handleError}
           className={cn(
-            'w-full h-full object-cover transition-opacity duration-500',
+            'w-full h-full object-cover transition-opacity duration-200',
             isLoaded ? 'opacity-100' : 'opacity-0'
           )}
         />
