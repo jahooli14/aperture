@@ -15,6 +15,56 @@ precacheAndRoute(self.__WB_MANIFEST)
 self.skipWaiting()
 clientsClaim()
 
+// Disk cache for cover art so list grids feel instant on re-open. Covers come
+// from a small set of hosts (Open Library, TMDB, Wikimedia, Supabase storage)
+// and don't change once published — CacheFirst with a one-week sweep is safe.
+const IMAGE_CACHE = 'pm-images-v1'
+const IMAGE_HOSTS = new Set([
+  'covers.openlibrary.org',
+  'image.tmdb.org',
+  'upload.wikimedia.org',
+])
+const IMAGE_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
+
+function isCacheableImage(url: URL, request: Request): boolean {
+  if (request.method !== 'GET') return false
+  if (request.destination !== 'image') return false
+  if (IMAGE_HOSTS.has(url.hostname)) return true
+  // Supabase storage covers (any project ref)
+  if (url.hostname.endsWith('.supabase.co') && url.pathname.includes('/storage/')) return true
+  return false
+}
+
+async function cacheFirstImage(request: Request): Promise<Response> {
+  const cache = await caches.open(IMAGE_CACHE)
+  const cached = await cache.match(request)
+  if (cached) {
+    const dateHeader = cached.headers.get('x-pm-cached-at')
+    const cachedAt = dateHeader ? Number(dateHeader) : 0
+    if (cachedAt && Date.now() - cachedAt < IMAGE_CACHE_MAX_AGE_MS) {
+      return cached
+    }
+  }
+  try {
+    const network = await fetch(request)
+    if (network.ok) {
+      const cloned = new Response(await network.clone().blob(), {
+        status: network.status,
+        statusText: network.statusText,
+        headers: new Headers([
+          ...Array.from(network.headers.entries()),
+          ['x-pm-cached-at', String(Date.now())],
+        ]),
+      })
+      await cache.put(request, cloned)
+    }
+    return network
+  } catch (error) {
+    if (cached) return cached
+    throw error
+  }
+}
+
 // Handle Single Page App navigation (serve index.html for non-API routes)
 // Handle Single Page App navigation (serve index.html for non-API routes)
 try {
@@ -203,6 +253,13 @@ self.addEventListener('fetch', (event) => {
         }
       })()
     )
+    return
+  }
+
+  // Cover-art CacheFirst — disk-cache external images so the lists grid loads
+  // from cache on revisit instead of refetching from TMDB/Open Library/etc.
+  if (isCacheableImage(url, request)) {
+    event.respondWith(cacheFirstImage(request))
     return
   }
 

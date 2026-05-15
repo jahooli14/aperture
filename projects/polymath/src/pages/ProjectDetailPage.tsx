@@ -5,7 +5,7 @@
 
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
-import { Loader2, MoreVertical, Plus, Check, X, GripVertical, ChevronDown, Zap, Target, Star, Sprout, Pin, PinOff } from 'lucide-react'
+import { Loader2, MoreVertical, Plus, Check, X, GripVertical, Zap, Target, Star, Sprout, Pin, PinOff, Skull } from 'lucide-react'
 import { useProjectStore } from '../stores/useProjectStore'
 import { AddNoteDialog } from '../components/projects/AddNoteDialog'
 import { ProjectPath } from '../components/projects/ProjectPath'
@@ -181,7 +181,6 @@ export function ProjectDetailPage() {
   const [tempTitle, setTempTitle] = useState('')
   const [tempGoal, setTempGoal] = useState('')
   const [draggedPinnedTaskId, setDraggedPinnedTaskId] = useState<string | null>(null)
-  const [showStatusMenu, setShowStatusMenu] = useState(false)
   const [showCategoryMenu, setShowCategoryMenu] = useState(false)
   const titleInputRef = useRef<HTMLInputElement>(null)
   const goalInputRef = useRef<HTMLTextAreaElement>(null)
@@ -708,6 +707,25 @@ export function ProjectDetailPage() {
                   >
                     {pinnedItem?.id === project.id ? <><PinOff className="h-4 w-4" /> Unpin</> : <><Pin className="h-4 w-4" /> Pin</>}
                   </button>
+                  {project.status !== 'graveyard' && project.status !== 'completed' && (
+                    <button
+                      onClick={async () => {
+                        setShowMenu(false)
+                        const ok = await confirm({
+                          title: `Send "${project.title}" to the graveyard?`,
+                          description: 'Parks the project. It stops surfacing on Home but stays in the graveyard view — you can revive it later.',
+                          confirmText: 'Send to graveyard',
+                          cancelText: 'Cancel',
+                          variant: 'destructive',
+                        })
+                        if (ok) handleStatusChange('graveyard')
+                      }}
+                      className="w-full px-3.5 py-3 text-left text-[14px] font-medium transition-colors hover:bg-white/[0.05] rounded-xl flex items-center gap-2 min-h-[44px]"
+                      style={{ color: 'var(--brand-text-primary)', opacity: 0.9 }}
+                    >
+                      <Skull className="h-4 w-4" /> Send to graveyard
+                    </button>
+                  )}
                   <button
                     onClick={() => { setShowMenu(false); handleDelete() }}
                     className="w-full px-3.5 py-3 text-left text-[14px] font-medium transition-colors hover:bg-red-500/10 rounded-xl text-red-400 min-h-[44px]"
@@ -745,35 +763,29 @@ export function ProjectDetailPage() {
               <Star className="h-3 w-3 fill-current" /> Priority
             </span>
           )}
-          <div className="relative">
-            <button
-              onClick={() => setShowStatusMenu(!showStatusMenu)}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-all hover:bg-white/[0.04]"
-              style={{ background: 'rgba(255,255,255,0.03)' }}
+          {/* Read-only status chip. Transitions happen via explicit actions:
+              "Mark Complete" below the task list, and "Send to graveyard" in
+              the kebab menu. Dormant is set automatically by inactivity. */}
+          <span
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
+            style={{ background: 'rgba(255,255,255,0.03)' }}
+          >
+            <span
+              className="h-1.5 w-1.5 rounded-full"
+              style={{
+                background:
+                  project.status === 'active' || project.status === 'completed'
+                    ? 'rgb(var(--brand-primary-rgb))'
+                    : 'rgba(255,255,255,0.25)',
+              }}
+            />
+            <span
+              className="text-[11px] font-semibold capitalize"
+              style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}
             >
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: project.status === 'active' ? 'rgb(var(--brand-primary-rgb))' : project.status === 'completed' ? 'rgb(var(--brand-primary-rgb))' : 'rgba(255,255,255,0.25)' }} />
-              <span className="text-[11px] font-semibold capitalize" style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}>{project.status}</span>
-              <ChevronDown className="h-2.5 w-2.5" style={{ color: 'var(--brand-text-secondary)', opacity: 0.3 }} />
-            </button>
-            {showStatusMenu && (
-              <>
-                <div className="fixed inset-0 z-50" onClick={() => setShowStatusMenu(false)} />
-                <div className="absolute left-0 top-full mt-1.5 w-40 rounded-2xl p-1.5 z-[60] bg-[#1a1a24] border border-white/[0.08] shadow-2xl">
-                  {(['active', 'next', 'dormant', 'completed', 'graveyard'] as Project['status'][]).map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => { setShowStatusMenu(false); handleStatusChange(s) }}
-                      className={`w-full px-3 py-2 text-left text-[12px] font-medium capitalize rounded-xl transition-colors ${
-                        project.status === s ? 'bg-white/[0.06] text-[var(--brand-text-primary)]' : 'hover:bg-white/[0.04] text-[var(--brand-text-secondary)] opacity-60'
-                      }`}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+              {project.status}
+            </span>
+          </span>
           {project.type && (
             <span className="text-[11px] font-medium px-2.5 py-1 rounded-lg" style={{ color: 'var(--brand-text-secondary)', opacity: 0.4, background: 'rgba(255,255,255,0.03)' }}>
               {project.type}
