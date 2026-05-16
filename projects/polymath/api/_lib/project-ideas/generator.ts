@@ -280,10 +280,13 @@ async function runStage2Idea(
   opts: { attempt: number; temperature: number; feeling: SessionFeeling | null; brief: string | null },
 ): Promise<ProjectIdea | null> {
   // Titles the user already rejected ("not for me") or just saw, so the
-  // button doesn't re-serve something they killed. Rejected first — those
-  // are the hard "no"s; recent_titles catches regen-shows-same-idea.
+  // button doesn't re-serve something they killed OR already saved into
+  // a project. Rejected = hard "no"; built/saved = already a project, so
+  // re-proposing it is noise; recent_titles catches regen-shows-same.
   const avoidTitles = [
     ...gathered.prior_ideas.rejected.map(r => r.title),
+    ...gathered.prior_ideas.built.map(b => b.title),
+    ...gathered.prior_ideas.saved.map(s => s.title),
     ...gathered.recent_titles.map(t => t.title),
   ].filter((t): t is string => !!t && t.trim().length > 0)
   const ideaPrompt = buildFastIdeaPrompt(snapshot, opts.feeling, opts.brief, avoidTitles)
