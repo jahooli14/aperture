@@ -138,6 +138,10 @@ export function ProjectIdeasHome() {
   const [error, setError] = useState<string | null>(null)
   const [showEvidence, setShowEvidence] = useState(false)
   const [pendingFeedback, setPendingFeedback] = useState<string | null>(null)
+  // When set, the reason chips are showing for this idea id. One tap on a
+  // chip rejects with that reason (fed into the next prompt so the same
+  // shape doesn't come back); "just not for me" rejects with no reason.
+  const [reasonFor, setReasonFor] = useState<string | null>(null)
   const [loadingStage, setLoadingStage] = useState(0)
   const [activeIndex, setActiveIndex] = useState(0)
   // Default state is collapsed — the surface is a quiet button. The user
@@ -193,7 +197,9 @@ export function ProjectIdeasHome() {
   // Reset the evidence drawer whenever the active idea changes — without
   // this, switching slides while evidence is open animates two layouts at
   // once and looks janky on slow devices (notably Capacitor Android).
-  useEffect(() => { setShowEvidence(false) }, [ideas])
+  useEffect(() => { setShowEvidence(false); setReasonFor(null) }, [ideas])
+  // Close the reason picker when the user flips to another stacked idea.
+  useEffect(() => { setReasonFor(null) }, [activeIndex])
 
   const generate = useCallback(async () => {
     if (generating) return
@@ -244,12 +250,20 @@ export function ProjectIdeasHome() {
     }
   }, [generating])
 
-  const dismissIdea = useCallback(async (idea: ProjectIdea) => {
+  const dismissIdea = useCallback(async (idea: ProjectIdea, reason?: string) => {
     if (pendingFeedback === idea.id) return
     setPendingFeedback(idea.id)
+    setReasonFor(null)
     haptic.medium()
     try {
-      await api.post('utilities?resource=project-ideas-feedback', { id: idea.id, status: 'rejected' })
+      await api.post('utilities?resource=project-ideas-feedback', {
+        id: idea.id,
+        status: 'rejected',
+        // The reason is fed straight into the next idea prompt, so the
+        // same shape doesn't come back. Omitted when they just tap "not
+        // for me" without picking one.
+        ...(reason ? { feedback: reason } : {}),
+      })
       // Drop the rejected idea from the local deck and collapse back to
       // the button. If the queue still has more, the button will show
       // "unlock" again; if not, it'll show "suggest a project."
@@ -263,6 +277,15 @@ export function ProjectIdeasHome() {
       setPendingFeedback(null)
     }
   }, [pendingFeedback])
+
+  // Plain-English reasons. Each one is useful as feedback the model can
+  // act on next time — no jargon, no analyst voice.
+  const REJECT_REASONS = [
+    'Not my thing',
+    'Too vague',
+    'Already doing this',
+    'Bad timing',
+  ]
 
   // Save = commit. The idea becomes a real active project (so it lands at
   // the top of the projects section — new projects sort by last_active),
@@ -736,20 +759,48 @@ export function ProjectIdeasHome() {
                     (filled, mode-tinted CTA). Save commits the idea to the
                     projects section; there's no separate "building it". */}
                 <div
-                  className="relative mt-10 pt-5 flex items-center gap-2"
+                  className="relative mt-10 pt-5 flex items-center gap-2 flex-wrap"
                   style={{ borderTop: `1px solid rgba(${accent}, 0.12)` }}
                 >
-                  <button
-                    type="button"
-                    onClick={() => dismissIdea(active)}
-                    disabled={pendingFeedback === active.id}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[11px] tracking-wide transition-opacity opacity-50 hover:opacity-100 disabled:opacity-30"
-                    style={{ color: 'var(--brand-text-muted)' }}
-                    title="Not for me"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                    <span>not for me</span>
-                  </button>
+                  {reasonFor === active.id ? (
+                    // One-tap reason picker. Tapping a chip rejects with
+                    // that reason; "just not for me" rejects with none.
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {REJECT_REASONS.map(reason => (
+                        <button
+                          key={reason}
+                          type="button"
+                          onClick={() => dismissIdea(active, reason)}
+                          disabled={pendingFeedback === active.id}
+                          className="px-3 py-1.5 rounded-full text-[11px] tracking-wide transition-opacity hover:opacity-100 opacity-70 disabled:opacity-30"
+                          style={{ color: 'var(--brand-text-secondary)', border: `1px solid rgba(${accent}, 0.25)` }}
+                        >
+                          {reason}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => dismissIdea(active)}
+                        disabled={pendingFeedback === active.id}
+                        className="px-3 py-1.5 rounded-full text-[11px] tracking-wide transition-opacity opacity-50 hover:opacity-100 disabled:opacity-30"
+                        style={{ color: 'var(--brand-text-muted)' }}
+                      >
+                        just not for me
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setReasonFor(active.id)}
+                      disabled={pendingFeedback === active.id}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[11px] tracking-wide transition-opacity opacity-50 hover:opacity-100 disabled:opacity-30"
+                      style={{ color: 'var(--brand-text-muted)' }}
+                      title="Not for me"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                      <span>not for me</span>
+                    </button>
+                  )}
 
                   <span className="flex-1" aria-hidden />
 

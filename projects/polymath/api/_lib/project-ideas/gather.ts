@@ -32,6 +32,18 @@ const RECENT_TITLE_DAYS = 14
  *  immediately reach for the same dormant project with a different arrival. */
 const RECENT_CENTRE_DAYS = 1
 
+/** Hard block window. The centre of an idea the user explicitly REJECTED
+ *  stays off the table this long — "not for me" is about the project, not
+ *  just the wording, so reviving it under a fresh title within ~6 months
+ *  is exactly the repeat the user is complaining about. */
+const REJECTED_BLOCK_DAYS = 180
+
+/** Soft cooldown window. The centre of an idea that was shown but not acted
+ *  on (pending / superseded) is held back this long so back-to-back presses
+ *  rotate to a different project. Relaxed by the generator when filtering
+ *  would otherwise leave nothing to suggest. */
+const SHOWN_COOLDOWN_DAYS = 30
+
 type Supabase = ReturnType<typeof getSupabaseClient>
 
 export async function gatherForIdeas(supabase: Supabase, userId: string): Promise<GatherResult> {
@@ -104,7 +116,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       .limit(15),
     supabase
       .from('project_ideas')
-      .select('title, status, user_feedback')
+      .select('title, status, user_feedback, evidence, seed_pair, generated_at')
       .eq('user_id', userId)
       .in('status', ['saved', 'rejected', 'built'])
       .order('generated_at', { ascending: false })
@@ -239,16 +251,39 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
   // Limit each bucket to 20 so a long history of rejections doesn't crowd
   // out the saved/built signal in the prompt context.
   const PER_BUCKET = 20
-  for (const row of (priorIdeasRes.data ?? []) as Array<{ title: string; status: string; user_feedback: string | null }>) {
+  // Centres the fast path must not revive again. A rejected idea's centre
+  // is read from its stored seed_pair first; older fast-path rows have a
+  // null seed_pair, so fall back to the project_dormant / project rows in
+  // its evidence (evidence[0] on a fast idea is the project it revived).
+  const blockedCentre = new Set<string>()
+  const rejectedBlockSince = Date.now() - REJECTED_BLOCK_DAYS * 86_400_000
+  for (const row of (priorIdeasRes.data ?? []) as Array<{
+    title: string
+    status: string
+    user_feedback: string | null
+    evidence: Array<{ kind?: string; source_id?: string }> | null
+    seed_pair: { centre_id?: string } | null
+    generated_at: string
+  }>) {
     const entry = { title: row.title, feedback: row.user_feedback }
     if (row.status === 'saved' && prior_ideas.saved.length < PER_BUCKET) prior_ideas.saved.push(entry)
     else if (row.status === 'rejected' && prior_ideas.rejected.length < PER_BUCKET) prior_ideas.rejected.push(entry)
     else if (row.status === 'built' && prior_ideas.built.length < PER_BUCKET) prior_ideas.built.push(entry)
+
+    if (row.status === 'rejected' && new Date(row.generated_at).getTime() >= rejectedBlockSince) {
+      if (row.seed_pair?.centre_id) blockedCentre.add(row.seed_pair.centre_id)
+      for (const ev of row.evidence ?? []) {
+        if ((ev.kind === 'project_dormant' || ev.kind === 'project') && ev.source_id) {
+          blockedCentre.add(ev.source_id)
+        }
+      }
+    }
   }
 
   const recent_seed_pairs: GatherResult['recent_seed_pairs'] = []
   const recent_titles: GatherResult['recent_titles'] = []
   const recentCentreSet = new Set<string>()
+  const shownCooldownSince = new Date(Date.now() - SHOWN_COOLDOWN_DAYS * 86_400_000).toISOString()
   for (const row of (recentSeedPairsRes.data ?? []) as Array<{ title: string | null; seed_pair: { centre_id?: string; arrival_id?: string } | null; status: string; generated_at: string }>) {
     const sp = row.seed_pair
     if (sp && sp.centre_id && sp.arrival_id) {
@@ -260,6 +295,11 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       })
       if (row.generated_at >= recentCentreSince && (row.status === 'pending' || row.status === 'superseded')) {
         recentCentreSet.add(sp.centre_id)
+      }
+      // Soft cooldown: a centre shown but not acted on in the last ~30
+      // days is held back so the next press rotates to a different one.
+      if (row.generated_at >= shownCooldownSince && (row.status === 'pending' || row.status === 'superseded')) {
+        blockedCentre.add(sp.centre_id)
       }
     }
     if (
@@ -293,6 +333,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
     recent_seed_pairs,
     recent_titles,
     recent_centre_ids,
+    blocked_project_ids: Array.from(blockedCentre),
     total_signal_count,
   }
 }
