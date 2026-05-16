@@ -415,16 +415,22 @@ ${feelingBlock}
 
 ${deriveTasteLine(g)}
 
+═══════ THE ARC — time is a dimension, use it ═══════
+Every project and note below carries a date. Read the gap between the oldest and newest: what has changed — new skills, sharper taste, different constraints, what they keep returning to. Two of the strongest moves live here:
+  • GROWTH: a recent capture shows they've outgrown where an old project stalled. Don't restart it as-was — name the version that fits who they are NOW.
+  • RESURFACE: a genuinely good old project that went quiet because life moved on, not because it was wrong. Bring it back, framed for the present self.
+Old is not stale. Old + still resonant = the best material there is. But "why_now" must still point at something real (a recent capture, or a concrete shift over time) — never invent a connection.
+
 ${dormantHeader}
 ${dormantBlock || '  (none yet)'}
 ${relaxNote}
-═══════ ACTIVE PROJECTS — context only. These are already on Keep Going. NEVER centre an idea on one and NEVER put an active project's name in the title. They're listed so you don't accidentally re-pitch something they're already doing. ═══════
+═══════ ACTIVE PROJECTS — you MAY build on these, but ONLY as EXTEND: a sharp, specific NEW direction or output a recent capture points at. NEVER "finish / ship / continue / complete / polish X" — that's admin Keep Going already handles, not ignition. The title names the NEW thing, not the parent project. ═══════
 ${activeBlock || '  (none)'}
 
-═══════ RECENT VOICE NOTES (their own words — the richest signal) ═══════
+═══════ RECENT VOICE NOTES (their own words) ═══════
 ${memBlock || '  (none)'}
 
-═══════ LISTS — films / books / places (identity signal, never the whole idea) ═══════
+═══════ LISTS — films / books / places (identity signal: who they're becoming) ═══════
 ${listBlock || '  (none)'}
 
 ═══════ READING ═══════
@@ -446,14 +452,14 @@ ${ideaBrief}
 ═══════ OUTPUT (strict JSON, no markdown fences, no extra fields) ═══════
 {
   "move": "revive | extend | name",
-  "centre_id": "for revive/extend: the EXACT project_dormant#<id> from the DORMANT list above, copied verbatim. For name: null. NEVER an active project.",
-  "title": "≤6 words. Names the artefact or the action. Must NOT contain an active project's name.",
+  "centre_id": "the EXACT project_dormant#<id> OR project_active#<id> this is about, copied verbatim from the lists above. null only for a brand-new 'name' idea.",
+  "title": "≤6 words. Names the artefact or the action. For extend-on-active: name the NEW output, not the parent.",
   "pitch": "2 sentences. Sentence 1 = what the project IS. Sentence 2 = what done looks like in one observable test.",
-  "why_now": "ONE sentence. The specific recent capture or fact in their data that makes this the right one right now.",
+  "why_now": "ONE sentence. The specific recent capture OR the arc-over-time fact that makes this the right one right now.",
   "next_step": "ONE physical action they can do TODAY. Cut, drill, flash, commit a named file with named first content, drive, phone. NOT 'research,' 'plan,' 'sketch,' 'outline,' 'decide.'"
 }
 
-revive = restart a dormant project as-is. extend = a specific NEW output for a dormant project. name = a brand-new project the voice notes point at (centre_id null). Decide the move FIRST, then write from inside it. Reviving or extending a dormant project the user has NOT already rejected or just seen is almost always the strongest answer — only choose "name" when the voice notes genuinely point at something new. If the brief and the data don't line up cleanly, follow the brief.`
+revive = restart a dormant project (optionally reshaped for who they are NOW — see THE ARC). extend = a specific NEW direction/output for a dormant OR active project. name = a brand-new project the captures point at (centre_id null). Use ALL of it — every project (dormant and active), every voice note, every list item, reading and highlights — not just one section. Decide the move from where the strongest real energy is, not from a fixed preference order. If the brief and the data don't line up cleanly, follow the brief.`
 }
 
 /** Parses the single-call Flash response. Resolves the model's centre_id
@@ -484,30 +490,31 @@ function parseFastIdea(
     return null
   }
 
-  // Resolve centre_id against ONLY the dormant projects we offered. The
-  // fast path never centres on (or cites) an active project: Keep Going
-  // already owns those, and the GET-side filter in utilities.ts silently
-  // drops any non-read idea whose evidence cites an active project — so an
-  // extend-on-active idea would vanish. Active-project extend is Read
-  // mode's job (cron). Anything unresolvable is treated as a "name" idea
-  // rather than a hard fail — we'd still rather ship than retry.
+  // Resolve centre_id against the dormant projects we offered, then the
+  // active projects (EXTEND is now allowed on active projects — a sharp
+  // NEW direction, never "finish X"). Anything unresolvable is treated as
+  // a "name" idea rather than a hard fail.
   const rawCentre = typeof item.centre_id === 'string' ? item.centre_id : ''
   const bareCentre = rawCentre.includes('#') ? rawCentre.slice(rawCentre.indexOf('#') + 1).trim() : rawCentre.trim()
-  let centreDormant: GatherResult['dormant_projects'][number] | null = null
-  if (bareCentre) {
-    centreDormant = allowedDormant.find(r => r.id === bareCentre)
-      ?? (bareCentre.length >= 6 ? allowedDormant.find(r => r.id.startsWith(bareCentre)) ?? null : null)
-  }
+  const resolve = <T extends { id: string }>(rows: T[]): T | null =>
+    !bareCentre ? null
+      : (rows.find(r => r.id === bareCentre)
+        ?? (bareCentre.length >= 6 ? rows.find(r => r.id.startsWith(bareCentre)) ?? null : null))
+  const centreDormant = resolve(allowedDormant)
+  const centreActive = centreDormant ? null : resolve(gathered.active_projects)
 
-  // A title that names an active project (or "finish/ship X" against one)
-  // is Keep Going duplication and the GET filter would drop it anyway —
-  // reject here so attempt 2 gets a clean retry.
-  if (gathered.active_projects.some(p => p.title.trim() && title.toLowerCase().includes(p.title.toLowerCase()))) {
-    console.log(`[project-ideas] fast/single dropped "${title}" — title names an active project`)
+  // The ONLY active-project title rule: never "finish / ship / continue /
+  // complete X" against an active project (that's Keep Going admin, not
+  // ignition). A NEW-direction title that happens to mention the parent
+  // is fine — this mirrors the GET-side filter so the idea won't be
+  // dropped downstream.
+  const FINISH_RE = /^\s*(finish(ing)?|ship(ping)?|complete(\s+the)?|wrap\s*up|polish(\s+the)?|continue(\s+the)?)\b/i
+  if (FINISH_RE.test(title) && gathered.active_projects.some(p => p.title.trim() && title.toLowerCase().includes(p.title.toLowerCase()))) {
+    console.log(`[project-ideas] fast/single dropped "${title}" — "finish/ship X" against an active project`)
     return null
   }
 
-  const arrival = pickResonantMemory(gathered, centreDormant)
+  const arrival = pickResonantMemory(gathered, centreDormant ?? centreActive ?? null)
   const evidence: IdeaEvidence[] = []
   let seed_pair: SeedPair | undefined
   if (centreDormant) {
@@ -519,6 +526,15 @@ function parseFastIdea(
       excerpt: truncate(centreDormant.description ?? centreDormant.title, 220),
     })
     if (arrival) seed_pair = { centre_kind: 'project_dormant', centre_id: centreDormant.id, arrival_kind: 'memory', arrival_id: arrival.id }
+  } else if (centreActive) {
+    evidence.push({
+      kind: 'project',
+      source_id: centreActive.id,
+      label: `active project: ${centreActive.title}`,
+      date: isoDate(centreActive.updated_at),
+      excerpt: truncate(centreActive.description ?? centreActive.title, 220),
+    })
+    if (arrival) seed_pair = { centre_kind: 'project_active', centre_id: centreActive.id, arrival_kind: 'memory', arrival_id: arrival.id }
   }
   if (arrival) {
     evidence.push({
@@ -529,10 +545,9 @@ function parseFastIdea(
       excerpt: truncate(arrival.body, 220),
     })
   }
-  // A "name" idea with no dormant centre cites a second recent memory so
-  // the "from N signals" drawer isn't a single row — and never an active
-  // project (the GET filter would eat the whole idea).
-  if (!centreDormant) {
+  // A "name" idea with no project centre cites a second recent memory so
+  // the "from N signals" drawer isn't a single row.
+  if (!centreDormant && !centreActive) {
     const second = gathered.memories.find(m => m.id !== arrival?.id)
     if (second) {
       evidence.push({

@@ -1397,29 +1397,20 @@ async function handleProjectIdeasGet(req: VercelRequest, res: VercelResponse) {
     // the pattern often shows up across all states. The generator already
     // drops "finish / ship X" titles in parseRead, and the title-mentions
     // guard below still applies.
-    const activeProjectIds = new Set((projectsRes.data ?? []).map((p: any) => p.id as string))
     const activeProjectTitles = (projectsRes.data ?? [])
       .map((p: any) => (p.title as string | null) ?? '')
       .filter(t => t.trim().length > 0)
       .map(t => t.toLowerCase())
     const FINISH_RE = /^\s*(finish(ing)?|ship(ping)?|complete(\s+the)?|wrap\s*up|polish(\s+the)?|continue(\s+the)?)\b/i
+    // EXTEND-on-active is now a first-class move for ALL modes (the user
+    // asked for every project to be usable). So the old blanket "any
+    // non-read idea citing / naming an active project is Keep Going
+    // duplication" rule is gone. The ONE thing still forbidden, for every
+    // mode, is "finish / ship / continue X" against an active project —
+    // that's admin Keep Going already covers, not a new direction.
     const filtered = latest.filter((idea: any) => {
-      const isRead = idea.mode === 'read'
-      const evidence = Array.isArray(idea.evidence) ? idea.evidence : []
-      if (!isRead) {
-        const citesActive = evidence.some((e: any) => activeProjectIds.has(e?.source_id))
-        if (citesActive) return false
-      }
       const title = String(idea.title ?? '').toLowerCase()
-      // For Read, only block titles that BOTH mention an active project name
-      // AND start with a finish/ship verb — Read is allowed to extend an
-      // active project in a new direction; it just can't propose finishing
-      // one. Crossover keeps the stricter "any title mention" guard.
-      if (isRead) {
-        if (FINISH_RE.test(title) && activeProjectTitles.some(pt => title.includes(pt))) return false
-      } else {
-        if (activeProjectTitles.some(pt => title.includes(pt))) return false
-      }
+      if (FINISH_RE.test(title) && activeProjectTitles.some(pt => title.includes(pt))) return false
       return true
     })
 
