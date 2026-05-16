@@ -87,15 +87,24 @@ export async function generateProjectIdeas(
     //
     // If the LLM path fails twice a server-side template synthesises an
     // idea without an LLM call, so the button NEVER returns empty.
-    console.log(`[project-ideas] fast path: single full-corpus Flash${opts.feeling ? ` (feeling=${opts.feeling})` : ''}${opts.brief ? ' (custom brief)' : ''}; blocked=${gathered.blocked_project_ids.length}`)
+    // One diagnostic line that answers "timeout vs data?" at a glance:
+    // exact corpus counts going into the model + how many centres are
+    // blocked. If counts here are healthy but the LLM still falls back,
+    // it's a Flash timeout (see the attempt logs); if counts are thin,
+    // it's a gather/RLS data problem.
+    const corpus = `mem=${gathered.memories.length} list=${gathered.list_items.length} dorm=${gathered.dormant_projects.length} act=${gathered.active_projects.length} read=${gathered.reading.length} hl=${gathered.highlights.length} blocked=${gathered.blocked_project_ids.length}`
+    console.log(`[project-ideas] fast path: single full-corpus Flash${opts.feeling ? ` (feeling=${opts.feeling})` : ''}${opts.brief ? ' (custom brief)' : ''}; ${corpus}`)
+    const tFast = Date.now()
     const fastIdea = await runFastSingle(gathered, opts.feeling ?? null, opts.brief ?? null)
     if (fastIdea) {
+      console.log(`[project-ideas] fast path: LLM idea in ${Date.now() - tFast}ms — "${fastIdea.title}"`)
       return { ideas: [{ ...fastIdea, mode: 'crossover' }], attempts: 1 }
     }
-    // Flash misbehaved on both attempts. The template never returns null —
-    // the button is guaranteed to come back with something, even on a day
-    // when the user has almost no data and Flash is flaky.
-    console.log('[project-ideas] fast path: served server-side template fallback')
+    // Flash misbehaved on both attempts (or budget ran out). The template
+    // never returns null — the button is guaranteed to come back with
+    // something. The WARN + corpus line makes a recurring fallback
+    // obvious in the logs without needing to repro.
+    console.warn(`[project-ideas] fast path: LLM produced nothing after ${Date.now() - tFast}ms — serving template fallback; ${corpus}`)
     const synth = synthesiseFallbackIdea(gathered)
     return { ideas: [{ ...synth, mode: 'crossover' }], attempts: 2, fallback: true }
   }
@@ -602,11 +611,13 @@ export function synthesiseFallbackIdea(g: GatherResult): ProjectIdea {
   // most-recently-touched.
   const match = findResonantDormantProject(g)
   if (match) {
+    console.warn(`[project-ideas] fallback tier=dormant project="${match.project.title}" resonant=${!!match.memory}`)
     return buildDormantRevival(match, g)
   }
   // Tier 3: a recent voice note to follow.
   const memory = g.memories[0]
   if (memory) {
+    console.warn(`[project-ideas] fallback tier=voice (no usable dormant project; ${g.dormant_projects.length} exist, all blocked/empty)`)
     const excerpt = truncate(memory.body.replace(/\s+/g, ' ').trim(), 240)
     const days = daysAgo(memory.created_at)
     return {
@@ -621,6 +632,7 @@ export function synthesiseFallbackIdea(g: GatherResult): ProjectIdea {
   // Tier 4: a "want to make" list reaction.
   const wantsToMake = g.list_items.find((li) => li.reaction === 'make')
   if (wantsToMake) {
+    console.warn('[project-ideas] fallback tier=list-make (no dormant project, no voice notes)')
     return {
       rank: 1,
       title: truncate(wantsToMake.content, 60),
@@ -637,6 +649,7 @@ export function synthesiseFallbackIdea(g: GatherResult): ProjectIdea {
   const sparked = g.list_items.find((li) => li.reaction === 'sparked')
   const anyListItem = sparked ?? g.list_items.find((li) => li.reaction !== 'off')
   if (anyListItem) {
+    console.warn(`[project-ideas] fallback tier=list-${sparked ? 'sparked' : 'any'} (no dormant project, no voice notes)`)
     return {
       rank: 1,
       title: truncate(anyListItem.content, 60),
@@ -649,6 +662,7 @@ export function synthesiseFallbackIdea(g: GatherResult): ProjectIdea {
   const article = g.reading[0]
   const highlight = g.highlights[0]
   if (article || highlight) {
+    console.warn(`[project-ideas] fallback tier=${highlight ? 'highlight' : 'reading'} (no project, voice, or list signal)`)
     const source = highlight ? `"${truncate(highlight.quote, 140)}"` : `"${truncate(article!.title ?? 'something you saved', 80)}"`
     return {
       rank: 1,
@@ -661,6 +675,7 @@ export function synthesiseFallbackIdea(g: GatherResult): ProjectIdea {
   }
   // Tier 5: genuinely empty account — no projects, notes, lists, or
   // reading. The button must never come back empty.
+  console.warn('[project-ideas] fallback tier=universal — account looks empty (no projects/notes/lists/reading reached the generator)')
   return {
     rank: 1,
     title: 'Capture before you make',
