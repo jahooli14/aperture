@@ -130,4 +130,9 @@ export interface GenerationResult {
   ideas: ProjectIdea[]
   reason?: 'insufficient_data' | 'parse_failure'
   attempts: number
+  /** True when the ideas came from the no-LLM server-side template
+   *  (synthesiseFallbackIdea), not the model. The caller persists these
+   *  as 'superseded' rather than 'pending' so the queue short-circuit
+   *  doesn't re-serve filler forever — the next press regenerates. */
+  fallback?: boolean
 }

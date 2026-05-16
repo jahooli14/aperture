@@ -1717,7 +1717,12 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
       // Shape — Read mode self-tags which of the four Moment sub-shapes
       // fired. NULL on crossover, permissive fallback, and template rows.
       shape: idea.shape ?? null,
-      status: 'pending' as const,
+      // No-LLM template output is shown once but NOT left 'pending' — if
+      // it were, the queue short-circuit would re-serve the same filler
+      // on every press and the button would look permanently broken. As
+      // 'superseded' it still displays now (returned below) but the next
+      // press regenerates a fresh idea instead of returning this one.
+      status: (result.fallback ? 'superseded' : 'pending') as 'pending' | 'superseded',
       generated_at,
     }))
 
