@@ -279,8 +279,15 @@ async function runStage2Idea(
   gathered: GatherResult,
   opts: { attempt: number; temperature: number; feeling: SessionFeeling | null; brief: string | null },
 ): Promise<ProjectIdea | null> {
-  const ideaPrompt = buildFastIdeaPrompt(snapshot, opts.feeling, opts.brief)
-  console.log(`[project-ideas] fast/stage-2 (Flash) idea prompt: ${ideaPrompt.length} chars; attempt=${opts.attempt}`)
+  // Titles the user already rejected ("not for me") or just saw, so the
+  // button doesn't re-serve something they killed. Rejected first — those
+  // are the hard "no"s; recent_titles catches regen-shows-same-idea.
+  const avoidTitles = [
+    ...gathered.prior_ideas.rejected.map(r => r.title),
+    ...gathered.recent_titles.map(t => t.title),
+  ].filter((t): t is string => !!t && t.trim().length > 0)
+  const ideaPrompt = buildFastIdeaPrompt(snapshot, opts.feeling, opts.brief, avoidTitles)
+  console.log(`[project-ideas] fast/stage-2 (Flash) idea prompt: ${ideaPrompt.length} chars; attempt=${opts.attempt}; avoid=${avoidTitles.length}`)
   const t2 = Date.now()
   let ideaRaw: string
   try {
@@ -473,7 +480,7 @@ const FEELING_GUIDANCE: Record<SessionFeeling, string> = {
   restless: 'They are RESTLESS right now — they want a change of texture. Prefer a project that uses a different sense or tool than the obvious one (away from the screen if they\'ve been on it; back to a screen if they\'ve been in the workshop). The next_step should physically move them.',
 }
 
-function buildFastIdeaPrompt(s: Snapshot, feeling: SessionFeeling | null, brief: string | null): string {
+function buildFastIdeaPrompt(s: Snapshot, feeling: SessionFeeling | null, brief: string | null, avoidTitles: string[] = []): string {
   const feelingBlock = feeling ? `\n═══════ HOW THEY'RE FEELING RIGHT NOW ═══════\n${FEELING_GUIDANCE[feeling]}\n` : ''
   // The editorial brief is user-editable in Settings. NULL or empty
   // string → fall back to the built-in default. The user's text replaces
@@ -481,6 +488,13 @@ function buildFastIdeaPrompt(s: Snapshot, feeling: SessionFeeling | null, brief:
   // moves are allowed, what the title can look like, what the next step
   // must be). Plain-English rules and JSON structure stay non-editable.
   const ideaBrief = (brief && brief.trim()) ? brief.trim() : DEFAULT_IDEA_BRIEF
+  // Rejected / just-shown titles. The cron path already debounces these;
+  // the fast path didn't see them at all, so the button could re-emit an
+  // idea the user just marked "not for me". Cap so the block can't crowd
+  // out the real signal.
+  const avoidBlock = avoidTitles.length
+    ? avoidTitles.slice(0, 25).map(t => `  • "${t}"`).join('\n')
+    : '  (none yet)'
   return `You are writing one project suggestion for someone who just opened the app and asked "give me one project to work on today."
 
 ═══════ VOICE RULES (non-negotiable) ═══════
@@ -505,6 +519,9 @@ ${s.reactions_make.length ? s.reactions_make.map(r => `  • ${r}`).join('\n') :
 
 ═══════ THINGS THAT SPARKED THEM ═══════
 ${s.reactions_sparked.length ? s.reactions_sparked.map(r => `  • ${r}`).join('\n') : '  (none yet)'}
+
+═══════ ALREADY SEEN — the user marked these "not for me" or just saw them. NEVER re-emit any of these, and don't write a near-paraphrase. Pick a different angle entirely. ═══════
+${avoidBlock}
 
 ═══════ THE BRIEF (the user wrote this themselves — follow it) ═══════
 
