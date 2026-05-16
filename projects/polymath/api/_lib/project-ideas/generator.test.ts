@@ -121,7 +121,9 @@ describe('synthesiseFallbackIdea — resonance picks the right dormant project',
     expect(idea.title).toBe('Smashed glass colours')
   })
 
-  it('falls through to the voice-note tier when every dormant project is blocked', () => {
+  it('relaxes to a blocked project rather than free-falling when ALL are blocked', () => {
+    // A real (if recently-seen) project beats the generic "go capture a
+    // thought" tier and beats lying "no dormant projects" when they exist.
     const g = emptyGather({
       dormant_projects: [
         { id: 'p1', title: 'Bird cam latency', description: 'Fix the dropped frames', status: 'dormant', updated_at: isoDaysAgo(8) },
@@ -132,8 +134,18 @@ describe('synthesiseFallbackIdea — resonance picks the right dormant project',
       ],
     })
     const idea = synthesiseFallbackIdea(g)
-    expect(idea.title).not.toBe('Bird cam latency')
-    expect(idea.title).toBe('Follow what you said')
+    expect(idea.title).toBe('Bird cam latency')
+  })
+
+  it('uses a list / reading signal instead of the universal tier when one exists', () => {
+    const g = emptyGather({
+      list_items: [
+        { id: 'l1', content: 'Tinker Tailor Soldier Spy', list_type: 'films', list_title: 'Films', status: 'pending', created_at: isoDaysAgo(5), reaction: 'sparked', user_rating: null },
+      ],
+    })
+    const idea = synthesiseFallbackIdea(g)
+    expect(idea.title).toBe('Tinker Tailor Soldier Spy')
+    expect(idea.title).not.toBe('Capture before you make')
   })
 
   it('falls back to most-recent dormant when no memory resonates', () => {

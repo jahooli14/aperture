@@ -1580,6 +1580,11 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
         .order('rank', { ascending: true })
         .limit(3)
       if (queued && queued.length > 0) {
+        // Served from the pending queue — NOT regenerated. If a user
+        // reports "same idea every press", this line proves it: a pending
+        // row is short-circuiting generation. (Fallback rows are stored
+        // 'superseded' now, so they no longer get stuck here.)
+        console.log(`[generate-project-ideas] served from queue (no regen): "${queued[0].title}" generated_at=${queued[0].generated_at}`)
         return res.status(200).json({
           ideas: queued,
           batch_id: queued[0].batch_id,
@@ -1717,7 +1722,12 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
       // Shape — Read mode self-tags which of the four Moment sub-shapes
       // fired. NULL on crossover, permissive fallback, and template rows.
       shape: idea.shape ?? null,
-      status: 'pending' as const,
+      // No-LLM template output is shown once but NOT left 'pending' — if
+      // it were, the queue short-circuit would re-serve the same filler
+      // on every press and the button would look permanently broken. As
+      // 'superseded' it still displays now (returned below) but the next
+      // press regenerates a fresh idea instead of returning this one.
+      status: (result.fallback ? 'superseded' : 'pending') as 'pending' | 'superseded',
       generated_at,
     }))
 
@@ -1730,6 +1740,11 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
       console.error('[generate-project-ideas] insert failed:', insertErr)
       return res.status(500).json({ error: insertErr.message })
     }
+
+    // Outcome line: regenerated, LLM vs template, how long. A run of
+    // fallback=true here (vs fallback=false) is the at-a-glance signal
+    // that the model path is failing for this user.
+    console.log(`[generate-project-ideas] regenerated via=${viaCron ? 'cron' : 'user'} fallback=${!!result.fallback} status=${rows[0]?.status} took=${Date.now() - started}ms "${rows[0]?.title}"`)
 
     return res.status(200).json({
       ideas: inserted ?? [],

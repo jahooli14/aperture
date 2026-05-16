@@ -87,17 +87,26 @@ export async function generateProjectIdeas(
     //
     // If the LLM path fails twice a server-side template synthesises an
     // idea without an LLM call, so the button NEVER returns empty.
-    console.log(`[project-ideas] fast path: single full-corpus Flash${opts.feeling ? ` (feeling=${opts.feeling})` : ''}${opts.brief ? ' (custom brief)' : ''}; blocked=${gathered.blocked_project_ids.length}`)
+    // One diagnostic line that answers "timeout vs data?" at a glance:
+    // exact corpus counts going into the model + how many centres are
+    // blocked. If counts here are healthy but the LLM still falls back,
+    // it's a Flash timeout (see the attempt logs); if counts are thin,
+    // it's a gather/RLS data problem.
+    const corpus = `mem=${gathered.memories.length} list=${gathered.list_items.length} dorm=${gathered.dormant_projects.length} act=${gathered.active_projects.length} read=${gathered.reading.length} hl=${gathered.highlights.length} blocked=${gathered.blocked_project_ids.length}`
+    console.log(`[project-ideas] fast path: single full-corpus Flash${opts.feeling ? ` (feeling=${opts.feeling})` : ''}${opts.brief ? ' (custom brief)' : ''}; ${corpus}`)
+    const tFast = Date.now()
     const fastIdea = await runFastSingle(gathered, opts.feeling ?? null, opts.brief ?? null)
     if (fastIdea) {
+      console.log(`[project-ideas] fast path: LLM idea in ${Date.now() - tFast}ms — "${fastIdea.title}"`)
       return { ideas: [{ ...fastIdea, mode: 'crossover' }], attempts: 1 }
     }
-    // Flash misbehaved on both attempts. The template never returns null —
-    // the button is guaranteed to come back with something, even on a day
-    // when the user has almost no data and Flash is flaky.
-    console.log('[project-ideas] fast path: served server-side template fallback')
+    // Flash misbehaved on both attempts (or budget ran out). The template
+    // never returns null — the button is guaranteed to come back with
+    // something. The WARN + corpus line makes a recurring fallback
+    // obvious in the logs without needing to repro.
+    console.warn(`[project-ideas] fast path: LLM produced nothing after ${Date.now() - tFast}ms — serving template fallback; ${corpus}`)
     const synth = synthesiseFallbackIdea(gathered)
-    return { ideas: [{ ...synth, mode: 'crossover' }], attempts: 2 }
+    return { ideas: [{ ...synth, mode: 'crossover' }], attempts: 2, fallback: true }
   }
 
   // Read and crossover run in parallel — the wow shape and the convergence
@@ -602,11 +611,13 @@ export function synthesiseFallbackIdea(g: GatherResult): ProjectIdea {
   // most-recently-touched.
   const match = findResonantDormantProject(g)
   if (match) {
+    console.warn(`[project-ideas] fallback tier=dormant project="${match.project.title}" resonant=${!!match.memory}`)
     return buildDormantRevival(match, g)
   }
   // Tier 3: a recent voice note to follow.
   const memory = g.memories[0]
   if (memory) {
+    console.warn(`[project-ideas] fallback tier=voice (no usable dormant project; ${g.dormant_projects.length} exist, all blocked/empty)`)
     const excerpt = truncate(memory.body.replace(/\s+/g, ' ').trim(), 240)
     const days = daysAgo(memory.created_at)
     return {
@@ -621,6 +632,7 @@ export function synthesiseFallbackIdea(g: GatherResult): ProjectIdea {
   // Tier 4: a "want to make" list reaction.
   const wantsToMake = g.list_items.find((li) => li.reaction === 'make')
   if (wantsToMake) {
+    console.warn('[project-ideas] fallback tier=list-make (no dormant project, no voice notes)')
     return {
       rank: 1,
       title: truncate(wantsToMake.content, 60),
@@ -630,12 +642,45 @@ export function synthesiseFallbackIdea(g: GatherResult): ProjectIdea {
       evidence: [],
     }
   }
-  // Tier 5: universal — always succeeds. The button must never come back empty.
+  // Tier 4b: something they reacted to ("sparked"), or — failing that —
+  // any list item / reading / highlight. The universal tier below is for
+  // a genuinely empty account; if there's ANY identity signal, use it
+  // rather than telling a user with a full app to "go record a thought."
+  const sparked = g.list_items.find((li) => li.reaction === 'sparked')
+  const anyListItem = sparked ?? g.list_items.find((li) => li.reaction !== 'off')
+  if (anyListItem) {
+    console.warn(`[project-ideas] fallback tier=list-${sparked ? 'sparked' : 'any'} (no dormant project, no voice notes)`)
+    return {
+      rank: 1,
+      title: truncate(anyListItem.content, 60),
+      pitch: `This is on your ${anyListItem.list_type} list${sparked ? ' and you said it sparked you' : ''}. The lists aren\'t a to-read pile — they\'re who you\'re becoming. Make the smallest thing this points at.`,
+      why_now: 'You put this on a list yourself. That\'s a signal worth acting on before it goes quiet.',
+      next_step: 'Spend 30 minutes making one rough thing this pulls out of you — a page, a sketch, a clip. Stop at the timer.',
+      evidence: [],
+    }
+  }
+  const article = g.reading[0]
+  const highlight = g.highlights[0]
+  if (article || highlight) {
+    console.warn(`[project-ideas] fallback tier=${highlight ? 'highlight' : 'reading'} (no project, voice, or list signal)`)
+    const source = highlight ? `"${truncate(highlight.quote, 140)}"` : `"${truncate(article!.title ?? 'something you saved', 80)}"`
+    return {
+      rank: 1,
+      title: 'Make something from this',
+      pitch: `${source} — you flagged this while reading. Reading without making is just input. Turn the one idea you can\'t stop thinking about into something small and real.`,
+      why_now: 'You highlighted this for a reason. Acting on it now is what separates a reader from a maker.',
+      next_step: 'Re-read it once. Then spend 30 minutes making the first rough version of whatever it makes you want to build.',
+      evidence: [],
+    }
+  }
+  // Tier 5: genuinely empty account — no projects, notes, lists, or
+  // reading. The button must never come back empty.
+  console.warn('[project-ideas] fallback tier=universal — account looks empty (no projects/notes/lists/reading reached the generator)')
   return {
     rank: 1,
     title: 'Capture before you make',
-    pitch: 'There\'s not enough on the record yet to point at a specific project. The next move is to feed the harness — record the half-formed thought you came in with so the next idea has somewhere to land.',
-    why_now: 'No dormant projects, no recent captures. Today\'s job is to put a thought on the record, not to ship something.',
+    pitch: 'There\'s nothing on the record yet to point at a specific project. The next move is to feed the harness — record the half-formed thought you came in with so the next idea has somewhere to land.',
+    why_now: 'Nothing captured yet. Today\'s job is to put a thought on the record, not to ship something.',
     next_step: 'Open the recorder. Talk for two minutes about whatever you came here thinking about. Don\'t edit, don\'t polish — just leave a trace.',
     evidence: [],
   }
@@ -656,11 +701,14 @@ interface DormantMatch {
  *  resonates, so the button still answers. Returns null only when there
  *  are no dormant projects at all. */
 function findResonantDormantProject(g: GatherResult): DormantMatch | null {
-  // Skip projects the user rejected (~180d) or was just shown (~30d) — the
-  // template must not re-serve a "not for me" project either. Falls
-  // through to the voice-note tier when every dormant project is blocked.
+  // Prefer projects the user hasn't rejected (~180d) or just seen (~30d).
+  // But if blocking would empty the pool, RELAX to the full list (same as
+  // the LLM path) — a real project the user has seen recently is far
+  // better than free-falling to the "no projects" universal tier and
+  // lying about it. Returns null only when there are genuinely none.
   const blocked = new Set(g.blocked_project_ids)
-  const pool = g.dormant_projects.filter(p => !blocked.has(p.id))
+  let pool = g.dormant_projects.filter(p => !blocked.has(p.id))
+  if (pool.length === 0) pool = g.dormant_projects
   if (pool.length === 0) return null
 
   const now = Date.now()
