@@ -243,6 +243,17 @@ function deriveTasteLine(g: GatherResult): string {
  *  filter would leave nothing we relax it but tell the model the truth so
  *  it finds a new angle instead of reword #5. Retries once hotter; returns
  *  null only if both attempts fail (caller then serves the template). */
+/** Total LLM wall-clock budget for the fast path. The client aborts the
+ *  POST at 40s (ProjectIdeasHome), and gather + supersede + insert +
+ *  network eat into that, so the two attempts together must finish well
+ *  inside it. Two unconditional 25s attempts (= 50s) would blow the cap
+ *  and the user would just see a failure. */
+const FAST_TOTAL_BUDGET_MS = 34_000
+/** Don't start a retry unless this much budget is left — a retry that
+ *  can't realistically finish is worse than bailing straight to the
+ *  (instant) template. */
+const MIN_RETRY_BUDGET_MS = 7_000
+
 async function runFastSingle(
   gathered: GatherResult,
   feeling: SessionFeeling | null,
@@ -255,10 +266,21 @@ async function runFastSingle(
     dormant = gathered.dormant_projects
     allDormantSeen = true
   }
-  const first = await runFastSingleAttempt(gathered, dormant, allDormantSeen, feeling, brief, { attempt: 1, temperature: 0.9 })
+  const started = Date.now()
+  const firstTimeout = Math.min(FAST_STAGE_TIMEOUT_MS, FAST_TOTAL_BUDGET_MS)
+  const first = await runFastSingleAttempt(gathered, dormant, allDormantSeen, feeling, brief, { attempt: 1, temperature: 0.9, timeoutMs: firstTimeout })
   if (first) return first
+  // Only retry if there's real budget left under the client's 40s cap. A
+  // 25s retry after a 25s timeout would land past it and the user just
+  // sees an error — bail to the instant template instead. The server-side
+  // insert still happens, so a subsequent press is instant via the queue.
+  const remaining = FAST_TOTAL_BUDGET_MS - (Date.now() - started)
+  if (remaining < MIN_RETRY_BUDGET_MS) {
+    console.log(`[project-ideas] fast/single skipping retry — only ${remaining}ms budget left`)
+    return null
+  }
   // Hotter retry so attempt 2 doesn't reproduce attempt 1's parse-fail.
-  const second = await runFastSingleAttempt(gathered, dormant, allDormantSeen, feeling, brief, { attempt: 2, temperature: 1.0 })
+  const second = await runFastSingleAttempt(gathered, dormant, allDormantSeen, feeling, brief, { attempt: 2, temperature: 1.0, timeoutMs: Math.min(FAST_STAGE_TIMEOUT_MS, remaining) })
   return second
 }
 
@@ -268,10 +290,10 @@ async function runFastSingleAttempt(
   allDormantSeen: boolean,
   feeling: SessionFeeling | null,
   brief: string | null,
-  opts: { attempt: number; temperature: number },
+  opts: { attempt: number; temperature: number; timeoutMs: number },
 ): Promise<ProjectIdea | null> {
   const prompt = buildFastSinglePrompt(gathered, dormant, allDormantSeen, feeling, brief)
-  console.log(`[project-ideas] fast/single prompt: ${prompt.length} chars; attempt=${opts.attempt}; dormant=${dormant.length}${allDormantSeen ? ' (all seen — relaxed)' : ''}`)
+  console.log(`[project-ideas] fast/single prompt: ${prompt.length} chars; attempt=${opts.attempt}; dormant=${dormant.length}${allDormantSeen ? ' (all seen — relaxed)' : ''}; timeout=${opts.timeoutMs}ms`)
   const t0 = Date.now()
   let raw: string
   try {
@@ -282,7 +304,7 @@ async function runFastSingleAttempt(
         temperature: opts.temperature,
         responseFormat: 'json',
       }),
-      FAST_STAGE_TIMEOUT_MS,
+      opts.timeoutMs,
       `fast/single attempt ${opts.attempt}`,
     )
   } catch (err) {
