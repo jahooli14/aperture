@@ -15,12 +15,13 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { BookmarkPlus, BookmarkCheck, X, Hammer } from 'lucide-react'
+import { BookmarkPlus, X } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
 import { api } from '../../lib/apiClient'
 import { useSessionContextStore } from '../../stores/useSessionContextStore'
+import { useProjectStore } from '../../stores/useProjectStore'
+import { useToast } from '../ui/toast'
 
 interface IdeaEvidence {
   kind: string
@@ -128,7 +129,8 @@ const LOADING_STAGES: Array<{ at_ms: number; line: string }> = [
 ]
 
 export function ProjectIdeasHome() {
-  const navigate = useNavigate()
+  const createProject = useProjectStore(s => s.createProject)
+  const { addToast } = useToast()
   const [ideas, setIdeas] = useState<ProjectIdea[]>([])
   const [insufficientSignals, setInsufficientSignals] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
@@ -148,7 +150,10 @@ export function ProjectIdeasHome() {
     setError(null)
     try {
       const res = await api.get('utilities?resource=project-ideas') as ProjectIdeasResponse
-      const active = (res.ideas ?? []).slice(0, 3)
+      // Only pending ideas belong in the deck. Saved ideas have been
+      // turned into projects and live in the projects section now —
+      // they're cleared from this queue and never resurface here.
+      const active = (res.ideas ?? []).filter(i => i.status === 'pending').slice(0, 3)
       setIdeas(active)
       setActiveIndex(0)
     } catch {
@@ -239,52 +244,78 @@ export function ProjectIdeasHome() {
     }
   }, [generating])
 
-  const sendFeedback = useCallback(async (idea: ProjectIdea, status: 'saved' | 'rejected' | 'built' | 'pending') => {
+  const dismissIdea = useCallback(async (idea: ProjectIdea) => {
     if (pendingFeedback === idea.id) return
     setPendingFeedback(idea.id)
     haptic.medium()
     try {
-      await api.post('utilities?resource=project-ideas-feedback', { id: idea.id, status })
-      if (status === 'rejected') {
-        // Drop the rejected idea from the local deck and collapse back to
-        // the button. If the queue still has more, the button will show
-        // "unlock" again; if not, it'll show "suggest a project."
-        setIdeas(prev => prev.filter(i => i.id !== idea.id))
-        setActiveIndex(0)
-        setExpanded(false)
-        setShowEvidence(false)
-      } else if (status === 'built') {
-        // Navigate to a pre-filled new project page so the user can
-        // immediately start building what they just committed to. For
-        // Read, lead the description with the pattern — that's the line
-        // worth keeping in the project's own context as a reminder of
-        // why this one is the right one.
-        const description = idea.mode === 'read' && idea.pattern
-          ? `${idea.pattern}\n\n${idea.pitch}`
-          : idea.pitch
-        const params = new URLSearchParams({
-          title: idea.title,
-          description,
-          first_task: idea.next_step,
-          from_idea: idea.id,
-        })
-        navigate(`/projects?create=1&${params.toString()}`)
-      } else {
-        setIdeas(prev => prev.map(i => i.id === idea.id ? { ...i, status } : i))
-        // Save (or any non-destructive status change) collapses the card.
-        // The user has decided what to do with this one — we get out of
-        // the way and let them return to Keep Going.
-        if (status === 'saved') {
-          setExpanded(false)
-          setShowEvidence(false)
-        }
-      }
+      await api.post('utilities?resource=project-ideas-feedback', { id: idea.id, status: 'rejected' })
+      // Drop the rejected idea from the local deck and collapse back to
+      // the button. If the queue still has more, the button will show
+      // "unlock" again; if not, it'll show "suggest a project."
+      setIdeas(prev => prev.filter(i => i.id !== idea.id))
+      setActiveIndex(0)
+      setExpanded(false)
+      setShowEvidence(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save feedback')
     } finally {
       setPendingFeedback(null)
     }
-  }, [pendingFeedback, navigate])
+  }, [pendingFeedback])
+
+  // Save = commit. The idea becomes a real active project (so it lands at
+  // the top of the projects section — new projects sort by last_active),
+  // is marked 'built' server-side so it leaves the pending queue and is
+  // never suggested again, and drops out of the local deck.
+  const saveIdea = useCallback(async (idea: ProjectIdea) => {
+    if (pendingFeedback === idea.id) return
+    setPendingFeedback(idea.id)
+    haptic.medium()
+    try {
+      // For Read mode lead the description with the pattern — that's the
+      // line worth keeping as the project's own reminder of why it's the
+      // right one. Fold the next step in so it isn't lost (the API
+      // auto-scaffolds tasks from the description).
+      const description = [
+        idea.mode === 'read' && idea.pattern ? idea.pattern : null,
+        idea.pitch,
+        idea.next_step ? `First move: ${idea.next_step}` : null,
+      ].filter(Boolean).join('\n\n')
+
+      await createProject({
+        title: idea.title,
+        description,
+        status: 'active',
+        type: 'Creative',
+        metadata: { tasks: [], progress: 0, is_shaped: false, from_idea: idea.id },
+      })
+
+      // Mark it built so the server clears it from the pending queue and
+      // the generator's avoid-list never re-proposes it. Best-effort —
+      // the project is already created, so a feedback hiccup shouldn't
+      // block the user.
+      try {
+        await api.post('utilities?resource=project-ideas-feedback', { id: idea.id, status: 'built' })
+      } catch {
+        // Non-fatal: the project exists; the queue will reconcile on next load.
+      }
+
+      setIdeas(prev => prev.filter(i => i.id !== idea.id))
+      setActiveIndex(0)
+      setExpanded(false)
+      setShowEvidence(false)
+      addToast({
+        title: 'Saved to projects',
+        description: `"${idea.title}" is at the top of your projects.`,
+        variant: 'success',
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save this idea')
+    } finally {
+      setPendingFeedback(null)
+    }
+  }, [pendingFeedback, createProject, addToast])
 
   const active = ideas[activeIndex] ?? null
   const evidenceCount = useMemo(() => active?.evidence?.length ?? 0, [active])
@@ -701,15 +732,16 @@ export function ProjectIdeasHome() {
                   )}
                 </AnimatePresence>
 
-                {/* Action row — clear hierarchy: dismiss (ghost) | save (outlined)
-                    | building it (filled, mode-tinted, the unmistakable CTA). */}
+                {/* Action row — two choices only: dismiss (ghost) and save
+                    (filled, mode-tinted CTA). Save commits the idea to the
+                    projects section; there's no separate "building it". */}
                 <div
                   className="relative mt-10 pt-5 flex items-center gap-2"
                   style={{ borderTop: `1px solid rgba(${accent}, 0.12)` }}
                 >
                   <button
                     type="button"
-                    onClick={() => sendFeedback(active, 'rejected')}
+                    onClick={() => dismissIdea(active)}
                     disabled={pendingFeedback === active.id}
                     className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[11px] tracking-wide transition-opacity opacity-50 hover:opacity-100 disabled:opacity-30"
                     style={{ color: 'var(--brand-text-muted)' }}
@@ -723,38 +755,18 @@ export function ProjectIdeasHome() {
 
                   <button
                     type="button"
-                    onClick={() => sendFeedback(active, active.status === 'saved' ? 'pending' : 'saved')}
+                    onClick={() => saveIdea(active)}
                     disabled={pendingFeedback === active.id}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[11.5px] font-medium tracking-wide transition-all"
-                    style={{
-                      color: active.status === 'saved' ? `rgb(${accent})` : 'var(--brand-text-secondary)',
-                      background: active.status === 'saved' ? `rgba(${accent}, 0.12)` : 'transparent',
-                      border: active.status === 'saved' ? `1px solid rgba(${accent}, 0.4)` : '1px solid rgba(255,255,255,0.08)',
-                    }}
-                    title={active.status === 'saved' ? 'Unsave' : 'Save for later'}
-                  >
-                    {active.status === 'saved' ? <BookmarkCheck className="h-3.5 w-3.5" /> : <BookmarkPlus className="h-3.5 w-3.5" />}
-                    <span>{active.status === 'saved' ? 'saved' : 'save'}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => sendFeedback(active, 'built')}
-                    disabled={pendingFeedback === active.id || active.status === 'built'}
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[12px] font-bold tracking-wide transition-all disabled:opacity-60"
                     style={{
                       color: 'var(--brand-bg)',
-                      background: active.status === 'built'
-                        ? `rgba(${accent}, 0.5)`
-                        : `linear-gradient(135deg, rgb(${accent}), rgba(${accent}, 0.8))`,
-                      boxShadow: active.status === 'built'
-                        ? 'none'
-                        : `0 4px 16px -4px rgba(${accent}, 0.6), inset 0 1px 0 rgba(255,255,255,0.2)`,
+                      background: `linear-gradient(135deg, rgb(${accent}), rgba(${accent}, 0.8))`,
+                      boxShadow: `0 4px 16px -4px rgba(${accent}, 0.6), inset 0 1px 0 rgba(255,255,255,0.2)`,
                     }}
-                    title="I'm building it"
+                    title="Save to projects"
                   >
-                    <Hammer className="h-3.5 w-3.5" />
-                    <span>{active.status === 'built' ? 'building' : 'building it'}</span>
+                    <BookmarkPlus className="h-3.5 w-3.5" />
+                    <span>{pendingFeedback === active.id ? 'saving…' : 'save'}</span>
                   </button>
                 </div>
 
