@@ -66,7 +66,12 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
   ] = await Promise.all([
     supabase
       .from('memories')
-      .select('id, title, body, themes, memory_type, triage, created_at')
+      // NOTE: do NOT add `triage` here — that column is not in the
+      // memories schema (no migration creates it) and selecting it makes
+      // PostgREST fail the WHOLE query, returning zero notes. That bug
+      // silently starved the idea generator (mem=0). triage_category is
+      // set to null below instead.
+      .select('id, title, body, themes, memory_type, created_at')
       .eq('user_id', userId)
       .gte('created_at', anchorSince)
       .order('created_at', { ascending: false })
@@ -159,7 +164,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       body: (m.body as string).trim(),
       themes: Array.isArray(m.themes) ? (m.themes as string[]) : [],
       memory_type: m.memory_type as string | null,
-      triage_category: (m.triage?.category as string | undefined) ?? null,
+      triage_category: null,
       created_at: m.created_at as string,
     }))
 
