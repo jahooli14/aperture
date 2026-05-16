@@ -309,7 +309,7 @@ async function runFastSingleAttempt(
     raw = await withTimeout(
       generateText(prompt, {
         model: MODELS.FLASH_CHAT,
-        // gemini-3-flash-preview is a THINKING model — internal reasoning
+        // FLASH_CHAT is a Gemini 3.x thinking model — internal reasoning
         // tokens count against maxOutputTokens. 1400 was being consumed
         // almost entirely by thinking, leaving ~40 tokens for the answer
         // and a truncated, unparseable JSON. 8000 matches the Read /
