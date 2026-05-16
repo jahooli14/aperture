@@ -1,7 +1,7 @@
 /**
  * Default editorial brief for the "suggest a project" button.
  *
- * Inserted into buildFastIdeaPrompt's THE BRIEF slot. Users can override
+ * Inserted into the fast-path prompt's THE BRIEF slot. Users can override
  * this in Settings — their text replaces this block verbatim. Plain
  * English rules, data injection, and the output JSON spec are NOT
  * customisable: they stay structural so the surface keeps working when a

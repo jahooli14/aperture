@@ -114,6 +114,15 @@ export interface GatherResult {
    *  The picker treats these as deprioritised so a back-to-back regen can't
    *  pick the same centre × a different arrival and produce a reword. */
   recent_centre_ids: string[]
+  /** Project ids the fast path must NOT revive again right now. Union of:
+   *  (a) the centre of any idea the user explicitly REJECTED in the last
+   *  ~180 days — "not for me" means the project, not just that one title;
+   *  and (b) the centre of any idea shown but not acted on in the last
+   *  ~30 days — a soft cooldown so back-to-back presses rotate to a
+   *  different project instead of re-pitching the same one reworded. The
+   *  generator filters dormant candidates against this and relaxes only
+   *  when it would otherwise have nothing to offer. */
+  blocked_project_ids: string[]
   total_signal_count: number
 }
 

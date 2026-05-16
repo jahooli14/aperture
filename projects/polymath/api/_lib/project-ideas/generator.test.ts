@@ -33,6 +33,7 @@ function emptyGather(overrides: Partial<GatherResult> = {}): GatherResult {
     recent_seed_pairs: [],
     recent_titles: [],
     recent_centre_ids: [],
+    blocked_project_ids: [],
     total_signal_count: 0,
     ...overrides,
   }
@@ -105,6 +106,34 @@ describe('synthesiseFallbackIdea — resonance picks the right dormant project',
     // a day as any" line is exactly the regression we're guarding against.
     expect(idea.why_now).toMatch(/broken glass|colour|whole glass/)
     expect(idea.why_now).toContain('"')
+  })
+
+  it('skips a blocked dormant project and picks the next one', () => {
+    const g = emptyGather({
+      dormant_projects: [
+        { id: 'p1', title: 'Bird cam latency', description: 'Fix the dropped frames on the garden bird cam stream', status: 'dormant', updated_at: isoDaysAgo(8) },
+        { id: 'p2', title: 'Smashed glass colours', description: 'Smash some glass and let colours bleed through it', status: 'dormant', updated_at: isoDaysAgo(60) },
+      ],
+      // p1 was just rejected / shown — "not for me" must not come back.
+      blocked_project_ids: ['p1'],
+    })
+    const idea = synthesiseFallbackIdea(g)
+    expect(idea.title).toBe('Smashed glass colours')
+  })
+
+  it('falls through to the voice-note tier when every dormant project is blocked', () => {
+    const g = emptyGather({
+      dormant_projects: [
+        { id: 'p1', title: 'Bird cam latency', description: 'Fix the dropped frames', status: 'dormant', updated_at: isoDaysAgo(8) },
+      ],
+      blocked_project_ids: ['p1'],
+      memories: [
+        { id: 'm1', title: null, body: 'a real substantive thought about making something with my hands this weekend', themes: ['making'], memory_type: 'reflection', created_at: isoDaysAgo(3) },
+      ],
+    })
+    const idea = synthesiseFallbackIdea(g)
+    expect(idea.title).not.toBe('Bird cam latency')
+    expect(idea.title).toBe('Follow what you said')
   })
 
   it('falls back to most-recent dormant when no memory resonates', () => {
