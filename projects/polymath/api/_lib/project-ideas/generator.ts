@@ -395,8 +395,14 @@ function buildFastSinglePrompt(
     ...g.recent_titles.map(t => `  • just shown: "${t.title}"`),
   ].join('\n') || '  (none yet)'
 
+  // When every dormant project has been shown/rejected, stop calling
+  // dormant "preferred ground" — with a 1-project pool that framing makes
+  // the model revive the same thing forever. Flip the bias to NAME.
+  const dormantHeader = allDormantSeen
+    ? `═══════ DORMANT / ON-HOLD PROJECTS — context only. The user has already been shown / has rejected the project(s) below. Do NOT revive or re-pitch them, even reworded or "from a new angle". ═══════`
+    : `═══════ DORMANT / ON-HOLD PROJECTS (preferred ground — reviving the right one is usually the best answer) ═══════`
   const relaxNote = allDormantSeen
-    ? `\nNOTE: every dormant project below has already been suggested recently. Do NOT just reword one of them. Either find a genuinely DIFFERENT output for one (not the same pitch), or switch to a "name" / "extend" move grounded in the voice notes.\n`
+    ? `\nThe dormant pool is exhausted. The strongest move now is NAME: pull a genuinely new project out of the recent voice notes, lists, reading and highlights — something they're circling but haven't said out loud. Only EXTEND a dormant project if you can name a concretely DIFFERENT output (not the same pitch reworded). Reviving one as-is is off the table this run.\n`
     : ''
 
   return `You are a friend who's been paying attention, writing ONE project suggestion for someone who just opened the app and asked "give me one thing to work on today." You have their whole creative record below — use any of it, not just the projects.
@@ -409,7 +415,7 @@ ${feelingBlock}
 
 ${deriveTasteLine(g)}
 
-═══════ DORMANT / ON-HOLD PROJECTS (preferred ground — reviving the right one is usually the best answer) ═══════
+${dormantHeader}
 ${dormantBlock || '  (none yet)'}
 ${relaxNote}
 ═══════ ACTIVE PROJECTS — context only. These are already on Keep Going. NEVER centre an idea on one and NEVER put an active project's name in the title. They're listed so you don't accidentally re-pitch something they're already doing. ═══════
@@ -684,6 +690,18 @@ export function synthesiseFallbackIdea(g: GatherResult): ProjectIdea {
       evidence: [],
     }
   }
+  // Tier 4d (last resort before universal): a dormant project the user
+  // HAS seen/rejected. Only reached when there is no unblocked project,
+  // no voice note, no list item, no reading at all — a seen real project
+  // still beats "go record a thought". This ordering is the fix for the
+  // "every press returns the one blocked project" loop: it now sits
+  // BELOW voice/list/reading instead of above them.
+  const relaxedMatch = findResonantDormantProject(g, { allowBlocked: true })
+  if (relaxedMatch) {
+    console.warn(`[project-ideas] fallback tier=dormant-relaxed project="${relaxedMatch.project.title}" (only material left is an already-seen project)`)
+    return buildDormantRevival(relaxedMatch, g)
+  }
+
   // Tier 5: genuinely empty account — no projects, notes, lists, or
   // reading. The button must never come back empty.
   console.warn('[project-ideas] fallback tier=universal — account looks empty (no projects/notes/lists/reading reached the generator)')
@@ -711,15 +729,19 @@ interface DormantMatch {
  *  top-of-list dormant project (most recently touched) when nothing
  *  resonates, so the button still answers. Returns null only when there
  *  are no dormant projects at all. */
-function findResonantDormantProject(g: GatherResult): DormantMatch | null {
-  // Prefer projects the user hasn't rejected (~180d) or just seen (~30d).
-  // But if blocking would empty the pool, RELAX to the full list (same as
-  // the LLM path) — a real project the user has seen recently is far
-  // better than free-falling to the "no projects" universal tier and
-  // lying about it. Returns null only when there are genuinely none.
+function findResonantDormantProject(
+  g: GatherResult,
+  opts: { allowBlocked?: boolean } = {},
+): DormantMatch | null {
+  // Strict by default: only projects the user hasn't rejected (~180d) or
+  // just seen (~30d). The caller deliberately retries with
+  // allowBlocked=true ONLY as a last resort (better a seen project than
+  // the "go capture a thought" universal tier) — never ahead of the
+  // voice / list / reading tiers, or a user with one blocked dormant
+  // project gets the same revival on every single press.
   const blocked = new Set(g.blocked_project_ids)
   let pool = g.dormant_projects.filter(p => !blocked.has(p.id))
-  if (pool.length === 0) pool = g.dormant_projects
+  if (pool.length === 0 && opts.allowBlocked) pool = g.dormant_projects
   if (pool.length === 0) return null
 
   const now = Date.now()

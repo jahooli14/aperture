@@ -121,9 +121,9 @@ describe('synthesiseFallbackIdea — resonance picks the right dormant project',
     expect(idea.title).toBe('Smashed glass colours')
   })
 
-  it('relaxes to a blocked project rather than free-falling when ALL are blocked', () => {
-    // A real (if recently-seen) project beats the generic "go capture a
-    // thought" tier and beats lying "no dormant projects" when they exist.
+  it('does NOT re-serve the only (blocked) dormant project when a voice note exists', () => {
+    // The "10 presses, all coloured glass" bug: one blocked dormant
+    // project must not pre-empt the voice tier. Voice wins here.
     const g = emptyGather({
       dormant_projects: [
         { id: 'p1', title: 'Bird cam latency', description: 'Fix the dropped frames', status: 'dormant', updated_at: isoDaysAgo(8) },
@@ -132,6 +132,19 @@ describe('synthesiseFallbackIdea — resonance picks the right dormant project',
       memories: [
         { id: 'm1', title: null, body: 'a real substantive thought about making something with my hands this weekend', themes: ['making'], memory_type: 'reflection', created_at: isoDaysAgo(3) },
       ],
+    })
+    const idea = synthesiseFallbackIdea(g)
+    expect(idea.title).not.toBe('Bird cam latency')
+    expect(idea.title).toBe('Follow what you said')
+  })
+
+  it('last-resort relaxes to a blocked project only when nothing else exists at all', () => {
+    const g = emptyGather({
+      dormant_projects: [
+        { id: 'p1', title: 'Bird cam latency', description: 'Fix the dropped frames', status: 'dormant', updated_at: isoDaysAgo(8) },
+      ],
+      blocked_project_ids: ['p1'],
+      // no memories, no list items, no reading
     })
     const idea = synthesiseFallbackIdea(g)
     expect(idea.title).toBe('Bird cam latency')
