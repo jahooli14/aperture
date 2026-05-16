@@ -163,6 +163,16 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       created_at: m.created_at as string,
     }))
 
+  // Memory pipeline diagnostic. mem=0 with notes present is the failure
+  // we keep chasing: this line says whether the QUERY came back empty
+  // (RLS / user_id / column → err or raw=0) or the ≥80-char/≥10-word
+  // filter ate everything (raw>0 kept=0 → notes are just short).
+  const memRaw = memoriesRes.data?.length ?? 0
+  if (memRaw === 0 || memories.length === 0) {
+    const sampleLens = (memoriesRes.data ?? []).slice(0, 5).map((m: any) => (m.body ?? '').trim().length).join(',')
+    console.warn(`[gather] memories raw=${memRaw} kept=${memories.length} err=${memoriesRes.error?.message ?? 'none'} firstBodyLens=[${sampleLens}]`)
+  }
+
   const list_items = (listItemsRes.data ?? [])
     .filter((li: any) => li.content && li.content.trim().length >= 4)
     .map((li: any) => ({

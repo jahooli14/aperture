@@ -458,14 +458,20 @@ function parseFastIdea(
   allowedDormant: GatherResult['dormant_projects'],
 ): ProjectIdea | null {
   const payload = robustJsonParse(raw)
-  if (!payload || typeof payload !== 'object') return null
+  if (!payload || typeof payload !== 'object') {
+    console.warn(`[project-ideas] fast/single unparseable response (${raw.length} chars): ${raw.slice(0, 300).replace(/\s+/g, ' ')}`)
+    return null
+  }
   const item = payload as { move?: string; centre_id?: string | null; title?: string; pitch?: string; why_now?: string; next_step?: string }
   if (!item.title || !item.pitch || !item.next_step) {
-    console.warn('[project-ideas] fast/single missing required fields', { hasTitle: !!item.title, hasPitch: !!item.pitch, hasNextStep: !!item.next_step })
+    console.warn(`[project-ideas] fast/single missing required fields (hasTitle=${!!item.title} hasPitch=${!!item.pitch} hasNextStep=${!!item.next_step}); raw: ${raw.slice(0, 300).replace(/\s+/g, ' ')}`)
     return null
   }
   const title = String(item.title).trim().slice(0, 140)
-  if (title.length < 3) return null
+  if (title.length < 3) {
+    console.warn(`[project-ideas] fast/single title too short: "${title}"`)
+    return null
+  }
 
   // Resolve centre_id against ONLY the dormant projects we offered. The
   // fast path never centres on (or cites) an active project: Keep Going
