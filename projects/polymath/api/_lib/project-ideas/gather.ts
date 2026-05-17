@@ -59,6 +59,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
     ieIdeasRes,
     priorIdeasRes,
     recentSeedPairsRes,
+    recentIdeasRes,
   ] = await Promise.all([
     supabase
       .from('memories')
@@ -141,6 +142,17 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       .gte('generated_at', cooldownSince)
       .order('generated_at', { ascending: false })
       .limit(120),
+    // Source-rotation window: the last few ideas of ANY status (rejected
+    // included — a rejected idea still MINED that material and showing the
+    // same vein again is the exact "5 petrol-station ideas in a row"
+    // complaint). Title + evidence let the model see which well each came
+    // from and deliberately pick a different one.
+    supabase
+      .from('project_ideas')
+      .select('title, evidence, status, generated_at')
+      .eq('user_id', userId)
+      .order('generated_at', { ascending: false })
+      .limit(8),
   ])
 
   // Minimal floor only: drop pure fragments ("mouses are good") that the
@@ -325,6 +337,23 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
   }
   const recent_centre_ids = Array.from(recentCentreSet)
 
+  // Source-rotation window. The last ~6 ideas (any status) with the well
+  // each was mined from, so the prompt can forbid re-mining the same vein
+  // and force a different region of the corpus on the next press.
+  const recently_mined: GatherResult['recently_mined'] = []
+  for (const row of (recentIdeasRes.data ?? []).slice(0, 6) as Array<{
+    title: string | null
+    evidence: Array<{ label?: string; excerpt?: string; kind?: string }> | null
+    status: string
+  }>) {
+    if (!row.title) continue
+    const lead = Array.isArray(row.evidence) ? row.evidence[0] : null
+    const source = lead
+      ? `${lead.label ?? lead.kind ?? 'source'}${lead.excerpt ? `: "${(lead.excerpt as string).slice(0, 140)}"` : ''}`
+      : '(no cited source)'
+    recently_mined.push({ title: row.title, source, status: row.status })
+  }
+
   const total_signal_count =
     memories.length +
     list_items.length +
@@ -347,6 +376,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
     recent_titles,
     recent_centre_ids,
     blocked_project_ids: Array.from(blockedCentre),
+    recently_mined,
     total_signal_count,
   }
 }

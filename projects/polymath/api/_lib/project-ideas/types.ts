@@ -123,6 +123,11 @@ export interface GatherResult {
    *  generator filters dormant candidates against this and relaxes only
    *  when it would otherwise have nothing to offer. */
   blocked_project_ids: string[]
+  /** The last ~6 ideas (any status) with the source/well each was mined
+   *  from. Feeds the "you keep mining the same vein — rotate" block so
+   *  successive presses draw from genuinely different parts of the corpus
+   *  instead of re-skinning the same obsession (petrol stations, glass…). */
+  recently_mined: Array<{ title: string; source: string; status: string }>
   total_signal_count: number
 }
 
