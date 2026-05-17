@@ -14,8 +14,6 @@
 import type { getSupabaseClient } from '../supabase.js'
 import type { GatherResult } from './types.js'
 
-const RECENT_DAYS = 120
-const ANCHOR_DAYS = 365
 /** Cooldown window for seed pairs. A (centre × arrival) convergence can't
  *  fire again for this many weeks once it's been surfaced. 12 weeks lines
  *  up with the long-dormant reshape cadence in CLAUDE.md and is long
@@ -47,8 +45,6 @@ const SHOWN_COOLDOWN_DAYS = 30
 type Supabase = ReturnType<typeof getSupabaseClient>
 
 export async function gatherForIdeas(supabase: Supabase, userId: string): Promise<GatherResult> {
-  const recentSince = new Date(Date.now() - RECENT_DAYS * 86_400_000).toISOString()
-  const anchorSince = new Date(Date.now() - ANCHOR_DAYS * 86_400_000).toISOString()
   const cooldownSince = new Date(Date.now() - SEED_PAIR_COOLDOWN_DAYS * 86_400_000).toISOString()
   const recentTitleSince = new Date(Date.now() - RECENT_TITLE_DAYS * 86_400_000).toISOString()
   const recentCentreSince = new Date(Date.now() - RECENT_CENTRE_DAYS * 86_400_000).toISOString()
@@ -71,61 +67,63 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       // PostgREST fail the WHOLE query, returning zero notes. That bug
       // silently starved the idea generator (mem=0). triage_category is
       // set to null below instead.
+      //
+      // No time-window filter on purpose: the model has a huge cheap
+      // context window and we want the full arc (growth + resurfacing old
+      // gems). The high row cap is only a serverless safety bound — for
+      // virtually every real user it means "all of it".
       .select('id, title, body, themes, memory_type, created_at')
       .eq('user_id', userId)
-      .gte('created_at', anchorSince)
       .order('created_at', { ascending: false })
-      .limit(60),
+      .limit(500),
     supabase
       .from('list_items')
       .select('id, content, status, created_at, list_id, metadata, user_rating, lists(title, type)')
       .eq('user_id', userId)
-      .gte('created_at', anchorSince)
       .in('status', ['pending', 'active', 'completed'])
       .order('created_at', { ascending: false })
-      .limit(80),
+      .limit(400),
     supabase
       .from('projects')
       .select('id, title, description, status, metadata, updated_at')
       .eq('user_id', userId)
       .in('status', ['active', 'upcoming'])
       .order('updated_at', { ascending: false })
-      .limit(15),
+      .limit(100),
     supabase
       .from('projects')
       .select('id, title, description, status, metadata, updated_at')
       .eq('user_id', userId)
       .in('status', ['dormant', 'on-hold', 'archived', 'abandoned'])
       .order('updated_at', { ascending: false })
-      .limit(15),
+      .limit(150),
     supabase
       .from('reading_queue')
       .select('id, title, excerpt, source, created_at, status')
       .eq('user_id', userId)
-      .gte('created_at', recentSince)
       .order('created_at', { ascending: false })
-      .limit(20),
+      .limit(150),
     supabase
       .from('project_suggestions')
       .select('id, title, status')
       .eq('user_id', userId)
       .in('status', ['pending', 'dismissed', 'meh'])
       .order('created_at', { ascending: false })
-      .limit(20),
+      .limit(40),
     supabase
       .from('ie_ideas')
       .select('id, title, description, status, rejection_reason')
       .eq('user_id', userId)
       .in('status', ['approved', 'pending', 'spark'])
       .order('created_at', { ascending: false })
-      .limit(15),
+      .limit(40),
     supabase
       .from('project_ideas')
       .select('title, status, user_feedback, evidence, seed_pair, generated_at')
       .eq('user_id', userId)
       .in('status', ['saved', 'rejected', 'built'])
       .order('generated_at', { ascending: false })
-      .limit(60),
+      .limit(200),
     // Recent batches — drives three signals at once:
     //   1. recent_seed_pairs (cooldown set for the picker)
     //   2. recent_titles (do-not-repeat block in the prompt — catches the
@@ -145,18 +143,18 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       .limit(120),
   ])
 
-  // Drop short cryptic voice notes ("mouses are good") before they reach
-  // the prompt. The model treats anything in the prompt as load-bearing
-  // and will invent project shapes to use them. The bar: ≥80 chars AND
-  // ≥10 words. A real load-bearing note describes a thing; a phrase
-  // doesn't. (Bed by 10, Sonically Sound etc. survive as PROJECTS via
-  // the projects table — losing a 3-word voice note doesn't lose them.)
+  // Minimal floor only: drop pure fragments ("mouses are good") that the
+  // model would treat as load-bearing and invent junk around. Per the
+  // "give it everything, refine via the prompt" call, the old ≥80-char /
+  // ≥10-word bar was far too aggressive — it silently ate real short
+  // notes. Now: ≥20 chars AND ≥4 words. The prompt already tells the
+  // model motifs are flavour, not the vessel, so let it judge.
   const memories = (memoriesRes.data ?? [])
     .filter((m: any) => {
       const body = (m.body ?? '').trim()
-      if (body.length < 80) return false
+      if (body.length < 20) return false
       const wordCount = body.split(/\s+/).filter(Boolean).length
-      return wordCount >= 10
+      return wordCount >= 4
     })
     .map((m: any) => ({
       id: m.id as string,
@@ -233,7 +231,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       .select('id, highlight_text, created_at, article_id, reading_queue!inner(title)')
       .in('article_id', articleIds)
       .order('created_at', { ascending: false })
-      .limit(20)
+      .limit(200)
     highlights = ((highlightRows ?? []) as any[])
       .filter(h => h.highlight_text && (h.highlight_text as string).trim().length >= 10)
       .map(h => ({

@@ -217,7 +217,10 @@ export function ProjectIdeasHome() {
       const res = await api.post(
         'utilities?resource=generate-project-ideas',
         feeling ? { feeling } : {},
-        { timeout: 40_000 },
+        // Full-history corpus on a thinking model is genuinely slow on a
+        // cold press; the server budget is ~66s. Paid once — the next
+        // press is instant from the pending queue.
+        { timeout: 75_000 },
       ) as GenerateResponse
       if (!res.ideas || res.ideas.length === 0) {
         if (res.reason === 'insufficient_data') {

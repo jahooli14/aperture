@@ -208,10 +208,13 @@ async function runPermissive(gathered: GatherResult, opts: { fast?: boolean } = 
  *  The underlying call continues in the background (Promise.race doesn't
  *  cancel) but we stop waiting.
  *
- *  Raised from 15s → 25s after the template kept firing on real button
- *  presses. The user explicitly asked for the LLM idea — they'll wait
- *  25s for a real thought before they want the template's fake one. */
-const FAST_STAGE_TIMEOUT_MS = 25_000
+ *  Raised 15s → 25s → 45s as the corpus widened to "give it everything".
+ *  A full-history prompt on a thinking model is genuinely slower; the
+ *  user explicitly chose completeness over speed and will wait for a
+ *  real thought rather than get the template's fake one. The queue
+ *  short-circuit means the NEXT press is instant, so the wait is paid
+ *  once, not every time. */
+const FAST_STAGE_TIMEOUT_MS = 45_000
 
 function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
@@ -253,11 +256,11 @@ function deriveTasteLine(g: GatherResult): string {
  *  it finds a new angle instead of reword #5. Retries once hotter; returns
  *  null only if both attempts fail (caller then serves the template). */
 /** Total LLM wall-clock budget for the fast path. The client aborts the
- *  POST at 40s (ProjectIdeasHome), and gather + supersede + insert +
- *  network eat into that, so the two attempts together must finish well
- *  inside it. Two unconditional 25s attempts (= 50s) would blow the cap
- *  and the user would just see a failure. */
-const FAST_TOTAL_BUDGET_MS = 34_000
+ *  POST at 75s (ProjectIdeasHome); gather + supersede + insert + network
+ *  eat into that, so the budget sits below it. With the full-history
+ *  prompt one good attempt is usually all there's time for — the retry
+ *  only fires when an early failure leaves real budget. */
+const FAST_TOTAL_BUDGET_MS = 66_000
 /** Don't start a retry unless this much budget is left — a retry that
  *  can't realistically finish is worse than bailing straight to the
  *  (instant) template. */
@@ -344,20 +347,23 @@ function buildFastSinglePrompt(
   // must be). Plain-English rules and JSON structure stay non-editable.
   const ideaBrief = (brief && brief.trim()) ? brief.trim() : DEFAULT_IDEA_BRIEF
 
-  const dormantBlock = dormant.slice(0, 14).map(p => {
-    const blockerLine = p.blocker ? `\n      blocked at: "${truncate(p.blocker, 160)}"` : ''
-    const bookmarkLine = p.last_bookmark ? `\n      left off: "${truncate(p.last_bookmark, 160)}"` : ''
-    return `  project_dormant#${p.id} "${p.title}" (last touched ${isoDate(p.updated_at)})${p.description ? ` — ${truncate(p.description, 240)}` : ''}${blockerLine}${bookmarkLine}`
+  // The model has a huge, cheap context window — give it the whole
+  // corpus and let the prompt steer direction, rather than pre-trimming.
+  // Caps here are generous safety bounds, not editorial choices; gather
+  // already row-caps upstream.
+  const dormantBlock = dormant.slice(0, 120).map(p => {
+    const blockerLine = p.blocker ? `\n      blocked at: "${truncate(p.blocker, 200)}"` : ''
+    const bookmarkLine = p.last_bookmark ? `\n      left off: "${truncate(p.last_bookmark, 200)}"` : ''
+    return `  project_dormant#${p.id} "${p.title}" (last touched ${isoDate(p.updated_at)})${p.description ? ` — ${truncate(p.description, 320)}` : ''}${blockerLine}${bookmarkLine}`
   }).join('\n')
 
-  const activeBlock = g.active_projects.slice(0, 12).map(p =>
-    `  project_active#${p.id} "${p.title}"${p.description ? ` — ${truncate(p.description, 120)}` : ''}`
+  const activeBlock = g.active_projects.slice(0, 80).map(p =>
+    `  project_active#${p.id} "${p.title}" (last touched ${isoDate(p.updated_at)})${p.description ? ` — ${truncate(p.description, 200)}` : ''}`
   ).join('\n')
 
-  // Full recent voice stream — the big change. The model now reads the
-  // user's actual words, not five Lite-chosen 140-char excerpts.
-  const memBlock = g.memories.slice(0, 28).map(m =>
-    `  memory#${m.id} (${isoDate(m.created_at)}) — "${truncate(m.body, 280)}"`
+  // The full voice stream, oldest dates intact so THE ARC is readable.
+  const memBlock = g.memories.slice(0, 350).map(m =>
+    `  memory#${m.id} (${isoDate(m.created_at)}) — "${truncate(m.body, 420)}"`
   ).join('\n')
 
   // Lists grouped by type, reaction-tagged; "off" items filtered out.
@@ -370,17 +376,17 @@ function buildFastSinglePrompt(
     li => li.list_type,
   )
   const listBlock = Array.from(listsByType.entries()).map(([type, items]) =>
-    `  ${type}: ${items.slice(0, 8).map(li => {
+    `  ${type}: ${items.slice(0, 60).map(li => {
       const tag = li.reaction === 'make' ? ' [WANT TO MAKE]' : li.reaction === 'sparked' ? ' [SPARKED]' : ''
-      return `${truncate(li.content, 60)}${tag}`
+      return `${truncate(li.content, 80)}${tag}`
     }).join('; ')}`
   ).join('\n')
 
-  const readingBlock = g.reading.slice(0, 12).map(r =>
-    `  "${r.title ?? '(untitled)'}"${r.excerpt ? ` — ${truncate(r.excerpt, 140)}` : ''}`
+  const readingBlock = g.reading.slice(0, 120).map(r =>
+    `  "${r.title ?? '(untitled)'}"${r.excerpt ? ` — ${truncate(r.excerpt, 160)}` : ''}`
   ).join('\n')
-  const highlightBlock = g.highlights.slice(0, 10).map(h =>
-    `  "${truncate(h.quote, 180)}"${h.article_title ? ` — ${h.article_title}` : ''}`
+  const highlightBlock = g.highlights.slice(0, 120).map(h =>
+    `  "${truncate(h.quote, 200)}"${h.article_title ? ` — ${h.article_title}` : ''}`
   ).join('\n')
 
   // Rejected projects are already filtered out of the dormant list by id;
@@ -395,8 +401,14 @@ function buildFastSinglePrompt(
     ...g.recent_titles.map(t => `  • just shown: "${t.title}"`),
   ].join('\n') || '  (none yet)'
 
+  // When every dormant project has been shown/rejected, stop calling
+  // dormant "preferred ground" — with a 1-project pool that framing makes
+  // the model revive the same thing forever. Flip the bias to NAME.
+  const dormantHeader = allDormantSeen
+    ? `═══════ DORMANT / ON-HOLD PROJECTS — context only. The user has already been shown / has rejected the project(s) below. Do NOT revive or re-pitch them, even reworded or "from a new angle". ═══════`
+    : `═══════ DORMANT / ON-HOLD PROJECTS (preferred ground — reviving the right one is usually the best answer) ═══════`
   const relaxNote = allDormantSeen
-    ? `\nNOTE: every dormant project below has already been suggested recently. Do NOT just reword one of them. Either find a genuinely DIFFERENT output for one (not the same pitch), or switch to a "name" / "extend" move grounded in the voice notes.\n`
+    ? `\nThe dormant pool is exhausted. The strongest move now is NAME: pull a genuinely new project out of the recent voice notes, lists, reading and highlights — something they're circling but haven't said out loud. Only EXTEND a dormant project if you can name a concretely DIFFERENT output (not the same pitch reworded). Reviving one as-is is off the table this run.\n`
     : ''
 
   return `You are a friend who's been paying attention, writing ONE project suggestion for someone who just opened the app and asked "give me one thing to work on today." You have their whole creative record below — use any of it, not just the projects.
@@ -409,16 +421,22 @@ ${feelingBlock}
 
 ${deriveTasteLine(g)}
 
-═══════ DORMANT / ON-HOLD PROJECTS (preferred ground — reviving the right one is usually the best answer) ═══════
+═══════ THE ARC — time is a dimension, use it ═══════
+Every project and note below carries a date. Read the gap between the oldest and newest: what has changed — new skills, sharper taste, different constraints, what they keep returning to. Two of the strongest moves live here:
+  • GROWTH: a recent capture shows they've outgrown where an old project stalled. Don't restart it as-was — name the version that fits who they are NOW.
+  • RESURFACE: a genuinely good old project that went quiet because life moved on, not because it was wrong. Bring it back, framed for the present self.
+Old is not stale. Old + still resonant = the best material there is. But "why_now" must still point at something real (a recent capture, or a concrete shift over time) — never invent a connection.
+
+${dormantHeader}
 ${dormantBlock || '  (none yet)'}
 ${relaxNote}
-═══════ ACTIVE PROJECTS — context only. These are already on Keep Going. NEVER centre an idea on one and NEVER put an active project's name in the title. They're listed so you don't accidentally re-pitch something they're already doing. ═══════
+═══════ ACTIVE PROJECTS — you MAY build on these, but ONLY as EXTEND: a sharp, specific NEW direction or output a recent capture points at. NEVER "finish / ship / continue / complete / polish X" — that's admin Keep Going already handles, not ignition. The title names the NEW thing, not the parent project. ═══════
 ${activeBlock || '  (none)'}
 
-═══════ RECENT VOICE NOTES (their own words — the richest signal) ═══════
+═══════ RECENT VOICE NOTES (their own words) ═══════
 ${memBlock || '  (none)'}
 
-═══════ LISTS — films / books / places (identity signal, never the whole idea) ═══════
+═══════ LISTS — films / books / places (identity signal: who they're becoming) ═══════
 ${listBlock || '  (none)'}
 
 ═══════ READING ═══════
@@ -440,14 +458,14 @@ ${ideaBrief}
 ═══════ OUTPUT (strict JSON, no markdown fences, no extra fields) ═══════
 {
   "move": "revive | extend | name",
-  "centre_id": "for revive/extend: the EXACT project_dormant#<id> from the DORMANT list above, copied verbatim. For name: null. NEVER an active project.",
-  "title": "≤6 words. Names the artefact or the action. Must NOT contain an active project's name.",
+  "centre_id": "the EXACT project_dormant#<id> OR project_active#<id> this is about, copied verbatim from the lists above. null only for a brand-new 'name' idea.",
+  "title": "≤6 words. Names the artefact or the action. For extend-on-active: name the NEW output, not the parent.",
   "pitch": "2 sentences. Sentence 1 = what the project IS. Sentence 2 = what done looks like in one observable test.",
-  "why_now": "ONE sentence. The specific recent capture or fact in their data that makes this the right one right now.",
+  "why_now": "ONE sentence. The specific recent capture OR the arc-over-time fact that makes this the right one right now.",
   "next_step": "ONE physical action they can do TODAY. Cut, drill, flash, commit a named file with named first content, drive, phone. NOT 'research,' 'plan,' 'sketch,' 'outline,' 'decide.'"
 }
 
-revive = restart a dormant project as-is. extend = a specific NEW output for a dormant project. name = a brand-new project the voice notes point at (centre_id null). Decide the move FIRST, then write from inside it. Reviving or extending a dormant project the user has NOT already rejected or just seen is almost always the strongest answer — only choose "name" when the voice notes genuinely point at something new. If the brief and the data don't line up cleanly, follow the brief.`
+revive = restart a dormant project (optionally reshaped for who they are NOW — see THE ARC). extend = a specific NEW direction/output for a dormant OR active project. name = a brand-new project the captures point at (centre_id null). Use ALL of it — every project (dormant and active), every voice note, every list item, reading and highlights — not just one section. Decide the move from where the strongest real energy is, not from a fixed preference order. If the brief and the data don't line up cleanly, follow the brief.`
 }
 
 /** Parses the single-call Flash response. Resolves the model's centre_id
@@ -478,30 +496,31 @@ function parseFastIdea(
     return null
   }
 
-  // Resolve centre_id against ONLY the dormant projects we offered. The
-  // fast path never centres on (or cites) an active project: Keep Going
-  // already owns those, and the GET-side filter in utilities.ts silently
-  // drops any non-read idea whose evidence cites an active project — so an
-  // extend-on-active idea would vanish. Active-project extend is Read
-  // mode's job (cron). Anything unresolvable is treated as a "name" idea
-  // rather than a hard fail — we'd still rather ship than retry.
+  // Resolve centre_id against the dormant projects we offered, then the
+  // active projects (EXTEND is now allowed on active projects — a sharp
+  // NEW direction, never "finish X"). Anything unresolvable is treated as
+  // a "name" idea rather than a hard fail.
   const rawCentre = typeof item.centre_id === 'string' ? item.centre_id : ''
   const bareCentre = rawCentre.includes('#') ? rawCentre.slice(rawCentre.indexOf('#') + 1).trim() : rawCentre.trim()
-  let centreDormant: GatherResult['dormant_projects'][number] | null = null
-  if (bareCentre) {
-    centreDormant = allowedDormant.find(r => r.id === bareCentre)
-      ?? (bareCentre.length >= 6 ? allowedDormant.find(r => r.id.startsWith(bareCentre)) ?? null : null)
-  }
+  const resolve = <T extends { id: string }>(rows: T[]): T | null =>
+    !bareCentre ? null
+      : (rows.find(r => r.id === bareCentre)
+        ?? (bareCentre.length >= 6 ? rows.find(r => r.id.startsWith(bareCentre)) ?? null : null))
+  const centreDormant = resolve(allowedDormant)
+  const centreActive = centreDormant ? null : resolve(gathered.active_projects)
 
-  // A title that names an active project (or "finish/ship X" against one)
-  // is Keep Going duplication and the GET filter would drop it anyway —
-  // reject here so attempt 2 gets a clean retry.
-  if (gathered.active_projects.some(p => p.title.trim() && title.toLowerCase().includes(p.title.toLowerCase()))) {
-    console.log(`[project-ideas] fast/single dropped "${title}" — title names an active project`)
+  // The ONLY active-project title rule: never "finish / ship / continue /
+  // complete X" against an active project (that's Keep Going admin, not
+  // ignition). A NEW-direction title that happens to mention the parent
+  // is fine — this mirrors the GET-side filter so the idea won't be
+  // dropped downstream.
+  const FINISH_RE = /^\s*(finish(ing)?|ship(ping)?|complete(\s+the)?|wrap\s*up|polish(\s+the)?|continue(\s+the)?)\b/i
+  if (FINISH_RE.test(title) && gathered.active_projects.some(p => p.title.trim() && title.toLowerCase().includes(p.title.toLowerCase()))) {
+    console.log(`[project-ideas] fast/single dropped "${title}" — "finish/ship X" against an active project`)
     return null
   }
 
-  const arrival = pickResonantMemory(gathered, centreDormant)
+  const arrival = pickResonantMemory(gathered, centreDormant ?? centreActive ?? null)
   const evidence: IdeaEvidence[] = []
   let seed_pair: SeedPair | undefined
   if (centreDormant) {
@@ -513,6 +532,15 @@ function parseFastIdea(
       excerpt: truncate(centreDormant.description ?? centreDormant.title, 220),
     })
     if (arrival) seed_pair = { centre_kind: 'project_dormant', centre_id: centreDormant.id, arrival_kind: 'memory', arrival_id: arrival.id }
+  } else if (centreActive) {
+    evidence.push({
+      kind: 'project',
+      source_id: centreActive.id,
+      label: `active project: ${centreActive.title}`,
+      date: isoDate(centreActive.updated_at),
+      excerpt: truncate(centreActive.description ?? centreActive.title, 220),
+    })
+    if (arrival) seed_pair = { centre_kind: 'project_active', centre_id: centreActive.id, arrival_kind: 'memory', arrival_id: arrival.id }
   }
   if (arrival) {
     evidence.push({
@@ -523,10 +551,9 @@ function parseFastIdea(
       excerpt: truncate(arrival.body, 220),
     })
   }
-  // A "name" idea with no dormant centre cites a second recent memory so
-  // the "from N signals" drawer isn't a single row — and never an active
-  // project (the GET filter would eat the whole idea).
-  if (!centreDormant) {
+  // A "name" idea with no project centre cites a second recent memory so
+  // the "from N signals" drawer isn't a single row.
+  if (!centreDormant && !centreActive) {
     const second = gathered.memories.find(m => m.id !== arrival?.id)
     if (second) {
       evidence.push({
@@ -684,6 +711,18 @@ export function synthesiseFallbackIdea(g: GatherResult): ProjectIdea {
       evidence: [],
     }
   }
+  // Tier 4d (last resort before universal): a dormant project the user
+  // HAS seen/rejected. Only reached when there is no unblocked project,
+  // no voice note, no list item, no reading at all — a seen real project
+  // still beats "go record a thought". This ordering is the fix for the
+  // "every press returns the one blocked project" loop: it now sits
+  // BELOW voice/list/reading instead of above them.
+  const relaxedMatch = findResonantDormantProject(g, { allowBlocked: true })
+  if (relaxedMatch) {
+    console.warn(`[project-ideas] fallback tier=dormant-relaxed project="${relaxedMatch.project.title}" (only material left is an already-seen project)`)
+    return buildDormantRevival(relaxedMatch, g)
+  }
+
   // Tier 5: genuinely empty account — no projects, notes, lists, or
   // reading. The button must never come back empty.
   console.warn('[project-ideas] fallback tier=universal — account looks empty (no projects/notes/lists/reading reached the generator)')
@@ -711,15 +750,19 @@ interface DormantMatch {
  *  top-of-list dormant project (most recently touched) when nothing
  *  resonates, so the button still answers. Returns null only when there
  *  are no dormant projects at all. */
-function findResonantDormantProject(g: GatherResult): DormantMatch | null {
-  // Prefer projects the user hasn't rejected (~180d) or just seen (~30d).
-  // But if blocking would empty the pool, RELAX to the full list (same as
-  // the LLM path) — a real project the user has seen recently is far
-  // better than free-falling to the "no projects" universal tier and
-  // lying about it. Returns null only when there are genuinely none.
+function findResonantDormantProject(
+  g: GatherResult,
+  opts: { allowBlocked?: boolean } = {},
+): DormantMatch | null {
+  // Strict by default: only projects the user hasn't rejected (~180d) or
+  // just seen (~30d). The caller deliberately retries with
+  // allowBlocked=true ONLY as a last resort (better a seen project than
+  // the "go capture a thought" universal tier) — never ahead of the
+  // voice / list / reading tiers, or a user with one blocked dormant
+  // project gets the same revival on every single press.
   const blocked = new Set(g.blocked_project_ids)
   let pool = g.dormant_projects.filter(p => !blocked.has(p.id))
-  if (pool.length === 0) pool = g.dormant_projects
+  if (pool.length === 0 && opts.allowBlocked) pool = g.dormant_projects
   if (pool.length === 0) return null
 
   const now = Date.now()
