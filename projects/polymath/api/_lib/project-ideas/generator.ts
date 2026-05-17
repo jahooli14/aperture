@@ -400,6 +400,13 @@ function buildFastSinglePrompt(
     ...g.prior_ideas.saved.map(s => `  • saved: "${s.title}"`),
     ...g.recent_titles.map(t => `  • just shown: "${t.title}"`),
   ].join('\n') || '  (none yet)'
+  // Source-rotation: the wells the last few ideas were mined from. If
+  // every line points at the same subject/place/photo set, that vein is
+  // exhausted for THIS press — a different project from the same well is
+  // still the same well.
+  const minedBlock = g.recently_mined.length
+    ? g.recently_mined.map(m => `  • "${m.title}" — mined from ${m.source}`).join('\n')
+    : '  (nothing yet — first idea, no rotation constraint)'
 
   // When every dormant project has been shown/rejected, stop calling
   // dormant "preferred ground" — with a 1-project pool that framing makes
@@ -445,8 +452,14 @@ ${readingBlock || '  (none)'}
 ═══════ HIGHLIGHTS (sentences they flagged) ═══════
 ${highlightBlock || '  (none)'}
 
-═══════ PROJECTS THEY REJECTED — "not for me". Do NOT re-pitch any of these, even reworded or from a new angle. ═══════
+═══════ YOU KEEP MINING THE SAME VEIN — ROTATE NOW (most important constraint this press) ═══════
+The user pressed again, so the last idea did NOT land. Here is the well each recent idea was mined from:
+${minedBlock}
+If those lines point at the same subject / place / photo set / motif, that vein is OFF for this press. A different project from the same well (more petrol-station things, more glass things) is NOT rotation — it is the exact failure the user is complaining about. Build this idea from material that does NOT appear above: deliberately reach into the corners you have not used — the OLDEST dormant projects, the reading list, the films/books/places lists, notes from months ago, an active project's new direction. There is far more to this person than their most-photographed obsession. Prove it. "why_now" must still be real — pick a genuinely different thread that also has a true reason to surface now.
+
+═══════ WHAT THEY'VE REJECTED — LEARN THE RULE, DON'T JUST SKIP THE TITLE ═══════
 ${rejectedBlock}
+Every "not for me" (and its reason) describes a CATEGORY they don't want — a medium, a scale, a subject, a vibe — not just that one title. Infer the rule behind the nos and stay out of the whole category. Re-pitching a rejected shape under a new name is the single biggest failure mode here. Weight this list heavily.
 
 ═══════ ALREADY BUILT / SAVED / JUST SHOWN — never re-emit these titles or a near-paraphrase ═══════
 ${seenBlock}

@@ -34,6 +34,7 @@ function emptyGather(overrides: Partial<GatherResult> = {}): GatherResult {
     recent_titles: [],
     recent_centre_ids: [],
     blocked_project_ids: [],
+    recently_mined: [],
     total_signal_count: 0,
     ...overrides,
   }
