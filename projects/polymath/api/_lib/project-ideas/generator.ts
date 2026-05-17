@@ -208,10 +208,13 @@ async function runPermissive(gathered: GatherResult, opts: { fast?: boolean } = 
  *  The underlying call continues in the background (Promise.race doesn't
  *  cancel) but we stop waiting.
  *
- *  Raised from 15s → 25s after the template kept firing on real button
- *  presses. The user explicitly asked for the LLM idea — they'll wait
- *  25s for a real thought before they want the template's fake one. */
-const FAST_STAGE_TIMEOUT_MS = 25_000
+ *  Raised 15s → 25s → 45s as the corpus widened to "give it everything".
+ *  A full-history prompt on a thinking model is genuinely slower; the
+ *  user explicitly chose completeness over speed and will wait for a
+ *  real thought rather than get the template's fake one. The queue
+ *  short-circuit means the NEXT press is instant, so the wait is paid
+ *  once, not every time. */
+const FAST_STAGE_TIMEOUT_MS = 45_000
 
 function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
@@ -253,11 +256,11 @@ function deriveTasteLine(g: GatherResult): string {
  *  it finds a new angle instead of reword #5. Retries once hotter; returns
  *  null only if both attempts fail (caller then serves the template). */
 /** Total LLM wall-clock budget for the fast path. The client aborts the
- *  POST at 40s (ProjectIdeasHome), and gather + supersede + insert +
- *  network eat into that, so the two attempts together must finish well
- *  inside it. Two unconditional 25s attempts (= 50s) would blow the cap
- *  and the user would just see a failure. */
-const FAST_TOTAL_BUDGET_MS = 34_000
+ *  POST at 75s (ProjectIdeasHome); gather + supersede + insert + network
+ *  eat into that, so the budget sits below it. With the full-history
+ *  prompt one good attempt is usually all there's time for — the retry
+ *  only fires when an early failure leaves real budget. */
+const FAST_TOTAL_BUDGET_MS = 66_000
 /** Don't start a retry unless this much budget is left — a retry that
  *  can't realistically finish is worse than bailing straight to the
  *  (instant) template. */
@@ -344,20 +347,23 @@ function buildFastSinglePrompt(
   // must be). Plain-English rules and JSON structure stay non-editable.
   const ideaBrief = (brief && brief.trim()) ? brief.trim() : DEFAULT_IDEA_BRIEF
 
-  const dormantBlock = dormant.slice(0, 14).map(p => {
-    const blockerLine = p.blocker ? `\n      blocked at: "${truncate(p.blocker, 160)}"` : ''
-    const bookmarkLine = p.last_bookmark ? `\n      left off: "${truncate(p.last_bookmark, 160)}"` : ''
-    return `  project_dormant#${p.id} "${p.title}" (last touched ${isoDate(p.updated_at)})${p.description ? ` — ${truncate(p.description, 240)}` : ''}${blockerLine}${bookmarkLine}`
+  // The model has a huge, cheap context window — give it the whole
+  // corpus and let the prompt steer direction, rather than pre-trimming.
+  // Caps here are generous safety bounds, not editorial choices; gather
+  // already row-caps upstream.
+  const dormantBlock = dormant.slice(0, 120).map(p => {
+    const blockerLine = p.blocker ? `\n      blocked at: "${truncate(p.blocker, 200)}"` : ''
+    const bookmarkLine = p.last_bookmark ? `\n      left off: "${truncate(p.last_bookmark, 200)}"` : ''
+    return `  project_dormant#${p.id} "${p.title}" (last touched ${isoDate(p.updated_at)})${p.description ? ` — ${truncate(p.description, 320)}` : ''}${blockerLine}${bookmarkLine}`
   }).join('\n')
 
-  const activeBlock = g.active_projects.slice(0, 12).map(p =>
-    `  project_active#${p.id} "${p.title}"${p.description ? ` — ${truncate(p.description, 120)}` : ''}`
+  const activeBlock = g.active_projects.slice(0, 80).map(p =>
+    `  project_active#${p.id} "${p.title}" (last touched ${isoDate(p.updated_at)})${p.description ? ` — ${truncate(p.description, 200)}` : ''}`
   ).join('\n')
 
-  // Full recent voice stream — the big change. The model now reads the
-  // user's actual words, not five Lite-chosen 140-char excerpts.
-  const memBlock = g.memories.slice(0, 28).map(m =>
-    `  memory#${m.id} (${isoDate(m.created_at)}) — "${truncate(m.body, 280)}"`
+  // The full voice stream, oldest dates intact so THE ARC is readable.
+  const memBlock = g.memories.slice(0, 350).map(m =>
+    `  memory#${m.id} (${isoDate(m.created_at)}) — "${truncate(m.body, 420)}"`
   ).join('\n')
 
   // Lists grouped by type, reaction-tagged; "off" items filtered out.
@@ -370,17 +376,17 @@ function buildFastSinglePrompt(
     li => li.list_type,
   )
   const listBlock = Array.from(listsByType.entries()).map(([type, items]) =>
-    `  ${type}: ${items.slice(0, 8).map(li => {
+    `  ${type}: ${items.slice(0, 60).map(li => {
       const tag = li.reaction === 'make' ? ' [WANT TO MAKE]' : li.reaction === 'sparked' ? ' [SPARKED]' : ''
-      return `${truncate(li.content, 60)}${tag}`
+      return `${truncate(li.content, 80)}${tag}`
     }).join('; ')}`
   ).join('\n')
 
-  const readingBlock = g.reading.slice(0, 12).map(r =>
-    `  "${r.title ?? '(untitled)'}"${r.excerpt ? ` — ${truncate(r.excerpt, 140)}` : ''}`
+  const readingBlock = g.reading.slice(0, 120).map(r =>
+    `  "${r.title ?? '(untitled)'}"${r.excerpt ? ` — ${truncate(r.excerpt, 160)}` : ''}`
   ).join('\n')
-  const highlightBlock = g.highlights.slice(0, 10).map(h =>
-    `  "${truncate(h.quote, 180)}"${h.article_title ? ` — ${h.article_title}` : ''}`
+  const highlightBlock = g.highlights.slice(0, 120).map(h =>
+    `  "${truncate(h.quote, 200)}"${h.article_title ? ` — ${h.article_title}` : ''}`
   ).join('\n')
 
   // Rejected projects are already filtered out of the dormant list by id;
