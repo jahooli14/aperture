@@ -2,9 +2,11 @@ import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import { logger } from '../lib/logger';
 import { alignPhoto, calculateZoomLevel } from '../lib/imageUtils';
+import { detectEyesFromImage } from '../lib/faceDetection';
 import type { Database } from '../types/database';
 
 type Photo = Database['public']['Tables']['photos']['Row'];
+type AlignmentTransform = NonNullable<Photo['alignment_transform']>;
 
 export interface EyeCoordinates {
   leftEye: { x: number; y: number };
@@ -61,7 +63,16 @@ interface PhotoState {
   deleting: boolean;
   fetchError: string | null;
   fetchPhotos: (retryCount?: number) => Promise<void>;
-  uploadPhoto: (file: File, eyeCoords: EyeCoordinates | null, uploadDate?: string, note?: string, emoji?: string, zoomLevel?: number) => Promise<string>;
+  uploadPhoto: (
+    originalFile: File,
+    alignedFile: File | null,
+    eyeCoords: EyeCoordinates | null,
+    transform: AlignmentTransform | null,
+    uploadDate?: string,
+    note?: string,
+    emoji?: string,
+    zoomLevel?: number
+  ) => Promise<string>;
   updatePhotoNote: (photoId: string, note: string, emoji?: string) => Promise<void>;
   deletePhoto: (photoId: string) => Promise<void>;
   restorePhoto: (photo: Photo) => void;
@@ -69,6 +80,10 @@ interface PhotoState {
   hasUploadedForDate: (date: string) => boolean;
   getEyeHistoryStats: (limit?: number) => EyeHistoryStats | null;
   reAlignPhoto: (photoId: string, newEyeCoords: Pick<EyeCoordinates, 'leftEye' | 'rightEye'>, birthdate?: string | null) => Promise<void>;
+  reAlignBacklog: (
+    birthdate?: string | null,
+    onProgress?: (done: number, total: number) => void
+  ) => Promise<{ processed: number; aligned: number; failed: number }>;
 }
 
 export const usePhotoStore = create<PhotoState>((set, get) => ({
@@ -224,7 +239,16 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
     }
   },
 
-  uploadPhoto: async (file: File, eyeCoords: EyeCoordinates | null, uploadDate?: string, note?: string, emoji?: string, zoomLevel?: number) => {
+  uploadPhoto: async (
+    originalFile: File,
+    alignedFile: File | null,
+    eyeCoords: EyeCoordinates | null,
+    transform: AlignmentTransform | null,
+    uploadDate?: string,
+    note?: string,
+    emoji?: string,
+    zoomLevel?: number
+  ) => {
     set({ uploading: true });
 
     try {
@@ -249,37 +273,39 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
         throw new Error('Cannot upload photos older than 5 years');
       }
 
-      // Upload to Supabase Storage
-      const fileExtension = file.name.split('.').pop() || 'jpg';
-      const fileName = `${user.id}/${Date.now()}.${fileExtension}`;
+      // Persist the TRUE original separately from the aligned image. This is
+      // what makes re-alignment lossless: the eye_coordinates we store are in
+      // the original's pixel space, so a later re-align (manual or auto) starts
+      // from untouched pixels instead of re-warping an already-warped image.
+      const stamp = Date.now();
+      const ext = originalFile.name.split('.').pop() || 'jpg';
 
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('originals')
-        .upload(fileName, file, {
-          contentType: file.type,
-          upsert: false,
-        });
+      const uploadOne = async (f: File, suffix: string): Promise<string> => {
+        const path = `${user.id}/${stamp}${suffix}.${ext}`;
+        const { data, error } = await supabase.storage
+          .from('originals')
+          .upload(path, f, { contentType: f.type || 'image/jpeg', upsert: false });
+        if (error) {
+          logger.error('Storage upload error', { error: error.message, path }, 'PhotoStore');
+          throw error;
+        }
+        return supabase.storage.from('originals').getPublicUrl(data.path).data.publicUrl;
+      };
 
-      if (uploadError) {
-        logger.error('Storage upload error', { error: uploadError.message, fileName }, 'PhotoStore');
-        throw uploadError;
-      }
+      const originalUrl = await uploadOne(originalFile, '-original');
+      // If alignment ran, store the aligned render too; otherwise the timeline
+      // falls back to the original (this should be rare now that failed
+      // detection drops the user into manual eye placement instead).
+      const alignedUrl = alignedFile ? await uploadOne(alignedFile, '-aligned') : originalUrl;
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('originals')
-        .getPublicUrl(uploadData.path);
-
-      // Prepare photo record with eye coordinates if available
-      // Note: If eyes were detected, the uploaded file is already aligned client-side
-      // Both original_url and aligned_url point to the same aligned image
       type PhotoInsert = Database['public']['Tables']['photos']['Insert'];
 
       const photoRecord: PhotoInsert = {
         user_id: user.id,
         upload_date: targetDate,
-        original_url: publicUrl,
-        aligned_url: publicUrl, // Points to aligned image (if eyes were detected)
+        original_url: originalUrl,
+        aligned_url: alignedUrl,
+        alignment_transform: alignedFile ? transform : null,
         eye_coordinates: eyeCoords ? {
           leftEye: eyeCoords.leftEye,
           rightEye: eyeCoords.rightEye,
@@ -614,5 +640,117 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
     logger.info('Photo re-aligned', { photoId, zoomLevel }, 'PhotoStore');
     await get().fetchPhotos();
     console.log('[reAlignPhoto] done');
+  },
+
+  /**
+   * One-shot pass to fix the existing timeline. Re-detects eyes (same pipeline
+   * as upload) on every photo that wasn't aligned by the current pipeline —
+   * i.e. anything missing `alignment_transform` — and re-renders a properly
+   * stacked image. Photos already aligned by the new pipeline are skipped, so
+   * this is safe to run repeatedly. Detection failures are left untouched (the
+   * user can still fix those by hand via the per-photo adjust sheet).
+   */
+  reAlignBacklog: async (birthdate, onProgress) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const candidates = get().photos.filter((p) => !p.alignment_transform);
+    const total = candidates.length;
+    let aligned = 0;
+    let failed = 0;
+
+    for (let i = 0; i < candidates.length; i++) {
+      const photo = candidates[i];
+      try {
+        // Prefer the true original (new rows store it separately; on legacy
+        // rows original_url === aligned_url, so this is still the right pick).
+        const sourceUrl =
+          photo.signed_original_url || photo.original_url ||
+          photo.signed_aligned_url || photo.aligned_url;
+        if (!sourceUrl) { failed++; continue; }
+
+        const response = await fetch(sourceUrl);
+        if (!response.ok) { failed++; continue; }
+        const blob = await response.blob();
+        const sourceFile = new File([blob], `${photo.id}-source.jpg`, {
+          type: blob.type || 'image/jpeg',
+        });
+
+        const coords = await detectEyesFromImage(sourceFile);
+        if (!coords) { failed++; continue; }
+
+        let zoomLevel = 0.40;
+        if (birthdate) {
+          const ageInMonths = Math.floor(
+            (new Date(photo.upload_date).getTime() - new Date(birthdate).getTime()) /
+            (1000 * 60 * 60 * 24 * 30.44)
+          );
+          zoomLevel = calculateZoomLevel(ageInMonths);
+        } else {
+          const prev = photo.metadata as Record<string, unknown> | null;
+          if (prev && typeof prev.zoom_level === 'number') zoomLevel = prev.zoom_level;
+        }
+
+        const result = await alignPhoto(sourceFile, coords, zoomLevel);
+
+        const fileName = `${user.id}/${Date.now()}-backfill.jpg`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('originals')
+          .upload(fileName, result.alignedImage, {
+            contentType: result.alignedImage.type || 'image/jpeg',
+            upsert: false,
+          });
+        if (uploadError) { failed++; continue; }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('originals')
+          .getPublicUrl(uploadData.path);
+
+        const existingMetadata = (photo.metadata && typeof photo.metadata === 'object')
+          ? { ...(photo.metadata as Record<string, unknown>) }
+          : {};
+        existingMetadata.zoom_level = zoomLevel;
+
+        const updatePayload = {
+          aligned_url: publicUrl,
+          alignment_transform: result.transform,
+          eye_coordinates: {
+            leftEye: coords.leftEye,
+            rightEye: coords.rightEye,
+            confidence: coords.confidence,
+            imageWidth: coords.imageWidth,
+            imageHeight: coords.imageHeight,
+            ...(coords.eyesOpen !== undefined ? { eyesOpen: coords.eyesOpen } : {}),
+            ...(coords.faceWidth !== undefined ? { faceWidth: coords.faceWidth } : {}),
+            ...(coords.irisAgreement !== undefined ? { irisAgreement: coords.irisAgreement } : {}),
+          },
+          metadata: existingMetadata,
+        };
+
+        const { data: updatedRows, error: updateError } = await supabase
+          .from('photos')
+          .update(updatePayload as never)
+          .eq('id', photo.id)
+          .select();
+
+        if (updateError || !updatedRows || updatedRows.length === 0) {
+          failed++;
+          continue;
+        }
+        aligned++;
+      } catch (err) {
+        logger.error('Backlog re-align failed for photo', {
+          photoId: photo.id,
+          error: err instanceof Error ? err.message : String(err),
+        }, 'PhotoStore');
+        failed++;
+      } finally {
+        onProgress?.(i + 1, total);
+      }
+    }
+
+    if (aligned > 0) await get().fetchPhotos();
+    logger.info('Backlog re-align complete', { processed: total, aligned, failed }, 'PhotoStore');
+    return { processed: total, aligned, failed };
   },
 }));

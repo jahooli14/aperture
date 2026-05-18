@@ -90,8 +90,9 @@ interface PhotoGalleryProps {
 const PRIVACY_MODE_KEY = 'wizard-privacy-mode';
 
 export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
-  const { photos, loading, fetchError, fetchPhotos, deletePhoto, restorePhoto, deleting } = usePhotoStore();
-  const { getJoinedAccount } = useSettingsStore();
+  const { photos, loading, fetchError, fetchPhotos, deletePhoto, restorePhoto, deleting, reAlignBacklog } = usePhotoStore();
+  const { getJoinedAccount, settings } = useSettingsStore();
+  const [realignState, setRealignState] = useState<{ done: number; total: number } | null>(null);
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
   const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
@@ -142,6 +143,37 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
 
   const handleViewAll = () => {
     setIsOverlayOpen(true);
+  };
+
+  // Photos the current pipeline hasn't aligned yet (legacy uploads + any that
+  // were committed before detection succeeded). These are the ones that don't
+  // stack in the timeline.
+  const unalignedCount = useMemo(
+    () => photos.filter((p) => !p.alignment_transform).length,
+    [photos]
+  );
+
+  const handleFixAlignment = async () => {
+    if (realignState) return;
+    setRealignState({ done: 0, total: unalignedCount });
+    try {
+      const res = await reAlignBacklog(
+        settings?.baby_birthdate ?? null,
+        (done, total) => setRealignState({ done, total })
+      );
+      if (showToast) {
+        const msg = res.failed > 0
+          ? `Aligned ${res.aligned}. ${res.failed} couldn't be auto-detected — tap those to place the eyes by hand.`
+          : `Aligned ${res.aligned} photo${res.aligned === 1 ? '' : 's'}. The timeline now stacks.`;
+        showToast(msg, res.failed > 0 ? 'info' : 'success');
+      }
+    } catch (err) {
+      if (showToast) {
+        showToast(err instanceof Error ? err.message : 'Re-align failed', 'error');
+      }
+    } finally {
+      setRealignState(null);
+    }
   };
 
   if (fetchError) {
@@ -260,10 +292,22 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
             onClick={handleViewAll}
             whileHover={{ scale: 1.02, y: -2 }}
             whileTap={{ scale: 0.98 }}
-            className="w-full mb-6 py-3 px-6 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-lg transition-all shadow-lg"
+            className="w-full mb-3 py-3 px-6 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-lg transition-all shadow-lg"
           >
             🎬 Watch Their Growth
           </motion.button>
+        )}
+
+        {hasPhotos && unalignedCount > 0 && (
+          <button
+            onClick={handleFixAlignment}
+            disabled={!!realignState}
+            className="w-full mb-6 py-3 px-6 bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 font-medium rounded-lg transition-colors disabled:opacity-60"
+          >
+            {realignState
+              ? `Re-aligning ${realignState.done}/${realignState.total}…`
+              : `Fix alignment on ${unalignedCount} photo${unalignedCount === 1 ? '' : 's'}`}
+          </button>
         )}
       </div>
 
