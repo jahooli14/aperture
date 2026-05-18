@@ -1,4 +1,5 @@
 import { GoogleGenAI } from '@google/genai'
+import { passageContextWindow } from './rewrite'
 
 export const GEMINI_MODEL = 'gemini-3.1-flash-lite'
 export const STRUCTURAL_MODEL = 'gemini-3-flash-preview'
@@ -107,6 +108,52 @@ export async function* streamResponse(
   }
 }
 
+// --- Inline passage rewrite (the redrafting primitive) ---
+
+export async function* streamRewrite(
+  apiKey: string,
+  passage: string,
+  instruction: string,
+  ctx: GeminiContext
+): AsyncGenerator<string> {
+  const ai = new GoogleGenAI({ apiKey })
+
+  const surrounding = passageContextWindow(ctx.prose, passage)
+
+  const prompt = `You are redrafting one passage of a book manuscript titled "${ctx.manuscriptTitle}" (section: ${ctx.sectionLabel}, scene: "${ctx.sceneTitle}").
+${ctx.sceneBeat ? `Scene beat: ${ctx.sceneBeat}.` : ''}
+
+The full scene, for voice and context:
+---
+${surrounding || '(no other prose yet)'}
+---
+
+Rewrite ONLY this passage:
+---
+${passage}
+---
+
+What to change: ${instruction}
+
+Rules:
+- Keep the author's voice, tense, and point of view. You are sharpening their prose, not replacing it with yours.
+- Return ONLY the rewritten passage. No preamble, no quotes, no explanation, no markdown.
+- Match the length roughly unless the instruction says otherwise.
+- Plain, concrete words. No corporate or workshop jargon.`
+
+  const stream = await ai.models.generateContentStream({
+    model: GEMINI_MODEL,
+    contents: [{ role: 'user', parts: [{ text: prompt }] }]
+  })
+
+  for await (const chunk of stream) {
+    const text = chunk.text
+    if (text) {
+      yield text
+    }
+  }
+}
+
 // --- Structural chatbot (manuscript-level) ---
 
 export interface StructuralSceneSummary {
@@ -128,6 +175,7 @@ export interface StructuralContext {
 export type StructuralAction =
   | { type: 'move_scene'; sceneId: string; targetBeforeSceneId: string | null; targetSection: string }
   | { type: 'edit_prose'; sceneId: string; newProse: string }
+  | { type: 'delete_scene'; sceneId: string }
   | { type: 'create_scene'; title: string; section: string; targetBeforeSceneId: string | null; sceneBeat: string; proseFramework: string }
 
 function buildStructuralSystemPrompt(ctx: StructuralContext): string {
@@ -160,6 +208,9 @@ move_scene — reorder or move a scene to a different section:
 
 edit_prose — rewrite or cut within a scene (return the complete new prose, not a diff):
 {"type":"edit_prose","sceneId":"<id>","newProse":"<full revised prose>"}
+
+delete_scene — cut a scene entirely (use when the author wants it gone, or after merging its content into another scene via edit_prose):
+{"type":"delete_scene","sceneId":"<id>"}
 
 create_scene — scaffold a new scene the author will develop:
 {"type":"create_scene","title":"<title>","section":"<section>","targetBeforeSceneId":"<id or null>","sceneBeat":"<one-sentence beat>","proseFramework":"<detailed scene framework: key beats, emotional arc, what must be established, suggested opening — structured so the author can write directly into it>"}

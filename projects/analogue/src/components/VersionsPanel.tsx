@@ -11,7 +11,7 @@ interface Props {
 
 export default function VersionsPanel({ onClose }: Props) {
   const { versions, isLoading, error, loadVersions, saveVersion, deleteVersion, clearError } = useVersionStore()
-  const { manuscript, updateScene } = useManuscriptStore()
+  const { manuscript, updateScene, createScene } = useManuscriptStore()
   const [nameInput, setNameInput] = useState('')
   const [saving, setSaving] = useState(false)
   const [restoring, setRestoring] = useState<string | null>(null)
@@ -36,14 +36,25 @@ export default function VersionsPanel({ onClose }: Props) {
     const currentSceneIds = new Set(manuscript.scenes.map(s => s.id))
 
     for (const snap of version.scenes) {
-      if (!currentSceneIds.has(snap.id)) continue
-      await updateScene(snap.id, {
-        prose: snap.prose,
-        footnotes: snap.footnotes,
-        section: snap.section,
-        order: snap.order,
-        sceneBeat: snap.sceneBeat,
-      })
+      if (currentSceneIds.has(snap.id)) {
+        await updateScene(snap.id, {
+          prose: snap.prose,
+          footnotes: snap.footnotes,
+          section: snap.section,
+          order: snap.order,
+          sceneBeat: snap.sceneBeat,
+        })
+      } else {
+        // Scene was cut after this checkpoint — bring it back.
+        const recreated = await createScene(snap.section, snap.title)
+        await updateScene(recreated.id, {
+          prose: snap.prose,
+          footnotes: snap.footnotes,
+          section: snap.section,
+          order: snap.order,
+          sceneBeat: snap.sceneBeat,
+        })
+      }
     }
 
     setRestoring(null)
@@ -171,7 +182,7 @@ export default function VersionsPanel({ onClose }: Props) {
             >
               <p className="text-sm font-medium text-ink-100 mb-1">Restore "{confirmRestore.name}"?</p>
               <p className="text-xs text-ink-400 mb-4 leading-relaxed">
-                Prose and structure will be restored for scenes that still exist. Scenes added after this checkpoint won't be touched.
+                Prose and structure are restored, and scenes cut after this checkpoint are brought back. Scenes added after it are left as they are.
               </p>
               <div className="flex gap-2">
                 <button

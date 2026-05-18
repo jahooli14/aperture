@@ -1,9 +1,11 @@
 import { useRef, useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Send, Trash2, CheckCircle2, XCircle, Bot, ChevronsRight } from 'lucide-react'
+import { X, Send, Trash2, CheckCircle2, XCircle, Bot, ChevronsRight, Eye } from 'lucide-react'
 import { useStructuralAIStore } from '../stores/useStructuralAIStore'
 import { useManuscriptStore } from '../stores/useManuscriptStore'
 import { useProseHistoryStore } from '../stores/useProseHistoryStore'
+import { useVersionStore } from '../stores/useVersionStore'
+import { diffWords } from '../lib/diff'
 import type { StructuralContext, StructuralAction } from '../lib/gemini'
 import type { NarrativeSection } from '../types/manuscript'
 
@@ -52,6 +54,10 @@ function actionLabel(
     const words = action.newProse.split(/\s+/).length
     return `Edit prose in "${scene?.title ?? action.sceneId}" (${words} words)`
   }
+  if (action.type === 'delete_scene') {
+    const scene = manuscript.scenes.find(s => s.id === action.sceneId)
+    return `Cut scene "${scene?.title ?? action.sceneId}"`
+  }
   if (action.type === 'create_scene') {
     const before = action.targetBeforeSceneId
       ? manuscript.scenes.find(s => s.id === action.targetBeforeSceneId)
@@ -65,12 +71,15 @@ function actionLabel(
 export default function StructuralChatbot({ onClose }: Props) {
   const {
     messages, isLoading, streamingContent, pendingActions,
-    error, sendMessage, clearMessages, dismissAction, clearAllPending, clearError
+    error, sendMessage, clearMessages, dismissAction, clearError
   } = useStructuralAIStore()
-  const { manuscript, reorderScenes, updateScene, createScene } = useManuscriptStore()
+  const { manuscript, reorderScenes, updateScene, createScene, deleteScene } = useManuscriptStore()
+  const saveVersion = useVersionStore(s => s.saveVersion)
   const [input, setInput] = useState('')
   const [applying, setApplying] = useState(false)
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const checkpointDoneRef = useRef(false)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -121,6 +130,10 @@ export default function StructuralChatbot({ onClose }: Props) {
       await updateScene(action.sceneId, { prose: action.newProse })
     }
 
+    if (action.type === 'delete_scene') {
+      await deleteScene(action.sceneId)
+    }
+
     if (action.type === 'create_scene') {
       const newScene = await createScene(action.section as NarrativeSection, action.title)
       await updateScene(newScene.id, {
@@ -141,22 +154,47 @@ export default function StructuralChatbot({ onClose }: Props) {
     }
   }
 
+  // Safety net: one full-manuscript checkpoint before the first structural
+  // change of this session, so any restructure is reversible from Versions.
+  const ensureCheckpoint = async () => {
+    if (checkpointDoneRef.current) return
+    const stamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    await saveVersion(`Auto · before restructure · ${stamp}`, manuscript)
+    checkpointDoneRef.current = true
+  }
+
   const handleApplyOne = async (index: number) => {
     const action = pendingActions[index]
     if (!action) return
     setApplying(true)
-    await applyAction(action)
-    dismissAction(index)
-    setApplying(false)
+    try {
+      await ensureCheckpoint()
+      await applyAction(action)
+      dismissAction(index)
+    } catch {
+      // Leave the action pending so it can be retried; don't strand the UI.
+      alert('Could not apply that change. It was left pending — try again.')
+    } finally {
+      setApplying(false)
+    }
   }
 
   const handleApplyAll = async () => {
     setApplying(true)
-    for (const action of pendingActions) {
-      await applyAction(action)
+    try {
+      await ensureCheckpoint()
+      // Apply front-to-back, dropping each as it succeeds so a mid-batch
+      // failure leaves the remaining changes pending rather than lost.
+      while (useStructuralAIStore.getState().pendingActions.length) {
+        const a = useStructuralAIStore.getState().pendingActions[0]
+        await applyAction(a)
+        dismissAction(0)
+      }
+    } catch {
+      alert('Some changes could not be applied. The rest were left pending.')
+    } finally {
+      setApplying(false)
     }
-    clearAllPending()
-    setApplying(false)
   }
 
   return (
@@ -267,29 +305,70 @@ export default function StructuralChatbot({ onClose }: Props) {
                 </button>
               )}
             </div>
+            <p className="text-[11px] text-ink-500 mb-2">
+              A checkpoint is saved automatically first — undo any of this from Versions.
+            </p>
             <div className="space-y-2">
-              {pendingActions.map((action, i) => (
-                <div key={i} className="flex items-start gap-2">
-                  <span className="text-xs text-ink-500 mt-0.5 shrink-0">{i + 1}.</span>
-                  <p className="flex-1 text-xs text-ink-200 leading-relaxed">{actionLabel(action, manuscript)}</p>
-                  <div className="flex gap-1 shrink-0">
-                    <button
-                      onClick={() => handleApplyOne(i)}
-                      disabled={applying}
-                      className="flex items-center gap-1 px-2 py-1 bg-section-alignment/80 rounded text-xs text-white disabled:opacity-50"
-                    >
-                      <CheckCircle2 className="w-3 h-3" />
-                    </button>
-                    <button
-                      onClick={() => dismissAction(i)}
-                      disabled={applying}
-                      className="flex items-center gap-1 px-2 py-1 bg-ink-800 rounded text-xs text-ink-400 disabled:opacity-50"
-                    >
-                      <XCircle className="w-3 h-3" />
-                    </button>
+              {pendingActions.map((action, i) => {
+                const editAction = action.type === 'edit_prose' ? action : null
+                const current = editAction
+                  ? manuscript.scenes.find(s => s.id === editAction.sceneId)?.prose ?? ''
+                  : ''
+                return (
+                  <div key={i}>
+                    <div className="flex items-start gap-2">
+                      <span className="text-xs text-ink-500 mt-0.5 shrink-0">{i + 1}.</span>
+                      <p className="flex-1 text-xs text-ink-200 leading-relaxed">
+                        {actionLabel(action, manuscript)}
+                        {action.type === 'delete_scene' && (
+                          <span className="text-red-400/80"> · permanent</span>
+                        )}
+                      </p>
+                      <div className="flex gap-1 shrink-0">
+                        {editAction && (
+                          <button
+                            onClick={() => setPreviewIndex(previewIndex === i ? null : i)}
+                            disabled={applying}
+                            className={`flex items-center gap-1 px-2 py-1 rounded text-xs disabled:opacity-50 ${
+                              previewIndex === i ? 'bg-section-alignment/40 text-white' : 'bg-ink-800 text-ink-400'
+                            }`}
+                            title="Preview changes"
+                          >
+                            <Eye className="w-3 h-3" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleApplyOne(i)}
+                          disabled={applying}
+                          className="flex items-center gap-1 px-2 py-1 bg-section-alignment/80 rounded text-xs text-white disabled:opacity-50"
+                        >
+                          <CheckCircle2 className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={() => dismissAction(i)}
+                          disabled={applying}
+                          className="flex items-center gap-1 px-2 py-1 bg-ink-800 rounded text-xs text-ink-400 disabled:opacity-50"
+                        >
+                          <XCircle className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                    {editAction && previewIndex === i && (
+                      <div className="mt-1.5 ml-5 max-h-52 overflow-y-auto text-xs text-ink-200 leading-relaxed whitespace-pre-wrap bg-ink-950 border border-ink-800 rounded-lg p-2.5">
+                        {diffWords(current, editAction.newProse).map((part, k) =>
+                          part.type === 'same' ? (
+                            <span key={k}>{part.value}</span>
+                          ) : part.type === 'add' ? (
+                            <span key={k} className="bg-green-500/25 text-green-200 rounded-sm">{part.value}</span>
+                          ) : (
+                            <span key={k} className="bg-red-500/20 text-red-300/80 line-through rounded-sm">{part.value}</span>
+                          )
+                        )}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </motion.div>
         )}
