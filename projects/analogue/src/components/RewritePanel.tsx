@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { X, Wand2, Send, Check, RotateCcw, Loader2, AlertCircle } from 'lucide-react'
 import { useAIStore } from '../stores/useAIStore'
 import { streamRewrite } from '../lib/gemini'
+import { diffWords } from '../lib/diff'
 import type { GeminiContext } from '../lib/gemini'
 
 const PRESETS: { label: string; instruction: string }[] = [
@@ -29,6 +30,7 @@ export default function RewritePanel({ passage, ctx, onClose, onAccept }: Props)
   const [isStreaming, setIsStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lastInstruction, setLastInstruction] = useState<string | null>(null)
+  const [showChanges, setShowChanges] = useState(true)
   const resultRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -107,14 +109,40 @@ export default function RewritePanel({ passage, ctx, onClose, onAccept }: Props)
           {/* Result */}
           {hasResult && (
             <div>
-              <p className="text-[11px] uppercase tracking-wider text-amber-500/80 mb-1">
-                {isStreaming ? 'Rewriting…' : 'Rewritten'}
-              </p>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[11px] uppercase tracking-wider text-amber-500/80">
+                  {isStreaming ? 'Rewriting…' : 'Rewritten'}
+                </p>
+                {result && !isStreaming && (
+                  <button
+                    onClick={() => setShowChanges(v => !v)}
+                    className="text-[11px] text-ink-500 hover:text-ink-300 underline"
+                  >
+                    {showChanges ? 'Clean view' : 'Show changes'}
+                  </button>
+                )}
+              </div>
               <div className="text-sm text-ink-100 leading-relaxed whitespace-pre-wrap bg-amber-950/20 border border-amber-800/30 rounded-lg p-3">
-                {result || (
+                {!result ? (
                   <span className="flex items-center gap-2 text-ink-400">
                     <Loader2 className="w-3 h-3 animate-spin" /> Thinking…
                   </span>
+                ) : isStreaming || !showChanges ? (
+                  result
+                ) : (
+                  diffWords(passage, result).map((part, i) =>
+                    part.type === 'same' ? (
+                      <span key={i}>{part.value}</span>
+                    ) : part.type === 'add' ? (
+                      <span key={i} className="bg-green-500/25 text-green-200 rounded-sm">
+                        {part.value}
+                      </span>
+                    ) : (
+                      <span key={i} className="bg-red-500/20 text-red-300/80 line-through rounded-sm">
+                        {part.value}
+                      </span>
+                    )
+                  )
                 )}
               </div>
             </div>
