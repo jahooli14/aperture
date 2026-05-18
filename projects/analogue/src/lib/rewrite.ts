@@ -37,3 +37,24 @@ export function locateSelection(
   if (ambiguous && selected.trim().length < 12) return null
   return { start, end: start + selected.length }
 }
+
+// Build the context the AI sees when redrafting a passage. For a long scene,
+// centre the window on the passage so the model sees the voice immediately
+// around it — not just the scene's opening, which is what it would get from
+// a naive head-slice and which produces tonally-off redrafts deep in a scene.
+export function passageContextWindow(
+  fullProse: string,
+  passage: string,
+  radius = 900
+): string {
+  if (fullProse.length <= radius * 2) return fullProse
+  const idx = fullProse.indexOf(passage)
+  if (idx === -1) return fullProse.slice(0, radius * 2) + '…'
+  const start = Math.max(0, idx - radius)
+  const end = Math.min(fullProse.length, idx + passage.length + radius)
+  return (
+    (start > 0 ? '…' : '') +
+    fullProse.slice(start, end) +
+    (end < fullProse.length ? '…' : '')
+  )
+}

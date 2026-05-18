@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { diffWords } from './diff'
-import { applyRewrite, locateSelection } from './rewrite'
+import { applyRewrite, locateSelection, passageContextWindow } from './rewrite'
 import { applyMask, getStorageText } from './mask'
 
 const join = (parts: { type: string; value: string }[], skip: string) =>
@@ -80,6 +80,32 @@ describe('locateSelection', () => {
     expect(locateSelection(prose, 'The harbor')).toBeNull() // appears twice, short
     const loc = locateSelection(prose, 'A gull cried over the long grey water.')
     expect(loc).not.toBeNull()
+  })
+})
+
+describe('passageContextWindow', () => {
+  it('returns the whole scene when it is short', () => {
+    const s = 'A short scene that fits.'
+    expect(passageContextWindow(s, 'short')).toBe(s)
+  })
+
+  it('centres the window on the passage for a long scene', () => {
+    const lead = 'L'.repeat(3000)
+    const tail = 'T'.repeat(3000)
+    const passage = 'THE NEEDLE IN THE HAYSTACK'
+    const full = lead + passage + tail
+    const ctx = passageContextWindow(full, passage, 500)
+    expect(ctx.includes(passage)).toBe(true)
+    expect(ctx.length).toBeLessThan(full.length)
+    expect(ctx.startsWith('…')).toBe(true)
+    expect(ctx.endsWith('…')).toBe(true)
+  })
+
+  it('falls back to the head when the passage is not found', () => {
+    const full = 'X'.repeat(5000)
+    const ctx = passageContextWindow(full, 'not here', 500)
+    expect(ctx.length).toBeLessThan(full.length)
+    expect(ctx.endsWith('…')).toBe(true)
   })
 })
 

@@ -1,4 +1,5 @@
 import { GoogleGenAI } from '@google/genai'
+import { passageContextWindow } from './rewrite'
 
 export const GEMINI_MODEL = 'gemini-3.1-flash-lite'
 export const STRUCTURAL_MODEL = 'gemini-3-flash-preview'
@@ -117,7 +118,7 @@ export async function* streamRewrite(
 ): AsyncGenerator<string> {
   const ai = new GoogleGenAI({ apiKey })
 
-  const surrounding = ctx.prose.length > 1500 ? ctx.prose.slice(0, 1500) + '…' : ctx.prose
+  const surrounding = passageContextWindow(ctx.prose, passage)
 
   const prompt = `You are redrafting one passage of a book manuscript titled "${ctx.manuscriptTitle}" (section: ${ctx.sectionLabel}, scene: "${ctx.sceneTitle}").
 ${ctx.sceneBeat ? `Scene beat: ${ctx.sceneBeat}.` : ''}
