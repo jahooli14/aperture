@@ -69,6 +69,9 @@ type Message =
       pendingGoal?: GoalUpdate | null
       resolvedOpIds?: string[]
       resolvedGoal?: boolean
+      dismissedOpIds?: string[]
+      goalDismissed?: boolean
+      undoSnapshot?: { tasks: Task[]; goal: string; goalChanged: boolean } | null
     }
   | { kind: 'you'; content: string }
 
@@ -111,6 +114,11 @@ export function InlineGuide({
   const getLatestTasks = useCallback((): Task[] => {
     const fresh = useProjectStore.getState().allProjects.find(p => p.id === project.id)
     return ((fresh?.metadata?.tasks as Task[] | undefined) ?? (project.metadata?.tasks as Task[] | undefined) ?? [])
+  }, [project.id, project.metadata])
+
+  const getLatestGoal = useCallback((): string => {
+    const fresh = useProjectStore.getState().allProjects.find(p => p.id === project.id)
+    return ((fresh?.metadata?.end_goal as string | undefined) ?? (project.metadata?.end_goal as string | undefined) ?? '')
   }, [project.id, project.metadata])
 
   const getApiHistory = useCallback(() => {
@@ -290,6 +298,13 @@ export function InlineGuide({
     }))
   }
 
+  const dismissOp = (msgIndex: number, key: string) => {
+    setMessages(prev => prev.map((m, i) => {
+      if (i !== msgIndex || m.kind !== 'guide') return m
+      return { ...m, dismissedOpIds: [...(m.dismissedOpIds || []), key] }
+    }))
+  }
+
   // Run an update against the latest tasks-from-store, serialized through a
   // single promise chain so rapid Apply clicks can't race each other.
   const enqueueTaskUpdate = useCallback(
@@ -304,10 +319,28 @@ export function InlineGuide({
     [onUpdateTasks, getLatestTasks]
   )
 
+  // Snapshot tasks + goal once per message, before the first apply, so a
+  // single Undo can put everything back. Read synchronously so we capture
+  // the pre-change state, not the post-change one.
+  const recordSnapshot = useCallback((msgIndex: number, goalChangedNow: boolean) => {
+    const tasksNow = getLatestTasks().map(t => ({ ...t }))
+    const goalNow = getLatestGoal()
+    setMessages(prev => prev.map((m, i) => {
+      if (i !== msgIndex || m.kind !== 'guide') return m
+      if (m.undoSnapshot) {
+        return goalChangedNow && !m.undoSnapshot.goalChanged
+          ? { ...m, undoSnapshot: { ...m.undoSnapshot, goalChanged: true } }
+          : m
+      }
+      return { ...m, undoSnapshot: { tasks: tasksNow, goal: goalNow, goalChanged: goalChangedNow } }
+    }))
+  }, [getLatestTasks, getLatestGoal])
+
   const applyTaskOp = async (msgIndex: number, op: TaskOp, key: string) => {
     if (!onUpdateTasks) return
     if (op.action === 'add' && !op.newText) return
     if (op.action !== 'add' && !op.taskId) return
+    recordSnapshot(msgIndex, false)
     try {
       await enqueueTaskUpdate(tasks => applyOpToTasks(tasks, op))
       markOpResolved(msgIndex, key)
@@ -316,29 +349,9 @@ export function InlineGuide({
     }
   }
 
-  const applyAllOps = async (msgIndex: number, ops: TaskOp[], alreadyResolved: string[]) => {
-    if (!onUpdateTasks) return
-    const remaining = ops
-      .map((op, i) => ({ op, key: opKey(op, i) }))
-      .filter(({ op, key }) => {
-        if (alreadyResolved.includes(key)) return false
-        if (op.action === 'add') return !!op.newText
-        return !!op.taskId
-      })
-    if (remaining.length === 0) return
-    try {
-      await enqueueTaskUpdate(tasks => remaining.reduce((acc, { op }) => applyOpToTasks(acc, op), tasks))
-      setMessages(prev => prev.map((m, i) => {
-        if (i !== msgIndex || m.kind !== 'guide') return m
-        return { ...m, resolvedOpIds: [...(m.resolvedOpIds || []), ...remaining.map(r => r.key)] }
-      }))
-    } catch (err) {
-      console.error('[InlineGuide] apply-all failed:', err)
-    }
-  }
-
   const applyGoalUpdate = async (msgIndex: number, goal: GoalUpdate) => {
     if (!onUpdateGoal) return
+    recordSnapshot(msgIndex, true)
     // Chain onto the same queue so a pending tasks update finishes first.
     writeQueue.current = writeQueue.current
       .catch(() => {})
@@ -352,7 +365,95 @@ export function InlineGuide({
   }
 
   const dismissGoalUpdate = (msgIndex: number) => {
-    setMessages(prev => prev.map((m, i) => (i === msgIndex && m.kind === 'guide') ? { ...m, resolvedGoal: true } : m))
+    setMessages(prev => prev.map((m, i) => (i === msgIndex && m.kind === 'guide') ? { ...m, goalDismissed: true } : m))
+  }
+
+  // One tap applies every still-pending change in this message — task ops
+  // first, then the finish-line update — through the same write queue.
+  const applyEverything = async (msgIndex: number) => {
+    const msg = messages[msgIndex]
+    if (!msg || msg.kind !== 'guide') return
+    const handled = new Set([...(msg.resolvedOpIds || []), ...(msg.dismissedOpIds || [])])
+    const ops = (msg.pendingOps || [])
+      .map((op, idx) => ({ op, key: opKey(op, idx) }))
+      .filter(({ op, key }) => {
+        if (handled.has(key)) return false
+        if (op.action === 'add') return !!op.newText
+        return !!op.taskId
+      })
+    const goal = (!msg.resolvedGoal && !msg.goalDismissed && msg.pendingGoal) ? msg.pendingGoal : null
+    if (ops.length === 0 && !goal) return
+    recordSnapshot(msgIndex, !!goal)
+    try {
+      if (onUpdateTasks && ops.length > 0) {
+        await enqueueTaskUpdate(tasks => ops.reduce((acc, { op }) => applyOpToTasks(acc, op), tasks))
+      }
+      if (onUpdateGoal && goal) {
+        writeQueue.current = writeQueue.current.catch(() => {}).then(() => onUpdateGoal(goal.newGoal))
+        await writeQueue.current
+      }
+      setMessages(prev => prev.map((m, i) => {
+        if (i !== msgIndex || m.kind !== 'guide') return m
+        return {
+          ...m,
+          resolvedOpIds: [...(m.resolvedOpIds || []), ...ops.map(o => o.key)],
+          resolvedGoal: goal ? true : m.resolvedGoal,
+        }
+      }))
+    } catch (err) {
+      console.error('[InlineGuide] apply-all failed:', err)
+    }
+  }
+
+  const dismissAll = (msgIndex: number) => {
+    setMessages(prev => prev.map((m, i) => {
+      if (i !== msgIndex || m.kind !== 'guide') return m
+      const handled = new Set([...(m.resolvedOpIds || []), ...(m.dismissedOpIds || [])])
+      const toDismiss = (m.pendingOps || [])
+        .map((op, idx) => opKey(op, idx))
+        .filter(k => !handled.has(k))
+      return {
+        ...m,
+        dismissedOpIds: [...(m.dismissedOpIds || []), ...toDismiss],
+        goalDismissed: m.resolvedGoal ? m.goalDismissed : true,
+      }
+    }))
+  }
+
+  const undoChanges = async (msgIndex: number) => {
+    const msg = messages[msgIndex]
+    if (!msg || msg.kind !== 'guide' || !msg.undoSnapshot) return
+    const snap = msg.undoSnapshot
+    try {
+      if (onUpdateTasks) await enqueueTaskUpdate(() => snap.tasks.map(t => ({ ...t })))
+      if (snap.goalChanged && onUpdateGoal) {
+        writeQueue.current = writeQueue.current.catch(() => {}).then(() => onUpdateGoal(snap.goal))
+        await writeQueue.current
+      }
+      setMessages(prev => prev.map((m, i) => {
+        if (i !== msgIndex || m.kind !== 'guide') return m
+        return { ...m, resolvedOpIds: [], resolvedGoal: false, dismissedOpIds: [], goalDismissed: false, undoSnapshot: null }
+      }))
+    } catch (err) {
+      console.error('[InlineGuide] undo failed:', err)
+    }
+  }
+
+  const buildSummary = (ops: TaskOp[], goalPending: boolean): string => {
+    const c: Record<string, number> = { add: 0, edit: 0, delete: 0, complete: 0, uncomplete: 0 }
+    ops.forEach(o => { c[o.action] = (c[o.action] || 0) + 1 })
+    const parts: string[] = []
+    if (c.add) parts.push(`add ${c.add} task${c.add > 1 ? 's' : ''}`)
+    if (c.edit) parts.push(`sharpen ${c.edit}`)
+    if (c.delete) parts.push(`delete ${c.delete}`)
+    if (c.complete) parts.push(`mark ${c.complete} done`)
+    if (c.uncomplete) parts.push(`reopen ${c.uncomplete}`)
+    if (goalPending) parts.push('update the finish line')
+    if (parts.length === 0) return ''
+    const joined = parts.length === 1
+      ? parts[0]
+      : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`
+    return joined.charAt(0).toUpperCase() + joined.slice(1) + '.'
   }
 
   const describeOp = (op: TaskOp): { label: string; preview: string; icon: typeof Plus; destructive: boolean } => {
@@ -430,30 +531,26 @@ export function InlineGuide({
                     {/* Pending task operations (need user confirmation) */}
                     {msg.pendingOps && msg.pendingOps.length > 0 && (
                       <div className="space-y-1.5 pt-1">
-                        {(() => {
-                          const resolvedKeys = msg.resolvedOpIds || []
-                          const unresolved = msg.pendingOps.filter((op, idx) => !resolvedKeys.includes(opKey(op, idx)))
-                          if (unresolved.length < 2) return null
-                          return (
-                            <div className="flex justify-end pb-1">
-                              <button
-                                onClick={() => applyAllOps(i, msg.pendingOps!, resolvedKeys)}
-                                className="flex items-center gap-1 px-3 py-1 rounded-lg transition-all text-[11px] font-bold uppercase tracking-wider"
-                                style={{
-                                  background: 'rgba(var(--brand-primary-rgb),0.12)',
-                                  color: 'rgb(var(--brand-primary-rgb))',
-                                  border: '1px solid rgba(var(--brand-primary-rgb),0.3)',
-                                }}
-                              >
-                                <Check className="h-3 w-3" /> Apply all ({unresolved.length})
-                              </button>
-                            </div>
-                          )
-                        })()}
                         {msg.pendingOps.map((op, j) => {
                           const key = opKey(op, j)
                           const resolved = (msg.resolvedOpIds || []).includes(key)
+                          const dismissed = (msg.dismissedOpIds || []).includes(key)
                           const { label, preview, icon: OpIcon, destructive } = describeOp(op)
+                          if (dismissed) {
+                            return (
+                              <div
+                                key={key}
+                                className="flex items-center gap-2 px-3 py-2 rounded-xl"
+                                style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', opacity: 0.4 }}
+                              >
+                                <X className="h-3.5 w-3.5 flex-shrink-0" style={{ color: 'var(--brand-text-muted)' }} />
+                                <p className="text-[12px] leading-snug line-through truncate" style={{ color: 'var(--brand-text-muted)' }}>
+                                  {preview}
+                                </p>
+                                <span className="ml-auto text-[10px] uppercase tracking-wider" style={{ color: 'var(--brand-text-muted)' }}>Skipped</span>
+                              </div>
+                            )
+                          }
                           return (
                             <div
                               key={key}
@@ -484,9 +581,9 @@ export function InlineGuide({
                               ) : (
                                 <div className="flex items-center gap-1 flex-shrink-0">
                                   <button
-                                    onClick={() => markOpResolved(i, key)}
+                                    onClick={() => dismissOp(i, key)}
                                     className="h-9 w-9 flex items-center justify-center rounded-lg transition-colors hover:bg-white/[0.08] text-[var(--brand-text-muted)]"
-                                    aria-label="Dismiss"
+                                    aria-label="Skip"
                                   >
                                     <X className="h-4 w-4" />
                                   </button>
@@ -536,6 +633,10 @@ export function InlineGuide({
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium" style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--brand-text-secondary)', opacity: 0.4 }}>
                             <Check className="h-3 w-3" /> Updated
                           </span>
+                        ) : msg.goalDismissed ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium" style={{ color: 'var(--brand-text-muted)', opacity: 0.5 }}>
+                            <X className="h-3 w-3" /> Skipped
+                          </span>
                         ) : (
                           <div className="flex items-center gap-1 justify-end">
                             <button
@@ -543,7 +644,7 @@ export function InlineGuide({
                               className="px-2.5 py-1 text-[11px] font-medium rounded-lg hover:bg-white/[0.05] transition-colors"
                               style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
                             >
-                              Dismiss
+                              Skip
                             </button>
                             <button
                               onClick={() => msg.pendingGoal && applyGoalUpdate(i, msg.pendingGoal)}
@@ -561,9 +662,94 @@ export function InlineGuide({
                       </div>
                     )}
 
+                    {/* One-tap: apply everything still pending in this turn */}
+                    {(() => {
+                      const handled = new Set([...(msg.resolvedOpIds || []), ...(msg.dismissedOpIds || [])])
+                      const liveOps = (msg.pendingOps || []).filter((op, idx) => {
+                        if (handled.has(opKey(op, idx))) return false
+                        if (op.action === 'add') return !!op.newText
+                        return !!op.taskId
+                      })
+                      const goalLive = !!(msg.pendingGoal && !msg.resolvedGoal && !msg.goalDismissed)
+                      if (liveOps.length + (goalLive ? 1 : 0) < 2) return null
+                      return (
+                        <div
+                          className="flex flex-col gap-2.5 px-3.5 py-3 rounded-xl"
+                          style={{
+                            background: 'rgba(var(--brand-primary-rgb),0.06)',
+                            border: '1px solid rgba(var(--brand-primary-rgb),0.18)',
+                          }}
+                        >
+                          <p className="text-[12.5px] leading-snug" style={{ color: 'var(--brand-text-secondary)' }}>
+                            {buildSummary(liveOps, goalLive)}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => applyEverything(i)}
+                              className="flex items-center justify-center gap-1.5 flex-1 min-h-[44px] rounded-lg transition-all text-[14px] font-semibold"
+                              style={{
+                                background: 'rgba(var(--brand-primary-rgb),0.2)',
+                                color: 'rgb(var(--brand-primary-rgb))',
+                                border: '1px solid rgba(var(--brand-primary-rgb),0.45)',
+                              }}
+                            >
+                              <Check className="h-4 w-4" strokeWidth={2.5} /> Go ahead
+                            </button>
+                            <button
+                              onClick={() => dismissAll(i)}
+                              className="min-h-[44px] px-4 rounded-lg transition-colors hover:bg-white/[0.05] text-[13px] font-medium"
+                              style={{ color: 'var(--brand-text-secondary)', opacity: 0.6 }}
+                            >
+                              Not now
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })()}
+
+                    {/* Undo — appears once every change in this turn has settled */}
+                    {msg.undoSnapshot && (() => {
+                      const handled = new Set([...(msg.resolvedOpIds || []), ...(msg.dismissedOpIds || [])])
+                      const liveOps = (msg.pendingOps || []).filter((op, idx) => {
+                        if (handled.has(opKey(op, idx))) return false
+                        if (op.action === 'add') return !!op.newText
+                        return !!op.taskId
+                      })
+                      const goalLive = !!(msg.pendingGoal && !msg.resolvedGoal && !msg.goalDismissed)
+                      if (liveOps.length + (goalLive ? 1 : 0) > 0) return null
+                      return (
+                        <div
+                          className="flex items-center justify-between px-3.5 py-2.5 rounded-xl"
+                          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+                        >
+                          <span className="flex items-center gap-1.5 text-[12px]" style={{ color: 'var(--brand-text-secondary)' }}>
+                            <Check className="h-3.5 w-3.5" style={{ color: 'rgb(var(--brand-primary-rgb))' }} /> Task list updated
+                          </span>
+                          <button
+                            onClick={() => undoChanges(i)}
+                            className="flex items-center gap-1 px-3 min-h-[36px] rounded-lg transition-colors hover:bg-white/[0.06] text-[12px] font-medium"
+                            style={{ color: 'var(--brand-text-secondary)' }}
+                          >
+                            <RotateCcw className="h-3.5 w-3.5" /> Undo
+                          </button>
+                        </div>
+                      )
+                    })()}
+
                     {/* Suggested tasks */}
                     {msg.suggestedTasks && msg.suggestedTasks.length > 0 && (
                       <div className="space-y-1.5 pt-1">
+                        {msg.suggestedTasks.filter(t => !addedTasks.has(t.text)).length >= 2 && (
+                          <div className="flex justify-end pb-0.5">
+                            <button
+                              onClick={() => msg.suggestedTasks?.forEach(handleAddTask)}
+                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all text-[11px] font-medium"
+                              style={{ background: 'rgba(var(--brand-primary-rgb),0.08)', color: 'rgb(var(--brand-primary-rgb))', opacity: 0.8 }}
+                            >
+                              <Plus className="h-3 w-3" /> Add all
+                            </button>
+                          </div>
+                        )}
                         {msg.suggestedTasks.map((task, j) => {
                           const added = addedTasks.has(task.text)
                           return (
@@ -646,7 +832,7 @@ export function InlineGuide({
         <div className="mt-4 flex items-center gap-2">
           <input
             ref={inputRef}
-            placeholder="Reply..."
+            placeholder="What changed, or what's next?"
             value={input}
             onChange={e => setInput(e.target.value)}
             onFocus={() => setExpanded(true)}
