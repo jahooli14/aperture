@@ -72,7 +72,9 @@ export default function RewritePanel({ passage, ctx, onClose, onAccept }: Props)
 
   const handleCustom = () => {
     const text = custom.trim()
-    if (!text) return
+    // Don't clear (and lose) the instruction if a rewrite is still streaming
+    // — the Enter-key path isn't covered by the disabled Send button.
+    if (!text || isStreaming) return
     setCustom('')
     run(text)
   }

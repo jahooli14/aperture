@@ -71,7 +71,7 @@ function actionLabel(
 export default function StructuralChatbot({ onClose }: Props) {
   const {
     messages, isLoading, streamingContent, pendingActions,
-    error, sendMessage, clearMessages, dismissAction, clearAllPending, clearError
+    error, sendMessage, clearMessages, dismissAction, clearError
   } = useStructuralAIStore()
   const { manuscript, reorderScenes, updateScene, createScene, deleteScene } = useManuscriptStore()
   const saveVersion = useVersionStore(s => s.saveVersion)
@@ -167,20 +167,34 @@ export default function StructuralChatbot({ onClose }: Props) {
     const action = pendingActions[index]
     if (!action) return
     setApplying(true)
-    await ensureCheckpoint()
-    await applyAction(action)
-    dismissAction(index)
-    setApplying(false)
+    try {
+      await ensureCheckpoint()
+      await applyAction(action)
+      dismissAction(index)
+    } catch {
+      // Leave the action pending so it can be retried; don't strand the UI.
+      alert('Could not apply that change. It was left pending — try again.')
+    } finally {
+      setApplying(false)
+    }
   }
 
   const handleApplyAll = async () => {
     setApplying(true)
-    await ensureCheckpoint()
-    for (const action of pendingActions) {
-      await applyAction(action)
+    try {
+      await ensureCheckpoint()
+      // Apply front-to-back, dropping each as it succeeds so a mid-batch
+      // failure leaves the remaining changes pending rather than lost.
+      while (useStructuralAIStore.getState().pendingActions.length) {
+        const a = useStructuralAIStore.getState().pendingActions[0]
+        await applyAction(a)
+        dismissAction(0)
+      }
+    } catch {
+      alert('Some changes could not be applied. The rest were left pending.')
+    } finally {
+      setApplying(false)
     }
-    clearAllPending()
-    setApplying(false)
   }
 
   return (
