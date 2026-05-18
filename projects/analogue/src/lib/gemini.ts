@@ -174,6 +174,7 @@ export interface StructuralContext {
 export type StructuralAction =
   | { type: 'move_scene'; sceneId: string; targetBeforeSceneId: string | null; targetSection: string }
   | { type: 'edit_prose'; sceneId: string; newProse: string }
+  | { type: 'delete_scene'; sceneId: string }
   | { type: 'create_scene'; title: string; section: string; targetBeforeSceneId: string | null; sceneBeat: string; proseFramework: string }
 
 function buildStructuralSystemPrompt(ctx: StructuralContext): string {
@@ -206,6 +207,9 @@ move_scene — reorder or move a scene to a different section:
 
 edit_prose — rewrite or cut within a scene (return the complete new prose, not a diff):
 {"type":"edit_prose","sceneId":"<id>","newProse":"<full revised prose>"}
+
+delete_scene — cut a scene entirely (use when the author wants it gone, or after merging its content into another scene via edit_prose):
+{"type":"delete_scene","sceneId":"<id>"}
 
 create_scene — scaffold a new scene the author will develop:
 {"type":"create_scene","title":"<title>","section":"<section>","targetBeforeSceneId":"<id or null>","sceneBeat":"<one-sentence beat>","proseFramework":"<detailed scene framework: key beats, emotional arc, what must be established, suggested opening — structured so the author can write directly into it>"}
