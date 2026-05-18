@@ -24,6 +24,7 @@ import { WordTagList } from '../components/WordTagList'
 import { TaggedProseView } from '../components/TaggedProseView'
 import AIAssistantDrawer from '../components/AIAssistantDrawer'
 import RewritePanel from '../components/RewritePanel'
+import { applyRewrite, locateSelection } from '../lib/rewrite'
 import VoiceNoteButton from '../components/VoiceNoteButton'
 import { useProseHistoryStore } from '../stores/useProseHistoryStore'
 
@@ -371,18 +372,19 @@ export default function EditorPage() {
     const base = isReadMode
       ? applyMask(scene.prose, manuscript.protagonistRealName, manuscript.maskModeEnabled)
       : localProse
-    const before = base.slice(0, selectionStart)
-    const after = base.slice(selectionEnd)
-    const newProse = before + newText + after
 
     // Snapshot the pre-rewrite text so the History button can undo it
     const prevStorage = getStorageText(base, manuscript.protagonistRealName, manuscript.maskModeEnabled)
     proseHistory.snapshot(scene.id, prevStorage, 'rewrite')
 
-    setLocalProse(newProse)
-    cursorPositionRef.current = (before + newText).length
+    const { displayProse: newProse, storageProse: rawText } = applyRewrite(
+      base, selectionStart, selectionEnd, newText,
+      manuscript.protagonistRealName, manuscript.maskModeEnabled
+    )
 
-    const rawText = getStorageText(newProse, manuscript.protagonistRealName, manuscript.maskModeEnabled)
+    setLocalProse(newProse)
+    cursorPositionRef.current = selectionStart + newText.length
+
     updateScene(scene.id, { prose: rawText })
     updateSessionWords(rawText.trim().split(/\s+/).filter(Boolean).length)
 
@@ -400,14 +402,13 @@ export default function EditorPage() {
       return
     }
     const base = applyMask(scene!.prose, manuscript!.protagonistRealName, manuscript!.maskModeEnabled)
-    const start = base.indexOf(text)
-    // Only offer redraft when we can map the selection back exactly.
-    if (start === -1 || base.indexOf(text, start + 1) !== -1 && text.trim().length < 12) {
+    const located = locateSelection(base, text)
+    if (!located) {
       setReadSelection(null)
       return
     }
     const rect = sel.getRangeAt(0).getBoundingClientRect()
-    setReadSelection({ text, start, top: rect.top, left: rect.left + rect.width / 2 })
+    setReadSelection({ text, start: located.start, top: rect.top, left: rect.left + rect.width / 2 })
   }, [isReadMode, scene, manuscript])
 
   const openReadRewrite = useCallback(() => {
