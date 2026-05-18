@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X } from 'lucide-react'
+import { X, Wand2 } from 'lucide-react'
 import { SceneNode } from '../types/manuscript'
 import { useManuscriptStore } from '../stores/useManuscriptStore'
 import QuickBeatInput from './QuickBeatInput'
@@ -18,6 +18,7 @@ interface MetadataDrawerProps {
   focusMode: boolean
   onFocusMode: (enabled: boolean) => void
   onExport: () => void
+  onRedraftScene: () => void
   currentSceneIndex: number
   totalScenes: number
   allScenes: SceneNode[]
@@ -34,6 +35,7 @@ export default function MetadataDrawer({
   focusMode,
   onFocusMode,
   onExport,
+  onRedraftScene,
   currentSceneIndex,
   totalScenes,
   allScenes,
@@ -136,6 +138,16 @@ export default function MetadataDrawer({
                   ))}
                 </div>
               </div>
+
+              {/* Redraft whole scene */}
+              <button
+                onClick={onRedraftScene}
+                disabled={!scene.prose?.trim()}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-600 hover:bg-amber-500 text-white rounded font-medium text-sm transition-colors disabled:opacity-40"
+              >
+                <Wand2 className="w-4 h-4" />
+                Redraft whole scene
+              </button>
 
               {/* What happens */}
               <QuickBeatInput scene={scene} />

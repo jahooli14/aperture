@@ -858,6 +858,14 @@ The Read mode will show your text with proper paragraph formatting."
         focusMode={focusMode}
         onFocusMode={toggleFocusMode}
         onExport={() => setShowExport(true)}
+        onRedraftScene={() => {
+          const base = isReadMode
+            ? applyMask(scene.prose, manuscript.protagonistRealName, manuscript.maskModeEnabled)
+            : localProse
+          setShowDrawer(false)
+          setSelection(base, 0, base.length)
+          setShowRewrite(true)
+        }}
         currentSceneIndex={currentIndex}
         totalScenes={sortedScenes.length}
         allScenes={sortedScenes}
