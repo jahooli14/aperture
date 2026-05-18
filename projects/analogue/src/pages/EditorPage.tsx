@@ -73,6 +73,12 @@ export default function EditorPage() {
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [showHistory, setShowHistory] = useState(false)
   const [showRewrite, setShowRewrite] = useState(false)
+  const [readSelection, setReadSelection] = useState<{ text: string; start: number; top: number; left: number } | null>(null)
+
+  // Safety net: snapshot the prose as it was when the scene opened, on the
+  // first edit of this session, so the History button can undo manual redrafts.
+  const pristineProseRef = useRef<string>('')
+  const snappedRef = useRef(false)
 
   // Local state for immediate UI updates (prevents cursor jumping)
   const [localProse, setLocalProse] = useState<string>('')
@@ -134,6 +140,14 @@ export default function EditorPage() {
       setLocalProse(displayProse)
     }
   }, [scene?.id, manuscript?.protagonistRealName, manuscript?.maskModeEnabled])
+
+  // Reset the safety-net snapshot when the scene changes.
+  useEffect(() => {
+    if (scene) {
+      pristineProseRef.current = scene.prose
+      snappedRef.current = false
+    }
+  }, [scene?.id])
 
   // Start session tracking when scene loads
   useEffect(() => {
@@ -227,6 +241,11 @@ export default function EditorPage() {
     const newValue = e.target.value
     cursorPositionRef.current = e.target.selectionStart
 
+    if (!snappedRef.current && pristineProseRef.current.trim()) {
+      proseHistory.snapshot(scene.id, pristineProseRef.current, 'before edits')
+      snappedRef.current = true
+    }
+
     setLocalProse(newValue)
 
     if (debounceTimerRef.current !== null) {
@@ -256,6 +275,12 @@ export default function EditorPage() {
     if (scene && manuscript) {
       const newValue = e.currentTarget.value
       cursorPositionRef.current = e.currentTarget.selectionStart
+
+      if (!snappedRef.current && pristineProseRef.current.trim()) {
+        proseHistory.snapshot(scene.id, pristineProseRef.current, 'before edits')
+        snappedRef.current = true
+      }
+
       setLocalProse(newValue)
 
       const rawText = getStorageText(
@@ -365,13 +390,32 @@ export default function EditorPage() {
     setShowRewrite(false)
   }, [scene, manuscript, localProse, isReadMode, selectionStart, selectionEnd, proseHistory, updateScene, updateSessionWords, clearSelection])
 
-  // Read mode: tap a paragraph to redraft just that paragraph.
-  const handleParagraphRewrite = useCallback((displayProseText: string, paragraph: string) => {
-    const start = displayProseText.indexOf(paragraph)
-    if (start === -1) return
-    setSelection(paragraph, start, start + paragraph.length)
+  // Read mode: select any span (works with or without word tags) and redraft it.
+  const handleReadSelection = useCallback(() => {
+    if (!isReadMode) return
+    const sel = window.getSelection()
+    const text = sel?.toString() ?? ''
+    if (!sel || sel.isCollapsed || text.trim().length < 4) {
+      setReadSelection(null)
+      return
+    }
+    const base = applyMask(scene!.prose, manuscript!.protagonistRealName, manuscript!.maskModeEnabled)
+    const start = base.indexOf(text)
+    // Only offer redraft when we can map the selection back exactly.
+    if (start === -1 || base.indexOf(text, start + 1) !== -1 && text.trim().length < 12) {
+      setReadSelection(null)
+      return
+    }
+    const rect = sel.getRangeAt(0).getBoundingClientRect()
+    setReadSelection({ text, start, top: rect.top, left: rect.left + rect.width / 2 })
+  }, [isReadMode, scene, manuscript])
+
+  const openReadRewrite = useCallback(() => {
+    if (!readSelection) return
+    setSelection(readSelection.text, readSelection.start, readSelection.start + readSelection.text.length)
+    setReadSelection(null)
     setShowRewrite(true)
-  }, [setSelection])
+  }, [readSelection, setSelection])
 
   if (!scene || !manuscript) {
     return (
@@ -485,7 +529,7 @@ export default function EditorPage() {
           >
             <div className="p-3">
               <p className="text-xs text-amber-500/80 font-medium mb-2">
-                AI edit history — tap a version to restore
+                Edit history — tap a version to restore
               </p>
               <div className="space-y-1.5 max-h-48 overflow-y-auto">
                 {proseHistory.getSnapshots(sceneId).map((snap, i) => (
@@ -522,7 +566,11 @@ export default function EditorPage() {
         style={footnoteDrawerOpen ? { height: `${100 - footnoteDrawerHeight}%` } : undefined}
       >
         {isReadMode ? (
-          <div className="absolute inset-0 overflow-y-auto p-3 pb-24">
+          <div
+            className="absolute inset-0 overflow-y-auto p-3 pb-24"
+            onMouseUp={handleReadSelection}
+            onTouchEnd={handleReadSelection}
+          >
             {!displayProse ? (
               <p className="text-ink-600 italic">No content yet. Switch to Edit mode to start writing.</p>
             ) : scene.wordTags && scene.wordTags.length > 0 ? (
@@ -538,14 +586,13 @@ export default function EditorPage() {
             ) : (
               <div className="prose-container max-w-none">
                 <p className="text-xs text-ink-600 mb-4">
-                  Tap any paragraph to redraft it.
+                  Select any text to redraft it.
                 </p>
                 {displayProse.split(/\n\n+/).map((paragraph, i) => (
                   paragraph.trim() && (
                     <p
                       key={i}
-                      onClick={() => handleParagraphRewrite(displayProse, paragraph)}
-                      className="text-ink-100 text-base leading-relaxed mb-4 first:mt-0 -mx-2 px-2 py-0.5 rounded-md cursor-pointer transition-colors active:bg-amber-500/10 hover:bg-ink-900/40"
+                      className="text-ink-100 text-base leading-relaxed mb-4 first:mt-0"
                       style={{ textIndent: i > 0 ? '2em' : '0' }}
                     >
                       {paragraph.split('\n').map((line, j) => (
@@ -617,6 +664,25 @@ The Read mode will show your text with proper paragraph formatting."
               </div>
             )}
           </div>
+        )}
+
+        {/* Read-mode floating redraft button */}
+        {isReadMode && readSelection && (
+          <button
+            onPointerDown={(e) => e.preventDefault()}
+            onClick={openReadRewrite}
+            style={{
+              position: 'fixed',
+              top: Math.max(56, readSelection.top - 44),
+              left: readSelection.left,
+              transform: 'translateX(-50%)',
+              zIndex: 30,
+            }}
+            className="flex items-center gap-1.5 px-3 py-2 bg-amber-600 rounded-full text-xs font-medium text-white shadow-lg"
+          >
+            <Wand2 className="w-3.5 h-3.5" />
+            Redraft
+          </button>
         )}
 
         {/* Selection toolbar */}
