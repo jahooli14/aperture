@@ -342,12 +342,16 @@ export default function EditorPage() {
   const handleRewriteAccept = useCallback((newText: string) => {
     if (!scene || !manuscript) return
 
-    const before = localProse.slice(0, selectionStart)
-    const after = localProse.slice(selectionEnd)
+    // In read mode there is no live textarea, so scene.prose is authoritative.
+    const base = isReadMode
+      ? applyMask(scene.prose, manuscript.protagonistRealName, manuscript.maskModeEnabled)
+      : localProse
+    const before = base.slice(0, selectionStart)
+    const after = base.slice(selectionEnd)
     const newProse = before + newText + after
 
     // Snapshot the pre-rewrite text so the History button can undo it
-    const prevStorage = getStorageText(localProse, manuscript.protagonistRealName, manuscript.maskModeEnabled)
+    const prevStorage = getStorageText(base, manuscript.protagonistRealName, manuscript.maskModeEnabled)
     proseHistory.snapshot(scene.id, prevStorage, 'rewrite')
 
     setLocalProse(newProse)
@@ -359,7 +363,15 @@ export default function EditorPage() {
 
     clearSelection()
     setShowRewrite(false)
-  }, [scene, manuscript, localProse, selectionStart, selectionEnd, proseHistory, updateScene, updateSessionWords, clearSelection])
+  }, [scene, manuscript, localProse, isReadMode, selectionStart, selectionEnd, proseHistory, updateScene, updateSessionWords, clearSelection])
+
+  // Read mode: tap a paragraph to redraft just that paragraph.
+  const handleParagraphRewrite = useCallback((displayProseText: string, paragraph: string) => {
+    const start = displayProseText.indexOf(paragraph)
+    if (start === -1) return
+    setSelection(paragraph, start, start + paragraph.length)
+    setShowRewrite(true)
+  }, [setSelection])
 
   if (!scene || !manuscript) {
     return (
@@ -525,11 +537,15 @@ export default function EditorPage() {
               />
             ) : (
               <div className="prose-container max-w-none">
+                <p className="text-xs text-ink-600 mb-4">
+                  Tap any paragraph to redraft it.
+                </p>
                 {displayProse.split(/\n\n+/).map((paragraph, i) => (
                   paragraph.trim() && (
                     <p
                       key={i}
-                      className="text-ink-100 text-base leading-relaxed mb-4 first:mt-0"
+                      onClick={() => handleParagraphRewrite(displayProse, paragraph)}
+                      className="text-ink-100 text-base leading-relaxed mb-4 first:mt-0 -mx-2 px-2 py-0.5 rounded-md cursor-pointer transition-colors active:bg-amber-500/10 hover:bg-ink-900/40"
                       style={{ textIndent: i > 0 ? '2em' : '0' }}
                     >
                       {paragraph.split('\n').map((line, j) => (
@@ -803,7 +819,7 @@ The Read mode will show your text with proper paragraph formatting."
           <RewritePanel
             passage={selectedText}
             ctx={aiContext}
-            onClose={() => setShowRewrite(false)}
+            onClose={() => { setShowRewrite(false); clearSelection() }}
             onAccept={handleRewriteAccept}
           />
         )}
