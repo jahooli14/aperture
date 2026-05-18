@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Bot,
   History,
+  Wand2,
 } from 'lucide-react'
 import { useManuscriptStore } from '../stores/useManuscriptStore'
 import { useEditorStore } from '../stores/useEditorStore'
@@ -22,6 +23,7 @@ import { TagDrawer } from '../components/TagDrawer'
 import { WordTagList } from '../components/WordTagList'
 import { TaggedProseView } from '../components/TaggedProseView'
 import AIAssistantDrawer from '../components/AIAssistantDrawer'
+import RewritePanel from '../components/RewritePanel'
 import VoiceNoteButton from '../components/VoiceNoteButton'
 import { useProseHistoryStore } from '../stores/useProseHistoryStore'
 
@@ -44,6 +46,8 @@ export default function EditorPage() {
     showReverbTagging,
     setShowReverbTagging,
     selectedText,
+    selectionStart,
+    selectionEnd,
     setSelection,
     clearSelection,
     focusMode,
@@ -68,6 +72,7 @@ export default function EditorPage() {
   const [isReadMode, setIsReadMode] = useState(false)
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [showHistory, setShowHistory] = useState(false)
+  const [showRewrite, setShowRewrite] = useState(false)
 
   // Local state for immediate UI updates (prevents cursor jumping)
   const [localProse, setLocalProse] = useState<string>('')
@@ -334,6 +339,28 @@ export default function EditorPage() {
     }
   }, [scene, manuscript, localProse, updateScene, updateSessionWords, openFootnoteDrawer])
 
+  const handleRewriteAccept = useCallback((newText: string) => {
+    if (!scene || !manuscript) return
+
+    const before = localProse.slice(0, selectionStart)
+    const after = localProse.slice(selectionEnd)
+    const newProse = before + newText + after
+
+    // Snapshot the pre-rewrite text so the History button can undo it
+    const prevStorage = getStorageText(localProse, manuscript.protagonistRealName, manuscript.maskModeEnabled)
+    proseHistory.snapshot(scene.id, prevStorage, 'rewrite')
+
+    setLocalProse(newProse)
+    cursorPositionRef.current = (before + newText).length
+
+    const rawText = getStorageText(newProse, manuscript.protagonistRealName, manuscript.maskModeEnabled)
+    updateScene(scene.id, { prose: rawText })
+    updateSessionWords(rawText.trim().split(/\s+/).filter(Boolean).length)
+
+    clearSelection()
+    setShowRewrite(false)
+  }, [scene, manuscript, localProse, selectionStart, selectionEnd, proseHistory, updateScene, updateSessionWords, clearSelection])
+
   if (!scene || !manuscript) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -586,14 +613,21 @@ The Read mode will show your text with proper paragraph formatting."
               className="flex items-center gap-2 px-4 py-2 border-t border-ink-800 bg-ink-900"
             >
               <span className="text-xs text-ink-500 truncate flex-1">
-                "{selectedText.slice(0, 30)}..."
+                "{selectedText.slice(0, 24)}..."
               </span>
+              <button
+                onClick={() => setShowRewrite(true)}
+                className="flex items-center gap-1 px-3 py-1.5 bg-amber-600 rounded text-xs text-white"
+              >
+                <Wand2 className="w-3 h-3" />
+                Rewrite
+              </button>
               <button
                 onClick={handleTagWisdom}
                 className="flex items-center gap-1 px-3 py-1.5 bg-section-departure rounded text-xs text-white"
               >
                 <Tag className="w-3 h-3" />
-                Tag Wisdom
+                Tag
               </button>
             </motion.div>
           )}
@@ -762,6 +796,18 @@ The Read mode will show your text with proper paragraph formatting."
         onClose={() => setShowAIAssistant(false)}
         ctx={aiContext}
       />
+
+      {/* Inline Rewrite Panel */}
+      <AnimatePresence>
+        {showRewrite && selectedText && (
+          <RewritePanel
+            passage={selectedText}
+            ctx={aiContext}
+            onClose={() => setShowRewrite(false)}
+            onAccept={handleRewriteAccept}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

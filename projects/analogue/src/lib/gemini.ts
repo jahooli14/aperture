@@ -107,6 +107,52 @@ export async function* streamResponse(
   }
 }
 
+// --- Inline passage rewrite (the redrafting primitive) ---
+
+export async function* streamRewrite(
+  apiKey: string,
+  passage: string,
+  instruction: string,
+  ctx: GeminiContext
+): AsyncGenerator<string> {
+  const ai = new GoogleGenAI({ apiKey })
+
+  const surrounding = ctx.prose.length > 1500 ? ctx.prose.slice(0, 1500) + '…' : ctx.prose
+
+  const prompt = `You are redrafting one passage of a book manuscript titled "${ctx.manuscriptTitle}" (section: ${ctx.sectionLabel}, scene: "${ctx.sceneTitle}").
+${ctx.sceneBeat ? `Scene beat: ${ctx.sceneBeat}.` : ''}
+
+The full scene, for voice and context:
+---
+${surrounding || '(no other prose yet)'}
+---
+
+Rewrite ONLY this passage:
+---
+${passage}
+---
+
+What to change: ${instruction}
+
+Rules:
+- Keep the author's voice, tense, and point of view. You are sharpening their prose, not replacing it with yours.
+- Return ONLY the rewritten passage. No preamble, no quotes, no explanation, no markdown.
+- Match the length roughly unless the instruction says otherwise.
+- Plain, concrete words. No corporate or workshop jargon.`
+
+  const stream = await ai.models.generateContentStream({
+    model: GEMINI_MODEL,
+    contents: [{ role: 'user', parts: [{ text: prompt }] }]
+  })
+
+  for await (const chunk of stream) {
+    const text = chunk.text
+    if (text) {
+      yield text
+    }
+  }
+}
+
 // --- Structural chatbot (manuscript-level) ---
 
 export interface StructuralSceneSummary {
