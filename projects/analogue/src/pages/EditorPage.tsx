@@ -130,6 +130,35 @@ export default function EditorPage() {
     return () => document.removeEventListener('selectionchange', h)
   }, [isComposing])
 
+  // Keep the caret above the on-screen keyboard when typing near the
+  // bottom of a long scene (dropped this in the rebuild — it's essential
+  // on a phone, where the caret otherwise hides behind the keyboard).
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    let keyboardOpen = false
+    const onResize = () => {
+      const ta = proseRef.current
+      if (!ta) return
+      const diff = window.innerHeight - vv.height
+      if (diff > 150 && document.activeElement === ta) {
+        keyboardOpen = true
+        requestAnimationFrame(() => {
+          if (proseRef.current && keyboardOpen) {
+            const el = proseRef.current
+            const lines = el.value.substring(0, el.selectionStart).split('\n').length
+            const lh = parseInt(getComputedStyle(el).lineHeight) || 24
+            el.scrollTop = Math.max(0, (lines - 2) * lh)
+          }
+        })
+      } else if (diff < 50) {
+        keyboardOpen = false
+      }
+    }
+    vv.addEventListener('resize', onResize)
+    return () => vv.removeEventListener('resize', onResize)
+  }, [])
+
   useLayoutEffect(() => {
     if (!isRead && proseRef.current && cursorRef.current > 0) {
       const ta = proseRef.current

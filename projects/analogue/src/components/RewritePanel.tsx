@@ -31,6 +31,7 @@ export default function RewritePanel({ passage, ctx, onClose, onAccept }: Props)
   const [error, setError] = useState<string | null>(null)
   const [lastInstruction, setLastInstruction] = useState<string | null>(null)
   const [showChanges, setShowChanges] = useState(true)
+  const [slow, setSlow] = useState(false)
   const resultRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -46,10 +47,15 @@ export default function RewritePanel({ passage, ctx, onClose, onAccept }: Props)
     setLastInstruction(instruction)
     setResult('')
     setError(null)
+    setSlow(false)
     setIsStreaming(true)
+    // On a flaky mobile connection, surface that it's still working rather
+    // than looking frozen — silence is the worst latency experience.
+    const slowTimer = window.setTimeout(() => setSlow(true), 6000)
     try {
       let full = ''
       for await (const chunk of streamRewrite(apiKey, passage, instruction, ctx)) {
+        if (!full) { clearTimeout(slowTimer); setSlow(false) }
         full += chunk
         setResult(full)
       }
@@ -58,6 +64,8 @@ export default function RewritePanel({ passage, ctx, onClose, onAccept }: Props)
       const m = err instanceof Error ? err.message : 'Something went wrong'
       setError(m.includes('API_KEY') || m.includes('403') ? 'Invalid API key.' : m)
     } finally {
+      clearTimeout(slowTimer)
+      setSlow(false)
       setIsStreaming(false)
     }
   }
@@ -125,7 +133,8 @@ export default function RewritePanel({ passage, ctx, onClose, onAccept }: Props)
               <div className="text-sm text-ink-100 leading-relaxed whitespace-pre-wrap bg-amber-950/20 border border-amber-800/30 rounded-lg p-3">
                 {!result ? (
                   <span className="flex items-center gap-2 text-ink-400">
-                    <Loader2 className="w-3 h-3 animate-spin" /> Thinking…
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    {slow ? 'Still working — slow connection?' : 'Thinking…'}
                   </span>
                 ) : isStreaming || !showChanges ? (
                   result
