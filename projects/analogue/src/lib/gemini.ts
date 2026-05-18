@@ -1,6 +1,6 @@
 import { GoogleGenAI } from '@google/genai'
 
-export const GEMINI_MODEL = 'gemini-3.1-flash-lite-preview'
+export const GEMINI_MODEL = 'gemini-3.1-flash-lite'
 export const STRUCTURAL_MODEL = 'gemini-3-flash-preview'
 
 export interface GeminiContext {
