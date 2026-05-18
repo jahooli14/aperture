@@ -8,7 +8,7 @@ import { DateSelector } from './DateSelector';
 import { UploadButtons } from './UploadButtons';
 import { PreviewControls } from './PreviewControls';
 import { EyeAdjust, type EyeAdjustCoords } from './EyeAdjust';
-import { rotateImage, fileToDataURL, validateImageFile, alignPhoto, compressImage, calculateZoomLevel } from '../lib/imageUtils';
+import { rotateImage, fileToDataURL, validateImageFile, alignPhoto, compressImage, calculateZoomLevel, type AlignmentResult } from '../lib/imageUtils';
 import { triggerHaptic } from '../lib/haptics';
 import { logger } from '../lib/logger';
 import type { ToastType } from './Toast';
@@ -29,6 +29,7 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
   const [detectingEyes, setDetectingEyes] = useState(false);
   const [aligning, setAligning] = useState(false);
   const [alignedFile, setAlignedFile] = useState<File | null>(null);
+  const [alignTransform, setAlignTransform] = useState<AlignmentResult['transform'] | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [note, setNote] = useState('');
   const [emoji, setEmoji] = useState('💬');
@@ -66,6 +67,7 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
       setRotation(newRotation);
       setEyeCoords(null); // Clear old eye coordinates
       setAlignedFile(null); // Clear old alignment
+      setAlignTransform(null);
       hasAlignedRef.current = false; // Reset alignment flag
       setDetectingEyes(true); // Re-run detection on rotated image
       setQualityWarnings([]);
@@ -107,6 +109,7 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
     // Reset all state before processing new file
     setEyeCoords(null);
     setAlignedFile(null);
+    setAlignTransform(null);
     hasAlignedRef.current = false;
     setDetectingEyes(false);
     setError('');
@@ -169,10 +172,17 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
     setQualityWarnings([]);
 
     if (!coords) {
-      // No error message - just silently proceed without alignment
-      // The photo will upload as-is, which is perfectly fine
+      // Detection couldn't find a usable face. Don't silently commit an
+      // unaligned photo to the timeline (that's what made the gallery stop
+      // stacking) — drop the user straight into manual eye placement so every
+      // photo entering the timeline is aligned. Falls back to original only if
+      // we somehow have no dimensions to drive the manual UI.
       setAlignedFile(null);
+      setAlignTransform(null);
       hasAlignedRef.current = false;
+      if (imageDims) {
+        setShowAdjust(true);
+      }
       return;
     }
 
@@ -243,12 +253,14 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
 
         const result = await alignPhoto(selectedFile, coords, calculatedZoom);
         setAlignedFile(result.alignedImage);
+        setAlignTransform(result.transform);
         setAligning(false);
       } catch (err) {
         logger.error('Alignment error', { error: err instanceof Error ? err.message : String(err) }, 'UploadPhoto');
         setAligning(false);
         setError('Failed to align photo. You can still upload the original.');
         setAlignedFile(null);
+        setAlignTransform(null);
         hasAlignedRef.current = false; // Reset on error
       }
     }
@@ -280,6 +292,7 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
     setShowAdjust(false);
     // Reset alignment guard so handleEyeDetection actually re-aligns.
     setAlignedFile(null);
+    setAlignTransform(null);
     hasAlignedRef.current = false;
     await handleEyeDetection(coords);
   };
@@ -292,9 +305,19 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
 
     try {
       setError('');
-      // Upload aligned photo if available, otherwise upload original
-      const fileToUpload = alignedFile || selectedFile;
-      await uploadPhoto(fileToUpload, eyeCoords, displayDate, note || undefined, emoji, alignedFile ? zoomLevel : undefined);
+      // selectedFile is the EXIF-corrected (and possibly user-rotated) source
+      // that eyeCoords were measured against — store it as the true original so
+      // future re-aligns are lossless. alignedFile is the stacked render.
+      await uploadPhoto(
+        selectedFile,
+        alignedFile,
+        eyeCoords,
+        alignedFile ? alignTransform : null,
+        displayDate,
+        note || undefined,
+        emoji,
+        alignedFile ? zoomLevel : undefined
+      );
 
       // Success feedback
       triggerHaptic('success');
@@ -322,6 +345,7 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
         setDetectingEyes(false);
         setAligning(false);
         setAlignedFile(null);
+        setAlignTransform(null);
         hasAlignedRef.current = false;
         setCustomDate('');
         setNote('');
@@ -640,6 +664,7 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
                 setDetectingEyes(false);
                 setAligning(false);
                 setAlignedFile(null);
+                setAlignTransform(null);
                 hasAlignedRef.current = false;
                 setNote('');
                 setEmoji('💬');

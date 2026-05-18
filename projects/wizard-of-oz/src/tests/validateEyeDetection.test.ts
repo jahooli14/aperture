@@ -15,49 +15,67 @@ describe('validateEyeDetection', () => {
     expect(validateEyeDetection(base())).toBe(true);
   });
 
-  it('rejects coordinates outside the image bounds', () => {
-    expect(validateEyeDetection(base({ leftEye: { x: -5, y: 500 } }))).toBe(false);
-    expect(validateEyeDetection(base({ rightEye: { x: 1300, y: 500 } }))).toBe(false);
-    expect(validateEyeDetection(base({ leftEye: { x: 400, y: -1 } }))).toBe(false);
-    expect(validateEyeDetection(base({ rightEye: { x: 400, y: 1700 } }))).toBe(false);
+  it('rejects non-finite coordinates', () => {
+    expect(validateEyeDetection(base({ leftEye: { x: NaN, y: 500 } }))).toBe(false);
+    expect(validateEyeDetection(base({ rightEye: { x: Infinity, y: 500 } }))).toBe(false);
+    expect(validateEyeDetection(base({ imageWidth: 0 }))).toBe(false);
   });
 
-  it('rejects eye distance below 8% of image width (too close)', () => {
-    // 1200 * 0.08 = 96 — eyes 50px apart is clearly too small.
+  it('rejects coordinates far outside the image bounds', () => {
+    // > 5% tolerance past the edge — clearly the wrong subject / broken detect.
+    expect(validateEyeDetection(base({ leftEye: { x: -200, y: 500 } }))).toBe(false);
+    expect(validateEyeDetection(base({ rightEye: { x: 1400, y: 500 } }))).toBe(false);
+    expect(validateEyeDetection(base({ leftEye: { x: 400, y: -200 } }))).toBe(false);
+    expect(validateEyeDetection(base({ rightEye: { x: 400, y: 1900 } }))).toBe(false);
+  });
+
+  it('tolerates an eye a hair past the frame edge (alignment white-fills it)', () => {
+    expect(validateEyeDetection(base({ leftEye: { x: -10, y: 500 } }))).toBe(true);
+    expect(validateEyeDetection(base({ rightEye: { x: 1210, y: 500 } }))).toBe(true);
+  });
+
+  it('rejects eyes essentially coincident (degenerate transform)', () => {
     const coords = base({
-      leftEye: { x: 580, y: 500 },
-      rightEye: { x: 630, y: 500 },
+      leftEye: { x: 600, y: 500 },
+      rightEye: { x: 603, y: 500 }, // 3px apart on a 1200px image
     });
     expect(validateEyeDetection(coords)).toBe(false);
   });
 
-  it('rejects eye distance above 50% of image width (too far / wrong subject)', () => {
+  it('ACCEPTS a tight close-up (eyes >50% of image width)', () => {
+    // This is the regression that broke stacking: a valid close-up was being
+    // rejected and the unaligned original uploaded instead.
     const coords = base({
       leftEye: { x: 100, y: 500 },
-      rightEye: { x: 1100, y: 500 }, // 1000 / 1200 = 83%
+      rightEye: { x: 1100, y: 500 }, // 1000 / 1200 ≈ 83%
     });
-    expect(validateEyeDetection(coords)).toBe(false);
+    expect(validateEyeDetection(coords)).toBe(true);
   });
 
-  it('accepts typical head tilts (up to 45°)', () => {
-    // Note: verticalDiff = |dy| and eyeDistance = sqrt(dx² + dy²), so
-    // verticalDiff <= eyeDistance always. The current threshold is intentionally
-    // permissive — we rely on the alignPhoto rotation to handle tilt, and leave
-    // hard rejection to the other checks (bounds, distance, margin).
+  it('ACCEPTS a small/far face (eyes <8% of image width)', () => {
+    // 1200 * 0.05 = 60 — far shot, still perfectly alignable.
+    const coords = base({
+      leftEye: { x: 570, y: 500 },
+      rightEye: { x: 630, y: 500 }, // 60px ≈ 5% of width, above the 1% floor
+    });
+    expect(validateEyeDetection(coords)).toBe(true);
+  });
+
+  it('ACCEPTS eyes near the horizontal frame edges', () => {
     expect(
-      validateEyeDetection(base({
-        leftEye: { x: 400, y: 500 },
-        rightEye: { x: 500, y: 700 }, // ~63° measured from horizontal
-      }))
+      validateEyeDetection(base({ leftEye: { x: 10, y: 500 }, rightEye: { x: 300, y: 500 } }))
+    ).toBe(true);
+    expect(
+      validateEyeDetection(base({ leftEye: { x: 900, y: 500 }, rightEye: { x: 1195, y: 500 } }))
     ).toBe(true);
   });
 
-  it('rejects eyes too close to the horizontal frame edges', () => {
-    const margin = 0.03 * 1200; // 36
-    const leftTooClose = base({ leftEye: { x: 10, y: 500 }, rightEye: { x: 300, y: 500 } });
-    const rightTooClose = base({ leftEye: { x: 800, y: 500 }, rightEye: { x: 1195, y: 500 } });
-    expect(margin).toBeCloseTo(36, 5);
-    expect(validateEyeDetection(leftTooClose)).toBe(false);
-    expect(validateEyeDetection(rightTooClose)).toBe(false);
+  it('accepts steep head tilts (alignPhoto rotates them upright)', () => {
+    expect(
+      validateEyeDetection(base({
+        leftEye: { x: 400, y: 500 },
+        rightEye: { x: 500, y: 700 }, // ~63° from horizontal
+      }))
+    ).toBe(true);
   });
 });
