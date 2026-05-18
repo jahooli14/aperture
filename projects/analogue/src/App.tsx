@@ -1,12 +1,8 @@
 import { useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import HomePage from './pages/HomePage'
+import ManuscriptPage from './pages/ManuscriptPage'
 import EditorPage from './pages/EditorPage'
-import TableOfContents from './pages/TableOfContents'
-import SensoryAuditPage from './pages/SensoryAuditPage'
-import ReverberationPage from './pages/ReverberationPage'
-import RevealAuditPage from './pages/RevealAuditPage'
-import TagOverview from './pages/TagOverview'
 import LoginPage from './pages/LoginPage'
 import { useAuthStore } from './stores/useAuthStore'
 
@@ -22,12 +18,8 @@ export default function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/toc" element={<TableOfContents />} />
+        <Route path="/m" element={<ManuscriptPage />} />
         <Route path="/edit/:sceneId" element={<EditorPage />} />
-        <Route path="/sensory" element={<SensoryAuditPage />} />
-        <Route path="/reverberations" element={<ReverberationPage />} />
-        <Route path="/reveal" element={<RevealAuditPage />} />
-        <Route path="/tags" element={<TagOverview />} />
       </Routes>
     </div>
   )

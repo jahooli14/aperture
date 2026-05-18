@@ -1,558 +1,263 @@
 import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { motion, AnimatePresence, useDragControls } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
-  ArrowLeft,
-  Plus,
-  MessageSquare,
-  Tag,
-  Menu,
-  ChevronLeft,
-  ChevronRight,
-  Bot,
-  History,
-  Wand2,
+  ArrowLeft, ChevronLeft, ChevronRight, Bot, History, Wand2,
+  Settings2, MessageSquarePlus, X, Check,
 } from 'lucide-react'
 import { useManuscriptStore } from '../stores/useManuscriptStore'
 import { useEditorStore } from '../stores/useEditorStore'
-import { applyMask, getStorageText } from '../lib/mask'
-import ReverbTagModal from '../components/ReverbTagModal'
-import ExportModal from '../components/ExportModal'
-import MetadataDrawer from '../components/MetadataDrawer'
-import { TagDrawer } from '../components/TagDrawer'
-import { WordTagList } from '../components/WordTagList'
-import { TaggedProseView } from '../components/TaggedProseView'
-import AIAssistantDrawer from '../components/AIAssistantDrawer'
-import RewritePanel from '../components/RewritePanel'
-import { applyRewrite, locateSelection } from '../lib/rewrite'
-import VoiceNoteButton from '../components/VoiceNoteButton'
 import { useProseHistoryStore } from '../stores/useProseHistoryStore'
-
-const AVAILABLE_TAGS = ['glasses', 'door', 'drift', 'postman', 'villager', 'identity', 'recovery', 'threshold', 'mask', 'anchor']
+import { applyMask, getStorageText } from '../lib/mask'
+import { applyRewrite, locateSelection } from '../lib/rewrite'
+import RewritePanel from '../components/RewritePanel'
+import AIAssistantDrawer from '../components/AIAssistantDrawer'
+import VoiceNoteButton from '../components/VoiceNoteButton'
 
 export default function EditorPage() {
   const { sceneId } = useParams<{ sceneId: string }>()
   const navigate = useNavigate()
-  const { manuscript, updateScene, addWordTag, removeWordTag } = useManuscriptStore()
+  const { manuscript, updateScene, toggleMaskMode } = useManuscriptStore()
   const {
-    footnoteDrawerOpen,
-    footnoteDrawerHeight,
-    openFootnoteDrawer,
-    closeFootnoteDrawer,
-    tagDrawerOpen,
-    activeTag,
-    openTagDrawer,
-    closeTagDrawer,
-    setActiveTag,
-    showReverbTagging,
-    setShowReverbTagging,
-    selectedText,
-    selectionStart,
-    selectionEnd,
-    setSelection,
-    clearSelection,
-    focusMode,
-    toggleFocusMode,
-    markSaved,
-    textSize,
-    cycleTextSize,
-    showAIAssistant,
-    setShowAIAssistant,
-    sessionWordsAdded,
-    startSession,
-    updateSessionWords,
+    selectedText, selectionStart, selectionEnd, setSelection, clearSelection,
+    focusMode, toggleFocusMode, markSaved, textSize, cycleTextSize,
+    showAIAssistant, setShowAIAssistant, sessionWordsAdded, startSession, updateSessionWords,
   } = useEditorStore()
-
   const proseHistory = useProseHistoryStore()
 
   const proseRef = useRef<HTMLTextAreaElement>(null)
-  const footnoteRef = useRef<HTMLTextAreaElement>(null)
-  const dragControls = useDragControls()
-  const [showDrawer, setShowDrawer] = useState(false)
-  const [showExport, setShowExport] = useState(false)
-  const [isReadMode, setIsReadMode] = useState(false)
-  const [touchStart, setTouchStart] = useState<number | null>(null)
-  const [showHistory, setShowHistory] = useState(false)
-  const [showRewrite, setShowRewrite] = useState(false)
-  const [readSelection, setReadSelection] = useState<{ text: string; start: number; top: number; left: number } | null>(null)
-
-  // Safety net: snapshot the prose as it was when the scene opened, on the
-  // first edit of this session, so the History button can undo manual redrafts.
-  const pristineProseRef = useRef<string>('')
+  const cursorRef = useRef(0)
+  const debounceRef = useRef<number | null>(null)
+  const pendingDisplayRef = useRef<string | null>(null)
+  const pristineRef = useRef('')
   const snappedRef = useRef(false)
 
-  // Local state for immediate UI updates (prevents cursor jumping)
-  const [localProse, setLocalProse] = useState<string>('')
+  const [localProse, setLocalProse] = useState('')
   const [isComposing, setIsComposing] = useState(false)
-  const cursorPositionRef = useRef<number>(0)
-  const debounceTimerRef = useRef<number | null>(null)
+  const [isRead, setIsRead] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
+  const [showRewrite, setShowRewrite] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [showFootnotes, setShowFootnotes] = useState(false)
+  const [readSel, setReadSel] = useState<{ text: string; start: number; top: number; left: number } | null>(null)
+  const [touchX, setTouchX] = useState<number | null>(null)
 
   const scene = manuscript?.scenes.find(s => s.id === sceneId)
+  const sorted = useMemo(
+    () => manuscript ? [...manuscript.scenes].sort((a, b) => a.order - b.order) : [],
+    [manuscript]
+  )
+  const idx = sorted.findIndex(s => s.id === sceneId)
+  const prev = idx > 0 ? sorted[idx - 1] : null
+  const next = idx >= 0 && idx < sorted.length - 1 ? sorted[idx + 1] : null
 
-  // Get adjacent scenes for navigation
-  const sortedScenes = useMemo(() => {
-    if (!manuscript) return []
-    return [...manuscript.scenes].sort((a, b) => a.order - b.order)
-  }, [manuscript])
-
-  const currentIndex = sortedScenes.findIndex(s => s.id === sceneId)
-  const prevScene = currentIndex > 0 ? sortedScenes[currentIndex - 1] : null
-  const nextScene = currentIndex < sortedScenes.length - 1 ? sortedScenes[currentIndex + 1] : null
-
-  // Swipe handlers - only trigger if not interacting with textarea
-  const handleTouchStart = (e: React.TouchEvent) => {
-    const target = e.target as HTMLElement
-    if (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT') {
-      setTouchStart(null)
-      return
-    }
-    setTouchStart(e.touches[0].clientX)
-  }
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStart === null) return
-
-    const target = e.target as HTMLElement
-    if (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT') {
-      setTouchStart(null)
-      return
-    }
-
-    const touchEnd = e.changedTouches[0].clientX
-    const diff = touchStart - touchEnd
-    const threshold = 100
-
-    if (diff > threshold && nextScene) {
-      navigate(`/edit/${nextScene.id}`)
-    } else if (diff < -threshold && prevScene) {
-      navigate(`/edit/${prevScene.id}`)
-    }
-    setTouchStart(null)
-  }
-
-  // Sync local state with scene changes
-  useEffect(() => {
-    if (scene && manuscript) {
-      const displayProse = applyMask(
-        scene.prose,
-        manuscript.protagonistRealName,
-        manuscript.maskModeEnabled
-      )
-      setLocalProse(displayProse)
-    }
-  }, [scene?.id, manuscript?.protagonistRealName, manuscript?.maskModeEnabled])
-
-  // Reset the safety-net snapshot when the scene changes.
-  useEffect(() => {
-    if (scene) {
-      pristineProseRef.current = scene.prose
-      snappedRef.current = false
-    }
-  }, [scene?.id])
-
-  // Start session tracking when scene loads
-  useEffect(() => {
-    if (scene) {
-      startSession(scene.wordCount)
-    }
-  }, [scene?.id])
-
-  // Auto-save indicator
-  useEffect(() => {
-    if (scene) {
-      const timer = setTimeout(() => markSaved(), 500)
-      return () => clearTimeout(timer)
-    }
-  }, [scene?.prose, scene?.footnotes, markSaved])
-
-  // Redirect if no manuscript
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!manuscript) {
-        navigate('/', { replace: true })
-      } else if (!scene) {
-        navigate('/toc', { replace: true })
-      }
-    }, 100)
-    return () => clearTimeout(timer)
-  }, [manuscript, scene, navigate])
-
-  // Track cursor position
-  useEffect(() => {
-    const textarea = proseRef.current
-    if (!textarea) return
-
-    const handleSelectionChange = () => {
-      if (document.activeElement === textarea && !isComposing) {
-        cursorPositionRef.current = textarea.selectionStart
-      }
-    }
-
-    document.addEventListener('selectionchange', handleSelectionChange)
-    return () => document.removeEventListener('selectionchange', handleSelectionChange)
-  }, [isComposing])
-
-  // Restore cursor position
-  useLayoutEffect(() => {
-    if (!isReadMode && proseRef.current && cursorPositionRef.current > 0) {
-      const textarea = proseRef.current
-      const pos = Math.min(cursorPositionRef.current, textarea.value.length)
-      textarea.setSelectionRange(pos, pos)
-    }
-  }, [localProse, isReadMode])
-
-  // Handle mobile keyboard viewport
-  useEffect(() => {
-    if (!window.visualViewport) return
-
-    let keyboardVisible = false
-
-    const handleViewportResize = () => {
-      const viewport = window.visualViewport
-      if (!viewport || !proseRef.current) return
-
-      const viewportHeight = viewport.height
-      const windowHeight = window.innerHeight
-      const heightDiff = windowHeight - viewportHeight
-
-      if (heightDiff > 150 && document.activeElement === proseRef.current) {
-        keyboardVisible = true
-
-        requestAnimationFrame(() => {
-          if (proseRef.current && keyboardVisible) {
-            const { selectionStart } = proseRef.current
-            const lines = proseRef.current.value.substring(0, selectionStart).split('\n').length
-            const lineHeight = parseInt(getComputedStyle(proseRef.current).lineHeight) || 24
-            proseRef.current.scrollTop = Math.max(0, (lines - 2) * lineHeight)
-          }
-        })
-      } else if (heightDiff < 50) {
-        keyboardVisible = false
-      }
-    }
-
-    window.visualViewport.addEventListener('resize', handleViewportResize)
-    return () => window.visualViewport?.removeEventListener('resize', handleViewportResize)
-  }, [])
-
-  const handleProseChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    if (!scene || !manuscript) return
-    if (isComposing) return
-
-    const newValue = e.target.value
-    cursorPositionRef.current = e.target.selectionStart
-
-    if (!snappedRef.current && pristineProseRef.current.trim()) {
-      proseHistory.snapshot(scene.id, pristineProseRef.current, 'before edits')
-      snappedRef.current = true
-    }
-
-    setLocalProse(newValue)
-
-    if (debounceTimerRef.current !== null) {
-      clearTimeout(debounceTimerRef.current)
-    }
-
-    debounceTimerRef.current = window.setTimeout(() => {
-      const rawText = getStorageText(
-        newValue,
-        manuscript.protagonistRealName,
-        manuscript.maskModeEnabled
-      )
-      updateScene(scene.id, { prose: rawText })
-
-      // Update session word count
-      const newWordCount = rawText.trim().split(/\s+/).filter(Boolean).length
-      updateSessionWords(newWordCount)
-    }, 200)
-  }
-
-  const handleCompositionStart = () => {
-    setIsComposing(true)
-  }
-
-  const handleCompositionEnd = (e: React.CompositionEvent<HTMLTextAreaElement>) => {
-    setIsComposing(false)
-    if (scene && manuscript) {
-      const newValue = e.currentTarget.value
-      cursorPositionRef.current = e.currentTarget.selectionStart
-
-      if (!snappedRef.current && pristineProseRef.current.trim()) {
-        proseHistory.snapshot(scene.id, pristineProseRef.current, 'before edits')
-        snappedRef.current = true
-      }
-
-      setLocalProse(newValue)
-
-      const rawText = getStorageText(
-        newValue,
-        manuscript.protagonistRealName,
-        manuscript.maskModeEnabled
-      )
-      updateScene(scene.id, { prose: rawText })
-
-      const newWordCount = rawText.trim().split(/\s+/).filter(Boolean).length
-      updateSessionWords(newWordCount)
-    }
-  }
-
-  const handleFootnoteChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    if (!scene) return
-    updateScene(scene.id, { footnotes: e.target.value })
-  }
-
-  const handleTextSelect = useCallback(() => {
-    const textarea = proseRef.current
-    if (!textarea || !scene) return
-
-    const start = textarea.selectionStart
-    const end = textarea.selectionEnd
-
-    if (start !== end && end - start > 3) {
-      const text = textarea.value.slice(start, end)
-
-      setTimeout(() => {
-        if (textarea.selectionStart === start && textarea.selectionEnd === end) {
-          if (activeTag) {
-            addWordTag({
-              sceneId: scene.id,
-              tag: activeTag,
-              text,
-              start,
-              end
-            })
-            clearSelection()
-            textarea.setSelectionRange(start, start)
-          } else {
-            setSelection(text, start, end)
-          }
-        }
-      }, 300)
-    } else {
-      clearSelection()
-    }
-  }, [scene, activeTag, addWordTag, clearSelection, setSelection])
-
-  const handleTagWisdom = () => {
-    if (selectedText) {
-      setShowReverbTagging(true)
-    }
-  }
-
-  const handleVoiceInsert = useCallback((text: string, target: 'prose' | 'footnotes') => {
-    if (!scene || !manuscript) return
-
-    if (target === 'prose') {
-      const textarea = proseRef.current
-      const insertAt = textarea ? cursorPositionRef.current : localProse.length
-      const before = localProse.slice(0, insertAt)
-      const after = localProse.slice(insertAt)
-      const separator = before.length > 0 && !before.endsWith('\n\n') ? '\n\n' : ''
-      const newProse = before + separator + text + (after.length > 0 ? '\n\n' : '') + after
-
-      setLocalProse(newProse)
-      cursorPositionRef.current = (before + separator + text).length
-
-      const rawText = getStorageText(newProse, manuscript.protagonistRealName, manuscript.maskModeEnabled)
-      updateScene(scene.id, { prose: rawText })
-      const newWordCount = rawText.trim().split(/\s+/).filter(Boolean).length
-      updateSessionWords(newWordCount)
-    } else {
-      const existing = scene.footnotes.trim()
-      const newFootnotes = existing ? existing + '\n\n' + text : text
-      updateScene(scene.id, { footnotes: newFootnotes })
-      openFootnoteDrawer()
-    }
-  }, [scene, manuscript, localProse, updateScene, updateSessionWords, openFootnoteDrawer])
-
-  const handleRewriteAccept = useCallback((newText: string) => {
-    if (!scene || !manuscript) return
-
-    // In read mode there is no live textarea, so scene.prose is authoritative.
-    const base = isReadMode
-      ? applyMask(scene.prose, manuscript.protagonistRealName, manuscript.maskModeEnabled)
-      : localProse
-
-    // Snapshot the pre-rewrite text so the History button can undo it
-    const prevStorage = getStorageText(base, manuscript.protagonistRealName, manuscript.maskModeEnabled)
-    proseHistory.snapshot(scene.id, prevStorage, 'rewrite')
-
-    const { displayProse: newProse, storageProse: rawText } = applyRewrite(
-      base, selectionStart, selectionEnd, newText,
-      manuscript.protagonistRealName, manuscript.maskModeEnabled
-    )
-
-    setLocalProse(newProse)
-    cursorPositionRef.current = selectionStart + newText.length
-
-    updateScene(scene.id, { prose: rawText })
-    updateSessionWords(rawText.trim().split(/\s+/).filter(Boolean).length)
-
-    clearSelection()
-    setShowRewrite(false)
-  }, [scene, manuscript, localProse, isReadMode, selectionStart, selectionEnd, proseHistory, updateScene, updateSessionWords, clearSelection])
-
-  // Read mode: select any span (works with or without word tags) and redraft it.
-  const handleReadSelection = useCallback(() => {
-    if (!isReadMode) return
-    const sel = window.getSelection()
-    const text = sel?.toString() ?? ''
-    if (!sel || sel.isCollapsed || text.trim().length < 4) {
-      setReadSelection(null)
-      return
-    }
-    const base = applyMask(scene!.prose, manuscript!.protagonistRealName, manuscript!.maskModeEnabled)
-    const located = locateSelection(base, text)
-    if (!located) {
-      setReadSelection(null)
-      return
-    }
-    const rect = sel.getRangeAt(0).getBoundingClientRect()
-    setReadSelection({ text, start: located.start, top: rect.top, left: rect.left + rect.width / 2 })
-  }, [isReadMode, scene, manuscript])
-
-  const openReadRewrite = useCallback(() => {
-    if (!readSelection) return
-    setSelection(readSelection.text, readSelection.start, readSelection.start + readSelection.text.length)
-    setReadSelection(null)
-    setShowRewrite(true)
-  }, [readSelection, setSelection])
-
-  if (!scene || !manuscript) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-ink-600 border-t-ink-300 rounded-full animate-spin" />
-      </div>
-    )
-  }
-
-  const displayProse = isReadMode
+  const displayProse = isRead && scene && manuscript
     ? applyMask(scene.prose, manuscript.protagonistRealName, manuscript.maskModeEnabled)
     : localProse
 
-  const parseFootnotes = (footnotesText: string): string[] => {
-    if (!footnotesText.trim()) return []
-    return footnotesText
-      .split(/\n\n+/)
-      .map(note => note.trim())
-      .filter(note => note.length > 0)
+  useEffect(() => {
+    if (scene && manuscript) {
+      setLocalProse(applyMask(scene.prose, manuscript.protagonistRealName, manuscript.maskModeEnabled))
+    }
+  }, [scene?.id, manuscript?.protagonistRealName, manuscript?.maskModeEnabled])
+
+  useEffect(() => {
+    if (scene) { pristineRef.current = scene.prose; snappedRef.current = false; startSession(scene.wordCount) }
+  }, [scene?.id])
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (!manuscript) navigate('/', { replace: true })
+      else if (!scene) navigate('/m', { replace: true })
+    }, 120)
+    return () => clearTimeout(t)
+  }, [manuscript, scene, navigate])
+
+  // Persist whatever is pending immediately (used on background / scene switch).
+  const flushPending = useCallback(() => {
+    if (pendingDisplayRef.current == null || !scene || !manuscript) return
+    if (debounceRef.current != null) { clearTimeout(debounceRef.current); debounceRef.current = null }
+    const raw = getStorageText(pendingDisplayRef.current, manuscript.protagonistRealName, manuscript.maskModeEnabled)
+    pendingDisplayRef.current = null
+    updateScene(scene.id, { prose: raw })
+    markSaved()
+  }, [scene, manuscript, updateScene, markSaved])
+
+  useEffect(() => {
+    const onHide = () => { if (document.visibilityState === 'hidden') flushPending() }
+    window.addEventListener('visibilitychange', onHide)
+    window.addEventListener('pagehide', flushPending)
+    return () => {
+      window.removeEventListener('visibilitychange', onHide)
+      window.removeEventListener('pagehide', flushPending)
+      flushPending()
+    }
+  }, [flushPending])
+
+  const snapPristine = () => {
+    if (!snappedRef.current && pristineRef.current.trim() && scene) {
+      proseHistory.snapshot(scene.id, pristineRef.current, 'before edits')
+      snappedRef.current = true
+    }
   }
 
-  const footnotes = parseFootnotes(scene.footnotes)
+  const commit = (displayText: string) => {
+    if (!scene || !manuscript) return
+    pendingDisplayRef.current = displayText
+    if (debounceRef.current != null) clearTimeout(debounceRef.current)
+    debounceRef.current = window.setTimeout(() => {
+      const raw = getStorageText(displayText, manuscript.protagonistRealName, manuscript.maskModeEnabled)
+      pendingDisplayRef.current = null
+      updateScene(scene.id, { prose: raw })
+      updateSessionWords(raw.trim().split(/\s+/).filter(Boolean).length)
+      markSaved()
+    }, 250)
+  }
 
-  // Build section label for AI context
-  const sectionLabel = manuscript.scenes.find(s => s.section === scene.section)
-    ? scene.section.charAt(0).toUpperCase() + scene.section.slice(1)
-    : scene.section
+  const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    if (isComposing || !scene) return
+    cursorRef.current = e.target.selectionStart
+    snapPristine()
+    setLocalProse(e.target.value)
+    commit(e.target.value)
+  }
+
+  useEffect(() => {
+    const ta = proseRef.current
+    if (!ta) return
+    const h = () => { if (document.activeElement === ta && !isComposing) cursorRef.current = ta.selectionStart }
+    document.addEventListener('selectionchange', h)
+    return () => document.removeEventListener('selectionchange', h)
+  }, [isComposing])
+
+  useLayoutEffect(() => {
+    if (!isRead && proseRef.current && cursorRef.current > 0) {
+      const ta = proseRef.current
+      const p = Math.min(cursorRef.current, ta.value.length)
+      ta.setSelectionRange(p, p)
+    }
+  }, [localProse, isRead])
+
+  const onSelect = useCallback(() => {
+    const ta = proseRef.current
+    if (!ta || !scene) return
+    const s = ta.selectionStart, e = ta.selectionEnd
+    if (e - s > 3) {
+      const t = ta.value.slice(s, e)
+      setTimeout(() => {
+        if (ta.selectionStart === s && ta.selectionEnd === e) setSelection(t, s, e)
+      }, 250)
+    } else clearSelection()
+  }, [scene, setSelection, clearSelection])
+
+  const handleRewriteAccept = useCallback((newText: string) => {
+    if (!scene || !manuscript) return
+    const base = isRead
+      ? applyMask(scene.prose, manuscript.protagonistRealName, manuscript.maskModeEnabled)
+      : localProse
+    proseHistory.snapshot(scene.id, getStorageText(base, manuscript.protagonistRealName, manuscript.maskModeEnabled), 'rewrite')
+    const { displayProse: np, storageProse: raw } = applyRewrite(
+      base, selectionStart, selectionEnd, newText,
+      manuscript.protagonistRealName, manuscript.maskModeEnabled
+    )
+    setLocalProse(np)
+    cursorRef.current = selectionStart + newText.length
+    updateScene(scene.id, { prose: raw })
+    updateSessionWords(raw.trim().split(/\s+/).filter(Boolean).length)
+    clearSelection()
+    setShowRewrite(false)
+  }, [scene, manuscript, localProse, isRead, selectionStart, selectionEnd, proseHistory, updateScene, updateSessionWords, clearSelection])
+
+  const handleReadSelection = useCallback(() => {
+    if (!isRead || !scene || !manuscript) return
+    const sel = window.getSelection()
+    const text = sel?.toString() ?? ''
+    if (!sel || sel.isCollapsed) { setReadSel(null); return }
+    const base = applyMask(scene.prose, manuscript.protagonistRealName, manuscript.maskModeEnabled)
+    const loc = locateSelection(base, text)
+    if (!loc) { setReadSel(null); return }
+    const r = sel.getRangeAt(0).getBoundingClientRect()
+    setReadSel({ text, start: loc.start, top: r.top, left: r.left + r.width / 2 })
+  }, [isRead, scene, manuscript])
+
+  const handleVoiceInsert = useCallback((text: string, targetField: 'prose' | 'footnotes') => {
+    if (!scene || !manuscript) return
+    if (targetField === 'prose') {
+      const at = cursorRef.current || localProse.length
+      const before = localProse.slice(0, at), after = localProse.slice(at)
+      const sep = before.length && !before.endsWith('\n\n') ? '\n\n' : ''
+      const np = before + sep + text + (after.length ? '\n\n' : '') + after
+      snapPristine()
+      setLocalProse(np)
+      cursorRef.current = (before + sep + text).length
+      const raw = getStorageText(np, manuscript.protagonistRealName, manuscript.maskModeEnabled)
+      updateScene(scene.id, { prose: raw })
+      updateSessionWords(raw.trim().split(/\s+/).filter(Boolean).length)
+    } else {
+      const ex = scene.footnotes.trim()
+      updateScene(scene.id, { footnotes: ex ? ex + '\n\n' + text : text })
+      setShowFootnotes(true)
+    }
+  }, [scene, manuscript, localProse, updateScene, updateSessionWords])
+
+  if (!scene || !manuscript) {
+    return <div className="flex-1 flex items-center justify-center">
+      <div className="w-6 h-6 border-2 border-ink-700 border-t-ink-300 rounded-full animate-spin" />
+    </div>
+  }
 
   const aiContext = {
     manuscriptTitle: manuscript.title,
-    sectionLabel,
+    sectionLabel: scene.chapterTitle ?? 'Manuscript',
     sceneTitle: scene.title,
     sceneBeat: scene.sceneBeat,
     prose: scene.prose,
   }
+  const footnotes = scene.footnotes.split(/\n\n+/).map(s => s.trim()).filter(Boolean)
 
   return (
     <div
       className={`flex-1 flex flex-col min-h-0 bg-ink-950 pt-safe text-size-${textSize}`}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
+      onTouchStart={e => { const t = e.target as HTMLElement; setTouchX(t.tagName === 'TEXTAREA' ? null : e.touches[0].clientX) }}
+      onTouchEnd={e => {
+        if (touchX == null) return
+        const d = touchX - e.changedTouches[0].clientX
+        if (d > 90 && next) navigate(`/edit/${next.id}`)
+        else if (d < -90 && prev) navigate(`/edit/${prev.id}`)
+        setTouchX(null)
+      }}
     >
-      {/* Minimal Header */}
-      <header className={`flex items-center justify-between px-3 py-3 border-b border-ink-800 focus-fade ${focusMode ? 'opacity-0' : 'opacity-100'}`}>
-        <div className="flex items-center gap-1">
-          <button onClick={() => navigate('/toc')} className="p-2 -ml-2">
-            <ArrowLeft className="w-5 h-5 text-ink-400" />
-          </button>
-          <button
-            onClick={openTagDrawer}
-            className={`p-2 relative ${activeTag ? 'bg-blue-500/20 text-blue-400' : 'text-ink-400'}`}
-          >
-            <Tag className="w-5 h-5" />
-            {scene.wordTags && scene.wordTags.length > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-blue-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                {scene.wordTags.length}
-              </span>
-            )}
-          </button>
-        </div>
-
-        <h1 className="text-base font-medium text-ink-100 truncate flex-1 text-center px-4">
-          {scene.title}
-        </h1>
-
-        <div className="flex items-center gap-1">
-          {/* Session words counter */}
-          {sessionWordsAdded > 0 && (
-            <motion.span
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="text-xs text-green-400 font-medium px-1"
-            >
-              +{sessionWordsAdded}
-            </motion.span>
-          )}
-          {/* Version history button — only when AI prose history exists for this scene */}
-          {sceneId && proseHistory.hasSnapshots(sceneId) && (
-            <button
-              onClick={() => setShowHistory(v => !v)}
-              className={`p-2 rounded-lg transition-colors ${showHistory ? 'bg-amber-600/20 text-amber-400' : 'text-ink-400'}`}
-              title="Version history"
-            >
-              <History className="w-5 h-5" />
-            </button>
-          )}
-          {/* Voice note button */}
-          <VoiceNoteButton ctx={aiContext} onInsert={handleVoiceInsert} />
-          {/* AI button */}
-          <button
-            onClick={() => setShowAIAssistant(!showAIAssistant)}
-            className={`p-2 rounded-lg transition-colors ${showAIAssistant ? 'bg-purple-600/20 text-purple-400' : 'text-ink-400'}`}
-          >
-            <Bot className="w-5 h-5" />
-          </button>
-          <button onClick={() => setShowDrawer(true)} className="p-2 -mr-2">
-            <Menu className="w-5 h-5 text-ink-400" />
-          </button>
-        </div>
+      <header className={`flex items-center px-2 py-2.5 transition-opacity ${focusMode ? 'opacity-0 pointer-events-none' : ''}`}>
+        <button onClick={() => { flushPending(); navigate('/m') }} className="p-2 text-ink-400"><ArrowLeft className="w-5 h-5" /></button>
+        <h1 className="flex-1 text-center text-sm font-medium text-ink-200 truncate px-2">{scene.title}</h1>
+        {sessionWordsAdded > 0 && <span className="text-xs text-amber-500 px-1">+{sessionWordsAdded}</span>}
+        {sceneId && proseHistory.hasSnapshots(sceneId) && (
+          <button onClick={() => setShowHistory(v => !v)} className={`p-2 ${showHistory ? 'text-amber-400' : 'text-ink-400'}`}><History className="w-5 h-5" /></button>
+        )}
+        <VoiceNoteButton ctx={aiContext} onInsert={handleVoiceInsert} />
+        <button onClick={() => setShowAIAssistant(!showAIAssistant)} className={`p-2 ${showAIAssistant ? 'text-purple-400' : 'text-ink-400'}`}><Bot className="w-5 h-5" /></button>
+        <button onClick={() => setShowSettings(true)} className="p-2 text-ink-400"><Settings2 className="w-5 h-5" /></button>
       </header>
 
-      {/* Prose version history restore sheet */}
+      {/* History */}
       <AnimatePresence>
-        {showHistory && sceneId && scene && manuscript && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="overflow-hidden border-b border-amber-800/30 bg-amber-950/20 flex-shrink-0"
-          >
+        {showHistory && sceneId && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden bg-amber-950/15 border-y border-amber-900/30">
             <div className="p-3">
-              <p className="text-xs text-amber-500/80 font-medium mb-2">
-                Edit history — tap a version to restore
-              </p>
-              <div className="space-y-1.5 max-h-48 overflow-y-auto">
+              <p className="text-[11px] text-amber-500/80 mb-2">Edit history — tap to restore</p>
+              <div className="space-y-1.5 max-h-44 overflow-y-auto">
                 {proseHistory.getSnapshots(sceneId).map((snap, i) => (
-                  <button
-                    key={i}
-                    onClick={async () => {
-                      await updateScene(sceneId, { prose: snap.prose })
-                      const display = applyMask(snap.prose, manuscript.protagonistRealName, manuscript.maskModeEnabled)
-                      setLocalProse(display)
-                      proseHistory.remove(sceneId, i)
-                    }}
-                    className="w-full text-left px-3 py-2 bg-ink-900 hover:bg-ink-800 rounded-lg transition-colors"
-                  >
-                    <div className="flex items-center justify-between gap-2 mb-0.5">
-                      <span className="text-xs text-amber-500/70">{snap.trigger}</span>
-                      <span className="text-xs text-ink-600">
-                        {new Date(snap.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
+                  <button key={i} onClick={async () => {
+                    await updateScene(sceneId, { prose: snap.prose })
+                    setLocalProse(applyMask(snap.prose, manuscript.protagonistRealName, manuscript.maskModeEnabled))
+                    proseHistory.remove(sceneId, i); setShowHistory(false)
+                  }} className="w-full text-left px-3 py-2 bg-ink-900 rounded-lg">
+                    <div className="flex justify-between text-[11px] mb-0.5">
+                      <span className="text-amber-500/70">{snap.trigger}</span>
+                      <span className="text-ink-600">{new Date(snap.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
-                    <p className="text-xs text-ink-400 truncate">
-                      {snap.prose.slice(0, 90)}{snap.prose.length > 90 ? '…' : ''}
-                    </p>
+                    <p className="text-[11px] text-ink-500 truncate">{snap.prose.slice(0, 80)}…</p>
                   </button>
                 ))}
               </div>
@@ -561,344 +266,177 @@ export default function EditorPage() {
         )}
       </AnimatePresence>
 
-      {/* Prose Pane */}
-      <div
-        className="flex-1 relative min-h-0"
-        style={footnoteDrawerOpen ? { height: `${100 - footnoteDrawerHeight}%` } : undefined}
-      >
-        {isReadMode ? (
-          <div
-            className="absolute inset-0 overflow-y-auto p-3 pb-24"
-            onMouseUp={handleReadSelection}
-            onTouchEnd={handleReadSelection}
-          >
+      {/* Prose */}
+      <div className="flex-1 relative min-h-0">
+        {isRead ? (
+          <div className="absolute inset-0 overflow-y-auto px-5 py-4 pb-32" onMouseUp={handleReadSelection} onTouchEnd={handleReadSelection}>
             {!displayProse ? (
-              <p className="text-ink-600 italic">No content yet. Switch to Edit mode to start writing.</p>
-            ) : scene.wordTags && scene.wordTags.length > 0 ? (
-              <TaggedProseView
-                prose={displayProse}
-                wordTags={scene.wordTags}
-                onTagClick={(wordTag) => {
-                  if (confirm(`Remove "${wordTag.text}" tag?`)) {
-                    removeWordTag(wordTag.id, scene.id)
-                  }
-                }}
-              />
+              <p className="text-ink-700 italic">Empty. Switch to Edit to write.</p>
             ) : (
-              <div className="prose-container max-w-none">
-                <p className="text-xs text-ink-600 mb-4">
-                  Select any text to redraft it.
-                </p>
-                {displayProse.split(/\n\n+/).map((paragraph, i) => (
-                  paragraph.trim() && (
-                    <p
-                      key={i}
-                      className="text-ink-100 text-base leading-relaxed mb-4 first:mt-0"
-                      style={{ textIndent: i > 0 ? '2em' : '0' }}
-                    >
-                      {paragraph.split('\n').map((line, j) => (
-                        <span key={j}>
-                          {line}
-                          {j < paragraph.split('\n').length - 1 && <br />}
-                        </span>
-                      ))}
-                    </p>
-                  )
+              <div className="reading max-w-prose mx-auto">
+                <p className="text-[11px] text-ink-700 mb-5">Select any text to redraft it.</p>
+                {displayProse.split(/\n\n+/).map((para, i) => para.trim() && (
+                  <p key={i} className="text-ink-200 leading-[1.85] mb-5" style={{ textIndent: i ? '1.4em' : 0 }}>
+                    {para.split('\n').map((ln, j) => <span key={j}>{ln}{j < para.split('\n').length - 1 && <br />}</span>)}
+                  </p>
                 ))}
-              </div>
-            )}
-
-            {footnotes.length > 0 && (
-              <div className="mt-6 pt-4 border-t border-ink-700">
-                <div className="space-y-2">
-                  {footnotes.map((footnote, i) => (
-                    <p key={i} className="text-ink-400 text-sm leading-relaxed">
-                      <span className="text-ink-500">[{i + 1}]</span> {footnote}
-                    </p>
-                  ))}
-                </div>
+                {footnotes.length > 0 && (
+                  <div className="mt-8 pt-4 border-t border-ink-800 space-y-2">
+                    {footnotes.map((f, i) => <p key={i} className="text-ink-500 text-sm leading-relaxed"><span className="text-ink-600">[{i + 1}]</span> {f}</p>)}
+                  </div>
+                )}
               </div>
             )}
           </div>
         ) : (
-          <div className="absolute inset-0 overflow-y-auto pb-24" style={{ scrollPaddingBottom: '150px', scrollPaddingTop: '100px' }}>
+          <div className="absolute inset-0 overflow-y-auto pb-32" style={{ scrollPaddingBottom: '160px' }}>
             <textarea
               ref={proseRef}
               value={displayProse}
-              onChange={handleProseChange}
-              onCompositionStart={handleCompositionStart}
-              onCompositionEnd={handleCompositionEnd}
-              onSelect={handleTextSelect}
+              onChange={onChange}
+              onCompositionStart={() => setIsComposing(true)}
+              onCompositionEnd={e => { setIsComposing(false); if (scene) { snapPristine(); setLocalProse(e.currentTarget.value); commit(e.currentTarget.value) } }}
+              onSelect={onSelect}
               onMouseDown={() => clearSelection()}
-              placeholder="Begin writing...
-
-Start a new paragraph by pressing Enter twice.
-
-The Read mode will show your text with proper paragraph formatting."
-              className="w-full h-full p-3 bg-transparent text-ink-100 placeholder:text-ink-600 resize-none prose-edit focus:outline-none"
-              style={{
-                WebkitTapHighlightColor: 'transparent',
-                touchAction: 'manipulation',
-                fontSize: '16px',
-                scrollPaddingBottom: '150px',
-                scrollPaddingTop: '100px'
-              }}
-              autoCapitalize="sentences"
-              autoCorrect="on"
-              autoComplete="off"
-              spellCheck={true}
-              inputMode="text"
-              enterKeyHint="enter"
+              placeholder="Begin writing…"
+              className="w-full h-full px-5 py-4 bg-transparent text-ink-100 placeholder:text-ink-700 resize-none prose-edit focus:outline-none"
+              style={{ WebkitTapHighlightColor: 'transparent', fontSize: '16px', minHeight: '60vh' }}
+              autoCapitalize="sentences" autoCorrect="on" spellCheck
             />
-
-            {footnotes.length > 0 && (
-              <div className="px-3 pb-3">
-                <div className="mt-6 pt-4 border-t border-ink-700">
-                  <div className="space-y-2">
-                    {footnotes.map((footnote, i) => (
-                      <p key={i} className="text-ink-400 text-sm leading-relaxed">
-                        <span className="text-ink-500">[{i + 1}]</span> {footnote}
-                      </p>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
 
-        {/* Read-mode floating redraft button */}
-        {isReadMode && readSelection && (
+        {/* Read-mode floating redraft */}
+        {isRead && readSel && (
           <button
-            onPointerDown={(e) => e.preventDefault()}
-            onClick={openReadRewrite}
-            style={{
-              position: 'fixed',
-              top: Math.max(56, readSelection.top - 44),
-              left: readSelection.left,
-              transform: 'translateX(-50%)',
-              zIndex: 30,
-            }}
-            className="flex items-center gap-1.5 px-3 py-2 bg-amber-600 rounded-full text-xs font-medium text-white shadow-lg"
-          >
-            <Wand2 className="w-3.5 h-3.5" />
-            Redraft
+            onPointerDown={e => e.preventDefault()}
+            onClick={() => { setSelection(readSel.text, readSel.start, readSel.start + readSel.text.length); setReadSel(null); setShowRewrite(true) }}
+            style={{ position: 'fixed', top: Math.max(56, readSel.top - 46), left: readSel.left, transform: 'translateX(-50%)', zIndex: 30 }}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-600 rounded-full text-xs font-medium text-white shadow-lg">
+            <Wand2 className="w-3.5 h-3.5" /> Redraft
           </button>
         )}
 
-        {/* Selection toolbar */}
+        {/* Edit-mode selection bar */}
         <AnimatePresence>
-          {selectedText && !isReadMode && !activeTag && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              className="flex items-center gap-2 px-4 py-2 border-t border-ink-800 bg-ink-900"
-            >
-              <span className="text-xs text-ink-500 truncate flex-1">
-                "{selectedText.slice(0, 24)}..."
-              </span>
-              <button
-                onClick={() => setShowRewrite(true)}
-                className="flex items-center gap-1 px-3 py-1.5 bg-amber-600 rounded text-xs text-white"
-              >
-                <Wand2 className="w-3 h-3" />
-                Rewrite
-              </button>
-              <button
-                onClick={handleTagWisdom}
-                className="flex items-center gap-1 px-3 py-1.5 bg-section-departure rounded text-xs text-white"
-              >
-                <Tag className="w-3 h-3" />
-                Tag
+          {selectedText && !isRead && (
+            <motion.div initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 30, opacity: 0 }}
+              className="fixed bottom-20 left-4 right-4 z-30 flex items-center gap-2 px-3 py-2.5 bg-ink-900 border border-ink-700 rounded-2xl shadow-xl pb-safe">
+              <span className="flex-1 text-xs text-ink-500 truncate">"{selectedText.slice(0, 28)}…"</span>
+              <button onClick={() => setShowRewrite(true)} className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-600 rounded-xl text-xs font-medium text-white">
+                <Wand2 className="w-3.5 h-3.5" /> Redraft
               </button>
             </motion.div>
           )}
         </AnimatePresence>
-
-        {/* Word Tags List */}
-        {!isReadMode && scene.wordTags && scene.wordTags.length > 0 && (
-          <WordTagList
-            wordTags={scene.wordTags}
-            onRemove={(tagId) => removeWordTag(tagId, scene.id)}
-          />
-        )}
-
-        {/* Active Tag Indicator */}
-        <AnimatePresence>
-          {activeTag && !isReadMode && (
-            <motion.button
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              onClick={() => setActiveTag(null)}
-              className="w-full px-4 py-2 border-t border-ink-800 bg-blue-900/30 text-center active:bg-blue-900/50"
-            >
-              <span className="text-xs text-blue-400">
-                Tagging: <span className="font-semibold capitalize">{activeTag}</span> • Tap to stop
-              </span>
-            </motion.button>
-          )}
-        </AnimatePresence>
       </div>
 
-      {/* Footnote Drawer */}
+      {/* Footnotes drawer */}
       <AnimatePresence>
-        {footnoteDrawerOpen ? (
-          <motion.div
-            initial={{ height: 0 }}
-            animate={{ height: `${footnoteDrawerHeight}%` }}
-            exit={{ height: 0 }}
-            className="footnote-drawer border-t border-ink-700 bg-ink-900 flex flex-col"
-          >
-            <div
-              className="flex items-center justify-center py-2 cursor-ns-resize"
-              onPointerDown={(e) => dragControls.start(e)}
-            >
-              <div className="w-10 h-1 bg-ink-600 rounded-full" />
+        {showFootnotes ? (
+          <motion.div initial={{ height: 0 }} animate={{ height: '34%' }} exit={{ height: 0 }}
+            className="border-t border-ink-800 bg-ink-900 flex flex-col overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-2">
+              <MessageSquarePlus className="w-4 h-4 text-ink-500" />
+              <span className="text-[11px] uppercase tracking-wider text-ink-500 flex-1">Notes</span>
+              <button onClick={() => setShowFootnotes(false)} className="text-xs text-ink-500">Close</button>
             </div>
-
-            <div className="flex items-center gap-2 px-4 pb-2">
-              <MessageSquare className="w-4 h-4 text-ink-500" />
-              <span className="text-xs text-ink-500 uppercase tracking-wider">
-                Notes / Inner Voice
-              </span>
-              <button
-                onClick={closeFootnoteDrawer}
-                className="ml-auto text-xs text-ink-500"
-              >
-                Collapse
-              </button>
-            </div>
-
             <textarea
-              ref={footnoteRef}
               value={scene.footnotes}
-              onChange={handleFootnoteChange}
-              placeholder="Scene notes, inner voice, ideas..."
-              className="flex-1 w-full px-4 pb-4 bg-transparent text-ink-300 text-sm leading-relaxed placeholder:text-ink-600 resize-none"
+              onChange={e => updateScene(scene.id, { footnotes: e.target.value })}
+              placeholder="Notes, inner voice, ideas…"
+              className="flex-1 w-full px-4 pb-4 bg-transparent text-ink-300 text-sm leading-relaxed placeholder:text-ink-700 resize-none focus:outline-none"
             />
           </motion.div>
-        ) : (
-          <motion.button
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={openFootnoteDrawer}
-            className="focus-fade fixed bottom-20 right-4 w-12 h-12 bg-ink-800 border border-ink-700 rounded-full flex items-center justify-center shadow-lg pb-safe"
-          >
-            <Plus className="w-5 h-5 text-ink-400" />
-          </motion.button>
+        ) : !focusMode && (
+          <button onClick={() => setShowFootnotes(true)}
+            className="fixed bottom-20 right-4 w-11 h-11 bg-ink-900 border border-ink-700 rounded-full flex items-center justify-center text-ink-400 shadow-lg z-20">
+            <MessageSquarePlus className="w-5 h-5" />
+          </button>
         )}
       </AnimatePresence>
 
-      {/* Scene Navigation */}
-      <div className={`focus-fade fixed bottom-4 left-0 right-0 flex items-center justify-center gap-4 px-4 pb-safe ${focusMode ? 'opacity-0' : 'opacity-100'}`}>
-        <button
-          onClick={() => prevScene && navigate(`/edit/${prevScene.id}`)}
-          disabled={!prevScene}
-          className="flex items-center gap-1 px-3 py-2 bg-ink-900/90 border border-ink-700 rounded-lg text-xs text-ink-300 disabled:opacity-30 disabled:cursor-not-allowed backdrop-blur-sm"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          Prev
+      {/* Scene nav */}
+      <div className={`fixed bottom-4 left-0 right-0 flex items-center justify-center gap-3 pb-safe transition-opacity ${focusMode ? 'opacity-0 pointer-events-none' : ''}`}>
+        <button onClick={() => prev && navigate(`/edit/${prev.id}`)} disabled={!prev}
+          className="flex items-center gap-1 px-3 py-2 bg-ink-900/90 border border-ink-800 rounded-full text-xs text-ink-300 disabled:opacity-30 backdrop-blur-sm">
+          <ChevronLeft className="w-4 h-4" /> Prev
         </button>
-        <span className="text-xs text-ink-500">
-          {currentIndex + 1} / {sortedScenes.length}
-        </span>
-        <button
-          onClick={() => nextScene && navigate(`/edit/${nextScene.id}`)}
-          disabled={!nextScene}
-          className="flex items-center gap-1 px-3 py-2 bg-ink-900/90 border border-ink-700 rounded-lg text-xs text-ink-300 disabled:opacity-30 disabled:cursor-not-allowed backdrop-blur-sm"
-        >
-          Next
-          <ChevronRight className="w-4 h-4" />
+        <span className="text-[11px] text-ink-600">{idx + 1} / {sorted.length}</span>
+        <button onClick={() => next && navigate(`/edit/${next.id}`)} disabled={!next}
+          className="flex items-center gap-1 px-3 py-2 bg-ink-900/90 border border-ink-800 rounded-full text-xs text-ink-300 disabled:opacity-30 backdrop-blur-sm">
+          Next <ChevronRight className="w-4 h-4" />
         </button>
       </div>
 
-      {/* Reverberation Tag Modal */}
+      {/* Settings sheet */}
       <AnimatePresence>
-        {showReverbTagging && (
-          <ReverbTagModal
-            scene={scene}
-            selectedText={selectedText}
-            onClose={() => {
-              setShowReverbTagging(false)
-              clearSelection()
-            }}
-          />
+        {showSettings && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 bg-black/40" onClick={() => setShowSettings(false)} />
+            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              className="fixed bottom-0 left-0 right-0 z-50 bg-ink-900 border-t border-ink-700 rounded-t-2xl p-5 pb-safe space-y-5">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-ink-100">Scene</span>
+                <button onClick={() => setShowSettings(false)} className="p-1 text-ink-400"><X className="w-4 h-4" /></button>
+              </div>
+
+              <button onClick={() => {
+                const base = isRead ? applyMask(scene.prose, manuscript.protagonistRealName, manuscript.maskModeEnabled) : localProse
+                setSelection(base, 0, base.length); setShowSettings(false); setShowRewrite(true)
+              }} disabled={!scene.prose.trim()}
+                className="w-full flex items-center justify-center gap-2 py-3 bg-amber-600 rounded-xl text-white font-medium disabled:opacity-40">
+                <Wand2 className="w-4 h-4" /> Redraft whole scene
+              </button>
+
+              {([
+                ['Mode', ['Edit', 'Read'], isRead ? 'Read' : 'Edit', (v: string) => setIsRead(v === 'Read')],
+                ['Text size', ['small', 'medium', 'large'], textSize, (v: string) => {
+                  const order = ['small', 'medium', 'large']
+                  let n = (order.indexOf(v) - order.indexOf(textSize) + 3) % 3
+                  while (n--) cycleTextSize()
+                }],
+              ] as const).map(([label, opts, cur, set]) => (
+                <div key={label}>
+                  <p className="text-xs text-ink-500 mb-1.5">{label}</p>
+                  <div className="flex gap-2">
+                    {opts.map(o => (
+                      <button key={o} onClick={() => set(o)}
+                        className={`flex-1 py-2.5 rounded-xl text-sm capitalize ${cur === o ? 'bg-ink-700 text-ink-50' : 'bg-ink-800 text-ink-400'}`}>{o}</button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-ink-300">Focus mode</span>
+                <button onClick={() => toggleFocusMode()}
+                  className={`relative w-11 h-6 rounded-full ${focusMode ? 'bg-amber-600' : 'bg-ink-700'}`}>
+                  <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${focusMode ? 'left-6' : 'left-1'}`} />
+                </button>
+              </div>
+
+              <button onClick={() => { toggleMaskMode(); }}
+                className="w-full flex items-center justify-between py-2 text-sm text-ink-300">
+                <span>Mask protagonist name</span>
+                {manuscript.maskModeEnabled && <Check className="w-4 h-4 text-amber-400" />}
+              </button>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
 
-      {/* Export Modal */}
-      <AnimatePresence>
-        {showExport && manuscript && (
-          <ExportModal
-            manuscript={manuscript}
-            onClose={() => setShowExport(false)}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Metadata Drawer */}
-      <MetadataDrawer
-        isOpen={showDrawer}
-        onClose={() => setShowDrawer(false)}
-        scene={scene}
-        mode={isReadMode ? 'read' : 'edit'}
-        onModeChange={(mode) => setIsReadMode(mode === 'read')}
-        textSize={textSize}
-        onTextSizeChange={(size) => {
-          const sizes = ['small', 'medium', 'large'] as const
-          const currentIndex = sizes.indexOf(textSize)
-          const targetIndex = sizes.indexOf(size)
-          const clicks = (targetIndex - currentIndex + 3) % 3
-          for (let i = 0; i < clicks; i++) {
-            cycleTextSize()
-          }
-        }}
-        focusMode={focusMode}
-        onFocusMode={toggleFocusMode}
-        onExport={() => setShowExport(true)}
-        onRedraftScene={() => {
-          const base = isReadMode
-            ? applyMask(scene.prose, manuscript.protagonistRealName, manuscript.maskModeEnabled)
-            : localProse
-          setShowDrawer(false)
-          setSelection(base, 0, base.length)
-          setShowRewrite(true)
-        }}
-        currentSceneIndex={currentIndex}
-        totalScenes={sortedScenes.length}
-        allScenes={sortedScenes}
-      />
-
-      {/* Tag Drawer */}
-      <TagDrawer
-        isOpen={tagDrawerOpen}
-        onClose={closeTagDrawer}
-        activeTag={activeTag}
-        onTagSelect={setActiveTag}
-        availableTags={AVAILABLE_TAGS}
-      />
-
-      {/* AI Assistant Drawer */}
-      <AIAssistantDrawer
-        isOpen={showAIAssistant}
-        onClose={() => setShowAIAssistant(false)}
-        ctx={aiContext}
-      />
-
-      {/* Inline Rewrite Panel */}
       <AnimatePresence>
         {showRewrite && selectedText && (
-          <RewritePanel
-            passage={selectedText}
-            ctx={aiContext}
+          <RewritePanel passage={selectedText} ctx={aiContext}
             onClose={() => { setShowRewrite(false); clearSelection() }}
-            onAccept={handleRewriteAccept}
-          />
+            onAccept={handleRewriteAccept} />
         )}
       </AnimatePresence>
+
+      <AIAssistantDrawer isOpen={showAIAssistant} onClose={() => setShowAIAssistant(false)} ctx={aiContext} />
     </div>
   )
 }
