@@ -35,6 +35,7 @@ config({ path: resolve(process.cwd(), '.env.local') })
 
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { MODELS } from '../api/_lib/models.js'
 
 const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY
@@ -60,8 +61,9 @@ const SYSTEM_TAGS = new Set<string>([
   'morning-followup',
   'bedtime-synthesis',
 ])
-// Conservative model for batch work — same family the live pipeline uses.
-const MODEL_NAME = 'gemini-2.5-flash-lite'
+// Same model the live pipeline uses (process-memory.ts) — sourced from the
+// shared constant so it can't drift out of sync again.
+const MODEL_NAME = MODELS.DEFAULT_CHAT
 
 interface Options {
   userId: string | null
