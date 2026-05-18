@@ -289,10 +289,20 @@ export default function EditorPage() {
               <div className="space-y-1.5 max-h-44 overflow-y-auto">
                 {proseHistory.getSnapshots(sceneId).map((snap, i) => (
                   <button key={i} onClick={async () => {
+                    // Keep the current working draft (incl. unsaved keystrokes)
+                    // recoverable, then cancel pending so it can't clobber the
+                    // restore. Restore is now fully reversible.
+                    const cur = isRead
+                      ? scene.prose
+                      : getStorageText(localProse, manuscript.protagonistRealName, manuscript.maskModeEnabled)
                     cancelPendingCommit()
                     await updateScene(sceneId, { prose: snap.prose })
                     setLocalProse(applyMask(snap.prose, manuscript.protagonistRealName, manuscript.maskModeEnabled))
-                    proseHistory.remove(sceneId, i); setShowHistory(false)
+                    // Remove the restored entry first (index still valid), then
+                    // record the prior draft so the restore is reversible.
+                    proseHistory.remove(sceneId, i)
+                    if (cur.trim() && cur !== snap.prose) proseHistory.snapshot(sceneId, cur, 'before restore')
+                    setShowHistory(false)
                   }} className="w-full text-left px-3 py-2 bg-ink-900 rounded-lg">
                     <div className="flex justify-between text-[11px] mb-0.5">
                       <span className="text-amber-500/70">{snap.trigger}</span>
