@@ -101,6 +101,14 @@ export default function EditorPage() {
     }
   }
 
+  // Drop any in-flight debounced save. Must run before rewrite / voice-insert
+  // / history-restore, otherwise a stale timer fires ~250ms later and
+  // overwrites the new content with the pre-edit text — silent data loss.
+  const cancelPendingCommit = useCallback(() => {
+    if (debounceRef.current != null) { clearTimeout(debounceRef.current); debounceRef.current = null }
+    pendingDisplayRef.current = null
+  }, [])
+
   const commit = (displayText: string) => {
     if (!scene || !manuscript) return
     pendingDisplayRef.current = displayText
@@ -181,6 +189,7 @@ export default function EditorPage() {
 
   const handleRewriteAccept = useCallback((newText: string) => {
     if (!scene || !manuscript) return
+    cancelPendingCommit()
     const base = isRead
       ? applyMask(scene.prose, manuscript.protagonistRealName, manuscript.maskModeEnabled)
       : localProse
@@ -195,7 +204,7 @@ export default function EditorPage() {
     updateSessionWords(raw.trim().split(/\s+/).filter(Boolean).length)
     clearSelection()
     setShowRewrite(false)
-  }, [scene, manuscript, localProse, isRead, selectionStart, selectionEnd, proseHistory, updateScene, updateSessionWords, clearSelection])
+  }, [scene, manuscript, localProse, isRead, selectionStart, selectionEnd, proseHistory, updateScene, updateSessionWords, clearSelection, cancelPendingCommit])
 
   const handleReadSelection = useCallback(() => {
     if (!isRead || !scene || !manuscript) return
@@ -212,6 +221,7 @@ export default function EditorPage() {
   const handleVoiceInsert = useCallback((text: string, targetField: 'prose' | 'footnotes') => {
     if (!scene || !manuscript) return
     if (targetField === 'prose') {
+      cancelPendingCommit()
       const at = cursorRef.current || localProse.length
       const before = localProse.slice(0, at), after = localProse.slice(at)
       const sep = before.length && !before.endsWith('\n\n') ? '\n\n' : ''
@@ -227,7 +237,7 @@ export default function EditorPage() {
       updateScene(scene.id, { footnotes: ex ? ex + '\n\n' + text : text })
       setShowFootnotes(true)
     }
-  }, [scene, manuscript, localProse, updateScene, updateSessionWords])
+  }, [scene, manuscript, localProse, updateScene, updateSessionWords, cancelPendingCommit])
 
   if (!scene || !manuscript) {
     return <div className="flex-1 flex items-center justify-center">
@@ -240,7 +250,8 @@ export default function EditorPage() {
     sectionLabel: scene.chapterTitle ?? 'Manuscript',
     sceneTitle: scene.title,
     sceneBeat: scene.sceneBeat,
-    prose: scene.prose,
+    // Respect mask mode: never send the protected real name to the model.
+    prose: applyMask(scene.prose, manuscript.protagonistRealName, manuscript.maskModeEnabled),
   }
   const footnotes = scene.footnotes.split(/\n\n+/).map(s => s.trim()).filter(Boolean)
 
@@ -278,6 +289,7 @@ export default function EditorPage() {
               <div className="space-y-1.5 max-h-44 overflow-y-auto">
                 {proseHistory.getSnapshots(sceneId).map((snap, i) => (
                   <button key={i} onClick={async () => {
+                    cancelPendingCommit()
                     await updateScene(sceneId, { prose: snap.prose })
                     setLocalProse(applyMask(snap.prose, manuscript.protagonistRealName, manuscript.maskModeEnabled))
                     proseHistory.remove(sceneId, i); setShowHistory(false)
