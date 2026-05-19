@@ -209,8 +209,9 @@ Voice-capture life annoyances → AI drafts automated fixes → approve → runs
 - `IDEA_ENGINE_SECRET` — Bearer token cron uses to call `/api/*` endpoints
 - `HOME_ASSISTANT_URL` + `HOME_ASSISTANT_TOKEN` — Smart home hub (optional)
 - `SONOS_HTTP_API_URL` — node-sonos-http-api bridge (optional)
-- `FRAME_TV_IP` — Samsung Frame TV local IP (optional)
 - `BIRD_CAM_URL` — Bird cam HTTP endpoint (optional)
+
+> Frame TV has no env var — it's driven through Home Assistant (`runner.ts`), since direct local-IP control isn't possible from the cloud.
 
 ## Session start
 
