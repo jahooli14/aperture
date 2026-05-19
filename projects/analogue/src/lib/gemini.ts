@@ -2,9 +2,7 @@ import { GoogleGenAI } from '@google/genai'
 import { passageContextWindow } from './rewrite'
 
 export const GEMINI_MODEL = 'gemini-3.1-flash-lite'
-// gemini-3-flash-preview was shut down 2026-03-09 (Gemini 3 preview line).
-// gemini-3.1-flash-lite is the current stable 3.x flash model.
-export const STRUCTURAL_MODEL = 'gemini-3.1-flash-lite'
+export const STRUCTURAL_MODEL = 'gemini-3-flash-preview'
 
 export interface GeminiContext {
   manuscriptTitle: string
