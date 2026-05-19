@@ -381,11 +381,14 @@ Self-check: any sentence sound like LinkedIn or a coach pitching? Rewrite or dro
         }
 
         if (!analysis) {
+          // Both attempts failed to parse. Never dump raw model text into the
+          // UI — that's exactly how corporate/oracle voice leaks past the gate.
+          // Stay quiet and honest instead.
           analysis = {
-            summary: 'Analysis generated but formatting failed.',
+            summary: "Couldn't pull this together right now.",
             patterns: [],
-            insight: lastResponseText.slice(0, 200),
-            next_step: 'Try again.',
+            insight: '',
+            next_step: '',
           }
         }
 
@@ -599,7 +602,7 @@ ${PLAIN_ENGLISH_RULES}`
             break
 
           case 'connect-dots':
-            prompt = `You've read everything this person has saved. Find the one thing they keep coming back to without realising it.
+            prompt = `You've read everything this person has saved. Point at two or three things they've put near each other without noticing.
 
 FOCUS ITEM:
 ${truncatedSource}
@@ -607,18 +610,19 @@ ${truncatedSource}
 KNOWLEDGE LAKE — ${corpusSize} items from their complete corpus (thoughts, articles, projects, lists):
 ${contextBlock}
 
-Find the single most surprising, non-obvious connection between this item and their broader corpus.
+1. One sentence: the plain thing this item shares with the others — a noun, not a thesis.
+2. Name 3 specific titles and the concrete detail each one adds. Quote the titles exactly.
+3. One concrete next move that uses the overlap — a tool against a workpiece, naming a real item. Skip this line if nothing concrete lines up.
 
-1. Name the pattern in one sharp, specific sentence — not "they're interested in X" but the precise way X shows up in their thinking.
-2. Show the evidence: walk through 3 specific items, noting exactly how the idea changes or deepens each time. Quote or closely paraphrase.
-3. Why it matters: what does seeing all three together reveal that any single one couldn't?
+No "what this reveals," no "what you couldn't see," no oracle voice. Point, don't interpret.
 
 ${PLAIN_ENGLISH_RULES}
-Name what you see in one sharp sentence. Show it in the items. Stop.`
+BAD: "Seeing these three together reveals a deeper truth about your creative ontology you couldn't see from inside."
+GOOD: "The cadence note, the Logic Pro tempo experiment, and the Steve Reich book are all about a steady pulse. Try 88 bpm on the running playlist sketch."`
             break
 
           case 'chase-thread':
-            prompt = `You're reading someone's notes and saved articles over time, following a single idea like a line through everything.
+            prompt = `You're reading someone's notes and saved articles over time, following one idea as it shows up again and again.
 
 FOCUS ITEM:
 ${truncatedSource}
@@ -626,14 +630,14 @@ ${truncatedSource}
 KNOWLEDGE LAKE — ${corpusSize} items from their complete corpus (thoughts, articles, projects, lists):
 ${contextBlock}
 
-Find the single most compelling recurring idea — the thing this person keeps coming back to without quite naming.
-
-1. Name it in one specific phrase. Not "creativity" — say what this person's actual version is, in plain words. Make it feel like THEIRS.
-2. Track it through at least 3 specific items, showing how it changes: where it starts shaky, where it gets confident, where it contradicts itself, where it shows up in a new domain.
-3. Where is this heading? Name the specific project, idea, or decision that would represent landing where they've been heading.
+1. Name the recurring idea in one plain phrase. Not "creativity" — their actual version, in words they'd use.
+2. Track it through 3 specific titles in order, one short clause each: where it starts, how it shifts, where it lands. Quote the titles exactly.
+3. Name the specific project or decision it's pointing at next. Skip this line if nothing concrete lines up.
 
 ${PLAIN_ENGLISH_RULES}
-Three sentences max. Name the items.`
+Three sentences max. Name the items. No "without quite naming it," no oracle voice.
+BAD: "A through-line of constraint runs through your work — the thing you keep circling without quite naming."
+GOOD: "You keep picking the limit before you start: the Bed By Ten note, the running playlist project, the Steve Reich book. Next is setting one fixed length for the EP."`
             break
 
           case 'provoke':
@@ -675,14 +679,15 @@ GOOD: "Three months ago you wrote that the song needs to be done by August. Now 
             : `${prompt}\n\nPREVIOUS ATTEMPT TRIPPED THE VOICE GATE: ${responseText.slice(0, 240).replace(/\n+/g, ' ')}\nRewrite using the rules above. No corporate or coach voice. Concrete nouns, short sentences.`
           const result = await model.generateContent(finalPrompt)
           responseText = result.response.text()
-          const violations = findVoiceViolations(responseText)
-          if (violations.length === 0 || attempt === 1) {
+          if (findVoiceViolations(responseText).length === 0) {
             cleanText = responseText
           }
         }
 
+        // If it still trips the gate after a retry, stay quiet rather than
+        // ship analyst voice. A short honest line beats corporate prose.
         return res.status(200).json({
-          result: cleanText ?? responseText,
+          result: cleanText ?? "Nothing clean to say here yet — try again in a moment.",
           actionType,
           itemTitle: sourceTitle,
           connectionCount: connections?.length || 0,
