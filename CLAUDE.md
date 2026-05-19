@@ -33,7 +33,7 @@ This applies to everything Polymath produces or surfaces: AI prompts, AI-generat
 - Real words people say. No "leveraging," "synergies," "soundscapes," "unlocking momentum," "psychological defenses," "feature-rich," "narrative substrate."
 - No invented hyphenated jargon in scare-quotes ("friction-over-function," "blind-edit," "high-impact transition"). If a term needs scare-quotes to be understood, rewrite it.
 - No analyst voice. The app is not consulting at the user. It's a friend who's paying attention.
-- One idea per sentence. Long, hedged, multi-clause analysis is the failure mode (see the Context Engine sidebar — pretentious in exactly this way).
+- One idea per sentence. Long, hedged, multi-clause analysis is the failure mode — the analyst/oracle voice ("what you couldn't see," "what this reveals").
 - Concrete nouns over abstract ones. "Logic Pro trial expired" beats "your reliance on the 90-day trial of Logic Pro acted as an artificial deadline."
 - Imperative verbs are fine. Time estimates are fine. Don't hedge.
 - If you can't say it plainly, you don't understand it well enough to surface it. Stay silent.
@@ -54,7 +54,7 @@ Polymath is a **creative harness**. The user opens it with willpower to spend on
 
 - **Todos / Fix Queue / AudioPen** — historical or unused. Code may still exist for these. Don't reference them as live features. If asked to extend them, ask first.
 - **Idea Engine emails** — separate Python project, not a Polymath surface.
-- **Context Engine sidebar** (`src/components/context/ContextSidebar.tsx`) — exists, surfaces an "AI Analysis" panel from many pages, but the output is the exact pretentious-coach voice the plain-English mantra forbids. **Needs review and rewrite of its prompt** before extending. Owner forgot it existed.
+- **Context Engine sidebar** (`src/components/context/ContextSidebar.tsx`) — surfaces an "AI Analysis" panel from many pages. Prompts in `api/connections.ts` (`analyze` + the `ai-action` types) were rewritten to plain English and are now voice-gated via `findVoiceViolations` with a quiet fallback. Still owner-unloved — confirm it's wanted before extending. If you add a new `ai-action` prompt, include a concrete BAD/GOOD anti-example like the existing ones.
 
 ### Project = creative goal with a defined output
 
@@ -209,8 +209,9 @@ Voice-capture life annoyances → AI drafts automated fixes → approve → runs
 - `IDEA_ENGINE_SECRET` — Bearer token cron uses to call `/api/*` endpoints
 - `HOME_ASSISTANT_URL` + `HOME_ASSISTANT_TOKEN` — Smart home hub (optional)
 - `SONOS_HTTP_API_URL` — node-sonos-http-api bridge (optional)
-- `FRAME_TV_IP` — Samsung Frame TV local IP (optional)
 - `BIRD_CAM_URL` — Bird cam HTTP endpoint (optional)
+
+> Frame TV has no env var — it's driven through Home Assistant (`runner.ts`), since direct local-IP control isn't possible from the cloud.
 
 ## Session start
 
