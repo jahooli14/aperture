@@ -79,12 +79,16 @@ export const useAIStore = create<AIStore>()(
           }))
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Something went wrong'
+          const isModelError = /not found|NOT_FOUND|not supported|404|deprecated/i.test(message)
+          const isKeyError = !isModelError && (message.includes('API_KEY') || message.includes('403'))
           set({
             isLoading: false,
             streamingContent: '',
-            error: message.includes('API_KEY') || message.includes('403')
-              ? 'Invalid API key. Check your Google AI Studio key.'
-              : message
+            error: isModelError
+              ? 'This Gemini model is unavailable. The app needs updating.'
+              : isKeyError
+                ? 'Invalid API key. Check your Google AI Studio key.'
+                : message
           })
         }
       }
