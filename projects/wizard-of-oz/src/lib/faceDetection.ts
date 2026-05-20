@@ -25,6 +25,9 @@ const IDX_RIGHT_IRIS = 468;
 const IDX_LEFT_EYE_OUTER = 263;
 const IDX_LEFT_EYE_INNER = 362;
 const IDX_LEFT_IRIS = 473;
+// Vertical face axis — used to reject upside-down detections.
+const IDX_FOREHEAD = 10;
+const IDX_CHIN = 152;
 
 type Landmark = { x: number; y: number; z?: number };
 
@@ -61,8 +64,23 @@ function buildCoordsFromFace(
     !landmarks[IDX_RIGHT_EYE_OUTER] ||
     !landmarks[IDX_RIGHT_EYE_INNER] ||
     !landmarks[IDX_LEFT_EYE_OUTER] ||
-    !landmarks[IDX_LEFT_EYE_INNER]
+    !landmarks[IDX_LEFT_EYE_INNER] ||
+    !landmarks[IDX_FOREHEAD] ||
+    !landmarks[IDX_CHIN]
   ) {
+    return null;
+  }
+
+  // MediaPipe is trained on upright faces. Fed an upside-down (or sideways)
+  // image it can still return landmarks, but with subject-left/right labels
+  // swapped — which silently produces a 180° rotation error downstream. Reject
+  // detections where the forehead-to-chin vector isn't pointing down in this
+  // canvas; the four-orientation search will then settle on the correct one.
+  const forehead = landmarks[IDX_FOREHEAD];
+  const chin = landmarks[IDX_CHIN];
+  const axisDx = chin.x - forehead.x;
+  const axisDy = chin.y - forehead.y;
+  if (axisDy <= 0 || Math.abs(axisDx) > axisDy) {
     return null;
   }
 

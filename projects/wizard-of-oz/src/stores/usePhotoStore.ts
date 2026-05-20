@@ -512,15 +512,15 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
   /**
    * Re-align an existing photo using user-corrected eye coordinates.
    *
-   * Fetches the current displayed image, runs alignPhoto() with the supplied
-   * coords, uploads the re-aligned bytes to a new storage path, and updates the
+   * Fetches the true original, runs alignPhoto() with the supplied coords,
+   * uploads the re-aligned bytes to a new storage path, and updates the
    * photo row's `aligned_url`, `eye_coordinates`, and metadata.zoom_level.
    *
-   * Note: because we currently store `original_url === aligned_url` at upload
-   * time, re-alignment starts from an already-aligned image. The supplied
-   * coords are in that image's space, so the final eye positions are still
-   * correct — there's just one extra resample step compared to aligning from a
-   * true untouched original.
+   * Re-aligning from the original is what makes rotation/zoom adjustments
+   * lossless — every edit re-warps untouched pixels, so the crop frame can
+   * move freely without revealing white margins from a prior tight crop.
+   * Falls back to the aligned image only for legacy rows that pre-date
+   * separate-original storage (where original_url === aligned_url).
    */
   reAlignPhoto: async (photoId, newEyeCoords, birthdate) => {
     const photo = get().photos.find((p) => p.id === photoId);
@@ -540,13 +540,13 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
     // We still keep the row-count check below as a backstop in case RLS ever
     // rejects the update — that way we fail loud instead of phantom-saving.
 
-    // Pick the best available URL to re-process. Signed URLs are preferred
-    // because the bucket may be private.
+    // Always start from the true original when one exists, so adjusting
+    // rotation or zoom doesn't re-crop already-cropped pixels.
     const sourceUrl =
-      photo.signed_aligned_url ||
-      photo.aligned_url ||
       photo.signed_original_url ||
-      photo.original_url;
+      photo.original_url ||
+      photo.signed_aligned_url ||
+      photo.aligned_url;
     if (!sourceUrl) throw new Error('No source image available');
 
     // Fetch the image and wrap it as a File so alignPhoto can consume it.

@@ -52,7 +52,13 @@ export function PhotoBottomSheet({ photo: photoProp, isOpen, onClose, onDelete }
     try {
       setAdjustError('');
       setAdjustState({ phase: 'loading' });
-      const sourceUrl = getPhotoDisplayUrl(photo);
+      // Edit on the true original (not the already-cropped aligned render)
+      // so panning / rotating / zooming has the full source to draw from.
+      // Falls back to the aligned URL for legacy rows where they're the same.
+      const sourceUrl =
+        photo.signed_original_url ||
+        photo.original_url ||
+        getPhotoDisplayUrl(photo);
       const response = await fetch(sourceUrl);
       if (!response.ok) throw new Error(`Couldn't load photo (${response.status})`);
       const blob = await response.blob();
