@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { X, Calendar, Image, Trash2, Eye, EyeOff, Baby, MessageSquare, Edit2, Check, MapPin, Target } from 'lucide-react';
 import type { Database } from '../types/database';
@@ -31,7 +31,13 @@ export function PhotoBottomSheet({ photo: photoProp, isOpen, onClose, onDelete }
   // (e.g. PhotoGallery) pass `photo` as a captured reference, which stays
   // stale after mutations like reAlignPhoto() replace the stored row. Reading
   // from the store ensures the sheet re-renders with new URLs / coords.
-  const photo = photos.find((p) => p.id === photoProp.id) ?? photoProp;
+  //
+  // Memoized so we don't rescan the entire photos array on every state change
+  // inside this sheet (note edit, adjust phase, place modal, etc.).
+  const photo = useMemo(
+    () => photos.find((p) => p.id === photoProp.id) ?? photoProp,
+    [photos, photoProp]
+  );
 
   const [isAddPlaceModalOpen, setIsAddPlaceModalOpen] = useState(false);
   const [adjustState, setAdjustState] = useState<

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MapPin, Plus, Trash2, Edit2, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePlaceStore } from '../stores/usePlaceStore';
@@ -64,28 +64,49 @@ export function PlacesList({ onEditPlace }: PlacesListProps) {
     }
   };
 
-  const filteredPlaces = selectedCategory
-    ? placesWithStats.filter((p) => p.category === selectedCategory)
-    : placesWithStats;
-
-  const sortedPlaces = [...filteredPlaces].sort((a, b) => {
+  // Memoize filter+sort so we don't recompute (and allocate) on every render
+  // when the user expands a row or scrolls — those changes don't touch
+  // placesWithStats/sortBy/selectedCategory.
+  const sortedPlaces = useMemo(() => {
+    const filtered = selectedCategory
+      ? placesWithStats.filter((p) => p.category === selectedCategory)
+      : placesWithStats;
+    const copy = [...filtered];
     if (sortBy === 'name') {
-      return a.name.localeCompare(b.name);
+      copy.sort((a, b) => a.name.localeCompare(b.name));
+    } else {
+      copy.sort((a, b) => {
+        const dateA = a.first_visit_date ? new Date(a.first_visit_date).getTime() : Infinity;
+        const dateB = b.first_visit_date ? new Date(b.first_visit_date).getTime() : Infinity;
+        return dateA - dateB;
+      });
     }
-    // First visit
-    const dateA = a.first_visit_date ? new Date(a.first_visit_date).getTime() : Infinity;
-    const dateB = b.first_visit_date ? new Date(b.first_visit_date).getTime() : Infinity;
-    return dateA - dateB;
-  });
+    return copy;
+  }, [placesWithStats, selectedCategory, sortBy]);
 
-  // Get unique categories from places
-  const availableCategories = Array.from(new Set(placesWithStats.map((p) => p.category || 'other'))).sort();
+  // Get unique categories from places — stable identity unless the underlying
+  // list changes, otherwise the category chip row re-renders every keystroke.
+  const availableCategories = useMemo(
+    () => Array.from(new Set(placesWithStats.map((p) => p.category || 'other'))).sort(),
+    [placesWithStats]
+  );
 
-  const getPlaceVisits = (placeId: string) => {
-    return placeVisits
-      .filter((pv) => pv.place_id === placeId)
-      .sort((a, b) => new Date(b.visit_date).getTime() - new Date(a.visit_date).getTime());
-  };
+  // Pre-bucket visits by place so each row's lookup is O(1) instead of an
+  // O(n) filter + sort over the entire visit list.
+  const visitsByPlace = useMemo(() => {
+    const map = new Map<string, typeof placeVisits>();
+    for (const pv of placeVisits) {
+      const list = map.get(pv.place_id);
+      if (list) list.push(pv);
+      else map.set(pv.place_id, [pv]);
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => new Date(b.visit_date).getTime() - new Date(a.visit_date).getTime());
+    }
+    return map;
+  }, [placeVisits]);
+
+  const getPlaceVisits = (placeId: string) => visitsByPlace.get(placeId) ?? [];
 
   const formatDate = (dateString: string | null) => {
     return formatDateForDisplay(dateString);

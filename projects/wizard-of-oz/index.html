@@ -7,6 +7,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0891B2" />
     <meta name="description" content="Track your baby's growth with daily photos" />
+    <!-- Preconnect to Supabase: starts DNS + TLS during HTML parse so the first
+         photo/data request doesn't pay the handshake cost. The exact origin is
+         injected from VITE_SUPABASE_URL inside main.tsx (we don't know it at
+         build-time of this file), but dns-prefetch on the wildcard helps too. -->
+    <link rel="dns-prefetch" href="https://supabase.co" />
+    <link rel="preconnect" href="https://supabase.co" crossorigin />
     <title>Pupils - Baby Photo Timeline</title>
   </head>
   <body>
