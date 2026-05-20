@@ -346,11 +346,33 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
         throw insertError || new Error('Failed to create photo record');
       }
 
-      // Refresh photos
-      await get().fetchPhotos();
+      // Optimistically insert the new photo so the gallery shows it on the next
+      // frame. Previously we awaited fetchPhotos() here, which made the success
+      // toast wait on a full DB+signed-URL round trip (~500-2000ms) before
+      // anything visible changed.
+      //
+      // Signed URLs will be populated by the background refetch below; until
+      // then we expose the public URL on signed_aligned_url so getPhotoDisplayUrl
+      // can render immediately. If the bucket is private the signed version
+      // swaps in seconds later — the optimistic image still loads from cache
+      // because the upload just wrote it.
+      const insertedPhoto = photoData as Photo;
+      const optimisticPhoto: Photo = {
+        ...insertedPhoto,
+        signed_original_url: insertedPhoto.signed_original_url ?? insertedPhoto.original_url,
+        signed_aligned_url:
+          insertedPhoto.signed_aligned_url ?? insertedPhoto.aligned_url ?? insertedPhoto.original_url,
+      };
+      const merged = [optimisticPhoto, ...get().photos.filter(p => p.id !== optimisticPhoto.id)]
+        .sort((a, b) => b.upload_date.localeCompare(a.upload_date));
+      set({ photos: merged, uploading: false });
 
-      set({ uploading: false });
-      return (photoData as Photo).id;
+      // Refresh photos in the background (no await) so signed URLs and any
+      // server-side fields (e.g. partner-shared rows) catch up without holding
+      // the caller's success animation hostage.
+      void get().fetchPhotos();
+
+      return insertedPhoto.id;
     } catch (error) {
       logger.error('Upload failed', { error: error instanceof Error ? error.message : String(error) }, 'PhotoStore');
       set({ uploading: false });

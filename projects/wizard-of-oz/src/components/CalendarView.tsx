@@ -519,13 +519,17 @@ function TimelineView({
             // Calculate photos between this date and the next one
             const nextDate = allDates[index + 1];
             const photoCount = nextDate ? getPhotoCountBetweenDates(nextDate, date) : 0;
+            // Cap per-row stagger at 8 rows so a long history doesn't make the
+            // timeline take seconds to finish entering. After row 8 every entry
+            // animates together.
+            const rowDelay = Math.min(index, 8) * 0.03;
 
             return (
               <motion.div key={date}>
                 <motion.div
-                  initial={{ opacity: 0, x: -20 }}
+                  initial={{ opacity: 0, x: -12 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
+                  transition={{ delay: rowDelay, duration: 0.18, ease: 'easeOut' }}
                   className="relative pl-20"
                 >
                   {/* Timeline dot with pulse effect */}
@@ -552,7 +556,7 @@ function TimelineView({
                               key={visit.id}
                               initial={{ opacity: 0 }}
                               animate={{ opacity: 1 }}
-                              transition={{ delay: visitIndex * 0.05 }}
+                              transition={{ delay: Math.min(visitIndex, 4) * 0.02, duration: 0.15 }}
                               className="px-4 py-3 hover:bg-yellow-50 transition-colors"
                             >
                               <div className="flex items-start gap-3">
@@ -578,7 +582,7 @@ function TimelineView({
                             key={place.id}
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            transition={{ delay: placeIndex * 0.05 }}
+                            transition={{ delay: Math.min(placeIndex, 4) * 0.02, duration: 0.15 }}
                             className="px-4 py-3 hover:bg-blue-50 transition-colors"
                           >
                             <div className="flex items-start gap-3">
@@ -600,7 +604,7 @@ function TimelineView({
                               key={achievement.id}
                               initial={{ opacity: 0 }}
                               animate={{ opacity: 1 }}
-                              transition={{ delay: milestoneIndex * 0.05 }}
+                              transition={{ delay: Math.min(milestoneIndex, 4) * 0.02, duration: 0.15 }}
                               className="px-4 py-3 bg-yellow-50 hover:bg-yellow-100 transition-colors"
                             >
                               <div className="flex items-center gap-3">
@@ -619,9 +623,9 @@ function TimelineView({
                 {/* Photo count between dates */}
                 {photoCount > 0 && (
                   <motion.div
-                    initial={{ opacity: 0, y: -10 }}
+                    initial={{ opacity: 0, y: -6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 + 0.1 }}
+                    transition={{ delay: rowDelay + 0.08, duration: 0.15 }}
                     className="relative pl-20 my-3"
                   >
                     <div className="flex items-center gap-3 text-sm text-gray-500">

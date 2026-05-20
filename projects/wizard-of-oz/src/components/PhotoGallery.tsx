@@ -3,8 +3,6 @@ import { motion } from 'framer-motion';
 import { lazyRetry } from '../lib/lazyRetry';
 import { usePhotoStore } from '../stores/usePhotoStore';
 import { useSettingsStore } from '../stores/useSettingsStore';
-import { DeleteConfirmModal } from './DeleteConfirmModal';
-import { PhotoBottomSheet } from './PhotoBottomSheet';
 import { triggerHaptic } from '../lib/haptics';
 import { logger } from '../lib/logger';
 import { PhotoSkeleton } from './PhotoSkeleton';
@@ -80,6 +78,14 @@ function ImageWithRetry({ src, alt, className, privacyMode }: ImageWithRetryProp
 
 // Lazy load PhotoOverlay since it's only shown on user interaction
 const PhotoOverlay = lazy(lazyRetry(() => import('./PhotoOverlay').then(m => ({ default: m.PhotoOverlay }))));
+
+// PhotoBottomSheet pulls in EyeAdjust + AddPlaceModal + place store — defer it
+// until the user actually taps a photo so the initial Watch tab is lighter.
+const PhotoBottomSheet = lazy(lazyRetry(() => import('./PhotoBottomSheet').then(m => ({ default: m.PhotoBottomSheet }))));
+
+// DeleteConfirmModal only renders after a delete action — no need to ship it
+// on first paint.
+const DeleteConfirmModal = lazy(lazyRetry(() => import('./DeleteConfirmModal').then(m => ({ default: m.DeleteConfirmModal }))));
 
 type Photo = Database['public']['Tables']['photos']['Row'];
 
@@ -312,50 +318,48 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-        {filteredPhotos.map((photo, index) => (
-          <motion.div
-            key={photo.id}
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            whileHover={{ scale: 1.05, y: -4 }}
-            whileTap={{ scale: 0.95 }}
-            transition={{
-              delay: index * 0.05,
-              type: 'spring',
-              stiffness: 400,
-              damping: 17
-            }}
-            onClick={(e) => handlePhotoClick(photo, e)}
-            className="relative aspect-square rounded-lg overflow-hidden bg-gray-200 shadow-md hover:shadow-2xl transition-shadow cursor-pointer group select-none"
-          >
-            <>
+        {filteredPhotos.map((photo) => {
+          // Comment chip metadata — computed inline so we don't churn the JSX
+          // object identity per render.
+          let chipEmoji = '';
+          if (photo.metadata && typeof photo.metadata === 'object') {
+            const metadata = photo.metadata as Record<string, unknown>;
+            const note = ('note' in metadata && metadata.note) ? String(metadata.note) : '';
+            if (note.trim()) {
+              chipEmoji = ('emoji' in metadata && metadata.emoji) ? String(metadata.emoji) : '💬';
+            }
+          }
+
+          // Plain <button> with CSS transitions instead of framer-motion per
+          // tile. The old stagger (delay: index * 0.05) blocked the grid for
+          // ~5s with 100 photos before everything was visible — now the whole
+          // grid paints in one frame, with CSS-only press/hover affordances.
+          return (
+            <button
+              key={photo.id}
+              type="button"
+              onClick={(e) => handlePhotoClick(photo, e)}
+              className="relative aspect-square rounded-lg overflow-hidden bg-gray-200 shadow-md hover:shadow-2xl active:scale-[0.97] hover:-translate-y-0.5 transition-[transform,box-shadow] duration-150 cursor-pointer group select-none touch-manipulation"
+            >
               {/* Smooth background placeholder - no more skeleton flash */}
               <div className="absolute inset-0 bg-gray-100" />
 
               <ImageWithRetry
                 src={getPhotoDisplayUrl(photo)}
                 alt={`Photo from ${photo.upload_date}`}
-                className="relative w-full h-full object-cover transition-opacity duration-500"
+                className="relative w-full h-full object-cover transition-opacity duration-300"
                 privacyMode={privacyMode}
               />
 
-              {/* Comment indicator chip - using same logic as PhotoBottomSheet */}
-              {(() => {
-                if (!photo.metadata || typeof photo.metadata !== 'object') return null;
-                const metadata = photo.metadata as Record<string, unknown>;
-                const note = ('note' in metadata && metadata.note) ? String(metadata.note) : '';
-                const emoji = ('emoji' in metadata && metadata.emoji) ? String(metadata.emoji) : '💬';
-
-                return note.trim() && (
-                  <div className="absolute top-2 right-2 bg-blue-500/90 backdrop-blur-sm text-white px-2 py-1 rounded-full flex items-center shadow-lg">
-                    <span className="text-base">{emoji}</span>
-                  </div>
-                );
-              })()}
+              {chipEmoji && (
+                <div className="absolute top-2 right-2 bg-blue-500/90 backdrop-blur-sm text-white px-2 py-1 rounded-full flex items-center shadow-lg">
+                  <span className="text-base">{chipEmoji}</span>
+                </div>
+              )}
 
               {/* Overlay with date - always visible on mobile, hover on desktop */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                <div className="absolute bottom-0 left-0 right-0 p-2 md:p-3">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity pointer-events-none">
+                <div className="absolute bottom-0 left-0 right-0 p-2 md:p-3 text-left">
                   <p className="text-white text-xs md:text-sm font-medium">
                     {new Date(photo.upload_date).toLocaleDateString('en-US', {
                       month: 'short',
@@ -364,9 +368,9 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
                   </p>
                 </div>
               </div>
-            </>
-          </motion.div>
-        ))}
+            </button>
+          );
+        })}
       </div>
 
       {/* Photo Overlay - Lazy loaded */}
@@ -380,87 +384,95 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
         </Suspense>
       )}
 
-      {/* Photo Bottom Sheet */}
-      <PhotoBottomSheet
-        photo={selectedPhoto}
-        isOpen={isBottomSheetOpen}
-        onClose={() => {
-          setIsBottomSheetOpen(false);
-          setSelectedPhoto(null);
-        }}
-        onDelete={() => {
-          if (selectedPhoto) {
-            setPhotoToDelete(selectedPhoto);
-          }
-        }}
-      />
+      {/* Photo Bottom Sheet — lazy: only mounts after the first photo click */}
+      {(isBottomSheetOpen || selectedPhoto) && (
+        <Suspense fallback={null}>
+          <PhotoBottomSheet
+            photo={selectedPhoto}
+            isOpen={isBottomSheetOpen}
+            onClose={() => {
+              setIsBottomSheetOpen(false);
+              setSelectedPhoto(null);
+            }}
+            onDelete={() => {
+              if (selectedPhoto) {
+                setPhotoToDelete(selectedPhoto);
+              }
+            }}
+          />
+        </Suspense>
+      )}
 
-      {/* Delete Confirmation Modal */}
-      <DeleteConfirmModal
-        photo={photoToDelete}
-        isOpen={!!photoToDelete}
-        onClose={() => setPhotoToDelete(null)}
-        onConfirm={async () => {
-          if (photoToDelete) {
-            try {
-              // Delete the photo
-              await deletePhoto(photoToDelete.id);
+      {/* Delete Confirmation Modal — lazy: only mounts after a delete tap */}
+      {photoToDelete && (
+        <Suspense fallback={null}>
+          <DeleteConfirmModal
+            photo={photoToDelete}
+            isOpen={!!photoToDelete}
+            onClose={() => setPhotoToDelete(null)}
+            onConfirm={async () => {
+              if (photoToDelete) {
+                try {
+                  // Delete the photo
+                  await deletePhoto(photoToDelete.id);
 
-              // Close modal
-              setPhotoToDelete(null);
+                  // Close modal
+                  setPhotoToDelete(null);
 
-              // Trigger haptic feedback
-              triggerHaptic('warning');
+                  // Trigger haptic feedback
+                  triggerHaptic('warning');
 
-              // Show undo toast with action
-              const photoDate = new Date(photoToDelete.upload_date).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-              });
+                  // Show undo toast with action
+                  const photoDate = new Date(photoToDelete.upload_date).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                  });
 
-              // Capture the photo in closure for undo callback
-              const photoToRestore = photoToDelete;
+                  // Capture the photo in closure for undo callback
+                  const photoToRestore = photoToDelete;
 
-              if (showToast) {
-                showToast(
-                  `Photo from ${photoDate} deleted`,
-                  'info',
-                  'UNDO',
-                  () => {
-                    // Restore the photo
-                    restorePhoto(photoToRestore);
-                    triggerHaptic('success');
-                    if (undoTimer) {
-                      clearTimeout(undoTimer);
-                      setUndoTimer(null);
-                    }
+                  if (showToast) {
+                    showToast(
+                      `Photo from ${photoDate} deleted`,
+                      'info',
+                      'UNDO',
+                      () => {
+                        // Restore the photo
+                        restorePhoto(photoToRestore);
+                        triggerHaptic('success');
+                        if (undoTimer) {
+                          clearTimeout(undoTimer);
+                          setUndoTimer(null);
+                        }
+                      }
+                    );
                   }
-                );
+
+                  // Set timer to clear undo after 5 seconds
+                  if (undoTimer) {
+                    clearTimeout(undoTimer);
+                  }
+
+                  const timer = setTimeout(() => {
+                    // Timer expired, undo is no longer available
+                    setUndoTimer(null);
+                  }, 5000);
+
+                  setUndoTimer(timer);
+
+                } catch (error) {
+                  logger.error('Failed to delete photo', { error: error instanceof Error ? error.message : String(error), photoId: photoToDelete.id }, 'PhotoGallery');
+                  if (showToast) {
+                    showToast('Failed to delete photo', 'error');
+                  }
+                  // Keep modal open on error so user can try again
+                }
               }
-
-              // Set timer to clear undo after 5 seconds
-              if (undoTimer) {
-                clearTimeout(undoTimer);
-              }
-
-              const timer = setTimeout(() => {
-                // Timer expired, undo is no longer available
-                setUndoTimer(null);
-              }, 5000);
-
-              setUndoTimer(timer);
-
-            } catch (error) {
-              logger.error('Failed to delete photo', { error: error instanceof Error ? error.message : String(error), photoId: photoToDelete.id }, 'PhotoGallery');
-              if (showToast) {
-                showToast('Failed to delete photo', 'error');
-              }
-              // Keep modal open on error so user can try again
-            }
-          }
-        }}
-        deleting={deleting}
-      />
+            }}
+            deleting={deleting}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

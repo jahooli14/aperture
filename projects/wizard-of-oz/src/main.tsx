@@ -3,6 +3,22 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 
+// Kick off DNS + TLS to the real Supabase project as early as possible. The
+// static index.html only knows the wildcard origin; here we have the env var,
+// so we can preconnect to the exact subdomain before React mounts.
+try {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  if (supabaseUrl) {
+    const link = document.createElement('link');
+    link.rel = 'preconnect';
+    link.href = supabaseUrl;
+    link.crossOrigin = 'anonymous';
+    document.head.appendChild(link);
+  }
+} catch {
+  // Non-fatal — preconnect is a hint, not a requirement.
+}
+
 // Global error handler for uncaught errors
 window.addEventListener('error', (event) => {
   console.error('Uncaught error:', event.error);
