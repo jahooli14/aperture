@@ -19,13 +19,15 @@ import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence, useMotionValue, useTransform, type PanInfo } from 'framer-motion'
 import {
   ArrowRight, ChevronDown, ChevronRight,
-  X, Bookmark, Archive, Pin, RotateCcw, WifiOff,
+  X, Bookmark, Archive, Pin, RotateCcw, WifiOff, Plus, Settings2,
   Film, Music, Monitor, Book, MapPin, Gamepad2, Calendar, FileText, Quote, Box,
 } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
 import { useToast } from '../ui/toast'
 import { readingDb } from '../../lib/db'
 import { useReadingStore } from '../../stores/useReadingStore'
+import { useRSSStore } from '../../stores/useRSSStore'
+import { FeedSearchSheet } from '../reading/FeedSearchSheet'
 
 const LIST_TYPE_ICONS: Record<string, React.ElementType> = {
   film: Film, music: Music, tech: Monitor, book: Book, place: MapPin,
@@ -324,6 +326,14 @@ export function ConsumingWidget() {
   const [recentlyArchived, setRecentlyArchived] = useState<ConsumingArticle[]>([])
   const [showRecentlyDismissed, setShowRecentlyDismissed] = useState(false)
   const [showRecentlyArchived, setShowRecentlyArchived] = useState(false)
+  // Add-feed bottom sheet — opened from the inline "+ Add feed" button at
+  // the bottom of New reads. Shared with /rss page.
+  const [addFeedOpen, setAddFeedOpen] = useState(false)
+  const fetchFeeds = useRSSStore(s => s.fetchFeeds)
+  const feeds = useRSSStore(s => s.feeds)
+  // Prime the feeds store so the sheet can show "already subscribed" badges
+  // and so /rss has fresh data when the user navigates.
+  useEffect(() => { fetchFeeds() }, [fetchFeeds])
   // navigator.onLine plus event listeners. Drives the "offline" badge and
   // disables Load more / shows stale data freely.
   const [isOnline, setIsOnline] = useState(() =>
@@ -553,6 +563,40 @@ export function ConsumingWidget() {
   if (!loaded) return null
 
   const hasAnything = activeItems.length > 0 || saved.length > 0 || feedReads.length > 0
+  // Zero-state with no feeds: show a minimal CTA so the user can subscribe.
+  // Without this they'd see the "now consuming" header in HomePage with
+  // nothing below it.
+  if (!hasAnything && feeds.length === 0) {
+    return (
+      <section className="pb-8">
+        <div
+          className="relative rounded-2xl overflow-hidden p-6 text-center"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.035), rgba(15,24,41,0.45))',
+            backdropFilter: 'blur(14px)',
+            border: '1px solid rgba(255,255,255,0.06)',
+          }}
+        >
+          <p className="text-[14px] text-[var(--brand-text-secondary)] mb-3">
+            Subscribe to a feed to start seeing headlines here.
+          </p>
+          <button
+            type="button"
+            onClick={() => setAddFeedOpen(true)}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.08] text-[13px] font-medium text-[var(--brand-text-primary)] transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add your first feed
+          </button>
+        </div>
+        <FeedSearchSheet
+          open={addFeedOpen}
+          onOpenChange={setAddFeedOpen}
+          onSubscribed={() => fetchFeeds()}
+        />
+      </section>
+    )
+  }
   if (!hasAnything) return null
 
   const shownActive = activeItems.slice(0, 3)
@@ -710,7 +754,47 @@ export function ConsumingWidget() {
             )}
           </>
         )}
+
+        {/* Widget footer — quick "+ Add feed" opens the inline sheet,
+            "Manage" goes to /rss for unsubscribe / toggle. Always visible
+            when the widget renders so the user can always find subscribe. */}
+        <div className="flex items-center border-t border-white/[0.04]">
+          <button
+            type="button"
+            onClick={() => setAddFeedOpen(true)}
+            className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-[11px] uppercase tracking-[0.15em] text-[var(--brand-text-muted)] opacity-70 hover:opacity-100 hover:bg-white/[0.025] transition-all"
+          >
+            <Plus className="h-3 w-3" />
+            <span>Add feed</span>
+          </button>
+          <div className="h-5 w-px bg-white/[0.05]" aria-hidden />
+          <Link
+            to="/rss"
+            className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-[11px] uppercase tracking-[0.15em] text-[var(--brand-text-muted)] opacity-70 hover:opacity-100 hover:bg-white/[0.025] transition-all"
+          >
+            <Settings2 className="h-3 w-3" />
+            <span>Manage</span>
+          </Link>
+        </div>
       </div>
+
+      <FeedSearchSheet
+        open={addFeedOpen}
+        onOpenChange={setAddFeedOpen}
+        onSubscribed={() => {
+          // Refresh the consuming surface so newly-subscribed items appear.
+          // A second-level effect would handle this cleaner; for now just
+          // a soft refetch via the existing endpoint.
+          fetch('/api/reading?resource=consuming').then(async (res) => {
+            if (!res.ok) return
+            const data = await res.json()
+            setSaved(data.saved ?? saved)
+            setFeedReads(data.new ?? feedReads)
+            setHasMore(!!data.new_has_more)
+            setNextOffset(data.new_next_offset ?? null)
+          }).catch(() => {})
+        }}
+      />
     </section>
   )
 }
