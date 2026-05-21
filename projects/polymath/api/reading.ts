@@ -15,7 +15,16 @@ import { parseHTML } from 'linkedom'
 import { updateItemConnections } from './_lib/connection-logic.js' // New import
 import { MODELS } from './_lib/models.js'
 
-const rssParser = new Parser()
+// Some feeds reject default node-fetch / no-UA requests with 403 — set a
+// realistic browser-ish UA so cloudflare-protected and UA-gated feeds
+// (Stratechery, certain Substacks, etc.) parse cleanly.
+const rssParser = new Parser({
+  headers: {
+    'User-Agent': 'Mozilla/5.0 (compatible; PolymathRSS/1.0; +https://aper-ture.vercel.app)',
+    'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*',
+  },
+  timeout: 15000,
+})
 
 // API Keys for third-party extraction services (Strategy B: Orchestrator Pattern)
 const DIFFBOT_API_KEY = process.env.DIFFBOT_API_KEY || '' // 10k credits/month free
