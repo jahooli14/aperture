@@ -1383,6 +1383,27 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
 
   // GET - List articles OR get single article
   if (req.method === 'GET' && !resource) {
+    // Batch fetch by ids — used by the home Consuming widget to warm the
+    // offline article cache without auto-promoting status (the single-id
+    // path below flips unread -> reading, which we explicitly DON'T want
+    // here because the widget is just pre-caching for offline reads).
+    const idsParam = req.query.ids
+    if (idsParam && typeof idsParam === 'string') {
+      try {
+        const ids = idsParam.split(',').map(s => s.trim()).filter(Boolean).slice(0, 50)
+        if (ids.length === 0) return res.status(200).json({ articles: [] })
+        const { data, error } = await supabase
+          .from('reading_queue')
+          .select('*')
+          .eq('user_id', userId)
+          .in('id', ids)
+        if (error) throw error
+        return res.status(200).json({ articles: data || [] })
+      } catch (error) {
+        return res.status(500).json({ error: 'Failed to fetch articles batch' })
+      }
+    }
+
     // Get single article with highlights
     if (id && typeof id === 'string') {
       try {

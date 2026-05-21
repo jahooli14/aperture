@@ -25,7 +25,6 @@ import {
 import { haptic } from '../../utils/haptics'
 import { useToast } from '../ui/toast'
 import { readingDb } from '../../lib/db'
-import { useReadingStore } from '../../stores/useReadingStore'
 import { useRSSStore } from '../../stores/useRSSStore'
 import { FeedSearchSheet } from '../reading/FeedSearchSheet'
 
@@ -419,14 +418,29 @@ export function ConsumingWidget() {
             })
           } catch { /* offline storage full / blocked — silent */ }
 
-          // 5. Cache article CONTENT in readingDb.articles so taps on
-          // New reads open offline. fetchArticles caches everything in
-          // one shot — wasteful for huge libraries, fine for typical use.
-          // Force=true ensures we refresh even if the in-memory store
-          // already has stale data from a previous session.
-          useReadingStore.getState()
-            .fetchArticles(undefined, true)
-            .catch(() => { /* network race; widget still works from cache */ })
+          // 5. Cache article CONTENT in readingDb.articles for the items
+          // we just fetched. Targeted batch fetch via ?ids=... so we don't
+          // pull every article in the user's library just to make 20 of
+          // them readable offline.
+          const idsToCache = [
+            ...(consumingFresh.new ?? []).map(a => a.id),
+            ...(consumingFresh.saved ?? []).map(a => a.id),
+          ].filter(Boolean)
+          if (idsToCache.length > 0) {
+            fetch(`/api/reading?ids=${idsToCache.join(',')}`)
+              .then(r => r.ok ? r.json() : null)
+              .then(async (payload) => {
+                if (!payload?.articles?.length) return
+                const cached = payload.articles.map((a: any) => ({
+                  ...a,
+                  offline_available: true,
+                  images_cached: false,
+                  last_synced: new Date().toISOString(),
+                }))
+                await readingDb.articles.bulkPut(cached)
+              })
+              .catch(() => { /* widget still works from cache */ })
+          }
         }
       } catch { /* silent — cached state already painted */ }
 
@@ -437,21 +451,99 @@ export function ConsumingWidget() {
     return () => { cancelled = true }
   }, [])
 
+  // Queue the action in Dexie's `operations` table so it gets replayed
+  // when we're next online. Used for: offline at request time, network
+  // error mid-request. Local state has already been updated optimistically;
+  // this just ensures the server eventually catches up.
+  const queueOp = useCallback(async (
+    action: string,
+    itemId: string,
+    extra?: Record<string, unknown>,
+  ) => {
+    try {
+      await readingDb.operations.add({
+        type: 'consuming-action',
+        table: 'reading_queue',
+        action,
+        item_id: itemId,
+        extra: extra ?? null,
+        timestamp: Date.now(),
+        retries: 0,
+      })
+    } catch { /* queue full / blocked is non-fatal */ }
+  }, [])
+
   const callConsumingAction = useCallback(async (
     action: 'dismiss' | 'save' | 'archive' | 'pin' | 'restore-dismiss' | 'restore-archive',
     id: string,
     extra?: Record<string, unknown>,
   ) => {
+    // Offline at request time -> queue directly.
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      await queueOp(action, id, extra)
+      return
+    }
     try {
-      await fetch(`/api/reading?resource=consuming&action=${action}`, {
+      const res = await fetch(`/api/reading?resource=consuming&action=${action}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, ...(extra ?? {}) }),
       })
+      // 5xx -> queue and retry later. 4xx -> drop (caller error or stale state).
+      if (!res.ok && res.status >= 500) {
+        await queueOp(action, id, extra)
+      }
     } catch {
-      /* optimistic — local state already updated */
+      // Network failure (DNS, CORS, fetch threw) — queue for retry.
+      await queueOp(action, id, extra)
+    }
+  }, [queueOp])
+
+  // Drain queued ops when online. Called on mount + every 'online' event.
+  // Operations run in insertion order so dependent actions stay coherent
+  // (e.g. archive then restore-archive on the same item replays in order).
+  const replayQueue = useCallback(async () => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return
+    let ops: any[] = []
+    try {
+      ops = await readingDb.operations
+        .where('type').equals('consuming-action')
+        .sortBy('timestamp')
+    } catch { return }
+    for (const op of ops) {
+      try {
+        const body = JSON.stringify({ id: op.item_id, ...(op.extra ?? {}) })
+        const res = await fetch(`/api/reading?resource=consuming&action=${op.action}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+        })
+        if (res.ok || res.status === 204) {
+          await readingDb.operations.delete(op.id)
+        } else if (res.status >= 400 && res.status < 500) {
+          // 4xx is non-retryable (likely stale item id) — drop.
+          await readingDb.operations.delete(op.id)
+        } else if ((op.retries ?? 0) >= 3) {
+          // Give up after 3 server-error retries.
+          await readingDb.operations.delete(op.id)
+        } else {
+          await readingDb.operations.update(op.id, { retries: (op.retries ?? 0) + 1 })
+        }
+      } catch {
+        // Lost network mid-drain — stop and leave the rest queued.
+        break
+      }
     }
   }, [])
+
+  // Replay on mount + on 'online' transitions. Listener separate from the
+  // isOnline state effect so the drain has its own concern.
+  useEffect(() => {
+    replayQueue()
+    const onOnline = () => { replayQueue() }
+    window.addEventListener('online', onOnline)
+    return () => window.removeEventListener('online', onOnline)
+  }, [replayQueue])
 
   // New reads — swipe handlers
   const dismissNew = useCallback((id: string) => {
@@ -560,7 +652,31 @@ export function ConsumingWidget() {
     }).catch(() => { /* cache write failure is non-critical */ })
   }, [loaded, saved, feedReads, recentlyDismissed, recentlyArchived, hasMore, nextOffset, activeItems])
 
-  if (!loaded) return null
+  // Loading state — render a low-key skeleton so the "now consuming"
+  // section header in HomePage doesn't sit above empty air for the ~500ms
+  // before the network resolves. The skeleton mirrors the eventual card
+  // dimensions so the page doesn't reflow when content arrives.
+  if (!loaded) {
+    return (
+      <section className="pb-8">
+        <div
+          className="relative rounded-2xl overflow-hidden"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.025), rgba(15,24,41,0.35))',
+            border: '1px solid rgba(255,255,255,0.04)',
+          }}
+        >
+          <div className="px-4 py-3.5 min-h-[60px] border-b border-white/[0.04]">
+            <div className="h-3 w-1/2 rounded shimmer" />
+            <div className="h-2 w-1/3 rounded shimmer mt-2 opacity-60" />
+          </div>
+          <div className="px-4 py-3 min-h-[44px]">
+            <div className="h-3 w-1/4 rounded shimmer opacity-60" />
+          </div>
+        </div>
+      </section>
+    )
+  }
 
   const hasAnything = activeItems.length > 0 || saved.length > 0 || feedReads.length > 0
   // Zero-state with no feeds: show a minimal CTA so the user can subscribe.
