@@ -34,31 +34,79 @@ async function fetchFeedDirect(url: string): Promise<any> {
  * any request that smells like a bot — node-fetch's default UA, missing
  * Accept-Language, missing Sec-Fetch-* etc. Mimicking Chrome unblocks
  * most of them.
+ *
+ * If the direct request gets a blocked status (403/429/503) or fails with
+ * a network error, AND SCRAPERAPI_KEY is configured, we retry via
+ * ScraperAPI's residential proxy. Cloudflare bot-fight + AWS-IP blocking
+ * is the most common reason browser-headers alone aren't enough — the
+ * publisher is blocking Vercel's datacenter range, not our UA.
  */
 async function fetchAsBrowser(url: string): Promise<string> {
-  const res = await fetch(url, {
-    redirect: 'follow',
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.9, text/html;q=0.8, */*;q=0.5',
-      'Accept-Language': 'en-US,en;q=0.9',
-      'Accept-Encoding': 'gzip, deflate, br',
-      'Cache-Control': 'no-cache',
-      'Pragma': 'no-cache',
-      'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-      'Sec-Ch-Ua-Mobile': '?0',
-      'Sec-Ch-Ua-Platform': '"macOS"',
-      'Sec-Fetch-Dest': 'document',
-      'Sec-Fetch-Mode': 'navigate',
-      'Sec-Fetch-Site': 'none',
-      'Sec-Fetch-User': '?1',
-      'Upgrade-Insecure-Requests': '1',
-    } as Record<string, string>,
-  })
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status} ${res.statusText} from ${url}`)
+  let directError: Error | null = null
+  let shouldTryProxy = false
+
+  try {
+    const res = await fetch(url, {
+      redirect: 'follow',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.9, text/html;q=0.8, */*;q=0.5',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+        'Sec-Ch-Ua-Mobile': '?0',
+        'Sec-Ch-Ua-Platform': '"macOS"',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Upgrade-Insecure-Requests': '1',
+      } as Record<string, string>,
+    })
+    if (res.ok) return await res.text()
+    directError = new Error(`HTTP ${res.status} ${res.statusText} from ${url}`)
+    // 403 / 429 / 503 typically mean "bot detected" or "IP-blocked" — those
+    // are the ones a residential proxy fixes. Other 4xx (404, etc.) are
+    // genuine client errors; no proxy helps.
+    shouldTryProxy = [403, 429, 503].includes(res.status)
+  } catch (e) {
+    directError = e instanceof Error ? e : new Error(String(e))
+    // Network-level failures could be IP blocks at the TCP layer — worth
+    // a proxy retry.
+    shouldTryProxy = true
   }
-  return await res.text()
+
+  if (shouldTryProxy && SCRAPERAPI_KEY) {
+    try {
+      console.log('[Feed Fetch] Direct failed, falling back to ScraperAPI for:', url)
+      return await fetchViaScraperAPI(url)
+    } catch (proxyError) {
+      const proxyMsg = proxyError instanceof Error ? proxyError.message : 'unknown'
+      throw new Error(`${directError!.message} — proxy also failed: ${proxyMsg}`)
+    }
+  }
+
+  throw directError!
+}
+
+/**
+ * Last-resort fetch via ScraperAPI's residential proxy. No JS rendering
+ * (feeds are static XML), so this costs 1 credit per request.
+ */
+async function fetchViaScraperAPI(url: string): Promise<string> {
+  if (!SCRAPERAPI_KEY) throw new Error('SCRAPERAPI_KEY not configured')
+  const scraperUrl = `https://api.scraperapi.com?api_key=${SCRAPERAPI_KEY}&url=${encodeURIComponent(url)}`
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 30000)
+  try {
+    const res = await fetch(scraperUrl, { signal: controller.signal })
+    if (!res.ok) throw new Error(`ScraperAPI HTTP ${res.status} ${res.statusText}`)
+    return await res.text()
+  } finally {
+    clearTimeout(timeoutId)
+  }
 }
 
 /**
