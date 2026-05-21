@@ -105,6 +105,10 @@ function relativeAge(iso: string | null): string {
 }
 
 const SWIPE_THRESHOLD_PX = 90
+// Touches that start within this many pixels of the left edge are treated
+// as iOS back-gesture territory — we don't fire a swipe action so we don't
+// fight the native gesture.
+const EDGE_SAFE_PX = 16
 
 /**
  * A row that can be tapped to navigate and swiped left/right to trigger an
@@ -141,6 +145,12 @@ function SwipeableArticleRow({
   const isPinned = !!article.pinned_at
 
   const handleDragEnd = (_: unknown, info: PanInfo) => {
+    // info.point.x is the release position, info.offset.x is the
+    // displacement since drag start, so the starting x is the difference.
+    // If the gesture began at the very left edge, iOS may have wanted the
+    // back gesture — skip our action and let the native one win cleanly.
+    const startX = info.point.x - info.offset.x
+    if (startX < EDGE_SAFE_PX) return
     if (info.offset.x <= -SWIPE_THRESHOLD_PX) {
       haptic.medium()
       onSwipeLeft()
@@ -568,13 +578,18 @@ export function ConsumingWidget() {
   }, [callConsumingAction, saved.length, addToast])
 
   // Tap on a New read — opens the article and (if there's room) saves it.
-  // The reader does not auto-promote status, so without the save the article
-  // would reappear in New reads next visit. At cap we still open it but
-  // leave it in New — the user must archive one to actually keep it.
+  // The reader's GET /api/reading?id= auto-promotes unread -> reading by
+  // default, which would silently push the article into Saved even when
+  // we explicitly blocked the save at cap. So at cap we pass
+  // ?no_promote=true on the URL to honor the user's rule "archive one to
+  // add a new one." The article stays in New reads; the user must
+  // archive one to actually keep it.
   const openNewRead = useCallback((article: ConsumingArticle) => {
-    saveNew(article)
-    navigate(`/reading/${article.id}`)
-  }, [saveNew, navigate])
+    const atCap = saved.length >= SAVED_CAP
+    const saveSucceeded = saveNew(article)
+    const suffix = !saveSucceeded && atCap ? '?no_promote=true' : ''
+    navigate(`/reading/${article.id}${suffix}`)
+  }, [saveNew, navigate, saved.length])
 
   // Saved reads — swipe handlers
   const archiveSaved = useCallback((id: string) => {

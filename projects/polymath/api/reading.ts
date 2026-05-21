@@ -1443,7 +1443,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
 
         if (highlightsError) throw highlightsError
 
-        if (article.status === 'unread') {
+        if (article.status === 'unread' && req.query.no_promote !== 'true') {
           await supabase
             .from('reading_queue')
             .update({ status: 'reading', read_at: new Date().toISOString() })

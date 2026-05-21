@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState, useMemo, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, ExternalLink, Archive, Loader2, Highlighter, Clock, Type, Mic, X } from 'lucide-react'
 import DOMPurify from 'dompurify'
@@ -22,7 +22,12 @@ import { spring, ease } from '../lib/motion'
 export function ReaderPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { data: articleData, isLoading: loading, refetch } = useArticle(id)
+  const [searchParams] = useSearchParams()
+  // ?no_promote=true is set by the home Consuming widget when Saved is at
+  // cap. Honoring it keeps the saved list a tidy 20 instead of silently
+  // growing as the user taps headlines to read.
+  const noPromote = searchParams.get('no_promote') === 'true'
+  const { data: articleData, isLoading: loading, refetch } = useArticle(id, { noPromote })
   const article = articleData?.article || null
   const highlights = articleData?.highlights || []
 

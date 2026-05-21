@@ -2,10 +2,17 @@ import { useState, useEffect, useCallback } from 'react'
 import type { Article, ArticleHighlight } from '../types/reading'
 import { readingDb } from '../lib/db'
 
-export function useArticle(id: string | undefined) {
+export function useArticle(id: string | undefined, options?: { noPromote?: boolean }) {
   const [data, setData] = useState<{ article: Article | null, highlights: ArticleHighlight[] } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // When set, the server skips the unread -> reading auto-promotion. Used
+  // by the home Consuming widget when Saved is at cap — opening an article
+  // for reading shouldn't silently move it into Saved when the user can't
+  // save anything new.
+  const noPromote = !!options?.noPromote
+  const queryString = noPromote ? '&no_promote=true' : ''
 
   const fetchArticle = useCallback(async (articleId: string, isBackgroundRefresh = false) => {
     if (!isBackgroundRefresh) {
@@ -38,7 +45,7 @@ export function useArticle(id: string | undefined) {
         }
 
         // If online, revalidate in background (don't await)
-        fetch(`/api/reading?id=${articleId}`)
+        fetch(`/api/reading?id=${articleId}${queryString}`)
           .then(async (response) => {
             if (response.ok) {
               const result = await response.json()
@@ -72,7 +79,7 @@ export function useArticle(id: string | undefined) {
       }
 
       console.log('[useArticle] No cache found, fetching from network...')
-      const response = await fetch(`/api/reading?id=${articleId}`)
+      const response = await fetch(`/api/reading?id=${articleId}${queryString}`)
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`)
@@ -108,7 +115,7 @@ export function useArticle(id: string | undefined) {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [queryString])
 
   useEffect(() => {
     if (id) {
