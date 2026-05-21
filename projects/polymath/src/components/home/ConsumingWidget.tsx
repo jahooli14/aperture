@@ -1,24 +1,28 @@
 /**
- * Consuming widget — the home's identity layer.
+ * Consuming widget — mobile-first, the home's identity layer.
  *
  * Three zones stacked inside one glass card:
  *   1. Top strip   — active list items (books, films, music, places, …).
- *                    Articles are intentionally excluded; they live in the
- *                    dropdowns below.
- *   2. Saved reads — articles you started or explicitly saved, not fresh
- *                    from RSS. Default open if non-empty.
- *   3. New reads   — unread RSS items, ranked by relevance × recency. The
- *                    scroll-through-feeds drawer. Default closed.
- *
- * Each dropdown is internally scrollable so the home page itself stays calm
- * — the rabbit hole lives inside the card.
+ *                    Articles are excluded; they live in the dropdowns.
+ *   2. Saved reads — articles you've started or saved. Pinned float on top.
+ *                    Defaults open if non-empty. Internally scrollable.
+ *                    Swipe left = archive (red). Swipe right = pin (gold).
+ *                    Tap = read now.
+ *   3. New reads   — unread RSS items, pure reverse-chrono. 20 at a time
+ *                    with a "Load more" button — the friction is the point;
+ *                    this isn't meant to be a doom-scroll surface.
+ *                    Swipe left = dismiss (red). Swipe right = save (blue).
+ *                    Tap = read now.
  */
 import React, { useEffect, useState, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { motion, AnimatePresence, useMotionValue, useTransform, type PanInfo } from 'framer-motion'
 import {
-  ArrowRight, ChevronDown, ChevronRight, X,
+  ArrowRight, ChevronDown, ChevronRight,
+  X, Bookmark, Archive, Pin,
   Film, Music, Monitor, Book, MapPin, Gamepad2, Calendar, FileText, Quote, Box,
 } from 'lucide-react'
+import { haptic } from '../../utils/haptics'
 
 const LIST_TYPE_ICONS: Record<string, React.ElementType> = {
   film: Film, music: Music, tech: Monitor, book: Book, place: MapPin,
@@ -61,11 +65,14 @@ interface ConsumingArticle {
   status: string
   tags: string[] | null
   created_at: string
+  pinned_at: string | null
 }
 
 interface ConsumingPayload {
   saved: ConsumingArticle[]
   new: ConsumingArticle[]
+  new_has_more: boolean
+  new_next_offset: number | null
 }
 
 function relativeAge(iso: string | null): string {
@@ -82,27 +89,104 @@ function relativeAge(iso: string | null): string {
   return `${weeks}w`
 }
 
-function ArticleRow({
+// Distance the user has to drag a row before the action commits on release.
+// 90px is past the visual reveal so the intent feels deliberate.
+const SWIPE_THRESHOLD_PX = 90
+
+/**
+ * A row that can be tapped to navigate and swiped left/right to trigger an
+ * action. Built on framer-motion's drag gesture so the tap-vs-drag distinction
+ * is handled cleanly. Backgrounds reveal proportionally as the drag progresses
+ * — like Gmail / iOS list rows.
+ */
+function SwipeableArticleRow({
   article,
-  onDismiss,
-  showDismiss = false,
+  onTap,
+  onSwipeLeft,
+  onSwipeRight,
+  leftLabel,
+  leftIcon: LeftIcon,
+  leftColor,
+  rightLabel,
+  rightIcon: RightIcon,
+  rightColor,
 }: {
   article: ConsumingArticle
-  onDismiss?: (id: string) => void
-  showDismiss?: boolean
+  onTap: () => void
+  onSwipeLeft: () => void
+  onSwipeRight: () => void
+  leftLabel: string
+  leftIcon: React.ElementType
+  leftColor: string
+  rightLabel: string
+  rightIcon: React.ElementType
+  rightColor: string
 }) {
+  const x = useMotionValue(0)
+  const leftBgOpacity = useTransform(x, [-SWIPE_THRESHOLD_PX, -20, 0], [1, 0.25, 0])
+  const rightBgOpacity = useTransform(x, [0, 20, SWIPE_THRESHOLD_PX], [0, 0.25, 1])
   const age = relativeAge(article.published_date || article.created_at)
+  const isPinned = !!article.pinned_at
+
+  const handleDragEnd = (_: unknown, info: PanInfo) => {
+    if (info.offset.x <= -SWIPE_THRESHOLD_PX) {
+      haptic.medium()
+      onSwipeLeft()
+    } else if (info.offset.x >= SWIPE_THRESHOLD_PX) {
+      haptic.medium()
+      onSwipeRight()
+    }
+    // framer-motion springs back to x=0 automatically.
+  }
+
   return (
-    <div className="group relative flex items-center gap-3 px-4 py-3 hover:bg-white/[0.025] transition-colors min-h-[58px] border-b border-white/[0.04] last:border-b-0">
-      <Link to={`/reading/${article.id}`} className="flex items-center gap-3 flex-1 min-w-0">
+    <div className="relative overflow-hidden border-b border-white/[0.04] last:border-b-0">
+      {/* Right-swipe reveal (positive x) sits on the LEFT side of the row */}
+      <motion.div
+        aria-hidden
+        className="absolute inset-y-0 left-0 flex items-center gap-2 px-5 text-[12px] font-medium uppercase tracking-wide text-white pointer-events-none"
+        style={{ opacity: rightBgOpacity, background: rightColor }}
+      >
+        <RightIcon className="h-4 w-4" />
+        <span>{rightLabel}</span>
+      </motion.div>
+      {/* Left-swipe reveal (negative x) sits on the RIGHT side */}
+      <motion.div
+        aria-hidden
+        className="absolute inset-y-0 right-0 flex items-center gap-2 px-5 text-[12px] font-medium uppercase tracking-wide text-white pointer-events-none justify-end"
+        style={{ opacity: leftBgOpacity, background: leftColor }}
+      >
+        <span>{leftLabel}</span>
+        <LeftIcon className="h-4 w-4" />
+      </motion.div>
+
+      <motion.div
+        drag="x"
+        dragDirectionLock
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.6}
+        dragMomentum={false}
+        onDragEnd={handleDragEnd}
+        onTap={onTap}
+        style={{ x, touchAction: 'pan-y' }}
+        whileTap={{ backgroundColor: 'rgba(255,255,255,0.025)' }}
+        className="relative flex items-center gap-3 px-4 py-3 min-h-[60px] cursor-pointer bg-[var(--brand-bg,#0a0f1d)]"
+      >
         <div
           className="relative h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
           style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
         >
           {article.favicon_url ? (
-            <img src={article.favicon_url} alt="" className="h-4 w-4" loading="lazy" />
+            <img src={article.favicon_url} alt="" className="h-4 w-4" loading="lazy" draggable={false} />
           ) : (
             <FileText className="h-4 w-4 text-[var(--brand-text-secondary)] opacity-80" />
+          )}
+          {isPinned && (
+            <span
+              aria-hidden
+              className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full"
+              style={{ background: 'rgb(252, 211, 77)', boxShadow: '0 0 6px rgba(252, 211, 77, 0.7)' }}
+            />
           )}
         </div>
         <div className="flex-1 min-w-0">
@@ -115,18 +199,7 @@ function ArticleRow({
               .join(' · ')}
           </p>
         </div>
-      </Link>
-      {showDismiss && onDismiss ? (
-        <button
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDismiss(article.id) }}
-          aria-label="Not interested"
-          className="h-7 w-7 rounded-md flex items-center justify-center text-[var(--brand-text-muted)] opacity-40 hover:opacity-100 hover:bg-white/[0.04] transition-all flex-shrink-0"
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
-      ) : (
-        <ArrowRight className="h-4 w-4 text-[var(--brand-text-muted)] opacity-40 flex-shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:opacity-70" />
-      )}
+      </motion.div>
     </div>
   )
 }
@@ -161,9 +234,13 @@ function DropdownHeader({
 }
 
 export function ConsumingWidget() {
+  const navigate = useNavigate()
   const [activeItems, setActiveItems] = useState<ActiveItem[]>([])
   const [saved, setSaved] = useState<ConsumingArticle[]>([])
   const [feedReads, setFeedReads] = useState<ConsumingArticle[]>([])
+  const [hasMore, setHasMore] = useState(false)
+  const [nextOffset, setNextOffset] = useState<number | null>(null)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [openSaved, setOpenSaved] = useState(false)
   const [openNew, setOpenNew] = useState(false)
@@ -192,6 +269,8 @@ export function ConsumingWidget() {
           const data = (await consumingRes.json()) as ConsumingPayload
           setSaved(data.saved ?? [])
           setFeedReads(data.new ?? [])
+          setHasMore(!!data.new_has_more)
+          setNextOffset(data.new_next_offset ?? null)
           if (!openSetByUser) {
             setOpenSaved((data.saved ?? []).length > 0)
           }
@@ -206,18 +285,72 @@ export function ConsumingWidget() {
     return () => { cancelled = true }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleDismiss = useCallback(async (id: string) => {
-    setFeedReads(prev => prev.filter(r => r.id !== id))
+  const callConsumingAction = useCallback(async (
+    action: 'dismiss' | 'save' | 'archive' | 'pin',
+    id: string,
+    extra?: Record<string, unknown>,
+  ) => {
     try {
-      await fetch('/api/reading?resource=consuming&action=dismiss', {
+      await fetch(`/api/reading?resource=consuming&action=${action}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ id, ...(extra ?? {}) }),
       })
     } catch {
-      /* optimistic — leave it removed locally even if the call fails */
+      /* optimistic — local state already updated */
     }
   }, [])
+
+  // New reads — swipe handlers
+  const dismissNew = useCallback((id: string) => {
+    setFeedReads(prev => prev.filter(r => r.id !== id))
+    callConsumingAction('dismiss', id)
+  }, [callConsumingAction])
+
+  const saveNew = useCallback((article: ConsumingArticle) => {
+    setFeedReads(prev => prev.filter(r => r.id !== article.id))
+    // Move it into Saved locally so the user sees the transition immediately.
+    setSaved(prev => [{ ...article, status: 'reading' }, ...prev])
+    callConsumingAction('save', article.id)
+  }, [callConsumingAction])
+
+  // Saved reads — swipe handlers
+  const archiveSaved = useCallback((id: string) => {
+    setSaved(prev => prev.filter(r => r.id !== id))
+    callConsumingAction('archive', id)
+  }, [callConsumingAction])
+
+  const togglePinSaved = useCallback((article: ConsumingArticle) => {
+    const willPin = !article.pinned_at
+    const nowIso = new Date().toISOString()
+    setSaved(prev => {
+      const next = prev.map(r =>
+        r.id === article.id ? { ...r, pinned_at: willPin ? nowIso : null } : r
+      )
+      // Re-sort so pinned floats to the top, then by updated_at proxy (created_at).
+      return [...next].sort((a, b) => {
+        if (!!b.pinned_at !== !!a.pinned_at) return b.pinned_at ? 1 : -1
+        if (a.pinned_at && b.pinned_at) return b.pinned_at.localeCompare(a.pinned_at)
+        return b.created_at.localeCompare(a.created_at)
+      })
+    })
+    callConsumingAction('pin', article.id, { pinned: willPin })
+  }, [callConsumingAction])
+
+  const loadMoreNew = useCallback(async () => {
+    if (loadingMore || nextOffset == null) return
+    setLoadingMore(true)
+    try {
+      const res = await fetch(`/api/reading?resource=consuming&new_offset=${nextOffset}&saved_limit=0`)
+      if (!res.ok) return
+      const data = (await res.json()) as ConsumingPayload
+      setFeedReads(prev => [...prev, ...(data.new ?? [])])
+      setHasMore(!!data.new_has_more)
+      setNextOffset(data.new_next_offset ?? null)
+    } finally {
+      setLoadingMore(false)
+    }
+  }, [loadingMore, nextOffset])
 
   if (!loaded) return null
 
@@ -280,10 +413,31 @@ export function ConsumingWidget() {
               onClick={() => { setOpenSaved(v => !v); setOpenSetByUser(true) }}
             />
             {openSaved && (
-              <div className="max-h-[320px] overflow-y-auto border-t border-white/[0.04]">
-                {saved.map(article => (
-                  <ArticleRow key={article.id} article={article} />
-                ))}
+              <div className="max-h-[60vh] overflow-y-auto border-t border-white/[0.04]">
+                <AnimatePresence initial={false} mode="popLayout">
+                  {saved.map(article => (
+                    <motion.div
+                      key={article.id}
+                      layout
+                      initial={{ opacity: 1 }}
+                      exit={{ opacity: 0, height: 0, x: -200 }}
+                      transition={{ duration: 0.18 }}
+                    >
+                      <SwipeableArticleRow
+                        article={article}
+                        onTap={() => navigate(`/reading/${article.id}`)}
+                        onSwipeLeft={() => archiveSaved(article.id)}
+                        onSwipeRight={() => togglePinSaved(article)}
+                        leftLabel="Archive"
+                        leftIcon={Archive}
+                        leftColor="rgb(185, 28, 28)"
+                        rightLabel={article.pinned_at ? 'Unpin' : 'Pin'}
+                        rightIcon={Pin}
+                        rightColor="rgb(180, 124, 12)"
+                      />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
               </div>
             )}
           </>
@@ -299,15 +453,41 @@ export function ConsumingWidget() {
               onClick={() => { setOpenNew(v => !v); setOpenSetByUser(true) }}
             />
             {openNew && (
-              <div className="max-h-[420px] overflow-y-auto border-t border-white/[0.04]">
-                {feedReads.map(article => (
-                  <ArticleRow
-                    key={article.id}
-                    article={article}
-                    showDismiss
-                    onDismiss={handleDismiss}
-                  />
-                ))}
+              <div className="max-h-[70vh] overflow-y-auto border-t border-white/[0.04]">
+                <AnimatePresence initial={false} mode="popLayout">
+                  {feedReads.map(article => (
+                    <motion.div
+                      key={article.id}
+                      layout
+                      initial={{ opacity: 1 }}
+                      exit={{ opacity: 0, height: 0, x: -200 }}
+                      transition={{ duration: 0.18 }}
+                    >
+                      <SwipeableArticleRow
+                        article={article}
+                        onTap={() => navigate(`/reading/${article.id}`)}
+                        onSwipeLeft={() => dismissNew(article.id)}
+                        onSwipeRight={() => saveNew(article)}
+                        leftLabel="Dismiss"
+                        leftIcon={X}
+                        leftColor="rgb(185, 28, 28)"
+                        rightLabel="Save"
+                        rightIcon={Bookmark}
+                        rightColor="rgb(29, 78, 216)"
+                      />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+                {hasMore && (
+                  <button
+                    type="button"
+                    onClick={loadMoreNew}
+                    disabled={loadingMore}
+                    className="w-full px-4 py-3 text-[12px] uppercase tracking-[0.15em] text-[var(--brand-text-muted)] hover:bg-white/[0.025] disabled:opacity-50 transition-colors border-t border-white/[0.04]"
+                  >
+                    {loadingMore ? 'Loading…' : 'Load more'}
+                  </button>
+                )}
               </div>
             )}
           </>

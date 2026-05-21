@@ -1224,22 +1224,32 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
 
   // CONSUMING RESOURCE — feeds the home Consuming widget's two dropdowns:
   //  - "Saved reads": articles the user explicitly saved or has started, NOT
-  //    fresh from RSS. Status != 'unread' OR no rss tag.
-  //  - "New reads":   unread RSS items, not yet dismissed. Ranked by
-  //    embedding similarity vs active projects + recent thoughts, with a
-  //    recency boost so the strip refreshes as the feeds do.
+  //    fresh from RSS. Pinned items float to the top. Returns all (capped at
+  //    200 for safety) — the user wants every saved article reachable.
+  //  - "New reads":   unread RSS items, not yet dismissed. Pure reverse-chrono
+  //    so the surface reads as the feeds, not as an algorithm. Paginated 20
+  //    at a time so "load more" is a friction point against doom-scroll.
+  //  Mutations (mobile swipe gestures):
+  //    POST ?action=dismiss  — left swipe on New reads. Sets dismissed_at.
+  //    POST ?action=save     — right swipe on New reads. Status -> 'reading',
+  //                            so the row moves to Saved reads on next fetch.
+  //    POST ?action=archive  — left swipe on Saved reads. Status -> 'archived'.
+  //    POST ?action=pin      — right swipe on Saved reads. Sets/clears pinned_at.
   if (resource === 'consuming') {
     if (req.method === 'GET') {
       try {
-        const parsedSavedLimit = req.query.saved_limit ? parseInt(req.query.saved_limit as string, 10) : 30
-        const parsedNewLimit = req.query.new_limit ? parseInt(req.query.new_limit as string, 10) : 50
-        const savedLimit = Number.isFinite(parsedSavedLimit) && parsedSavedLimit > 0 ? Math.min(parsedSavedLimit, 100) : 30
-        const newLimit = Number.isFinite(parsedNewLimit) && parsedNewLimit > 0 ? Math.min(parsedNewLimit, 100) : 50
+        const parsedSavedLimit = req.query.saved_limit ? parseInt(req.query.saved_limit as string, 10) : 200
+        const parsedNewLimit = req.query.new_limit ? parseInt(req.query.new_limit as string, 10) : 20
+        const parsedNewOffset = req.query.new_offset ? parseInt(req.query.new_offset as string, 10) : 0
+        const savedLimit = Number.isFinite(parsedSavedLimit) && parsedSavedLimit > 0 ? Math.min(parsedSavedLimit, 500) : 200
+        const newLimit = Number.isFinite(parsedNewLimit) && parsedNewLimit > 0 ? Math.min(parsedNewLimit, 100) : 20
+        const newOffset = Number.isFinite(parsedNewOffset) && parsedNewOffset >= 0 ? parsedNewOffset : 0
 
-        const SELECT_COLS = 'id, url, title, excerpt, source, favicon_url, thumbnail_url, published_date, read_time_minutes, status, tags, created_at, embedding'
+        const SELECT_COLS = 'id, url, title, excerpt, source, favicon_url, thumbnail_url, published_date, read_time_minutes, status, tags, created_at, pinned_at'
 
         // Saved reads — anything the user has touched, or saved without an
-        // rss tag. Newest first. Dismissed and archived rows excluded.
+        // rss tag. Pinned float to the top; rest by recency. Dismissed and
+        // archived rows excluded.
         const savedQuery = supabase
           .from('reading_queue')
           .select(SELECT_COLS)
@@ -1247,12 +1257,12 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
           .neq('status', 'archived')
           .is('dismissed_at', null)
           .or('status.neq.unread,tags.not.cs.{rss}')
+          .order('pinned_at', { ascending: false, nullsFirst: false })
           .order('updated_at', { ascending: false })
           .limit(savedLimit)
 
-        // New reads — rss-tagged, untouched, undismissed. Pull more than
-        // newLimit so the ranking pass has a real candidate pool.
-        const candidateCap = Math.max(newLimit * 3, 60)
+        // New reads — rss-tagged, untouched, undismissed. Reverse chrono with
+        // a small +1 to fetch so we can tell whether more pages exist.
         const newQuery = supabase
           .from('reading_queue')
           .select(SELECT_COLS)
@@ -1261,74 +1271,25 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
           .is('dismissed_at', null)
           .contains('tags', ['rss'])
           .order('created_at', { ascending: false })
-          .limit(candidateCap)
+          .range(newOffset, newOffset + newLimit)  // inclusive, so +1 row
 
-        const [savedRes, newRes, projectsRes, thoughtsRes] = await Promise.all([
-          savedQuery,
-          newQuery,
-          supabase
-            .from('projects')
-            .select('id, embedding')
-            .eq('user_id', userId)
-            .in('status', ['active', 'upcoming'])
-            .not('embedding', 'is', null)
-            .limit(20),
-          supabase
-            .from('memories')
-            .select('id, embedding, created_at')
-            .eq('user_id', userId)
-            .not('embedding', 'is', null)
-            .gte('created_at', new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString())
-            .order('created_at', { ascending: false })
-            .limit(50),
-        ])
+        const [savedRes, newRes] = await Promise.all([savedQuery, newQuery])
 
         if (savedRes.error) throw savedRes.error
         if (newRes.error) throw newRes.error
 
-        const projects = projectsRes.data ?? []
-        const thoughts = thoughtsRes.data ?? []
-        const newCandidates = newRes.data ?? []
-
-        const now = Date.now()
-        // Recency half-life of 3 days — items decay smoothly so a 2-week-old
-        // hit needs serious similarity to outrank a fresh one.
-        const HALF_LIFE_MS = 3 * 24 * 60 * 60 * 1000
-
-        const ranked = newCandidates.map((item: any) => {
-          let bestSim = 0
-          if (item.embedding) {
-            for (const p of projects) {
-              if (!p.embedding) continue
-              const sim = cosineSimilarity(item.embedding, p.embedding)
-              if (sim > bestSim) bestSim = sim
-            }
-            for (const t of thoughts) {
-              if (!t.embedding) continue
-              const sim = cosineSimilarity(item.embedding, t.embedding)
-              if (sim > bestSim) bestSim = sim
-            }
-          }
-          const ageMs = item.created_at ? now - new Date(item.created_at).getTime() : 0
-          const recency = Math.pow(0.5, ageMs / HALF_LIFE_MS) // 1.0 at now, 0.5 at 3d, ~0.25 at 6d
-          const relevance = Math.max(0, bestSim) // similarity is in [-1, 1]; clamp negatives
-          const score = relevance * 0.6 + recency * 0.4
-          // Strip embedding from the payload — large and unused on the client.
-          const { embedding, ...rest } = item
-          return { ...rest, _score: score, _relevance: relevance }
-        })
-
-        ranked.sort((a: any, b: any) => b._score - a._score)
-        const newReads = ranked.slice(0, newLimit).map(({ _score, _relevance, ...row }) => row)
-
-        // Strip embeddings from saved too.
-        const savedReads = (savedRes.data ?? []).map(({ embedding, ...row }: any) => row)
+        const newRows = newRes.data ?? []
+        const hasMore = newRows.length > newLimit
+        const newReads = hasMore ? newRows.slice(0, newLimit) : newRows
+        const savedReads = savedRes.data ?? []
 
         return res.status(200).json({
           saved: savedReads,
           new: newReads,
           saved_count: savedReads.length,
           new_count: newReads.length,
+          new_has_more: hasMore,
+          new_next_offset: hasMore ? newOffset + newLimit : null,
         })
       } catch (error) {
         console.error('[Reading] Consuming error:', error)
@@ -1336,25 +1297,42 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // POST ?resource=consuming&action=dismiss body { id }
-    // Hides an item from "New reads" without archiving it. The article still
-    // lives in reading_queue — useful if we ever surface a "dismissed" view.
-    if (req.method === 'POST' && req.query.action === 'dismiss') {
+    if (req.method === 'POST') {
+      const { id: itemId, pinned } = (req.body ?? {}) as { id?: string; pinned?: boolean }
+      if (!itemId || typeof itemId !== 'string') {
+        return res.status(400).json({ error: 'id required' })
+      }
+
+      const action = req.query.action
+      let update: Record<string, any> | null = null
+
+      if (action === 'dismiss') {
+        update = { dismissed_at: new Date().toISOString() }
+      } else if (action === 'save') {
+        // Mobile right-swipe on a New read. Status -> 'reading' is the cheapest
+        // way to move it into the Saved reads query; the article hasn't really
+        // been read, but "I want this in my list" is closer to reading than
+        // unread.
+        update = { status: 'reading' }
+      } else if (action === 'archive') {
+        update = { status: 'archived', archived_at: new Date().toISOString() }
+      } else if (action === 'pin') {
+        update = { pinned_at: pinned === false ? null : new Date().toISOString() }
+      } else {
+        return res.status(400).json({ error: 'unknown action' })
+      }
+
       try {
-        const { id: itemId } = req.body ?? {}
-        if (!itemId || typeof itemId !== 'string') {
-          return res.status(400).json({ error: 'id required' })
-        }
         const { error } = await supabase
           .from('reading_queue')
-          .update({ dismissed_at: new Date().toISOString() })
+          .update(update)
           .eq('id', itemId)
           .eq('user_id', userId)
         if (error) throw error
         return res.status(204).send('')
       } catch (error) {
-        console.error('[Reading] Dismiss error:', error)
-        return res.status(500).json({ error: 'Failed to dismiss item' })
+        console.error(`[Reading] Consuming ${action} error:`, error)
+        return res.status(500).json({ error: `Failed to ${action} item` })
       }
     }
 
