@@ -226,8 +226,12 @@ async function handleListItems(req: VercelRequest, res: VercelResponse) {
         if (req.method === 'GET' && resource === 'active-items') {
             const parsedLimit = req.query.limit ? parseInt(req.query.limit as string, 10) : 4
             const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 100) : 4
-            // Over-fetch and filter articles out in code — the home widget
-            // handles them via the reading_queue dropdowns instead.
+            // Optional ?types=book,film filters to only those list types.
+            // Default: exclude articles (they have their own widget surface).
+            const typesParam = typeof req.query.types === 'string' ? req.query.types : ''
+            const includeTypes = typesParam
+                ? typesParam.split(',').map(s => s.trim()).filter(Boolean)
+                : null
             const { data, error } = await supabase
                 .from('list_items')
                 .select('id, content, status, list_id, list:lists!inner(id, title, type)')
@@ -236,7 +240,11 @@ async function handleListItems(req: VercelRequest, res: VercelResponse) {
                 .order('updated_at', { ascending: false })
                 .limit(Math.min(limit * 4, 100))
             if (error) throw error
-            const filtered = (data ?? []).filter((row: any) => row.list?.type !== 'article').slice(0, limit)
+            const filtered = (data ?? []).filter((row: any) => {
+                const t = row.list?.type
+                if (includeTypes) return includeTypes.includes(t)
+                return t !== 'article'
+            }).slice(0, limit)
             return res.status(200).json(filtered)
         }
 

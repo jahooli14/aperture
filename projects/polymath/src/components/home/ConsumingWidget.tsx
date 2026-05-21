@@ -2,17 +2,17 @@
  * Consuming widget — mobile-first, the home's identity layer.
  *
  * Three zones stacked inside one glass card:
- *   1. Top strip   — active list items (books, films, music, places, …).
- *                    Articles are excluded; they live in the dropdowns.
- *   2. Saved reads — articles you've started or saved. Pinned float on top.
- *                    Defaults open if non-empty. Internally scrollable.
+ *   1. Top strip   — up to 3 active books (currently reading).
+ *   2. Saved reads — articles you've started or saved. Capped at 20 so it
+ *                    can't become a dumping ground — to add a new one, you
+ *                    archive an old one. Closed by default. Pinned float
+ *                    to the top.
  *                    Swipe left = archive (red). Swipe right = pin (gold).
  *                    Tap = read now.
  *   3. New reads   — unread RSS items, pure reverse-chrono. 20 at a time
- *                    with a "Load more" button — the friction is the point;
- *                    this isn't meant to be a doom-scroll surface.
+ *                    with a "Load more" button. Closed by default.
  *                    Swipe left = dismiss (red). Swipe right = save (blue).
- *                    Tap = read now.
+ *                    Tap = read now (also auto-saves if Saved has room).
  */
 import React, { useEffect, useState, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -23,6 +23,7 @@ import {
   Film, Music, Monitor, Book, MapPin, Gamepad2, Calendar, FileText, Quote, Box,
 } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
+import { useToast } from '../ui/toast'
 
 const LIST_TYPE_ICONS: Record<string, React.ElementType> = {
   film: Film, music: Music, tech: Monitor, book: Book, place: MapPin,
@@ -43,6 +44,10 @@ const LIST_TYPE_ACCENT: Record<string, string> = {
   software: '59, 130, 246',
   generic: '156, 163, 175',
 }
+
+// Hard cap on Saved reads — keeps the list a curated shortlist, not a dump.
+// To save a new article past this, the user archives an old one first.
+const SAVED_CAP = 20
 
 interface ActiveItem {
   listId: string
@@ -89,15 +94,12 @@ function relativeAge(iso: string | null): string {
   return `${weeks}w`
 }
 
-// Distance the user has to drag a row before the action commits on release.
-// 90px is past the visual reveal so the intent feels deliberate.
 const SWIPE_THRESHOLD_PX = 90
 
 /**
  * A row that can be tapped to navigate and swiped left/right to trigger an
- * action. Built on framer-motion's drag gesture so the tap-vs-drag distinction
- * is handled cleanly. Backgrounds reveal proportionally as the drag progresses
- * — like Gmail / iOS list rows.
+ * action. Drag-vs-tap distinction is handled by framer-motion. Backgrounds
+ * reveal proportionally as the drag progresses — Gmail / iOS list style.
  */
 function SwipeableArticleRow({
   article,
@@ -136,7 +138,6 @@ function SwipeableArticleRow({
       haptic.medium()
       onSwipeRight()
     }
-    // framer-motion springs back to x=0 automatically.
   }
 
   return (
@@ -170,30 +171,28 @@ function SwipeableArticleRow({
         onTap={onTap}
         style={{ x, touchAction: 'pan-y' }}
         whileTap={{ backgroundColor: 'rgba(255,255,255,0.025)' }}
-        className="relative flex items-center gap-3 px-4 py-3 min-h-[60px] cursor-pointer bg-[var(--brand-bg,#0a0f1d)]"
+        className="relative flex items-start gap-3 px-4 py-3 min-h-[64px] cursor-pointer bg-[var(--brand-bg,#0a0f1d)]"
       >
-        <div
-          className="relative h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
-          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
-        >
-          {article.favicon_url ? (
-            <img src={article.favicon_url} alt="" className="h-4 w-4" loading="lazy" draggable={false} />
-          ) : (
-            <FileText className="h-4 w-4 text-[var(--brand-text-secondary)] opacity-80" />
-          )}
-          {isPinned && (
-            <span
-              aria-hidden
-              className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full"
-              style={{ background: 'rgb(252, 211, 77)', boxShadow: '0 0 6px rgba(252, 211, 77, 0.7)' }}
-            />
-          )}
-        </div>
+        {isPinned && (
+          <span
+            aria-hidden
+            className="absolute left-1.5 top-1/2 -translate-y-1/2 h-1.5 w-1.5 rounded-full"
+            style={{ background: 'rgb(252, 211, 77)', boxShadow: '0 0 6px rgba(252, 211, 77, 0.7)' }}
+          />
+        )}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-[var(--brand-text-primary)] truncate">
+          <p
+            className="text-[15px] leading-snug font-medium text-[var(--brand-text-primary)]"
+            style={{
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+          >
             {article.title || article.url}
           </p>
-          <p className="text-[11px] text-[var(--brand-text-muted)] truncate mt-0.5">
+          <p className="text-[11px] text-[var(--brand-text-muted)] truncate mt-1">
             {[article.source, age, article.read_time_minutes ? `${article.read_time_minutes} min` : null]
               .filter(Boolean)
               .join(' · ')}
@@ -235,6 +234,7 @@ function DropdownHeader({
 
 export function ConsumingWidget() {
   const navigate = useNavigate()
+  const { addToast } = useToast()
   const [activeItems, setActiveItems] = useState<ActiveItem[]>([])
   const [saved, setSaved] = useState<ConsumingArticle[]>([])
   const [feedReads, setFeedReads] = useState<ConsumingArticle[]>([])
@@ -242,18 +242,18 @@ export function ConsumingWidget() {
   const [nextOffset, setNextOffset] = useState<number | null>(null)
   const [loadingMore, setLoadingMore] = useState(false)
   const [loaded, setLoaded] = useState(false)
-  // New reads opens by default — this surface is the whole point of the
-  // widget (Chrome new-tab replacement). Saved reads stays closed unless
-  // the user opens it; it shouldn't push New reads off-screen.
+  // Both dropdowns closed by default. The widget is a compact peek; the
+  // user opens whichever drawer they want.
   const [openSaved, setOpenSaved] = useState(false)
-  const [openNew, setOpenNew] = useState(true)
+  const [openNew, setOpenNew] = useState(false)
 
   useEffect(() => {
     let cancelled = false
     const fetchAll = async () => {
       try {
         const [activeRes, consumingRes] = await Promise.all([
-          fetch('/api/lists?scope=items&resource=active-items&limit=4'),
+          // Top strip: active books, capped at 3.
+          fetch('/api/lists?scope=items&resource=active-items&types=book&limit=3'),
           fetch('/api/reading?resource=consuming'),
         ])
         if (cancelled) return
@@ -282,7 +282,7 @@ export function ConsumingWidget() {
     }
     fetchAll()
     return () => { cancelled = true }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
   const callConsumingAction = useCallback(async (
     action: 'dismiss' | 'save' | 'archive' | 'pin',
@@ -306,17 +306,24 @@ export function ConsumingWidget() {
     callConsumingAction('dismiss', id)
   }, [callConsumingAction])
 
-  const saveNew = useCallback((article: ConsumingArticle) => {
+  const saveNew = useCallback((article: ConsumingArticle): boolean => {
+    if (saved.length >= SAVED_CAP) {
+      addToast({
+        title: 'Saved is full',
+        description: 'Archive an old one to keep this.',
+      })
+      return false
+    }
     setFeedReads(prev => prev.filter(r => r.id !== article.id))
-    // Move it into Saved locally so the user sees the transition immediately.
     setSaved(prev => [{ ...article, status: 'reading' }, ...prev])
     callConsumingAction('save', article.id)
-  }, [callConsumingAction])
+    return true
+  }, [callConsumingAction, saved.length, addToast])
 
-  // Tap on a New read = open AND save. The reader page does not auto-promote
-  // status, so without this the article would reappear in New reads next
-  // time the home renders — re-surfacing things the user already looked at,
-  // which is exactly the doom-scroll trap this widget is meant to replace.
+  // Tap on a New read — opens the article and (if there's room) saves it.
+  // The reader does not auto-promote status, so without the save the article
+  // would reappear in New reads next visit. At cap we still open it but
+  // leave it in New — the user must archive one to actually keep it.
   const openNewRead = useCallback((article: ConsumingArticle) => {
     saveNew(article)
     navigate(`/reading/${article.id}`)
@@ -335,7 +342,6 @@ export function ConsumingWidget() {
       const next = prev.map(r =>
         r.id === article.id ? { ...r, pinned_at: willPin ? nowIso : null } : r
       )
-      // Re-sort so pinned floats to the top, then by updated_at proxy (created_at).
       return [...next].sort((a, b) => {
         if (!!b.pinned_at !== !!a.pinned_at) return b.pinned_at ? 1 : -1
         if (a.pinned_at && b.pinned_at) return b.pinned_at.localeCompare(a.pinned_at)
@@ -365,7 +371,7 @@ export function ConsumingWidget() {
   const hasAnything = activeItems.length > 0 || saved.length > 0 || feedReads.length > 0
   if (!hasAnything) return null
 
-  const shownActive = activeItems.slice(0, 4)
+  const shownActive = activeItems.slice(0, 3)
 
   return (
     <section className="pb-8">
@@ -378,7 +384,7 @@ export function ConsumingWidget() {
           boxShadow: '0 4px 20px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.03)',
         }}
       >
-        {/* Top strip — non-article active items */}
+        {/* Top strip — up to 3 active books */}
         {shownActive.map((item, i) => {
           const Icon = LIST_TYPE_ICONS[item.listType] || Box
           const accent = LIST_TYPE_ACCENT[item.listType] || LIST_TYPE_ACCENT.generic

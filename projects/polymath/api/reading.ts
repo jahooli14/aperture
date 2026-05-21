@@ -1238,7 +1238,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
   if (resource === 'consuming') {
     if (req.method === 'GET') {
       try {
-        const parsedSavedLimit = req.query.saved_limit ? parseInt(req.query.saved_limit as string, 10) : 200
+        const parsedSavedLimit = req.query.saved_limit ? parseInt(req.query.saved_limit as string, 10) : 20
         const parsedNewLimit = req.query.new_limit ? parseInt(req.query.new_limit as string, 10) : 20
         const parsedNewOffset = req.query.new_offset ? parseInt(req.query.new_offset as string, 10) : 0
         const savedLimit = Number.isFinite(parsedSavedLimit) && parsedSavedLimit > 0 ? Math.min(parsedSavedLimit, 500) : 200
