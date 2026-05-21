@@ -10,7 +10,7 @@
  *   2. Still warm        — RecentlyActiveMini (2-up glass)
  *   3. The queue         — UpNextMini (2-up ghost)
  *   4. Try something new — ProjectIdeasHome (compact on-demand suggestion)
- *   5. Now consuming     — NowConsumingWidget (identity layer)
+ *   5. Now consuming     — ConsumingWidget (identity layer + reading drawers)
  *   6. Thought of the day — ThoughtOfTheDay (editorial pull-quote)
  *
  * Behind everything: a vanishingly subtle vertical wash (.home-atmosphere) —
@@ -21,8 +21,8 @@
  * removed wordmark/eyebrow.
  */
 
-import React, { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useProjectStore, usePriorityProject, useMostRecentNonPriorityProject } from '../stores/useProjectStore'
 import { useMemoryStore } from '../stores/useMemoryStore'
@@ -35,114 +35,10 @@ import { RecentlyActiveMini } from '../components/home/RecentlyActiveMini'
 import { UpNextMini } from '../components/home/UpNextMini'
 import { ThoughtOfTheDay } from '../components/home/ThoughtOfTheDay'
 import { ProjectIdeasHome } from '../components/home/ProjectIdeasHome'
+import { ConsumingWidget } from '../components/home/ConsumingWidget'
 import { UnauthHome } from '../components/onboarding/UnauthHome'
 import { ease, stagger } from '../lib/motion'
-import { AlertCircle, ArrowRight, Film, Music, Monitor, Book, MapPin, Gamepad2, Calendar, FileText, Quote, Box, Search, Moon, Settings } from 'lucide-react'
-
-const LIST_TYPE_ICONS: Record<string, React.ElementType> = {
-  film: Film, music: Music, tech: Monitor, book: Book, place: MapPin,
-  game: Gamepad2, event: Calendar, quote: Quote, article: FileText,
-  software: Monitor, generic: Box,
-}
-
-// Per-list-type accent colour (rgb triple) — paints the icon halo so the
-// strip reads as a constellation of distinct items, not a uniform list.
-const LIST_TYPE_ACCENT: Record<string, string> = {
-  film: '236, 72, 153',     // pink
-  music: '239, 68, 68',     // red
-  tech: '59, 130, 246',     // blue
-  book: '252, 211, 77',     // amber
-  place: '16, 185, 129',    // emerald
-  game: '167, 139, 250',    // violet
-  event: '56, 189, 248',    // cyan
-  quote: '156, 163, 175',   // slate
-  article: '6, 182, 212',   // teal
-  software: '59, 130, 246', // blue
-  generic: '156, 163, 175', // slate
-}
-
-function NowConsumingWidget() {
-  const [activeItems, setActiveItems] = useState<{ listId: string; listTitle: string; listType: string; itemId: string; itemContent: string }[]>([])
-  const [loaded, setLoaded] = useState(false)
-
-  useEffect(() => {
-    const fetchActiveItems = async () => {
-      try {
-        const res = await fetch('/api/lists?scope=items&resource=active-items&limit=4')
-        if (!res.ok) return
-        const rows = await res.json()
-        setActiveItems(rows.map((r: any) => ({
-          listId: r.list_id,
-          listTitle: r.list?.title ?? '',
-          listType: r.list?.type ?? 'generic',
-          itemId: r.id,
-          itemContent: r.content,
-        })))
-      } catch {}
-      setLoaded(true)
-    }
-    fetchActiveItems()
-  }, [])
-
-  if (!loaded || activeItems.length === 0) return null
-
-  const shown = activeItems.slice(0, 4)
-
-  return (
-    <section className="pb-8">
-      <div
-        className="relative flex flex-col rounded-2xl overflow-hidden"
-        style={{
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.035), rgba(15,24,41,0.45))',
-          backdropFilter: 'blur(14px)',
-          border: '1px solid rgba(255,255,255,0.06)',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.03)',
-        }}
-      >
-        {shown.map((item, i) => {
-          const Icon = LIST_TYPE_ICONS[item.listType] || Box
-          const accent = LIST_TYPE_ACCENT[item.listType] || LIST_TYPE_ACCENT.generic
-          const isLast = i === shown.length - 1
-          return (
-            <Link
-              key={item.itemId}
-              to={`/lists/${item.listId}`}
-              className="group relative flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-white/[0.025] min-h-[60px]"
-              style={{
-                borderBottom: isLast ? 'none' : '1px solid rgba(255,255,255,0.04)',
-                animation: `pageEnter 0.45s cubic-bezier(0.4,0,0.2,1) ${i * 60}ms both`,
-              }}
-            >
-              <div
-                className="relative h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                }}
-              >
-                <Icon className="h-4 w-4 text-[var(--brand-text-secondary)] opacity-80" />
-                {/* Type accent — single dot, the only colour cue per row */}
-                <span
-                  aria-hidden
-                  className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full"
-                  style={{
-                    background: `rgb(${accent})`,
-                    boxShadow: `0 0 6px rgba(${accent}, 0.7)`,
-                  }}
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-[var(--brand-text-primary)] truncate">{item.itemContent}</p>
-                <p className="text-[11px] text-[var(--brand-text-muted)] truncate mt-0.5">{item.listTitle}</p>
-              </div>
-              <ArrowRight className="h-4 w-4 text-[var(--brand-text-muted)] opacity-40 flex-shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:opacity-70" />
-            </Link>
-          )
-        })}
-      </div>
-    </section>
-  )
-}
+import { AlertCircle, Search, Moon, Settings } from 'lucide-react'
 
 export function HomePage() {
   const { isAuthenticated } = useAuthContext()
@@ -323,10 +219,12 @@ export function HomePage() {
 
           <div className="section-seam" aria-hidden />
 
-          {/* Section 5 — Now consuming. Identity layer. */}
+          {/* Section 5 — Now consuming. Identity layer.
+              Non-article lists in the top strip; Saved reads + New reads
+              dropdowns hold articles from the reading queue and RSS feeds. */}
           <h2 className="section-header" style={{ margin: '0 0 10px' }}>now <span>consuming</span></h2>
           <motion.div {...stackTransition(6)}>
-            <NowConsumingWidget />
+            <ConsumingWidget />
           </motion.div>
 
           <div className="section-seam" aria-hidden />

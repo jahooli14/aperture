@@ -1222,10 +1222,188 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
+  // CONSUMING RESOURCE — feeds the home Consuming widget's two dropdowns:
+  //  - "Saved reads": articles the user explicitly saved or has started, NOT
+  //    fresh from RSS. Pinned items float to the top. Returns all (capped at
+  //    200 for safety) — the user wants every saved article reachable.
+  //  - "New reads":   unread RSS items, not yet dismissed. Pure reverse-chrono
+  //    so the surface reads as the feeds, not as an algorithm. Paginated 20
+  //    at a time so "load more" is a friction point against doom-scroll.
+  //  Mutations (mobile swipe gestures):
+  //    POST ?action=dismiss          — left swipe on New reads. Sets dismissed_at.
+  //    POST ?action=save             — right swipe on New reads. Status -> 'reading',
+  //                                    so the row moves to Saved reads on next fetch.
+  //    POST ?action=archive          — left swipe on Saved reads. Status -> 'archived'.
+  //    POST ?action=pin              — right swipe on Saved reads. Sets/clears pinned_at.
+  //    POST ?action=restore-dismiss  — undo a dismiss (clears dismissed_at).
+  //    POST ?action=restore-archive  — undo an archive (clears archived_at, status='reading').
+  if (resource === 'consuming') {
+    if (req.method === 'GET') {
+      try {
+        const parsedSavedLimit = req.query.saved_limit ? parseInt(req.query.saved_limit as string, 10) : 20
+        const parsedNewLimit = req.query.new_limit ? parseInt(req.query.new_limit as string, 10) : 20
+        const parsedNewOffset = req.query.new_offset ? parseInt(req.query.new_offset as string, 10) : 0
+        const savedLimit = Number.isFinite(parsedSavedLimit) && parsedSavedLimit > 0 ? Math.min(parsedSavedLimit, 500) : 200
+        const newLimit = Number.isFinite(parsedNewLimit) && parsedNewLimit > 0 ? Math.min(parsedNewLimit, 100) : 20
+        const newOffset = Number.isFinite(parsedNewOffset) && parsedNewOffset >= 0 ? parsedNewOffset : 0
+
+        const SELECT_COLS = 'id, url, title, excerpt, source, favicon_url, thumbnail_url, published_date, read_time_minutes, status, tags, created_at, pinned_at'
+
+        // Saved reads — anything the user has touched, or saved without an
+        // rss tag. Pinned float to the top; rest by recency. Dismissed and
+        // archived rows excluded.
+        const savedQuery = supabase
+          .from('reading_queue')
+          .select(SELECT_COLS)
+          .eq('user_id', userId)
+          .neq('status', 'archived')
+          .is('dismissed_at', null)
+          .or('status.neq.unread,tags.not.cs.{rss}')
+          .order('pinned_at', { ascending: false, nullsFirst: false })
+          .order('updated_at', { ascending: false })
+          .limit(savedLimit)
+
+        // New reads — rss-tagged, untouched, undismissed. Reverse chrono with
+        // a small +1 to fetch so we can tell whether more pages exist.
+        const newQuery = supabase
+          .from('reading_queue')
+          .select(SELECT_COLS)
+          .eq('user_id', userId)
+          .eq('status', 'unread')
+          .is('dismissed_at', null)
+          .contains('tags', ['rss'])
+          .order('created_at', { ascending: false })
+          .range(newOffset, newOffset + newLimit)  // inclusive, so +1 row
+
+        // Recently hidden — 24h undo window for swipe-left actions.
+        const undoCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+        const recentlyDismissedQuery = supabase
+          .from('reading_queue')
+          .select(SELECT_COLS)
+          .eq('user_id', userId)
+          .not('dismissed_at', 'is', null)
+          .gte('dismissed_at', undoCutoff)
+          .order('dismissed_at', { ascending: false })
+          .limit(20)
+
+        const recentlyArchivedQuery = supabase
+          .from('reading_queue')
+          .select(SELECT_COLS)
+          .eq('user_id', userId)
+          .eq('status', 'archived')
+          .not('archived_at', 'is', null)
+          .gte('archived_at', undoCutoff)
+          .is('dismissed_at', null)
+          .order('archived_at', { ascending: false })
+          .limit(20)
+
+        const [savedRes, newRes, recentlyDismissedRes, recentlyArchivedRes] = await Promise.all([
+          savedQuery,
+          newQuery,
+          recentlyDismissedQuery,
+          recentlyArchivedQuery,
+        ])
+
+        if (savedRes.error) throw savedRes.error
+        if (newRes.error) throw newRes.error
+
+        const newRows = newRes.data ?? []
+        const hasMore = newRows.length > newLimit
+        const newReads = hasMore ? newRows.slice(0, newLimit) : newRows
+        const savedReads = savedRes.data ?? []
+        const recentlyDismissed = recentlyDismissedRes.data ?? []
+        const recentlyArchived = recentlyArchivedRes.data ?? []
+
+        return res.status(200).json({
+          saved: savedReads,
+          new: newReads,
+          recently_dismissed: recentlyDismissed,
+          recently_archived: recentlyArchived,
+          saved_count: savedReads.length,
+          new_count: newReads.length,
+          new_has_more: hasMore,
+          new_next_offset: hasMore ? newOffset + newLimit : null,
+        })
+      } catch (error) {
+        console.error('[Reading] Consuming error:', error)
+        return res.status(500).json({ error: 'Failed to load consuming surface' })
+      }
+    }
+
+    if (req.method === 'POST') {
+      const { id: itemId, pinned } = (req.body ?? {}) as { id?: string; pinned?: boolean }
+      if (!itemId || typeof itemId !== 'string') {
+        return res.status(400).json({ error: 'id required' })
+      }
+
+      const action = req.query.action
+      let update: Record<string, any> | null = null
+
+      if (action === 'dismiss') {
+        update = { dismissed_at: new Date().toISOString() }
+      } else if (action === 'save') {
+        // Mobile right-swipe on a New read. Status -> 'reading' is the cheapest
+        // way to move it into the Saved reads query; the article hasn't really
+        // been read, but "I want this in my list" is closer to reading than
+        // unread.
+        update = { status: 'reading' }
+      } else if (action === 'archive') {
+        update = { status: 'archived', archived_at: new Date().toISOString() }
+      } else if (action === 'pin') {
+        update = { pinned_at: pinned === false ? null : new Date().toISOString() }
+      } else if (action === 'restore-dismiss') {
+        update = { dismissed_at: null }
+      } else if (action === 'restore-archive') {
+        // Bring an archived item back into Saved reads. Status flips to
+        // 'reading' (was 'archived'); archived_at cleared so the row is
+        // no longer in the "recently archived" window.
+        update = { status: 'reading', archived_at: null }
+      } else {
+        return res.status(400).json({ error: 'unknown action' })
+      }
+
+      try {
+        const { error } = await supabase
+          .from('reading_queue')
+          .update(update)
+          .eq('id', itemId)
+          .eq('user_id', userId)
+        if (error) throw error
+        return res.status(204).send('')
+      } catch (error) {
+        console.error(`[Reading] Consuming ${action} error:`, error)
+        return res.status(500).json({ error: `Failed to ${action} item` })
+      }
+    }
+
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
   // ARTICLES RESOURCE (default - only if no resource specified)
 
   // GET - List articles OR get single article
   if (req.method === 'GET' && !resource) {
+    // Batch fetch by ids — used by the home Consuming widget to warm the
+    // offline article cache without auto-promoting status (the single-id
+    // path below flips unread -> reading, which we explicitly DON'T want
+    // here because the widget is just pre-caching for offline reads).
+    const idsParam = req.query.ids
+    if (idsParam && typeof idsParam === 'string') {
+      try {
+        const ids = idsParam.split(',').map(s => s.trim()).filter(Boolean).slice(0, 50)
+        if (ids.length === 0) return res.status(200).json({ articles: [] })
+        const { data, error } = await supabase
+          .from('reading_queue')
+          .select('*')
+          .eq('user_id', userId)
+          .in('id', ids)
+        if (error) throw error
+        return res.status(200).json({ articles: data || [] })
+      } catch (error) {
+        return res.status(500).json({ error: 'Failed to fetch articles batch' })
+      }
+    }
+
     // Get single article with highlights
     if (id && typeof id === 'string') {
       try {
@@ -1265,7 +1443,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
 
         if (highlightsError) throw highlightsError
 
-        if (article.status === 'unread') {
+        if (article.status === 'unread' && req.query.no_promote !== 'true') {
           await supabase
             .from('reading_queue')
             .update({ status: 'reading', read_at: new Date().toISOString() })
@@ -1781,21 +1959,45 @@ Return ONLY the JSON, no other text.`
               totalArticlesAdded++
             }
 
-            // 2. Cleanup: Only keep latest 5 unread items per feed
-            // Items that are 'reading', 'read', or 'archived' are PROTECTED
+            // 2. Cleanup: keep latest 20 LIVE unread items per feed.
+            // "Live" = not dismissed. Dismissed items used to count against
+            // the cap, which meant dismissing 15 articles starved the feed
+            // down to 5 fresh slots. Now they're handled separately below.
+            // Items with status 'reading' / 'read' / 'archived' stay PROTECTED.
+            const sourceHost = new URL(feed.feed_url).hostname.replace('www.', '')
             const { data: currentUnread } = await supabase
               .from('reading_queue')
               .select('id, created_at')
               .eq('user_id', userId)
               .eq('status', 'unread')
+              .is('dismissed_at', null)
               .contains('tags', ['rss'])
-              .eq('source', new URL(feed.feed_url).hostname.replace('www.', ''))
+              .eq('source', sourceHost)
               .order('created_at', { ascending: false })
 
-            if (currentUnread && currentUnread.length > 5) {
-              const toDelete = currentUnread.slice(5).map(i => i.id)
+            if (currentUnread && currentUnread.length > 20) {
+              const toDelete = currentUnread.slice(20).map(i => i.id)
               await supabase.from('reading_queue').delete().in('id', toDelete)
               console.log(`[RSS Sync] Purged ${toDelete.length} old unread RSS items for ${feed.title}`)
+            }
+
+            // 3. Cleanup dismissed: delete anything the user explicitly
+            // dismissed more than 7 days ago. Holding them longer just to
+            // be safe — gives a "undo" window if we ever surface one.
+            const dismissedCutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+            const { data: oldDismissed } = await supabase
+              .from('reading_queue')
+              .select('id')
+              .eq('user_id', userId)
+              .not('dismissed_at', 'is', null)
+              .lt('dismissed_at', dismissedCutoff)
+              .contains('tags', ['rss'])
+              .eq('source', sourceHost)
+              .limit(200)
+
+            if (oldDismissed && oldDismissed.length > 0) {
+              await supabase.from('reading_queue').delete().in('id', oldDismissed.map(i => i.id))
+              console.log(`[RSS Sync] Purged ${oldDismissed.length} long-dismissed RSS items for ${feed.title}`)
             }
 
             await supabase.from('rss_feeds').update({ last_fetched_at: new Date().toISOString() }).eq('id', feed.id)

@@ -50,6 +50,7 @@ const FavouritesPage = lazy(lazyRetry(() => import('./pages/FavouritesPage')))
 const FixQueuePage = lazy(lazyRetry(() => import('./pages/FixQueuePage')))
 const LoginPage = lazy(lazyRetry(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage }))))
 const CognitiveReplayPage = lazy(lazyRetry(() => import('./pages/CognitiveReplayPage').then(m => ({ default: m.CognitiveReplayPage }))))
+const FeedsPage = lazy(lazyRetry(() => import('./pages/FeedsPage').then(m => ({ default: m.FeedsPage }))))
 
 // Loading fallback component with skeleton
 import { useBedtimeNotifications } from './hooks/useBedtimeNotifications'
@@ -316,6 +317,7 @@ export default function App() {
                       <Route path="/memories" element={<AnimatedPage page="thoughts"><MemoriesPage /></AnimatedPage>} />
                       <Route path="/reading" element={<AnimatedPage page="reading"><ReadingPage /></AnimatedPage>} />
                       <Route path="/reading/:id" element={<AnimatedPage page="reading"><ReaderPage /></AnimatedPage>} />
+                      <Route path="/rss" element={<AnimatedPage page="reading"><FeedsPage /></AnimatedPage>} />
                       {/* /suggestions route removed — content folded into home page carousel */}
                       <Route path="/projects" element={<AnimatedPage page="projects"><ProjectsPage /></AnimatedPage>} />
                       <Route path="/projects/drawer" element={<AnimatedPage page="projects"><DrawerPage /></AnimatedPage>} />

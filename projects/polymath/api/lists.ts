@@ -220,19 +220,32 @@ async function handleListItems(req: VercelRequest, res: VercelResponse) {
     try {
         // GET /api/lists?scope=items&resource=active-items&limit=N
         // Returns up to N active items across ALL lists in one query.
-        // Used by NowConsumingWidget to avoid N serial fetches.
+        // Used by the home Consuming widget to avoid N serial fetches.
+        // Articles are excluded — they have their own surface in the same
+        // widget (Saved reads / New reads dropdowns) sourced from reading_queue.
         if (req.method === 'GET' && resource === 'active-items') {
             const parsedLimit = req.query.limit ? parseInt(req.query.limit as string, 10) : 4
             const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 100) : 4
+            // Optional ?types=book,film filters to only those list types.
+            // Default: exclude articles (they have their own widget surface).
+            const typesParam = typeof req.query.types === 'string' ? req.query.types : ''
+            const includeTypes = typesParam
+                ? typesParam.split(',').map(s => s.trim()).filter(Boolean)
+                : null
             const { data, error } = await supabase
                 .from('list_items')
                 .select('id, content, status, list_id, list:lists!inner(id, title, type)')
                 .eq('user_id', userId)
                 .eq('status', 'active')
                 .order('updated_at', { ascending: false })
-                .limit(limit)
+                .limit(Math.min(limit * 4, 100))
             if (error) throw error
-            return res.status(200).json(data ?? [])
+            const filtered = (data ?? []).filter((row: any) => {
+                const t = row.list?.type
+                if (includeTypes) return includeTypes.includes(t)
+                return t !== 'article'
+            }).slice(0, limit)
+            return res.status(200).json(filtered)
         }
 
         // GET /api/lists?scope=items&resource=favourites
