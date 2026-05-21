@@ -86,12 +86,20 @@ export const useRSSStore = create<RSSState>((set, get) => ({
           throw new Error('API not available. Please check that serverless functions are deployed.')
         }
 
+        // Surface the API's actual error. Earlier code threw the real
+        // error from inside the json() try-block, so the surrounding
+        // catch swallowed it — every 400/500 looked the same. Now
+        // json-parse failures fall through to a generic status message,
+        // but a parseable body shows the real reason.
+        let errorData: any = null
         try {
-          const errorData = await response.json()
-          throw new Error(errorData.details || errorData.error || 'Failed to subscribe to feed')
-        } catch (jsonError) {
-          throw new Error(`Server error: ${response.status} ${response.statusText}`)
-        }
+          errorData = await response.json()
+        } catch { /* body wasn't JSON */ }
+        throw new Error(
+          errorData?.details ||
+          errorData?.error ||
+          `Server error: ${response.status} ${response.statusText}`
+        )
       }
 
       const { feed } = await response.json()
