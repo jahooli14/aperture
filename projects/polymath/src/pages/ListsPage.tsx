@@ -96,8 +96,15 @@ function ListsPageInner() {
 
             const allCachedCovers = await readingDb.getAllCachedListCoverImages()
             allCachedCovers.forEach(cover => {
-                if (cover.image_type === 'quote' && !cachedQuotes[cover.list_id]) {
-                    cachedQuotes[cover.list_id] = cover.image_url
+                // Route by stored image_type. Without splitting on type, a
+                // quote entry whose list already had a backend-supplied
+                // quote falls through to the else and lands in cachedCovers
+                // — the lists grid then tries to load the quote text as an
+                // image URL and renders a dark placeholder.
+                if (cover.image_type === 'quote') {
+                    if (!cachedQuotes[cover.list_id]) {
+                        cachedQuotes[cover.list_id] = cover.image_url
+                    }
                 } else if (!cachedCovers[cover.list_id]) {
                     cachedCovers[cover.list_id] = cover.image_url
                 }
