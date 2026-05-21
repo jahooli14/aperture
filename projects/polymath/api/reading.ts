@@ -15,16 +15,147 @@ import { parseHTML } from 'linkedom'
 import { updateItemConnections } from './_lib/connection-logic.js' // New import
 import { MODELS } from './_lib/models.js'
 
-// Some feeds reject default node-fetch / no-UA requests with 403 — set a
-// realistic browser-ish UA so cloudflare-protected and UA-gated feeds
-// (Stratechery, certain Substacks, etc.) parse cleanly.
-const rssParser = new Parser({
-  headers: {
-    'User-Agent': 'Mozilla/5.0 (compatible; PolymathRSS/1.0; +https://aper-ture.vercel.app)',
-    'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*',
-  },
-  timeout: 15000,
-})
+// rss-parser is used only for XML parsing now — fetching is done manually
+// in robustParseFeed below so we can present a full browser identity to
+// stubborn feeds (Cloudflare, UA-gated Substacks, etc.).
+const rssParser = new Parser({ timeout: 15000 })
+
+/**
+ * Browser-headers fetch + parse, for known canonical feed URLs (sync,
+ * items handlers). No discovery fallback — if it 4xxs, we propagate.
+ */
+async function fetchFeedDirect(url: string): Promise<any> {
+  const xml = await fetchAsBrowser(url)
+  return await rssParser.parseString(xml)
+}
+
+/**
+ * Fetch a URL with a fully browser-realistic header set. Many feeds 403
+ * any request that smells like a bot — node-fetch's default UA, missing
+ * Accept-Language, missing Sec-Fetch-* etc. Mimicking Chrome unblocks
+ * most of them.
+ */
+async function fetchAsBrowser(url: string): Promise<string> {
+  const res = await fetch(url, {
+    redirect: 'follow',
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.9, text/html;q=0.8, */*;q=0.5',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+      'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+      'Sec-Ch-Ua-Mobile': '?0',
+      'Sec-Ch-Ua-Platform': '"macOS"',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      'Sec-Fetch-User': '?1',
+      'Upgrade-Insecure-Requests': '1',
+    } as Record<string, string>,
+  })
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status} ${res.statusText} from ${url}`)
+  }
+  return await res.text()
+}
+
+/**
+ * Look for a feed link inside an HTML document. Used when the user pastes
+ * a website URL instead of the feed URL — we find the <link rel="alternate"
+ * type="application/rss+xml"> and resolve to an absolute URL.
+ */
+function discoverFeedLink(html: string, baseUrl: string): string | null {
+  // Match <link ...> tags, then check their attributes regardless of order.
+  const linkRe = /<link\b([^>]*)>/gi
+  let m: RegExpExecArray | null
+  while ((m = linkRe.exec(html)) !== null) {
+    const attrs = m[1]
+    const isAlternate = /\brel\s*=\s*["']?alternate["']?/i.test(attrs)
+    const isFeedType = /\btype\s*=\s*["']?application\/(?:rss|atom)\+xml["']?/i.test(attrs)
+    if (!isAlternate || !isFeedType) continue
+    const hrefMatch = /\bhref\s*=\s*["']([^"']+)["']/i.exec(attrs)
+    if (!hrefMatch) continue
+    const href = hrefMatch[1]
+    try {
+      return new URL(href, baseUrl).toString()
+    } catch {
+      continue
+    }
+  }
+  return null
+}
+
+const FEED_URL_HINT_RE = /\.(xml|rss|atom)(\?|$)|\/feed\/?$|\/rss\/?$|\/atom\/?$|\/feed\.\w+$|\/rss\.\w+$/i
+
+/**
+ * Robust feed fetch + parse, trying strategies in order:
+ *   1. Direct parse (rss-parser w/ browser-ish headers via robust fetch)
+ *   2. If URL looks like a website (no obvious feed suffix), fetch as HTML
+ *      and look for a <link rel="alternate"> feed pointer, then parse that.
+ *   3. Same as 2 but try common feed paths (/feed, /rss, /feed.xml, etc.)
+ *      against the host as a last resort.
+ *
+ * Returns the parsed feed AND the URL that actually worked, since (2) and
+ * (3) may discover a different canonical feed URL than what was passed in.
+ */
+async function robustParseFeed(inputUrl: string): Promise<{ feedData: any; finalUrl: string }> {
+  let lastError: Error | null = null
+
+  // Normalise: trim, default to https if no protocol.
+  let url = inputUrl.trim()
+  if (!/^https?:\/\//i.test(url)) {
+    url = 'https://' + url
+  }
+
+  // Strategy 1: fetch directly and parse.
+  try {
+    const xml = await fetchAsBrowser(url)
+    const feedData = await rssParser.parseString(xml)
+    return { feedData, finalUrl: url }
+  } catch (e) {
+    lastError = e instanceof Error ? e : new Error(String(e))
+  }
+
+  // Strategy 2: maybe it's a website URL. Try to discover the feed.
+  const looksLikeFeed = FEED_URL_HINT_RE.test(url)
+  if (!looksLikeFeed) {
+    try {
+      const html = await fetchAsBrowser(url)
+      const discovered = discoverFeedLink(html, url)
+      if (discovered) {
+        const xml = await fetchAsBrowser(discovered)
+        const feedData = await rssParser.parseString(xml)
+        return { feedData, finalUrl: discovered }
+      }
+    } catch (e) {
+      lastError = e instanceof Error ? e : new Error(String(e))
+    }
+  }
+
+  // Strategy 3: try the common feed paths against the origin.
+  if (!looksLikeFeed) {
+    try {
+      const base = new URL(url)
+      const candidates = ['/feed', '/rss', '/feed.xml', '/rss.xml', '/atom.xml', '/index.xml']
+      for (const path of candidates) {
+        const candidate = `${base.origin}${path}`
+        try {
+          const xml = await fetchAsBrowser(candidate)
+          const feedData = await rssParser.parseString(xml)
+          return { feedData, finalUrl: candidate }
+        } catch {
+          // try next
+        }
+      }
+    } catch {
+      // base URL was malformed; fall through to lastError
+    }
+  }
+
+  throw lastError ?? new Error('Could not parse feed at any candidate URL')
+}
 
 // API Keys for third-party extraction services (Strategy B: Orchestrator Pattern)
 const DIFFBOT_API_KEY = process.env.DIFFBOT_API_KEY || '' // 10k credits/month free
@@ -1913,7 +2044,7 @@ Return ONLY the JSON, no other text.`
         let totalArticlesAdded = 0
         for (const feed of feeds) {
           try {
-            const feedData = await rssParser.parseURL(feed.feed_url)
+            const feedData = await fetchFeedDirect(feed.feed_url)
 
             // 1. Process new items
             for (const item of feedData.items.slice(0, 5)) {
@@ -2075,7 +2206,7 @@ Return ONLY the JSON, no other text.`
         }
 
         // Fetch RSS feed items
-        const feedData = await rssParser.parseURL(feed.feed_url)
+        const feedData = await fetchFeedDirect(feed.feed_url)
 
         // Return the latest 20 items
         // Simplified parsing: prioritize content:encoded > content > description > summary
@@ -2137,26 +2268,39 @@ Return ONLY the JSON, no other text.`
           })
         }
 
-        const { data: existing, error: existingError } = await supabase.from('rss_feeds').select('id').eq('user_id', userId).eq('feed_url', feed_url).single()
-        if (existingError && existingError.code !== 'PGRST116') throw existingError
-        if (existing) return res.status(200).json({ success: true, feed: existing, message: 'Already subscribed' })
-
-        console.log('[RSS Subscribe] Fetching RSS feed:', feed_url)
-        let feedData
+        // robustParseFeed handles browser-headers, follows website->feed
+        // discovery, and tries common feed paths as a last resort.
+        let feedData: any
+        let canonicalUrl = feed_url
         try {
-          feedData = await rssParser.parseURL(feed_url)
-          console.log('[RSS Subscribe] Feed parsed successfully:', feedData.title)
+          const result = await robustParseFeed(feed_url)
+          feedData = result.feedData
+          canonicalUrl = result.finalUrl
+          console.log('[RSS Subscribe] Parsed via robust path:', canonicalUrl, '->', feedData.title)
         } catch (parseError) {
-          console.error('[RSS Subscribe] Failed to parse RSS feed:', parseError)
+          console.error('[RSS Subscribe] Robust parse failed:', parseError)
           return res.status(400).json({
-            error: 'Failed to parse RSS feed',
-            details: parseError instanceof Error ? parseError.message : 'Invalid RSS feed URL or feed is unreachable'
+            error: 'Could not subscribe to this feed',
+            details: parseError instanceof Error ? parseError.message : 'Invalid feed URL or feed is unreachable',
           })
+        }
+
+        // De-dupe against the canonical URL we landed on, not the input,
+        // so pasting a homepage URL doesn't bypass an existing subscription.
+        const { data: existing, error: existingError } = await supabase
+          .from('rss_feeds')
+          .select('*')
+          .eq('user_id', userId)
+          .in('feed_url', Array.from(new Set([feed_url, canonicalUrl])))
+          .maybeSingle()
+        if (existingError && existingError.code !== 'PGRST116') throw existingError
+        if (existing) {
+          return res.status(200).json({ success: true, feed: existing, message: 'Already subscribed' })
         }
 
         const { data, error } = await supabase.from('rss_feeds').insert([{
           user_id: userId,
-          feed_url,
+          feed_url: canonicalUrl,
           title: feedData.title || 'Untitled',
           description: feedData.description || null,
           site_url: feedData.link || null,
