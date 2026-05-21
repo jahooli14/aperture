@@ -19,7 +19,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence, useMotionValue, useTransform, type PanInfo } from 'framer-motion'
 import {
   ArrowRight, ChevronDown, ChevronRight,
-  X, Bookmark, Archive, Pin,
+  X, Bookmark, Archive, Pin, RotateCcw,
   Film, Music, Monitor, Book, MapPin, Gamepad2, Calendar, FileText, Quote, Box,
 } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
@@ -76,6 +76,8 @@ interface ConsumingArticle {
 interface ConsumingPayload {
   saved: ConsumingArticle[]
   new: ConsumingArticle[]
+  recently_dismissed: ConsumingArticle[]
+  recently_archived: ConsumingArticle[]
   new_has_more: boolean
   new_next_offset: number | null
 }
@@ -232,6 +234,69 @@ function DropdownHeader({
   )
 }
 
+/**
+ * Inline "Recently hidden" panel — sits at the bottom of a dropdown.
+ * Collapsed: shows a compact toggle with the count.
+ * Expanded: lists each item muted, with a single Restore button.
+ * The whole row is non-interactive except the Restore icon — keeps the
+ * affordance unambiguous (no accidental reopens).
+ */
+function RecentlyHidden({
+  label,
+  items,
+  open,
+  onToggle,
+  onRestore,
+}: {
+  label: string
+  items: ConsumingArticle[]
+  open: boolean
+  onToggle: () => void
+  onRestore: (article: ConsumingArticle) => void
+}) {
+  if (items.length === 0) return null
+  const Chevron = open ? ChevronDown : ChevronRight
+  return (
+    <div className="border-t border-white/[0.04]">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex items-center gap-2 w-full px-4 py-2.5 text-left hover:bg-white/[0.02] transition-colors min-h-[36px]"
+      >
+        <Chevron className="h-3.5 w-3.5 text-[var(--brand-text-muted)] opacity-50" />
+        <span className="text-[11px] uppercase tracking-[0.12em] text-[var(--brand-text-muted)] opacity-70">
+          {label}
+        </span>
+        <span className="ml-auto text-[11px] text-[var(--brand-text-muted)] opacity-60 tabular-nums">
+          {items.length}
+        </span>
+      </button>
+      {open && (
+        <div className="px-4 pb-3 space-y-1">
+          {items.map(article => (
+            <div
+              key={article.id}
+              className="flex items-center gap-2 py-1.5 text-[12px] text-[var(--brand-text-muted)] opacity-70"
+            >
+              <span className="flex-1 min-w-0 truncate">
+                {article.title || article.url}
+              </span>
+              <button
+                type="button"
+                onClick={() => onRestore(article)}
+                aria-label="Restore"
+                className="h-7 w-7 rounded-md flex items-center justify-center text-[var(--brand-text-muted)] hover:text-[var(--brand-text-primary)] hover:bg-white/[0.05] transition-colors flex-shrink-0"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function ConsumingWidget() {
   const navigate = useNavigate()
   const { addToast } = useToast()
@@ -246,6 +311,12 @@ export function ConsumingWidget() {
   // user opens whichever drawer they want.
   const [openSaved, setOpenSaved] = useState(false)
   const [openNew, setOpenNew] = useState(false)
+  // Undo state — last 24h of swipe-left actions are recoverable from
+  // within their respective dropdowns.
+  const [recentlyDismissed, setRecentlyDismissed] = useState<ConsumingArticle[]>([])
+  const [recentlyArchived, setRecentlyArchived] = useState<ConsumingArticle[]>([])
+  const [showRecentlyDismissed, setShowRecentlyDismissed] = useState(false)
+  const [showRecentlyArchived, setShowRecentlyArchived] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -271,6 +342,8 @@ export function ConsumingWidget() {
           const data = (await consumingRes.json()) as ConsumingPayload
           setSaved(data.saved ?? [])
           setFeedReads(data.new ?? [])
+          setRecentlyDismissed(data.recently_dismissed ?? [])
+          setRecentlyArchived(data.recently_archived ?? [])
           setHasMore(!!data.new_has_more)
           setNextOffset(data.new_next_offset ?? null)
         }
@@ -285,7 +358,7 @@ export function ConsumingWidget() {
   }, [])
 
   const callConsumingAction = useCallback(async (
-    action: 'dismiss' | 'save' | 'archive' | 'pin',
+    action: 'dismiss' | 'save' | 'archive' | 'pin' | 'restore-dismiss' | 'restore-archive',
     id: string,
     extra?: Record<string, unknown>,
   ) => {
@@ -302,9 +375,11 @@ export function ConsumingWidget() {
 
   // New reads — swipe handlers
   const dismissNew = useCallback((id: string) => {
+    const article = feedReads.find(r => r.id === id)
     setFeedReads(prev => prev.filter(r => r.id !== id))
+    if (article) setRecentlyDismissed(prev => [article, ...prev])
     callConsumingAction('dismiss', id)
-  }, [callConsumingAction])
+  }, [callConsumingAction, feedReads])
 
   const saveNew = useCallback((article: ConsumingArticle): boolean => {
     if (saved.length >= SAVED_CAP) {
@@ -331,9 +406,31 @@ export function ConsumingWidget() {
 
   // Saved reads — swipe handlers
   const archiveSaved = useCallback((id: string) => {
+    const article = saved.find(r => r.id === id)
     setSaved(prev => prev.filter(r => r.id !== id))
+    if (article) setRecentlyArchived(prev => [article, ...prev])
     callConsumingAction('archive', id)
+  }, [callConsumingAction, saved])
+
+  // Restore handlers — bring a hidden item back into its parent list.
+  const restoreDismiss = useCallback((article: ConsumingArticle) => {
+    setRecentlyDismissed(prev => prev.filter(r => r.id !== article.id))
+    setFeedReads(prev => [article, ...prev])
+    callConsumingAction('restore-dismiss', article.id)
   }, [callConsumingAction])
+
+  const restoreArchive = useCallback((article: ConsumingArticle) => {
+    if (saved.length >= SAVED_CAP) {
+      addToast({
+        title: 'Saved is full',
+        description: 'Archive an old one before restoring this.',
+      })
+      return
+    }
+    setRecentlyArchived(prev => prev.filter(r => r.id !== article.id))
+    setSaved(prev => [{ ...article, status: 'reading' }, ...prev])
+    callConsumingAction('restore-archive', article.id)
+  }, [callConsumingAction, saved.length, addToast])
 
   const togglePinSaved = useCallback((article: ConsumingArticle) => {
     const willPin = !article.pinned_at
@@ -418,7 +515,7 @@ export function ConsumingWidget() {
         })}
 
         {/* Saved reads dropdown */}
-        {saved.length > 0 && (
+        {(saved.length > 0 || recentlyArchived.length > 0) && (
           <>
             <DropdownHeader
               label="Saved reads"
@@ -452,13 +549,20 @@ export function ConsumingWidget() {
                     </motion.div>
                   ))}
                 </AnimatePresence>
+                <RecentlyHidden
+                  label="Recently archived"
+                  items={recentlyArchived}
+                  open={showRecentlyArchived}
+                  onToggle={() => setShowRecentlyArchived(v => !v)}
+                  onRestore={restoreArchive}
+                />
               </div>
             )}
           </>
         )}
 
         {/* New reads dropdown */}
-        {feedReads.length > 0 && (
+        {(feedReads.length > 0 || recentlyDismissed.length > 0) && (
           <>
             <DropdownHeader
               label="New reads"
@@ -502,6 +606,13 @@ export function ConsumingWidget() {
                     {loadingMore ? 'Loading…' : 'Load more'}
                   </button>
                 )}
+                <RecentlyHidden
+                  label="Recently dismissed"
+                  items={recentlyDismissed}
+                  open={showRecentlyDismissed}
+                  onToggle={() => setShowRecentlyDismissed(v => !v)}
+                  onRestore={restoreDismiss}
+                />
               </div>
             )}
           </>

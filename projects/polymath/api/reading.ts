@@ -1230,11 +1230,13 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
   //    so the surface reads as the feeds, not as an algorithm. Paginated 20
   //    at a time so "load more" is a friction point against doom-scroll.
   //  Mutations (mobile swipe gestures):
-  //    POST ?action=dismiss  — left swipe on New reads. Sets dismissed_at.
-  //    POST ?action=save     — right swipe on New reads. Status -> 'reading',
-  //                            so the row moves to Saved reads on next fetch.
-  //    POST ?action=archive  — left swipe on Saved reads. Status -> 'archived'.
-  //    POST ?action=pin      — right swipe on Saved reads. Sets/clears pinned_at.
+  //    POST ?action=dismiss          — left swipe on New reads. Sets dismissed_at.
+  //    POST ?action=save             — right swipe on New reads. Status -> 'reading',
+  //                                    so the row moves to Saved reads on next fetch.
+  //    POST ?action=archive          — left swipe on Saved reads. Status -> 'archived'.
+  //    POST ?action=pin              — right swipe on Saved reads. Sets/clears pinned_at.
+  //    POST ?action=restore-dismiss  — undo a dismiss (clears dismissed_at).
+  //    POST ?action=restore-archive  — undo an archive (clears archived_at, status='reading').
   if (resource === 'consuming') {
     if (req.method === 'GET') {
       try {
@@ -1273,7 +1275,34 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
           .order('created_at', { ascending: false })
           .range(newOffset, newOffset + newLimit)  // inclusive, so +1 row
 
-        const [savedRes, newRes] = await Promise.all([savedQuery, newQuery])
+        // Recently hidden — 24h undo window for swipe-left actions.
+        const undoCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+        const recentlyDismissedQuery = supabase
+          .from('reading_queue')
+          .select(SELECT_COLS)
+          .eq('user_id', userId)
+          .not('dismissed_at', 'is', null)
+          .gte('dismissed_at', undoCutoff)
+          .order('dismissed_at', { ascending: false })
+          .limit(20)
+
+        const recentlyArchivedQuery = supabase
+          .from('reading_queue')
+          .select(SELECT_COLS)
+          .eq('user_id', userId)
+          .eq('status', 'archived')
+          .not('archived_at', 'is', null)
+          .gte('archived_at', undoCutoff)
+          .is('dismissed_at', null)
+          .order('archived_at', { ascending: false })
+          .limit(20)
+
+        const [savedRes, newRes, recentlyDismissedRes, recentlyArchivedRes] = await Promise.all([
+          savedQuery,
+          newQuery,
+          recentlyDismissedQuery,
+          recentlyArchivedQuery,
+        ])
 
         if (savedRes.error) throw savedRes.error
         if (newRes.error) throw newRes.error
@@ -1282,10 +1311,14 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         const hasMore = newRows.length > newLimit
         const newReads = hasMore ? newRows.slice(0, newLimit) : newRows
         const savedReads = savedRes.data ?? []
+        const recentlyDismissed = recentlyDismissedRes.data ?? []
+        const recentlyArchived = recentlyArchivedRes.data ?? []
 
         return res.status(200).json({
           saved: savedReads,
           new: newReads,
+          recently_dismissed: recentlyDismissed,
+          recently_archived: recentlyArchived,
           saved_count: savedReads.length,
           new_count: newReads.length,
           new_has_more: hasMore,
@@ -1318,6 +1351,13 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         update = { status: 'archived', archived_at: new Date().toISOString() }
       } else if (action === 'pin') {
         update = { pinned_at: pinned === false ? null : new Date().toISOString() }
+      } else if (action === 'restore-dismiss') {
+        update = { dismissed_at: null }
+      } else if (action === 'restore-archive') {
+        // Bring an archived item back into Saved reads. Status flips to
+        // 'reading' (was 'archived'); archived_at cleared so the row is
+        // no longer in the "recently archived" window.
+        update = { status: 'reading', archived_at: null }
       } else {
         return res.status(400).json({ error: 'unknown action' })
       }
