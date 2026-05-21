@@ -1898,24 +1898,45 @@ Return ONLY the JSON, no other text.`
               totalArticlesAdded++
             }
 
-            // 2. Cleanup: Only keep latest 20 unread items per feed.
-            // The home Consuming widget's "New reads" dropdown is the user's
-            // scroll-through-feeds surface, so we need depth — 5 was right
-            // when RSS dumped into the main queue, too shallow now.
-            // Items that are 'reading', 'read', or 'archived' are PROTECTED.
+            // 2. Cleanup: keep latest 20 LIVE unread items per feed.
+            // "Live" = not dismissed. Dismissed items used to count against
+            // the cap, which meant dismissing 15 articles starved the feed
+            // down to 5 fresh slots. Now they're handled separately below.
+            // Items with status 'reading' / 'read' / 'archived' stay PROTECTED.
+            const sourceHost = new URL(feed.feed_url).hostname.replace('www.', '')
             const { data: currentUnread } = await supabase
               .from('reading_queue')
               .select('id, created_at')
               .eq('user_id', userId)
               .eq('status', 'unread')
+              .is('dismissed_at', null)
               .contains('tags', ['rss'])
-              .eq('source', new URL(feed.feed_url).hostname.replace('www.', ''))
+              .eq('source', sourceHost)
               .order('created_at', { ascending: false })
 
             if (currentUnread && currentUnread.length > 20) {
               const toDelete = currentUnread.slice(20).map(i => i.id)
               await supabase.from('reading_queue').delete().in('id', toDelete)
               console.log(`[RSS Sync] Purged ${toDelete.length} old unread RSS items for ${feed.title}`)
+            }
+
+            // 3. Cleanup dismissed: delete anything the user explicitly
+            // dismissed more than 7 days ago. Holding them longer just to
+            // be safe — gives a "undo" window if we ever surface one.
+            const dismissedCutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+            const { data: oldDismissed } = await supabase
+              .from('reading_queue')
+              .select('id')
+              .eq('user_id', userId)
+              .not('dismissed_at', 'is', null)
+              .lt('dismissed_at', dismissedCutoff)
+              .contains('tags', ['rss'])
+              .eq('source', sourceHost)
+              .limit(200)
+
+            if (oldDismissed && oldDismissed.length > 0) {
+              await supabase.from('reading_queue').delete().in('id', oldDismissed.map(i => i.id))
+              console.log(`[RSS Sync] Purged ${oldDismissed.length} long-dismissed RSS items for ${feed.title}`)
             }
 
             await supabase.from('rss_feeds').update({ last_fetched_at: new Date().toISOString() }).eq('id', feed.id)

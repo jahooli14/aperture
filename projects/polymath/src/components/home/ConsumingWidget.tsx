@@ -242,9 +242,11 @@ export function ConsumingWidget() {
   const [nextOffset, setNextOffset] = useState<number | null>(null)
   const [loadingMore, setLoadingMore] = useState(false)
   const [loaded, setLoaded] = useState(false)
+  // New reads opens by default — this surface is the whole point of the
+  // widget (Chrome new-tab replacement). Saved reads stays closed unless
+  // the user opens it; it shouldn't push New reads off-screen.
   const [openSaved, setOpenSaved] = useState(false)
-  const [openNew, setOpenNew] = useState(false)
-  const [openSetByUser, setOpenSetByUser] = useState(false)
+  const [openNew, setOpenNew] = useState(true)
 
   useEffect(() => {
     let cancelled = false
@@ -271,9 +273,6 @@ export function ConsumingWidget() {
           setFeedReads(data.new ?? [])
           setHasMore(!!data.new_has_more)
           setNextOffset(data.new_next_offset ?? null)
-          if (!openSetByUser) {
-            setOpenSaved((data.saved ?? []).length > 0)
-          }
         }
       } catch {
         /* silent — widget hides itself when everything is empty */
@@ -313,6 +312,15 @@ export function ConsumingWidget() {
     setSaved(prev => [{ ...article, status: 'reading' }, ...prev])
     callConsumingAction('save', article.id)
   }, [callConsumingAction])
+
+  // Tap on a New read = open AND save. The reader page does not auto-promote
+  // status, so without this the article would reappear in New reads next
+  // time the home renders — re-surfacing things the user already looked at,
+  // which is exactly the doom-scroll trap this widget is meant to replace.
+  const openNewRead = useCallback((article: ConsumingArticle) => {
+    saveNew(article)
+    navigate(`/reading/${article.id}`)
+  }, [saveNew, navigate])
 
   // Saved reads — swipe handlers
   const archiveSaved = useCallback((id: string) => {
@@ -410,7 +418,7 @@ export function ConsumingWidget() {
               label="Saved reads"
               count={saved.length}
               open={openSaved}
-              onClick={() => { setOpenSaved(v => !v); setOpenSetByUser(true) }}
+              onClick={() => setOpenSaved(v => !v)}
             />
             {openSaved && (
               <div className="max-h-[60vh] overflow-y-auto border-t border-white/[0.04]">
@@ -450,7 +458,7 @@ export function ConsumingWidget() {
               label="New reads"
               count={feedReads.length}
               open={openNew}
-              onClick={() => { setOpenNew(v => !v); setOpenSetByUser(true) }}
+              onClick={() => setOpenNew(v => !v)}
             />
             {openNew && (
               <div className="max-h-[70vh] overflow-y-auto border-t border-white/[0.04]">
@@ -465,7 +473,7 @@ export function ConsumingWidget() {
                     >
                       <SwipeableArticleRow
                         article={article}
-                        onTap={() => navigate(`/reading/${article.id}`)}
+                        onTap={() => openNewRead(article)}
                         onSwipeLeft={() => dismissNew(article.id)}
                         onSwipeRight={() => saveNew(article)}
                         leftLabel="Dismiss"
