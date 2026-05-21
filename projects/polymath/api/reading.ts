@@ -1222,6 +1222,145 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
+  // CONSUMING RESOURCE — feeds the home Consuming widget's two dropdowns:
+  //  - "Saved reads": articles the user explicitly saved or has started, NOT
+  //    fresh from RSS. Status != 'unread' OR no rss tag.
+  //  - "New reads":   unread RSS items, not yet dismissed. Ranked by
+  //    embedding similarity vs active projects + recent thoughts, with a
+  //    recency boost so the strip refreshes as the feeds do.
+  if (resource === 'consuming') {
+    if (req.method === 'GET') {
+      try {
+        const parsedSavedLimit = req.query.saved_limit ? parseInt(req.query.saved_limit as string, 10) : 30
+        const parsedNewLimit = req.query.new_limit ? parseInt(req.query.new_limit as string, 10) : 50
+        const savedLimit = Number.isFinite(parsedSavedLimit) && parsedSavedLimit > 0 ? Math.min(parsedSavedLimit, 100) : 30
+        const newLimit = Number.isFinite(parsedNewLimit) && parsedNewLimit > 0 ? Math.min(parsedNewLimit, 100) : 50
+
+        const SELECT_COLS = 'id, url, title, excerpt, source, favicon_url, thumbnail_url, published_date, read_time_minutes, status, tags, created_at, embedding'
+
+        // Saved reads — anything the user has touched, or saved without an
+        // rss tag. Newest first. Dismissed and archived rows excluded.
+        const savedQuery = supabase
+          .from('reading_queue')
+          .select(SELECT_COLS)
+          .eq('user_id', userId)
+          .neq('status', 'archived')
+          .is('dismissed_at', null)
+          .or('status.neq.unread,tags.not.cs.{rss}')
+          .order('updated_at', { ascending: false })
+          .limit(savedLimit)
+
+        // New reads — rss-tagged, untouched, undismissed. Pull more than
+        // newLimit so the ranking pass has a real candidate pool.
+        const candidateCap = Math.max(newLimit * 3, 60)
+        const newQuery = supabase
+          .from('reading_queue')
+          .select(SELECT_COLS)
+          .eq('user_id', userId)
+          .eq('status', 'unread')
+          .is('dismissed_at', null)
+          .contains('tags', ['rss'])
+          .order('created_at', { ascending: false })
+          .limit(candidateCap)
+
+        const [savedRes, newRes, projectsRes, thoughtsRes] = await Promise.all([
+          savedQuery,
+          newQuery,
+          supabase
+            .from('projects')
+            .select('id, embedding')
+            .eq('user_id', userId)
+            .in('status', ['active', 'upcoming'])
+            .not('embedding', 'is', null)
+            .limit(20),
+          supabase
+            .from('memories')
+            .select('id, embedding, created_at')
+            .eq('user_id', userId)
+            .not('embedding', 'is', null)
+            .gte('created_at', new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString())
+            .order('created_at', { ascending: false })
+            .limit(50),
+        ])
+
+        if (savedRes.error) throw savedRes.error
+        if (newRes.error) throw newRes.error
+
+        const projects = projectsRes.data ?? []
+        const thoughts = thoughtsRes.data ?? []
+        const newCandidates = newRes.data ?? []
+
+        const now = Date.now()
+        // Recency half-life of 3 days — items decay smoothly so a 2-week-old
+        // hit needs serious similarity to outrank a fresh one.
+        const HALF_LIFE_MS = 3 * 24 * 60 * 60 * 1000
+
+        const ranked = newCandidates.map((item: any) => {
+          let bestSim = 0
+          if (item.embedding) {
+            for (const p of projects) {
+              if (!p.embedding) continue
+              const sim = cosineSimilarity(item.embedding, p.embedding)
+              if (sim > bestSim) bestSim = sim
+            }
+            for (const t of thoughts) {
+              if (!t.embedding) continue
+              const sim = cosineSimilarity(item.embedding, t.embedding)
+              if (sim > bestSim) bestSim = sim
+            }
+          }
+          const ageMs = item.created_at ? now - new Date(item.created_at).getTime() : 0
+          const recency = Math.pow(0.5, ageMs / HALF_LIFE_MS) // 1.0 at now, 0.5 at 3d, ~0.25 at 6d
+          const relevance = Math.max(0, bestSim) // similarity is in [-1, 1]; clamp negatives
+          const score = relevance * 0.6 + recency * 0.4
+          // Strip embedding from the payload — large and unused on the client.
+          const { embedding, ...rest } = item
+          return { ...rest, _score: score, _relevance: relevance }
+        })
+
+        ranked.sort((a: any, b: any) => b._score - a._score)
+        const newReads = ranked.slice(0, newLimit).map(({ _score, _relevance, ...row }) => row)
+
+        // Strip embeddings from saved too.
+        const savedReads = (savedRes.data ?? []).map(({ embedding, ...row }: any) => row)
+
+        return res.status(200).json({
+          saved: savedReads,
+          new: newReads,
+          saved_count: savedReads.length,
+          new_count: newReads.length,
+        })
+      } catch (error) {
+        console.error('[Reading] Consuming error:', error)
+        return res.status(500).json({ error: 'Failed to load consuming surface' })
+      }
+    }
+
+    // POST ?resource=consuming&action=dismiss body { id }
+    // Hides an item from "New reads" without archiving it. The article still
+    // lives in reading_queue — useful if we ever surface a "dismissed" view.
+    if (req.method === 'POST' && req.query.action === 'dismiss') {
+      try {
+        const { id: itemId } = req.body ?? {}
+        if (!itemId || typeof itemId !== 'string') {
+          return res.status(400).json({ error: 'id required' })
+        }
+        const { error } = await supabase
+          .from('reading_queue')
+          .update({ dismissed_at: new Date().toISOString() })
+          .eq('id', itemId)
+          .eq('user_id', userId)
+        if (error) throw error
+        return res.status(204).send('')
+      } catch (error) {
+        console.error('[Reading] Dismiss error:', error)
+        return res.status(500).json({ error: 'Failed to dismiss item' })
+      }
+    }
+
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
   // ARTICLES RESOURCE (default - only if no resource specified)
 
   // GET - List articles OR get single article
@@ -1781,8 +1920,11 @@ Return ONLY the JSON, no other text.`
               totalArticlesAdded++
             }
 
-            // 2. Cleanup: Only keep latest 5 unread items per feed
-            // Items that are 'reading', 'read', or 'archived' are PROTECTED
+            // 2. Cleanup: Only keep latest 20 unread items per feed.
+            // The home Consuming widget's "New reads" dropdown is the user's
+            // scroll-through-feeds surface, so we need depth — 5 was right
+            // when RSS dumped into the main queue, too shallow now.
+            // Items that are 'reading', 'read', or 'archived' are PROTECTED.
             const { data: currentUnread } = await supabase
               .from('reading_queue')
               .select('id, created_at')
@@ -1792,8 +1934,8 @@ Return ONLY the JSON, no other text.`
               .eq('source', new URL(feed.feed_url).hostname.replace('www.', ''))
               .order('created_at', { ascending: false })
 
-            if (currentUnread && currentUnread.length > 5) {
-              const toDelete = currentUnread.slice(5).map(i => i.id)
+            if (currentUnread && currentUnread.length > 20) {
+              const toDelete = currentUnread.slice(20).map(i => i.id)
               await supabase.from('reading_queue').delete().in('id', toDelete)
               console.log(`[RSS Sync] Purged ${toDelete.length} old unread RSS items for ${feed.title}`)
             }
