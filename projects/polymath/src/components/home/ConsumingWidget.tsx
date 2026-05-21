@@ -19,11 +19,13 @@ import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence, useMotionValue, useTransform, type PanInfo } from 'framer-motion'
 import {
   ArrowRight, ChevronDown, ChevronRight,
-  X, Bookmark, Archive, Pin, RotateCcw,
+  X, Bookmark, Archive, Pin, RotateCcw, WifiOff,
   Film, Music, Monitor, Book, MapPin, Gamepad2, Calendar, FileText, Quote, Box,
 } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
 import { useToast } from '../ui/toast'
+import { readingDb } from '../../lib/db'
+import { useReadingStore } from '../../stores/useReadingStore'
 
 const LIST_TYPE_ICONS: Record<string, React.ElementType> = {
   film: Film, music: Music, tech: Monitor, book: Book, place: MapPin,
@@ -48,6 +50,11 @@ const LIST_TYPE_ACCENT: Record<string, string> = {
 // Hard cap on Saved reads — keeps the list a curated shortlist, not a dump.
 // To save a new article past this, the user archives an old one first.
 const SAVED_CAP = 20
+
+// Cache key for the consuming payload in Dexie's dashboard table.
+// Stale-while-revalidate: paint the cached state immediately, then refresh
+// from network if we're online. Used for offline tube-reading.
+const CONSUMING_CACHE_KEY = 'consuming-payload-v1'
 
 interface ActiveItem {
   listId: string
@@ -317,42 +324,105 @@ export function ConsumingWidget() {
   const [recentlyArchived, setRecentlyArchived] = useState<ConsumingArticle[]>([])
   const [showRecentlyDismissed, setShowRecentlyDismissed] = useState(false)
   const [showRecentlyArchived, setShowRecentlyArchived] = useState(false)
+  // navigator.onLine plus event listeners. Drives the "offline" badge and
+  // disables Load more / shows stale data freely.
+  const [isOnline, setIsOnline] = useState(() =>
+    typeof navigator === 'undefined' ? true : navigator.onLine
+  )
+  useEffect(() => {
+    const goOnline = () => setIsOnline(true)
+    const goOffline = () => setIsOnline(false)
+    window.addEventListener('online', goOnline)
+    window.addEventListener('offline', goOffline)
+    return () => {
+      window.removeEventListener('online', goOnline)
+      window.removeEventListener('offline', goOffline)
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
+
+    const applyPayload = (data: ConsumingPayload, activeItemsFresh?: ActiveItem[]) => {
+      setSaved(data.saved ?? [])
+      setFeedReads(data.new ?? [])
+      setRecentlyDismissed(data.recently_dismissed ?? [])
+      setRecentlyArchived(data.recently_archived ?? [])
+      setHasMore(!!data.new_has_more)
+      setNextOffset(data.new_next_offset ?? null)
+      if (activeItemsFresh !== undefined) setActiveItems(activeItemsFresh)
+    }
+
     const fetchAll = async () => {
+      // 1. Stale-while-revalidate: paint the cached state immediately so the
+      // user sees content even on slow networks or offline.
+      try {
+        const cached = await readingDb.getDashboard(CONSUMING_CACHE_KEY)
+        if (cached && !cancelled) {
+          applyPayload(cached as ConsumingPayload, cached.activeItems ?? [])
+          setLoaded(true)
+        }
+      } catch { /* cache miss is fine */ }
+
+      // 2. Offline: cache is all we get. Stop.
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        if (!cancelled) setLoaded(true)
+        return
+      }
+
+      // 3. Refresh from network.
       try {
         const [activeRes, consumingRes] = await Promise.all([
-          // Top strip: active books, capped at 3.
           fetch('/api/lists?scope=items&resource=active-items&types=book&limit=3'),
           fetch('/api/reading?resource=consuming'),
         ])
         if (cancelled) return
+
+        let activeItemsFresh: ActiveItem[] = []
         if (activeRes.ok) {
           const rows = await activeRes.json()
-          setActiveItems(rows.map((r: any) => ({
+          activeItemsFresh = rows.map((r: any) => ({
             listId: r.list_id,
             listTitle: r.list?.title ?? '',
             listType: r.list?.type ?? 'generic',
             itemId: r.id,
             itemContent: r.content,
-          })))
+          }))
         }
+
+        let consumingFresh: ConsumingPayload | null = null
         if (consumingRes.ok) {
-          const data = (await consumingRes.json()) as ConsumingPayload
-          setSaved(data.saved ?? [])
-          setFeedReads(data.new ?? [])
-          setRecentlyDismissed(data.recently_dismissed ?? [])
-          setRecentlyArchived(data.recently_archived ?? [])
-          setHasMore(!!data.new_has_more)
-          setNextOffset(data.new_next_offset ?? null)
+          consumingFresh = (await consumingRes.json()) as ConsumingPayload
+          applyPayload(consumingFresh, activeItemsFresh)
+        } else {
+          // Endpoint failed but active-items succeeded — still update strip.
+          setActiveItems(activeItemsFresh)
         }
-      } catch {
-        /* silent — widget hides itself when everything is empty */
-      } finally {
-        if (!cancelled) setLoaded(true)
-      }
+
+        // 4. Persist the fresh payload to Dexie so the next cold start
+        // (and any offline trips) reads recent state.
+        if (consumingFresh) {
+          try {
+            await readingDb.cacheDashboard(CONSUMING_CACHE_KEY, {
+              ...consumingFresh,
+              activeItems: activeItemsFresh,
+            })
+          } catch { /* offline storage full / blocked — silent */ }
+
+          // 5. Cache article CONTENT in readingDb.articles so taps on
+          // New reads open offline. fetchArticles caches everything in
+          // one shot — wasteful for huge libraries, fine for typical use.
+          // Force=true ensures we refresh even if the in-memory store
+          // already has stale data from a previous session.
+          useReadingStore.getState()
+            .fetchArticles(undefined, true)
+            .catch(() => { /* network race; widget still works from cache */ })
+        }
+      } catch { /* silent — cached state already painted */ }
+
+      if (!cancelled) setLoaded(true)
     }
+
     fetchAll()
     return () => { cancelled = true }
   }, [])
@@ -449,7 +519,7 @@ export function ConsumingWidget() {
   }, [callConsumingAction])
 
   const loadMoreNew = useCallback(async () => {
-    if (loadingMore || nextOffset == null) return
+    if (loadingMore || nextOffset == null || !isOnline) return
     setLoadingMore(true)
     try {
       const res = await fetch(`/api/reading?resource=consuming&new_offset=${nextOffset}&saved_limit=0`)
@@ -461,7 +531,24 @@ export function ConsumingWidget() {
     } finally {
       setLoadingMore(false)
     }
-  }, [loadingMore, nextOffset])
+  }, [loadingMore, nextOffset, isOnline])
+
+  // Persist state to Dexie on changes so offline / cold-start visits paint
+  // the user's most recent actions, not just the last server snapshot.
+  // Side effects (network POSTs) silently fail offline and get reconciled
+  // when the network refetch overwrites cache on next online visit.
+  useEffect(() => {
+    if (!loaded) return
+    readingDb.cacheDashboard(CONSUMING_CACHE_KEY, {
+      saved,
+      new: feedReads,
+      recently_dismissed: recentlyDismissed,
+      recently_archived: recentlyArchived,
+      new_has_more: hasMore,
+      new_next_offset: nextOffset,
+      activeItems,
+    }).catch(() => { /* cache write failure is non-critical */ })
+  }, [loaded, saved, feedReads, recentlyDismissed, recentlyArchived, hasMore, nextOffset, activeItems])
 
   if (!loaded) return null
 
@@ -572,6 +659,12 @@ export function ConsumingWidget() {
             />
             {openNew && (
               <div className="max-h-[70vh] overflow-y-auto border-t border-white/[0.04]">
+                {!isOnline && (
+                  <div className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 text-[11px] text-amber-200/80">
+                    <WifiOff className="h-3.5 w-3.5" />
+                    <span>You're offline — showing the last cached batch.</span>
+                  </div>
+                )}
                 <AnimatePresence initial={false} mode="popLayout">
                   {feedReads.map(article => (
                     <motion.div
@@ -600,10 +693,10 @@ export function ConsumingWidget() {
                   <button
                     type="button"
                     onClick={loadMoreNew}
-                    disabled={loadingMore}
+                    disabled={loadingMore || !isOnline}
                     className="w-full px-4 py-3 text-[12px] uppercase tracking-[0.15em] text-[var(--brand-text-muted)] hover:bg-white/[0.025] disabled:opacity-50 transition-colors border-t border-white/[0.04]"
                   >
-                    {loadingMore ? 'Loading…' : 'Load more'}
+                    {!isOnline ? 'Offline — connect to fetch more' : loadingMore ? 'Loading…' : 'Load more'}
                   </button>
                 )}
                 <RecentlyHidden
