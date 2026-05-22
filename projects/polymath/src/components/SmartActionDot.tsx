@@ -23,7 +23,7 @@ export const SmartActionDot: React.FC<SmartActionDotProps> = ({
       onClick={onClick}
       className={`relative h-6 w-6 rounded-full flex items-center justify-center transition-colors duration-200 ${className}`}
       style={{
-        backgroundColor: `${color.replace('var(', '').replace(')', '')}, 0.2)`, // Use RGB from CSS var
+        backgroundColor: 'rgba(var(--brand-primary-rgb), 0.2)',
         color: color,
       }}
       title={title}

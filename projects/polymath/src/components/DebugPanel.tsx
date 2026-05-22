@@ -7,6 +7,9 @@ export function DebugPanel() {
   const { showBugTracker } = useThemeStore()
 
   useEffect(() => {
+    // Only hijack the console when the bug tracker is actually enabled.
+    if (!showBugTracker) return
+
     // Intercept console.log
     const originalLog = console.log
     const originalError = console.error
@@ -32,7 +35,7 @@ export function DebugPanel() {
       console.log = originalLog
       console.error = originalError
     }
-  }, [])
+  }, [showBugTracker])
 
   // Hide debug panel if bug tracker is disabled
   if (!showBugTracker) {

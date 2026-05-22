@@ -257,7 +257,7 @@ export function SearchPage() {
         navigate(`/reading/${result.id}`)
         break
       case 'suggestion':
-        navigate('/suggestions')
+        // The /suggestions route was removed; show the match without navigating.
         addToast({
           title: 'Suggestion found',
           description: result.title,

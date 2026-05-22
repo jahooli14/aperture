@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { Link2, X, Zap, ArrowRight } from 'lucide-react'
+import { Link2, X, Zap, ArrowRight, Folder, FileText, MessageSquare } from 'lucide-react'
 import { useAutoSuggestion } from '../contexts/AutoSuggestionContext'
 import { useState, useEffect } from 'react'
 import { useToast } from './ui/toast'
@@ -83,10 +83,10 @@ export function SuggestionToast({ itemId, itemType, itemTitle }: SuggestionToast
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'project': return ''
-      case 'article': return ''
-      case 'thought': return ''
-      default: return ''
+      case 'project': return <Folder size={20} style={{ color: 'var(--brand-primary)' }} />
+      case 'article': return <FileText size={20} style={{ color: 'var(--brand-primary)' }} />
+      case 'thought': return <MessageSquare size={20} style={{ color: 'var(--brand-primary)' }} />
+      default: return <Link2 size={20} style={{ color: 'var(--brand-primary)' }} />
     }
   }
 
@@ -125,6 +125,7 @@ export function SuggestionToast({ itemId, itemType, itemTitle }: SuggestionToast
               </div>
               <button
                 onClick={handleClose}
+                aria-label="Close"
                 className="text-[var(--brand-text-primary)]/40 hover:text-[var(--brand-text-primary)]/60 transition-colors"
                 style={{ WebkitTapHighlightColor: 'transparent' }}
               >
@@ -141,7 +142,7 @@ export function SuggestionToast({ itemId, itemType, itemTitle }: SuggestionToast
               }}
             >
               <div className="flex items-start gap-3 mb-2">
-                <span className="text-2xl">{getTypeIcon(currentSuggestion.toItemType)}</span>
+                <span className="flex items-center justify-center pt-0.5">{getTypeIcon(currentSuggestion.toItemType)}</span>
                 <div className="flex-1 min-w-0">
                   <h4
                     className="text-sm font-semibold mb-1 truncate"

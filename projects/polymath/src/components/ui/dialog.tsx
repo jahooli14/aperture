@@ -112,7 +112,16 @@ const DialogContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, children, ...props }, ref) => {
-  const { onOpenChange } = React.useContext(DialogContext)
+  const { open, onOpenChange } = React.useContext(DialogContext)
+
+  React.useEffect(() => {
+    if (!open) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onOpenChange(false)
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [open, onOpenChange])
 
   return (
     <DialogPortal>
@@ -120,6 +129,8 @@ const DialogContent = React.forwardRef<
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
         <motion.div
           ref={ref}
+          role="dialog"
+          aria-modal="true"
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}

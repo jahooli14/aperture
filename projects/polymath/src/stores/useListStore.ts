@@ -25,7 +25,7 @@ interface ListStore {
     updateListItemStatus: (itemId: string, status: ListItem['status']) => Promise<void>
     updateListItemMetadata: (itemId: string, metadata: any) => Promise<void>
     updateListItemContent: (itemId: string, content: string) => Promise<void>
-    updateList: (listId: string, updates: { title?: string; description?: string }) => Promise<void>
+    updateList: (listId: string, updates: { title?: string; description?: string | null }) => Promise<void>
     updateListSettings: (listId: string, settings: ListSettings) => Promise<void>
     deleteList: (listId: string) => Promise<void>
     reorderItems: (listId: string, itemIds: string[]) => Promise<void>

@@ -3,9 +3,8 @@
  * Shows AI-suggested connections when user finishes reading an article
  */
 
-import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Zap, Check, ChevronRight, Brain, Rocket, BookmarkCheck } from 'lucide-react'
+import { X } from 'lucide-react'
 import { ItemInsightStrip } from '../ItemInsightStrip'
 
 interface ArticleConnectionsDialogProps {
@@ -18,29 +17,13 @@ interface ArticleConnectionsDialogProps {
   }
   isOpen: boolean
   onClose: () => void
-  onConnectionsCreated?: () => void
-  initialStage?: 'prompt' | 'discovering'
 }
 
 export function ArticleConnectionsDialog({
   article,
   isOpen,
   onClose,
-  onConnectionsCreated,
-  initialStage = 'prompt'
 }: ArticleConnectionsDialogProps) {
-  const [stage, setStage] = useState<'prompt' | 'discovering'>(initialStage)
-
-  useEffect(() => {
-    if (isOpen) {
-      setStage(initialStage)
-    }
-  }, [isOpen, initialStage])
-
-  const handleDiscover = () => {
-    setStage('discovering')
-  }
-
   return (
     <AnimatePresence>
       {isOpen && (
@@ -67,76 +50,27 @@ export function ArticleConnectionsDialog({
               <button
                 onClick={onClose}
                 className="absolute top-4 right-4 p-2 rounded-lg hover:bg-[rgba(255,255,255,0.1)] transition-colors"
-
                 aria-label="Close"
               >
                 <X className="h-5 w-5" style={{ color: "var(--brand-primary)" }} />
               </button>
 
-              {stage === 'prompt' ? (
-                <div className="p-8 text-center">
-                  {/* Success Icon */}
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
-                    className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-6"
-                    style={{ background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb), 0.8), rgba(147, 197, 253, 0.8))' }}
+              <div className="p-6">
+                <p className="text-sm mb-4" style={{ color: "var(--brand-primary)" }}>
+                  "{article.title}"
+                </p>
+                <ItemInsightStrip title={article.title} themes={article.themes ?? undefined} />
+
+                <div className="mt-6 pt-6 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
+                  <button
+                    onClick={onClose}
+                    className="w-full px-6 py-3 rounded-lg font-medium border transition-all hover:bg-[var(--glass-surface)]"
+                    style={{ borderColor: 'rgba(255, 255, 255, 0.2)', color: 'var(--brand-text-secondary)' }}
                   >
-                    <Check className="h-8 w-8 text-[var(--brand-text-primary)]" />
-                  </motion.div>
-
-                  <h2 className="text-2xl font-bold premium-text-platinum mb-2">
-                    Finished.
-                  </h2>
-
-                  <p className="text-lg mb-6" style={{ color: "var(--brand-primary)" }}>
-                    "{article.title}"
-                  </p>
-
-                  <p className="mb-8" style={{ color: "var(--brand-primary)" }}>
-                    Want to connect this to your projects or thoughts?
-                  </p>
-
-                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                    <button
-                      onClick={handleDiscover}
-                      className="px-6 py-3 rounded-lg font-medium inline-flex items-center justify-center gap-2 transition-all"
-                      style={{ background: 'var(--brand-primary)', color: 'white' }}
-                    >
-                      <Zap className="h-5 w-5" />
-                      Discover Connections
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={onClose}
-                      className="px-6 py-3 rounded-lg font-medium border transition-all hover:bg-[var(--glass-surface)]"
-
-                      style={{ borderColor: 'rgba(255, 255, 255, 0.2)', color: 'var(--brand-text-secondary)' }}
-                    >
-                      Skip
-                    </button>
-                  </div>
+                    Done
+                  </button>
                 </div>
-              ) : (
-                <div className="p-6">
-                  <p className="text-sm mb-4" style={{ color: "var(--brand-primary)" }}>
-                    "{article.title}"
-                  </p>
-                  <ItemInsightStrip title={article.title} themes={article.themes ?? undefined} />
-
-                  <div className="mt-6 pt-6 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
-                    <button
-                      onClick={onClose}
-                      className="w-full px-6 py-3 rounded-lg font-medium border transition-all hover:bg-[var(--glass-surface)]"
-
-                      style={{ borderColor: 'rgba(255, 255, 255, 0.2)', color: 'var(--brand-text-secondary)' }}
-                    >
-                      Done
-                    </button>
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
           </motion.div>
         </>

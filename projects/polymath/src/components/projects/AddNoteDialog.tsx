@@ -9,6 +9,7 @@ import { Button } from '../ui/button'
 import { Label } from '../ui/label'
 import { useToast } from '../ui/toast'
 import { useMemoryStore } from '../../stores/useMemoryStore'
+import { api } from '../../lib/apiClient'
 import { handleInputFocus } from '../../utils/keyboard'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -90,20 +91,10 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
         const fileExt = file.name.split('.').pop()
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
 
-        const authResponse = await fetch('/api/utilities?resource=upload-image', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fileName, fileType: file.type })
-        }).catch(err => {
-          throw new Error('Network error - check your internet connection')
+        const { signedUrl, publicUrl } = await api.post('utilities?resource=upload-image', {
+          fileName,
+          fileType: file.type,
         })
-
-        if (!authResponse.ok) {
-          const errorData = await authResponse.json().catch(() => ({}))
-          throw new Error(errorData.details || errorData.error || `Server error (${authResponse.status})`)
-        }
-
-        const { signedUrl, publicUrl } = await authResponse.json()
         if (!signedUrl || !publicUrl) throw new Error('Invalid response from upload server')
 
         const uploadResponse = await fetch(signedUrl, {

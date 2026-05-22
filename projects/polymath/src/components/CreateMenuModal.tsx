@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { Brain, Layers, ListPlus, X } from 'lucide-react'
+import { Brain, Layers, Link, ListPlus, X } from 'lucide-react'
 
 interface CreateMenuModalProps {
     isOpen: boolean
@@ -13,6 +13,7 @@ const creationActions = [
     { id: 'thought', label: 'Thought',   description: 'Write down a thought',  icon: Brain },
     { id: 'project', label: 'Project',   description: 'Start something new',   icon: Layers },
     { id: 'list',    label: 'List Item', description: 'Add to one of your lists', icon: ListPlus },
+    { id: 'article', label: 'Article',   description: 'Save a link to read later', icon: Link },
 ] as const
 
 export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalProps) {

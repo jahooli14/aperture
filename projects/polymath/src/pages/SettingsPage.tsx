@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { Palette, Check, Bug, ToggleRight, ToggleLeft, Zap, RefreshCw, Search, Type, Bell, GitBranch, RotateCcw, Lightbulb } from 'lucide-react'
+import { Palette, Check, Bug, ToggleRight, ToggleLeft, Zap, RefreshCw, Search, Type, Bell, GitBranch, RotateCcw, Lightbulb, LogOut } from 'lucide-react'
 import { api } from '../lib/apiClient'
+import { supabase } from '../lib/supabase'
 import { useThemeStore, DEFAULT_ACCENT_COLOR, DEFAULT_BG_ACCENT_COLOR } from '../stores/useThemeStore'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { useToast } from '../components/ui/toast'
@@ -136,6 +137,11 @@ export function SettingsPage() {
     toggleBedtime, updateBedtime,
     toggleMorning, updateMorning,
   } = useNotificationSettings()
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    navigate('/login')
+  }
 
   const handleResetOnboarding = async () => {
     setResetting(true)
@@ -807,6 +813,21 @@ export function SettingsPage() {
               )}
             </div>
           </div>
+        </section>
+
+        <section className="mt-8">
+          <button
+            onClick={handleSignOut}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all"
+            style={{
+              background: 'var(--glass-surface)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              color: 'var(--brand-text-secondary)',
+            }}
+          >
+            <LogOut className="h-4 w-4" />
+            Sign out
+          </button>
         </section>
       </div>
     </motion.div>

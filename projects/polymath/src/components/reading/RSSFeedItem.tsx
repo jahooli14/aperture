@@ -125,7 +125,7 @@ export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProp
               }}
               className="w-full bg-brand-primary hover:bg-brand-primary text-[var(--brand-text-primary)] h-8 text-xs"
             >
-              Read Article
+              Open
             </Button>
             <Button
               variant="outline"

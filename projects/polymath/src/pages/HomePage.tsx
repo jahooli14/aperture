@@ -89,6 +89,7 @@ export function HomePage() {
         fetchMemories()
       } catch (err) {
         console.error('Failed to load data on mount:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load')
       }
     }
     loadData()

@@ -165,6 +165,7 @@ export function VoiceSearch({
         {onClose && (
           <button
             onClick={handleClose}
+            aria-label="Close voice search"
             className="p-2 rounded-lg hover:bg-[var(--glass-surface)] transition-colors"
             style={{ color: "var(--brand-primary)" }}
           >
@@ -202,6 +203,7 @@ export function VoiceSearch({
         {/* Microphone Button */}
         <button
           onClick={isListening ? stopListening : startListening}
+          aria-label={isListening ? 'Stop listening' : 'Start listening'}
           className={`h-14 w-14 rounded-full flex items-center justify-center transition-all ${
             isListening ? 'animate-pulse' : ''
           }`}

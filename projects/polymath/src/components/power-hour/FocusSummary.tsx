@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { CheckCircle2, ArrowRight, Bookmark, ThumbsDown, Minus, ThumbsUp, Smile, Flame, Mic, AlertTriangle } from 'lucide-react'
 import { useFocusStore } from '../../stores/useFocusStore'
 import { useProjectStore } from '../../stores/useProjectStore'
+import { useToast } from '../ui/toast'
 import { VoiceInput } from '../VoiceInput'
 
 const REFLECTION_RATINGS = [
@@ -16,6 +17,7 @@ const REFLECTION_RATINGS = [
 export function FocusSummary() {
     const { tasks, elapsedSeconds, reset, projectId } = useFocusStore()
     const { updateProject } = useProjectStore()
+    const { addToast } = useToast()
     const [nextStep, setNextStep] = useState('')
     const [blocker, setBlocker] = useState('')
     const [rating, setRating] = useState<number | null>(null)
@@ -153,7 +155,15 @@ export function FocusSummary() {
                                                 source_reference: { type: 'project', id: projectId },
                                                 context: 'post_session',
                                             }),
-                                        }).catch(() => {/* silent */})
+                                        })
+                                            .then((res) => {
+                                                if (!res.ok) throw new Error(`HTTP ${res.status}`)
+                                            })
+                                            .catch(() => {
+                                                addToast({ title: "Couldn't save your note", description: 'Try again in a moment.', variant: 'destructive' })
+                                            })
+                                    } else if (transcript.trim() && !projectId) {
+                                        addToast({ title: 'Note not saved', description: 'This session has no project attached.', variant: 'destructive' })
                                     }
                                     setSessionNoteRecorded(true)
                                     setShowVoiceCapture(false)

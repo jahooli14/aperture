@@ -7,6 +7,7 @@ import { Label } from '../ui/label'
 import { cn } from '../../lib/utils'
 import { motion } from 'framer-motion'
 import { useToast } from '../ui/toast'
+import { ListIcon } from '../../lib/listTheme'
 import {
     BottomSheet,
     BottomSheetContent,
@@ -112,7 +113,9 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
                                                         borderColor: 'rgba(var(--brand-primary-rgb), 0.2)',
                                                     }}
                                                 >
-                                                    <span className="text-lg">{list.icon || ''}</span>
+                                                    {list.icon
+                                                        ? <span className="text-lg">{list.icon}</span>
+                                                        : <ListIcon type={list.type} className="h-5 w-5" />}
                                                 </div>
                                                 <div className="text-left">
                                                     <p className="text-sm font-medium" style={{ color: "var(--brand-primary)" }}>{list.title}</p>

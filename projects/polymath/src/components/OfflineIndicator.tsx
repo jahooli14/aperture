@@ -8,9 +8,11 @@ import { useState, useEffect } from 'react'
 import { useOfflineStore } from '../stores/useOfflineStore'
 import { syncPendingOperations } from '../lib/syncManager'
 import { clearQueue } from '../lib/offlineQueue'
+import { useConfirmDialog } from './ui/confirm-dialog'
 
 export function OfflineIndicator() {
   const { isOnline, isSyncing, isPulling, queueSize, lastSyncTime, setSyncing, updateQueueSize, setSyncResult } = useOfflineStore()
+  const { confirm, dialog: confirmDialog } = useConfirmDialog()
   const [isExpanded, setIsExpanded] = useState(false)
   const [wasOffline, setWasOffline] = useState(false)
 
@@ -114,7 +116,13 @@ export function OfflineIndicator() {
     }
 
     const handleClear = async () => {
-      if (confirm(`Clear all ${queueSize} pending notes? This cannot be undone.`)) {
+      const confirmed = await confirm({
+        title: 'Clear pending notes?',
+        description: `Clear all ${queueSize} pending notes? This cannot be undone.`,
+        confirmText: 'Clear',
+        variant: 'destructive',
+      })
+      if (confirmed) {
         setIsExpanded(false)
         await clearQueue()
         await updateQueueSize()
@@ -157,6 +165,7 @@ export function OfflineIndicator() {
             </div>
           )}
         </div>
+        {confirmDialog}
       </div>
     )
   }

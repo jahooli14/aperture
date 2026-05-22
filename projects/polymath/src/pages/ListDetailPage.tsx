@@ -185,6 +185,7 @@ const CompletionCelebration = ({
                                         key={star}
                                         type="button"
                                         onClick={() => handleRate(star)}
+                                        aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
                                         className="p-2 rounded-xl transition-all hover:scale-110 hover:bg-brand-primary/10"
                                     >
                                         <Star className="h-7 w-7 text-brand-text-secondary/40 hover:text-brand-text-secondary hover:fill-amber-400 transition-all" />
@@ -1653,6 +1654,7 @@ export default function ListDetailPage() {
                         {/* List settings */}
                         <button
                             onClick={() => setShowListSettings(true)}
+                            aria-label="Collection settings"
                             className="flex items-center justify-center w-11 h-11 rounded-full border transition-all border-white/10 bg-[var(--glass-surface)] text-[var(--brand-text-secondary)] hover:text-[var(--brand-text-primary)] hover:border-white/20"
                         >
                             <Settings2 className="h-4 w-4" />
@@ -1675,7 +1677,7 @@ export default function ListDetailPage() {
                                 >
                                     <div className="flex items-center justify-between mb-3">
                                         <span className="text-sm text-brand-primary font-medium">Voice Quick-Add</span>
-                                        <button onClick={() => setIsVoiceMode(false)} className="text-brand-text-muted hover:text-[var(--brand-text-primary)] transition-colors">
+                                        <button onClick={() => setIsVoiceMode(false)} aria-label="Stop voice input" className="text-brand-text-muted hover:text-[var(--brand-text-primary)] transition-colors">
                                             <MicOff className="h-4 w-4" />
                                         </button>
                                     </div>
@@ -1979,8 +1981,8 @@ export default function ListDetailPage() {
                                         key={`desc-${list?.id}`}
                                         onBlur={(e) => {
                                             const val = e.target.value.trim()
-                                            if (list && val !== (list.description || '')) {
-                                                updateList(list.id, { description: val || undefined })
+                                            if (list && val !== (list.description ?? '')) {
+                                                updateList(list.id, { description: val || null })
                                             }
                                         }}
                                         rows={2}
@@ -2004,6 +2006,7 @@ export default function ListDetailPage() {
                                     onClick={() => {
                                         if (list) updateListSettings(list.id, { status_enabled: !hasStatus })
                                     }}
+                                    aria-label={hasStatus ? 'Disable progress tracking' : 'Enable progress tracking'}
                                     className="transition-colors"
                                     style={{ color: hasStatus ? `rgb(${rgb})` : 'rgba(255,255,255,0.25)' }}
                                 >
