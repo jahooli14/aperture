@@ -73,11 +73,17 @@ export const useRSSStore = create<RSSState>((set, get) => ({
   subscribeFeed: async (request: SaveFeedRequest) => {
     set({ loading: true, error: null })
 
+    // Hard client-side timeout so the subscribe spinner can never hang
+    // indefinitely. The server function caps at 30s; give it a little
+    // headroom then surface a clear, retryable error.
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 35000)
     try {
       const response = await fetch('/api/reading?resource=rss', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request),
+        signal: controller.signal,
       })
 
       if (!response.ok) {
@@ -113,10 +119,15 @@ export const useRSSStore = create<RSSState>((set, get) => ({
 
       return feed
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      const isAbort = error instanceof Error && error.name === 'AbortError'
+      const errorMessage = isAbort
+        ? 'Timed out reaching the feed. Try again in a moment.'
+        : (error instanceof Error ? error.message : 'Unknown error')
       set({ error: errorMessage, loading: false })
-      console.error('[useRSSStore] Subscribe feed error:', error)
-      throw error
+      console.error('[useRSSStore] Subscribe feed error:', errorMessage)
+      throw new Error(errorMessage)
+    } finally {
+      clearTimeout(timeoutId)
     }
   },
 
