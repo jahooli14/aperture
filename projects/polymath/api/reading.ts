@@ -30,95 +30,108 @@ async function fetchFeedDirect(url: string): Promise<any> {
 }
 
 /**
- * Fetch a URL with a fully browser-realistic header set + a hard timeout
- * so a slow / unresponsive feed server can never hang the Vercel function.
- * Many feeds 403 any request that smells like a bot — node-fetch's
- * default UA, missing Accept-Language, missing Sec-Fetch-* etc. Mimicking
- * Chrome unblocks most of them.
- *
- * If the direct request gets a blocked status (403/429/503) or fails with
- * a network error, AND SCRAPERAPI_KEY is configured, we retry via
- * ScraperAPI's residential proxy. Cloudflare bot-fight + AWS-IP blocking
- * is the most common reason browser-headers alone aren't enough — the
- * publisher is blocking Vercel's datacenter range, not our UA.
+ * Browser-realistic headers used for the direct fetch attempt.
  */
-async function fetchAsBrowser(url: string): Promise<string> {
-  let directError: Error | null = null
-  let shouldTryProxy = false
+const BROWSER_HEADERS: Record<string, string> = {
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Accept': 'application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.9, text/html;q=0.8, */*;q=0.5',
+  'Accept-Language': 'en-US,en;q=0.9',
+  'Cache-Control': 'no-cache',
+  'Pragma': 'no-cache',
+  'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+  'Sec-Ch-Ua-Mobile': '?0',
+  'Sec-Ch-Ua-Platform': '"macOS"',
+  'Sec-Fetch-Dest': 'document',
+  'Sec-Fetch-Mode': 'navigate',
+  'Sec-Fetch-Site': 'none',
+  'Sec-Fetch-User': '?1',
+  'Upgrade-Insecure-Requests': '1',
+}
 
+async function fetchWithTimeout(url: string, ms: number, headers?: Record<string, string>): Promise<Response> {
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 8000)
+  const timeoutId = setTimeout(() => controller.abort(), ms)
   try {
-    const res = await fetch(url, {
-      redirect: 'follow',
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.9, text/html;q=0.8, */*;q=0.5',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-        'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-        'Sec-Ch-Ua-Mobile': '?0',
-        'Sec-Ch-Ua-Platform': '"macOS"',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
-        'Sec-Fetch-User': '?1',
-        'Upgrade-Insecure-Requests': '1',
-      } as Record<string, string>,
-    })
-    if (res.ok) return await res.text()
-    directError = new Error(`HTTP ${res.status} ${res.statusText} from ${url}`)
-    shouldTryProxy = [403, 429, 503].includes(res.status)
-  } catch (e) {
-    if (e instanceof Error && e.name === 'AbortError') {
-      directError = new Error(`Timeout fetching ${url} (>8s)`)
-    } else {
-      directError = e instanceof Error ? e : new Error(String(e))
-    }
-    shouldTryProxy = true
+    return await fetch(url, { signal: controller.signal, redirect: 'follow', headers })
   } finally {
     clearTimeout(timeoutId)
   }
-
-  if (shouldTryProxy && SCRAPERAPI_KEY) {
-    try {
-      console.log('[Feed Fetch] Direct failed, falling back to ScraperAPI for:', url)
-      return await fetchViaScraperAPI(url)
-    } catch (proxyError) {
-      const proxyMsg = proxyError instanceof Error ? proxyError.message : 'unknown'
-      throw new Error(`${directError!.message} — proxy also failed: ${proxyMsg}`)
-    }
-  }
-
-  throw directError!
 }
 
 /**
- * Last-resort fetch via ScraperAPI's residential proxy. No JS rendering
- * (feeds are static XML), so this costs 1 credit per request. 18s budget
- * keeps the whole subscribe flow under Vercel's 30s maxDuration even
- * with one direct attempt + one proxy attempt.
+ * Fetch a feed/HTML URL, working around the single biggest reason RSS
+ * subscribe fails on Vercel: publishers (Cloudflare bot-fight, etc.) block
+ * the AWS datacenter IP range Vercel runs on. Browser headers fix UA-gating
+ * but not IP blocking — for that we need to fetch from a different network.
+ *
+ * Order of attempts (first success wins, each hard-timeboxed so the whole
+ * thing stays under the 30s function budget):
+ *   1. Direct, with full Chrome headers — works for any feed that isn't
+ *      IP-blocking us. Fast path.
+ *   2. ScraperAPI residential proxy — only if SCRAPERAPI_KEY is set. Best
+ *      quality, costs 1 credit.
+ *   3. Free public proxies (allorigins, codetabs) — no key needed. They
+ *      fetch server-side from their own (non-AWS) IPs, so they sail past
+ *      datacenter blocks. Less reliable than ScraperAPI but free, and the
+ *      two together give decent coverage.
+ *
+ * Throws with a combined error string only if every strategy fails.
  */
-async function fetchViaScraperAPI(url: string): Promise<string> {
-  if (!SCRAPERAPI_KEY) throw new Error('SCRAPERAPI_KEY not configured')
-  const scraperUrl = `https://api.scraperapi.com?api_key=${SCRAPERAPI_KEY}&url=${encodeURIComponent(url)}`
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 18000)
+async function fetchAsBrowser(url: string): Promise<string> {
+  const errors: string[] = []
+
+  // Strategy 1: direct.
   try {
-    const res = await fetch(scraperUrl, { signal: controller.signal })
-    if (!res.ok) throw new Error(`ScraperAPI HTTP ${res.status} ${res.statusText}`)
-    return await res.text()
-  } catch (e) {
-    if (e instanceof Error && e.name === 'AbortError') {
-      throw new Error('ScraperAPI timeout (>18s)')
+    const res = await fetchWithTimeout(url, 7000, BROWSER_HEADERS)
+    if (res.ok) {
+      const text = await res.text()
+      if (text && text.trim()) return text
+      errors.push('direct: empty body')
+    } else {
+      errors.push(`direct: HTTP ${res.status}`)
     }
-    throw e
-  } finally {
-    clearTimeout(timeoutId)
+  } catch (e) {
+    errors.push(`direct: ${e instanceof Error ? (e.name === 'AbortError' ? 'timeout' : e.message) : 'failed'}`)
   }
+
+  // Build the proxy chain. ScraperAPI first if configured (best), else the
+  // free proxies.
+  const proxies: { name: string; url: string; timeout: number }[] = []
+  if (SCRAPERAPI_KEY) {
+    proxies.push({
+      name: 'scraperapi',
+      url: `https://api.scraperapi.com?api_key=${SCRAPERAPI_KEY}&url=${encodeURIComponent(url)}`,
+      timeout: 18000,
+    })
+  } else {
+    proxies.push({
+      name: 'allorigins',
+      url: `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+      timeout: 11000,
+    })
+    proxies.push({
+      name: 'codetabs',
+      url: `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`,
+      timeout: 9000,
+    })
+  }
+
+  for (const proxy of proxies) {
+    try {
+      const res = await fetchWithTimeout(proxy.url, proxy.timeout)
+      if (res.ok) {
+        const text = await res.text()
+        if (text && text.trim()) return text
+        errors.push(`${proxy.name}: empty body`)
+      } else {
+        errors.push(`${proxy.name}: HTTP ${res.status}`)
+      }
+    } catch (e) {
+      errors.push(`${proxy.name}: ${e instanceof Error ? (e.name === 'AbortError' ? 'timeout' : e.message) : 'failed'}`)
+    }
+  }
+
+  throw new Error(`Could not fetch feed. Tried: ${errors.join('; ')}`)
 }
 
 /**
