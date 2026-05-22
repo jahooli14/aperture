@@ -108,7 +108,6 @@ export function SearchPage() {
   const [query, setQuery] = useState(searchParams.get('q') || '')
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState<SearchResponse | null>(null)
-  const [searchMode, setSearchMode] = useState<'text' | 'semantic'>('semantic')
   const [searchFocused, setSearchFocused] = useState(false)
   const [showVoiceSearch, setShowVoiceSearch] = useState(false)
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
@@ -118,7 +117,6 @@ export function SearchPage() {
     const params = new URLSearchParams(location.search)
     const similarId = params.get('similar')
     if (similarId) {
-      setSearchMode('semantic')
       setLoading(true)
       fetch(`/api/memories?similar=${encodeURIComponent(similarId)}`)
         .then(r => r.ok ? r.json() : null)
@@ -183,8 +181,7 @@ export function SearchPage() {
         haptic.light()
       } else {
         try {
-          const semanticParam = searchMode === 'semantic' ? '&semantic=true' : ''
-          const response = await fetch(`/api/memories?q=${encodeURIComponent(searchQuery)}${semanticParam}`)
+          const response = await fetch(`/api/memories?q=${encodeURIComponent(searchQuery)}&semantic=true`)
           if (!response.ok) {
             throw new Error('Online search failed')
           }
@@ -367,26 +364,6 @@ export function SearchPage() {
                 </motion.div>
               )}
             </AnimatePresence>
-
-            {/* Mode toggles  larger touch targets */}
-            <div className="flex items-center gap-2 mt-3">
-              <button
-                onClick={() => { setSearchMode('text'); if (query.trim().length >= 2) performSearch(query.trim()) }}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all active:scale-95 ${
-                  searchMode === 'text' ? 'bg-[rgba(255,255,255,0.1)] text-[var(--brand-text-primary)]' : 'text-[var(--brand-text-muted)]'
-                }`}
-              >
-                Exact
-              </button>
-              <button
-                onClick={() => { setSearchMode('semantic'); if (query.trim().length >= 2) performSearch(query.trim()) }}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all active:scale-95 ${
-                  searchMode === 'semantic' ? 'bg-brand-primary/20 text-brand-primary' : 'text-[var(--brand-text-muted)]'
-                }`}
-              >
-                Smart
-              </button>
-            </div>
 
           {/* Results */}
           {loading && (
