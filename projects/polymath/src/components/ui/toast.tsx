@@ -76,7 +76,11 @@ export function useToast() {
 
 function ToastContainer({ toasts, removingIds, removeToast }: { toasts: Toast[]; removingIds: Set<string>; removeToast: (id: string) => void }) {
   return (
-    <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] flex flex-col items-center justify-center pointer-events-none">
+    <div
+      role="status"
+      aria-live="polite"
+      className="fixed bottom-28 right-4 left-4 sm:left-auto z-[100] flex flex-col-reverse items-center sm:items-end gap-2 pointer-events-none"
+    >
       {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} isRemoving={removingIds.has(toast.id)} onClose={() => removeToast(toast.id)} />
       ))}

@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog'
+import { useToast } from '../ui/toast'
 import { motion } from 'framer-motion'
 import { Search, Link as LinkIcon, Brain, Layers, BookOpen, Lightbulb, Loader2 } from 'lucide-react'
 import { handleInputFocus } from '../../utils/keyboard'
@@ -42,6 +43,7 @@ export function CreateConnectionDialog({
   sourceContent,
   onConnectionCreated
 }: CreateConnectionDialogProps) {
+  const { addToast } = useToast()
   const [searchQuery, setSearchQuery] = useState('')
   const [suggestions, setSuggestions] = useState<SearchableItem[]>([])
   const [allItems, setAllItems] = useState<SearchableItem[]>([])
@@ -197,7 +199,11 @@ export function CreateConnectionDialog({
       onOpenChange(false)
     } catch (error) {
       console.error('Error creating connection:', error)
-      alert('Failed to create connection. It may already exist.')
+      addToast({
+        title: "Couldn't create connection",
+        description: 'It may already exist. Try again in a moment.',
+        variant: 'destructive',
+      })
     } finally {
       setCreating(false)
     }

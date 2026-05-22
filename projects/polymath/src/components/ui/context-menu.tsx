@@ -32,6 +32,15 @@ export function ContextMenu({ items, isOpen, onClose, title }: ContextMenuProps)
     return () => { document.body.style.overflow = prev }
   }, [isOpen])
 
+  useEffect(() => {
+    if (!isOpen) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [isOpen, onClose])
+
   const destructive = items.filter(i => i.variant === 'destructive')
   const regular = items.filter(i => i.variant !== 'destructive')
 

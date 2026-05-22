@@ -5,7 +5,7 @@
 
 import * as React from 'react'
 import * as ReactDOM from 'react-dom'
-import { motion, useMotionValue, useTransform, PanInfo } from 'framer-motion'
+import { AnimatePresence, motion, useMotionValue, useTransform, PanInfo } from 'framer-motion'
 import { cn } from '../../lib/utils'
 import { X } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
@@ -45,11 +45,9 @@ const BottomSheet = ({ open, onOpenChange, children }: BottomSheetProps) => {
   )
 }
 
+// Always render the portal so the children can play their exit animation via
+// AnimatePresence; visibility is gated inside BottomSheetContent.
 const BottomSheetPortal = ({ children }: { children: React.ReactNode }) => {
-  const { open } = React.useContext(BottomSheetContext)
-
-  if (!open) return null
-
   return ReactDOM.createPortal(
     <>{children}</>,
     document.body
@@ -87,7 +85,7 @@ const BottomSheetContent = React.forwardRef<
   HTMLDivElement,
   { className?: string; children: React.ReactNode }
 >(({ className, children }, ref) => {
-  const { onOpenChange } = React.useContext(BottomSheetContext)
+  const { open, onOpenChange } = React.useContext(BottomSheetContext)
   const y = useMotionValue(0)
   const opacity = useTransform(y, [0, 300], [1, 0.8], { clamp: true })
 
@@ -99,10 +97,24 @@ const BottomSheetContent = React.forwardRef<
     }
   }
 
+  React.useEffect(() => {
+    if (!open) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onOpenChange(false)
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [open, onOpenChange])
+
   return (
     <BottomSheetPortal>
+      <AnimatePresence>
+        {open && (
+          <React.Fragment key="bottom-sheet">
       <BottomSheetOverlay />
       <motion.div
+        role="dialog"
+        aria-modal="true"
         ref={ref}
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
@@ -193,6 +205,9 @@ const BottomSheetContent = React.forwardRef<
         {/* Safe area spacing for iOS home indicator */}
         <div className="flex-shrink-0" style={{ height: 'env(safe-area-inset-bottom)' }} />
       </motion.div>
+          </React.Fragment>
+        )}
+      </AnimatePresence>
     </BottomSheetPortal>
   )
 })

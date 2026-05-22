@@ -56,20 +56,30 @@ export function PWAUpdateNotification() {
     // Clear dismissal flag before reloading
     localStorage.removeItem('pwa-update-dismissed')
 
+    // Reload once the new service worker has taken control, rather than after
+    // a fixed delay that races slow activations. Fall back to a timeout in
+    // case controllerchange never fires.
+    let reloaded = false
+    const reload = () => {
+      if (reloaded) return
+      reloaded = true
+      window.location.reload()
+    }
+
     // Skip the waiting service worker to activate immediately
     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.addEventListener('controllerchange', reload, { once: true })
       navigator.serviceWorker.ready.then((registration) => {
         if (registration.waiting) {
           // Tell the waiting service worker to skip waiting and become active
           registration.waiting.postMessage({ type: 'SKIP_WAITING' })
         }
       })
+      // Safety net: if the SW doesn't hand over control, reload anyway.
+      setTimeout(reload, 3000)
+    } else {
+      reload()
     }
-
-    // Reload after a brief delay to let the skip_waiting message process
-    setTimeout(() => {
-      window.location.reload()
-    }, 100)
   }
 
   const handleDismiss = () => {
