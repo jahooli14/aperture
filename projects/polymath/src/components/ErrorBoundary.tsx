@@ -86,14 +86,14 @@ export class ErrorBoundary extends Component<Props, State> {
 
             <h2
               className="text-2xl font-bold mb-3"
-              style={{ color: "var(--brand-primary)" }}
+              style={{ color: "var(--brand-text-primary)" }}
             >
               Something went wrong
             </h2>
 
             <p
               className="mb-6 text-sm"
-              style={{ color: "var(--brand-primary)" }}
+              style={{ color: "var(--brand-text-secondary)" }}
             >
               Something broke. Refresh to get back.
             </p>
@@ -101,7 +101,7 @@ export class ErrorBoundary extends Component<Props, State> {
             {/* Show error details only in development */}
             {import.meta.env.DEV && this.state.error && (
               <div className="mb-6 text-left">
-                <h3 className="text-sm font-bold mb-2" style={{ color: "var(--brand-primary)" }}>
+                <h3 className="text-sm font-bold mb-2" style={{ color: "var(--brand-text-primary)" }}>
                   Error Details:
                 </h3>
                 <div

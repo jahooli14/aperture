@@ -752,7 +752,7 @@ export function OnboardingChatPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 1.0, duration: 0.5 }}
                 className="text-base sm:text-lg italic font-medium leading-snug"
-                style={{ color: 'var(--brand-primary)' }}
+                style={{ color: 'var(--brand-text-primary)' }}
               >
                 “the welding part caught my ear”
               </motion.p>
@@ -770,7 +770,7 @@ export function OnboardingChatPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 1.7, duration: 0.5 }}
                 className="text-base sm:text-lg italic font-medium leading-snug"
-                style={{ color: 'var(--brand-primary)' }}
+                style={{ color: 'var(--brand-text-primary)' }}
               >
                 “I miss making things with my hands”
               </motion.p>

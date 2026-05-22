@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Star } from 'lucide-react'
-import { Button } from '../components/ui/button'
 import { OptimizedImage } from '../components/ui/optimized-image'
 import { ListIcon, ListColor } from '../lib/listTheme'
 import type { ListItem, ListType } from '../types'
@@ -162,16 +161,17 @@ export default function FavouritesPage() {
     }, [items])
 
     return (
-        <div className="min-h-screen bg-black flex flex-col">
-            <div className="pt-24 px-4 sm:px-6 lg:px-8 pb-4 max-w-5xl">
-                <Button
-                    variant="ghost"
+        <div className="min-h-screen flex flex-col">
+            <div className="px-4 sm:px-6 lg:px-8 pb-4 max-w-5xl">
+              <header className="page-masthead">
+                <div className="page-masthead-text">
+                <button
                     onClick={() => navigate('/lists')}
-                    className="text-brand-text-muted mb-4 pl-0 hover:text-[var(--brand-text-primary)] hover:bg-transparent"
+                    className="flex items-center gap-2 text-[11px] uppercase tracking-[0.15em] text-[var(--brand-text-muted)] hover:text-[var(--brand-text-secondary)] transition-colors mb-2"
                 >
-                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    <ArrowLeft className="h-3.5 w-3.5" />
                     Back to Collections
-                </Button>
+                </button>
 
                 <div className="flex items-center gap-3 mb-3">
                     <div
@@ -201,6 +201,8 @@ export default function FavouritesPage() {
 
                 <h1 className="page-hero-sm">Your top-rated.</h1>
                 <div className="page-eyebrow">Four stars &amp; up, across every collection</div>
+                </div>
+              </header>
             </div>
 
             <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-48 max-w-5xl">

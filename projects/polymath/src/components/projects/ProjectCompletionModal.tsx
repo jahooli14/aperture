@@ -159,7 +159,7 @@ export function ProjectCompletionModal({ project, sparkedByMemories, isOpen, onC
                         <p className="text-sm italic leading-relaxed line-clamp-3" style={{ color: 'var(--brand-text-primary)' }}>
                           "{firstSpark.body || firstSpark.title}"
                         </p>
-                        <p className="text-[10px] mt-1 opacity-50" style={{ color: 'var(--brand-primary)' }}>
+                        <p className="text-[10px] mt-1 opacity-50" style={{ color: 'var(--brand-text-muted)' }}>
                           {new Date(firstSpark.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                         </p>
                       </div>

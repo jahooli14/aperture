@@ -753,21 +753,22 @@ export function ReadingPage() {
   return (
     <>
       <SubtleBackground />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 sm:pt-10 pb-4 flex flex-col gap-4">
-          <div className="flex items-end justify-between gap-3">
-            <div className="min-w-0 flex-1">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-4 flex flex-col gap-4">
+          <header className="page-masthead">
+            <div className="page-masthead-text">
               <h1 className="page-hero">Your reading.</h1>
               <div className="page-eyebrow">Deep dives &amp; quick catches</div>
             </div>
-            <button
-              onClick={() => navigate('/search')}
-              className="h-11 w-11 rounded-xl flex items-center justify-center transition-all bg-[var(--glass-surface)] border border-white/10 flex-shrink-0"
-              style={{ color: "var(--brand-primary)" }}
-              title="Search everything"
-            >
-              <Search className="h-5 w-5" />
-            </button>
-          </div>
+            <div className="page-masthead-actions">
+              <button
+                onClick={() => navigate('/search')}
+                className="masthead-action press-spring"
+                title="Search everything"
+              >
+                <Search className="h-5 w-5" />
+              </button>
+            </div>
+          </header>
 
           <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4">
             {/* Filter Tabs */}
@@ -800,7 +801,7 @@ export function ReadingPage() {
                   onBlur={() => setInlineUrlFocused(false)}
                   autoComplete="off"
                   className="flex-1 h-full border-0 text-sm focus:outline-none focus:ring-0 placeholder:text-[var(--brand-text-primary)]/20 appearance-none bg-transparent"
-                  style={{ color: "var(--brand-primary)" }}
+                  style={{ color: "var(--brand-text-secondary)" }}
                 />
               </div>
               <button
@@ -849,10 +850,10 @@ export function ReadingPage() {
                     <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--brand-primary)" }} />
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm" style={{ color: "var(--brand-primary)" }}>
+                    <p className="font-medium text-sm" style={{ color: "var(--brand-text-secondary)" }}>
                       {status === 'retrying' ? 'Retrying extraction...' : 'Extracting article...'}
                     </p>
-                    <p className="text-xs truncate" style={{ color: "var(--brand-primary)" }}>
+                    <p className="text-xs truncate" style={{ color: "var(--brand-text-muted)" }}>
                       {new URL(url).hostname}
                     </p>
                   </div>
@@ -929,10 +930,10 @@ export function ReadingPage() {
                       style={{ border: '1.5px solid var(--glass-surface-hover)', background: 'var(--glass-surface)' }}
                     >
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate" style={{ color: "var(--brand-primary)" }}>
+                        <p className="text-sm font-medium truncate" style={{ color: "var(--brand-text-secondary)" }}>
                           {article.title || 'Untitled'}
                         </p>
-                        <p className="text-xs truncate mt-0.5" style={{ color: "var(--brand-primary)" }}>
+                        <p className="text-xs truncate mt-0.5" style={{ color: "var(--brand-text-muted)" }}>
                           {article.source || (article.url ? new URL(article.url).hostname.replace('www.', '') : '')}
                           {article.read_time_minutes ? `  ${article.read_time_minutes} min read` : ''}
                         </p>

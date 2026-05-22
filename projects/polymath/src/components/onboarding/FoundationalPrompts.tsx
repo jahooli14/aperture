@@ -72,7 +72,7 @@ export function FoundationalPrompts() {
     <div className="max-w-2xl mx-auto">
       {/* Progress Header */}
       <div className="mb-6 p-4 rounded-lg" style={{ background: 'var(--glass-surface)', backdropFilter: 'blur(12px)' }}>
-        <h2 className="text-lg font-bold mb-2" style={{ color: "var(--brand-primary)" }}>Tell us about yourself</h2>
+        <h2 className="text-lg font-bold mb-2" style={{ color: "var(--brand-text-primary)" }}>Tell us about yourself</h2>
         <div className="flex items-center gap-3">
           <div className="flex-1 rounded-full h-2" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
             <div
@@ -80,18 +80,18 @@ export function FoundationalPrompts() {
               style={{ width: `${progress?.completion_percentage || 0}%`, backgroundColor: 'var(--brand-primary)' }}
             />
           </div>
-          <span className="text-sm font-medium" style={{ color: "var(--brand-primary)" }}>
+          <span className="text-sm font-medium" style={{ color: "var(--brand-text-muted)" }}>
             {progress?.completed_required || 0}/{progress?.total_required || 5}
           </span>
         </div>
-        <p className="text-sm mt-2" style={{ color: "var(--brand-primary)" }}>
+        <p className="text-sm mt-2" style={{ color: "var(--brand-text-secondary)" }}>
           {progress?.has_unlocked_projects ? (
             <span className="font-medium" style={{ color: "var(--brand-primary)" }}> Projects ready.</span>
           ) : (
             <>Answer {(progress?.total_required || 5) - (progress?.completed_required || 0)} more to start Projects</>
           )}
         </p>
-        <p className="text-xs mt-1" style={{ color: "var(--brand-primary)" }}>
+        <p className="text-xs mt-1" style={{ color: "var(--brand-text-muted)" }}>
            The more you share, the better your suggestions get.
         </p>
       </div>
@@ -99,7 +99,7 @@ export function FoundationalPrompts() {
       {/* Prompt List */}
       <div className="space-y-3">
         {requiredPrompts.length === 0 ? (
-          <div className="text-center py-12" style={{ color: "var(--brand-primary)" }}>
+          <div className="text-center py-12" style={{ color: "var(--brand-text-secondary)" }}>
             <p>No prompts loaded. Refresh the page to try again.</p>
           </div>
         ) : (
@@ -133,18 +133,18 @@ export function FoundationalPrompts() {
 
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-semibold" style={{ color: "var(--brand-primary)" }}>
+                    <h3 className="font-semibold" style={{ color: "var(--brand-text-primary)" }}>
                       {index + 1}. {prompt.prompt_text}
                     </h3>
                     {!locked && (
                       <ChevronRight className="h-5 w-5" style={{ color: "var(--brand-primary)" }} />
                     )}
                   </div>
-                  <p className="text-sm mt-1" style={{ color: "var(--brand-primary)" }}>
+                  <p className="text-sm mt-1" style={{ color: "var(--brand-text-secondary)" }}>
                     {prompt.prompt_description}
                   </p>
                   {completed && prompt.response && (
-                    <div className="mt-2 text-xs" style={{ color: "var(--brand-primary)" }}>
+                    <div className="mt-2 text-xs" style={{ color: "var(--brand-text-muted)" }}>
                       <p className="line-clamp-2">
                         {prompt.response.bullets.join('  ')}
                       </p>
@@ -154,7 +154,7 @@ export function FoundationalPrompts() {
                     </div>
                   )}
                   {locked && (
-                    <p className="text-xs mt-1" style={{ color: "var(--brand-primary)" }}>
+                    <p className="text-xs mt-1" style={{ color: "var(--brand-text-muted)" }}>
                       Complete previous prompts to unlock
                     </p>
                   )}

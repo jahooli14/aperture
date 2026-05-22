@@ -369,7 +369,7 @@ export function ProjectPath({ tasks, highlightedTasks = [], onUpdate, projectId 
                                       <span>{task.estimate_set ? `${task.estimated_minutes}m` : 'Estimate'}</span>
                                     </button>
                                     {task.is_ai_suggested && (
-                                      <span className="text-[9px] font-medium uppercase tracking-wider" style={{ color: 'var(--brand-primary)', opacity: 0.35 }}>suggested</span>
+                                      <span className="text-[9px] font-medium uppercase tracking-wider" style={{ color: 'var(--brand-text-muted)', opacity: 0.35 }}>suggested</span>
                                     )}
                                     {isHighlighted && (
                                       <span className="text-[9px] font-semibold uppercase tracking-wider" style={{ color: `rgb(${phase.accent})`, opacity: 0.5 }}>focus</span>

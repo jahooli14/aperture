@@ -63,7 +63,7 @@ export function TimelinePage() {
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center">
             <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-r-transparent mb-4" style={{ borderColor: 'var(--brand-primary)' }}></div>
-            <p className="text-lg" style={{ color: "var(--brand-primary)" }}>Loading your activity...</p>
+            <p className="text-lg" style={{ color: "var(--brand-text-secondary)" }}>Loading your activity...</p>
           </div>
         </div>
       </div>
@@ -79,20 +79,20 @@ export function TimelinePage() {
               {isOffline ? (
                 <>
                   <WifiOff className="h-16 w-16 mx-auto mb-4" style={{ color: "var(--brand-primary)" }} />
-                  <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--brand-primary)" }}>
+                  <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--brand-text-primary)" }}>
                     Offline
                   </h2>
-                  <p style={{ color: "var(--brand-primary)" }}>
+                  <p style={{ color: "var(--brand-text-secondary)" }}>
                     Timeline data will be available when you're back online
                   </p>
                 </>
               ) : (
                 <>
                   <Clock className="h-16 w-16 mx-auto mb-4" style={{ color: "var(--brand-primary)" }} />
-                  <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--brand-primary)" }}>
+                  <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--brand-text-primary)" }}>
                     Not Enough Data Yet
                   </h2>
-                  <p style={{ color: "var(--brand-primary)" }}>
+                  <p style={{ color: "var(--brand-text-secondary)" }}>
                     Add a few more thoughts to see when you're most active.
                   </p>
                 </>
@@ -105,12 +105,15 @@ export function TimelinePage() {
   }
 
   return (
-    <div className="min-h-screen py-8 sm:py-12 relative" style={{ backgroundColor: 'var(--brand-bg)' }}>
+    <div className="min-h-screen pb-24 relative" style={{ backgroundColor: 'var(--brand-bg)' }}>
       <SubtleBackground />
-      {/* Header */}
-      <div className="max-w-6xl mx-auto px-4 mb-8 sm:mb-12">
-        <h1 className="page-hero">Your timeline.</h1>
-        <div className="page-eyebrow">When you do your best thinking</div>
+      <div className="max-w-6xl mx-auto px-4">
+        <header className="page-masthead">
+          <div className="page-masthead-text">
+            <h1 className="page-hero">Your timeline.</h1>
+            <div className="page-eyebrow">When you do your best thinking</div>
+          </div>
+        </header>
       </div>
 
       <div className="max-w-6xl mx-auto px-4 space-y-6 pb-24">
@@ -126,14 +129,14 @@ export function TimelinePage() {
                   {pattern.type === 'emotional_continuity' && <Calendar className="h-8 w-8" style={{ color: "var(--brand-primary)" }} />}
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold mb-2" style={{ color: "var(--brand-primary)" }}>
+                  <h3 className="text-xl font-bold mb-2" style={{ color: "var(--brand-text-primary)" }}>
                     {pattern.title}
                   </h3>
-                  <p className="mb-4" style={{ color: "var(--brand-primary)" }}>
+                  <p className="mb-4" style={{ color: "var(--brand-text-secondary)" }}>
                     {pattern.description}
                   </p>
                   <div className="p-4 rounded-lg glass-card-subtle">
-                    <p className="text-sm font-medium" style={{ color: "var(--brand-primary)" }}>
+                    <p className="text-sm font-medium" style={{ color: "var(--brand-text-secondary)" }}>
                        {pattern.insight}
                     </p>
                   </div>
@@ -141,7 +144,7 @@ export function TimelinePage() {
                   {/* Data Visualization */}
                   {pattern.type === 'thinking_time' && pattern.data && (
                     <div className="mt-4">
-                      <p className="text-sm font-medium mb-3" style={{ color: "var(--brand-primary)" }}>
+                      <p className="text-sm font-medium mb-3" style={{ color: "var(--brand-text-muted)" }}>
                         Your top thinking times:
                       </p>
                       <div className="space-y-2">
@@ -174,7 +177,7 @@ export function TimelinePage() {
 
                   {pattern.type === 'velocity' && pattern.data && (
                     <div className="mt-4">
-                      <p className="text-sm font-medium mb-3" style={{ color: "var(--brand-primary)" }}>
+                      <p className="text-sm font-medium mb-3" style={{ color: "var(--brand-text-muted)" }}>
                         Captures per week:
                       </p>
                       <div className="flex items-end gap-2 h-32">
@@ -189,7 +192,7 @@ export function TimelinePage() {
                                 }}
                               />
                             </div>
-                            <span className="text-xs" style={{ color: "var(--brand-primary)" }}>
+                            <span className="text-xs" style={{ color: "var(--brand-text-muted)" }}>
                               {new Date(week.week).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                             </span>
                           </div>
@@ -200,13 +203,13 @@ export function TimelinePage() {
 
                   {pattern.type === 'side_hustle_hours' && pattern.data && (
                     <div className="mt-4">
-                      <p className="text-sm font-medium mb-3" style={{ color: "var(--brand-primary)" }}>
+                      <p className="text-sm font-medium mb-3" style={{ color: "var(--brand-text-muted)" }}>
                         Personal project time per month:
                       </p>
                       <div className="space-y-2">
                         {pattern.data.map((month: any, i: number) => (
                           <div key={i} className="flex items-center gap-3">
-                            <span className="text-sm font-medium w-24" style={{ color: "var(--brand-primary)" }}>
+                            <span className="text-sm font-medium w-24" style={{ color: "var(--brand-text-muted)" }}>
                               {new Date(month.month + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                             </span>
                             <div className="flex-1 rounded-full h-8 relative overflow-hidden" style={{ backgroundColor: 'var(--glass-surface)' }}>
@@ -218,7 +221,7 @@ export function TimelinePage() {
                                 }}
                               />
                               <div className="relative px-3 py-1 flex items-center justify-end">
-                                <span className="text-sm font-bold" style={{ color: "var(--brand-primary)" }}>
+                                <span className="text-sm font-bold" style={{ color: "var(--brand-text-primary)" }}>
                                   {month.hours}h
                                 </span>
                               </div>
@@ -237,10 +240,10 @@ export function TimelinePage() {
         {/* Summary Card */}
         <Card className="glass-card">
           <CardContent className="pt-6">
-            <h3 className="text-lg font-bold mb-3" style={{ color: "var(--brand-primary)" }}>
+            <h3 className="text-lg font-bold mb-3" style={{ color: "var(--brand-text-primary)" }}>
               What This Means
             </h3>
-            <p style={{ color: "var(--brand-primary)" }}>
+            <p style={{ color: "var(--brand-text-secondary)" }}>
               Here's when you tend to do your best work.
               Use this to plan around your peak times and
               make the most of your free time.

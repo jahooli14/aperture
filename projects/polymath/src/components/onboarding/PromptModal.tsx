@@ -99,7 +99,7 @@ export function PromptModal({
           <X className="h-5 w-5" />
         </button>
         {promptNumber && totalPrompts && (
-          <span className="text-sm" style={{ color: "var(--brand-primary)" }}>
+          <span className="text-sm" style={{ color: "var(--brand-text-muted)" }}>
             {promptNumber}/{totalPrompts}
           </span>
         )}
@@ -107,9 +107,9 @@ export function PromptModal({
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4 pb-48">
-        <h2 className="text-xl font-bold mb-2" style={{ color: "var(--brand-primary)" }}>{prompt.prompt_text}</h2>
+        <h2 className="text-xl font-bold mb-2" style={{ color: "var(--brand-text-primary)" }}>{prompt.prompt_text}</h2>
         {prompt.prompt_description && (
-          <p className="text-sm mb-6" style={{ color: "var(--brand-primary)" }}>{prompt.prompt_description}</p>
+          <p className="text-sm mb-6" style={{ color: "var(--brand-text-secondary)" }}>{prompt.prompt_description}</p>
         )}
 
         <div className="space-y-3">
@@ -154,7 +154,7 @@ export function PromptModal({
           backgroundColor: 'var(--glass-surface)',
           border: 'none'
         }}>
-          <p className="text-sm" style={{ color: "var(--brand-primary)" }}>
+          <p className="text-sm" style={{ color: "var(--brand-text-secondary)" }}>
              <strong>Be specific!</strong> AI can't suggest great projects from vague responses.
             Add concrete details, names, feelings, and examples.
           </p>
@@ -165,7 +165,7 @@ export function PromptModal({
             backgroundColor: 'var(--glass-surface)',
             border: 'none'
           }}>
-            <p className="text-sm" style={{ color: "var(--brand-primary)" }}>{error}</p>
+            <p className="text-sm" style={{ color: "var(--brand-text-secondary)" }}>{error}</p>
           </div>
         )}
       </div>

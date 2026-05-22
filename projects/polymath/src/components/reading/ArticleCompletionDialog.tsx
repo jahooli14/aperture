@@ -77,10 +77,10 @@ export function ArticleCompletionDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[550px]">
         <DialogHeader className="mb-2">
-          <DialogTitle className="text-2xl font-bold mb-3" style={{ color: "var(--brand-primary)" }}>
+          <DialogTitle className="text-2xl font-bold mb-3" style={{ color: "var(--brand-text-primary)" }}>
             Capture Your Thoughts
           </DialogTitle>
-          <DialogDescription className="text-base leading-relaxed" style={{ color: "var(--brand-primary)" }}>
+          <DialogDescription className="text-base leading-relaxed" style={{ color: "var(--brand-text-secondary)" }}>
             What did you learn from "{article.title}"?
           </DialogDescription>
         </DialogHeader>
@@ -121,7 +121,7 @@ export function ArticleCompletionDialog({
         {mode === 'text' && (
           <div className="space-y-4">
             <div>
-              <Label htmlFor="thought-text" className="text-sm font-medium mb-2 block" style={{ color: "var(--brand-primary)" }}>
+              <Label htmlFor="thought-text" className="text-sm font-medium mb-2 block" style={{ color: "var(--brand-text-secondary)" }}>
                 Your thoughts (key takeaways, questions, connections)
               </Label>
               <textarea
@@ -158,7 +158,7 @@ export function ArticleCompletionDialog({
                 disabled={loading}
                 className="px-6 py-3 rounded-xl font-medium transition-all hover:bg-[var(--glass-surface)]"
 
-                style={{ color: "var(--brand-primary)" }}
+                style={{ color: "var(--brand-text-muted)" }}
               >
                 Skip
               </button>
@@ -181,7 +181,7 @@ export function ArticleCompletionDialog({
         {/* Voice Mode */}
         {mode === 'voice' && (
           <div className="space-y-6">
-            <div className="text-sm text-center mb-4" style={{ color: "var(--brand-primary)" }}>
+            <div className="text-sm text-center mb-4" style={{ color: "var(--brand-text-secondary)" }}>
               Record your thoughts about this article
             </div>
 
@@ -195,7 +195,7 @@ export function ArticleCompletionDialog({
                 disabled={loading}
                 className="px-6 py-3 rounded-xl font-medium transition-all hover:bg-[var(--glass-surface)]"
 
-                style={{ color: "var(--brand-primary)" }}
+                style={{ color: "var(--brand-text-muted)" }}
               >
                 Skip for now
               </button>

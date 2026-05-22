@@ -123,11 +123,13 @@ export default function DrawerPage() {
     <>
       <SubtleBackground />
       <div className="min-h-screen">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8 sm:pt-10 pb-24">
-          <div className="mb-7">
-            <h1 className="page-hero-sm">The drawer.</h1>
-            <div className="page-eyebrow">{drawerProjects.length} resting · {warmedCount} warming</div>
-          </div>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-24">
+          <header className="page-masthead">
+            <div className="page-masthead-text">
+              <h1 className="page-hero-sm">The drawer.</h1>
+              <div className="page-eyebrow">{drawerProjects.length} resting · {warmedCount} warming</div>
+            </div>
+          </header>
 
           <div className="relative mb-6">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 opacity-60" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />

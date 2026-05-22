@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog'
 import { useToast } from '../ui/toast'
 import { motion } from 'framer-motion'
-import { Search, Link as LinkIcon, Brain, Layers, BookOpen, Lightbulb, Loader2 } from 'lucide-react'
+import { Search, Link as LinkIcon, Rocket, BookOpen, Lightbulb, Loader2 } from 'lucide-react'
 import { handleInputFocus } from '../../utils/keyboard'
 import type { ConnectionSourceType, Project, Memory, ReadingQueueItem, ProjectSuggestion } from '../../types'
 
@@ -29,8 +29,8 @@ type SearchableItem = {
 }
 
 const SCHEMA_COLORS = {
-  project: { primary: 'rgb(var(--brand-primary-rgb))', icon: Layers },
-  thought: { primary: 'rgb(var(--brand-primary-rgb))', icon: Brain },
+  project: { primary: 'rgb(var(--brand-primary-rgb))', icon: Rocket },
+  thought: { primary: 'rgb(var(--brand-primary-rgb))', icon: Lightbulb },
   article: { primary: 'rgb(var(--brand-primary-rgb))', icon: BookOpen },
   suggestion: { primary: 'rgb(var(--brand-primary-rgb))', icon: Lightbulb }
 }
@@ -298,7 +298,7 @@ export function CreateConnectionDialog({
           {loading ? (
             <div className="py-12 text-center">
               <Loader2 className="h-8 w-8 animate-spin mx-auto mb-3" style={{ color: "var(--brand-primary)" }} />
-              <p className="text-sm" style={{ color: "var(--brand-primary)" }}>Loading items...</p>
+              <p className="text-sm" style={{ color: "var(--brand-text-secondary)" }}>Loading items...</p>
             </div>
           ) : (
             <div className="space-y-4 py-2">
@@ -307,7 +307,7 @@ export function CreateConnectionDialog({
                 <div>
                   <div className="flex items-center gap-2 mb-3 px-1">
                     <Lightbulb className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
-                    <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>
+                    <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--brand-text-primary)" }}>
                       Suggested Based on Similarity
                     </h3>
                   </div>
@@ -331,7 +331,7 @@ export function CreateConnectionDialog({
                 <div>
                   {filteredSuggestions.length > 0 && (
                     <div className="flex items-center gap-2 mb-3 px-1 mt-6">
-                      <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>
+                      <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--brand-text-primary)" }}>
                         All Items
                       </h3>
                     </div>
@@ -409,11 +409,11 @@ function ItemCard({
               </div>
             )}
           </div>
-          <div className="font-medium mb-1 line-clamp-1" style={{ color: "var(--brand-primary)" }}>
+          <div className="font-medium mb-1 line-clamp-1" style={{ color: "var(--brand-text-primary)" }}>
             {item.title}
           </div>
           {item.preview && (
-            <div className="text-sm line-clamp-2" style={{ color: "var(--brand-primary)" }}>
+            <div className="text-sm line-clamp-2" style={{ color: "var(--brand-text-secondary)" }}>
               {item.preview}
             </div>
           )}

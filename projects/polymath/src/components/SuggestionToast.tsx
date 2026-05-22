@@ -118,7 +118,7 @@ export function SuggestionToast({ itemId, itemType, itemTitle }: SuggestionToast
                 </motion.div>
                 <span
                   className="text-sm font-medium"
-                  style={{ color: "var(--brand-primary)" }}
+                  style={{ color: "var(--brand-text-secondary)" }}
                 >
                   This might connect to
                 </span>
@@ -146,13 +146,13 @@ export function SuggestionToast({ itemId, itemType, itemTitle }: SuggestionToast
                 <div className="flex-1 min-w-0">
                   <h4
                     className="text-sm font-semibold mb-1 truncate"
-                    style={{ color: "var(--brand-primary)" }}
+                    style={{ color: "var(--brand-text-primary)" }}
                   >
                     {currentSuggestion.toItemTitle}
                   </h4>
                   <p
                     className="text-xs leading-relaxed"
-                    style={{ color: "var(--brand-primary)" }}
+                    style={{ color: "var(--brand-text-secondary)" }}
                   >
                     {currentSuggestion.reasoning}
                   </p>
@@ -174,7 +174,7 @@ export function SuggestionToast({ itemId, itemType, itemTitle }: SuggestionToast
                 </div>
                 <span
                   className="text-xs font-medium"
-                  style={{ color: "var(--brand-primary)" }}
+                  style={{ color: "var(--brand-text-muted)" }}
                 >
                   {Math.round(currentSuggestion.confidence * 100)}%
                 </span>

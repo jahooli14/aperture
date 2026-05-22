@@ -67,7 +67,7 @@ export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProp
         <div className="flex items-start gap-3">
           {/* Feed Info & Title Container */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "var(--brand-primary)" }}>
+            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "var(--brand-text-muted)" }}>
               {item.feed_title && <span className="truncate max-w-[150px]">{item.feed_title}</span>}
               {item.feed_title && item.published_at && <span className="opacity-30"></span>}
               {item.published_at && (
@@ -78,7 +78,7 @@ export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProp
               )}
             </div>
 
-            <h3 className="text-sm font-bold leading-snug group-hover:text-brand-primary transition-colors" style={{ color: "var(--brand-primary)" }}>
+            <h3 className="text-sm font-bold leading-snug group-hover:text-brand-primary transition-colors" style={{ color: "var(--brand-text-primary)" }}>
               {item.title}
             </h3>
           </div>

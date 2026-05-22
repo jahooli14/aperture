@@ -35,12 +35,12 @@ export const ThemeClusterCard = React.memo(function ThemeClusterCard({ cluster, 
       {/* Content */}
       <div className="flex-1 w-full min-w-0">
         {/* Theme Name */}
-        <h3 className="text-sm font-black uppercase tracking-wide mb-1 line-clamp-2" style={{ color: "var(--brand-primary)" }}>
+        <h3 className="text-sm font-black uppercase tracking-wide mb-1 line-clamp-2" style={{ color: "var(--brand-text-primary)" }}>
           {cluster.name}
         </h3>
 
         {/* Thought Count */}
-        <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "var(--brand-primary)" }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "var(--brand-text-muted)" }}>
           {cluster.memory_count} {cluster.memory_count === 1 ? 'thought' : 'thoughts'}
         </p>
 

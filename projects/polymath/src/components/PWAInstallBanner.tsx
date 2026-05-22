@@ -84,10 +84,10 @@ export function PWAInstallBanner() {
             </div>
 
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-bold mb-1" style={{ color: "var(--brand-primary)" }}>
+              <h3 className="text-lg font-bold mb-1" style={{ color: "var(--brand-text-primary)" }}>
                 Install Aperture
               </h3>
-              <p className="text-sm leading-relaxed" style={{ color: "var(--brand-primary)" }}>
+              <p className="text-sm leading-relaxed" style={{ color: "var(--brand-text-secondary)" }}>
                 Add to your home screen. Works offline, loads faster.
               </p>
             </div>
@@ -101,7 +101,7 @@ export function PWAInstallBanner() {
               'Lives on your home screen',
               'No browser bar'
             ].map((feature, index) => (
-              <div key={index} className="flex items-center gap-2 text-sm" style={{ color: "var(--brand-primary)" }}>
+              <div key={index} className="flex items-center gap-2 text-sm" style={{ color: "var(--brand-text-secondary)" }}>
                 <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: 'var(--brand-primary)' }} />
                 {feature}
               </div>

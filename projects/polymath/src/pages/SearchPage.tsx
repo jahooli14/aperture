@@ -307,12 +307,16 @@ export function SearchPage() {
 
         {/* Dia-leaning search — single big soft input, page is mostly air */}
         <div className="min-h-screen pb-24">
-          <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-16 sm:pt-24">
+          <div className="max-w-2xl mx-auto px-4 sm:px-6">
 
-            <h1 className="page-hero-sm text-center mb-2">What are you looking for?</h1>
-            <p className="meta-serif text-center mb-10">
-              Memories, projects, articles — anything you've kept.
-            </p>
+            <header className="page-masthead">
+              <div className="page-masthead-text">
+                <h1 className="page-hero-sm text-center mb-2">What are you looking for?</h1>
+                <p className="meta-serif text-center mb-10">
+                  Memories, projects, articles — anything you've kept.
+                </p>
+              </div>
+            </header>
 
             <form onSubmit={handleTextSearch} className="flex gap-2 mb-6">
               <div className="flex-1 relative">
@@ -374,7 +378,7 @@ export function SearchPage() {
             }}>
               <div className="text-center py-20">
                 <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" style={{ color: "var(--brand-primary)" }} />
-                <p style={{ color: "var(--brand-primary)" }}>Searching...</p>
+                <p style={{ color: "var(--brand-text-secondary)" }}>Searching...</p>
               </div>
             </div>
           )}
@@ -390,7 +394,7 @@ export function SearchPage() {
                 <h2 className="section-title mb-2">
                   {results.total} {results.total === 1 ? 'result' : 'results'} for &ldquo;{results.query}&rdquo;
                 </h2>
-                <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm" style={{ color: "var(--brand-primary)" }}>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm" style={{ color: "var(--brand-text-muted)" }}>
                   <span>{results.breakdown.memories} memories</span>
                   <span></span>
                   <span>{results.breakdown.projects} projects</span>

@@ -504,7 +504,7 @@ export function BedtimePage() {
                         <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--glass-surface)' }}>
                           <div className="flex items-start gap-2">
                             <Star className="h-3 w-3 mt-1 flex-shrink-0" style={{ color: "var(--brand-primary)" }} />
-                            <p className="text-xs italic" style={{ color: "var(--brand-primary)" }}>
+                            <p className="text-xs italic" style={{ color: "var(--brand-text-muted)" }}>
                               {prompt.metaphor}
                             </p>
                           </div>
@@ -516,7 +516,7 @@ export function BedtimePage() {
                         <div className="flex items-center justify-between">
                           {/* Star Rating */}
                           <div className="flex items-center gap-1">
-                            <span className="text-xs mr-2" style={{ color: "var(--brand-primary)" }}>
+                            <span className="text-xs mr-2" style={{ color: "var(--brand-text-muted)" }}>
                               Rate:
                             </span>
                             {[1, 2, 3, 4, 5].map((star) => (
@@ -623,7 +623,7 @@ export function BedtimePage() {
                 <h2 className="text-xl font-semibold premium-text-platinum mb-2">
                   Offline
                 </h2>
-                <p className="text-sm mb-6" style={{ color: "var(--brand-primary)" }}>
+                <p className="text-sm mb-6" style={{ color: "var(--brand-text-secondary)" }}>
                   Bedtime prompts will be available when you're back online
                 </p>
               </>
@@ -635,7 +635,7 @@ export function BedtimePage() {
                 <h2 className="text-xl font-semibold premium-text-platinum mb-2">
                   No prompts yet
                 </h2>
-                <p className="text-sm mb-6" style={{ color: "var(--brand-primary)" }}>
+                <p className="text-sm mb-6" style={{ color: "var(--brand-text-secondary)" }}>
                   {message || 'Check back at 9:30pm for tonight\'s ideas'}
                 </p>
                 <button
@@ -674,7 +674,7 @@ export function BedtimePage() {
             background: 'linear-gradient(135deg, rgba(var(--brand-primary-rgb), 0.05), rgba(var(--brand-primary-rgb), 0.05))'
           }}
         >
-          <p className="text-sm leading-relaxed" style={{ color: "var(--brand-primary)" }}>
+          <p className="text-sm leading-relaxed" style={{ color: "var(--brand-text-secondary)" }}>
             <strong className="premium-text-platinum">Reflection ritual:</strong> Quiet prompts for the end of the day. Let them sit overnight — the good answers usually arrive in the morning. Zen Mode shows them one at a time.
           </p>
         </motion.div>

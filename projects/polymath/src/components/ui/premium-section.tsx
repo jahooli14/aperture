@@ -29,7 +29,7 @@ export function PremiumSection({
           {title && (
             <h2
               className="text-lg font-semibold mb-2"
-              style={{ color: "var(--brand-primary)" }}
+              style={{ color: "var(--brand-text-primary)" }}
             >
               {title}
             </h2>
@@ -37,7 +37,7 @@ export function PremiumSection({
           {description && (
             <p
               className="text-sm"
-              style={{ color: "var(--brand-primary)" }}
+              style={{ color: "var(--brand-text-secondary)" }}
             >
               {description}
             </p>

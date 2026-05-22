@@ -197,24 +197,33 @@ export function FixQueuePage() {
             <ArrowLeft className="h-5 w-5" style={{ color: 'var(--brand-text-secondary)' }} />
           </button>
           <Wrench className="h-5 w-5 flex-shrink-0" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
-          <h1 className="text-lg sm:text-xl font-bold truncate" style={{ color: 'var(--brand-text)' }}>Fix Queue</h1>
-          <span className="text-xs sm:text-sm ml-auto whitespace-nowrap" style={{ color: 'var(--brand-text-tertiary)' }}>
+          <h1 className="page-hero-sm truncate">Fix Queue</h1>
+          <span className="text-xs sm:text-sm ml-auto whitespace-nowrap" style={{ color: 'var(--brand-text-muted)' }}>
             {deployed.length} running
           </span>
           <button onClick={() => { setLoading(true); fetchItems() }} className="p-2 rounded-xl hover:bg-white/5 active:scale-95 transition-all flex-shrink-0">
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} style={{ color: 'var(--brand-text-tertiary)' }} />
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} style={{ color: 'var(--brand-text-muted)' }} />
           </button>
         </div>
       </div>
 
       <div className="max-w-2xl mx-auto px-4 space-y-6">
 
+        {/* Paused notice — cron is disabled; drafts stay visible but nothing
+            new is drafted or run. */}
+        <div className="glass-card rounded-2xl px-4 py-3 flex items-start gap-3">
+          <Clock className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: 'var(--brand-text-muted)' }} />
+          <p className="text-sm leading-relaxed" style={{ color: 'var(--brand-text-secondary)' }}>
+            Fix Queue is paused. Your saved drafts stay here, but no new fixes are drafted or run automatically.
+          </p>
+        </div>
+
         {/* Empty state */}
         {!loading && items.length === 0 && (
           <div className="text-center py-16">
-            <Wrench className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--brand-text-tertiary)' }} />
-            <p className="text-lg font-medium mb-2" style={{ color: 'var(--brand-text)' }}>No annoyances yet</p>
-            <p className="text-sm" style={{ color: 'var(--brand-text-tertiary)' }}>
+            <Wrench className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--brand-text-muted)' }} />
+            <p className="text-lg font-medium mb-2" style={{ color: 'var(--brand-text-primary)' }}>No annoyances yet</p>
+            <p className="text-sm" style={{ color: 'var(--brand-text-muted)' }}>
               Voice-capture a frustration and it'll appear here with a fix draft
             </p>
           </div>
@@ -351,14 +360,14 @@ function Section({ title, count, color, defaultCollapsed = false, children }: {
         className="flex items-center gap-2 mb-3 group"
       >
         <div className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
-        <span className="text-sm font-semibold" style={{ color: 'var(--brand-text)' }}>{title}</span>
+        <span className="text-sm font-semibold" style={{ color: 'var(--brand-text-primary)' }}>{title}</span>
         <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ backgroundColor: `${color}20`, color }}>
           {count}
         </span>
         {collapsed ? (
-          <ChevronDown className="h-3.5 w-3.5 ml-1 opacity-40 group-hover:opacity-70 transition-opacity" style={{ color: 'var(--brand-text-tertiary)' }} />
+          <ChevronDown className="h-3.5 w-3.5 ml-1 opacity-40 group-hover:opacity-70 transition-opacity" style={{ color: 'var(--brand-text-muted)' }} />
         ) : (
-          <ChevronUp className="h-3.5 w-3.5 ml-1 opacity-40 group-hover:opacity-70 transition-opacity" style={{ color: 'var(--brand-text-tertiary)' }} />
+          <ChevronUp className="h-3.5 w-3.5 ml-1 opacity-40 group-hover:opacity-70 transition-opacity" style={{ color: 'var(--brand-text-muted)' }} />
         )}
       </button>
       <AnimatePresence>
@@ -459,7 +468,7 @@ function FixCard({ item, expanded, onToggle, actions }: {
               {/* Original thought */}
               {meta.original_thought && (
                 <div className="pt-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--brand-text-tertiary)' }}>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--brand-text-muted)' }}>
                     Original note
                   </p>
                   <p className="text-xs leading-relaxed" style={{ color: 'var(--brand-text-secondary)' }}>
@@ -471,7 +480,7 @@ function FixCard({ item, expanded, onToggle, actions }: {
               {/* Fix draft detail */}
               {draft && (
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--brand-text-tertiary)' }}>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--brand-text-muted)' }}>
                     Automation plan
                   </p>
                   <div className="space-y-2">
@@ -483,7 +492,7 @@ function FixCard({ item, expanded, onToggle, actions }: {
                       >
                         <ActionTypeIcon type={action.type} />
                         <div className="text-xs leading-relaxed" style={{ color: 'var(--brand-text-secondary)' }}>
-                          <span className="font-medium" style={{ color: 'var(--brand-text)' }}>
+                          <span className="font-medium" style={{ color: 'var(--brand-text-primary)' }}>
                             {action.type.replace(/_/g, ' ')}
                           </span>
                           {action.type === 'send_email' && (
@@ -500,10 +509,10 @@ function FixCard({ item, expanded, onToggle, actions }: {
                     ))}
                   </div>
                   <div className="flex items-center justify-between mt-2">
-                    <span className="text-[10px]" style={{ color: 'var(--brand-text-tertiary)' }}>
+                    <span className="text-[10px]" style={{ color: 'var(--brand-text-muted)' }}>
                       Est. cost: {draft.estimated_cost}
                     </span>
-                    <span className="text-[10px]" style={{ color: 'var(--brand-text-tertiary)' }}>
+                    <span className="text-[10px]" style={{ color: 'var(--brand-text-muted)' }}>
                       Schedule: {draft.schedule.cron}
                     </span>
                   </div>
@@ -520,8 +529,8 @@ function FixCard({ item, expanded, onToggle, actions }: {
                     <div key={i} className="flex items-start gap-2 mt-1">
                       <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
                       <div>
-                        <p className="text-xs font-medium" style={{ color: 'var(--brand-text)' }}>{req.label}</p>
-                        <p className="text-[10px]" style={{ color: 'var(--brand-text-tertiary)' }}>{req.description}</p>
+                        <p className="text-xs font-medium" style={{ color: 'var(--brand-text-primary)' }}>{req.label}</p>
+                        <p className="text-[10px]" style={{ color: 'var(--brand-text-muted)' }}>{req.description}</p>
                       </div>
                     </div>
                   ))}
@@ -531,7 +540,7 @@ function FixCard({ item, expanded, onToggle, actions }: {
               {/* Fix hint for manual items */}
               {!draft && meta.fix_hint && (
                 <div className="pt-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--brand-text-tertiary)' }}>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--brand-text-muted)' }}>
                     Suggestion
                   </p>
                   <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>{meta.fix_hint}</p>
