@@ -19,8 +19,6 @@ import '@fontsource/playfair-display/400-italic.css'
 import '@fontsource/playfair-display/600.css'
 import '@fontsource/playfair-display/700.css'
 
-// Import Zebra design system
-import './styles/zebra.css'
 import './styles/premium-dark.css'
 import './styles/ripple.css'
 
