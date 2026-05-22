@@ -753,21 +753,22 @@ export function ReadingPage() {
   return (
     <>
       <SubtleBackground />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 sm:pt-10 pb-4 flex flex-col gap-4">
-          <div className="flex items-end justify-between gap-3">
-            <div className="min-w-0 flex-1">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-4 flex flex-col gap-4">
+          <header className="page-masthead">
+            <div className="page-masthead-text">
               <h1 className="page-hero">Your reading.</h1>
               <div className="page-eyebrow">Deep dives &amp; quick catches</div>
             </div>
-            <button
-              onClick={() => navigate('/search')}
-              className="h-11 w-11 rounded-xl flex items-center justify-center transition-all bg-[var(--glass-surface)] border border-white/10 flex-shrink-0"
-              style={{ color: "var(--brand-primary)" }}
-              title="Search everything"
-            >
-              <Search className="h-5 w-5" />
-            </button>
-          </div>
+            <div className="page-masthead-actions">
+              <button
+                onClick={() => navigate('/search')}
+                className="masthead-action press-spring"
+                title="Search everything"
+              >
+                <Search className="h-5 w-5" />
+              </button>
+            </div>
+          </header>
 
           <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4">
             {/* Filter Tabs */}

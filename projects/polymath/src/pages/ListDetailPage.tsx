@@ -1151,40 +1151,42 @@ function ArticleListMode({ list, navigate }: ArticleListModeProps) {
     }
 
     return (
-        <div className="min-h-screen bg-black flex flex-col">
+        <div className="min-h-screen flex flex-col">
             {/* Header */}
-            <div className="pt-20 sm:pt-24 px-4 sm:px-6 lg:px-8 pb-4" style={{ paddingTop: 'calc(5rem + env(safe-area-inset-top))' }}>
-                <Button variant="ghost" onClick={() => navigate('/lists')} className="text-[var(--brand-text-secondary)] mb-4 -ml-2 hover:text-[var(--brand-text-primary)] hover:bg-white/5">
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Collections
-                </Button>
+            <div className="px-4 sm:px-6 lg:px-8 pb-4">
+                <header className="page-masthead">
+                    <div className="page-masthead-text">
+                        <button onClick={() => navigate('/lists')} className="flex items-center gap-2 text-[11px] uppercase tracking-[0.15em] text-[var(--brand-text-muted)] hover:text-[var(--brand-text-secondary)] transition-colors mb-2">
+                            <ArrowLeft className="h-3.5 w-3.5" /> Back to Collections
+                        </button>
 
-                <div className="flex items-center gap-3 mb-3">
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full"
-                        style={{ backgroundColor: 'rgba(251,191,36,0.1)', boxShadow: 'inset 0 0 0 1px rgba(251,191,36,0.2)' }}>
-                        <BookOpen className="h-3.5 w-3.5" style={{ color: 'rgb(251,191,36)' }} />
-                        <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'rgb(251,191,36)' }}>
-                            Short Reads
-                        </span>
-                    </div>
-                    <div className="px-3 py-1.5 rounded-full bg-zinc-800/50 text-xs font-mono text-brand-text-muted"
-                        style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface)' }}>
-                        {readingArticles.length} {readingArticles.length === 1 ? 'article' : 'articles'}
-                    </div>
-                </div>
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full"
+                                style={{ backgroundColor: 'rgba(251,191,36,0.1)', boxShadow: 'inset 0 0 0 1px rgba(251,191,36,0.2)' }}>
+                                <BookOpen className="h-3.5 w-3.5" style={{ color: 'rgb(251,191,36)' }} />
+                                <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'rgb(251,191,36)' }}>
+                                    Short Reads
+                                </span>
+                            </div>
+                            <div className="px-3 py-1.5 rounded-full bg-zinc-800/50 text-xs font-mono text-brand-text-muted"
+                                style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface)' }}>
+                                {readingArticles.length} {readingArticles.length === 1 ? 'article' : 'articles'}
+                            </div>
+                        </div>
 
-                <div className="flex items-center justify-between mb-2">
-                    <h1 className="page-hero-sm">{list.title}</h1>
-                    <button
-                        onClick={() => fetchArticles(undefined, true)}
-                        className="h-9 w-9 rounded-full flex items-center justify-center transition-all text-brand-text-muted hover:text-[var(--brand-text-primary)]"
-                        style={{ border: '1px solid var(--glass-surface-hover)' }}
-                        title="Refresh"
-                    >
-                        <RefreshCw className="h-4 w-4" />
-                    </button>
-                </div>
-                {list.description && <p className="text-brand-text-muted text-sm max-w-xl mb-4">{list.description}</p>}
+                        <h1 className="page-hero-sm mb-2">{list.title}</h1>
+                        {list.description && <p className="text-brand-text-muted text-sm max-w-xl mb-4">{list.description}</p>}
+                    </div>
+                    <div className="page-masthead-actions">
+                        <button
+                            onClick={() => fetchArticles(undefined, true)}
+                            className="masthead-action press-spring"
+                            title="Refresh"
+                        >
+                            <RefreshCw className="h-4 w-4" />
+                        </button>
+                    </div>
+                </header>
 
                 {/* URL Add Input */}
                 <div className="mt-4 mb-8 max-w-2xl">
@@ -1573,36 +1575,38 @@ export default function ListDetailPage() {
     }
 
     return (
-        <div className="min-h-screen bg-black flex flex-col">
+        <div className="min-h-screen flex flex-col">
             {/* Header */}
-            <div className="pt-20 sm:pt-24 px-4 sm:px-6 lg:px-8 pb-4" style={{ paddingTop: 'calc(5rem + env(safe-area-inset-top))' }}>
-                <Button variant="ghost" onClick={() => navigate('/lists')} className="text-[var(--brand-text-secondary)] mb-4 -ml-2 hover:text-[var(--brand-text-primary)] hover:bg-white/5">
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Collections
-                </Button>
+            <div className="px-4 sm:px-6 lg:px-8 pb-4">
+                <header className="page-masthead">
+                    <div className="page-masthead-text">
+                        <button onClick={() => navigate('/lists')} className="flex items-center gap-2 text-[11px] uppercase tracking-[0.15em] text-[var(--brand-text-muted)] hover:text-[var(--brand-text-secondary)] transition-colors mb-2">
+                            <ArrowLeft className="h-3.5 w-3.5" /> Back to Collections
+                        </button>
 
-                {/* List type header */}
-                <div className="flex items-center gap-2 mb-3 flex-wrap">
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
-                        style={{
-                            backgroundColor: `rgba(${rgb}, 0.14)`,
-                            boxShadow: `inset 0 0 0 1px rgba(${rgb}, 0.35)`
-                        }}>
-                        <ListIcon type={list.type} className="h-3.5 w-3.5" style={{ color: `rgb(${rgb})` }} />
-                        <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: `rgb(${rgb})` }}>
-                            {list.type}
-                        </span>
-                    </div>
-                    {/* Item count badge */}
-                    <div className="px-2.5 py-1 rounded-full bg-white/8 text-xs font-semibold text-[var(--brand-text-secondary)]"
-                        style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.12)' }}>
-                        {displayItems.length} {displayItems.length === 1 ? 'item' : 'items'}
-                    </div>
-                </div>
+                        {/* List type header */}
+                        <div className="flex items-center gap-2 mb-3 flex-wrap">
+                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+                                style={{
+                                    backgroundColor: `rgba(${rgb}, 0.14)`,
+                                    boxShadow: `inset 0 0 0 1px rgba(${rgb}, 0.35)`
+                                }}>
+                                <ListIcon type={list.type} className="h-3.5 w-3.5" style={{ color: `rgb(${rgb})` }} />
+                                <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: `rgb(${rgb})` }}>
+                                    {list.type}
+                                </span>
+                            </div>
+                            {/* Item count badge */}
+                            <div className="px-2.5 py-1 rounded-full bg-white/8 text-xs font-semibold text-[var(--brand-text-secondary)]"
+                                style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.12)' }}>
+                                {displayItems.length} {displayItems.length === 1 ? 'item' : 'items'}
+                            </div>
+                        </div>
 
-                <div className="flex items-start justify-between gap-3">
-                    <h1 className="page-hero-sm mb-1 flex-1 min-w-0 break-words">{list.title}</h1>
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <h1 className="page-hero-sm mb-1 break-words">{list.title}</h1>
+                        {list.description && <p className="text-[var(--brand-text-secondary)] text-sm max-w-xl mb-2 leading-relaxed">{list.description}</p>}
+                    </div>
+                    <div className="page-masthead-actions">
                         {/* Sort picker */}
                         <div className="relative">
                             <button
@@ -1660,8 +1664,7 @@ export default function ListDetailPage() {
                             <Settings2 className="h-4 w-4" />
                         </button>
                     </div>
-                </div>
-                {list.description && <p className="text-[var(--brand-text-secondary)] text-sm max-w-xl mb-2 leading-relaxed">{list.description}</p>}
+                </header>
 
                 {/* Add Input */}
                 <div className="mt-4 mb-5 max-w-2xl">

@@ -310,12 +310,16 @@ export function SearchPage() {
 
         {/* Dia-leaning search — single big soft input, page is mostly air */}
         <div className="min-h-screen pb-24">
-          <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-16 sm:pt-24">
+          <div className="max-w-2xl mx-auto px-4 sm:px-6">
 
-            <h1 className="page-hero-sm text-center mb-2">What are you looking for?</h1>
-            <p className="meta-serif text-center mb-10">
-              Memories, projects, articles — anything you've kept.
-            </p>
+            <header className="page-masthead">
+              <div className="page-masthead-text">
+                <h1 className="page-hero-sm text-center mb-2">What are you looking for?</h1>
+                <p className="meta-serif text-center mb-10">
+                  Memories, projects, articles — anything you've kept.
+                </p>
+              </div>
+            </header>
 
             <form onSubmit={handleTextSearch} className="flex gap-2 mb-6">
               <div className="flex-1 relative">

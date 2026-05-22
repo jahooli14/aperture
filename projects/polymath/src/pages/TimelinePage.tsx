@@ -105,12 +105,15 @@ export function TimelinePage() {
   }
 
   return (
-    <div className="min-h-screen py-8 sm:py-12 relative" style={{ backgroundColor: 'var(--brand-bg)' }}>
+    <div className="min-h-screen pb-24 relative" style={{ backgroundColor: 'var(--brand-bg)' }}>
       <SubtleBackground />
-      {/* Header */}
-      <div className="max-w-6xl mx-auto px-4 mb-8 sm:mb-12">
-        <h1 className="page-hero">Your timeline.</h1>
-        <div className="page-eyebrow">When you do your best thinking</div>
+      <div className="max-w-6xl mx-auto px-4">
+        <header className="page-masthead">
+          <div className="page-masthead-text">
+            <h1 className="page-hero">Your timeline.</h1>
+            <div className="page-eyebrow">When you do your best thinking</div>
+          </div>
+        </header>
       </div>
 
       <div className="max-w-6xl mx-auto px-4 space-y-6 pb-24">

@@ -151,15 +151,16 @@ export function CognitiveReplayPage() {
   ]
 
   return (
-    <div className="min-h-screen pb-24 relative" style={{ paddingTop: 'calc(5rem + env(safe-area-inset-top))' }}>
+    <div className="min-h-screen pb-24 relative">
       <SubtleBackground />
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 relative z-10">
-        {/* Header */}
-        <div className="mb-7 sm:mb-9">
-          <h1 className="page-hero-sm">Cognitive replay.</h1>
-          <div className="page-eyebrow">Reconstruct what you were thinking</div>
-        </div>
+        <header className="page-masthead">
+          <div className="page-masthead-text">
+            <h1 className="page-hero-sm">Cognitive replay.</h1>
+            <div className="page-eyebrow">Reconstruct what you were thinking</div>
+          </div>
+        </header>
 
         {isOffline && (
           <Card className="mb-6 border-brand-primary/20 bg-brand-primary/5">

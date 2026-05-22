@@ -197,7 +197,7 @@ export function FixQueuePage() {
             <ArrowLeft className="h-5 w-5" style={{ color: 'var(--brand-text-secondary)' }} />
           </button>
           <Wrench className="h-5 w-5 flex-shrink-0" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
-          <h1 className="text-lg sm:text-xl font-bold truncate" style={{ color: 'var(--brand-text)' }}>Fix Queue</h1>
+          <h1 className="page-hero-sm truncate">Fix Queue</h1>
           <span className="text-xs sm:text-sm ml-auto whitespace-nowrap" style={{ color: 'var(--brand-text-tertiary)' }}>
             {deployed.length} running
           </span>
@@ -213,7 +213,7 @@ export function FixQueuePage() {
         {!loading && items.length === 0 && (
           <div className="text-center py-16">
             <Wrench className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--brand-text-tertiary)' }} />
-            <p className="text-lg font-medium mb-2" style={{ color: 'var(--brand-text)' }}>No annoyances yet</p>
+            <p className="text-lg font-medium mb-2" style={{ color: 'var(--brand-text-primary)' }}>No annoyances yet</p>
             <p className="text-sm" style={{ color: 'var(--brand-text-tertiary)' }}>
               Voice-capture a frustration and it'll appear here with a fix draft
             </p>
@@ -351,7 +351,7 @@ function Section({ title, count, color, defaultCollapsed = false, children }: {
         className="flex items-center gap-2 mb-3 group"
       >
         <div className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
-        <span className="text-sm font-semibold" style={{ color: 'var(--brand-text)' }}>{title}</span>
+        <span className="text-sm font-semibold" style={{ color: 'var(--brand-text-primary)' }}>{title}</span>
         <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ backgroundColor: `${color}20`, color }}>
           {count}
         </span>
@@ -483,7 +483,7 @@ function FixCard({ item, expanded, onToggle, actions }: {
                       >
                         <ActionTypeIcon type={action.type} />
                         <div className="text-xs leading-relaxed" style={{ color: 'var(--brand-text-secondary)' }}>
-                          <span className="font-medium" style={{ color: 'var(--brand-text)' }}>
+                          <span className="font-medium" style={{ color: 'var(--brand-text-primary)' }}>
                             {action.type.replace(/_/g, ' ')}
                           </span>
                           {action.type === 'send_email' && (
@@ -520,7 +520,7 @@ function FixCard({ item, expanded, onToggle, actions }: {
                     <div key={i} className="flex items-start gap-2 mt-1">
                       <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" style={{ color: 'rgb(var(--brand-primary-rgb))' }} />
                       <div>
-                        <p className="text-xs font-medium" style={{ color: 'var(--brand-text)' }}>{req.label}</p>
+                        <p className="text-xs font-medium" style={{ color: 'var(--brand-text-primary)' }}>{req.label}</p>
                         <p className="text-[10px]" style={{ color: 'var(--brand-text-tertiary)' }}>{req.description}</p>
                       </div>
                     </div>

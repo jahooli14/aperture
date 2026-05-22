@@ -5,7 +5,7 @@
 
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
-import { Loader2, MoreVertical, Plus, Check, X, GripVertical, Zap, Target, Star, Sprout, Pin, PinOff, Skull } from 'lucide-react'
+import { Loader2, MoreVertical, Plus, Check, X, GripVertical, Zap, Target, Star, Sprout, Pin, PinOff, Skull, ArrowLeft } from 'lucide-react'
 import { useProjectStore } from '../stores/useProjectStore'
 import { AddNoteDialog } from '../components/projects/AddNoteDialog'
 import { ProjectPath } from '../components/projects/ProjectPath'
@@ -662,21 +662,22 @@ export function ProjectDetailPage() {
   return (
     <div className="min-h-screen pb-24 relative" style={{ backgroundColor: 'var(--brand-bg)' }}>
       <SubtleBackground />
-      <div className="max-w-2xl mx-auto px-5 sm:px-6 pt-8 pb-4">
-        {/* Nav row */}
-        <div className="flex items-center justify-between mb-6">
+      <div className="max-w-2xl mx-auto px-5 sm:px-6 pb-4">
+        <header className="page-masthead mb-6">
+          <div className="page-masthead-text">
           <button
             onClick={() => navigate('/projects')}
-            className="text-[14px] font-medium opacity-65 hover:opacity-100 transition-opacity min-h-[44px] flex items-center pr-3 -ml-1 px-2 rounded-lg"
-            style={{ color: 'var(--brand-text-primary)' }}
+            className="flex items-center gap-2 text-[11px] uppercase tracking-[0.15em] text-[var(--brand-text-muted)] hover:text-[var(--brand-text-secondary)] transition-colors"
           >
-            ← Back
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Back
           </button>
+          </div>
+          <div className="page-masthead-actions">
           <div className="relative flex items-center gap-2">
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className="h-11 w-11 flex items-center justify-center rounded-xl transition-all hover:bg-white/[0.06]"
-              style={{ color: 'var(--brand-text-secondary)' }}
+              className="masthead-action press-spring"
               aria-label="More options"
             >
               <MoreVertical className="h-5 w-5" />
@@ -736,7 +737,8 @@ export function ProjectDetailPage() {
               </>
             )}
           </div>
-        </div>
+          </div>
+        </header>
 
         {/* Hidden PinButton to preserve useEffect content sync */}
         <div className="hidden">
