@@ -167,7 +167,7 @@ export function SwipeableCard({
 export const SwipeActions = {
   delete: (onDelete: () => void): SwipeAction => ({
     icon: <Trash2 className="h-5 w-5 text-[var(--brand-text-primary)]" />,
-    color: 'bg-brand-primary',
+    color: 'bg-destructive',
     label: 'Delete',
     threshold: 100,
     onAction: onDelete
