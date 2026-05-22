@@ -213,6 +213,9 @@ async function handleResetOnboarding(req: VercelRequest, res: VercelResponse) {
 // ── Upload Image ───────────────────────────────────────────────────────────
 async function handleUploadImage(req: VercelRequest, res: VercelResponse) {
   try {
+    const userId = await getUserId(req)
+    if (!userId) return res.status(401).json({ error: 'Sign in to upload' })
+
     const supabase = getSupabaseClient()
     const { fileName, fileType } = req.body
 

@@ -669,6 +669,7 @@ export function ReaderPage() {
               transition={{ duration: 0.5, delay: 0.15 }}
               className={`reader-content ${settings.article}`}
               onMouseUp={handleTextSelection}
+              onTouchEnd={handleTextSelection}
               dangerouslySetInnerHTML={{ __html: processedContent || article.content || '' }}
             />
           ) : (
@@ -727,7 +728,7 @@ export function ReaderPage() {
           onCapture={async ({ text }) => {
             if (text) {
               // Create a thought from the capture
-              await fetch('/api/memories', {
+              const res = await fetch('/api/memories', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -736,6 +737,10 @@ export function ReaderPage() {
                   tags: ['reading-thought']
                 })
               })
+              if (!res.ok) {
+                addToast({ title: "Couldn't save your thought", description: 'Try again in a moment.', variant: 'destructive' })
+                return
+              }
             }
             await handleArchiveComplete()
           }}

@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Moon, Eye, EyeOff, RefreshCw, Loader2, Star, Maximize2, Link2, Search, Zap, StarIcon, Wind, WifiOff } from 'lucide-react'
 import { useToast } from '../components/ui/toast'
 import { SubtleBackground } from '../components/SubtleBackground'
@@ -38,6 +38,7 @@ export function BedtimePage() {
   const [showWelcome, setShowWelcome] = useState(false)
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
   const { addToast } = useToast()
+  const navigate = useNavigate()
 
   useEffect(() => {
     fetchPrompts()
@@ -289,7 +290,7 @@ export function BedtimePage() {
                 Bedtime
               </h1>
             </div>
-            <button className="h-11 w-11 flex items-center justify-center rounded-full hover:bg-white/[0.06] transition-colors flex-shrink-0" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
+            <button onClick={() => navigate('/search')} aria-label="Search" className="h-11 w-11 flex items-center justify-center rounded-full hover:bg-white/[0.06] transition-colors flex-shrink-0" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
               <Search className="h-4 w-4 opacity-70" />
             </button>
           </div>

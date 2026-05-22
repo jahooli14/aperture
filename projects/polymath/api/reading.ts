@@ -1431,7 +1431,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         const parsedSavedLimit = req.query.saved_limit ? parseInt(req.query.saved_limit as string, 10) : 20
         const parsedNewLimit = req.query.new_limit ? parseInt(req.query.new_limit as string, 10) : 20
         const parsedNewOffset = req.query.new_offset ? parseInt(req.query.new_offset as string, 10) : 0
-        const savedLimit = Number.isFinite(parsedSavedLimit) && parsedSavedLimit > 0 ? Math.min(parsedSavedLimit, 500) : 200
+        const savedLimit = Number.isFinite(parsedSavedLimit) && parsedSavedLimit >= 0 ? Math.min(parsedSavedLimit, 500) : 200
         const newLimit = Number.isFinite(parsedNewLimit) && parsedNewLimit > 0 ? Math.min(parsedNewLimit, 100) : 20
         const newOffset = Number.isFinite(parsedNewOffset) && parsedNewOffset >= 0 ? parsedNewOffset : 0
 
@@ -1934,6 +1934,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
       if (req.body.processed !== undefined) updates.processed = req.body.processed
       if (req.body.thumbnail_url !== undefined) updates.thumbnail_url = req.body.thumbnail_url
       if (req.body.favicon_url !== undefined) updates.favicon_url = req.body.favicon_url
+      if (req.body.notes !== undefined) updates.notes = req.body.notes
 
       const { data, error } = await supabase
         .from('reading_queue')
