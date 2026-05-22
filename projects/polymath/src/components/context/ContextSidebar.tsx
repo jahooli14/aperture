@@ -141,18 +141,20 @@ export function ContextSidebar() {
 
     const handleLinkItem = async (e: React.MouseEvent, item: ContextItem) => {
         e.stopPropagation()
-        // Create a connection between active context and this item
+        // Create a connection between active context and this item.
+        // The connections table stores thoughts as 'thought'; the sidebar
+        // labels them 'memory', so normalise before hitting create-spark.
+        const normaliseType = (t: string) => (t === 'memory' ? 'thought' : t)
         try {
-            const response = await fetch('/api/connections', {
+            const response = await fetch('/api/connections?action=create-spark', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    source_type: activeContext.type,
+                    source_type: normaliseType(activeContext.type),
                     source_id: activeContext.id,
-                    target_type: item.type,
+                    target_type: normaliseType(item.type),
                     target_id: item.id,
-                    connection_type: 'manual_context_link',
-                    reasoning: 'Linked via connections'
+                    connection_type: 'manual_context_link'
                 })
             })
 
