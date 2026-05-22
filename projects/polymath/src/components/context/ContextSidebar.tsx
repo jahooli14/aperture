@@ -156,13 +156,12 @@ export function ContextSidebar() {
                 })
             })
 
-            if (response.ok) {
-                addToast({
-                    title: 'Connected!',
-                    description: `Linked "${item.title}" to current context`,
-                    variant: 'success'
-                })
-            }
+            if (!response.ok) throw new Error(`HTTP ${response.status}`)
+            addToast({
+                title: 'Connected!',
+                description: `Linked "${item.title}" to current context`,
+                variant: 'success'
+            })
         } catch (error) {
             addToast({
                 title: 'Failed to link',

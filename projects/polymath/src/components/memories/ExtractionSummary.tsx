@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Brain, Users, Hash, Heart, X, Lightbulb, BookOpen, ListPlus, Wrench, ArrowRight, Sparkles } from 'lucide-react'
 import { useJourneyStore } from '../../stores/useJourneyStore'
 import { useProjectStore } from '../../stores/useProjectStore'
+import { CreateProjectDialog } from '../projects/CreateProjectDialog'
 
 interface ExtractionDetail {
   memoryId: string
@@ -21,6 +22,7 @@ export function ExtractionSummary() {
   const navigate = useNavigate()
   const [extraction, setExtraction] = useState<ExtractionDetail | null>(null)
   const [visible, setVisible] = useState(false)
+  const [createOpen, setCreateOpen] = useState(false)
   const { incrementDataPoints, onboardingCompletedAt } = useJourneyStore()
   const allProjects = useProjectStore(s => s.allProjects)
 
@@ -42,6 +44,8 @@ export function ExtractionSummary() {
   }, [onboardingCompletedAt])
 
   return (
+    <>
+    <CreateProjectDialog isOpen={createOpen} onOpenChange={setCreateOpen} hideTrigger />
     <AnimatePresence>
       {visible && extraction && (
         <motion.div
@@ -128,7 +132,7 @@ export function ExtractionSummary() {
                     </button>
                   )}
                   <button
-                    onClick={() => { setVisible(false); navigate('/projects?create=1') }}
+                    onClick={() => { setVisible(false); setCreateOpen(true) }}
                     className="text-xs font-bold underline"
                     style={{ color: 'rgb(var(--brand-primary-rgb))' }}
                   >
@@ -212,5 +216,6 @@ export function ExtractionSummary() {
         </motion.div>
       )}
     </AnimatePresence>
+    </>
   )
 }

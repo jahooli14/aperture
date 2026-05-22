@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Calendar, Edit, Trash2, Copy, Share2, Link2, Plus, Pin, CheckSquare, Square } from 'lucide-react'
+import { X, Calendar, Edit, Trash2, Copy, Share2, Link2, Pin, CheckSquare, Square } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { MarkdownRenderer } from '../ui/MarkdownRenderer'
 import { format } from 'date-fns'
@@ -13,7 +13,6 @@ import { EditMemoryDialog } from './EditMemoryDialog'
 import { TagEditor } from './TagEditor'
 import { ThemeEditor } from './ThemeEditor'
 import { GlassCard } from '../ui/GlassCard'
-import { SmartActionDot } from '../SmartActionDot'
 import { CACHE_TTL } from '../../lib/cacheConfig'
 
 import { useContextEngineStore } from '../../stores/useContextEngineStore'
@@ -82,7 +81,7 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
 
   const handleMemoryClick = useCallback((memoryId: string) => {
     onClose()
-    navigate(`/memories?highlight=${memoryId}`)
+    navigate(`/memories?id=${memoryId}`)
   }, [onClose, navigate])
 
   const handleAnalyze = (e: React.MouseEvent) => {
@@ -221,6 +220,7 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
                   onClick={handleAnalyze}
                   className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-[rgba(var(--brand-primary-rgb),0.1)] transition-colors"
                   title="Analyze with AI"
+                  aria-label="Analyze with AI"
                 >
                   <span className="w-2.5 h-2.5 rounded-full block" style={{
                     backgroundColor: 'rgb(var(--color-accent-dark-rgb))',
@@ -252,8 +252,25 @@ const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
                   onClick={() => setEditDialogOpen(true)}
                   className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-[rgba(255,255,255,0.08)] transition-colors text-[var(--brand-text-secondary)]"
                   title="Edit Memory"
+                  aria-label="Edit thought"
                 >
                   <Edit className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={handleCopyText}
+                  className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-[rgba(255,255,255,0.08)] transition-colors text-[var(--brand-text-secondary)]"
+                  title="Copy text"
+                  aria-label="Copy text"
+                >
+                  <Copy className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={handleShare}
+                  className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-[rgba(255,255,255,0.08)] transition-colors text-[var(--brand-text-secondary)]"
+                  title="Share"
+                  aria-label="Share"
+                >
+                  <Share2 className="h-5 w-5" />
                 </button>
                 <button
                   onClick={handleDelete}

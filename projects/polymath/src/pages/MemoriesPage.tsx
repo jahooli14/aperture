@@ -342,14 +342,16 @@ function MemoriesPageInner() {
 
   const handleReview = async (memoryId: string) => {
     try {
-      await fetch(`/api/memories`, {
+      const res = await fetch(`/api/memories`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: memoryId })
       })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       setResurfacing(prev => prev.filter(m => m.id !== memoryId))
     } catch (err) {
       console.error('Failed to mark as reviewed:', err)
+      addToast({ title: "Couldn't mark as reviewed", description: 'Try again in a moment.', variant: 'destructive' })
     }
   }
 

@@ -164,7 +164,7 @@ export function FocusSession() {
                         <span className="text-xs font-bold uppercase tracking-widest">Session Plan</span>
                     </div>
                     <button
-                        onClick={() => { endSession(); useFocusStore.getState().reset() }}
+                        onClick={() => useFocusStore.getState().reset()}
                         className="p-2 hover:bg-[rgba(255,255,255,0.1)] rounded-full transition-colors opacity-50 hover:opacity-100"
                     >
                         <X className="h-5 w-5" />

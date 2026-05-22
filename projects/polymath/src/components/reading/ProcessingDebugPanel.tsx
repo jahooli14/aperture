@@ -89,7 +89,7 @@ export function ProcessingDebugPanel({ articles, onRetry, onFlushAll }: Processi
         className="max-w-4xl mx-auto glass-card rounded-xl overflow-hidden"
         style={{
           backgroundColor: 'rgba(15, 24, 41, 0.98)',
-          borderColor: 'var(--premium-red)',
+          borderColor: 'rgb(var(--color-error-rgb))',
           borderWidth: '2px',
           borderStyle: 'solid',
           boxShadow: '0 10px 40px rgba(var(--color-error-rgb), 0.3)'
@@ -133,7 +133,7 @@ export function ProcessingDebugPanel({ articles, onRetry, onFlushAll }: Processi
               className="ml-3 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
               style={{
                 backgroundColor: 'rgba(var(--color-error-rgb), 0.2)',
-                color: 'var(--premium-red)',
+                color: 'rgb(var(--color-error-rgb))',
                 border: '1px solid rgba(var(--color-error-rgb), 0.3)'
               }}
             >
@@ -182,7 +182,7 @@ export function ProcessingDebugPanel({ articles, onRetry, onFlushAll }: Processi
                         className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
                         style={{
                           backgroundColor: processing ? 'rgba(var(--brand-primary-rgb), 0.1)' : 'rgba(var(--color-error-rgb), 0.1)',
-                          color: processing ? 'var(--brand-primary)' : 'var(--premium-red)',
+                          color: processing ? 'var(--brand-primary)' : 'rgb(var(--color-error-rgb))',
                         }}
                       >
                         {processing ? (
@@ -268,9 +268,9 @@ export function ProcessingDebugPanel({ articles, onRetry, onFlushAll }: Processi
                       className="flex gap-2"
                       style={{
                         color: log.level === 'error'
-                          ? 'var(--premium-red)'
+                          ? 'rgb(var(--color-error-rgb))'
                           : log.level === 'success'
-                          ? 'var(--premium-green)'
+                          ? 'rgba(52,211,153,1)'
                           : 'var(--brand-text-muted)'
                       }}
                     >
