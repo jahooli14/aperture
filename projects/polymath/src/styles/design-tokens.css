@@ -319,6 +319,7 @@
    running under the icon. Boost the icon-aware padding so it always wins. */
 .soft-input.pl-11 { padding-left: 2.75rem; }
 .soft-input.pl-10 { padding-left: 2.5rem; }
+.soft-input.pl-14 { padding-left: 3.5rem; }
 
 .soft-input:not(:placeholder-shown) {
   font-style: normal;

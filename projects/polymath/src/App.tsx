@@ -220,9 +220,12 @@ export default function App() {
   useEffect(() => {
     if (!isNative()) return
 
-    // Set status bar style to dark content (dark icons on light background)
+    // Draw the app behind the status bar (edge-to-edge), with a transparent
+    // bar so the dark gradient shows through and only the system icons sit on
+    // top — no solid black band. Style.Dark = light icons for our dark theme.
+    StatusBar.setOverlaysWebView({ overlay: true }).catch(console.error)
     StatusBar.setStyle({ style: Style.Dark }).catch(console.error)
-    StatusBar.setBackgroundColor({ color: "var(--brand-text-secondary)" }).catch(console.error)
+    StatusBar.setBackgroundColor({ color: '#00000000' }).catch(console.error)
   }, [])
 
   // Setup deep linking for Supabase OAuth on native platforms

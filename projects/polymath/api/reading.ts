@@ -30,83 +30,108 @@ async function fetchFeedDirect(url: string): Promise<any> {
 }
 
 /**
- * Fetch a URL with a fully browser-realistic header set. Many feeds 403
- * any request that smells like a bot — node-fetch's default UA, missing
- * Accept-Language, missing Sec-Fetch-* etc. Mimicking Chrome unblocks
- * most of them.
- *
- * If the direct request gets a blocked status (403/429/503) or fails with
- * a network error, AND SCRAPERAPI_KEY is configured, we retry via
- * ScraperAPI's residential proxy. Cloudflare bot-fight + AWS-IP blocking
- * is the most common reason browser-headers alone aren't enough — the
- * publisher is blocking Vercel's datacenter range, not our UA.
+ * Browser-realistic headers used for the direct fetch attempt.
  */
-async function fetchAsBrowser(url: string): Promise<string> {
-  let directError: Error | null = null
-  let shouldTryProxy = false
-
-  try {
-    const res = await fetch(url, {
-      redirect: 'follow',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.9, text/html;q=0.8, */*;q=0.5',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-        'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-        'Sec-Ch-Ua-Mobile': '?0',
-        'Sec-Ch-Ua-Platform': '"macOS"',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
-        'Sec-Fetch-User': '?1',
-        'Upgrade-Insecure-Requests': '1',
-      } as Record<string, string>,
-    })
-    if (res.ok) return await res.text()
-    directError = new Error(`HTTP ${res.status} ${res.statusText} from ${url}`)
-    // 403 / 429 / 503 typically mean "bot detected" or "IP-blocked" — those
-    // are the ones a residential proxy fixes. Other 4xx (404, etc.) are
-    // genuine client errors; no proxy helps.
-    shouldTryProxy = [403, 429, 503].includes(res.status)
-  } catch (e) {
-    directError = e instanceof Error ? e : new Error(String(e))
-    // Network-level failures could be IP blocks at the TCP layer — worth
-    // a proxy retry.
-    shouldTryProxy = true
-  }
-
-  if (shouldTryProxy && SCRAPERAPI_KEY) {
-    try {
-      console.log('[Feed Fetch] Direct failed, falling back to ScraperAPI for:', url)
-      return await fetchViaScraperAPI(url)
-    } catch (proxyError) {
-      const proxyMsg = proxyError instanceof Error ? proxyError.message : 'unknown'
-      throw new Error(`${directError!.message} — proxy also failed: ${proxyMsg}`)
-    }
-  }
-
-  throw directError!
+const BROWSER_HEADERS: Record<string, string> = {
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Accept': 'application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.9, text/html;q=0.8, */*;q=0.5',
+  'Accept-Language': 'en-US,en;q=0.9',
+  'Cache-Control': 'no-cache',
+  'Pragma': 'no-cache',
+  'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+  'Sec-Ch-Ua-Mobile': '?0',
+  'Sec-Ch-Ua-Platform': '"macOS"',
+  'Sec-Fetch-Dest': 'document',
+  'Sec-Fetch-Mode': 'navigate',
+  'Sec-Fetch-Site': 'none',
+  'Sec-Fetch-User': '?1',
+  'Upgrade-Insecure-Requests': '1',
 }
 
-/**
- * Last-resort fetch via ScraperAPI's residential proxy. No JS rendering
- * (feeds are static XML), so this costs 1 credit per request.
- */
-async function fetchViaScraperAPI(url: string): Promise<string> {
-  if (!SCRAPERAPI_KEY) throw new Error('SCRAPERAPI_KEY not configured')
-  const scraperUrl = `https://api.scraperapi.com?api_key=${SCRAPERAPI_KEY}&url=${encodeURIComponent(url)}`
+async function fetchWithTimeout(url: string, ms: number, headers?: Record<string, string>): Promise<Response> {
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 30000)
+  const timeoutId = setTimeout(() => controller.abort(), ms)
   try {
-    const res = await fetch(scraperUrl, { signal: controller.signal })
-    if (!res.ok) throw new Error(`ScraperAPI HTTP ${res.status} ${res.statusText}`)
-    return await res.text()
+    return await fetch(url, { signal: controller.signal, redirect: 'follow', headers })
   } finally {
     clearTimeout(timeoutId)
   }
+}
+
+/**
+ * Fetch a feed/HTML URL, working around the single biggest reason RSS
+ * subscribe fails on Vercel: publishers (Cloudflare bot-fight, etc.) block
+ * the AWS datacenter IP range Vercel runs on. Browser headers fix UA-gating
+ * but not IP blocking — for that we need to fetch from a different network.
+ *
+ * Order of attempts (first success wins, each hard-timeboxed so the whole
+ * thing stays under the 30s function budget):
+ *   1. Direct, with full Chrome headers — works for any feed that isn't
+ *      IP-blocking us. Fast path.
+ *   2. ScraperAPI residential proxy — only if SCRAPERAPI_KEY is set. Best
+ *      quality, costs 1 credit.
+ *   3. Free public proxies (allorigins, codetabs) — no key needed. They
+ *      fetch server-side from their own (non-AWS) IPs, so they sail past
+ *      datacenter blocks. Less reliable than ScraperAPI but free, and the
+ *      two together give decent coverage.
+ *
+ * Throws with a combined error string only if every strategy fails.
+ */
+async function fetchAsBrowser(url: string): Promise<string> {
+  const errors: string[] = []
+
+  // Strategy 1: direct.
+  try {
+    const res = await fetchWithTimeout(url, 7000, BROWSER_HEADERS)
+    if (res.ok) {
+      const text = await res.text()
+      if (text && text.trim()) return text
+      errors.push('direct: empty body')
+    } else {
+      errors.push(`direct: HTTP ${res.status}`)
+    }
+  } catch (e) {
+    errors.push(`direct: ${e instanceof Error ? (e.name === 'AbortError' ? 'timeout' : e.message) : 'failed'}`)
+  }
+
+  // Build the proxy chain. ScraperAPI first if configured (best), else the
+  // free proxies.
+  const proxies: { name: string; url: string; timeout: number }[] = []
+  if (SCRAPERAPI_KEY) {
+    proxies.push({
+      name: 'scraperapi',
+      url: `https://api.scraperapi.com?api_key=${SCRAPERAPI_KEY}&url=${encodeURIComponent(url)}`,
+      timeout: 18000,
+    })
+  } else {
+    proxies.push({
+      name: 'allorigins',
+      url: `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+      timeout: 11000,
+    })
+    proxies.push({
+      name: 'codetabs',
+      url: `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`,
+      timeout: 9000,
+    })
+  }
+
+  for (const proxy of proxies) {
+    try {
+      const res = await fetchWithTimeout(proxy.url, proxy.timeout)
+      if (res.ok) {
+        const text = await res.text()
+        if (text && text.trim()) return text
+        errors.push(`${proxy.name}: empty body`)
+      } else {
+        errors.push(`${proxy.name}: HTTP ${res.status}`)
+      }
+    } catch (e) {
+      errors.push(`${proxy.name}: ${e instanceof Error ? (e.name === 'AbortError' ? 'timeout' : e.message) : 'failed'}`)
+    }
+  }
+
+  throw new Error(`Could not fetch feed. Tried: ${errors.join('; ')}`)
 }
 
 /**
@@ -138,15 +163,18 @@ function discoverFeedLink(html: string, baseUrl: string): string | null {
 const FEED_URL_HINT_RE = /\.(xml|rss|atom)(\?|$)|\/feed\/?$|\/rss\/?$|\/atom\/?$|\/feed\.\w+$|\/rss\.\w+$/i
 
 /**
- * Robust feed fetch + parse, trying strategies in order:
- *   1. Direct parse (rss-parser w/ browser-ish headers via robust fetch)
+ * Robust feed fetch + parse. Two strategies, both bounded by fetchAsBrowser's
+ * 8s hard timeout so the worst-case latency is ~16s + a possible ScraperAPI
+ * retry (18s) — comfortably under the 30s Vercel maxDuration.
+ *
+ *   1. Direct parse (browser-headers fetch, ScraperAPI fallback inside).
  *   2. If URL looks like a website (no obvious feed suffix), fetch as HTML
  *      and look for a <link rel="alternate"> feed pointer, then parse that.
- *   3. Same as 2 but try common feed paths (/feed, /rss, /feed.xml, etc.)
- *      against the host as a last resort.
  *
- * Returns the parsed feed AND the URL that actually worked, since (2) and
- * (3) may discover a different canonical feed URL than what was passed in.
+ * The earlier "try /feed, /rss, /feed.xml…" strategy was removed — six
+ * sequential probes burned the function's time budget and added little
+ * over discovery. If discovery can't find the feed link in the HTML head,
+ * the user should paste the feed URL directly.
  */
 async function robustParseFeed(inputUrl: string): Promise<{ feedData: any; finalUrl: string }> {
   let lastError: Error | null = null
@@ -166,7 +194,8 @@ async function robustParseFeed(inputUrl: string): Promise<{ feedData: any; final
     lastError = e instanceof Error ? e : new Error(String(e))
   }
 
-  // Strategy 2: maybe it's a website URL. Try to discover the feed.
+  // Strategy 2: maybe it's a website URL. Try to discover the feed via
+  // <link rel="alternate" type="application/rss+xml" href="…">.
   const looksLikeFeed = FEED_URL_HINT_RE.test(url)
   if (!looksLikeFeed) {
     try {
@@ -182,27 +211,7 @@ async function robustParseFeed(inputUrl: string): Promise<{ feedData: any; final
     }
   }
 
-  // Strategy 3: try the common feed paths against the origin.
-  if (!looksLikeFeed) {
-    try {
-      const base = new URL(url)
-      const candidates = ['/feed', '/rss', '/feed.xml', '/rss.xml', '/atom.xml', '/index.xml']
-      for (const path of candidates) {
-        const candidate = `${base.origin}${path}`
-        try {
-          const xml = await fetchAsBrowser(candidate)
-          const feedData = await rssParser.parseString(xml)
-          return { feedData, finalUrl: candidate }
-        } catch {
-          // try next
-        }
-      }
-    } catch {
-      // base URL was malformed; fall through to lastError
-    }
-  }
-
-  throw lastError ?? new Error('Could not parse feed at any candidate URL')
+  throw lastError ?? new Error('Could not fetch or parse this feed')
 }
 
 // API Keys for third-party extraction services (Strategy B: Orchestrator Pattern)

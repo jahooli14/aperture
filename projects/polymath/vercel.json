@@ -44,6 +44,9 @@
     "api/projects.ts": {
       "maxDuration": 60
     },
+    "api/reading.ts": {
+      "maxDuration": 30
+    },
     "api/utilities.ts": {
       "maxDuration": 90
     }

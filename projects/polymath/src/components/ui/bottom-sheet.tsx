@@ -9,6 +9,7 @@ import { AnimatePresence, motion, useMotionValue, useTransform, PanInfo } from '
 import { cn } from '../../lib/utils'
 import { X } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
+import { useKeyboardInset } from '../../hooks/useKeyboardInset'
 
 interface BottomSheetProps {
   open?: boolean
@@ -88,6 +89,7 @@ const BottomSheetContent = React.forwardRef<
   const { open, onOpenChange } = React.useContext(BottomSheetContext)
   const y = useMotionValue(0)
   const opacity = useTransform(y, [0, 300], [1, 0.8], { clamp: true })
+  const keyboardInset = useKeyboardInset()
 
   const handleDragEnd = (_: any, info: PanInfo) => {
     // Dismiss if dragged down more than 80px or with fast velocity
@@ -133,6 +135,9 @@ const BottomSheetContent = React.forwardRef<
         style={{
           y,
           opacity,
+          bottom: keyboardInset,
+          maxHeight: keyboardInset > 0 ? `calc(100vh - ${keyboardInset + 16}px)` : undefined,
+          transition: 'bottom 0.2s ease-out',
           background: 'linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 12%), rgba(15, 24, 41, 0.78)',
           backdropFilter: 'blur(40px) saturate(200%)',
           WebkitBackdropFilter: 'blur(40px) saturate(200%)',

@@ -8,10 +8,11 @@
  * Reused by FeedsPage and ConsumingWidget so both entry points open the
  * same UI.
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Search, Plus, Loader2, Link as LinkIcon, Check } from 'lucide-react'
 import { useRSSStore } from '../../stores/useRSSStore'
 import { useToast } from '../ui/toast'
+import { PRESET_FEEDS } from '../../types/rss'
 import {
   BottomSheet,
   BottomSheetContent,
@@ -100,6 +101,17 @@ export function FeedSearchSheet({ open, onOpenChange, onSubscribed }: FeedSearch
 
   const existingUrls = new Set(existingFeeds.map(f => f.feed_url))
 
+  // Group the verified preset feeds by category, preserving definition order.
+  const presetGroups = useMemo(() => {
+    const groups = new Map<string, typeof PRESET_FEEDS[number][]>()
+    for (const feed of PRESET_FEEDS) {
+      const list = groups.get(feed.category) ?? []
+      list.push(feed)
+      groups.set(feed.category, list)
+    }
+    return Array.from(groups.entries())
+  }, [])
+
   return (
     <BottomSheet open={open} onOpenChange={onOpenChange}>
       <BottomSheetContent>
@@ -135,9 +147,49 @@ export function FeedSearchSheet({ open, onOpenChange, onSubscribed }: FeedSearch
             )}
 
             {!searching && !query.trim() && (
-              <p className="text-[13px] text-[var(--brand-text-muted)] py-2">
-                Type a topic to find feeds. Or paste a feed URL if you have one.
-              </p>
+              <div className="space-y-4 py-1">
+                <p className="text-[12px] text-[var(--brand-text-muted)]">
+                  Suggested feeds — or search a topic above, or paste a URL below.
+                </p>
+                {presetGroups.map(([category, feeds]) => (
+                  <div key={category} className="space-y-1.5">
+                    <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--brand-text-muted)] opacity-60 px-1">
+                      {category}
+                    </p>
+                    {feeds.map((f) => {
+                      const already = existingUrls.has(f.feed_url)
+                      const isLoading = subscribingUrl === f.feed_url
+                      return (
+                        <button
+                          key={f.feed_url}
+                          type="button"
+                          disabled={already || isLoading}
+                          onClick={() => handleSubscribe(f.feed_url)}
+                          className="flex items-start gap-3 w-full text-left p-3 rounded-lg bg-white/[0.025] hover:bg-white/[0.05] disabled:opacity-50 disabled:hover:bg-white/[0.025] transition-colors"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[14px] font-medium text-[var(--brand-text-primary)] truncate">{f.title}</p>
+                            <p className="text-[12px] text-[var(--brand-text-muted)] mt-0.5"
+                               style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+                            >
+                              {f.description}
+                            </p>
+                          </div>
+                          <div className="flex-shrink-0 h-8 w-8 rounded-md flex items-center justify-center bg-white/[0.04] border border-white/[0.06]">
+                            {isLoading ? (
+                              <Loader2 className="h-4 w-4 text-[var(--brand-text-secondary)] animate-spin" />
+                            ) : already ? (
+                              <Check className="h-4 w-4 text-emerald-400" />
+                            ) : (
+                              <Plus className="h-4 w-4 text-[var(--brand-text-secondary)]" />
+                            )}
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                ))}
+              </div>
             )}
 
             <ul className="space-y-1.5">
