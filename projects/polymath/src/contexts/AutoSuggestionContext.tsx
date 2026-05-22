@@ -173,18 +173,18 @@ export function AutoSuggestionProvider({ children }: { children: ReactNode }) {
     if (!user) return
 
     try {
-      // Create the connection
-      const response = await fetch('/api/connections', {
+      // Create the connection. source/target field names must match the
+      // create-spark API contract; the suggestion only knows the target side,
+      // so default the source type to thought (the common case).
+      const response = await fetch('/api/connections?action=create-spark', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          itemId: fromItemId,
-          itemType: pendingSuggestions[fromItemId]?.[0]?.toItemType || 'thought', // Get from context
-          relatedItemId: suggestion.toItemId,
-          relatedItemType: suggestion.toItemType,
-          userId: user.id,
-          connectionType: 'ai_suggested',
-          suggestionId: suggestion.id
+          source_type: 'thought',
+          source_id: fromItemId,
+          target_type: suggestion.toItemType,
+          target_id: suggestion.toItemId,
+          connection_type: 'ai_suggested'
         })
       })
 
@@ -194,7 +194,7 @@ export function AutoSuggestionProvider({ children }: { children: ReactNode }) {
 
       // Update suggestion status
       await fetch(`/api/connections?action=update-suggestion&id=${suggestion.id}`, {
-        method: 'PATCH',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'accepted' })
       })
@@ -224,7 +224,7 @@ export function AutoSuggestionProvider({ children }: { children: ReactNode }) {
 
     // Then update server in background
     fetch(`/api/connections?action=update-suggestion&id=${suggestionId}`, {
-      method: 'PATCH',
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'dismissed' })
     }).catch(error => {

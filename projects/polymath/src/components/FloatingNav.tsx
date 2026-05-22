@@ -207,13 +207,13 @@ export function FloatingNav() {
         // If we're on a project page, create a connection
         if (projectId && data.memory?.id) {
           try {
-            const connectionResponse = await fetch('/api/connections', {
+            const connectionResponse = await fetch('/api/connections?action=create-spark', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 source_type: 'project',
                 source_id: projectId,
-                target_type: 'memory',
+                target_type: 'thought',
                 target_id: data.memory.id,
                 connection_type: 'project_voice_note',
                 reasoning: 'Voice note captured while viewing this project'

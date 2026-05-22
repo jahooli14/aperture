@@ -1054,6 +1054,36 @@ Be specific: mention actual shared concepts. Do not say "both are about X".`
       }
     }
 
+    // Update a suggestion's status (accept / dismiss)
+    // POST /api/connections?action=update-suggestion&id=<suggestionId>
+    // Body: { status: 'accepted' | 'dismissed' }
+    if (action === 'update-suggestion') {
+      try {
+        const id = req.query.id as string | undefined
+        const { status } = req.body as { status?: string }
+
+        if (!id || !status) {
+          return res.status(400).json({ error: 'id and status are required' })
+        }
+        if (status !== 'accepted' && status !== 'dismissed') {
+          return res.status(400).json({ error: 'status must be accepted or dismissed' })
+        }
+
+        const { error } = await supabase
+          .from('connection_suggestions')
+          .update({ status })
+          .eq('id', id)
+          .eq('user_id', userId)
+
+        if (error) throw error
+
+        return res.status(200).json({ success: true })
+      } catch (error) {
+        console.error('[connections] update-suggestion error:', error)
+        return res.status(500).json({ error: 'Failed to update suggestion' })
+      }
+    }
+
     // Manual Connection Creation
     if (action === 'create-spark') {
       try {
