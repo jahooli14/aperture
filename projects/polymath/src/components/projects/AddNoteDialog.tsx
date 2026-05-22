@@ -230,7 +230,7 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
           {/* Image Upload */}
           <div className="pt-4 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
             <div className="flex items-center justify-between mb-3">
-              <Label className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--brand-primary)" }}>
+              <Label className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--brand-text-secondary)" }}>
                 <ImageIcon className="h-4 w-4" style={{ color: "var(--brand-primary)" }} />
                 Photos
               </Label>

@@ -88,7 +88,7 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     className="pl-10 bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary placeholder:text-[var(--brand-text-primary)]/15"
-                                    style={{ color: "var(--brand-primary)" }}
+                                    style={{ color: "var(--brand-text-secondary)" }}
                                     autoFocus
                                 />
                             </div>
@@ -118,8 +118,8 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
                                                         : <ListIcon type={list.type} className="h-5 w-5" />}
                                                 </div>
                                                 <div className="text-left">
-                                                    <p className="text-sm font-medium" style={{ color: "var(--brand-primary)" }}>{list.title}</p>
-                                                    <p className="text-xs" style={{ color: "var(--brand-primary)" }}>{list.item_count || 0} items</p>
+                                                    <p className="text-sm font-medium" style={{ color: "var(--brand-text-secondary)" }}>{list.title}</p>
+                                                    <p className="text-xs" style={{ color: "var(--brand-text-muted)" }}>{list.item_count || 0} items</p>
                                                 </div>
                                             </div>
                                             <ChevronRight className="h-4 w-4 transition-colors" style={{ color: "var(--brand-primary)" }} />
@@ -127,7 +127,7 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
                                     ))
                                 ) : (
                                     <div className="text-center py-8">
-                                        <p className="text-sm" style={{ color: "var(--brand-primary)" }}>No lists found</p>
+                                        <p className="text-sm" style={{ color: "var(--brand-text-secondary)" }}>No lists found</p>
                                     </div>
                                 )}
                             </div>
@@ -156,8 +156,8 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
                                     <span className="text-xl">{selectedList?.icon || ''}</span>
                                 </div>
                                 <div className="flex-1">
-                                    <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--brand-primary)" }}>Target Collection</p>
-                                    <p className="text-lg font-bold" style={{ color: "var(--brand-primary)" }}>{selectedList?.title}</p>
+                                    <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--brand-text-muted)" }}>Target Collection</p>
+                                    <p className="text-lg font-bold" style={{ color: "var(--brand-text-primary)" }}>{selectedList?.title}</p>
                                 </div>
                                 <button
                                     onClick={() => setSelectedListId(null)}
@@ -177,7 +177,7 @@ export function AddItemToListDialog({ isOpen, onOpenChange }: AddItemToListDialo
                                         value={content}
                                         onChange={(e) => setContent(e.target.value)}
                                         className="bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary placeholder:text-[var(--brand-text-primary)]/15 py-6 text-lg"
-                                        style={{ color: "var(--brand-primary)" }}
+                                        style={{ color: "var(--brand-text-secondary)" }}
                                     />
                                 </div>
 

@@ -57,7 +57,7 @@ export function ItemInsightStrip({ title, themes, itemId, itemType }: ItemInsigh
               <p className="text-xs font-medium leading-snug" style={{ color: 'var(--brand-text-primary)' }}>
                 {insight.title}
               </p>
-              <p className="text-xs mt-0.5 leading-relaxed opacity-70 line-clamp-2" style={{ color: 'var(--brand-primary)' }}>
+              <p className="text-xs mt-0.5 leading-relaxed opacity-70 line-clamp-2" style={{ color: 'var(--brand-text-secondary)' }}>
                 {insight.description}
               </p>
             </div>

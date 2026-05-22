@@ -158,7 +158,7 @@ export function VoiceSearch({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Search className="h-5 w-5" style={{ color: "var(--brand-primary)" }} />
-          <h3 className="text-lg font-semibold" style={{ color: "var(--brand-primary)" }}>
+          <h3 className="text-lg font-semibold" style={{ color: "var(--brand-text-primary)" }}>
             Voice Search
           </h3>
         </div>
@@ -183,7 +183,7 @@ export function VoiceSearch({
         }}
       >
         {displayText ? (
-          <p className="text-base leading-relaxed" style={{ color: "var(--brand-primary)" }}>
+          <p className="text-base leading-relaxed" style={{ color: "var(--brand-text-secondary)" }}>
             {displayText}
             {interimTranscript && (
               <span style={{ color: 'var(--brand-text-muted)', fontStyle: 'italic' }}>
@@ -192,7 +192,7 @@ export function VoiceSearch({
             )}
           </p>
         ) : (
-          <p className="text-center" style={{ color: "var(--brand-primary)" }}>
+          <p className="text-center" style={{ color: "var(--brand-text-muted)" }}>
             {placeholder}
           </p>
         )}
@@ -254,7 +254,7 @@ export function VoiceSearch({
       </div>
 
       {/* Status */}
-      <div className="mt-4 text-center text-sm" style={{ color: "var(--brand-primary)" }}>
+      <div className="mt-4 text-center text-sm" style={{ color: "var(--brand-text-muted)" }}>
         {isListening ? (
           <span className="flex items-center justify-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin" />

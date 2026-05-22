@@ -290,7 +290,7 @@ export function SettingsPage() {
               <Palette className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
               <h2
                 className="text-xl font-bold"
-                style={{ color: "var(--brand-primary)" }}
+                style={{ color: "var(--brand-text-primary)" }}
               >
                 Appearance
               </h2>
@@ -300,7 +300,7 @@ export function SettingsPage() {
                 tone used in the background atmosphere. */}
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold uppercase tracking-wider opacity-60" style={{ color: 'var(--brand-primary)' }}>
+                <h3 className="text-sm font-semibold uppercase tracking-wider opacity-60" style={{ color: 'var(--brand-text-muted)' }}>
                   Look &amp; feel
                 </h3>
                 <button
@@ -335,7 +335,7 @@ export function SettingsPage() {
 
             {/* Intensity */}
             <div className="mb-8">
-              <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider opacity-60 flex items-center gap-2" style={{ color: "var(--brand-primary)" }}>
+              <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider opacity-60 flex items-center gap-2" style={{ color: "var(--brand-text-muted)" }}>
                 Visual style
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -355,7 +355,7 @@ export function SettingsPage() {
                       <div className={`font-semibold mb-1 ${isSelected ? '' : 'premium-text-platinum'}`} style={{ color: isSelected ? 'var(--brand-primary)' : undefined }}>
                         {option.label}
                       </div>
-                      <div className="text-xs" style={{ color: "var(--brand-primary)" }}>
+                      <div className="text-xs" style={{ color: "var(--brand-text-muted)" }}>
                         {option.description}
                       </div>
                     </button>
@@ -366,7 +366,7 @@ export function SettingsPage() {
 
             {/* Font Size */}
             <div>
-              <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider opacity-60 flex items-center gap-2" style={{ color: "var(--brand-primary)" }}>
+              <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider opacity-60 flex items-center gap-2" style={{ color: "var(--brand-text-muted)" }}>
                 <Type className="h-4 w-4" /> Text Size
               </h3>
               <div className="grid grid-cols-3 gap-3">
@@ -405,7 +405,7 @@ export function SettingsPage() {
           }}>
             <div className="flex items-center gap-3 mb-4 border-b border-[var(--glass-surface)] pb-4">
               <Lightbulb className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
-              <h2 className="text-xl font-bold" style={{ color: 'var(--brand-primary)' }}>
+              <h2 className="text-xl font-bold" style={{ color: 'var(--brand-text-primary)' }}>
                 Suggest-an-idea brief
               </h2>
             </div>
@@ -480,7 +480,7 @@ export function SettingsPage() {
           }}>
             <div className="flex items-center gap-3 mb-6 border-b border-[var(--glass-surface)] pb-4">
               <Bell className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
-              <h2 className="text-xl font-bold" style={{ color: "var(--brand-primary)" }}>
+              <h2 className="text-xl font-bold" style={{ color: "var(--brand-text-primary)" }}>
                 Notifications
               </h2>
             </div>
@@ -491,8 +491,8 @@ export function SettingsPage() {
               <div className="rounded-xl" style={{ background: 'var(--premium-surface-1)', border: '1px solid var(--glass-surface-hover)' }}>
                 <div className="flex items-center justify-between px-4 py-3.5">
                   <div>
-                    <p className="text-[15px]" style={{ color: "var(--brand-primary)" }}>Bedtime reflection</p>
-                    <p className="text-[12px]" style={{ color: "var(--brand-primary)" }}>Daily reminder to capture the day</p>
+                    <p className="text-[15px]" style={{ color: "var(--brand-text-secondary)" }}>Bedtime reflection</p>
+                    <p className="text-[12px]" style={{ color: "var(--brand-text-muted)" }}>Daily reminder to capture the day</p>
                   </div>
                   <button
                     onClick={() => toggleBedtime(!bedtimeEnabled)}
@@ -504,7 +504,7 @@ export function SettingsPage() {
                 </div>
                 {bedtimeEnabled && (
                   <div className="px-4 pb-3.5 flex items-center gap-3 border-t border-[var(--glass-surface)] pt-3">
-                    <span className="text-[12px]" style={{ color: "var(--brand-primary)" }}>Time</span>
+                    <span className="text-[12px]" style={{ color: "var(--brand-text-muted)" }}>Time</span>
                     <select
                       value={bedtimeHour}
                       onChange={e => updateBedtime(Number(e.target.value), bedtimeMinute)}
@@ -517,7 +517,7 @@ export function SettingsPage() {
                         </option>
                       ))}
                     </select>
-                    <span style={{ color: "var(--brand-primary)" }}>:</span>
+                    <span style={{ color: "var(--brand-text-muted)" }}>:</span>
                     <select
                       value={bedtimeMinute}
                       onChange={e => updateBedtime(bedtimeHour, Number(e.target.value))}
@@ -538,8 +538,8 @@ export function SettingsPage() {
               <div className="rounded-xl" style={{ background: 'var(--premium-surface-1)', border: '1px solid var(--glass-surface-hover)' }}>
                 <div className="flex items-center justify-between px-4 py-3.5">
                   <div>
-                    <p className="text-[15px]" style={{ color: "var(--brand-primary)" }}>Morning planning</p>
-                    <p className="text-[12px]" style={{ color: "var(--brand-primary)" }}>Set your intentions for the day</p>
+                    <p className="text-[15px]" style={{ color: "var(--brand-text-secondary)" }}>Morning planning</p>
+                    <p className="text-[12px]" style={{ color: "var(--brand-text-muted)" }}>Set your intentions for the day</p>
                   </div>
                   <button
                     onClick={() => toggleMorning(!morningEnabled)}
@@ -551,7 +551,7 @@ export function SettingsPage() {
                 </div>
                 {morningEnabled && (
                   <div className="px-4 pb-3.5 flex items-center gap-3 border-t border-[var(--glass-surface)] pt-3">
-                    <span className="text-[12px]" style={{ color: "var(--brand-primary)" }}>Time</span>
+                    <span className="text-[12px]" style={{ color: "var(--brand-text-muted)" }}>Time</span>
                     <select
                       value={morningHour}
                       onChange={e => updateMorning(Number(e.target.value), morningMinute)}
@@ -564,7 +564,7 @@ export function SettingsPage() {
                         </option>
                       ))}
                     </select>
-                    <span style={{ color: "var(--brand-primary)" }}>:</span>
+                    <span style={{ color: "var(--brand-text-muted)" }}>:</span>
                     <select
                       value={morningMinute}
                       onChange={e => updateMorning(morningHour, Number(e.target.value))}
@@ -595,7 +595,7 @@ export function SettingsPage() {
               <Zap className="h-6 w-6" style={{ color: "var(--brand-primary)" }} />
               <h2
                 className="text-xl font-bold"
-                style={{ color: "var(--brand-primary)" }}
+                style={{ color: "var(--brand-text-primary)" }}
               >
                 System
               </h2>

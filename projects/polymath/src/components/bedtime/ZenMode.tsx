@@ -164,7 +164,7 @@ export function ZenMode({ prompts, onClose, onMarkViewed }: ZenModeProps) {
               {currentPrompt.format && (
                 <span
                   className="text-xs uppercase tracking-wide opacity-60"
-                  style={{ color: "var(--brand-primary)" }}
+                  style={{ color: "var(--brand-text-muted)" }}
                 >
                   {currentPrompt.format}
                 </span>
@@ -174,7 +174,7 @@ export function ZenMode({ prompts, onClose, onMarkViewed }: ZenModeProps) {
             {/* Prompt text */}
             <motion.p
               className="text-2xl md:text-3xl leading-relaxed font-light px-4"
-              style={{ color: "var(--brand-primary)" }}
+              style={{ color: "var(--brand-text-secondary)" }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2, duration: 0.8 }}
@@ -191,7 +191,7 @@ export function ZenMode({ prompts, onClose, onMarkViewed }: ZenModeProps) {
                 transition={{ delay: 0.6, duration: 0.8 }}
               >
                 <Star className="h-4 w-4 mt-1 flex-shrink-0" style={{ color: "var(--brand-primary)" }} />
-                <p className="text-base italic" style={{ color: "var(--brand-primary)" }}>
+                <p className="text-base italic" style={{ color: "var(--brand-text-secondary)" }}>
                   {currentPrompt.metaphor}
                 </p>
               </motion.div>
@@ -211,11 +211,11 @@ export function ZenMode({ prompts, onClose, onMarkViewed }: ZenModeProps) {
           </button>
 
           <div className="flex flex-col items-center gap-2">
-            <p className="text-sm font-medium" style={{ color: "var(--brand-primary)" }}>
+            <p className="text-sm font-medium" style={{ color: "var(--brand-text-muted)" }}>
               {currentIndex + 1} of {sortedPrompts.length}
             </p>
             {currentIndex === sortedPrompts.length - 1 && (
-              <p className="text-xs" style={{ color: "var(--brand-primary)" }}>
+              <p className="text-xs" style={{ color: "var(--brand-text-muted)" }}>
                 Tap  to close
               </p>
             )}

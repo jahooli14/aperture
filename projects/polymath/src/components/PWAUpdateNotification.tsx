@@ -125,10 +125,10 @@ export function PWAUpdateNotification() {
             </div>
 
             <div className="flex-1 min-w-0">
-              <h3 className="font-bold mb-1" style={{ color: "var(--brand-primary)" }}>
+              <h3 className="font-bold mb-1" style={{ color: "var(--brand-text-primary)" }}>
                 Update available
               </h3>
-              <p className="text-sm leading-relaxed" style={{ color: "var(--brand-primary)" }}>
+              <p className="text-sm leading-relaxed" style={{ color: "var(--brand-text-secondary)" }}>
                 A new version of Aperture is ready. Refresh to switch over.
               </p>
             </div>

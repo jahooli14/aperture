@@ -56,7 +56,7 @@ export function ArticleConnectionsDialog({
               </button>
 
               <div className="p-6">
-                <p className="text-sm mb-4" style={{ color: "var(--brand-primary)" }}>
+                <p className="text-sm mb-4" style={{ color: "var(--brand-text-secondary)" }}>
                   "{article.title}"
                 </p>
                 <ItemInsightStrip title={article.title} themes={article.themes ?? undefined} />

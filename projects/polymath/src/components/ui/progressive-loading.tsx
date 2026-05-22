@@ -59,7 +59,7 @@ export function ProgressiveLoading({ messages, duration, className = '' }: Progr
     <div className={`flex items-center gap-3 ${className}`}>
       <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--brand-primary)" }} />
       <div className="flex-1">
-        <p className="text-sm font-medium" style={{ color: "var(--brand-primary)" }}>
+        <p className="text-sm font-medium" style={{ color: "var(--brand-text-secondary)" }}>
           {currentIcon && <span className="mr-2">{currentIcon}</span>}
           {currentMessage}
         </p>

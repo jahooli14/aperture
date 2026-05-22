@@ -213,7 +213,7 @@ export function ConnectionsList({ itemType, itemId, itemTitle, onConnectionDelet
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-[10px] font-bold uppercase tracking-wider opacity-60" style={{ color: "var(--brand-primary)" }}>
+                      <span className="text-[10px] font-bold uppercase tracking-wider opacity-60" style={{ color: "var(--brand-text-muted)" }}>
                         {item.type}
                       </span>
                       {isAI && (

@@ -640,7 +640,7 @@ export function ProjectDetailPage() {
       <div className="min-h-screen flex items-center justify-center bg-brand-bg" style={{ backgroundColor: 'var(--brand-bg)' }}>
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-[var(--brand-primary)]" style={{ color: "var(--brand-primary)" }} />
-          <p className="text-[var(--brand-text-secondary)]" style={{ color: "var(--brand-primary)" }}>Loading project...</p>
+          <p className="text-[var(--brand-text-secondary)]" style={{ color: "var(--brand-text-secondary)" }}>Loading project...</p>
         </div>
       </div>
     )
@@ -650,7 +650,7 @@ export function ProjectDetailPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-brand-bg" style={{ backgroundColor: 'var(--brand-bg)' }}>
         <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2 text-[var(--brand-text-primary)]" style={{ color: "var(--brand-primary)" }}>Project not found</h2>
+          <h2 className="text-xl font-semibold mb-2 text-[var(--brand-text-primary)]" style={{ color: "var(--brand-text-primary)" }}>Project not found</h2>
           <Button onClick={() => navigate('/projects')} variant="outline">
             Back to Projects
           </Button>

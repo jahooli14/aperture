@@ -455,7 +455,7 @@ export function RevealSequence({ analysis, books, transcripts = [], groundingPhr
                   <p className="text-sm mb-3 leading-relaxed" style={{ color: 'var(--brand-text-secondary)' }}>{suggestion.description}</p>
 
                   <div className="p-3 rounded-lg mb-4 flex-1" style={{ background: 'rgba(var(--brand-primary-rgb),0.06)' }}>
-                    <p className="text-xs font-medium mb-1 uppercase tracking-wider" style={{ color: 'var(--brand-primary)', opacity: 0.7 }}>Why you?</p>
+                    <p className="text-xs font-medium mb-1 uppercase tracking-wider" style={{ color: 'var(--brand-text-muted)', opacity: 0.7 }}>Why you?</p>
                     <p className="text-xs leading-relaxed" style={{ color: 'var(--brand-text-secondary)', opacity: 0.8 }}>{suggestion.reasoning}</p>
                   </div>
 
@@ -674,7 +674,7 @@ function InsightBody({ text }: { text: string }) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.55 }}
         className="text-lg sm:text-xl italic leading-snug font-medium"
-        style={{ color: 'var(--brand-primary)' }}
+        style={{ color: 'var(--brand-text-primary)' }}
       >
         “{quoteA}”
       </motion.p>
@@ -696,7 +696,7 @@ function InsightBody({ text }: { text: string }) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1.1 }}
         className="text-lg sm:text-xl italic leading-snug font-medium"
-        style={{ color: 'var(--brand-primary)' }}
+        style={{ color: 'var(--brand-text-primary)' }}
       >
         “{quoteB}”
       </motion.p>

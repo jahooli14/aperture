@@ -177,7 +177,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
             Task Checklist
           </h3>
           {totalCount > 0 && (
-            <p className="text-xs mt-0.5" style={{ color: "var(--brand-primary)" }}>
+            <p className="text-xs mt-0.5" style={{ color: "var(--brand-text-muted)" }}>
               {completedCount} of {totalCount} completed
             </p>
           )}
@@ -250,7 +250,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                       if (e.key === 'Escape') handleEditCancel()
                     }}
                     className="w-full px-2 py-1 text-sm rounded-xl bg-[rgba(255,255,255,0.1)] outline-none ring-1 ring-brand-primary/50"
-                    style={{ color: "var(--brand-primary)" }}
+                    style={{ color: "var(--brand-text-secondary)" }}
                     autoFocus
                   />
                 ) : (
@@ -319,7 +319,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
             <button
               onClick={() => setShowCompleted(!showCompleted)}
               className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-[var(--glass-surface)] transition-colors text-sm"
-              style={{ color: "var(--brand-primary)" }}
+              style={{ color: "var(--brand-text-muted)" }}
             >
               {showCompleted ? (
                 <ChevronDown className="h-4 w-4" />
@@ -366,20 +366,20 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
                             if (e.key === 'Escape') handleEditCancel()
                           }}
                           className="w-full px-2 py-1 text-sm rounded-xl focus:outline-none focus:ring-2 bg-[rgba(255,255,255,0.1)]"
-                          style={{ color: "var(--brand-primary)" }}
+                          style={{ color: "var(--brand-text-secondary)" }}
                           autoFocus
                         />
                       ) : (
                         <span
                           className="text-sm line-through cursor-text hover:opacity-70 transition-opacity block"
                           onClick={() => handleEditStart(task.id, task.text)}
-                          style={{ color: "var(--brand-primary)" }}
+                          style={{ color: "var(--brand-text-muted)" }}
                         >
                           {task.text}
                         </span>
                       )}
                       {task.completed_at && (
-                        <span className="text-[9px] opacity-30 mt-0.5 block" style={{ color: 'var(--brand-primary)' }}>
+                        <span className="text-[9px] opacity-30 mt-0.5 block" style={{ color: 'var(--brand-text-muted)' }}>
                           Done {new Date(task.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </span>
                       )}
@@ -420,7 +420,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
             placeholder="Task description..."
             autoFocus
             className="flex-1 px-3 py-2 text-sm rounded-lg focus:outline-none focus:ring-2 glass-card"
-            style={{ color: "var(--brand-primary)" }}
+            style={{ color: "var(--brand-text-secondary)" }}
           />
           <button
             onClick={handleAddTask}
@@ -442,7 +442,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
               setNewTaskText('')
             }}
             className="px-4 py-2 text-sm font-medium transition-all rounded-lg"
-            style={{ color: "var(--brand-primary)" }}
+            style={{ color: "var(--brand-text-secondary)" }}
           >
             Cancel
           </button>
@@ -460,7 +460,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate, projectId }: 
 
       {/* Empty State */}
       {tasks.length === 0 && !isAdding && (
-        <div className="text-center py-8" style={{ color: "var(--brand-primary)" }}>
+        <div className="text-center py-8" style={{ color: "var(--brand-text-secondary)" }}>
           <p className="text-sm">No tasks yet</p>
           <p className="text-xs mt-1">Break down your project into steps</p>
         </div>

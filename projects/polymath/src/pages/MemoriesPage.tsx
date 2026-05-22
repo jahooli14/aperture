@@ -672,7 +672,7 @@ function MemoriesPageInner() {
                         <ArrowLeft className="h-3.5 w-3.5" />
                         Back to themes
                       </button>
-                      <h2 className="section-heading mb-6" style={{ color: "var(--brand-primary)" }}>
+                      <h2 className="section-heading mb-6" style={{ color: "var(--brand-text-primary)" }}>
                         <div
                           className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
                           style={{
@@ -687,7 +687,7 @@ function MemoriesPageInner() {
                           })}
                         </div>
                         {selectedCluster.name}
-                        <span className="text-sm font-normal" style={{ color: "var(--brand-primary)" }}>
+                        <span className="text-sm font-normal" style={{ color: "var(--brand-text-muted)" }}>
                           ({selectedCluster.memory_count} thoughts)
                         </span>
                       </h2>
@@ -711,7 +711,7 @@ function MemoriesPageInner() {
                       {loadingClusters && clusters.length === 0 ? (
                         <div className="text-center py-12">
                           <div className="inline-block h-10 w-10 animate-spin rounded-lg border-4 border-solid mb-4" style={{ borderColor: 'var(--brand-primary)', borderRightColor: 'transparent' }}></div>
-                          <p className="text-xs" style={{ color: "var(--brand-primary)" }}>Working out the themes…</p>
+                          <p className="text-xs" style={{ color: "var(--brand-text-muted)" }}>Working out the themes…</p>
                         </div>
                       ) : clusters.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -780,7 +780,7 @@ function MemoriesPageInner() {
                   {/* Pinned Thoughts Section */}
                   {pinnedMemories.length > 0 && !searchQuery && (
                     <div className="mb-6">
-                      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--brand-primary)" }}>
+                      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--brand-text-primary)" }}>
                         <Pin className="w-3.5 h-3.5 text-brand-text-secondary" style={{ fill: 'currentColor' }} />
                         Pinned
                       </h3>
@@ -817,7 +817,7 @@ function MemoriesPageInner() {
                                 {memory.body}
                               </p>
                             )}
-                            <span className="text-[11px] mt-2 block font-medium" style={{ color: "var(--brand-primary)" }}>
+                            <span className="text-[11px] mt-2 block font-medium" style={{ color: "var(--brand-text-muted)" }}>
                               {new Date(memory.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                             </span>
                           </motion.div>

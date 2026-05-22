@@ -800,7 +800,7 @@ export function ReadingPage() {
                   onBlur={() => setInlineUrlFocused(false)}
                   autoComplete="off"
                   className="flex-1 h-full border-0 text-sm focus:outline-none focus:ring-0 placeholder:text-[var(--brand-text-primary)]/20 appearance-none bg-transparent"
-                  style={{ color: "var(--brand-primary)" }}
+                  style={{ color: "var(--brand-text-secondary)" }}
                 />
               </div>
               <button
@@ -849,10 +849,10 @@ export function ReadingPage() {
                     <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--brand-primary)" }} />
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm" style={{ color: "var(--brand-primary)" }}>
+                    <p className="font-medium text-sm" style={{ color: "var(--brand-text-secondary)" }}>
                       {status === 'retrying' ? 'Retrying extraction...' : 'Extracting article...'}
                     </p>
-                    <p className="text-xs truncate" style={{ color: "var(--brand-primary)" }}>
+                    <p className="text-xs truncate" style={{ color: "var(--brand-text-muted)" }}>
                       {new URL(url).hostname}
                     </p>
                   </div>
@@ -929,10 +929,10 @@ export function ReadingPage() {
                       style={{ border: '1.5px solid var(--glass-surface-hover)', background: 'var(--glass-surface)' }}
                     >
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate" style={{ color: "var(--brand-primary)" }}>
+                        <p className="text-sm font-medium truncate" style={{ color: "var(--brand-text-secondary)" }}>
                           {article.title || 'Untitled'}
                         </p>
-                        <p className="text-xs truncate mt-0.5" style={{ color: "var(--brand-primary)" }}>
+                        <p className="text-xs truncate mt-0.5" style={{ color: "var(--brand-text-muted)" }}>
                           {article.source || (article.url ? new URL(article.url).hostname.replace('www.', '') : '')}
                           {article.read_time_minutes ? `  ${article.read_time_minutes} min read` : ''}
                         </p>

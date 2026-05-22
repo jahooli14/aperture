@@ -38,7 +38,7 @@ export function SuggestedPrompts() {
 
   return (
     <div className="mb-6">
-      <h3 className="text-sm font-bold uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: 'var(--brand-primary)', opacity: 0.7 }}>
+      <h3 className="text-sm font-bold uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: 'var(--brand-text-primary)', opacity: 0.7 }}>
         <Lightbulb className="h-4 w-4" />
         Tell us more
       </h3>

@@ -280,7 +280,7 @@ export function PostOnboardingFlow({ analysis, sparkedSuggestion, transcripts = 
               transition={{ delay: 0.3 }}
               className="text-center mb-4"
             >
-              <p className="text-xs font-medium uppercase tracking-widest" style={{ color: 'var(--brand-primary)', opacity: 0.6 }}>
+              <p className="text-xs font-medium uppercase tracking-widest" style={{ color: 'var(--brand-text-muted)', opacity: 0.6 }}>
                 Your first project
               </p>
             </motion.div>

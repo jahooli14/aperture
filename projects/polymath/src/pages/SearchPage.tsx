@@ -397,7 +397,7 @@ export function SearchPage() {
             }}>
               <div className="text-center py-20">
                 <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" style={{ color: "var(--brand-primary)" }} />
-                <p style={{ color: "var(--brand-primary)" }}>Searching...</p>
+                <p style={{ color: "var(--brand-text-secondary)" }}>Searching...</p>
               </div>
             </div>
           )}
@@ -413,7 +413,7 @@ export function SearchPage() {
                 <h2 className="section-title mb-2">
                   {results.total} {results.total === 1 ? 'result' : 'results'} for &ldquo;{results.query}&rdquo;
                 </h2>
-                <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm" style={{ color: "var(--brand-primary)" }}>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm" style={{ color: "var(--brand-text-muted)" }}>
                   <span>{results.breakdown.memories} memories</span>
                   <span></span>
                   <span>{results.breakdown.projects} projects</span>

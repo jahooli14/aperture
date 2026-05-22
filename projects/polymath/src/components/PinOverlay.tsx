@@ -89,7 +89,7 @@ export function PinOverlay() {
             <button
               onClick={() => setViewState('half')}
               className="font-semibold truncate text-left flex-1 min-w-0"
-              style={{ color: 'var(--brand-primary)' }}
+              style={{ color: 'var(--brand-text-primary)' }}
               title="Expand"
               aria-label="Expand"
             >
@@ -152,7 +152,7 @@ export function PinOverlay() {
             }}>
               Pinned
             </span>
-            <h3 className="font-semibold truncate" style={{ color: 'var(--brand-primary)' }}>
+            <h3 className="font-semibold truncate" style={{ color: 'var(--brand-text-primary)' }}>
               {pinnedItem?.title}
             </h3>
           </div>

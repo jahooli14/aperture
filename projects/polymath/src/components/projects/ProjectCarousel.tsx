@@ -151,7 +151,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
                 <h3 className="font-bold text-lg premium-text-platinum">
                   {section.title}
                 </h3>
-                <p className="text-sm" style={{ color: "var(--brand-primary)" }}>
+                <p className="text-sm" style={{ color: "var(--brand-text-secondary)" }}>
                   {section.description}
                 </p>
               </div>
@@ -198,7 +198,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
                         {project.description && (
                           <p
                             className="text-xs line-clamp-2"
-                            style={{ color: "var(--brand-primary)" }}
+                            style={{ color: "var(--brand-text-secondary)" }}
                           >
                             {project.description}
                           </p>
@@ -255,13 +255,13 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
                               {nextTask.text}
                             </p>
                             {totalTasks > 0 && (
-                              <span className="text-xs font-medium flex-shrink-0" style={{ color: "var(--brand-primary)" }}>
+                              <span className="text-xs font-medium flex-shrink-0" style={{ color: "var(--brand-text-muted)" }}>
                                 {completedTasks}/{totalTasks}
                               </span>
                             )}
                           </>
                         ) : (
-                          <p className="text-xs flex-1" style={{ color: "var(--brand-primary)" }}>
+                          <p className="text-xs flex-1" style={{ color: "var(--brand-text-muted)" }}>
                             No tasks yet
                           </p>
                         )}
@@ -305,7 +305,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
         ))
       ) : (
         <div className="text-center py-12">
-          <p style={{ color: "var(--brand-primary)" }}>
+          <p style={{ color: "var(--brand-text-secondary)" }}>
             No active projects yet. Ready to build something?
           </p>
           <Link
