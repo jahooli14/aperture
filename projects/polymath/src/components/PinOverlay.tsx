@@ -91,6 +91,7 @@ export function PinOverlay() {
               className="font-semibold truncate text-left flex-1 min-w-0"
               style={{ color: 'var(--brand-primary)' }}
               title="Expand"
+              aria-label="Expand"
             >
               {pinnedItem?.title}
             </button>

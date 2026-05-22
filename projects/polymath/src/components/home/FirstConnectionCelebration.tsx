@@ -70,6 +70,7 @@ export function FirstConnectionCelebration() {
           >
             <button
               onClick={handleDismiss}
+              aria-label="Dismiss"
               className="absolute top-3 right-3 h-6 w-6 rounded-full flex items-center justify-center transition-colors hover:bg-[rgba(255,255,255,0.1)]"
               style={{ color: 'var(--brand-text-secondary)', opacity: 0.4 }}
             >
