@@ -11,8 +11,8 @@
  */
 
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { X, ImageIcon, Palette, RefreshCw, Check, Link as LinkIcon } from 'lucide-react'
+import { ImageIcon, Palette, RefreshCw, Check, Link as LinkIcon } from 'lucide-react'
+import { BottomSheet, BottomSheetContent } from '../ui/bottom-sheet'
 import type { List } from '../../types'
 import { useListStore } from '../../stores/useListStore'
 import { useToast } from '../ui/toast'
@@ -99,53 +99,15 @@ export function CustomiseCoverSheet({ list, isOpen, onClose }: Props) {
   }
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 z-[10000] bg-black/65 backdrop-blur-md"
-          />
-          <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 30, stiffness: 400 }}
-            className="fixed bottom-0 left-0 right-0 z-[10001] rounded-t-3xl pb-safe glass-sheet"
-            style={{
-              maxHeight: '85vh',
-              overflowY: 'auto',
-            }}
-          >
-            <div className="flex justify-center pt-3 pb-1">
-              <div className="w-10 h-1 rounded-full bg-white/15" />
-            </div>
-
-            <div className="px-5 pt-3 pb-8">
-              <div className="flex items-start justify-between gap-3 mb-5">
-                <div className="min-w-0">
+    <BottomSheet open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
+      <BottomSheetContent className="max-h-[85vh]">
+              <div className="mb-5 pr-12 min-w-0">
                   <p className="text-[10px] tracking-[0.2em] mb-1" style={{ color: 'rgba(var(--brand-primary-rgb), 0.7)' }}>
                     customise cover
                   </p>
                   <h3 className="text-lg font-semibold text-[var(--brand-text-primary)] truncate">
                     {list.title}
                   </h3>
-                </div>
-                <button
-                  onClick={onClose}
-                  className="h-9 w-9 rounded-full flex items-center justify-center text-[var(--brand-text-muted)] hover:text-white transition-all"
-                  style={{
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.10)',
-                    backdropFilter: 'blur(12px) saturate(160%)',
-                    WebkitBackdropFilter: 'blur(12px) saturate(160%)',
-                  }}
-                >
-                  <X className="h-4 w-4" />
-                </button>
               </div>
 
               {/* Tabs */}
@@ -313,10 +275,7 @@ export function CustomiseCoverSheet({ list, isOpen, onClose }: Props) {
                   </button>
                 </div>
               )}
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+      </BottomSheetContent>
+    </BottomSheet>
   )
 }
