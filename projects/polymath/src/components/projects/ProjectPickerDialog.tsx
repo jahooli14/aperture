@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, X, Layers, Clock, Check } from 'lucide-react'
+import { Search, X, Rocket, Clock, Check } from 'lucide-react'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { Project } from '../../types'
 
@@ -101,7 +101,7 @@ export function ProjectPickerDialog({
                                             project.status === 'upcoming' ? 'bg-brand-primary/20 text-brand-primary' :
                                                 'bg-gray-500/20 text-[var(--brand-text-secondary)]'
                                         }`}>
-                                        <Layers className="h-4 w-4" />
+                                        <Rocket className="h-4 w-4" />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <h3 className="text-sm font-medium text-gray-200 group-hover:text-[var(--brand-text-primary)] truncate">

@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Layers, Brain, BookOpen, X } from 'lucide-react'
+import { Search, Layers, Rocket, Lightbulb, BookOpen, X } from 'lucide-react'
 import type { ConnectionSourceType } from '../../types'
 
 interface PickerItem {
@@ -25,9 +25,9 @@ interface ConnectionPathPickerProps {
 }
 
 const TYPE_ICONS: Record<string, typeof Layers> = {
-  project: Layers,
-  thought: Brain,
-  memory: Brain,
+  project: Rocket,
+  thought: Lightbulb,
+  memory: Lightbulb,
   article: BookOpen,
 }
 

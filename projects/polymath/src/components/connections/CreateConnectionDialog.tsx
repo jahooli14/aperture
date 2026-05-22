@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog'
 import { useToast } from '../ui/toast'
 import { motion } from 'framer-motion'
-import { Search, Link as LinkIcon, Brain, Layers, BookOpen, Lightbulb, Loader2 } from 'lucide-react'
+import { Search, Link as LinkIcon, Rocket, BookOpen, Lightbulb, Loader2 } from 'lucide-react'
 import { handleInputFocus } from '../../utils/keyboard'
 import type { ConnectionSourceType, Project, Memory, ReadingQueueItem, ProjectSuggestion } from '../../types'
 
@@ -29,8 +29,8 @@ type SearchableItem = {
 }
 
 const SCHEMA_COLORS = {
-  project: { primary: 'rgb(var(--brand-primary-rgb))', icon: Layers },
-  thought: { primary: 'rgb(var(--brand-primary-rgb))', icon: Brain },
+  project: { primary: 'rgb(var(--brand-primary-rgb))', icon: Rocket },
+  thought: { primary: 'rgb(var(--brand-primary-rgb))', icon: Lightbulb },
   article: { primary: 'rgb(var(--brand-primary-rgb))', icon: BookOpen },
   suggestion: { primary: 'rgb(var(--brand-primary-rgb))', icon: Lightbulb }
 }

@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Layers, Brain, BookOpen } from 'lucide-react'
+import { X, Layers, Rocket, Lightbulb, BookOpen } from 'lucide-react'
 import type { ConnectionSourceType } from '../../types'
 
 interface PathNode {
@@ -28,9 +28,9 @@ interface ConnectionRevealOverlayProps {
 }
 
 const TYPE_ICONS: Record<string, typeof Layers> = {
-  project: Layers,
-  thought: Brain,
-  memory: Brain,
+  project: Rocket,
+  thought: Lightbulb,
+  memory: Lightbulb,
   article: BookOpen,
 }
 
