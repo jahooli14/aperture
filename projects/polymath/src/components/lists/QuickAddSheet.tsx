@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Send } from 'lucide-react'
 import { useListStore } from '../../stores/useListStore'
 import { useToast } from '../ui/toast'
+import { useKeyboardInset } from '../../hooks/useKeyboardInset'
 import type { List } from '../../types'
 
 interface QuickAddSheetProps {
@@ -18,6 +19,7 @@ export function QuickAddSheet({ list, isOpen, onClose, listRgb }: QuickAddSheetP
     const inputRef = useRef<HTMLInputElement>(null)
     const { addListItem } = useListStore()
     const { addToast } = useToast()
+    const keyboardInset = useKeyboardInset()
 
     useEffect(() => {
         if (isOpen) {
@@ -68,6 +70,8 @@ export function QuickAddSheet({ list, isOpen, onClose, listRgb }: QuickAddSheetP
                         transition={{ type: 'spring', damping: 30, stiffness: 400 }}
                         className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl pb-safe"
                         style={{
+                            bottom: keyboardInset,
+                            transition: 'bottom 0.2s ease-out',
                             backgroundColor: 'var(--glass-surface)',
                             boxShadow: `0 -20px 60px rgba(0,0,0,0.6), inset 0 1px 0 var(--glass-surface-hover)`
                         }}
