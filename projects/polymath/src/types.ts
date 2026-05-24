@@ -508,6 +508,7 @@ export interface Project {
   created_at: string
   updated_at?: string
   is_priority?: boolean // Focus tier — at most 1 priority project (the hero in Keep Going)
+  is_favourite?: boolean // User-marked favourite — multi-select, surfaces in the home Favourites carousel
   up_next_position?: number | null // 1, 2, or 3 — pinned to the Up Next shelf
   metadata?: ProjectMetadata
   embedding?: number[] // Vector embedding (1536 dims)

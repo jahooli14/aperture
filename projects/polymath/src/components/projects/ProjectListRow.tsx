@@ -7,7 +7,7 @@
 import React, { useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Star, Plus, Check } from 'lucide-react'
+import { Star, Heart, Plus, Check } from 'lucide-react'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { usePin } from '../../contexts/PinContext'
 import type { Project } from '../../types'
@@ -120,6 +120,23 @@ export function ProjectListRow({
                 style={{
                   color: project.is_priority ? 'rgb(var(--brand-primary-rgb))' : 'rgba(255, 255, 255, 0.45)',
                   fill: project.is_priority ? 'rgb(var(--brand-primary-rgb))' : 'none'
+                }}
+              />
+            </button>
+            <button
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                updateProject(project.id, { is_favourite: !project.is_favourite })
+              }}
+              className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-xl hover:bg-white/10 transition-colors"
+              title={project.is_favourite ? "Remove from favourites" : "Add to favourites"}
+            >
+              <Heart
+                size={18}
+                style={{
+                  color: project.is_favourite ? 'rgb(244, 114, 182)' : 'rgba(255, 255, 255, 0.45)',
+                  fill: project.is_favourite ? 'rgb(244, 114, 182)' : 'none'
                 }}
               />
             </button>

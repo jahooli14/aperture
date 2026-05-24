@@ -258,6 +258,7 @@ export const useProjectStore = create<ProjectState>()(
           last_active: new Date().toISOString(),
           status: 'active',
           is_priority: false,
+          is_favourite: false,
           ...data
         } as Project
 
