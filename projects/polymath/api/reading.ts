@@ -2373,53 +2373,64 @@ Return ONLY the JSON, no other text.`
 
         console.log('[RSS Subscribe] Successfully subscribed to feed:', data.title)
 
-        // Auto-import latest 3 articles immediately (no cron needed!)
+        // Import the latest items immediately using ONLY the feed's own
+        // content. The old path fetched each article's full text through
+        // Jina AI inline (3 sequential calls, no timeout) — that routinely
+        // blew past the function cap and left the client spinning forever.
+        // The feed XML already carries title/link/summary (often full
+        // content via content:encoded), which is enough to populate New
+        // reads instantly. Richer extraction happens later in the
+        // background RSS sync; the reader can render feed content as-is.
         let articlesAdded = 0
         try {
-          console.log('[RSS Subscribe] Auto-importing latest articles...')
-          for (const item of feedData.items.slice(0, 3)) {
-            const existing = await supabase.from('reading_queue').select('id').eq('user_id', userId).eq('url', item.link || '').single()
-            if (existing.data) continue
+          const items = (feedData.items || []).slice(0, 8).filter((i: any) => i.link)
+          const links = items.map((i: any) => i.link)
+          const { data: existingRows } = await supabase
+            .from('reading_queue')
+            .select('url')
+            .eq('user_id', userId)
+            .in('url', links)
+          const existingSet = new Set((existingRows ?? []).map((r: any) => r.url))
 
-            const jinaUrl = `https://r.jina.ai/${item.link}`
-            const response = await fetch(jinaUrl, { headers: { 'Accept': 'application/json', 'X-Return-Format': 'json' } })
-            let content = item.contentSnippet || item.description || ''
-
-            const text = await response.text()
-            if (response.ok && text) {
-              try {
-                const result = JSON.parse(text)
-                const rawContent = result.data?.content || result.content || content
-                const cleanedMarkdown = cleanMarkdownContent(rawContent)
-                content = cleanHtml(marked.parse(cleanedMarkdown).toString(), item.link || '')
-              } catch (e) {
-                console.error('[RSS Subscribe] Failed to parse Jina response for', item.link)
+          const rows = items
+            .filter((item: any) => !existingSet.has(item.link))
+            .map((item: any) => {
+              const rawContent = item['content:encoded'] || item.content || item.description || item.summary || ''
+              const content = rawContent ? cleanHtml(rawContent, item.link) : ''
+              const plain = stripHtml(content)
+              const words = plain ? plain.split(/\s+/).length : 0
+              let source = ''
+              try { source = new URL(item.link).hostname.replace('www.', '') } catch { /* leave blank */ }
+              return {
+                user_id: userId,
+                url: item.link,
+                title: decodeHTMLEntities(item.title || 'Untitled'),
+                author: item.creator || item.author || null,
+                content,
+                excerpt: plain.substring(0, 200),
+                published_date: item.pubDate || item.isoDate || null,
+                source,
+                read_time_minutes: Math.max(1, Math.ceil(words / 225)),
+                word_count: words,
+                status: 'unread',
+                tags: ['rss', 'auto-imported'],
+                // Mark processed so the reader doesn't poll forever waiting
+                // for extraction that the subscribe path no longer does.
+                processed: true,
               }
-            }
+            })
 
-            await supabase.from('reading_queue').insert([{
-              user_id: userId,
-              url: item.link || '',
-              title: decodeHTMLEntities(item.title || 'Untitled'),
-              author: item.creator || item.author || null,
-              content,
-              excerpt: content.substring(0, 200),
-              published_date: item.pubDate || item.isoDate || null,
-              source: new URL(item.link || '').hostname.replace('www.', ''),
-              read_time_minutes: Math.ceil(content.split(/\s+/).length / 225),
-              word_count: content.split(/\s+/).length,
-              status: 'unread',
-              tags: ['rss', 'auto-imported'],
-              processed: true
-            }])
-            articlesAdded++
+          if (rows.length > 0) {
+            const { error: insertError } = await supabase.from('reading_queue').insert(rows)
+            if (insertError) throw insertError
+            articlesAdded = rows.length
           }
 
           await supabase.from('rss_feeds').update({ last_fetched_at: new Date().toISOString() }).eq('id', data.id)
-          console.log(`[RSS Subscribe] Auto-imported ${articlesAdded} articles`)
+          console.log(`[RSS Subscribe] Imported ${articlesAdded} items from feed content`)
         } catch (importError) {
-          console.error('[RSS Subscribe] Auto-import failed:', importError)
-          // Don't fail the subscription if import fails
+          console.error('[RSS Subscribe] Item import failed (subscription still succeeded):', importError)
+          // Don't fail the subscription if import fails.
         }
 
         return res.status(201).json({
