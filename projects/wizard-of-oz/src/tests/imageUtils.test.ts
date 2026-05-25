@@ -1,5 +1,35 @@
+// @vitest-environment node
+// imageUtils' tested surface (calculateZoomLevel, computeCropRect,
+// computeAlignmentPadding, hasWhiteCorners) is pure math — no DOM needed, and
+// skipping jsdom dodges an ESM/TLA load issue under recent Node versions.
 import { describe, it, expect } from 'vitest';
-import { calculateZoomLevel, computeCropRect } from '../lib/imageUtils';
+import { calculateZoomLevel, computeCropRect, computeAlignmentPadding, hasWhiteCorners } from '../lib/imageUtils';
+
+const TARGET_WIDTH = 1080;
+const EYE_LINE_FRAC = 0.34; // alignPhoto maps source eye distance → 34% of TARGET_WIDTH
+
+// Pretend the source has eyes at the given midpoint with the given eye distance
+// and tilt. Returns the alignment_transform fields that alignPhoto would store.
+function fakeAlignment(
+  eyeMidX: number,
+  eyeMidY: number,
+  eyeDistance: number,
+  tiltDeg: number
+) {
+  const angleRad = (tiltDeg * Math.PI) / 180;
+  const scale = (TARGET_WIDTH * EYE_LINE_FRAC) / eyeDistance;
+  const halfEye = eyeDistance / 2;
+  const cos = Math.cos(angleRad);
+  const sin = Math.sin(angleRad);
+  const leftEye = { x: eyeMidX - cos * halfEye, y: eyeMidY - sin * halfEye };
+  const rightEye = { x: eyeMidX + cos * halfEye, y: eyeMidY + sin * halfEye };
+  return {
+    transform: { rotation: -tiltDeg, scale, translateX: 0, translateY: 0 },
+    eyes: leftEye.x !== undefined ? { leftEye, rightEye } : { leftEye, rightEye },
+    angleRad,
+    scale,
+  };
+}
 
 describe('calculateZoomLevel', () => {
   it('uses tight crop (0.40) for newborns and clamps at 0 months', () => {
@@ -86,5 +116,57 @@ describe('computeCropRect', () => {
     )!;
     expect(far.width).toBeGreaterThan(close.width);
     expect(far.width).toBeCloseTo(close.width * 2, 1);
+  });
+});
+
+describe('computeAlignmentPadding', () => {
+  it('is zero on every side when the source dwarfs the needed crop', () => {
+    // Source 4000×4000 with face centered and eyes 800px apart → scale ~0.46;
+    // the projected output canvas is well inside the source, no padding needed.
+    const { angleRad, scale } = fakeAlignment(2000, 2000, 800, 0);
+    const pad = computeAlignmentPadding(4000, 4000, 2000, 2000, angleRad, scale, 0.40);
+    expect(pad.padLeft).toBe(0);
+    expect(pad.padRight).toBe(0);
+    expect(pad.padTop).toBe(0);
+    expect(pad.padBottom).toBe(0);
+  });
+
+  it('pads only the side the face is close to', () => {
+    // Face near the LEFT edge of a 2000×2000 source.
+    const { angleRad, scale } = fakeAlignment(200, 1000, 800, 0);
+    const pad = computeAlignmentPadding(2000, 2000, 200, 1000, angleRad, scale, 0.40);
+    expect(pad.padLeft).toBeGreaterThan(0);
+    expect(pad.padRight).toBe(0);
+  });
+
+  it('adds padding on both axes when the photo is tilted', () => {
+    // Centered face on a 1500×1500 source, 45° tilt — the rotated canvas
+    // diagonal extends past the source edges on every side.
+    const { angleRad, scale } = fakeAlignment(750, 750, 600, 45);
+    const pad = computeAlignmentPadding(1500, 1500, 750, 750, angleRad, scale, 0.40);
+    expect(pad.padLeft + pad.padRight + pad.padTop + pad.padBottom).toBeGreaterThan(0);
+  });
+});
+
+describe('hasWhiteCorners', () => {
+  it('returns false for a well-framed, untilted shot', () => {
+    const { transform, eyes } = fakeAlignment(2000, 2000, 800, 0);
+    expect(
+      hasWhiteCorners(transform, { ...eyes, imageWidth: 4000, imageHeight: 4000 }, 0.40)
+    ).toBe(false);
+  });
+
+  it('returns true when the face sits close to a source edge', () => {
+    const { transform, eyes } = fakeAlignment(150, 1000, 800, 0);
+    expect(
+      hasWhiteCorners(transform, { ...eyes, imageWidth: 2000, imageHeight: 2000 }, 0.40)
+    ).toBe(true);
+  });
+
+  it('returns true for a heavily tilted face on a tight crop', () => {
+    const { transform, eyes } = fakeAlignment(750, 750, 600, 30);
+    expect(
+      hasWhiteCorners(transform, { ...eyes, imageWidth: 1500, imageHeight: 1500 }, 0.40)
+    ).toBe(true);
   });
 });

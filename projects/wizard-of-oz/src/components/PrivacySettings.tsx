@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Lock, Eye, EyeOff, Download, ChevronRight, AlertCircle, Baby, Bell, BellRing, Users, Copy, RefreshCw } from 'lucide-react';
+import { Shield, Lock, Eye, EyeOff, Download, ChevronRight, AlertCircle, Baby, Bell, BellRing, Users, Copy, RefreshCw, Wand2 } from 'lucide-react';
 import { usePhotoStore } from '../stores/usePhotoStore';
+import { hasWhiteCorners } from '../lib/imageUtils';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { subscribeToPushNotifications, unsubscribeFromPushNotifications, getPushSubscriptionStatus, isPushNotificationSupported } from '../lib/notifications';
 
@@ -14,7 +15,7 @@ const PRIVACY_MODE_KEY = 'wizard-privacy-mode';
 const PASSCODE_KEY = 'wizard-passcode';
 
 export function PrivacySettings({ onClose, onJoinSuccess }: PrivacySettingsProps) {
-  const { photos, fetchPhotos } = usePhotoStore();
+  const { photos, fetchPhotos, fixWhiteCornerPhotos } = usePhotoStore();
   const { settings, updateBirthdate, updateReminderSettings, generateInviteCode, getSharedUsers, removeSharedUser, joinWithCode, getJoinedAccount } = useSettingsStore();
   const [privacyMode, setPrivacyMode] = useState(false);
   const [hasPasscode, setHasPasscode] = useState(false);
@@ -39,6 +40,31 @@ export function PrivacySettings({ onClose, onJoinSuccess }: PrivacySettingsProps
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState('');
   const [joinedAccount, setJoinedAccount] = useState<{ owner_user_id: string } | null>(null);
+  const [fixingCorners, setFixingCorners] = useState(false);
+  const [fixProgress, setFixProgress] = useState<{ done: number; total: number } | null>(null);
+  const [fixResult, setFixResult] = useState<{ aligned: number; failed: number } | null>(null);
+
+  const whiteCornerCount = useMemo(() => {
+    return photos.reduce((n, p) => {
+      if (!p.alignment_transform || !p.eye_coordinates || !p.aligned_url) return n;
+      const meta = p.metadata as Record<string, unknown> | null;
+      const zoomLevel = (meta && typeof meta.zoom_level === 'number') ? meta.zoom_level : 0.40;
+      return hasWhiteCorners(p.alignment_transform, p.eye_coordinates, zoomLevel) ? n + 1 : n;
+    }, 0);
+  }, [photos]);
+
+  const handleFixCorners = async () => {
+    setFixingCorners(true);
+    setFixResult(null);
+    setFixProgress({ done: 0, total: whiteCornerCount });
+    try {
+      const result = await fixWhiteCornerPhotos((done, total) => setFixProgress({ done, total }));
+      setFixResult({ aligned: result.aligned, failed: result.failed });
+    } finally {
+      setFixingCorners(false);
+      setFixProgress(null);
+    }
+  };
 
   useEffect(() => {
     const savedPrivacyMode = localStorage.getItem(PRIVACY_MODE_KEY) === 'true';
@@ -781,6 +807,41 @@ export function PrivacySettings({ onClose, onJoinSuccess }: PrivacySettingsProps
               </div>
             </div>
           </div>
+
+          {/* Fix old photos with white edges */}
+          {whiteCornerCount > 0 && (
+            <div className="bg-gray-50 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Wand2 className="w-5 h-5 text-purple-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900 mb-1">Fix white edges</h3>
+                  <p className="text-sm text-gray-600 mb-3">
+                    {whiteCornerCount} photo{whiteCornerCount === 1 ? '' : 's'} {whiteCornerCount === 1 ? 'has' : 'have'} white triangles in the corners from earlier alignments. Re-render with mirrored edges. Pupils stay in the same place.
+                  </p>
+                  {fixProgress && (
+                    <p className="text-sm text-gray-500 mb-2">
+                      Re-aligning {fixProgress.done} of {fixProgress.total}…
+                    </p>
+                  )}
+                  {fixResult && (
+                    <p className="text-sm text-gray-600 mb-2">
+                      Fixed {fixResult.aligned}{fixResult.failed > 0 ? `, ${fixResult.failed} failed` : ''}.
+                    </p>
+                  )}
+                  <button
+                    onClick={handleFixCorners}
+                    disabled={fixingCorners}
+                    className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-2 disabled:opacity-50"
+                  >
+                    <span>{fixingCorners ? 'Working…' : `Fix ${whiteCornerCount} photo${whiteCornerCount === 1 ? '' : 's'}`}</span>
+                    {!fixingCorners && <ChevronRight className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Privacy Info */}
           <div className="bg-green-50 border border-green-200 rounded-xl p-4">

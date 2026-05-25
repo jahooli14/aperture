@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import { logger } from '../lib/logger';
-import { alignPhoto, calculateZoomLevel } from '../lib/imageUtils';
+import { alignPhoto, calculateZoomLevel, hasWhiteCorners } from '../lib/imageUtils';
 import { detectEyesFromImage } from '../lib/faceDetection';
 import type { Database } from '../types/database';
 
@@ -82,6 +82,9 @@ interface PhotoState {
   reAlignPhoto: (photoId: string, newEyeCoords: Pick<EyeCoordinates, 'leftEye' | 'rightEye'>, birthdate?: string | null) => Promise<void>;
   reAlignBacklog: (
     birthdate?: string | null,
+    onProgress?: (done: number, total: number) => void
+  ) => Promise<{ processed: number; aligned: number; failed: number }>;
+  fixWhiteCornerPhotos: (
     onProgress?: (done: number, total: number) => void
   ) => Promise<{ processed: number; aligned: number; failed: number }>;
 }
@@ -773,6 +776,96 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
 
     if (aligned > 0) await get().fetchPhotos();
     logger.info('Backlog re-align complete', { processed: total, aligned, failed }, 'PhotoStore');
+    return { processed: total, aligned, failed };
+  },
+
+  /**
+   * Re-render photos whose stored alignment would have produced white triangles
+   * in the corners (face near a source edge or large tilt). Uses the same
+   * stored eye coordinates and zoom_level — pupils land in the exact same
+   * place — but now goes through the mirror-padded alignPhoto, so the corners
+   * fill with reflected source pixels instead of white.
+   *
+   * Skips eye re-detection: the original coords are correct, only the render
+   * is wrong. Detection is geometric (no image fetch needed), so the candidate
+   * list is cheap to compute.
+   */
+  fixWhiteCornerPhotos: async (onProgress) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const candidates = get().photos.filter((p) => {
+      if (!p.alignment_transform || !p.eye_coordinates || !p.aligned_url) return false;
+      const meta = p.metadata as Record<string, unknown> | null;
+      const zoomLevel = (meta && typeof meta.zoom_level === 'number') ? meta.zoom_level : 0.40;
+      return hasWhiteCorners(p.alignment_transform, p.eye_coordinates, zoomLevel);
+    });
+    const total = candidates.length;
+    let aligned = 0;
+    let failed = 0;
+
+    for (let i = 0; i < candidates.length; i++) {
+      const photo = candidates[i];
+      try {
+        const sourceUrl =
+          photo.signed_original_url || photo.original_url ||
+          photo.signed_aligned_url || photo.aligned_url;
+        if (!sourceUrl || !photo.eye_coordinates) { failed++; continue; }
+
+        const response = await fetch(sourceUrl);
+        if (!response.ok) { failed++; continue; }
+        const blob = await response.blob();
+        const sourceFile = new File([blob], `${photo.id}-source.jpg`, {
+          type: blob.type || 'image/jpeg',
+        });
+
+        const meta = photo.metadata as Record<string, unknown> | null;
+        const zoomLevel = (meta && typeof meta.zoom_level === 'number') ? meta.zoom_level : 0.40;
+
+        const result = await alignPhoto(sourceFile, photo.eye_coordinates, zoomLevel);
+
+        const fileName = `${user.id}/${Date.now()}-cornerfix.jpg`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('originals')
+          .upload(fileName, result.alignedImage, {
+            contentType: result.alignedImage.type || 'image/jpeg',
+            upsert: false,
+          });
+        if (uploadError) { failed++; continue; }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('originals')
+          .getPublicUrl(uploadData.path);
+
+        const updatePayload = {
+          aligned_url: publicUrl,
+          alignment_transform: result.transform,
+        };
+
+        const { data: updatedRows, error: updateError } = await supabase
+          .from('photos')
+          .update(updatePayload as never)
+          .eq('id', photo.id)
+          .select();
+
+        if (updateError || !updatedRows || updatedRows.length === 0) {
+          failed++;
+          continue;
+        }
+        aligned++;
+      } catch (err) {
+        logger.error('White-corner fix failed for photo', {
+          photoId: photo.id,
+          error: err instanceof Error ? err.message : String(err),
+        }, 'PhotoStore');
+        failed++;
+      } finally {
+        onProgress?.(i + 1, total);
+      }
+    }
+
+    if (aligned > 0) await get().fetchPhotos();
+    logger.info('White-corner fix complete', { processed: total, aligned, failed }, 'PhotoStore');
     return { processed: total, aligned, failed };
   },
 }));

@@ -266,6 +266,178 @@ export function computeCropRect(
 }
 
 /**
+ * Project the four corners of the output canvas back into source-image
+ * coordinates given the affine transform alignPhoto uses (rotate by -angle,
+ * scale, translate so the eye midpoint lands at targetCenter). The convex hull
+ * of these four points is exactly the region of the source sampled by the
+ * aligned render — anywhere outside the source rectangle produces white.
+ */
+function projectCanvasCornersToSource(
+  sourceCenterX: number,
+  sourceCenterY: number,
+  angleRad: number,
+  scale: number,
+  zoomLevel: number
+): Array<{ x: number; y: number }> {
+  const targetCenterX = TARGET_WIDTH * 0.5;
+  const targetCenterY = TARGET_HEIGHT * zoomLevel;
+  const cos = Math.cos(angleRad);
+  const sin = Math.sin(angleRad);
+  const corners: Array<[number, number]> = [
+    [0, 0],
+    [TARGET_WIDTH, 0],
+    [TARGET_WIDTH, TARGET_HEIGHT],
+    [0, TARGET_HEIGHT],
+  ];
+  return corners.map(([cx, cy]) => {
+    const dx = cx - targetCenterX;
+    const dy = cy - targetCenterY;
+    return {
+      x: sourceCenterX + (cos * dx - sin * dy) / scale,
+      y: sourceCenterY + (sin * dx + cos * dy) / scale,
+    };
+  });
+}
+
+/**
+ * Per-edge mirror padding (in source pixels) needed so that the rotated+scaled
+ * source covers every canvas pixel. Zero on all four sides for well-framed
+ * shots — only positive when the face sits close to a source edge or the tilt
+ * pushes a canvas corner outside the source rectangle.
+ */
+export function computeAlignmentPadding(
+  bitmapWidth: number,
+  bitmapHeight: number,
+  sourceCenterX: number,
+  sourceCenterY: number,
+  angleRad: number,
+  scale: number,
+  zoomLevel: number
+): { padLeft: number; padRight: number; padTop: number; padBottom: number } {
+  const projected = projectCanvasCornersToSource(
+    sourceCenterX, sourceCenterY, angleRad, scale, zoomLevel
+  );
+  const xs = projected.map((p) => p.x);
+  const ys = projected.map((p) => p.y);
+  return {
+    padLeft: Math.max(0, Math.ceil(-Math.min(...xs))),
+    padRight: Math.max(0, Math.ceil(Math.max(...xs) - bitmapWidth)),
+    padTop: Math.max(0, Math.ceil(-Math.min(...ys))),
+    padBottom: Math.max(0, Math.ceil(Math.max(...ys) - bitmapHeight)),
+  };
+}
+
+/**
+ * Returns true if the existing aligned render has white triangles in the
+ * corners — i.e. the rotated source rectangle didn't fully cover the output
+ * canvas at the time it was rendered. Pure function over stored DB fields,
+ * so the legacy-fix backfill can decide which rows to re-align without
+ * fetching any pixels.
+ */
+export function hasWhiteCorners(
+  alignmentTransform: { rotation: number; scale: number },
+  eyeCoordinates: {
+    leftEye: { x: number; y: number };
+    rightEye: { x: number; y: number };
+    imageWidth: number;
+    imageHeight: number;
+  },
+  zoomLevel: number
+): boolean {
+  // Stored `rotation` is `-angle * 180/π` (see alignPhoto below).
+  const angleRad = (-alignmentTransform.rotation * Math.PI) / 180;
+  const { leftEye, rightEye, imageWidth, imageHeight } = eyeCoordinates;
+  const sourceCenterX = (leftEye.x + rightEye.x) / 2;
+  const sourceCenterY = (leftEye.y + rightEye.y) / 2;
+  const projected = projectCanvasCornersToSource(
+    sourceCenterX, sourceCenterY, angleRad, alignmentTransform.scale, zoomLevel
+  );
+  return projected.some(
+    (p) => p.x < 0 || p.x > imageWidth || p.y < 0 || p.y > imageHeight
+  );
+}
+
+/**
+ * Mirror-pad the source bitmap so the affine transform in alignPhoto can sample
+ * past the original bounds without revealing white fill in the corners. The
+ * mirrored strips reuse adjacent source pixels — for typical baby photos the
+ * edges are background (fabric, wall, skin) where reflection is invisible.
+ *
+ * Returns the original bitmap unchanged when no padding is needed.
+ */
+async function padBitmapWithReflection(
+  bitmap: ImageBitmap,
+  pad: { padLeft: number; padRight: number; padTop: number; padBottom: number }
+): Promise<{ paddedBitmap: ImageBitmap; padLeft: number; padTop: number }> {
+  const { padLeft, padRight, padTop, padBottom } = pad;
+  if (!padLeft && !padRight && !padTop && !padBottom) {
+    return { paddedBitmap: bitmap, padLeft: 0, padTop: 0 };
+  }
+
+  // Cap each reflected strip at the source dimension — we don't ping-pong
+  // mirror, so if a pad request exceeds the source size we just leave the
+  // outer-most slice unpadded. Only happens with absurd tilt + tight crop.
+  const leftStrip = Math.min(padLeft, bitmap.width);
+  const rightStrip = Math.min(padRight, bitmap.width);
+  const topStrip = Math.min(padTop, bitmap.height);
+  const bottomStrip = Math.min(padBottom, bitmap.height);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = bitmap.width + padLeft + padRight;
+  canvas.height = bitmap.height + padTop + padBottom;
+  const ctx = canvas.getContext('2d')!;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
+  ctx.drawImage(bitmap, padLeft, padTop);
+
+  const reflect = (
+    sx: number, sy: number, sw: number, sh: number,
+    dx: number, dy: number,
+    flipX: boolean, flipY: boolean
+  ) => {
+    ctx.save();
+    ctx.translate(dx + (flipX ? sw : 0), dy + (flipY ? sh : 0));
+    ctx.scale(flipX ? -1 : 1, flipY ? -1 : 1);
+    ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, sw, sh);
+    ctx.restore();
+  };
+
+  if (padTop > 0) {
+    reflect(0, 0, bitmap.width, topStrip, padLeft, padTop - topStrip, false, true);
+  }
+  if (padBottom > 0) {
+    reflect(0, bitmap.height - bottomStrip, bitmap.width, bottomStrip,
+            padLeft, padTop + bitmap.height, false, true);
+  }
+  if (padLeft > 0) {
+    reflect(0, 0, leftStrip, bitmap.height, padLeft - leftStrip, padTop, true, false);
+  }
+  if (padRight > 0) {
+    reflect(bitmap.width - rightStrip, 0, rightStrip, bitmap.height,
+            padLeft + bitmap.width, padTop, true, false);
+  }
+  if (padTop > 0 && padLeft > 0) {
+    reflect(0, 0, leftStrip, topStrip, padLeft - leftStrip, padTop - topStrip, true, true);
+  }
+  if (padTop > 0 && padRight > 0) {
+    reflect(bitmap.width - rightStrip, 0, rightStrip, topStrip,
+            padLeft + bitmap.width, padTop - topStrip, true, true);
+  }
+  if (padBottom > 0 && padLeft > 0) {
+    reflect(0, bitmap.height - bottomStrip, leftStrip, bottomStrip,
+            padLeft - leftStrip, padTop + bitmap.height, true, true);
+  }
+  if (padBottom > 0 && padRight > 0) {
+    reflect(bitmap.width - rightStrip, bitmap.height - bottomStrip, rightStrip, bottomStrip,
+            padLeft + bitmap.width, padTop + bitmap.height, true, true);
+  }
+
+  const paddedBitmap = await createImageBitmap(canvas);
+  return { paddedBitmap, padLeft, padTop };
+}
+
+/**
  * Aligns a photo based on detected eye coordinates
  * Uses affine transformation to rotate, scale, and translate the image
  * so that eyes match target positions
@@ -314,7 +486,14 @@ export async function alignPhoto(
     const targetCenterX = (targetPositions.leftEye.x + targetPositions.rightEye.x) / 2;
     const targetCenterY = (targetPositions.leftEye.y + targetPositions.rightEye.y) / 2;
 
-    // White background fills any uncovered regions after the affine transform.
+    // Mirror-pad the source enough to cover any canvas pixel that would
+    // otherwise fall outside the source rectangle. White fill stays as a final
+    // backstop for the pathological case where even mirror can't reach.
+    const pad = computeAlignmentPadding(
+      bitmap.width, bitmap.height, sourceCenterX, sourceCenterY, angle, scale, zoomLevel
+    );
+    const { paddedBitmap, padLeft, padTop } = await padBitmapWithReflection(bitmap, pad);
+
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -322,8 +501,11 @@ export async function alignPhoto(
     ctx.translate(targetCenterX, targetCenterY);
     ctx.rotate(-angle);
     ctx.scale(scale, scale);
-    ctx.drawImage(bitmap, -sourceCenterX, -sourceCenterY);
+    // Eye midpoint in the padded bitmap is shifted by (padLeft, padTop); the
+    // draw offset compensates so the eyes still land at targetCenter.
+    ctx.drawImage(paddedBitmap, -(sourceCenterX + padLeft), -(sourceCenterY + padTop));
     ctx.restore();
+    if (paddedBitmap !== bitmap) paddedBitmap.close();
     bitmap.close();
 
     return new Promise((resolve, reject) => {
