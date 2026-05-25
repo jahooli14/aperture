@@ -86,7 +86,7 @@ interface PhotoState {
   ) => Promise<{ processed: number; aligned: number; failed: number }>;
   fixWhiteCornerPhotos: (
     onProgress?: (done: number, total: number) => void
-  ) => Promise<{ processed: number; aligned: number; failed: number }>;
+  ) => Promise<{ processed: number; aligned: number; skipped: number; failed: number }>;
 }
 
 export const usePhotoStore = create<PhotoState>((set, get) => ({
@@ -781,14 +781,17 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
 
   /**
    * Re-render photos whose stored alignment would have produced white triangles
-   * in the corners (face near a source edge or large tilt). Uses the same
-   * stored eye coordinates and zoom_level — pupils land in the exact same
-   * place — but now goes through the mirror-padded alignPhoto, so the corners
-   * fill with reflected source pixels instead of white.
+   * in the corners. Uses the same stored eye coordinates and zoom_level so the
+   * pupils land in the exact same place; the new alignPhoto pads the source
+   * with edge-clamped pixels instead of white.
    *
-   * Skips eye re-detection: the original coords are correct, only the render
-   * is wrong. Detection is geometric (no image fetch needed), so the candidate
-   * list is cheap to compute.
+   * Two classes of legacy photo can't be fixed cleanly and are skipped:
+   *   1. `original_url === aligned_url` — there is no untouched source. The
+   *      "original" is the already-cropped 1080×1350 frame, so any re-align
+   *      would just smear that already-cropped image again.
+   *   2. The current original's pixel dimensions don't match the eye_coordinates'
+   *      stored imageWidth/imageHeight (the coords reference a different image).
+   *      Re-aligning would land the eyes in the wrong pixel.
    */
   fixWhiteCornerPhotos: async (onProgress) => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -796,12 +799,16 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
 
     const candidates = get().photos.filter((p) => {
       if (!p.alignment_transform || !p.eye_coordinates || !p.aligned_url) return false;
+      // Legacy rows where the original was never stored separately can't be
+      // re-rendered without losing eye alignment.
+      if (p.original_url && p.original_url === p.aligned_url) return false;
       const meta = p.metadata as Record<string, unknown> | null;
       const zoomLevel = (meta && typeof meta.zoom_level === 'number') ? meta.zoom_level : 0.40;
       return hasWhiteCorners(p.alignment_transform, p.eye_coordinates, zoomLevel);
     });
     const total = candidates.length;
     let aligned = 0;
+    let skipped = 0;
     let failed = 0;
 
     for (let i = 0; i < candidates.length; i++) {
@@ -813,11 +820,37 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
         if (!sourceUrl || !photo.eye_coordinates) { failed++; continue; }
 
         const response = await fetch(sourceUrl);
-        if (!response.ok) { failed++; continue; }
+        if (!response.ok) {
+          logger.warn('White-corner fix: source fetch failed', {
+            photoId: photo.id, status: response.status,
+          }, 'PhotoStore');
+          failed++;
+          continue;
+        }
         const blob = await response.blob();
         const sourceFile = new File([blob], `${photo.id}-source.jpg`, {
           type: blob.type || 'image/jpeg',
         });
+
+        // Verify the fetched original's dimensions match the stored
+        // eye_coordinates' coordinate space. A mismatch means the coords
+        // reference a different image and re-aligning would put the eyes in
+        // the wrong place. Allow 1px for EXIF/decoder rounding.
+        const probeBitmap = await createImageBitmap(sourceFile, { imageOrientation: 'from-image' });
+        const widthOk = Math.abs(probeBitmap.width - photo.eye_coordinates.imageWidth) <= 1;
+        const heightOk = Math.abs(probeBitmap.height - photo.eye_coordinates.imageHeight) <= 1;
+        probeBitmap.close();
+        if (!widthOk || !heightOk) {
+          logger.warn('White-corner fix: dimension mismatch, skipping', {
+            photoId: photo.id,
+            fetchedWidth: probeBitmap.width,
+            fetchedHeight: probeBitmap.height,
+            storedWidth: photo.eye_coordinates.imageWidth,
+            storedHeight: photo.eye_coordinates.imageHeight,
+          }, 'PhotoStore');
+          skipped++;
+          continue;
+        }
 
         const meta = photo.metadata as Record<string, unknown> | null;
         const zoomLevel = (meta && typeof meta.zoom_level === 'number') ? meta.zoom_level : 0.40;
@@ -831,7 +864,13 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
             contentType: result.alignedImage.type || 'image/jpeg',
             upsert: false,
           });
-        if (uploadError) { failed++; continue; }
+        if (uploadError) {
+          logger.warn('White-corner fix: upload failed', {
+            photoId: photo.id, error: uploadError.message,
+          }, 'PhotoStore');
+          failed++;
+          continue;
+        }
 
         const { data: { publicUrl } } = supabase.storage
           .from('originals')
@@ -849,6 +888,11 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
           .select();
 
         if (updateError || !updatedRows || updatedRows.length === 0) {
+          logger.warn('White-corner fix: db update failed', {
+            photoId: photo.id,
+            error: updateError?.message,
+            rowsUpdated: updatedRows?.length ?? 0,
+          }, 'PhotoStore');
           failed++;
           continue;
         }
@@ -865,7 +909,7 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
     }
 
     if (aligned > 0) await get().fetchPhotos();
-    logger.info('White-corner fix complete', { processed: total, aligned, failed }, 'PhotoStore');
-    return { processed: total, aligned, failed };
+    logger.info('White-corner fix complete', { processed: total, aligned, skipped, failed }, 'PhotoStore');
+    return { processed: total, aligned, skipped, failed };
   },
 }));

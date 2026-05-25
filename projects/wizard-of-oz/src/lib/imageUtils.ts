@@ -358,14 +358,18 @@ export function hasWhiteCorners(
 }
 
 /**
- * Mirror-pad the source bitmap so the affine transform in alignPhoto can sample
- * past the original bounds without revealing white fill in the corners. The
- * mirrored strips reuse adjacent source pixels — for typical baby photos the
- * edges are background (fabric, wall, skin) where reflection is invisible.
+ * Edge-clamp pad the source bitmap so the affine transform in alignPhoto can
+ * sample past the original bounds without revealing white in the corners.
+ *
+ * Each edge stretches the outermost row/column of source pixels (1px thick)
+ * outward to fill the pad strip. Unlike mirror reflection, this can't duplicate
+ * recognizable content like a face that's near the source edge — the source
+ * strip has no spatial variation to repeat, just the edge colour smearing
+ * outward.
  *
  * Returns the original bitmap unchanged when no padding is needed.
  */
-async function padBitmapWithReflection(
+async function padBitmapWithEdgeClamp(
   bitmap: ImageBitmap,
   pad: { padLeft: number; padRight: number; padTop: number; padBottom: number }
 ): Promise<{ paddedBitmap: ImageBitmap; padLeft: number; padTop: number }> {
@@ -373,14 +377,6 @@ async function padBitmapWithReflection(
   if (!padLeft && !padRight && !padTop && !padBottom) {
     return { paddedBitmap: bitmap, padLeft: 0, padTop: 0 };
   }
-
-  // Cap each reflected strip at the source dimension — we don't ping-pong
-  // mirror, so if a pad request exceeds the source size we just leave the
-  // outer-most slice unpadded. Only happens with absurd tilt + tight crop.
-  const leftStrip = Math.min(padLeft, bitmap.width);
-  const rightStrip = Math.min(padRight, bitmap.width);
-  const topStrip = Math.min(padTop, bitmap.height);
-  const bottomStrip = Math.min(padBottom, bitmap.height);
 
   const canvas = document.createElement('canvas');
   canvas.width = bitmap.width + padLeft + padRight;
@@ -391,46 +387,36 @@ async function padBitmapWithReflection(
 
   ctx.drawImage(bitmap, padLeft, padTop);
 
-  const reflect = (
-    sx: number, sy: number, sw: number, sh: number,
-    dx: number, dy: number,
-    flipX: boolean, flipY: boolean
-  ) => {
-    ctx.save();
-    ctx.translate(dx + (flipX ? sw : 0), dy + (flipY ? sh : 0));
-    ctx.scale(flipX ? -1 : 1, flipY ? -1 : 1);
-    ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, sw, sh);
-    ctx.restore();
-  };
-
   if (padTop > 0) {
-    reflect(0, 0, bitmap.width, topStrip, padLeft, padTop - topStrip, false, true);
+    ctx.drawImage(bitmap, 0, 0, bitmap.width, 1,
+                  padLeft, 0, bitmap.width, padTop);
   }
   if (padBottom > 0) {
-    reflect(0, bitmap.height - bottomStrip, bitmap.width, bottomStrip,
-            padLeft, padTop + bitmap.height, false, true);
+    ctx.drawImage(bitmap, 0, bitmap.height - 1, bitmap.width, 1,
+                  padLeft, padTop + bitmap.height, bitmap.width, padBottom);
   }
   if (padLeft > 0) {
-    reflect(0, 0, leftStrip, bitmap.height, padLeft - leftStrip, padTop, true, false);
+    ctx.drawImage(bitmap, 0, 0, 1, bitmap.height,
+                  0, padTop, padLeft, bitmap.height);
   }
   if (padRight > 0) {
-    reflect(bitmap.width - rightStrip, 0, rightStrip, bitmap.height,
-            padLeft + bitmap.width, padTop, true, false);
+    ctx.drawImage(bitmap, bitmap.width - 1, 0, 1, bitmap.height,
+                  padLeft + bitmap.width, padTop, padRight, bitmap.height);
   }
   if (padTop > 0 && padLeft > 0) {
-    reflect(0, 0, leftStrip, topStrip, padLeft - leftStrip, padTop - topStrip, true, true);
+    ctx.drawImage(bitmap, 0, 0, 1, 1, 0, 0, padLeft, padTop);
   }
   if (padTop > 0 && padRight > 0) {
-    reflect(bitmap.width - rightStrip, 0, rightStrip, topStrip,
-            padLeft + bitmap.width, padTop - topStrip, true, true);
+    ctx.drawImage(bitmap, bitmap.width - 1, 0, 1, 1,
+                  padLeft + bitmap.width, 0, padRight, padTop);
   }
   if (padBottom > 0 && padLeft > 0) {
-    reflect(0, bitmap.height - bottomStrip, leftStrip, bottomStrip,
-            padLeft - leftStrip, padTop + bitmap.height, true, true);
+    ctx.drawImage(bitmap, 0, bitmap.height - 1, 1, 1,
+                  0, padTop + bitmap.height, padLeft, padBottom);
   }
   if (padBottom > 0 && padRight > 0) {
-    reflect(bitmap.width - rightStrip, bitmap.height - bottomStrip, rightStrip, bottomStrip,
-            padLeft + bitmap.width, padTop + bitmap.height, true, true);
+    ctx.drawImage(bitmap, bitmap.width - 1, bitmap.height - 1, 1, 1,
+                  padLeft + bitmap.width, padTop + bitmap.height, padRight, padBottom);
   }
 
   const paddedBitmap = await createImageBitmap(canvas);
@@ -486,13 +472,13 @@ export async function alignPhoto(
     const targetCenterX = (targetPositions.leftEye.x + targetPositions.rightEye.x) / 2;
     const targetCenterY = (targetPositions.leftEye.y + targetPositions.rightEye.y) / 2;
 
-    // Mirror-pad the source enough to cover any canvas pixel that would
-    // otherwise fall outside the source rectangle. White fill stays as a final
-    // backstop for the pathological case where even mirror can't reach.
+    // Edge-clamp pad the source so canvas pixels falling outside the source
+    // rectangle pick up smeared edge colour rather than white. White fill stays
+    // as a final backstop for the pathological case.
     const pad = computeAlignmentPadding(
       bitmap.width, bitmap.height, sourceCenterX, sourceCenterY, angle, scale, zoomLevel
     );
-    const { paddedBitmap, padLeft, padTop } = await padBitmapWithReflection(bitmap, pad);
+    const { paddedBitmap, padLeft, padTop } = await padBitmapWithEdgeClamp(bitmap, pad);
 
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
