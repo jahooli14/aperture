@@ -1,12 +1,12 @@
 /**
  * Project Carousel Component
- * Displays projects in carousel sections: Pinned, Recent, Resurface, New Ideas
+ * Displays projects in carousel sections: Favourites, Recent, Resurface, New Ideas
  */
 
 import React, { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ChevronRight, Check, Pin, Clock, AlertCircle, Zap, ArrowRight } from 'lucide-react'
+import { ChevronRight, Check, Heart, Pin, Clock, AlertCircle, Zap, ArrowRight } from 'lucide-react'
 import { useToast } from '../ui/toast'
 import { haptic } from '../../utils/haptics'
 import type { Project } from '../../types'
@@ -35,12 +35,12 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
       ? projects.filter(p => p.status === 'active')
       : []
 
-    // 1. PINNED - Projects marked as priority
-    const pinned = activeProjects.filter(p => p.is_priority)
+    // 1. FAVOURITES - Projects the user marked as a favourite (multi-select)
+    const favourites = activeProjects.filter(p => p.is_favourite)
 
-    // 2. RECENT - Recently updated projects (excluding pinned)
+    // 2. RECENT - Recently updated projects (excluding favourites)
     const recent = activeProjects
-      .filter(p => !p.is_priority)
+      .filter(p => !p.is_favourite)
       .sort((a, b) => {
         const aTime = new Date(a.updated_at || a.last_active).getTime()
         const bTime = new Date(b.updated_at || b.last_active).getTime()
@@ -54,7 +54,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
     const resurface = activeProjects
       .filter(p => {
         const lastActive = new Date(p.updated_at || p.last_active)
-        return lastActive < oneWeekAgo && !p.is_priority && !recent.includes(p)
+        return lastActive < oneWeekAgo && !p.is_favourite && !recent.includes(p)
       })
       .sort((a, b) => {
         const aTime = new Date(a.updated_at || a.last_active).getTime()
@@ -65,7 +65,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
 
     // 4. NEW IDEAS - Newest projects
     const newIdeas = activeProjects
-      .filter(p => !p.is_priority && !recent.includes(p) && !resurface.includes(p))
+      .filter(p => !p.is_favourite && !recent.includes(p) && !resurface.includes(p))
       .sort((a, b) => {
         const aTime = new Date(a.created_at).getTime()
         const bTime = new Date(b.created_at).getTime()
@@ -75,12 +75,12 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
 
     return [
       {
-        id: 'pinned',
-        title: 'Pinned',
-        description: 'Your favorite projects',
-        icon: <Pin className="h-5 w-5" />,
+        id: 'favourites',
+        title: 'Favourites',
+        description: 'Projects you\'ve favourited',
+        icon: <Heart className="h-5 w-5" />,
         color: "var(--brand-text-secondary)",
-        projects: pinned
+        projects: favourites
       },
       {
         id: 'recent',
