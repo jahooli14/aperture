@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
-import { X, Calendar, Image, Trash2, Eye, EyeOff, Baby, MessageSquare, Edit2, Check, MapPin, Target } from 'lucide-react';
+import { X, Calendar, Image, Trash2, Eye, EyeOff, Baby, MessageSquare, Edit2, Check, MapPin, Target, ExternalLink } from 'lucide-react';
 import type { Database } from '../types/database';
 import { calculateAge, formatAge } from '../lib/ageUtils';
 import { calculateZoomLevel } from '../lib/imageUtils';
@@ -516,6 +516,17 @@ export function PhotoBottomSheet({ photo: photoProp, isOpen, onClose, onDelete }
                         </p>
                       );
                     })()}
+                    {(photo.signed_original_url || photo.original_url) && (
+                      <a
+                        href={photo.signed_original_url || photo.original_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 font-medium"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        View original photo
+                      </a>
+                    )}
                   </div>
                 </div>
               </div>

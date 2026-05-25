@@ -42,11 +42,14 @@ export function PrivacySettings({ onClose, onJoinSuccess }: PrivacySettingsProps
   const [joinedAccount, setJoinedAccount] = useState<{ owner_user_id: string } | null>(null);
   const [fixingCorners, setFixingCorners] = useState(false);
   const [fixProgress, setFixProgress] = useState<{ done: number; total: number } | null>(null);
-  const [fixResult, setFixResult] = useState<{ aligned: number; failed: number } | null>(null);
+  const [fixResult, setFixResult] = useState<{ aligned: number; skipped: number; failed: number } | null>(null);
 
   const whiteCornerCount = useMemo(() => {
     return photos.reduce((n, p) => {
       if (!p.alignment_transform || !p.eye_coordinates || !p.aligned_url) return n;
+      // Match the same legacy filter used by the fix routine: photos where the
+      // original was never stored separately can't be cleanly re-rendered.
+      if (p.original_url && p.original_url === p.aligned_url) return n;
       const meta = p.metadata as Record<string, unknown> | null;
       const zoomLevel = (meta && typeof meta.zoom_level === 'number') ? meta.zoom_level : 0.40;
       return hasWhiteCorners(p.alignment_transform, p.eye_coordinates, zoomLevel) ? n + 1 : n;
@@ -59,7 +62,7 @@ export function PrivacySettings({ onClose, onJoinSuccess }: PrivacySettingsProps
     setFixProgress({ done: 0, total: whiteCornerCount });
     try {
       const result = await fixWhiteCornerPhotos((done, total) => setFixProgress({ done, total }));
-      setFixResult({ aligned: result.aligned, failed: result.failed });
+      setFixResult({ aligned: result.aligned, skipped: result.skipped, failed: result.failed });
     } finally {
       setFixingCorners(false);
       setFixProgress(null);
@@ -827,7 +830,9 @@ export function PrivacySettings({ onClose, onJoinSuccess }: PrivacySettingsProps
                   )}
                   {fixResult && (
                     <p className="text-sm text-gray-600 mb-2">
-                      Fixed {fixResult.aligned}{fixResult.failed > 0 ? `, ${fixResult.failed} failed` : ''}.
+                      Fixed {fixResult.aligned}
+                      {fixResult.skipped > 0 ? `, ${fixResult.skipped} skipped (no untouched original)` : ''}
+                      {fixResult.failed > 0 ? `, ${fixResult.failed} failed (check console)` : ''}.
                     </p>
                   )}
                   <button
