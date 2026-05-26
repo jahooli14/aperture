@@ -73,28 +73,30 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
 
     try {
-      // Try to get the current session with a longer timeout (15 seconds)
-      // This is more forgiving on slow networks
+      // getSession() reads localStorage and is usually instant, but if Supabase
+      // decides a token needs refreshing it will hit the network. On poor
+      // signal that fetch hangs — and we used to wait 15s before falling
+      // through, which looked like the app was broken. 3s is plenty to read
+      // localStorage; if the network is slow the listener will catch up later.
       console.log('[Auth] Calling getSession()...');
       const timeoutPromise = new Promise<{ data: { session: null } }>((resolve) => {
         setTimeout(() => {
-          console.warn('[Auth] Session check timed out after 15s, will rely on auth listener');
+          console.warn('[Auth] Session check timed out after 3s, continuing with cached state');
           resolve({ data: { session: null } });
-        }, 15000);
+        }, 3000);
       });
 
-      // Race between session check and timeout
       const sessionPromise = supabase.auth.getSession();
       const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]);
       console.log('[Auth] getSession completed in', Date.now() - startTime, 'ms, hasSession:', !!session);
 
-      // Only update if we got a valid session response
-      // The auth listener will handle the rest
       if (session) {
         set({ user: session.user, loading: false });
       } else {
-        // No session found, but don't clear anything
-        // The auth listener will update if a session exists
+        // Timeout or no session — unblock the UI. If a session does exist
+        // and the network call eventually completes, onAuthStateChange will
+        // update the user. Meanwhile the app renders the sign-in screen,
+        // which is far better than a frozen spinner.
         set({ loading: false });
       }
     } catch (error) {
