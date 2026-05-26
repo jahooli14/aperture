@@ -22,7 +22,7 @@ export default defineConfig(({ mode }) => {
         registerType: 'autoUpdate',
         injectManifest: {
           maximumFileSizeToCacheInBytes: 6000000,
-          globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}']
         },
         devOptions: {
           enabled: true,
