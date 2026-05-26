@@ -48,6 +48,7 @@ function App() {
   const [isLocked, setIsLocked] = useState(false);
   const [passcode, setPasscode] = useState<string | null>(null);
   const [loadingTooLong, setLoadingTooLong] = useState(false);
+  const [isOffline, setIsOffline] = useState(typeof navigator !== 'undefined' ? !navigator.onLine : false);
   const [showIosInstallBanner, setShowIosInstallBanner] = useState(false);
   const loadingRef = useRef(loading);
   const unlockedThisSession = useRef(false); // Track if user unlocked passcode this session
@@ -160,8 +161,14 @@ function App() {
 
   // Check if online
   useEffect(() => {
-    const handleOnline = () => showToast('Back online!', 'success');
-    const handleOffline = () => showToast('You are offline. Some features may not work.', 'error');
+    const handleOnline = () => {
+      setIsOffline(false);
+      showToast('Back online!', 'success');
+    };
+    const handleOffline = () => {
+      setIsOffline(true);
+      showToast('You are offline. Some features may not work.', 'error');
+    };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -254,12 +261,16 @@ function App() {
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="text-center max-w-md">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary-600 border-t-transparent mb-4"></div>
-          <p className="text-gray-600 mb-4">Loading...</p>
+          <p className="text-gray-600 mb-4">
+            {isOffline ? 'Offline — loading from cache…' : 'Loading…'}
+          </p>
 
           {loadingTooLong && (
             <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
               <p className="text-sm text-yellow-800 mb-3">
-                Loading is taking longer than usual. This might be due to a network issue or cached data.
+                {isOffline
+                  ? "You're offline. If this screen sticks around, your cached session may have expired — clear cache to sign in fresh."
+                  : 'Loading is taking longer than usual. This might be due to a network issue or cached data.'}
               </p>
               <button
                 onClick={handleClearCache}

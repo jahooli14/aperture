@@ -1,11 +1,26 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { registerSW } from 'virtual:pwa-register'
 import './index.css'
 import App from './App.tsx'
 
-// Kick off DNS + TLS to the real Supabase project as early as possible. The
-// static index.html only knows the wildcard origin; here we have the env var,
-// so we can preconnect to the exact subdomain before React mounts.
+// Register the service worker BEFORE React mounts. Previously this only ran
+// when <UpdateNotification> mounted (inside App, after auth resolved), which
+// meant first-time visitors on slow networks could spend 5-15s without any
+// offline cache being installed. Doing it here means the SW is requested as
+// soon as the JS bundle parses.
+if (import.meta.env.PROD) {
+  registerSW({
+    immediate: true,
+    onRegistered(r) {
+      console.log('[PWA] Service worker registered', r?.scope);
+    },
+    onRegisterError(err) {
+      console.error('[PWA] Service worker registration failed', err);
+    },
+  });
+}
+
 try {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   if (supabaseUrl) {
