@@ -35,6 +35,17 @@ export const BANNED_WORDS: readonly string[] = [
   // Context-Engine specific cringe seen in the wild
   'through-line', 'throughline', 'thread of', 'central thread',
   'creative ontology', 'foundational premise', 'foundational premises',
+  // Drift seen in project ideas + bedtime output
+  'intentionality', 'discipline', 'practice of',
+  'first principles', 'mental model', 'mental models',
+  'creative practice', 'creative tension',
+  'lean into', 'leaned into', 'leaning into',
+  'double down', 'doubled down', 'doubling down',
+  'sit with', 'sitting with',
+  'embodied', 'embodiment',
+  'arc of', 'the arc', 'narrative arc',
+  'rich', 'richness',
+  'curate', 'curated', 'curation', 'curatorial',
 ]
 
 /** Phrases / patterns that still slip through even after BANNED_WORDS. */
@@ -55,6 +66,15 @@ export const CRINGE_PATTERNS: readonly RegExp[] = [
   /\binevitable in retrospect\b/i,
   /\bcouldn't see from inside\b/i,
   /\bthe moment when [a-z\s]+ makes [a-z\s]+ possible\b/i,
+  // Idea-generator drift
+  /\b(the )?practice of [a-z]+ing\b/i,
+  /\bsomething (deeper|bigger|more) than\b/i,
+  /\bthe (tension|dance|interplay) between\b/i,
+  /\bwhat (it means|it looks like) (to|when)\b/i,
+  /\byour relationship (with|to)\b/i,
+  /\b(quiet|loud) confidence\b/i,
+  /\bthe shape of\b/i,
+  /\bsmall but mighty\b/i,
 ]
 
 /** Title-only patterns — abstract -ness nouns + flowery adjectives. */

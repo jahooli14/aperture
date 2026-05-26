@@ -21,14 +21,21 @@ interface SessionContextState {
   feeling: SessionFeeling | null
   setFeeling: (next: SessionFeeling | null) => void
   clear: () => void
+  // True once the user has been shown the at-open prompt this session,
+  // even if they dismissed it without choosing. Prevents the modal
+  // from popping back on every navigation.
+  promptSeen: boolean
+  markPromptSeen: () => void
 }
 
 export const useSessionContextStore = create<SessionContextState>()(
   persist(
     (set) => ({
       feeling: null,
-      setFeeling: (next) => set({ feeling: next }),
+      setFeeling: (next) => set({ feeling: next, promptSeen: true }),
       clear: () => set({ feeling: null }),
+      promptSeen: false,
+      markPromptSeen: () => set({ promptSeen: true }),
     }),
     {
       name: 'polymath:session-context',

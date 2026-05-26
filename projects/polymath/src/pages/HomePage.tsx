@@ -36,9 +36,55 @@ import { UpNextMini } from '../components/home/UpNextMini'
 import { ThoughtOfTheDay } from '../components/home/ThoughtOfTheDay'
 import { ProjectIdeasHome } from '../components/home/ProjectIdeasHome'
 import { ConsumingWidget } from '../components/home/ConsumingWidget'
+import { SessionContextPrompt } from '../components/home/SessionContextPrompt'
+import { LongDormantHint } from '../components/home/LongDormantHint'
 import { UnauthHome } from '../components/onboarding/UnauthHome'
+import { useSessionContextStore } from '../stores/useSessionContextStore'
 import { ease, stagger } from '../lib/motion'
 import { AlertCircle, Search, Moon, Settings } from 'lucide-react'
+
+/**
+ * Mode register — a small uppercase chip under the wordmark that names
+ * what the lead card is firing in. Reads the priority/recent project
+ * state and the session feeling, picks one label. Plain words only.
+ */
+function ModeRegisterChip({
+  hasPriority,
+  hasRecent,
+  feeling,
+}: {
+  hasPriority: boolean
+  hasRecent: boolean
+  feeling: 'focused' | 'scattered' | 'restless' | null
+}) {
+  let label = 'quiet'
+  if (hasPriority) label = 'priority'
+  else if (hasRecent) label = 'keep going'
+
+  // Feeling overrides the structural label when it's strong — restless
+  // means "show me new", scattered means "small win", focused = keep going.
+  if (feeling === 'restless') label = 'restless · try new'
+  else if (feeling === 'scattered' && hasRecent) label = 'small win'
+
+  return (
+    <div
+      className="inline-flex items-center"
+      style={{
+        marginTop: 6,
+        padding: '3px 9px',
+        borderRadius: 999,
+        fontSize: 10,
+        letterSpacing: '0.22em',
+        textTransform: 'uppercase',
+        color: 'var(--brand-text-muted)',
+        background: 'rgba(255,255,255,0.04)',
+        border: '1px solid rgba(255,255,255,0.08)',
+      }}
+    >
+      {label}
+    </div>
+  )
+}
 
 export function HomePage() {
   const { isAuthenticated } = useAuthContext()
@@ -52,6 +98,7 @@ export function HomePage() {
   const priorityProject = usePriorityProject()
   const recentProject = useMostRecentNonPriorityProject()
   const hasAnyFocus = priorityProject || recentProject
+  const feeling = useSessionContextStore(s => s.feeling)
 
   const [error, setError] = useState<string | null>(null)
 
@@ -136,6 +183,7 @@ export function HomePage() {
       transition={{ duration: 0.2 }}
     >
       <SubtleBackground />
+      <SessionContextPrompt />
 
       <div className="min-h-screen pb-24 relative">
         {/* Vertical time-of-day wash — warm-top to cool-bottom. The trick
@@ -151,6 +199,14 @@ export function HomePage() {
             <header className="page-masthead">
               <div className="page-masthead-text">
                 <h1 className="page-hero">Aperture.</h1>
+                {/* Mode register — a small chip naming what the lead card
+                    is firing in. CLAUDE.md asks for this so the page reads
+                    as one editorial stack with a labelled hero. */}
+                <ModeRegisterChip
+                  hasPriority={!!priorityProject}
+                  hasRecent={!!recentProject}
+                  feeling={feeling}
+                />
               </div>
               <div className="page-masthead-actions">
                 {isAfterBedtime && (
@@ -209,6 +265,14 @@ export function HomePage() {
           </motion.div>
 
           <div className="section-seam" aria-hidden />
+
+          {/* Long-dormant hint — Mode 2b seed. Quiet, rare, opt-in tap.
+              Lives between the queue and "try something new" so it reads
+              as "or: here's something old you cared about". Renders
+              nothing if no project qualifies. */}
+          <motion.div {...stackTransition(5)} style={{ marginBottom: 10 }}>
+            <LongDormantHint />
+          </motion.div>
 
           {/* Section 4 — Try something new. Compact escape-hatch for
               on-demand idea generation. Sits below the project lists so

@@ -732,6 +732,41 @@ export const useRecentNonPriorityProjects = (limit = 2) =>
       .slice(0, limit)
   }))
 
+/**
+ * Long-dormant project candidate for Mode 2b (CLAUDE.md §The Moment).
+ *
+ * Surfaces a single project that:
+ *   - is shaped (has a defined deliverable)
+ *   - is in dormant / on-hold / maintaining
+ *   - hasn't been touched in 120+ days (~4 months)
+ *
+ * Picks the one that's been dormant longest, so the user is offered the
+ * memory most worth revisiting. Returns null if no project qualifies.
+ *
+ * This is the seed for Mode 2b — eventually the AI synthesis layer will
+ * propose a *reshape* using what the user has acquired since. For now the
+ * home surfaces it as a quiet hint: "you started this".
+ */
+const LONG_DORMANT_DAYS = 120
+export const useLongDormantProject = () =>
+  useProjectStore(useShallow(state => {
+    const now = Date.now()
+    const cutoff = LONG_DORMANT_DAYS * 24 * 60 * 60 * 1000
+    const candidates = state.allProjects.filter(p => {
+      if (p.metadata?.is_shaped === false) return false
+      if (!['dormant', 'on-hold', 'maintaining'].includes(p.status ?? '')) return false
+      const t = new Date(p.last_active || p.updated_at || 0).getTime()
+      if (!t) return false
+      return now - t > cutoff
+    })
+    if (candidates.length === 0) return null
+    return candidates.sort((a, b) => {
+      const aTime = new Date(a.last_active || a.updated_at || 0).getTime()
+      const bTime = new Date(b.last_active || b.updated_at || 0).getTime()
+      return aTime - bTime  // oldest first
+    })[0]
+  }))
+
 // Up Next shelf: projects with up_next_position set, sorted by position asc.
 export const useUpNextProjects = () =>
   useProjectStore(useShallow(state =>

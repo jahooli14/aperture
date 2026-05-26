@@ -10,18 +10,32 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '../ui/button'
 import { Textarea } from '../ui/textarea'
 import { Label } from '../ui/label'
-import { Mic, Type, Loader2 } from 'lucide-react'
+import { Mic, Type, Loader2, Sparkles, Frown, Hammer } from 'lucide-react'
 import { VoiceInput } from '../VoiceInput'
 import { ItemInsightStrip } from '../ItemInsightStrip'
 import type { Article } from '../../types/reading'
+
+/**
+ * One-tap reaction the user can leave even when they don't want to
+ * write a thought. CLAUDE.md §Identity layer / §Inputs #3 — these are
+ * framing signals for The Moment, not consumption logs. Stored as
+ * tag strings on the article so they round-trip without a migration.
+ */
+export type ArticleReaction = 'inspired' | 'felt_off' | 'made_want_make'
 
 interface ArticleCompletionDialogProps {
   article: Article | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  onCapture: (data: { text?: string; audio?: Blob }) => Promise<void>
-  onSkip: () => void
+  onCapture: (data: { text?: string; audio?: Blob; reaction?: ArticleReaction }) => Promise<void>
+  onSkip: (reaction?: ArticleReaction) => void
 }
+
+const REACTION_OPTIONS: Array<{ value: ArticleReaction; label: string; icon: typeof Sparkles }> = [
+  { value: 'inspired', label: 'Inspired me', icon: Sparkles },
+  { value: 'felt_off', label: 'Felt off', icon: Frown },
+  { value: 'made_want_make', label: 'Made me want to make', icon: Hammer },
+]
 
 export function ArticleCompletionDialog({
   article,
@@ -34,6 +48,7 @@ export function ArticleCompletionDialog({
   const [mode, setMode] = useState<'voice' | 'text'>('text')
   const [textInput, setTextInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [reaction, setReaction] = useState<ArticleReaction | null>(null)
 
 
   const handleSubmit = async () => {
@@ -41,8 +56,9 @@ export function ArticleCompletionDialog({
 
     setLoading(true)
     try {
-      await onCapture({ text: textInput })
+      await onCapture({ text: textInput, reaction: reaction ?? undefined })
       setTextInput('')
+      setReaction(null)
       onOpenChange(false)
     } catch (error) {
       console.error('Failed to capture thought:', error)
@@ -54,7 +70,7 @@ export function ArticleCompletionDialog({
   const handleVoiceTranscript = (text: string) => {
     // VoiceInput provides transcript - we'll capture it as text
     setLoading(true)
-    onCapture({ text })
+    onCapture({ text, reaction: reaction ?? undefined })
       .then(() => {
         onOpenChange(false)
       })
@@ -67,7 +83,7 @@ export function ArticleCompletionDialog({
   }
 
   const handleSkip = () => {
-    onSkip()
+    onSkip(reaction ?? undefined)
     onOpenChange(false)
   }
 
@@ -84,6 +100,37 @@ export function ArticleCompletionDialog({
             What did you learn from "{article.title}"?
           </DialogDescription>
         </DialogHeader>
+
+        {/* One-tap reaction — identity-signal capture. The user can pick
+            this on its own (then Skip) or pair it with a written thought. */}
+        <div className="mt-4 mb-1">
+          <div className="text-[11px] uppercase tracking-[0.18em] mb-2.5 text-center" style={{ color: 'var(--brand-text-muted)' }}>
+            How did it land?
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {REACTION_OPTIONS.map(({ value, label, icon: Icon }) => {
+              const active = reaction === value
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setReaction(active ? null : value)}
+                  className="flex flex-col items-center gap-1.5 py-3 px-2 transition-all press-spring"
+                  style={{
+                    borderRadius: 10,
+                    background: active ? 'rgba(var(--brand-primary-rgb), 0.16)' : 'rgba(255,255,255,0.04)',
+                    border: active ? '1px solid rgba(var(--brand-primary-rgb), 0.45)' : '1px solid rgba(255,255,255,0.08)',
+                    color: active ? 'var(--brand-text-primary)' : 'var(--brand-text-secondary)',
+                  }}
+                  aria-pressed={active}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="text-[11px] leading-tight text-center">{label}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
 
         {/* Mode Toggle */}
         <div className="flex gap-3 justify-center my-6">

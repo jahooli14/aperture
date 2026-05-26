@@ -14,10 +14,27 @@ import { useScrollDirection } from '../hooks/useScrollDirection'
 import { useToast } from '../components/ui/toast'
 import { useOfflineArticle } from '../hooks/useOfflineArticle'
 import { useReadingProgress } from '../hooks/useReadingProgress'
-import { ArticleCompletionDialog } from '../components/reading/ArticleCompletionDialog'
+import { ArticleCompletionDialog, type ArticleReaction } from '../components/reading/ArticleCompletionDialog'
 import { VoiceInput } from '../components/VoiceInput'
 import { DateRule } from '../components/ui/DateRule'
 import { spring, ease } from '../lib/motion'
+import type { Article } from '../types/reading'
+
+/**
+ * Persist a reading reaction onto the article's tags as `reaction:<value>`.
+ * Replaces any prior reaction tag so each article has at most one.
+ * Stored on tags (not metadata) so the existing tags array round-trips
+ * through the reading store without a schema or API change.
+ */
+async function persistArticleReaction(article: Article, reaction: ArticleReaction) {
+  const stripped = (article.tags || []).filter(t => !t.startsWith('reaction:'))
+  const nextTags = [...stripped, `reaction:${reaction}`]
+  try {
+    await useReadingStore.getState().updateArticle(article.id, { tags: nextTags })
+  } catch {
+    // Non-fatal — the archive still succeeds even if the tag write fails.
+  }
+}
 
 export function ReaderPage() {
   const { id } = useParams<{ id: string }>()
@@ -725,7 +742,7 @@ export function ReaderPage() {
           open={showCompletionDialog}
           onOpenChange={setShowCompletionDialog}
           article={article}
-          onCapture={async ({ text }) => {
+          onCapture={async ({ text, reaction }) => {
             if (text) {
               // Create a thought from the capture
               const res = await fetch('/api/memories', {
@@ -742,9 +759,13 @@ export function ReaderPage() {
                 return
               }
             }
+            if (reaction) await persistArticleReaction(article, reaction)
             await handleArchiveComplete()
           }}
-          onSkip={handleArchiveComplete}
+          onSkip={async (reaction) => {
+            if (reaction) await persistArticleReaction(article, reaction)
+            await handleArchiveComplete()
+          }}
         />
 
         {/* Voice Note FAB — consistent with global VoiceFAB design */}
