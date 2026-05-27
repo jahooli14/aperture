@@ -107,6 +107,10 @@ jobs:
           if [ "$SCHEDULE" = "0 8 * * *" ] || [ "$FORCE" = "true" ]; then
             hit "/api/projects?resource=evolve" &
             hit "/api/utilities?resource=generate-project-ideas" &
+            # The Portrait — score predictions whose sealed_until has
+            # passed. Idempotent (skips predictions that already have a
+            # reckoning), so it's safe to re-run.
+            hit "/api/utilities?resource=portrait-reckon" &
           fi
 
           # ── 09:00 UTC daily: Idea Engine review + email digest ────────
