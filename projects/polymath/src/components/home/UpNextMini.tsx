@@ -7,23 +7,23 @@
  * material and the seam hairline above.
  */
 
-import { useUpNextProjects } from '../../stores/useProjectStore'
+import { useUpNextMiniProjects } from '../../stores/useProjectStore'
 import { ProjectMiniCard } from './ProjectMiniCard'
 
 export function UpNextMini() {
-  const projects = useUpNextProjects()
+  const projects = useUpNextMiniProjects()
   if (projects.length === 0) return null
 
   const shown = projects.slice(0, 2)
 
   return (
     <div className="grid grid-cols-2 gap-3 items-stretch">
-      {shown.map((p, i) => (
+      {shown.map((p) => (
         <ProjectMiniCard
           key={p.id}
           project={p}
           variant="ghost"
-          meta={`#${i + 1} in queue`}
+          meta={p.up_next_position != null ? `#${p.up_next_position} in queue` : 'in queue'}
         />
       ))}
     </div>

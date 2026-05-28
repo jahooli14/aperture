@@ -690,10 +690,28 @@ export const useProjectStore = create<ProjectState>()(
 export const useUnshapedProjects = () =>
   useProjectStore(useShallow(state => state.allProjects.filter(p => p.metadata?.is_shaped === false)))
 
-// Active, shaped projects only. Up Next has its own shelf; pinned projects
-// are excluded from the "recent" selector so they don't show up twice.
+// Active, shaped projects only.
 const isActiveShaped = (p: { status?: string; metadata?: { is_shaped?: boolean } }) =>
   ['active', 'upcoming'].includes(p.status ?? '') && p.metadata?.is_shaped !== false
+
+// How many projects the "Still warm" row shows. The queue excludes these so a
+// project you recently touched never sits in both rows — recency wins.
+export const RECENT_ROW_LIMIT = 2
+
+const byRecency = (a: Project, b: Project) => {
+  const aTime = new Date(a.last_active || a.updated_at || 0).getTime()
+  const bTime = new Date(b.last_active || b.updated_at || 0).getTime()
+  return bTime - aTime
+}
+
+// Active, shaped projects (minus the priority), most-recently-touched first.
+// Includes queued projects: a project you just worked on is "warm" even if it
+// also sits in Up Next — it drops out of the queue below.
+const recentNonPriority = (projects: Project[]): Project[] => {
+  const active = projects.filter(isActiveShaped)
+  const priorityId = active.find(p => p.is_priority)?.id
+  return active.filter(p => p.id !== priorityId).sort(byRecency)
+}
 
 // The starred project, if one is set. Drives the "priority" home section.
 export const usePriorityProject = () =>
@@ -701,41 +719,36 @@ export const usePriorityProject = () =>
     state.allProjects.filter(isActiveShaped).find(p => p.is_priority) ?? null
   ))
 
-// The most-recently-touched active project that isn't the priority and
-// isn't sitting in Up Next. Drives the "still warm" home section.
+// The most-recently-touched active project that isn't the priority.
+// Drives the "still warm" home section's empty-state fallback.
 export const useMostRecentNonPriorityProject = () =>
-  useProjectStore(useShallow(state => {
-    const active = state.allProjects.filter(isActiveShaped)
-    const priorityId = active.find(p => p.is_priority)?.id
-    return active
-      .filter(p => p.up_next_position == null && p.id !== priorityId)
-      .sort((a, b) => {
-        const aTime = new Date(a.last_active || a.updated_at || 0).getTime()
-        const bTime = new Date(b.last_active || b.updated_at || 0).getTime()
-        return bTime - aTime
-      })[0] ?? null
-  }))
+  useProjectStore(useShallow(state => recentNonPriority(state.allProjects)[0] ?? null))
 
-// The N most-recently-touched active projects that aren't the priority
-// and aren't sitting in Up Next. Drives the "recently active" home row.
-export const useRecentNonPriorityProjects = (limit = 2) =>
-  useProjectStore(useShallow(state => {
-    const active = state.allProjects.filter(isActiveShaped)
-    const priorityId = active.find(p => p.is_priority)?.id
-    return active
-      .filter(p => p.up_next_position == null && p.id !== priorityId)
-      .sort((a, b) => {
-        const aTime = new Date(a.last_active || a.updated_at || 0).getTime()
-        const bTime = new Date(b.last_active || b.updated_at || 0).getTime()
-        return bTime - aTime
-      })
-      .slice(0, limit)
-  }))
+// The N most-recently-touched active projects that aren't the priority.
+// Drives the "recently active" home row.
+export const useRecentNonPriorityProjects = (limit = RECENT_ROW_LIMIT) =>
+  useProjectStore(useShallow(state => recentNonPriority(state.allProjects).slice(0, limit)))
 
-// Up Next shelf: projects with up_next_position set, sorted by position asc.
+// Up Next shelf: every queued project, sorted by position asc. Used by the
+// full, editable queue shelf (reorder / unpin) — shows the complete queue.
 export const useUpNextProjects = () =>
   useProjectStore(useShallow(state =>
     state.allProjects
       .filter(p => p.up_next_position != null)
       .sort((a, b) => (a.up_next_position ?? 99) - (b.up_next_position ?? 99))
   ))
+
+// Home "queue" mini: queued projects, minus the priority and minus any project
+// already shown in the "Still warm" row. A project you recently touched belongs
+// in "warm", not waiting in the queue — so it drops out here to avoid showing
+// twice on the home stack. (The full shelf above still lists it.)
+export const useUpNextMiniProjects = () =>
+  useProjectStore(useShallow(state => {
+    const warmIds = new Set(
+      recentNonPriority(state.allProjects).slice(0, RECENT_ROW_LIMIT).map(p => p.id)
+    )
+    const priorityId = state.allProjects.filter(isActiveShaped).find(p => p.is_priority)?.id
+    return state.allProjects
+      .filter(p => p.up_next_position != null && p.id !== priorityId && !warmIds.has(p.id))
+      .sort((a, b) => (a.up_next_position ?? 99) - (b.up_next_position ?? 99))
+  }))

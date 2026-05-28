@@ -1,7 +1,8 @@
 /**
  * RecentlyActiveMini — the two-up "recently active" row on the home.
- * Pulls the two most-recently-touched active projects (excluding priority
- * and Up Next). Hidden when empty.
+ * Pulls the two most-recently-touched active projects (excluding only the
+ * priority). A queued project you just touched surfaces here and drops out
+ * of the queue mini below, so it never shows twice. Hidden when empty.
  *
  * No section heading — group identity comes from the cards' material
  * (glass variant) and the seam hairline above this block.

@@ -23,6 +23,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { useListStore } from '../stores/useListStore'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useReadingStore } from '../stores/useReadingStore'
+import type { Article } from '../types/reading'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
@@ -30,6 +31,7 @@ import { ItemInsightStrip } from '../components/ItemInsightStrip'
 import { VoiceInput } from '../components/VoiceInput'
 import { OptimizedImage } from '../components/ui/optimized-image'
 import { ArticleCard } from '../components/reading/ArticleCard'
+import { CompactArticleRow } from '../components/reading/CompactArticleRow'
 import { listHasStatus, type ListItem, type ListType, type ListSettings } from '../types'
 import { useToast } from '../components/ui/toast'
 import { BottomSheet, BottomSheetContent, BottomSheetHeader, BottomSheetTitle } from '../components/ui/bottom-sheet'
@@ -1103,6 +1105,14 @@ function ArticleListMode({ list, navigate }: ArticleListModeProps) {
         [articles]
     )
 
+    // Split saved reads (things you chose to keep) from feed items (RSS /
+    // auto-imported, which arrive in bulk). Saved reads get the full card and
+    // stand out; feed items render as quiet compact rows underneath.
+    const isFeedArticle = (a: Article) =>
+        !!a.tags?.some(t => t === 'rss' || t === 'auto-imported')
+    const savedArticles = useMemo(() => readingArticles.filter(a => !isFeedArticle(a)), [readingArticles])
+    const feedArticles = useMemo(() => readingArticles.filter(isFeedArticle), [readingArticles])
+
     useEffect(() => {
         fetchArticles(undefined, true)
     }, [])
@@ -1232,14 +1242,43 @@ function ArticleListMode({ list, navigate }: ArticleListModeProps) {
                         <p className="text-sm text-brand-text-muted opacity-60">Paste a URL above to start reading.</p>
                     </div>
                 ) : (
-                    <div className="space-y-3">
-                        {readingArticles.map(article => (
-                            <ArticleCard
-                                key={article.id}
-                                article={article}
-                                onClick={() => navigate(`/reading/${article.id}`)}
-                            />
-                        ))}
+                    <div className="space-y-8">
+                        {/* Saved reads — full cards, the things you chose to keep */}
+                        {savedArticles.length > 0 && (
+                            <div className="space-y-3">
+                                {savedArticles.map(article => (
+                                    <ArticleCard
+                                        key={article.id}
+                                        article={article}
+                                        onClick={() => navigate(`/reading/${article.id}`)}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Feed items — quiet compact rows, much smaller weight */}
+                        {feedArticles.length > 0 && (
+                            <div>
+                                <div className="flex items-center gap-2 px-3 mb-2">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-brand-text-muted">
+                                        From your feeds
+                                    </span>
+                                    <span className="text-[11px] font-mono text-brand-text-muted opacity-60">
+                                        {feedArticles.length}
+                                    </span>
+                                </div>
+                                <div className="rounded-2xl overflow-hidden divide-y divide-white/[0.04]"
+                                    style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface)' }}>
+                                    {feedArticles.map(article => (
+                                        <CompactArticleRow
+                                            key={article.id}
+                                            article={article}
+                                            onClick={() => navigate(`/reading/${article.id}`)}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
