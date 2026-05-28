@@ -17,7 +17,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { RefreshCw, ArrowLeft, Aperture } from 'lucide-react'
+import { RefreshCw, ArrowLeft, Aperture, Lock } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthContext } from '../contexts/AuthContext'
 import { SignInNudge } from '../components/SignInNudge'
@@ -367,22 +367,36 @@ function PortraitPageInner() {
 
               <div className="section-seam my-10" aria-hidden />
 
-              {/* sealed for next week */}
+              {/* sealed for next week — the prediction text itself stays
+                  hidden. "Sealed" means sealed. If the user can read what
+                  the harness predicted, they can game it (or game against
+                  it) and the calibration score becomes meaningless. The
+                  reveal happens next week in the "last week, the harness
+                  predicted" section, alongside the verdict. */}
               {payload.next_prediction && (
                 <section>
                   <h2 className="section-header" style={{ margin: '0 0 16px' }}>
                     sealed for next <span>week</span>
                   </h2>
-                  <blockquote
-                    className="text-[16px] sm:text-[18px] leading-[1.55] italic pl-4 mb-3"
+                  <div
+                    className="flex items-center gap-3 px-4 py-4 rounded-2xl mb-3"
                     style={{
-                      color: 'var(--brand-text-primary)',
-                      fontFamily: 'var(--brand-font-body)',
-                      borderLeft: '2px solid rgba(var(--brand-primary-rgb), 0.4)',
+                      background: 'rgba(var(--brand-primary-rgb), 0.05)',
+                      border: '1px dashed rgba(var(--brand-primary-rgb), 0.3)',
                     }}
                   >
-                    “{payload.next_prediction.prediction}”
-                  </blockquote>
+                    <Lock
+                      className="h-4 w-4 flex-shrink-0"
+                      style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.7 }}
+                      aria-hidden
+                    />
+                    <p
+                      className="text-[13px] sm:text-[14px] leading-[1.55] italic flex-1 min-w-0"
+                      style={{ color: 'var(--brand-text-secondary)', fontFamily: 'var(--brand-font-body)' }}
+                    >
+                      A prediction is sealed. You'll find out what it was — and whether it landed — next week.
+                    </p>
+                  </div>
                   <p
                     className="text-[12px] italic opacity-70"
                     style={{ color: 'var(--brand-text-muted)' }}

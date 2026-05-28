@@ -48,8 +48,15 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
     } catch { /* silent */ }
   }, [article.id, article.tags, currentReaction, updateArticle])
 
-  // No more redundant cleaning needed as it's done on backend
-  const excerpt = article.excerpt || ''
+  // No more redundant cleaning needed as it's done on backend.
+  // Suppress excerpts that are clearly junk from a failed scrape — a
+  // bare "Comments" or single short word is what TechCrunch-style
+  // pages return when readability fails, and rendering it as a body
+  // paragraph makes the card look broken. Below 20 chars OR a single
+  // word, we'd rather show no excerpt at all.
+  const rawExcerpt = (article.excerpt || '').trim()
+  const wordCount = rawExcerpt ? rawExcerpt.split(/\s+/).filter(Boolean).length : 0
+  const excerpt = rawExcerpt.length >= 20 && wordCount >= 3 ? rawExcerpt : ''
 
   useEffect(() => {
     readingDb.getProgress(article.id).then(p => {
@@ -60,11 +67,11 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
   const handleMarkAsRead = async () => {
     try {
       await updateArticleStatus(article.id, 'archived')
-      addToast({
-        title: 'Archived',
-        description: 'Article moved to archive',
-        variant: 'success',
-      })
+      // Intentionally no success toast — the card disappearing from the
+      // queue is the confirmation, and the connections dialog opening is
+      // the next step. Stacked "Archived" toasts after speed-archiving
+      // were the "icicles" complaint: visually awful and informationally
+      // empty.
       setShowConnectionsDialog(true)
     } catch (error) {
       addToast({
@@ -210,7 +217,13 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
         </div>
 
         <div className="flex items-start justify-between gap-3 mb-3">
-          {article.thumbnail_url ? (
+          {/* Thumbnail only renders when the article has one. The old
+              "empty placeholder rectangle" left a grey hole in cards
+              whose enrichment hadn't finished or whose source has no
+              image — looked like a broken shell. With no placeholder
+              the meta column takes the full width and the card reads
+              as deliberately compact rather than half-loaded. */}
+          {article.thumbnail_url && (
             <div className="flex-shrink-0">
               <Thumbnail
                 src={article.thumbnail_url}
@@ -219,12 +232,9 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
                 aspectRatio="1/1"
               />
             </div>
-          ) : (
-            <div className="w-16 h-16 rounded-lg flex items-center justify-center" style={{ background: 'var(--glass-surface)', border: '1.5px solid var(--glass-surface-hover)' }}>
-            </div>
           )}
 
-          <div className="flex-1 flex flex-col items-end justify-between h-16">
+          <div className={`flex-1 flex flex-col items-end justify-between ${article.thumbnail_url ? 'h-16' : 'min-h-[40px]'}`}>
             <div className="flex items-center gap-1">
 
               {isContentFullyCached ? (
