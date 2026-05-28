@@ -20,35 +20,43 @@ export function calculateAge(birthDate: string, photoDate: string): BabyAge {
   const birth = new Date(birthDate + 'T00:00:00');
   const photo = new Date(photoDate + 'T00:00:00');
 
+  const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
   // Calculate total days
-  const totalDays = Math.floor((photo.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24));
+  const totalDays = Math.floor((photo.getTime() - birth.getTime()) / MS_PER_DAY);
 
-  // Calculate years
-  let years = photo.getFullYear() - birth.getFullYear();
-  let months = photo.getMonth() - birth.getMonth();
-  let days = photo.getDate() - birth.getDate();
+  // Anchor = the birthday advanced by `m` whole months, clamping the day to the
+  // target month's length so "born on the 31st" lands on the last valid day
+  // (e.g. Jan 31 + 1 month = Feb 28) instead of overflowing into the next month.
+  const anchorFor = (m: number): Date => {
+    const targetMonth = birth.getMonth() + m;
+    const lastDayOfTarget = new Date(birth.getFullYear(), targetMonth + 1, 0).getDate();
+    return new Date(
+      birth.getFullYear(),
+      targetMonth,
+      Math.min(birth.getDate(), lastDayOfTarget)
+    );
+  };
 
-  // Adjust if we haven't reached the birth month this year
-  if (months < 0 || (months === 0 && days < 0)) {
-    years--;
-    months += 12;
+  // Whole months elapsed, then back off one if we overshot the photo date.
+  let totalMonths =
+    (photo.getFullYear() - birth.getFullYear()) * 12 + (photo.getMonth() - birth.getMonth());
+  if (anchorFor(totalMonths) > photo) {
+    totalMonths--;
   }
 
-  // Adjust if we haven't reached the birth day this month
-  if (days < 0) {
-    months--;
-    const prevMonth = new Date(photo.getFullYear(), photo.getMonth(), 0);
-    days += prevMonth.getDate();
-  }
-
-  // Calculate weeks from remaining days
+  const years = Math.floor(totalMonths / 12);
+  const months = totalMonths % 12;
+  // Calendar days into the current month (pairs with years/months).
+  const days = Math.floor((photo.getTime() - anchorFor(totalMonths).getTime()) / MS_PER_DAY);
+  // Complete weeks since birth (pairs with the day-of-week remainder).
   const weeks = Math.floor(totalDays / 7);
 
   return {
     years,
     months,
     weeks,
-    days: totalDays % 7, // Days beyond complete weeks
+    days,
     totalDays,
   };
 }
@@ -105,7 +113,8 @@ export function formatAgeCompact(age: BabyAge): string {
   }
 
   if (age.weeks > 0) {
-    return `${age.weeks}w ${age.days}d`;
+    // Week display pairs with the day-of-week remainder, not the day-of-month.
+    return `${age.weeks}w ${age.totalDays % 7}d`;
   }
 
   return `${age.totalDays}d`;
