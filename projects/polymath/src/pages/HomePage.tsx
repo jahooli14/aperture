@@ -38,7 +38,7 @@ import { ProjectIdeasHome } from '../components/home/ProjectIdeasHome'
 import { ConsumingWidget } from '../components/home/ConsumingWidget'
 import { UnauthHome } from '../components/onboarding/UnauthHome'
 import { ease, stagger } from '../lib/motion'
-import { AlertCircle, Search, Moon, Settings, BookOpen } from 'lucide-react'
+import { AlertCircle, Search, Moon, Settings, Aperture } from 'lucide-react'
 
 export function HomePage() {
   const { isAuthenticated } = useAuthContext()
@@ -169,11 +169,11 @@ export function HomePage() {
                 )}
                 <button
                   onClick={() => navigate('/portrait')}
-                  aria-label="The Portrait — what the harness sees in you this week"
+                  aria-label="The portrait — read this week back"
                   className="masthead-action press-spring"
-                  title="The Portrait"
+                  title="The portrait"
                 >
-                  <BookOpen className="h-5 w-5" />
+                  <Aperture className="h-5 w-5" />
                 </button>
                 <button
                   onClick={() => navigate('/search')}

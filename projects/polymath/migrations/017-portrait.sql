@@ -29,8 +29,7 @@ CREATE INDEX IF NOT EXISTS idx_portrait_predictions_user_latest
   ON portrait_predictions(user_id, generated_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_portrait_predictions_unreckoned
-  ON portrait_predictions(sealed_until)
-  WHERE sealed_until IS NOT NULL;
+  ON portrait_predictions(sealed_until);
 
 CREATE TABLE IF NOT EXISTS portrait_reckonings (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -47,6 +46,12 @@ CREATE INDEX IF NOT EXISTS idx_portrait_reckonings_prediction
 -- RLS. The reckonings table inherits scoping through prediction_id; we
 -- check the prediction's user_id rather than denormalising user_id onto
 -- reckonings, so a single source of truth.
+--
+-- NOTE: api/_lib/supabase.ts prefers SUPABASE_SERVICE_ROLE_KEY in the
+-- backend, which bypasses RLS. The API handlers explicitly filter by
+-- user_id everywhere — RLS here is defence-in-depth for any future
+-- anon-key path (and protection against handler bugs that forget the
+-- explicit filter).
 ALTER TABLE portrait_snapshots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE portrait_predictions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE portrait_reckonings ENABLE ROW LEVEL SECURITY;

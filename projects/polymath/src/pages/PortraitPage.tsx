@@ -17,16 +17,16 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { RefreshCw, ArrowLeft, Sparkles } from 'lucide-react'
+import { RefreshCw, ArrowLeft, Aperture } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthContext } from '../contexts/AuthContext'
 import { SignInNudge } from '../components/SignInNudge'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { api } from '../lib/apiClient'
-import { useToast } from '../components/ui/toast'
 import { haptic } from '../utils/haptics'
+import type { PortraitPayload, PortraitReckoning } from '../../api/_lib/portrait/types'
 
-interface EvidenceRef {
+interface EvidenceRefView {
   kind: 'memory' | 'list_item' | 'project_event' | 'project' | 'reading' | 'highlight'
   source_id: string
   label: string
@@ -34,45 +34,7 @@ interface EvidenceRef {
   occurred_at: string | null
 }
 
-interface PortraitSnapshot {
-  id: string
-  body: string
-  evidence_refs: EvidenceRef[]
-  generated_at: string
-}
-
-interface PortraitPrediction {
-  id: string
-  prediction: string
-  week_starting: string
-  sealed_until: string
-  generated_at: string
-}
-
-interface PortraitReckoning {
-  id: string
-  prediction_id: string
-  called: 'hit' | 'partial' | 'miss'
-  evidence: string
-  score: number
-  evaluated_at: string
-}
-
-interface PortraitPredictionWithReckoning extends PortraitPrediction {
-  reckoning: PortraitReckoning | null
-}
-
-interface PortraitPayload {
-  snapshot: PortraitSnapshot | null
-  last_prediction: PortraitPredictionWithReckoning | null
-  next_prediction: PortraitPrediction | null
-  calibration: { score_sum: number; count: number; display: string } | null
-  next_refresh_available_at: string | null
-  reason?: 'insufficient_signal'
-  debounced?: boolean
-}
-
-const KIND_LABEL: Record<EvidenceRef['kind'], string> = {
+const KIND_LABEL: Record<EvidenceRefView['kind'], string> = {
   memory: 'voice note',
   list_item: 'list',
   project_event: 'project',
@@ -80,6 +42,16 @@ const KIND_LABEL: Record<EvidenceRef['kind'], string> = {
   reading: 'article',
   highlight: 'highlight',
 }
+
+// Staged loading copy. Crossfades while we wait for Flash. The thresholds
+// stretch past 20s because a slow tail shouldn't hit the last stage early.
+const LOADING_STAGES: Array<{ at_ms: number; line: string }> = [
+  { at_ms: 0,      line: 'reading you' },
+  { at_ms: 4_000,  line: 'lining up the week' },
+  { at_ms: 9_000,  line: 'writing it back' },
+  { at_ms: 15_000, line: 'sealing next week' },
+  { at_ms: 22_000, line: 'almost there' },
+]
 
 export default function PortraitPage() {
   // Thin auth gate — matches MemoriesPage so hooks rules stay clean.
@@ -96,26 +68,47 @@ export default function PortraitPage() {
 
 function PortraitPageInner() {
   const navigate = useNavigate()
-  const { addToast } = useToast()
   const [payload, setPayload] = useState<PortraitPayload | null>(null)
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showEvidence, setShowEvidence] = useState(false)
+  const [loadingStage, setLoadingStage] = useState(0)
+  const [debouncedFlash, setDebouncedFlash] = useState(false)
 
   const load = useCallback(async () => {
     try {
       const res = await api.get('utilities?resource=portrait') as PortraitPayload
       setPayload(res)
-    } catch (err: any) {
+    } catch (err) {
       console.error('[portrait] load failed:', err)
-      setError(err?.message || 'Could not load the portrait')
+      setError(err instanceof Error ? err.message : 'Could not load the portrait')
     } finally {
       setLoading(false)
     }
   }, [])
 
   useEffect(() => { void load() }, [load])
+
+  // Advance loading stages while generating. Resets when generation ends.
+  useEffect(() => {
+    if (!generating) {
+      setLoadingStage(0)
+      return
+    }
+    const startedAt = Date.now()
+    setLoadingStage(0)
+    const tick = () => {
+      const elapsed = Date.now() - startedAt
+      let idx = 0
+      for (let i = 0; i < LOADING_STAGES.length; i++) {
+        if (elapsed >= LOADING_STAGES[i].at_ms) idx = i
+      }
+      setLoadingStage(idx)
+    }
+    const id = window.setInterval(tick, 1000)
+    return () => window.clearInterval(id)
+  }, [generating])
 
   const generate = useCallback(async () => {
     if (generating) return
@@ -126,25 +119,26 @@ function PortraitPageInner() {
       const res = await api.post('utilities?resource=portrait', {}, { timeout: 75_000 }) as PortraitPayload
       setPayload(res)
       if (res.debounced) {
-        addToast({
-          title: 'Just generated',
-          description: 'The portrait is still fresh. Try again later.',
-          variant: 'default',
-        })
-      } else if (res.reason === 'insufficient_signal') {
-        addToast({
-          title: 'Not enough this week',
-          description: 'Capture a few thoughts or queue some reading, then try again.',
-          variant: 'default',
-        })
+        // Inline flash on the masthead — not a toast. State, not event.
+        setDebouncedFlash(true)
+        window.setTimeout(() => setDebouncedFlash(false), 2400)
       }
-    } catch (err: any) {
-      console.error('[portrait] generate failed:', err)
-      setError(err?.message || 'Could not generate the portrait')
+      // For insufficient_signal we leave the EmptyState to do the talking
+      // (it already renders the right copy from `payload.reason`). No toast.
+    } catch (err) {
+      // ApiError carries the server's reason for parse_failed / voice_failed.
+      const apiErr = err as { status?: number; details?: { reason?: string }; message?: string }
+      if (apiErr?.details?.reason === 'voice_failed') {
+        setError("The model wrote something off-voice. Try again in a moment.")
+      } else if (apiErr?.details?.reason === 'parse_failed') {
+        setError("Couldn't write this week's read. Try again in a moment.")
+      } else {
+        setError(apiErr?.message || 'Could not generate the portrait')
+      }
     } finally {
       setGenerating(false)
     }
-  }, [generating, addToast])
+  }, [generating])
 
   const updatedLabel = useMemo(() => {
     if (!payload?.snapshot) return null
@@ -175,7 +169,7 @@ function PortraitPageInner() {
               <button
                 onClick={() => navigate('/')}
                 aria-label="Back home"
-                className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] opacity-60 hover:opacity-100 transition-opacity mb-2 press-spring"
+                className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] opacity-60 hover:opacity-100 transition-opacity mb-2 press-spring py-1"
                 style={{ color: 'var(--brand-text-secondary)' }}
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
@@ -187,11 +181,17 @@ function PortraitPageInner() {
                   className="text-[11px] uppercase tracking-[0.22em] italic opacity-70 mt-2"
                   style={{ color: 'var(--brand-text-muted)' }}
                 >
-                  updated {updatedLabel}
+                  {debouncedFlash ? (
+                    <span style={{ color: 'rgb(var(--brand-primary-rgb))' }}>still fresh</span>
+                  ) : (
+                    <>updated {updatedLabel}</>
+                  )}
                   {payload.calibration && (
                     <>
-                      <span className="mx-2 opacity-50">·</span>
-                      calibration {payload.calibration.display}
+                      <span className="mx-2 opacity-50" aria-hidden>·</span>
+                      <span aria-label={`calibration: ${payload.calibration.display.replace(' / ', ' out of ')}`}>
+                        calibration {payload.calibration.display}
+                      </span>
                     </>
                   )}
                 </p>
@@ -201,8 +201,8 @@ function PortraitPageInner() {
               <button
                 onClick={generate}
                 disabled={generating || (!refreshAvailable && !!payload?.snapshot)}
-                aria-label="Refresh the portrait"
-                title={refreshAvailable ? 'Refresh' : 'Just generated — try again later'}
+                aria-label={refreshAvailable ? 'Refresh the portrait' : 'Still fresh — read again in a few hours'}
+                title={refreshAvailable ? 'Refresh' : 'Still fresh — read again in a few hours'}
                 className="masthead-action press-spring disabled:opacity-30"
               >
                 <RefreshCw className={`h-5 w-5 ${generating ? 'animate-spin' : ''}`} />
@@ -213,54 +213,84 @@ function PortraitPageInner() {
           {loading && (
             <div className="flex items-center justify-center py-16">
               <span className="text-[11px] uppercase tracking-[0.28em] italic opacity-50" style={{ color: 'var(--brand-text-muted)' }}>
-                opening the portrait…
+                reading you…
               </span>
             </div>
           )}
 
-          {!loading && !payload?.snapshot && (
+          {!loading && !payload?.snapshot && !generating && (
             <EmptyState
               onGenerate={generate}
-              generating={generating}
+              generating={false}
               reason={payload?.reason ?? null}
             />
           )}
 
-          {generating && payload?.snapshot && (
-            <div className="text-center my-6">
-              <span className="text-[11px] uppercase tracking-[0.28em] italic opacity-70" style={{ color: 'var(--brand-text-muted)' }}>
-                re-reading the week…
-              </span>
-            </div>
+          {/* Mid-page loading shimmer when there's no existing snapshot
+              (first generation). When we DO have an old snapshot we keep
+              it visible and show a small inline note above the body
+              instead — see the "regenerating" branch below. */}
+          {!loading && !payload?.snapshot && generating && (
+            <LoadingShimmer stageIdx={loadingStage} />
           )}
 
           {!loading && payload?.snapshot && (
             <>
+              {generating && (
+                <div className="text-center my-6">
+                  <AnimatePresence mode="wait">
+                    <motion.span
+                      key={loadingStage}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 0.8 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.5 }}
+                      className="text-[11px] uppercase tracking-[0.28em] italic"
+                      style={{ color: 'var(--brand-text-muted)' }}
+                    >
+                      {LOADING_STAGES[loadingStage]?.line ?? LOADING_STAGES[0].line}…
+                    </motion.span>
+                  </AnimatePresence>
+                </div>
+              )}
+
               {/* this week */}
               <section className="mt-2">
-                <h2 className="section-header" style={{ margin: '0 0 16px' }}>this <span>week</span></h2>
-                <div
-                  className="text-[16px] sm:text-[18px] leading-[1.7] whitespace-pre-line"
-                  style={{
-                    color: 'var(--brand-text-primary)',
-                    fontFamily: 'var(--brand-font-body)',
-                    fontWeight: 400,
-                  }}
-                >
-                  {payload.snapshot.body}
-                </div>
+                <h2 className="section-header" style={{ margin: '0 0 16px' }}>
+                  this <span>week</span>
+                </h2>
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={payload.snapshot.id}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.35, ease: 'easeOut' }}
+                    className="text-[16px] sm:text-[18px] leading-[1.7]"
+                    style={{
+                      color: 'var(--brand-text-primary)',
+                      fontFamily: 'var(--brand-font-body)',
+                      fontWeight: 400,
+                    }}
+                  >
+                    {splitParagraphs(payload.snapshot.body).map((para, i) => (
+                      <p key={i} className={i > 0 ? 'mt-5' : ''}>{para}</p>
+                    ))}
+                  </motion.div>
+                </AnimatePresence>
 
                 {payload.snapshot.evidence_refs.length > 0 && (
-                  <div className="mt-6 flex justify-center">
+                  <div className="mt-7 flex justify-center">
                     <button
                       type="button"
                       onClick={() => setShowEvidence(s => !s)}
-                      className="text-[10px] tracking-[0.28em] uppercase opacity-50 hover:opacity-90 transition-opacity press-spring"
+                      aria-expanded={showEvidence}
+                      className="text-[10px] tracking-[0.28em] uppercase opacity-50 hover:opacity-90 transition-opacity press-spring py-2 px-3 rounded-full"
                       style={{ color: 'var(--brand-text-muted)' }}
                     >
                       {showEvidence
-                        ? '— hide signals —'
-                        : `— ${payload.snapshot.evidence_refs.length === 1 ? 'see the signal' : `see all ${payload.snapshot.evidence_refs.length} signals`} —`}
+                        ? 'hide signals'
+                        : `see signals (${payload.snapshot.evidence_refs.length})`}
                     </button>
                   </div>
                 )}
@@ -274,7 +304,7 @@ function PortraitPageInner() {
                       transition={{ duration: 0.3 }}
                       className="mt-5 space-y-3 overflow-hidden"
                     >
-                      {payload.snapshot.evidence_refs.map((e, i) => (
+                      {(payload.snapshot.evidence_refs as EvidenceRefView[]).map((e, i) => (
                         <li
                           key={`${e.source_id}-${i}`}
                           className="text-[13px] leading-[1.6]"
@@ -324,13 +354,13 @@ function PortraitPageInner() {
               ) : (
                 <section>
                   <h2 className="section-header" style={{ margin: '0 0 16px' }}>
-                    no <span>verdict</span> yet
+                    still <span>sealed</span>
                   </h2>
                   <p
                     className="text-[14px] leading-[1.6] italic opacity-80"
                     style={{ color: 'var(--brand-text-secondary)' }}
                   >
-                    The first prediction is still sealed. Once a week passes, the harness scores itself and the score appears here.
+                    First prediction is sealed. We'll grade it once the week's done.
                   </p>
                 </section>
               )}
@@ -354,10 +384,10 @@ function PortraitPageInner() {
                     “{payload.next_prediction.prediction}”
                   </blockquote>
                   <p
-                    className="text-[10px] uppercase tracking-[0.28em] opacity-60"
+                    className="text-[12px] italic opacity-70"
                     style={{ color: 'var(--brand-text-muted)' }}
                   >
-                    opens {formatDay(payload.next_prediction.sealed_until)}
+                    opens <span style={{ color: 'rgb(var(--brand-primary-rgb))', fontStyle: 'normal' }}>{formatDay(payload.next_prediction.sealed_until)}</span>
                   </p>
                 </section>
               )}
@@ -365,7 +395,7 @@ function PortraitPageInner() {
           )}
 
           {error && !loading && (
-            <p className="mt-8 text-[12px] italic text-center" style={{ color: 'var(--brand-text-secondary)' }}>
+            <p className="mt-8 text-[13px] italic text-center" style={{ color: 'var(--brand-text-secondary)' }}>
               {error}
             </p>
           )}
@@ -384,9 +414,10 @@ function EmptyState({
   generating: boolean
   reason: 'insufficient_signal' | null
 }) {
+  const isQuietWeek = reason === 'insufficient_signal'
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      <Sparkles
+      <Aperture
         className="h-7 w-7 mb-5 opacity-50"
         style={{ color: 'var(--brand-text-secondary)' }}
         aria-hidden
@@ -400,15 +431,15 @@ function EmptyState({
           letterSpacing: '-0.018em',
         }}
       >
-        Nothing here yet.
+        {isQuietWeek ? 'Quiet week so far.' : 'No week to read yet.'}
       </h3>
       <p
         className="text-[14px] leading-[1.6] max-w-md mb-7 opacity-85"
         style={{ color: 'var(--brand-text-secondary)' }}
       >
-        {reason === 'insufficient_signal'
-          ? 'Not enough captured this week to write a portrait. Add a thought or two, then come back.'
-          : 'The portrait reads what you\'ve captured this week and writes you back. One sealed prediction per refresh. A calibration score that grows the longer it knows you.'}
+        {isQuietWeek
+          ? 'Capture a few thoughts or queue some reading, then come back.'
+          : 'Seven days of you, read back. One guess at next week. Graded when the week’s done.'}
       </p>
       <button
         type="button"
@@ -428,11 +459,52 @@ function EmptyState({
           </>
         ) : (
           <>
-            <Sparkles className="h-3.5 w-3.5" />
+            <Aperture className="h-3.5 w-3.5" />
             <span>open the portrait</span>
           </>
         )}
       </button>
+    </div>
+  )
+}
+
+function LoadingShimmer({ stageIdx }: { stageIdx: number }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div
+        className="relative w-48 h-[2px] overflow-hidden mb-8"
+        style={{ background: 'rgba(var(--brand-primary-rgb), 0.12)' }}
+      >
+        <motion.div
+          className="absolute top-0 left-0 h-full w-1/3"
+          style={{
+            background: 'linear-gradient(90deg, transparent, rgb(var(--brand-primary-rgb)), transparent)',
+          }}
+          animate={{ x: ['-100%', '300%'] }}
+          transition={{ duration: 2.4, ease: 'easeInOut', repeat: Infinity }}
+        />
+      </div>
+      <div className="relative h-6 mb-2 w-full max-w-xs">
+        <AnimatePresence mode="wait">
+          <motion.p
+            key={stageIdx}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            className="absolute inset-0 text-[12px] uppercase tracking-[0.22em] italic"
+            style={{ color: 'var(--brand-text-muted)' }}
+          >
+            {LOADING_STAGES[stageIdx]?.line ?? LOADING_STAGES[0].line}…
+          </motion.p>
+        </AnimatePresence>
+      </div>
+      <p
+        className="text-[10px] tracking-[0.16em] uppercase mt-1 opacity-50"
+        style={{ color: 'var(--brand-text-muted)' }}
+      >
+        A few seconds.
+      </p>
     </div>
   )
 }
@@ -442,21 +514,27 @@ function ReckoningRow({ reckoning }: { reckoning: PortraitReckoning }) {
     switch (reckoning.called) {
       case 'hit':
         return {
-          background: 'rgba(56, 189, 248, 0.14)',  // cyan
+          background: 'rgba(56, 189, 248, 0.14)',   // cyan — confirmation
           border: '1px solid rgba(56, 189, 248, 0.4)',
           color: 'rgb(56, 189, 248)',
+          label: 'called it',
         }
       case 'partial':
         return {
-          background: 'rgba(252, 211, 77, 0.12)',  // amber
+          background: 'rgba(252, 211, 77, 0.12)',   // amber — half-true
           border: '1px solid rgba(252, 211, 77, 0.4)',
           color: 'rgb(252, 211, 77)',
+          label: 'partial',
         }
       case 'miss':
+        // Slate, NOT rose — rose collides with the "Read mode" identity
+        // colour in ProjectIdeasHome. A miss is honest measurement, not
+        // failure, so neutral slate matches the tone better.
         return {
-          background: 'rgba(244, 114, 182, 0.12)', // rose
-          border: '1px solid rgba(244, 114, 182, 0.4)',
-          color: 'rgb(244, 114, 182)',
+          background: 'rgba(148, 163, 184, 0.12)',
+          border: '1px solid rgba(148, 163, 184, 0.4)',
+          color: 'rgb(148, 163, 184)',
+          label: 'missed it',
         }
     }
   })()
@@ -465,11 +543,13 @@ function ReckoningRow({ reckoning }: { reckoning: PortraitReckoning }) {
     <div className="flex items-start gap-3 flex-wrap">
       <span
         className="inline-flex items-center px-3 py-1 rounded-full text-[10px] uppercase tracking-[0.24em] font-semibold flex-shrink-0"
-        style={chipStyle}
+        style={{
+          background: chipStyle.background,
+          border: chipStyle.border,
+          color: chipStyle.color,
+        }}
       >
-        {reckoning.called === 'hit' && 'called it'}
-        {reckoning.called === 'partial' && 'partial'}
-        {reckoning.called === 'miss' && 'missed it'}
+        {chipStyle.label}
       </span>
       <p
         className="text-[14px] leading-[1.55] flex-1 min-w-0 opacity-90"
@@ -482,6 +562,21 @@ function ReckoningRow({ reckoning }: { reckoning: PortraitReckoning }) {
       </p>
     </div>
   )
+}
+
+/**
+ * Split body into paragraphs on blank-line separators. Gemini emits both
+ * `\n\n` and single `\n` newlines inconsistently — using
+ * `whitespace-pre-line` for the whole block gives jumpy vertical
+ * rhythm. Splitting and wrapping in `<p>` gives editorial paragraph
+ * spacing that matches the rest of the app. Single `\n` inside a
+ * paragraph is preserved via `whitespace-pre-line` on the parent.
+ */
+function splitParagraphs(body: string): string[] {
+  return body
+    .split(/\n{2,}/)
+    .map(p => p.trim())
+    .filter(Boolean)
 }
 
 function formatRelative(iso: string): string {

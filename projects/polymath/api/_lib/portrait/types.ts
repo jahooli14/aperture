@@ -81,6 +81,14 @@ export interface PortraitPayload {
   /** Server-side debounce window. The page uses this to grey out the
    *  refresh button without needing a 429 round-trip. */
   next_refresh_available_at: string | null
+  /** Set when the POST handler short-circuited a generation because the
+   *  user has a snapshot less than 6h old. */
+  debounced?: boolean
+  /** Set when the user has data but the generator decided there isn't
+   *  enough signal for a portrait this week. Generation failures
+   *  (parse_failed / voice_failed) come back as 5xx, NOT as a reason
+   *  field — the UI should treat them as transient errors. */
+  reason?: 'insufficient_signal'
 }
 
 /**

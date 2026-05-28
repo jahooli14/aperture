@@ -72,14 +72,34 @@ export interface WeeklyCorpus {
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
 
-export async function gatherWeek(supabase: Supabase, userId: string): Promise<WeeklyCorpus> {
-  const since = new Date(Date.now() - SEVEN_DAYS_MS).toISOString()
+export interface GatherWindow {
+  /** Inclusive lower bound (ISO timestamp). */
+  since: string
+  /** Exclusive upper bound (ISO timestamp). Defaults to now. */
+  until?: string
+}
+
+/**
+ * Pulls the user's corpus in a time window. With no window argument,
+ * defaults to "the last 7 days from now" — what the generator wants on
+ * a fresh refresh. The reckoner passes the prediction's actual sealed
+ * window so it grades against the week that was predicted, not the
+ * trailing week from when cron happened to fire.
+ */
+export async function gatherWeek(
+  supabase: Supabase,
+  userId: string,
+  window?: GatherWindow,
+): Promise<WeeklyCorpus> {
+  const since = window?.since ?? new Date(Date.now() - SEVEN_DAYS_MS).toISOString()
+  const until = window?.until ?? new Date().toISOString()
 
   const [
     memoriesRes,
     listItemsRes,
     projectsTouchedRes,
     readingRes,
+    highlightsRes,
     priorityRes,
   ] = await Promise.all([
     supabase
@@ -87,6 +107,7 @@ export async function gatherWeek(supabase: Supabase, userId: string): Promise<We
       .select('id, title, body, themes, memory_type, created_at')
       .eq('user_id', userId)
       .gte('created_at', since)
+      .lt('created_at', until)
       .order('created_at', { ascending: false })
       .limit(60),
     supabase
@@ -94,17 +115,23 @@ export async function gatherWeek(supabase: Supabase, userId: string): Promise<We
       .select('id, content, status, created_at, list_id, lists(title, type)')
       .eq('user_id', userId)
       .gte('created_at', since)
+      .lt('created_at', until)
       .order('created_at', { ascending: false })
       .limit(80),
-    // Project events: projects touched in the last 7 days. We synthesise an
+    // Project events: projects touched in the window. We synthesise an
     // "event" per project from updated_at + status — enough signal for the
     // generator to notice "opened twice, closed both times" patterns when
-    // the underlying sessions table isn't in scope yet.
+    // the underlying sessions table isn't in scope yet. Caveat:
+    // `updated_at` is touched by background jobs (heat recompute, RLS
+    // trigger writes) — so this over-reports "touched". Acceptable for
+    // slice 1; slice 2 should swap in a `last_user_touch` column or read
+    // from a sessions table.
     supabase
       .from('projects')
       .select('id, title, status, metadata, updated_at')
       .eq('user_id', userId)
       .gte('updated_at', since)
+      .lt('updated_at', until)
       .order('updated_at', { ascending: false })
       .limit(40),
     supabase
@@ -112,6 +139,20 @@ export async function gatherWeek(supabase: Supabase, userId: string): Promise<We
       .select('id, title, excerpt, source, status, created_at')
       .eq('user_id', userId)
       .gte('created_at', since)
+      .lt('created_at', until)
+      .order('created_at', { ascending: false })
+      .limit(40),
+    // Highlights — filtered by their own created_at, NOT by article id.
+    // The previous version only pulled highlights on articles also queued
+    // in the same week, so a highlight made today on an article queued
+    // last month was invisible to the portrait. RLS on article_highlights
+    // (via reading_queue.user_id) keeps this query user-scoped.
+    supabase
+      .from('article_highlights')
+      .select('id, highlight_text, created_at, article_id, reading_queue!inner(title, user_id)')
+      .eq('reading_queue.user_id', userId)
+      .gte('created_at', since)
+      .lt('created_at', until)
       .order('created_at', { ascending: false })
       .limit(40),
     // Stated priorities: pinned + favourited projects. We then check which
@@ -174,27 +215,14 @@ export async function gatherWeek(supabase: Supabase, userId: string): Promise<We
     created_at: r.created_at,
   }))
 
-  // Highlights are scoped to reading_queue articles. Pull the user's last
-  // 7 days of highlights via the article join.
-  let highlights: WeeklyHighlight[] = []
-  if (reading.length > 0) {
-    const articleIds = reading.map(r => r.id)
-    const { data: highlightRows } = await supabase
-      .from('article_highlights')
-      .select('id, highlight_text, created_at, article_id, reading_queue!inner(title)')
-      .in('article_id', articleIds)
-      .gte('created_at', since)
-      .order('created_at', { ascending: false })
-      .limit(40)
-    highlights = ((highlightRows ?? []) as any[])
-      .filter(h => h.highlight_text && (h.highlight_text as string).trim().length >= 10)
-      .map(h => ({
-        id: h.id,
-        quote: (h.highlight_text as string).trim(),
-        article_title: h.reading_queue?.title ?? null,
-        created_at: h.created_at,
-      }))
-  }
+  const highlights: WeeklyHighlight[] = ((highlightsRes.data ?? []) as any[])
+    .filter(h => h.highlight_text && (h.highlight_text as string).trim().length >= 10)
+    .map(h => ({
+      id: h.id,
+      quote: (h.highlight_text as string).trim(),
+      article_title: h.reading_queue?.title ?? null,
+      created_at: h.created_at,
+    }))
 
   return { since, memories, list_items, project_events, reading, highlights, stated_priorities }
 }
