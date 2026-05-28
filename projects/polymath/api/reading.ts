@@ -1226,9 +1226,11 @@ function extractDomain(url: string): string {
 // the Android share sheet bolts on, producing "duplicate" saves of the same
 // article. Functional query params and hash fragments are left intact so we
 // never merge two genuinely different pages.
+// Only unambiguous tracking params. Deliberately excludes things like `s`
+// (WordPress search), `ref`, and `spm` which can be functional on some sites.
 const TRACKING_PARAMS = [
   'fbclid', 'gclid', 'gclsrc', 'dclid', 'msclkid', 'mc_cid', 'mc_eid',
-  'igshid', 'ref', 'ref_src', 'ref_url', 's', 'spm', 'yclid', '_hsenc', '_hsmi',
+  'igshid', 'yclid', '_hsenc', '_hsmi',
 ]
 function normalizeArticleUrl(raw: string): string {
   try {
