@@ -4,12 +4,13 @@
  */
 
 import { useEffect } from 'react'
-import { Mic, Square, Loader2 } from 'lucide-react'
+import { Mic, Square, Loader2, RotateCcw } from 'lucide-react'
 import { Button } from './ui/button'
 import { useMediaRecorderVoice } from '../hooks/useMediaRecorderVoice'
 
 interface VoiceInputProps {
   onTranscript: (text: string) => void
+  onError?: (message: string) => void
   maxDuration?: number // seconds
   autoSubmit?: boolean
   autoStart?: boolean // Auto-start recording when component mounts
@@ -18,6 +19,7 @@ interface VoiceInputProps {
 
 export function VoiceInput({
   onTranscript,
+  onError,
   maxDuration = 30,
   autoSubmit = false,
   autoStart = false,
@@ -29,11 +31,15 @@ export function VoiceInput({
     timeLeft,
     isProcessing,
     isSupported,
+    error,
+    canRetry,
+    retry,
     toggleRecording,
     startRecording,
     stopRecording
   } = useMediaRecorderVoice({
     onTranscript,
+    onError,
     maxDuration,
     autoSubmit
   })
@@ -87,7 +93,7 @@ export function VoiceInput({
     <div className="space-y-3">
       <Button
         type="button"
-        onClick={toggleRecording}
+        onClick={canRetry ? retry : toggleRecording}
         disabled={isProcessing}
         className={`w-full py-4 rounded-xl flex items-center justify-center gap-3 transition-all duration-300 ${isRecording
           ? 'bg-brand-primary/20 text-brand-primary'
@@ -102,7 +108,12 @@ export function VoiceInput({
         {isProcessing ? (
           <>
             <Loader2 className="h-5 w-5 animate-spin" />
-            Transcribing…
+            Transcribing your note…
+          </>
+        ) : canRetry ? (
+          <>
+            <RotateCcw className="h-5 w-5" />
+            Try again
           </>
         ) : isRecording ? (
           <>
@@ -116,6 +127,25 @@ export function VoiceInput({
           </>
         )}
       </Button>
+
+      {/* Processing: a calm moving rule so the wait reads as deliberate work,
+          not a frozen spinner. */}
+      {isProcessing && (
+        <div className="h-[2px] w-full overflow-hidden rounded-full" style={{ background: 'rgba(var(--brand-primary-rgb), 0.12)' }}>
+          <div
+            className="h-full w-1/3 rounded-full animate-voice-progress"
+            style={{ background: 'linear-gradient(90deg, transparent, rgb(var(--brand-primary-rgb)), transparent)' }}
+          />
+        </div>
+      )}
+
+      {/* Recording failed (non-network) — the audio is kept; the button above
+          becomes a one-tap retry. Explain in plain English. */}
+      {error && !isProcessing && (
+        <p className="text-[13px] text-center text-[var(--brand-text-secondary)] opacity-80 leading-relaxed">
+          {error}
+        </p>
+      )}
 
       {transcript && !isProcessing && (
         <div className="p-4 bg-[var(--glass-surface)] rounded-xl" style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface-hover)' }}>

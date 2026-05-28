@@ -204,8 +204,17 @@ export function KeepGoingCard({ project, heading, emptyState }: KeepGoingCardPro
 /** Empty state used by the priority slot when nothing is starred and by the
  *  recent slot when there are no active projects. Pulled out so the same
  *  visual sits in both holes. */
-export function KeepGoingEmpty({ message }: { message?: string }) {
+export function KeepGoingEmpty({
+  message,
+  actionLabel,
+  onAction,
+}: {
+  message?: string
+  actionLabel?: string
+  onAction?: () => void
+}) {
   const navigate = useNavigate()
+  const handleAction = onAction ?? (() => navigate('/projects'))
   return (
     <div
       className="rounded-2xl p-6 flex flex-col items-center justify-center text-center"
@@ -219,10 +228,10 @@ export function KeepGoingEmpty({ message }: { message?: string }) {
       <Zap className="h-8 w-8 text-[var(--brand-primary)] opacity-30 mb-3" />
       <p className="text-sm font-medium text-[var(--brand-text-secondary)] opacity-60">{message ?? 'No active projects yet'}</p>
       <button
-        onClick={() => navigate('/projects')}
+        onClick={handleAction}
         className="mt-3 text-xs text-[var(--brand-primary)] opacity-70 hover:opacity-100 transition-opacity underline"
       >
-        Open projects
+        {actionLabel ?? 'Open projects'}
       </button>
     </div>
   )

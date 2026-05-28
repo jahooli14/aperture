@@ -24,7 +24,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { useProjectStore, usePriorityProject, useMostRecentNonPriorityProject } from '../stores/useProjectStore'
+import { useProjectStore, usePriorityProject, useMostRecentNonPriorityProject, useRecentNonPriorityProjects, useUpNextMiniProjects } from '../stores/useProjectStore'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { useJourneyStore } from '../stores/useJourneyStore'
@@ -52,6 +52,11 @@ export function HomePage() {
   const priorityProject = usePriorityProject()
   const recentProject = useMostRecentNonPriorityProject()
   const hasAnyFocus = priorityProject || recentProject
+  // Mirror the minis' selectors here so we can drop the section header +
+  // seam when the row would be empty — a bare "still warm" header over
+  // nothing reads as a bug, not a quiet state.
+  const recentMini = useRecentNonPriorityProjects(2)
+  const upNextMini = useUpNextMiniProjects()
 
   const [error, setError] = useState<string | null>(null)
 
@@ -196,25 +201,43 @@ export function HomePage() {
           ) : !hasAnyFocus ? (
             <motion.div {...stackTransition(2)}>
               <h2 className="section-header" style={{ margin: '0 0 10px' }}>your <span>priority</span></h2>
-              <KeepGoingEmpty />
+              {projects.length === 0 ? (
+                // Brand-new account: point at the core loop (capture), not an
+                // empty projects list they'd just bounce off.
+                <KeepGoingEmpty
+                  message="Nothing here yet. Start by capturing a thought."
+                  actionLabel="Capture a thought"
+                  onAction={() => window.dispatchEvent(new Event('openVoiceCapture'))}
+                />
+              ) : (
+                <KeepGoingEmpty />
+              )}
             </motion.div>
           ) : null}
 
-          <div className="section-seam" aria-hidden />
-
-          {/* Section 2 — Recently active. 2-up glass cards. */}
-          <h2 className="section-header" style={{ margin: '0 0 10px' }}>still <span>warm</span></h2>
-          <motion.div {...stackTransition(3)}>
-            <RecentlyActiveMini />
-          </motion.div>
-
-          <div className="section-seam" aria-hidden />
+          {/* Section 2 — Recently active. 2-up glass cards. Header + seam
+              only when there's something to show, so we never strand a
+              heading over an empty row. */}
+          {recentMini.length > 0 && (
+            <>
+              <div className="section-seam" aria-hidden />
+              <h2 className="section-header" style={{ margin: '0 0 10px' }}>still <span>warm</span></h2>
+              <motion.div {...stackTransition(3)}>
+                <RecentlyActiveMini />
+              </motion.div>
+            </>
+          )}
 
           {/* Section 3 — Up Next. 2-up ghost cards, quieter material. */}
-          <h2 className="section-header" style={{ margin: '0 0 10px' }}>the <span>queue</span></h2>
-          <motion.div {...stackTransition(4)}>
-            <UpNextMini />
-          </motion.div>
+          {upNextMini.length > 0 && (
+            <>
+              <div className="section-seam" aria-hidden />
+              <h2 className="section-header" style={{ margin: '0 0 10px' }}>the <span>queue</span></h2>
+              <motion.div {...stackTransition(4)}>
+                <UpNextMini />
+              </motion.div>
+            </>
+          )}
 
           <div className="section-seam" aria-hidden />
 
