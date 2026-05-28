@@ -6,6 +6,25 @@
  */
 
 /**
+ * Formats a Date as a YYYY-MM-DD string using its LOCAL calendar fields.
+ * Unlike `date.toISOString().split('T')[0]`, this does not shift the day in
+ * timezones offset from UTC, so it matches the dates the user actually sees.
+ */
+export function toLocalDateString(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Today's date as a YYYY-MM-DD string in the user's local timezone.
+ */
+export function getTodayLocalDateString(): string {
+  return toLocalDateString(new Date());
+}
+
+/**
  * Parses a YYYY-MM-DD string into a Date object representing that date in the local timezone.
  * This ensures that when formatted, it stays on the same calendar day.
  */
