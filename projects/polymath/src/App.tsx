@@ -51,6 +51,7 @@ const FixQueuePage = lazy(lazyRetry(() => import('./pages/FixQueuePage')))
 const LoginPage = lazy(lazyRetry(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage }))))
 const CognitiveReplayPage = lazy(lazyRetry(() => import('./pages/CognitiveReplayPage').then(m => ({ default: m.CognitiveReplayPage }))))
 const FeedsPage = lazy(lazyRetry(() => import('./pages/FeedsPage').then(m => ({ default: m.FeedsPage }))))
+const PortraitPage = lazy(lazyRetry(() => import('./pages/PortraitPage')))
 
 // Loading fallback component with skeleton
 import { useBedtimeNotifications } from './hooks/useBedtimeNotifications'
@@ -334,6 +335,7 @@ export default function App() {
                       <Route path="/lists/:id" element={<AnimatedPage page="lists"><ListDetailPage /></AnimatedPage>} />
                       <Route path="/favourites" element={<AnimatedPage page="lists"><FavouritesPage /></AnimatedPage>} />
                       <Route path="/fixes" element={<AnimatedPage page="fixes"><FixQueuePage /></AnimatedPage>} />
+                      <Route path="/portrait" element={<AnimatedPage page="portrait"><PortraitPage /></AnimatedPage>} />
                       <Route path="/login" element={<LoginPage />} />
                       <Route path="/share-target" element={<ShareTargetFallback />} />
                     </Routes>

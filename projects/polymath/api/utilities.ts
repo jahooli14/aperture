@@ -18,6 +18,9 @@
  *   POST ?resource=generate-project-ideas    — Generate a fresh batch (cron + manual)
  *   GET  ?resource=idea-prompt               — User's custom "suggest an idea" brief (+ default)
  *   POST ?resource=idea-prompt               — Update or reset the brief (null/empty = reset)
+ *   GET  ?resource=portrait                  — The Portrait — latest snapshot + last/next predictions + calibration
+ *   POST ?resource=portrait                  — Regenerate the portrait (debounced 6h)
+ *   POST ?resource=portrait-reckon           — Cron-only: score predictions whose sealed_until has passed
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
@@ -38,9 +41,18 @@ import {
 import { MODELS } from './_lib/models.js'
 import { PLAIN_ENGLISH_RULES } from './_lib/plain-english.js'
 import { DEFAULT_IDEA_BRIEF } from './_lib/project-ideas/default-prompt.js'
+import { gatherWeek } from './_lib/portrait/gather-week.js'
+import { generatePortrait } from './_lib/portrait/generator.js'
+import { reckonPrediction, scoreForCall } from './_lib/portrait/reckoner.js'
+import type { PortraitPayload, PortraitPredictionWithReckoning } from './_lib/portrait/types.js'
 import type { CoverageGrid, CoverageSlotId } from '../src/types'
 
 export const config = {
+  // Vercel caps execution at 60s by default. Bumped to 300s because the
+  // portrait-reckon cron may iterate several due predictions, each with
+  // its own gather + Flash call. Other utilities resources run far
+  // shorter — bumping the cap is harmless for them.
+  maxDuration: 300,
   api: {
     bodyParser: {
       sizeLimit: '10mb',
@@ -109,6 +121,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (resource === 'idea-prompt') {
     return handleIdeaPrompt(req, res)
+  }
+
+  if (req.method === 'GET' && resource === 'portrait') {
+    return handlePortraitGet(req, res)
+  }
+
+  if (req.method === 'POST' && resource === 'portrait') {
+    return handlePortraitGenerate(req, res)
+  }
+
+  if (req.method === 'POST' && resource === 'portrait-reckon') {
+    return handlePortraitReckon(req, res)
   }
 
   return res.status(404).json({ error: 'Not found' })
@@ -1764,4 +1788,406 @@ function randomUuid(): string {
     const v = ch === 'x' ? r : (r & 0x3) | 0x8
     return v.toString(16)
   })
+}
+
+// ══ The Portrait ════════════════════════════════════════════════════════════
+// See projects/polymath/docs/PORTRAIT_SPEC.md
+//
+// Three endpoints:
+//   GET  ?resource=portrait         → latest snapshot + last/next predictions + calibration
+//   POST ?resource=portrait         → regenerate (debounced 6h server-side)
+//   POST ?resource=portrait-reckon  → cron-only: score any prediction whose sealed_until has passed
+
+const PORTRAIT_REFRESH_DEBOUNCE_MS = 6 * 60 * 60 * 1000  // 6h
+const CALIBRATION_WINDOW = 10
+
+async function handlePortraitGet(req: VercelRequest, res: VercelResponse) {
+  const userId = await getUserId(req)
+  if (!userId) return res.status(401).json({ error: 'Sign in to see your portrait' })
+  const supabase = getSupabaseClient()
+
+  try {
+    const payload = await buildPortraitPayload(supabase, userId)
+    return res.status(200).json(payload)
+  } catch (err: any) {
+    console.error('[utilities/portrait] GET failed:', err)
+    return res.status(500).json({ error: err?.message || 'Failed to load portrait' })
+  }
+}
+
+async function handlePortraitGenerate(req: VercelRequest, res: VercelResponse) {
+  const userId = await getUserId(req)
+  if (!userId) return res.status(401).json({ error: 'Sign in to generate a portrait' })
+  const supabase = getSupabaseClient()
+
+  try {
+    // Server-side debounce. If the user has a snapshot less than 6h old,
+    // return the existing payload rather than burning a Flash call.
+    const { data: existingRows } = await supabase
+      .from('portrait_snapshots')
+      .select('id, generated_at')
+      .eq('user_id', userId)
+      .order('generated_at', { ascending: false })
+      .limit(1)
+    const existing = existingRows?.[0]
+    if (existing) {
+      const ageMs = Date.now() - new Date(existing.generated_at).getTime()
+      if (ageMs < PORTRAIT_REFRESH_DEBOUNCE_MS) {
+        const payload = await buildPortraitPayload(supabase, userId)
+        return res.status(200).json({ ...payload, debounced: true })
+      }
+    }
+
+    const corpus = await gatherWeek(supabase, userId)
+    const result = await generatePortrait(corpus)
+
+    if (!result.ok) {
+      // Disambiguate. `insufficient_signal` is "you don't have enough
+      // this week" → 200 + empty state copy on the client. The other
+      // reasons are real generation failures → 5xx so the client can
+      // surface "couldn't write this — try again", not "capture more".
+      if (result.reason === 'insufficient_signal') {
+        return res.status(200).json({
+          snapshot: null,
+          last_prediction: null,
+          next_prediction: null,
+          calibration: null,
+          next_refresh_available_at: null,
+          reason: 'insufficient_signal',
+        })
+      }
+      return res.status(502).json({
+        error: result.reason === 'voice_failed'
+          ? "The model wrote something off-voice. Try again in a moment."
+          : "Couldn't write this week's read. Try again in a moment.",
+        reason: result.reason,
+      })
+    }
+
+    // One sealed prediction per cycle. Before inserting a fresh one,
+    // remove any in-flight un-reckoned prediction (sealed_until still in
+    // the future). The user just regenerated — that signals they want
+    // the harness to take a new shot at next week. The cron continues
+    // to grade older predictions whose sealed_until has already passed
+    // (those land in the "last week" verdict UI on next render).
+    const todayIso = new Date().toISOString().slice(0, 10)
+    const { data: inFlight } = await supabase
+      .from('portrait_predictions')
+      .select('id, portrait_reckonings(id)')
+      .eq('user_id', userId)
+      .gt('sealed_until', todayIso)
+    const orphanIds = (inFlight ?? [])
+      .filter((r: any) => !r.portrait_reckonings || r.portrait_reckonings.length === 0)
+      .map((r: any) => r.id)
+    if (orphanIds.length > 0) {
+      const { error: delErr } = await supabase
+        .from('portrait_predictions')
+        .delete()
+        .in('id', orphanIds)
+      if (delErr) {
+        console.warn('[portrait] failed to clear in-flight predictions:', delErr.message)
+        // Non-fatal — the new prediction will still write; UI will
+        // pick the latest as next_prediction and ignore the stragglers.
+      }
+    }
+
+    // Insert prediction FIRST, then snapshot. If snapshot fails, roll
+    // the prediction back so we never end up with a half-state. (We
+    // don't have a transaction wrapper here, so this is the best we
+    // can do without an RPC.)
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000)
+    const sealedUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    const { data: predictionRow, error: predErr } = await supabase
+      .from('portrait_predictions')
+      .insert({
+        user_id: userId,
+        prediction: result.output.next_prediction,
+        week_starting: tomorrow.toISOString().slice(0, 10),
+        sealed_until: sealedUntil.toISOString().slice(0, 10),
+      })
+      .select('id')
+      .single()
+    if (predErr) throw predErr
+
+    const { error: snapErr } = await supabase
+      .from('portrait_snapshots')
+      .insert({
+        user_id: userId,
+        body: result.output.body,
+        evidence_refs: result.output.evidence_refs,
+      })
+    if (snapErr) {
+      // Roll back the prediction so the next refresh isn't blocked by
+      // an orphan "in-flight" row that doesn't correspond to any
+      // snapshot. Best-effort — if this also fails, the user just sees
+      // an error and the row will be cleaned up by the next regenerate.
+      await supabase.from('portrait_predictions').delete().eq('id', predictionRow.id)
+      throw snapErr
+    }
+
+    const payload = await buildPortraitPayload(supabase, userId)
+    return res.status(200).json(payload)
+  } catch (err: any) {
+    console.error('[utilities/portrait] POST failed:', err)
+    return res.status(500).json({ error: err?.message || 'Failed to generate portrait' })
+  }
+}
+
+/**
+ * Cron handler. Iterates predictions whose sealed_until has passed and
+ * which don't yet have a reckoning row. Each prediction is graded by a
+ * Flash call against the corpus from THAT prediction's own sealed week
+ * — not the trailing 7 days from now. (Cron can lag by hours or even
+ * days; using a fixed window means the verdict is always against the
+ * week the prediction was actually sealed for.)
+ *
+ * Bearer-token authed via IDEA_ENGINE_SECRET, same as the rest of the
+ * polymath cron endpoints — there's no end-user request driving this.
+ */
+async function handlePortraitReckon(req: VercelRequest, res: VercelResponse) {
+  // Node lowercases all incoming header keys, so the lowercase lookup
+  // is enough; the capital-A fallback is defensive belt-and-braces.
+  const authHeaderRaw = req.headers['authorization'] || req.headers['Authorization']
+  const expectedToken = process.env.IDEA_ENGINE_SECRET
+  if (!expectedToken) {
+    return res.status(500).json({ error: 'Cron secret not configured' })
+  }
+  const headerStr = Array.isArray(authHeaderRaw) ? authHeaderRaw[0] : authHeaderRaw
+  if (!headerStr || !headerStr.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized' })
+  }
+  if (!timingSafeStringEqual(headerStr.slice(7), expectedToken)) {
+    return res.status(401).json({ error: 'Unauthorized' })
+  }
+
+  const supabase = getSupabaseClient()
+  const today = new Date().toISOString().slice(0, 10)
+
+  try {
+    // Find unscored predictions whose sealed_until has passed. Left join
+    // against reckonings to filter out ones already scored.
+    const { data: due, error } = await supabase
+      .from('portrait_predictions')
+      .select('id, user_id, prediction, week_starting, sealed_until, generated_at, portrait_reckonings(id)')
+      .lte('sealed_until', today)
+      .order('sealed_until', { ascending: true })
+      .limit(50)
+    if (error) throw error
+
+    const unscored = (due ?? []).filter((row: any) =>
+      !row.portrait_reckonings || row.portrait_reckonings.length === 0
+    )
+
+    let scored = 0
+    let failed = 0
+    // Group by user so we only do one gather per user, then run the
+    // Flash call per prediction in that user's group. Each prediction
+    // still gets graded against its own window — gather is called with
+    // since=generated_at, until=sealed_until+1d so we cover the full
+    // sealed window for each prediction.
+    const byUser = new Map<string, typeof unscored>()
+    for (const p of unscored) {
+      const list = byUser.get(p.user_id) ?? []
+      list.push(p)
+      byUser.set(p.user_id, list)
+    }
+
+    for (const [userId, predictions] of byUser) {
+      // Cache gathers by window — multiple predictions for the same
+      // user can share a window if they were generated together.
+      const cache = new Map<string, Awaited<ReturnType<typeof gatherWeek>>>()
+      for (const pred of predictions) {
+        try {
+          // Sealed window for this prediction: from generated_at through
+          // sealed_until (end of day, exclusive of the day after).
+          const since = pred.generated_at as string
+          const sealedEnd = new Date(pred.sealed_until as string)
+          // Push the upper bound to the END of sealed_until's day (UTC)
+          // so a capture made on the last day still counts.
+          sealedEnd.setUTCDate(sealedEnd.getUTCDate() + 1)
+          const until = sealedEnd.toISOString()
+          const cacheKey = `${since}|${until}`
+          let corpus = cache.get(cacheKey)
+          if (!corpus) {
+            corpus = await gatherWeek(supabase, userId, { since, until })
+            cache.set(cacheKey, corpus)
+          }
+          const result = await reckonPrediction(pred.prediction, corpus)
+          if (!result) {
+            failed++
+            continue
+          }
+          const { error: insErr } = await supabase
+            .from('portrait_reckonings')
+            .insert({
+              prediction_id: pred.id,
+              called: result.called,
+              evidence: result.evidence,
+              score: scoreForCall(result.called),
+            })
+          if (insErr) {
+            console.warn('[portrait/reckon] insert failed for', pred.id, insErr.message)
+            failed++
+          } else {
+            scored++
+          }
+        } catch (e: any) {
+          console.warn('[portrait/reckon] prediction', pred.id, 'failed:', e?.message)
+          failed++
+        }
+      }
+    }
+
+    return res.status(200).json({ checked: unscored.length, scored, failed })
+  } catch (err: any) {
+    console.error('[utilities/portrait-reckon] failed:', err)
+    return res.status(500).json({ error: err?.message || 'Reckon failed' })
+  }
+}
+
+/**
+ * Constant-time string comparison. Returns false immediately on length
+ * mismatch (a length-side-channel is not a meaningful attack vector
+ * here — the secret length is fixed in the deployment), then xors each
+ * byte to avoid an early return on the first mismatch.
+ */
+function timingSafeStringEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false
+  let mismatch = 0
+  for (let i = 0; i < a.length; i++) {
+    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  }
+  return mismatch === 0
+}
+
+/**
+ * Assembles the page payload from the three portrait tables. Used by
+ * both GET ?resource=portrait and POST ?resource=portrait (after a fresh
+ * generation) so the page can render off a single shape.
+ */
+async function buildPortraitPayload(
+  supabase: ReturnType<typeof getSupabaseClient>,
+  userId: string,
+): Promise<PortraitPayload> {
+  // First, fetch the user's prediction ids — this is the explicit guard
+  // for the calibration query (defence-in-depth on top of RLS). We
+  // resolve ids first, then constrain the reckonings query with .in().
+  const [snapRes, predsRes, userPredIdsRes] = await Promise.all([
+    supabase
+      .from('portrait_snapshots')
+      .select('id, body, evidence_refs, generated_at')
+      .eq('user_id', userId)
+      .order('generated_at', { ascending: false })
+      .limit(1),
+    supabase
+      .from('portrait_predictions')
+      .select(`
+        id, prediction, week_starting, sealed_until, generated_at,
+        portrait_reckonings(id, prediction_id, called, evidence, score, evaluated_at)
+      `)
+      .eq('user_id', userId)
+      .order('generated_at', { ascending: false })
+      .limit(16),
+    supabase
+      .from('portrait_predictions')
+      .select('id')
+      .eq('user_id', userId)
+      .limit(200),
+  ])
+
+  // Calibration. Filter reckonings to this user's prediction ids — no
+  // join, no PostgREST syntax ambiguity. Two round-trips but bulletproof.
+  const userPredIds = (userPredIdsRes.data ?? []).map((r: any) => r.id)
+  let calibration: PortraitPayload['calibration'] = null
+  if (userPredIds.length > 0) {
+    const { data: calibRows } = await supabase
+      .from('portrait_reckonings')
+      .select('id, score, evaluated_at')
+      .in('prediction_id', userPredIds)
+      .order('evaluated_at', { ascending: false })
+      .limit(CALIBRATION_WINDOW)
+    const reckonings = (calibRows ?? []) as any[]
+    if (reckonings.length > 0) {
+      const sum = reckonings.reduce((acc, r) => acc + (typeof r.score === 'string' ? parseFloat(r.score) : r.score), 0)
+      calibration = {
+        score_sum: sum,
+        count: reckonings.length,
+        display: `${formatScore(sum)} / ${reckonings.length}`,
+      }
+    }
+  }
+
+  const snapshot = snapRes.data?.[0]
+    ? {
+        id: snapRes.data[0].id,
+        body: snapRes.data[0].body,
+        evidence_refs: snapRes.data[0].evidence_refs ?? [],
+        generated_at: snapRes.data[0].generated_at,
+      }
+    : null
+
+  // Split predictions into "last_prediction" (most-recently-EVALUATED
+  // reckoned one — the most recent verdict the user has seen) and
+  // "next_prediction" (most recent un-reckoned). Picking by
+  // evaluated_at rather than generated_at means "last week's verdict"
+  // always shows the most recently delivered one, even if predictions
+  // arrive out of order under cron lag.
+  const predictions = (predsRes.data ?? []) as any[]
+
+  let next_prediction: PortraitPayload['next_prediction'] = null
+  for (const p of predictions) {
+    const r = Array.isArray(p.portrait_reckonings) && p.portrait_reckonings.length > 0
+      ? p.portrait_reckonings[0]
+      : null
+    if (!r) {
+      next_prediction = {
+        id: p.id,
+        prediction: p.prediction,
+        week_starting: p.week_starting,
+        sealed_until: p.sealed_until,
+        generated_at: p.generated_at,
+      }
+      break  // predictions are ordered DESC by generated_at; first un-reckoned wins
+    }
+  }
+
+  let last_prediction: PortraitPredictionWithReckoning | null = null
+  const reckonedPreds = predictions
+    .map((p: any) => {
+      const r = Array.isArray(p.portrait_reckonings) && p.portrait_reckonings.length > 0
+        ? p.portrait_reckonings[0]
+        : null
+      return r ? { pred: p, reckoning: r } : null
+    })
+    .filter((x): x is { pred: any; reckoning: any } => x !== null)
+    .sort((a, b) => new Date(b.reckoning.evaluated_at).getTime() - new Date(a.reckoning.evaluated_at).getTime())
+  const top = reckonedPreds[0]
+  if (top) {
+    last_prediction = {
+      id: top.pred.id,
+      prediction: top.pred.prediction,
+      week_starting: top.pred.week_starting,
+      sealed_until: top.pred.sealed_until,
+      generated_at: top.pred.generated_at,
+      reckoning: {
+        id: top.reckoning.id,
+        prediction_id: top.reckoning.prediction_id ?? top.pred.id,
+        called: top.reckoning.called,
+        evidence: top.reckoning.evidence,
+        score: typeof top.reckoning.score === 'string' ? parseFloat(top.reckoning.score) : top.reckoning.score,
+        evaluated_at: top.reckoning.evaluated_at,
+      },
+    }
+  }
+
+  const next_refresh_available_at = snapshot
+    ? new Date(new Date(snapshot.generated_at).getTime() + PORTRAIT_REFRESH_DEBOUNCE_MS).toISOString()
+    : null
+
+  return { snapshot, last_prediction, next_prediction, calibration, next_refresh_available_at }
+}
+
+function formatScore(n: number): string {
+  // Whole numbers render as "7", halves render as "7.5".
+  return Number.isInteger(n) ? String(n) : n.toFixed(1)
 }

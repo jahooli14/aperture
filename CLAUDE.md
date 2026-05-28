@@ -46,38 +46,44 @@ Polymath is a **creative harness**. The user opens it with willpower to spend on
 
 ### Core loop
 
-1. User records a voice note **inside the app** (no AudioPen — the integration was never real). Pipeline transcribes, tidies the prose, generates a title, saves as a "thought."
-2. Thoughts feed the project corpus: existing projects (active / dormant / abandoned), lists (films / books / places — these are **identity signals**, not consumption logs; reading *Flowers for Algernon* makes you a different creative person from someone reading *50 Shades*), reading queue + highlights.
-3. The home delivers The Moment + active project focus.
+1. **Capture.** Voice note in-app → transcribe → tidy prose → title → save as a "thought." Capture-time triage classifies intent (`memory_type`, `triage.category`) so downstream surfaces can find it.
+2. **Feed the corpus.** Thoughts join projects (active / dormant / abandoned with `blockers`), lists (films / books / music / places / etc.), and reading (queue + RSS + highlights). Lists are **identity signals**, not consumption logs — reading *Flowers for Algernon* makes you a different creative person from someone reading *50 Shades*.
+3. **Direct the willpower.** The home stacks a starred project to push on, recently-touched projects to keep warm, an on-demand "suggest a project" surface, and an identity strip showing what you're consuming.
+
+### Home surface stack (as shipped — `HomePage.tsx`)
+
+A labelled editorial stack, separated by hairline seams:
+
+1. **Masthead** — "Aperture." wordmark + search + (after 21:30) bedtime icon.
+2. **Your priority** — `KeepGoingCard` for the starred project. Pulls a Power Hour plan; "Start session" opens the focus overlay.
+3. **Still warm** — `RecentlyActiveMini`, 2-up glass cards of recently-touched projects.
+4. **The queue** — `UpNextMini`, 2-up ghost cards of projects waiting their turn.
+5. **Try something new** — `ProjectIdeasHome`. Collapsed by default to a quiet "suggest a project" pill. Clicking either reveals a queued idea (instant, baked overnight) or kicks the fast path (~10s).
+6. **Now consuming** — `ConsumingWidget`. Active list items on top; Saved reads + New reads dropdowns underneath.
+7. **Thought of the day** — `ThoughtOfTheDay`, an editorial pull-quote from a past memory.
+
+### "Suggest a project" — modes inside `ProjectIdeasHome`
+
+The on-demand surface is the killer one. Two cooperating generators, with the UI deriving a visual mode per idea so each card reads as a distinct kind of correspondence from the harness:
+
+- **READ mode** (`mode='read'` in the DB) — the longitudinal pattern reader. Names a through-line across projects/voice notes/lists/reading the user hasn't said out loud, then names the project that breaks or extends it. The pattern is the hero; the project title sits below as the consequence. Cron-only — too slow for the on-demand path. Auto-surfaces on confidence ≥70; below that it sits in the queue.
+- **CROSSOVER mode** (`mode='crossover'`) — locked (centre × arrival) seed pairs. Has four derived visual sub-modes based on evidence:
+  - **new_idea** — a project shape coalescing across recent captures.
+  - **forgotten** (3–16 weeks dormant) — "you set this down — pick it up."
+  - **reshape** (16+ weeks dormant) — "you started this when you were a different person; here's the version that fits who you are now." Honors the original capture, serves the present self.
+  - **extend** — concrete new direction for an active project, prompted by a recent capture.
+
+Cron bakes a deep queue overnight (full pipeline, Read enabled). The on-demand button either reveals a queued idea or runs the fast path (single Flash call over the full corpus, ~10s). Cooldowns enforced at the project level: rejected centres blocked 180d, shown-not-acted-on centres blocked 30d.
 
 ### What's NOT in the user's mental model
 
-- **Todos / Fix Queue / AudioPen** — historical or unused. Code may still exist for these. Don't reference them as live features. If asked to extend them, ask first.
-- **Idea Engine emails** — separate Python project, not a Polymath surface.
-- **Context Engine sidebar** (`src/components/context/ContextSidebar.tsx`) — surfaces an "AI Analysis" panel from many pages. Prompts in `api/connections.ts` (`analyze` + the `ai-action` types) were rewritten to plain English and are now voice-gated via `findVoiceViolations` with a quiet fallback. Still owner-unloved — confirm it's wanted before extending. If you add a new `ai-action` prompt, include a concrete BAD/GOOD anti-example like the existing ones.
+- **Todos / Fix Queue / AudioPen** — historical or unused. Fix Queue route + API still exist so old drafts stay visible, but cron is disabled and it isn't surfaced on home. Don't extend without checking.
+- **Idea Engine emails** — separate Python project, lives in this repo for hosting cost only.
+- **Context Engine sidebar** (`src/components/context/ContextSidebar.tsx`) — surfaces an "AI Analysis" panel from many pages. Prompts in `api/connections.ts` (`analyze` + the `ai-action` types) are plain-English and voice-gated via `findVoiceViolations`. Still owner-unloved — confirm it's wanted before extending. If you add a new `ai-action` prompt, include a concrete BAD/GOOD anti-example like the existing ones.
 
 ### Project = creative goal with a defined output
 
-Active, partly-shaped, dormant, and abandoned are different states. Long-dormant projects are explicitly **not** waste — they are eligible for reshape (see Mode 2b below).
-
-### Home surface stack (target — work in progress to consolidate to this)
-
-1. **Header** — brand + duration toggle + search
-2. **The Moment** — single hero card, dynamic content based on which mode scores highest (see below)
-3. **Keep Going** — focus mode for active projects, Power Hour planning
-4. **Now Consuming** — compact strip of active list items
-5. **Thought of the Day** — resurfaced memory quote
-
-Cards being **deprecated / folded into The Moment**: This Week (mashups), Unshaped Nudge, Try Something New. Their jobs map to Mode 3, Mode 1, and Mode 2 respectively.
-
-### The Moment — three modes, scored each time
-
-The Moment is the killer surface. It scores three modes 0-100 and fires the highest. Each mode has its own quality bar; modes don't fire just because it's a slow week.
-
-- **Mode 1 — NEW IDEA COALESCING.** Name a project the user has been quietly circling across 3+ captures over 30-90 days but hasn't said out loud. Ripe when a concrete artefact-shape can be named in ≤6 words AND the theme isn't already a project AND identity (lists / reading) reinforces.
-- **Mode 2a — RECENT FORGOTTEN PROJECT (3-16 weeks dormant).** "You forgot about this — pick it up." Ripe when recent captures resonate with the project's themes AND it has a defined deliverable AND not surfaced in 4+ weeks.
-- **Mode 2b — LONG-DORMANT RESHAPE (4+ months dormant).** "You started this when you were a different person. Here's the version that fits who you are now." The reshape uses what the user has acquired *since* (skills, reading, completed projects, taste) to re-frame the original. Cooldown 12 weeks; reshape regenerates each time so it lands fresh. Honor the original capture, serve the present self.
-- **Mode 3 — EXTEND.** "Here's a specific direction for an existing project." A recent capture (≤30 days) suggests a concrete new feature/output for an existing active or dormant project. Ripe when the extension is specific (names the new output) and the project can absorb it.
+Active, partly-shaped, dormant, and abandoned are different states. Long-dormant projects are explicitly **not** waste — they are eligible for reshape via the crossover generator.
 
 ### Anti-patterns (kill on sight)
 
@@ -90,13 +96,14 @@ The Moment is the killer surface. It scores three modes 0-100 and fires the high
 
 Lists + reading queue + recent highlights are framing inputs. Same project surfaces with different framing depending on what the user has been reading. *Bed by Ten* after a minimalism book reads differently than *Bed by Ten* after a film about constraint.
 
-### Inputs to add (high-leverage, in order)
+### Session context
 
-1. **Session context at app open** — one tap before home renders: how long (15/60/90, already on the duration toggle) + how you're feeling (focused / scattered / restless). The Moment calibrates everything to context.
-2. **Per-project blocker field** — when work pauses, prompt "what's blocked here?" One sentence captured at the moment of pause. Powers the long-dormant reshape.
-3. **List-item / reading reaction tags** — one tap per item: "inspired me" / "felt off" / "made me want to make X." Identity signal.
-4. **Post-Keep-Going capture** — after a focus session ends, prompt "what did you do? what's next?" 30-second voice note feeds project freshness + cooldowns.
-5. **Voice-note intent extraction at capture time** — already transcribing + tidying. Also extract: project idea / frustration / reflection / taste signal. Zero friction. Powers Mode 1 and Mode 3.
+`useSessionContextStore` carries a per-session `feeling` (focused / scattered / restless), captured by the FeelingPill at app open and persisted to sessionStorage (resets when the tab closes). The on-demand "suggest a project" path passes it into the generator prompt so the re-roll calibrates to right-now state.
+
+### Inputs still to add
+
+1. **List-item / reading reaction tags** — one tap per item: "inspired me" / "felt off" / "made me want to make X." Sharpens the identity signal beyond "added to list."
+2. **Post-Keep-Going capture** — after a focus session ends, prompt "what did you do? what's next?" A 30-second voice note feeds project freshness + cooldowns.
 
 ## Commands
 
