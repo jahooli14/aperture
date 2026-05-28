@@ -6,7 +6,7 @@
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, ExternalLink, Archive, Loader2, Highlighter, Clock, Type, Mic, X } from 'lucide-react'
+import { ArrowLeft, ExternalLink, Archive, Loader2, Highlighter, Clock, Type, Mic, X, Check } from 'lucide-react'
 import DOMPurify from 'dompurify'
 import { useReadingStore } from '../stores/useReadingStore'
 import { useArticle } from '../hooks/useArticle'
@@ -62,6 +62,7 @@ export function ReaderPage() {
   const [isHighlighterMode, setIsHighlighterMode] = useState(false)
   const [showVoiceNote, setShowVoiceNote] = useState(false)
   const [savingNote, setSavingNote] = useState(false)
+  const [noteText, setNoteText] = useState('')
 
   // Automatic offline caching
   useEffect(() => {
@@ -298,30 +299,79 @@ export function ReaderPage() {
     }
   }
 
-  const handleVoiceNote = async (text: string) => {
-    if (!article || !text.trim()) return
+  // Save a thought tied to this article. Two things the old version got
+  // wrong: it POSTed to /api/memories (the "mark reviewed" handler, which
+  // never creates anything) and never checked response.ok — so a rejected
+  // save still showed "captured". This goes through the capture endpoint
+  // and then links the new thought to the article so it's genuinely related.
+  const handleSaveNote = async (text: string) => {
+    const trimmed = text.trim()
+    if (!article || !trimmed) return
     setSavingNote(true)
     try {
-      await fetch('/api/memories', {
+      const res = await fetch('/api/memories?capture=true', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: `Thought on: ${article.title}`,
-          body: text,
+          // 'body' = manual text entry (no transcript re-parsing); tag it so
+          // these reading thoughts are findable, and pass the article as the
+          // source so the connection below has context.
+          body: trimmed,
           tags: ['reading-thought'],
-          source_reference: { type: 'article', id: article.id }
-        })
+          source_reference: {
+            type: 'article',
+            id: article.id,
+            title: article.title,
+            url: article.url,
+          },
+        }),
       })
+
+      if (!res.ok) {
+        let detail = `HTTP ${res.status}`
+        try {
+          const err = await res.json()
+          detail = err.details || err.error || detail
+        } catch { /* non-JSON error body */ }
+        throw new Error(detail)
+      }
+
+      const data = await res.json()
+      const memoryId = data?.memory?.id
+
+      // Explicitly link the thought to the article. Embedding-based linking
+      // runs in the background but isn't guaranteed to connect these two —
+      // this makes "related" actually true. Non-fatal if it fails.
+      if (memoryId) {
+        try {
+          await fetch('/api/connections?action=create-spark', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              source_type: 'article',
+              source_id: article.id,
+              target_type: 'thought',
+              target_id: memoryId,
+              connection_type: 'reading_thought',
+            }),
+          })
+        } catch (linkErr) {
+          console.warn('[ReaderPage] Failed to link thought to article:', linkErr)
+        }
+      }
+
       addToast({
-        title: 'Thought captured',
-        description: 'Saved to your thoughts',
+        title: 'Thought saved',
+        description: `Linked to "${article.title}"`,
         variant: 'success',
       })
+      setNoteText('')
       setShowVoiceNote(false)
-    } catch {
+    } catch (error) {
+      console.error('[ReaderPage] Failed to save thought:', error)
       addToast({
         title: 'Failed to save',
-        description: 'Could not save your thought. Try again.',
+        description: 'Your text is still here — tap Save to try again.',
         variant: 'destructive',
       })
     } finally {
@@ -763,7 +813,7 @@ export function ReaderPage() {
                 WebkitBackdropFilter: 'blur(16px)',
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 0 10px var(--glass-surface)',
               }}
-              aria-label="Record a thought about this article"
+              aria-label="Add a thought about this article"
             >
               <Mic className="h-6 w-6 text-white" />
             </motion.button>
@@ -809,12 +859,41 @@ export function ReaderPage() {
                       <X className="h-6 w-6 text-brand-text-muted" />
                     </button>
                   </div>
-                  <div className="px-8 pb-10">
+                  <div className="px-8 pb-10 space-y-4">
+                    {/* Type it or talk it. Voice transcribes into the same
+                        box so you can read it back and edit before saving —
+                        nothing gets fired off behind your back. */}
+                    <textarea
+                      value={noteText}
+                      onChange={(e) => setNoteText(e.target.value)}
+                      autoFocus
+                      rows={4}
+                      placeholder="What did this spark? Type, or tap the mic to talk."
+                      className="w-full resize-none rounded-2xl p-4 text-[15px] leading-relaxed text-[var(--brand-text-primary)] bg-[var(--glass-surface)] placeholder:text-[var(--brand-text-muted)] focus:outline-none"
+                      style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface-hover)' }}
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => handleSaveNote(noteText)}
+                      disabled={savingNote || !noteText.trim()}
+                      className="w-full py-3.5 rounded-xl flex items-center justify-center gap-2 font-semibold text-white transition-all disabled:opacity-40"
+                      style={{ backgroundColor: 'var(--brand-primary)' }}
+                    >
+                      {savingNote ? (
+                        <><Loader2 className="h-5 w-5 animate-spin" /> Saving…</>
+                      ) : (
+                        <><Check className="h-5 w-5" /> Save thought</>
+                      )}
+                    </button>
+
                     <VoiceInput
-                      onTranscript={handleVoiceNote}
                       maxDuration={60}
                       autoSubmit={true}
-                      autoStart={true}
+                      autoStart={false}
+                      onTranscript={(t) =>
+                        setNoteText((prev) => (prev.trim() ? `${prev.trim()} ${t}` : t))
+                      }
                     />
                   </div>
                 </div>
