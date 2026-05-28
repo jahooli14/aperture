@@ -887,21 +887,30 @@ export function ConsumingWidget() {
         )}
 
         {/* Widget footer — quick "+ Add feed" opens the inline sheet,
-            "Manage" goes to /rss for unsubscribe / toggle. Always visible
-            when the widget renders so the user can always find subscribe. */}
+            "All reading" jumps to /reading (queue / unread / archived
+            tabs), "Manage" goes to /rss for unsubscribe / toggle. Always
+            visible when the widget renders. */}
         <div className="flex items-center border-t border-white/[0.04]">
           <button
             type="button"
             onClick={() => setAddFeedOpen(true)}
-            className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-[11px] uppercase tracking-[0.15em] text-[var(--brand-text-muted)] opacity-70 hover:opacity-100 hover:bg-white/[0.025] transition-all"
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-[11px] uppercase tracking-[0.15em] text-[var(--brand-text-muted)] opacity-70 hover:opacity-100 hover:bg-white/[0.025] transition-all"
           >
             <Plus className="h-3 w-3" />
             <span>Add feed</span>
           </button>
           <div className="h-5 w-px bg-white/[0.05]" aria-hidden />
           <Link
+            to="/reading"
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-[11px] uppercase tracking-[0.15em] text-[var(--brand-text-muted)] opacity-70 hover:opacity-100 hover:bg-white/[0.025] transition-all"
+          >
+            <span>All reading</span>
+            <ArrowRight className="h-3 w-3" />
+          </Link>
+          <div className="h-5 w-px bg-white/[0.05]" aria-hidden />
+          <Link
             to="/rss"
-            className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-[11px] uppercase tracking-[0.15em] text-[var(--brand-text-muted)] opacity-70 hover:opacity-100 hover:bg-white/[0.025] transition-all"
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-[11px] uppercase tracking-[0.15em] text-[var(--brand-text-muted)] opacity-70 hover:opacity-100 hover:bg-white/[0.025] transition-all"
           >
             <Settings2 className="h-3 w-3" />
             <span>Manage</span>
