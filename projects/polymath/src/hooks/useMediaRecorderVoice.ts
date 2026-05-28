@@ -196,6 +196,13 @@ export function useMediaRecorderVoice({
         const { queueOperation } = await import('../lib/offlineQueue')
         const captureId = await db.addPendingCapture({ blob: audioBlob, mimeType })
         await queueOperation('capture_media', { captureId })
+        // Bump the visible "pending sync" count immediately so the queued
+        // note shows up in the offline indicator — otherwise it stays hidden
+        // until the next sync tick and the capture feels lost.
+        try {
+          const { useOfflineStore } = await import('../stores/useOfflineStore')
+          await useOfflineStore.getState().updateQueueSize()
+        } catch { /* non-critical */ }
         window.dispatchEvent(new CustomEvent('voice-capture-queued-offline', {
           detail: { message: 'Voice note saved offline and will be transcribed when back online' }
         }))

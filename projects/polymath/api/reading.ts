@@ -1221,6 +1221,33 @@ function extractDomain(url: string): string {
   }
 }
 
+// Conservative URL canonicaliser for dedupe. Strips only well-known tracking
+// params (utm_*, fbclid, gclid, etc.) and a trailing slash — these are what
+// the Android share sheet bolts on, producing "duplicate" saves of the same
+// article. Functional query params and hash fragments are left intact so we
+// never merge two genuinely different pages.
+const TRACKING_PARAMS = [
+  'fbclid', 'gclid', 'gclsrc', 'dclid', 'msclkid', 'mc_cid', 'mc_eid',
+  'igshid', 'ref', 'ref_src', 'ref_url', 's', 'spm', 'yclid', '_hsenc', '_hsmi',
+]
+function normalizeArticleUrl(raw: string): string {
+  try {
+    const u = new URL(raw.trim())
+    for (const key of [...u.searchParams.keys()]) {
+      if (key.toLowerCase().startsWith('utm_') || TRACKING_PARAMS.includes(key.toLowerCase())) {
+        u.searchParams.delete(key)
+      }
+    }
+    // Drop a lone trailing slash on the path (keep "/" for the root).
+    if (u.pathname.length > 1 && u.pathname.endsWith('/')) {
+      u.pathname = u.pathname.slice(0, -1)
+    }
+    return u.toString()
+  } catch {
+    return raw.trim()
+  }
+}
+
 function estimateReadTime(content: string): number {
   // Strip HTML tags before counting words
   const textOnly = content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
@@ -1710,26 +1737,31 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
   // POST - Save new article (only if no resource specified)
   if (req.method === 'POST' && !resource) {
     try {
-      const { url, tags, title, content, excerpt } = req.body
+      const { url: rawUrl, tags, title, content, excerpt } = req.body
 
-      if (!url || typeof url !== 'string') {
+      if (!rawUrl || typeof rawUrl !== 'string') {
         return res.status(400).json({ error: 'URL is required' })
       }
 
       try {
-        new URL(url)
+        new URL(rawUrl)
       } catch {
         return res.status(400).json({ error: 'Invalid URL format' })
       }
 
+      // Canonicalise so the same article shared with different tracking params
+      // (the Android share sheet's habit) dedupes instead of piling up.
+      const url = normalizeArticleUrl(rawUrl)
 
-      // Check for duplicates
-      const { data: existing } = await supabase
+      // Check for duplicates — match the canonical URL and, for older rows
+      // saved before normalisation, the raw URL too.
+      const { data: existingRows } = await supabase
         .from('reading_queue')
         .select('*')
         .eq('user_id', userId)
-        .eq('url', url)
-        .single()
+        .in('url', url === rawUrl ? [url] : [url, rawUrl])
+        .limit(1)
+      const existing = existingRows?.[0]
 
       if (existing) {
         return res.status(200).json({
