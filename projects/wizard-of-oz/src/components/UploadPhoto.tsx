@@ -8,6 +8,7 @@ import { DateSelector } from './DateSelector';
 import { UploadButtons } from './UploadButtons';
 import { PreviewControls } from './PreviewControls';
 import { EyeAdjust, type EyeAdjustCoords } from './EyeAdjust';
+import { getTodayLocalDateString, toLocalDateString } from '../lib/dateUtils';
 import { rotateImage, fileToDataURL, validateImageFile, alignPhoto, compressImage, calculateZoomLevel, type AlignmentResult } from '../lib/imageUtils';
 import { triggerHaptic } from '../lib/haptics';
 import { logger } from '../lib/logger';
@@ -44,13 +45,13 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
   const { uploadPhoto, uploading, hasUploadedToday, hasUploadedForDate, getEyeHistoryStats } = usePhotoStore();
   const { settings } = useSettingsStore();
 
-  // Get today's date in YYYY-MM-DD format
-  const today = new Date().toISOString().split('T')[0];
+  // Get today's date in YYYY-MM-DD format (local, not UTC)
+  const today = getTodayLocalDateString();
 
   // Calculate minimum date (5 years ago)
   const fiveYearsAgo = new Date();
   fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
-  const minDate = fiveYearsAgo.toISOString().split('T')[0];
+  const minDate = toLocalDateString(fiveYearsAgo);
 
   const displayDate = customDate || today;
 

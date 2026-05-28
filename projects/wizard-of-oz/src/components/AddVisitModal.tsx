@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, MapPin, Plus } from 'lucide-react';
 import { usePlaceStore } from '../stores/usePlaceStore';
+import { getTodayLocalDateString } from '../lib/dateUtils';
 import type { Database } from '../types/database';
 
 type PlaceWithStats = Database['public']['Views']['places_with_stats']['Row'];
@@ -16,7 +17,7 @@ interface AddVisitModalProps {
 export function AddVisitModal({ isOpen, selectedPlace, onClose, onSuccess }: AddVisitModalProps) {
   const { placesWithStats, addPlaceVisit } = usePlaceStore();
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
-  const [visitDate, setVisitDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [visitDate, setVisitDate] = useState<string>(getTodayLocalDateString());
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -44,7 +45,7 @@ export function AddVisitModal({ isOpen, selectedPlace, onClose, onSuccess }: Add
       });
 
       // Reset form
-      setVisitDate(new Date().toISOString().split('T')[0]);
+      setVisitDate(getTodayLocalDateString());
       setNotes('');
       setSelectedPlaceId(selectedPlace?.id || null);
 
