@@ -27,11 +27,31 @@ export interface FASResult extends FASComponents {
 // block so the sampler has more compositional material; the sampler weights
 // by FAS, so low-FAS blocks get drawn rarely.
 //
-// Tuned from the FAS formula: weighted sum maxes at ~0.65 even for a clearly
-// novel idea (1.0 structural × 0.3 + 0.5 distance × 0.25 + 0 leap × 0.2 +
-// 0.5 surprise × 0.25 = 0.55). At 0.7 the digest was effectively unreachable
-// and every day fell into the vault/empty branch.
+// A genuinely new idea on an unexplored domain pair now scores: 1.0 structural
+// × 0.3 + ~0.5 distance × 0.25 + ~0 leap × 0.2 + ~0.5 surprise × 0.25 = ~0.55.
+// So the threshold sits right at "novel pair, decent distance and surprise":
+// strong cross-domain ideas clear it, safe restatements don't. Anything that
+// reuses a well-mined pair loses most of the structural slice and falls short.
 export const HIGH_SIGNAL_THRESHOLD = 0.55;
+
+/**
+ * Structural novelty from a domain pair's raw generation count.
+ *
+ * `timesGenerated` includes the *current* idea's own generation — the pair is
+ * stamped (recordDomainPairGeneration) at generate time, hours before review
+ * computes FAS — so we subtract one. A connection tried for the first time
+ * reads as fully novel; novelty then erodes 0.1 per prior exploration.
+ *
+ * This replaced a time-decay formula (timeDecay = daysSince(last_generated)/90)
+ * that was always ~0: last_generated_at is "now" by the time FAS runs, so
+ * structural novelty collapsed to ~0 for every idea and the digest bar became
+ * mathematically unreachable. Pure + exported so it's unit-testable.
+ */
+export function structuralNoveltyFromCount(timesGenerated: number): number {
+  const priorExplorations = Math.max(0, timesGenerated - 1);
+  if (priorExplorations === 0) return 1.0;
+  return Math.max(0, 1 - priorExplorations * 0.1);
+}
 
 /**
  * Calculate Frontier Advancement Score
@@ -98,33 +118,20 @@ async function calculateDomainPairNovelty(
 
   const { data, error } = await supabase
     .from('ie_domain_pairs')
-    .select('times_generated, last_generated_at')
+    .select('times_generated')
     .eq('user_id', userId)
     .eq('domain_a', a)
     .eq('domain_b', b)
     .single();
 
   if (error || !data) {
-    // Never explored before = maximum novelty
+    // No row at all = never explored = maximum novelty
     return 1.0;
   }
 
-  // If explored before, novelty decays with time since last exploration
-  const timesGenerated = data.times_generated;
-  if (timesGenerated === 0) return 1.0;
-
-  // Decay over 90 days
-  const lastGenerated = data.last_generated_at
-    ? new Date(data.last_generated_at)
-    : new Date(0);
-  const daysSince = (Date.now() - lastGenerated.getTime()) / (1000 * 60 * 60 * 24);
-
-  const timeDecay = Math.min(1.0, daysSince / 90);
-
-  // Exploration penalty: more times explored = less novel
-  const explorationPenalty = Math.max(0, 1 - timesGenerated * 0.1);
-
-  return timeDecay * explorationPenalty;
+  // Novelty erodes with how many times this connection was mined *before* the
+  // current idea. See structuralNoveltyFromCount for why we don't time-decay.
+  return structuralNoveltyFromCount(data.times_generated ?? 0);
 }
 
 /**
