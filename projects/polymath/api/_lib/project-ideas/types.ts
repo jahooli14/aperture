@@ -51,6 +51,20 @@ export type IdeaMode = 'crossover' | 'read'
  */
 export type IdeaShape = 'coalescing' | 'recent_forgotten' | 'reshape' | 'extend'
 
+/** What ACTUALLY happened to an idea the user built into a project. Derived
+ *  read-side from the spawned project (project.metadata.from_idea === idea.id):
+ *
+ *    shipped  — the project reached 'completed'. The platinum outcome.
+ *    worked   — active and genuinely moved since it was created (progress,
+ *               completed tasks, or fresh activity). Real traction.
+ *    claimed  — a project exists but hasn't moved since the user spun it up.
+ *    stalled  — went dormant / abandoned, or no project was ever created.
+ *
+ *  Orthogonal to project_ideas.status ('built' is the tap; this is the
+ *  result), so it's computed at gather time rather than stored — no write
+ *  instrumentation, always current. */
+export type IdeaOutcome = 'shipped' | 'worked' | 'claimed' | 'stalled'
+
 export interface ProjectIdea {
   rank: number
   title: string
@@ -99,7 +113,14 @@ export interface GatherResult {
   prior_ideas: {
     saved: Array<{ title: string; feedback: string | null }>
     rejected: Array<{ title: string; feedback: string | null }>
-    built: Array<{ title: string; feedback: string | null }>
+    /** Built ideas carry their REAL outcome, derived at gather time from the
+     *  project the idea spawned (linked via project.metadata.from_idea).
+     *  "built" is only the user's tap — the outcome is what actually happened
+     *  to the thing. This is the signal that closes the loop: the generator
+     *  should repeat the shapes that ship and back off the ones that stall.
+     *  `shape` is the Read-mode sub-shape (reshape / recent_forgotten / …) so
+     *  the prompt can tell when a *resurrection* specifically landed. */
+    built: Array<{ title: string; feedback: string | null; outcome: IdeaOutcome | null; shape: IdeaShape | null }>
   }
   /** Seed pairs used in recent batches (within the cooldown window).
    *  Drives the picker's "don't reuse this convergence" filter. */

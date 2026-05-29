@@ -29,7 +29,26 @@ import { MODELS } from '../models.js'
 import { pickSeedPairs, tokenise, topicalOverlap, type SeedCandidate } from './seed-picker.js'
 import { PLAIN_ENGLISH_RULES } from '../plain-english.js'
 import { DEFAULT_IDEA_BRIEF } from './default-prompt.js'
-import type { ArrivalKind, CentreKind, GatherResult, GenerationResult, IdeaEvidence, ProjectIdea, SeedPair } from './types.js'
+import type { ArrivalKind, CentreKind, GatherResult, GenerationResult, IdeaEvidence, IdeaOutcome, ProjectIdea, SeedPair } from './types.js'
+
+/** Built ideas now carry their real outcome (see types.ts / gather.ts). The
+ *  generator surfaces that outcome so it can repeat what ships and back off
+ *  what stalls — "built" alone was never the signal; the result is. */
+type BuiltIdea = GatherResult['prior_ideas']['built'][number]
+
+const OUTCOME_TAG: Record<IdeaOutcome, string> = {
+  shipped: '✓ SHIPPED — they took this all the way',
+  worked: '▸ in progress — they actually started building it',
+  claimed: 'built, not yet moved',
+  stalled: '✗ STALLED — they built it and it went nowhere',
+}
+
+/** One line for a built idea, tagged with what actually happened to it. */
+function builtLine(b: BuiltIdea, opts: { feedback?: number } = {}): string {
+  const tag = b.outcome ? ` [${OUTCOME_TAG[b.outcome]}]` : ''
+  const fb = opts.feedback && b.feedback ? ` — ${truncate(b.feedback, opts.feedback)}` : ''
+  return `  · "${b.title}"${tag}${fb}`
+}
 
 const MIN_SIGNALS = 8
 
@@ -396,7 +415,7 @@ function buildFastSinglePrompt(
     ? g.prior_ideas.rejected.map(r => `  • "${r.title}"${r.feedback ? ` — they said: ${truncate(r.feedback, 140)}` : ''}`).join('\n')
     : '  (none yet)'
   const seenBlock = [
-    ...g.prior_ideas.built.map(b => `  • BUILT: "${b.title}"`),
+    ...g.prior_ideas.built.map(b => `  • ${b.outcome ? OUTCOME_TAG[b.outcome] : 'BUILT'}: "${b.title}"`),
     ...g.prior_ideas.saved.map(s => `  • saved: "${s.title}"`),
     ...g.recent_titles.map(t => `  • just shown: "${t.title}"`),
   ].join('\n') || '  (none yet)'
@@ -463,6 +482,7 @@ Every "not for me" (and its reason) describes a CATEGORY they don't want — a m
 
 ═══════ ALREADY BUILT / SAVED / JUST SHOWN — never re-emit these titles or a near-paraphrase ═══════
 ${seenBlock}
+The tag on each BUILT line is what actually happened to it. "✓ SHIPPED" = they took that shape all the way — lean toward that KIND of idea (the medium, the scale, the way of working), never that exact title. "✗ STALLED — built and went nowhere" = that shape claims them but they don't finish it; offer it again only if a recent capture genuinely unblocks it, otherwise pick a different shape.
 
 ═══════ THE BRIEF (the user wrote this themselves — follow it) ═══════
 
@@ -962,7 +982,7 @@ function buildLockedPrompt(g: GatherResult, seeds: SeedCandidate[]): string {
   ).join('\n')
 
   const seenBlock = [
-    ...g.prior_ideas.built.map(t => `  · BUILT: "${t.title}"${t.feedback ? ` — note: ${truncate(t.feedback, 120)}` : ''}`),
+    ...g.prior_ideas.built.map(t => builtLine(t, { feedback: 120 })),
     ...g.prior_ideas.saved.map(t => `  · saved: "${t.title}"${t.feedback ? ` — note: ${truncate(t.feedback, 120)}` : ''}`),
     ...g.prior_ideas.rejected.map(t => `  · rejected: "${t.title}"${t.feedback ? ` — reason: ${truncate(t.feedback, 120)}` : ''}`),
   ].join('\n')
@@ -1105,7 +1125,7 @@ function buildPermissivePrompt(g: GatherResult): string {
   ).join('\n')
 
   const seenBlock = [
-    ...g.prior_ideas.built.map(t => `  · BUILT: "${t.title}"`),
+    ...g.prior_ideas.built.map(t => builtLine(t)),
     ...g.prior_ideas.saved.map(t => `  · saved: "${t.title}"`),
     ...g.prior_ideas.rejected.map(t => `  · rejected: "${t.title}"`),
   ].join('\n')
@@ -1194,7 +1214,26 @@ function buildReadPrompt(g: GatherResult): string {
   // PRIOR IDEA OUTCOMES — what the system has already proposed and what the
   // user did with each. Built / saved / rejected outcomes are the strongest
   // taste signal we have. Rejection reasons name what the user is sick of.
-  const priorBuilt = g.prior_ideas.built.map(t => `  · BUILT: "${t.title}"${t.feedback ? ` — ${truncate(t.feedback, 140)}` : ''}`).join('\n')
+  const priorBuilt = g.prior_ideas.built.map(t => builtLine(t, { feedback: 140 })).join('\n')
+
+  // Bet 3 — the resurrection signal. A reshape / recent-forgotten idea that
+  // the user BUILT and then actually shipped or worked on is the single
+  // strongest proof the harness can do its rarest, most valuable job: hand
+  // back a dormant project at the right moment and have it take. Call those
+  // out explicitly so the Read prompt leans toward repeating that move.
+  const resurrections = g.prior_ideas.built.filter(
+    b => (b.shape === 'reshape' || b.shape === 'recent_forgotten') &&
+         (b.outcome === 'shipped' || b.outcome === 'worked'),
+  )
+  const stalledResurrections = g.prior_ideas.built.filter(
+    b => (b.shape === 'reshape' || b.shape === 'recent_forgotten') && b.outcome === 'stalled',
+  )
+  const resurrectionBlock = resurrections.length
+    ? resurrections.map(b => `  · "${b.title}" — a dormant project you woke up, and it ${b.outcome === 'shipped' ? 'got finished' : 'got real traction'}.`).join('\n')
+    : null
+  const stalledResurrectionBlock = stalledResurrections.length
+    ? stalledResurrections.map(b => `  · "${b.title}" — woken up but stalled again. Don't re-pitch this one unless a NEW recent capture clearly unblocks it.`).join('\n')
+    : null
   const priorSaved = g.prior_ideas.saved.map(t => `  · saved: "${t.title}"${t.feedback ? ` — ${truncate(t.feedback, 140)}` : ''}`).join('\n')
   const priorRejected = g.prior_ideas.rejected.map(t => `  · rejected: "${t.title}"${t.feedback ? ` — reason: ${truncate(t.feedback, 140)}` : ''}`).join('\n')
 
@@ -1290,8 +1329,10 @@ ${activeProjBlock || '  (none)'}
 ═══════ DORMANT / ON-HOLD / ARCHIVED PROJECTS ═══════
 ${dormantProjBlock || '  (none)'}
 
-═══════ PRIOR IDEAS — BUILT (the strongest taste signal: they actually made this) ═══════
+═══════ PRIOR IDEAS — BUILT (with what ACTUALLY happened to each — the strongest taste signal there is) ═══════
 ${priorBuilt || '  (none yet — pattern reads should treat this as itself a signal)'}
+The tag is the real outcome, not just that they tapped "save". "✓ SHIPPED" = the pattern behind that idea is one they can finish — trust it, look for its next instance. "✗ STALLED" = a shape that pulls them in but they don't carry to the end; naming THAT is itself a valid pattern read.
+${resurrectionBlock ? `\n═══════ RESURRECTIONS THAT LANDED — a dormant project you handed back at the right moment, and it took. This is the harness doing its rarest job well. Find the next one like it. ═══════\n${resurrectionBlock}` : ''}${stalledResurrectionBlock ? `\n═══════ RESURRECTIONS THAT DIDN'T TAKE ═══════\n${stalledResurrectionBlock}` : ''}
 
 ═══════ PRIOR IDEAS — SAVED (kept on the radar, not built) ═══════
 ${priorSaved || '  (none)'}

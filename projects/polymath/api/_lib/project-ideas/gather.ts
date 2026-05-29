@@ -12,7 +12,47 @@
  */
 
 import type { getSupabaseClient } from '../supabase.js'
-import type { GatherResult } from './types.js'
+import type { GatherResult, IdeaOutcome } from './types.js'
+
+/** A project spawned from a built idea, as we read it back for outcome
+ *  classification. Loose shape — only the fields the classifier needs. */
+interface SpawnedProject {
+  status?: string | null
+  metadata?: { progress?: unknown; tasks?: unknown; from_idea?: unknown } | null
+  last_active?: string | null
+  updated_at?: string | null
+  created_at?: string | null
+}
+
+/** Activity within this window of a project's creation counts as the project
+ *  not really having moved — anything later is genuine work on it. 6h covers
+ *  the spin-up edits (shaping, first task) that happen in the same sitting. */
+const WORKED_GRACE_MS = 6 * 3_600_000
+
+/** Derive the REAL outcome of a built idea from the project it spawned.
+ *  Pure + exported so it's unit-testable. `undefined` project means the user
+ *  built the idea but no project survives — treat as a stall. */
+export function classifyIdeaOutcome(project: SpawnedProject | undefined): IdeaOutcome {
+  if (!project) return 'stalled'
+  const status = (project.status ?? '').toLowerCase()
+  if (status === 'completed') return 'shipped'
+  if (['dormant', 'on-hold', 'archived', 'abandoned'].includes(status)) return 'stalled'
+
+  // Active / upcoming / maintaining: did it move after it was created?
+  const progress = Number(project.metadata?.progress ?? 0)
+  const tasks = Array.isArray(project.metadata?.tasks) ? (project.metadata!.tasks as any[]) : []
+  const doneTasks = tasks.filter((t) => t?.done || t?.completed || t?.status === 'done').length
+  const lastActive = project.last_active ?? project.updated_at ?? null
+  const created = project.created_at ?? null
+  const movedSinceCreation =
+    !!lastActive && !!created &&
+    new Date(lastActive).getTime() - new Date(created).getTime() > WORKED_GRACE_MS
+
+  if (progress > 0 || doneTasks > 0 || movedSinceCreation) return 'worked'
+  return 'claimed'
+}
+
+const OUTCOME_RANK: Record<IdeaOutcome, number> = { shipped: 3, worked: 2, claimed: 1, stalled: 0 }
 
 /** Cooldown window for seed pairs. A (centre × arrival) convergence can't
  *  fire again for this many weeks once it's been surfaced. 12 weeks lines
@@ -60,6 +100,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
     priorIdeasRes,
     recentSeedPairsRes,
     recentIdeasRes,
+    spawnedProjectsRes,
   ] = await Promise.all([
     supabase
       .from('memories')
@@ -120,7 +161,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       .limit(40),
     supabase
       .from('project_ideas')
-      .select('title, status, user_feedback, evidence, seed_pair, generated_at')
+      .select('id, title, status, user_feedback, evidence, seed_pair, generated_at, mode, shape')
       .eq('user_id', userId)
       .in('status', ['saved', 'rejected', 'built'])
       .order('generated_at', { ascending: false })
@@ -153,6 +194,18 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       .eq('user_id', userId)
       .order('generated_at', { ascending: false })
       .limit(8),
+    // Projects spawned from a built idea (saved → "Save = commit" stamps
+    // metadata.from_idea = idea.id). Read back so we can derive what each
+    // built idea ACTUALLY became — shipped, worked, claimed, or stalled —
+    // and feed that real outcome into the generator instead of treating
+    // every "built" tap as a win. All statuses, since a built idea can have
+    // gone all the way to completed or all the way to abandoned.
+    supabase
+      .from('projects')
+      .select('status, metadata, last_active, updated_at, created_at')
+      .eq('user_id', userId)
+      .not('metadata->>from_idea', 'is', null)
+      .limit(400),
   ])
 
   // Minimal floor only: drop pure fragments ("mouses are good") that the
@@ -282,18 +335,45 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
   // its evidence (evidence[0] on a fast idea is the project it revived).
   const blockedCentre = new Set<string>()
   const rejectedBlockSince = Date.now() - REJECTED_BLOCK_DAYS * 86_400_000
+
+  // Map each built idea to the BEST outcome of any project it spawned, keyed
+  // by idea id (project.metadata.from_idea). One idea usually maps to one
+  // project; if it forked, keep the strongest outcome so a later revival
+  // still reads as a win.
+  const outcomeByIdeaId = new Map<string, IdeaOutcome>()
+  for (const proj of (spawnedProjectsRes.data ?? []) as SpawnedProject[]) {
+    const fromIdea = proj.metadata?.from_idea
+    if (typeof fromIdea !== 'string' || !fromIdea) continue
+    const outcome = classifyIdeaOutcome(proj)
+    const existing = outcomeByIdeaId.get(fromIdea)
+    if (!existing || OUTCOME_RANK[outcome] > OUTCOME_RANK[existing]) {
+      outcomeByIdeaId.set(fromIdea, outcome)
+    }
+  }
+
   for (const row of (priorIdeasRes.data ?? []) as Array<{
+    id: string
     title: string
     status: string
     user_feedback: string | null
     evidence: Array<{ kind?: string; source_id?: string }> | null
     seed_pair: { centre_id?: string } | null
     generated_at: string
+    mode: string | null
+    shape: GatherResult['prior_ideas']['built'][number]['shape']
   }>) {
     const entry = { title: row.title, feedback: row.user_feedback }
     if (row.status === 'saved' && prior_ideas.saved.length < PER_BUCKET) prior_ideas.saved.push(entry)
     else if (row.status === 'rejected' && prior_ideas.rejected.length < PER_BUCKET) prior_ideas.rejected.push(entry)
-    else if (row.status === 'built' && prior_ideas.built.length < PER_BUCKET) prior_ideas.built.push(entry)
+    else if (row.status === 'built' && prior_ideas.built.length < PER_BUCKET) {
+      // The idea row exists but its project may have been deleted or never
+      // created — classifyIdeaOutcome(undefined) reads that as a stall.
+      prior_ideas.built.push({
+        ...entry,
+        outcome: outcomeByIdeaId.get(row.id) ?? classifyIdeaOutcome(undefined),
+        shape: row.mode === 'read' ? (row.shape ?? null) : null,
+      })
+    }
 
     if (row.status === 'rejected' && new Date(row.generated_at).getTime() >= rejectedBlockSince) {
       if (row.seed_pair?.centre_id) blockedCentre.add(row.seed_pair.centre_id)

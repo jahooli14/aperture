@@ -52,6 +52,11 @@ interface ProjectIdea {
    *  that the idea sits in the queue and the user has to reach for the
    *  button. NULL on crossover (no threshold gate). */
   confidence?: number | null
+  /** Read-mode sub-shape. 'reshape' / 'recent_forgotten' are resurrections —
+   *  a dormant project handed back at the right moment, the harness's rarest
+   *  and most valuable move. We surface those assertively rather than hiding
+   *  them behind the generic pill. NULL on crossover / fallback rows. */
+  shape?: 'coalescing' | 'recent_forgotten' | 'reshape' | 'extend' | null
 }
 
 interface ProjectIdeasResponse {
@@ -127,6 +132,11 @@ const LOADING_STAGES: Array<{ at_ms: number; line: string }> = [
   { at_ms: 7_000,  line: 'picking the one that fits today' },
   { at_ms: 12_000, line: 'almost there' },
 ]
+
+// A baked resurrection (reshape / recent-forgotten Read idea) surfaces
+// assertively at a slightly lower confidence bar than the generic teaser —
+// it's the harness's rarest, most valuable move, so it earns a louder door.
+const RESURRECTION_MIN_CONFIDENCE = 60
 
 export function ProjectIdeasHome() {
   const createProject = useProjectStore(s => s.createProject)
@@ -347,6 +357,19 @@ export function ProjectIdeasHome() {
   const evidenceCount = useMemo(() => active?.evidence?.length ?? 0, [active])
   const mode = useMemo(() => active ? deriveMode(active) : null, [active])
 
+  // A baked resurrection sitting in the queue. When present we replace the
+  // quiet "suggest a project" pill with an assertive teaser, and open
+  // straight to it instead of the rank-0 idea.
+  const resurrectionIndex = useMemo(
+    () => ideas.findIndex(
+      i => i.mode === 'read' &&
+        (i.shape === 'reshape' || i.shape === 'recent_forgotten') &&
+        (i.confidence ?? 0) >= RESURRECTION_MIN_CONFIDENCE,
+    ),
+    [ideas],
+  )
+  const resurrection = resurrectionIndex >= 0 ? ideas[resurrectionIndex] : null
+
   // Click handler for the collapsed button. Either reveals a queued idea
   // (instant, no API call) or kicks off generation (~10s) when the queue
   // is empty. The post above already short-circuits on the server when a
@@ -358,11 +381,13 @@ export function ProjectIdeasHome() {
     haptic.medium()
     if (ideas.length > 0) {
       setExpanded(true)
-      setActiveIndex(0)
+      // Open straight to a baked resurrection when one's waiting; otherwise
+      // the rank-0 idea.
+      setActiveIndex(resurrectionIndex >= 0 ? resurrectionIndex : 0)
       return
     }
     await generate()
-  }, [generating, ideas.length, generate])
+  }, [generating, ideas.length, generate, resurrectionIndex])
 
   return (
     <section className="relative">
@@ -381,9 +406,30 @@ export function ProjectIdeasHome() {
           </div>
         )}
 
-        {/* Collapsed state — the quiet "suggest a project" pill. This is the
-            only idea surface on the home; nothing surfaces uninvited. */}
-        {!loading && !expanded && !generating && (
+        {/* Collapsed state. Normally a quiet "suggest a project" pill —
+            nothing surfaces uninvited. The ONE exception is a baked
+            resurrection (a dormant project worth waking up): that earns a
+            louder, rose-tinted door because it's the rarest thing the
+            harness does and the easiest to miss behind a generic pill. */}
+        {!loading && !expanded && !generating && resurrection && (
+          <div className="flex flex-col items-center gap-2">
+            <button
+              type="button"
+              onClick={reveal}
+              className="group inline-flex items-center gap-2.5 px-4 py-2.5 rounded-full transition-all"
+              style={{
+                background: 'rgba(244, 114, 182, 0.12)',
+                color: 'var(--brand-text-primary)',
+                border: '1px solid rgba(244, 114, 182, 0.32)',
+              }}
+            >
+              <span aria-hidden className="text-[13px] leading-none" style={{ color: 'rgb(244, 114, 182)' }}>◈</span>
+              <span className="text-[11.5px] tracking-wide">there's a project worth picking back up</span>
+            </button>
+          </div>
+        )}
+
+        {!loading && !expanded && !generating && !resurrection && (
           <div className="flex flex-col items-center gap-2">
             <button
               type="button"
