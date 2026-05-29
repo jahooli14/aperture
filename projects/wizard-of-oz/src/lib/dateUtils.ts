@@ -81,6 +81,31 @@ export function formatShortDate(dateString: string | null | undefined): string {
 }
 
 /**
+ * Formats a span of days into a friendly, human duration:
+ * "3 days", "5 weeks", "about 4 months", "about 1 year, 2 months".
+ * Assumes a positive number of days.
+ */
+export function formatDuration(days: number): string {
+  if (days < 14) {
+    return `${days} ${days === 1 ? 'day' : 'days'}`;
+  }
+  if (days < 56) {
+    const weeks = Math.round(days / 7);
+    return `${weeks} weeks`;
+  }
+
+  const months = Math.round(days / 30.44);
+  if (months < 24) {
+    return `about ${months} months`;
+  }
+
+  const years = Math.floor(months / 12);
+  const remMonths = months % 12;
+  const yearLabel = `${years} ${years === 1 ? 'year' : 'years'}`;
+  return remMonths === 0 ? `about ${yearLabel}` : `about ${yearLabel}, ${remMonths} months`;
+}
+
+/**
  * Formats a date for display relative to today: "Today", "Yesterday",
  * "N days ago" for the last week, otherwise the short date ("Oct 24").
  * Future dates fall back to the short date.

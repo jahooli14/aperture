@@ -1,6 +1,11 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
-import { toLocalDateString, getTodayLocalDateString, formatRelativeDate } from '../lib/dateUtils';
+import {
+  toLocalDateString,
+  getTodayLocalDateString,
+  formatRelativeDate,
+  formatDuration,
+} from '../lib/dateUtils';
 
 describe('toLocalDateString', () => {
   it('formats using local calendar fields', () => {
@@ -31,6 +36,33 @@ describe('getTodayLocalDateString', () => {
   it('returns the local YYYY-MM-DD for now', () => {
     expect(getTodayLocalDateString()).toBe(toLocalDateString(new Date()));
     expect(getTodayLocalDateString()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});
+
+describe('formatDuration', () => {
+  it('uses days under two weeks', () => {
+    expect(formatDuration(1)).toBe('1 day');
+    expect(formatDuration(5)).toBe('5 days');
+    expect(formatDuration(13)).toBe('13 days');
+  });
+
+  it('uses weeks up to about two months', () => {
+    expect(formatDuration(14)).toBe('2 weeks');
+    expect(formatDuration(49)).toBe('7 weeks');
+  });
+
+  it('uses approximate months past ~8 weeks', () => {
+    expect(formatDuration(94)).toBe('about 3 months');
+    expect(formatDuration(365)).toBe('about 12 months');
+  });
+
+  it('keeps months up to two years (how babies are described)', () => {
+    expect(formatDuration(Math.round(30.44 * 14))).toBe('about 14 months');
+  });
+
+  it('uses years past two years, with remaining months', () => {
+    expect(formatDuration(365 * 2)).toBe('about 2 years');
+    expect(formatDuration(Math.round(30.44 * 26))).toBe('about 2 years, 2 months');
   });
 });
 
