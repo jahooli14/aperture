@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, ExternalLink, Archive, Loader2, Highlighter, Clock, Type, Mic, X, Check } from 'lucide-react'
 import DOMPurify from 'dompurify'
 import { useReadingStore } from '../stores/useReadingStore'
+import { useMemoryStore } from '../stores/useMemoryStore'
 import { useArticle } from '../hooks/useArticle'
 import { useScrollDirection } from '../hooks/useScrollDirection'
 import { useToast } from '../components/ui/toast'
@@ -16,6 +17,8 @@ import { useOfflineArticle } from '../hooks/useOfflineArticle'
 import { useReadingProgress } from '../hooks/useReadingProgress'
 import { ArticleCompletionDialog } from '../components/reading/ArticleCompletionDialog'
 import { VoiceInput } from '../components/VoiceInput'
+import { ConnectionsList } from '../components/connections/ConnectionsList'
+import { useConnectionStore } from '../stores/useConnectionStore'
 import { DateRule } from '../components/ui/DateRule'
 import { spring, ease } from '../lib/motion'
 
@@ -63,6 +66,10 @@ export function ReaderPage() {
   const [showVoiceNote, setShowVoiceNote] = useState(false)
   const [savingNote, setSavingNote] = useState(false)
   const [noteText, setNoteText] = useState('')
+  // Bumped after a thought is saved so the "Connected" list remounts and
+  // shows the new link without a page refresh.
+  const [connRefreshKey, setConnRefreshKey] = useState(0)
+  const invalidateConnections = useConnectionStore(s => s.invalidateConnections)
 
   // Automatic offline caching
   useEffect(() => {
@@ -299,50 +306,40 @@ export function ReaderPage() {
     }
   }
 
-  // Save a thought tied to this article. Two things the old version got
-  // wrong: it POSTed to /api/memories (the "mark reviewed" handler, which
-  // never creates anything) and never checked response.ok — so a rejected
-  // save still showed "captured". This goes through the capture endpoint
-  // and then links the new thought to the article so it's genuinely related.
+  // Save a thought tied to this article. Goes through the memory store's
+  // createMemory, which handles optimistic UI, the capture endpoint, AND
+  // offline queueing (carrying the article source_reference so the link
+  // survives the sync). When online, we also create an explicit
+  // article→thought connection so "related" is actually true rather than
+  // relying on background embedding similarity.
   const handleSaveNote = async (text: string) => {
     const trimmed = text.trim()
     if (!article || !trimmed) return
     setSavingNote(true)
     try {
-      const res = await fetch('/api/memories?capture=true', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          // 'body' = manual text entry (no transcript re-parsing); tag it so
-          // these reading thoughts are findable, and pass the article as the
-          // source so the connection below has context.
-          body: trimmed,
-          tags: ['reading-thought'],
-          source_reference: {
-            type: 'article',
-            id: article.id,
-            title: article.title,
-            url: article.url,
-          },
-        }),
+      const memory = await useMemoryStore.getState().createMemory({
+        body: trimmed,
+        tags: ['reading-thought'],
+        source_reference: {
+          type: 'article',
+          id: article.id,
+          title: article.title ?? undefined,
+          url: article.url || undefined,
+        },
       })
 
-      if (!res.ok) {
-        let detail = `HTTP ${res.status}`
-        try {
-          const err = await res.json()
-          detail = err.details || err.error || detail
-        } catch { /* non-JSON error body */ }
-        throw new Error(detail)
-      }
+      // Offline: createMemory queued it (id is an offline placeholder). The
+      // source_reference rides along, so it gets linked when it syncs.
+      const isOfflineQueued = typeof memory?.id === 'string' && memory.id.startsWith('offline_')
 
-      const data = await res.json()
-      const memoryId = data?.memory?.id
-
-      // Explicitly link the thought to the article. Embedding-based linking
-      // runs in the background but isn't guaranteed to connect these two —
-      // this makes "related" actually true. Non-fatal if it fails.
-      if (memoryId) {
+      if (isOfflineQueued) {
+        addToast({
+          title: 'Saved offline',
+          description: 'It’ll sync and link to this article when you’re back online.',
+          variant: 'default',
+        })
+      } else if (memory?.id) {
+        // Online: link the thought to the article explicitly. Non-fatal.
         try {
           await fetch('/api/connections?action=create-spark', {
             method: 'POST',
@@ -351,20 +348,23 @@ export function ReaderPage() {
               source_type: 'article',
               source_id: article.id,
               target_type: 'thought',
-              target_id: memoryId,
+              target_id: memory.id,
               connection_type: 'reading_thought',
             }),
           })
         } catch (linkErr) {
           console.warn('[ReaderPage] Failed to link thought to article:', linkErr)
         }
+        // Refresh the "Connected" list so the new thought shows immediately.
+        invalidateConnections('article', article.id)
+        setConnRefreshKey(k => k + 1)
+        addToast({
+          title: 'Thought saved',
+          description: `Linked to "${article.title}"`,
+          variant: 'success',
+        })
       }
 
-      addToast({
-        title: 'Thought saved',
-        description: `Linked to "${article.title}"`,
-        variant: 'success',
-      })
       setNoteText('')
       setShowVoiceNote(false)
     } catch (error) {
@@ -742,6 +742,29 @@ export function ReaderPage() {
               </p>
             </motion.div>
           )}
+
+          {/* Connected — thoughts you've captured here plus anything in your
+              corpus this article links to. Closes the loop on "save a thought
+              from an article": the note shows up right here afterwards. */}
+          <motion.section
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="mt-14 pt-8 border-t border-white/[0.08]"
+          >
+            <h2
+              className="text-[11px] uppercase tracking-[0.32em] font-semibold mb-5"
+              style={{ color: 'rgba(255,255,255,0.4)' }}
+            >
+              Connected
+            </h2>
+            <ConnectionsList
+              key={connRefreshKey}
+              itemType="article"
+              itemId={article.id}
+              itemTitle={article.title ?? undefined}
+            />
+          </motion.section>
         </main>
 
         {/* Highlight Menu */}

@@ -372,6 +372,20 @@ export function ConsumingWidget() {
     } catch { /* private mode — just show it this once */ }
     setSwipeHintArmed(true)
   }, [openSaved, openNew])
+
+  // When an article is archived from another surface (reader, article list),
+  // drop it from these lists immediately so "Saved reads" doesn't show a
+  // stale, already-archived item until the next refetch.
+  useEffect(() => {
+    const onStatusChanged = (e: Event) => {
+      const { id, status } = (e as CustomEvent).detail || {}
+      if (!id || status !== 'archived') return
+      setSaved(prev => prev.filter(a => a.id !== id))
+      setFeedReads(prev => prev.filter(a => a.id !== id))
+    }
+    window.addEventListener('article-status-changed', onStatusChanged)
+    return () => window.removeEventListener('article-status-changed', onStatusChanged)
+  }, [])
   // navigator.onLine plus event listeners. Drives the "offline" badge and
   // disables Load more / shows stale data freely.
   const [isOnline, setIsOnline] = useState(() =>
