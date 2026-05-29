@@ -7,17 +7,18 @@ import App from './App'
 // Patch global fetch to auto-attach auth tokens to /api/ requests
 setupAuthFetch()
 
-// Import Inter font
-import '@fontsource/inter/400.css' // Regular
-import '@fontsource/inter/500.css' // Medium
-import '@fontsource/inter/600.css' // Semibold
-import '@fontsource/inter/700.css' // Bold
+// Import Inter font (Latin subset only — the app is English, so shipping the
+// cyrillic/greek/vietnamese subsets just bloats the PWA precache and CSS).
+import '@fontsource/inter/latin-400.css' // Regular
+import '@fontsource/inter/latin-500.css' // Medium
+import '@fontsource/inter/latin-600.css' // Semibold
+import '@fontsource/inter/latin-700.css' // Bold
 
 // Import Playfair Display serif font (for typography contrast)
-import '@fontsource/playfair-display/400.css'
-import '@fontsource/playfair-display/400-italic.css'
-import '@fontsource/playfair-display/600.css'
-import '@fontsource/playfair-display/700.css'
+import '@fontsource/playfair-display/latin-400.css'
+import '@fontsource/playfair-display/latin-400-italic.css'
+import '@fontsource/playfair-display/latin-600.css'
+import '@fontsource/playfair-display/latin-700.css'
 
 import './styles/premium-dark.css'
 import './styles/ripple.css'
@@ -136,6 +137,9 @@ console.log('[Main] Global error handlers installed')
 // Emergency fallback - show something if React fails to render
 try {
   console.log('[Main] Starting React render...')
+  // Tell the index.html cold-start watchdog the app code loaded and is booting,
+  // so it won't swap in the "trouble loading" retry screen.
+  ;(window as unknown as { __APP_BOOTED?: boolean }).__APP_BOOTED = true
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <App />

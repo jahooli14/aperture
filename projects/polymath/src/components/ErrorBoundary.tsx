@@ -45,6 +45,18 @@ export class ErrorBoundary extends Component<Props, State> {
     })
   }
 
+  // Soft retry: clear the error and re-render children. For a failed lazy
+  // chunk this re-triggers the import (lazyRetry re-fetches), so a user on a
+  // flaky connection can recover without a full reload that re-downloads the
+  // whole app. Primary action.
+  handleRetry = () => {
+    this.setState({
+      hasError: false,
+      error: null,
+      errorInfo: null
+    })
+  }
+
   handleReset = () => {
     this.setState({
       hasError: false,
@@ -52,7 +64,7 @@ export class ErrorBoundary extends Component<Props, State> {
       errorInfo: null
     })
 
-    // Reload the page to reset state
+    // Hard reload — secondary, for when a soft retry isn't enough.
     window.location.reload()
   }
 
@@ -88,14 +100,18 @@ export class ErrorBoundary extends Component<Props, State> {
               className="text-2xl font-bold mb-3"
               style={{ color: "var(--brand-text-primary)" }}
             >
-              Something went wrong
+              {typeof navigator !== 'undefined' && !navigator.onLine
+                ? "You're offline"
+                : 'Something went wrong'}
             </h2>
 
             <p
               className="mb-6 text-sm"
               style={{ color: "var(--brand-text-secondary)" }}
             >
-              Something broke. Refresh to get back.
+              {typeof navigator !== 'undefined' && !navigator.onLine
+                ? 'Reconnect and try again — the app needs a moment of signal to finish loading.'
+                : 'Bad connection can do this. Try again.'}
             </p>
 
             {/* Show error details only in development */}
@@ -137,13 +153,22 @@ export class ErrorBoundary extends Component<Props, State> {
               </div>
             )}
 
-            <button
-              onClick={this.handleReset}
-              className="glass-card px-6 py-3 rounded-lg font-medium transition-all hover:bg-[rgba(255,255,255,0.1)]"
-              style={{ color: "var(--brand-primary)" }}
-            >
-              Reload Page
-            </button>
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={this.handleRetry}
+                className="glass-card px-6 py-3 rounded-lg font-medium transition-all hover:bg-[rgba(255,255,255,0.1)]"
+                style={{ color: "var(--brand-primary)" }}
+              >
+                Try again
+              </button>
+              <button
+                onClick={this.handleReset}
+                className="px-4 py-3 rounded-lg text-sm transition-all hover:opacity-80"
+                style={{ color: "var(--brand-text-secondary)" }}
+              >
+                Reload
+              </button>
+            </div>
           </div>
         </div>
       )

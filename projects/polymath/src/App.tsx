@@ -11,12 +11,7 @@ import { PinOverlay } from './components/PinOverlay'
 import { AutoSuggestionProvider } from './contexts/AutoSuggestionContext'
 import { ScrollToTop } from './components/ScrollToTop'
 import { AnimatedPage } from './components/AnimatedPage'
-import { DebugPanel } from './components/DebugPanel'
-import { ExtractionSummary } from './components/memories/ExtractionSummary'
-import { SteeringCard } from './components/memories/SteeringCard'
-import { FirstConnectionCelebration } from './components/home/FirstConnectionCelebration'
-import { ContextSidebar } from './components/context/ContextSidebar'
-import { FocusSession } from './components/power-hour/FocusSession'
+import { useFocusStore } from './stores/useFocusStore'
 import { Loader2 } from 'lucide-react'
 import { App as CapacitorApp } from '@capacitor/app'
 import { StatusBar, Style } from '@capacitor/status-bar'
@@ -30,6 +25,16 @@ import './App.css'
 import './styles/theme.css'
 import './styles/design-tokens.css'
 import { lazyRetry } from './lib/lazyRetry'
+
+// Lazy load app-level overlays. These are conditional surfaces (post-action
+// banners, the focus overlay, the context sidebar, the dev console) that aren't
+// needed for first paint — keeping them out of the main chunk speeds up startup.
+const DebugPanel = lazy(lazyRetry(() => import('./components/DebugPanel').then(m => ({ default: m.DebugPanel }))))
+const ExtractionSummary = lazy(lazyRetry(() => import('./components/memories/ExtractionSummary').then(m => ({ default: m.ExtractionSummary }))))
+const SteeringCard = lazy(lazyRetry(() => import('./components/memories/SteeringCard').then(m => ({ default: m.SteeringCard }))))
+const FirstConnectionCelebration = lazy(lazyRetry(() => import('./components/home/FirstConnectionCelebration').then(m => ({ default: m.FirstConnectionCelebration }))))
+const ContextSidebar = lazy(lazyRetry(() => import('./components/context/ContextSidebar').then(m => ({ default: m.ContextSidebar }))))
+const FocusSession = lazy(lazyRetry(() => import('./components/power-hour/FocusSession').then(m => ({ default: m.FocusSession }))))
 
 // Lazy load pages with retry logic for chunk loading failures after deployments
 const HomePage = lazy(lazyRetry(() => import('./pages/HomePage').then(m => ({ default: m.HomePage }))))
@@ -140,6 +145,42 @@ function RouteTracker() {
   return null
 }
 
+// Focus overlay gate — only mounts (and downloads) the FocusSession chunk once a
+// session is actually running. Mirrors FocusSession's own `status === 'idle'`
+// null-return, so behaviour is unchanged while keeping it out of startup.
+function FocusSessionGate() {
+  const status = useFocusStore((s) => s.status)
+  if (status === 'idle') return null
+  return (
+    <Suspense fallback={null}>
+      <FocusSession />
+    </Suspense>
+  )
+}
+
+// Warm the chunks for the main nav destinations once the browser is idle, so
+// tapping a tab navigates instantly instead of waiting on a fresh download.
+function useIdleRoutePrefetch() {
+  useEffect(() => {
+    const prefetch = () => {
+      void import('./pages/MemoriesPage')
+      void import('./pages/ProjectsPage')
+      void import('./pages/ListsPage')
+      void import('./pages/ReadingPage')
+    }
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number
+      cancelIdleCallback?: (id: number) => void
+    }
+    if (typeof w.requestIdleCallback === 'function') {
+      const id = w.requestIdleCallback(prefetch, { timeout: 4000 })
+      return () => w.cancelIdleCallback?.(id)
+    }
+    const t = setTimeout(prefetch, 3000)
+    return () => clearTimeout(t)
+  }, [])
+}
+
 // Navigation component removed - replaced with FloatingNav
 
 export default function App() {
@@ -148,6 +189,9 @@ export default function App() {
 
   // Schedule bedtime/morning notifications on native platforms
   useBedtimeNotifications()
+
+  // Warm nav-destination chunks during idle for instant tab switches
+  useIdleRoutePrefetch()
 
   // Setup online/offline tracking and auto-sync
   useEffect(() => {
@@ -292,17 +336,23 @@ export default function App() {
 
             {/* Extraction Summary - Shows AI processing results after memory creation */}
             <ErrorBoundary fallback={null}>
-              <ExtractionSummary />
+              <Suspense fallback={null}>
+                <ExtractionSummary />
+              </Suspense>
             </ErrorBoundary>
 
             {/* Steering Card - Shows live mind steering after extraction completes */}
             <ErrorBoundary fallback={null}>
-              <SteeringCard />
+              <Suspense fallback={null}>
+                <SteeringCard />
+              </Suspense>
             </ErrorBoundary>
 
             {/* First Connection Celebration — early win for new users */}
             <ErrorBoundary fallback={null}>
-              <FirstConnectionCelebration />
+              <Suspense fallback={null}>
+                <FirstConnectionCelebration />
+              </Suspense>
             </ErrorBoundary>
 
             <div className="min-h-screen flex flex-col overflow-x-hidden">
@@ -345,7 +395,9 @@ export default function App() {
 
               {/* Context Engine Sidebar */}
               <ErrorBoundary fallback={null}>
-                <ContextSidebar />
+                <Suspense fallback={null}>
+                  <ContextSidebar />
+                </Suspense>
               </ErrorBoundary>
 
               {/* Pin Overlay - Split Screen */}
@@ -355,12 +407,14 @@ export default function App() {
 
               {/* Focus Session Overlay (Zen Mode) */}
               <ErrorBoundary fallback={null}>
-                <FocusSession />
+                <FocusSessionGate />
               </ErrorBoundary>
 
               {/* Debug Panel - Shows console logs on screen */}
               <ErrorBoundary fallback={null}>
-                <DebugPanel />
+                <Suspense fallback={null}>
+                  <DebugPanel />
+                </Suspense>
               </ErrorBoundary>
             </div>
           </Router>
