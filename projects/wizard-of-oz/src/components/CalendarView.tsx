@@ -5,6 +5,7 @@ import { usePhotoStore } from '../stores/usePhotoStore';
 import { useMilestoneStore } from '../stores/useMilestoneStore';
 import { usePlaceStore } from '../stores/usePlaceStore';
 import { getPhotoDisplayUrl } from '../lib/photoUtils';
+import { getTodayLocalDateString } from '../lib/dateUtils';
 import { milestones } from '../data/milestones';
 
 interface CalendarViewProps {
@@ -141,7 +142,7 @@ export function CalendarView({ onUploadClick }: CalendarViewProps = {}) {
   };
 
   const selectedPhoto = selectedDate ? photosByDate.get(selectedDate) : null;
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayLocalDateString();
   const hasTodayPhoto = photosByDate.has(today);
 
   return (

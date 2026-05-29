@@ -7,6 +7,9 @@ import { triggerHaptic } from '../lib/haptics';
 import { logger } from '../lib/logger';
 import { PhotoSkeleton } from './PhotoSkeleton';
 import { getPhotoDisplayUrl } from '../lib/photoUtils';
+import { formatRelativeDate, getTodayLocalDateString } from '../lib/dateUtils';
+import { calculateAge, formatAge } from '../lib/ageUtils';
+import { currentStreak } from '../lib/streak';
 import type { Database } from '../types/database';
 import type { ToastType } from './Toast';
 
@@ -283,14 +286,38 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
   // Check if we have any photos for the overlay
   const hasPhotos = photos.length > 0;
 
+  // Baby's age today, shown in the header for emotional context.
+  const ageToday = settings?.baby_birthdate
+    ? formatAge(calculateAge(settings.baby_birthdate, getTodayLocalDateString()))
+    : null;
+
+  // Consecutive-day capture streak — gently reinforces the one-a-day habit.
+  const streak = useMemo(
+    () => currentStreak(photos.map((p) => p.upload_date)),
+    [photos]
+  );
+
+  const todayStr = getTodayLocalDateString();
+
   return (
     <div className="space-y-6">
       <div>
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Your Journey</h2>
-            <p className="text-sm text-gray-600 mt-1">{filteredPhotos.length} {filteredPhotos.length === 1 ? 'day' : 'days'} captured</p>
+            <p className="text-sm text-gray-600 mt-1">
+              {filteredPhotos.length} {filteredPhotos.length === 1 ? 'day' : 'days'} captured
+              {ageToday && <span className="text-gray-400"> · {ageToday} old</span>}
+            </p>
           </div>
+          {streak >= 2 && (
+            <div className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 border border-orange-200 rounded-full">
+              <span className="text-base leading-none">🔥</span>
+              <span className="text-sm font-semibold text-orange-700">
+                {streak} day streak
+              </span>
+            </div>
+          )}
         </div>
 
         {hasPhotos && photos.length > 1 && (
@@ -334,12 +361,16 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
           // tile. The old stagger (delay: index * 0.05) blocked the grid for
           // ~5s with 100 photos before everything was visible — now the whole
           // grid paints in one frame, with CSS-only press/hover affordances.
+          const isToday = photo.upload_date === todayStr;
+
           return (
             <button
               key={photo.id}
               type="button"
               onClick={(e) => handlePhotoClick(photo, e)}
-              className="relative aspect-square rounded-lg overflow-hidden bg-gray-200 shadow-md hover:shadow-2xl active:scale-[0.97] hover:-translate-y-0.5 transition-[transform,box-shadow] duration-150 cursor-pointer group select-none touch-manipulation"
+              className={`relative aspect-square rounded-lg overflow-hidden bg-gray-200 shadow-md hover:shadow-2xl active:scale-[0.97] hover:-translate-y-0.5 transition-[transform,box-shadow] duration-150 cursor-pointer group select-none touch-manipulation ${
+                isToday ? 'ring-2 ring-primary-500 ring-offset-2' : ''
+              }`}
             >
               {/* Smooth background placeholder - no more skeleton flash */}
               <div className="absolute inset-0 bg-gray-100" />
@@ -361,10 +392,7 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity pointer-events-none">
                 <div className="absolute bottom-0 left-0 right-0 p-2 md:p-3 text-left">
                   <p className="text-white text-xs md:text-sm font-medium">
-                    {new Date(photo.upload_date).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                    })}
+                    {formatRelativeDate(photo.upload_date)}
                   </p>
                 </div>
               </div>
@@ -423,10 +451,7 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
                   triggerHaptic('warning');
 
                   // Show undo toast with action
-                  const photoDate = new Date(photoToDelete.upload_date).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                  });
+                  const photoDate = formatRelativeDate(photoToDelete.upload_date);
 
                   // Capture the photo in closure for undo callback
                   const photoToRestore = photoToDelete;

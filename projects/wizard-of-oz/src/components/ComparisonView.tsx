@@ -5,6 +5,7 @@ import { usePhotoStore } from '../stores/usePhotoStore';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { ComparisonSlider } from './ComparisonSlider';
 import { calculateAge, formatAge } from '../lib/ageUtils';
+import { formatDuration } from '../lib/dateUtils';
 import type { Database } from '../types/database';
 
 type Photo = Database['public']['Tables']['photos']['Row'];
@@ -193,7 +194,10 @@ export function ComparisonView() {
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-gray-700">Time Between Photos</p>
                     <p className="text-base text-gray-900">
-                      {calculateDaysBetween(selectedPhoto1, selectedPhoto2)} days apart
+                      {(() => {
+                        const days = calculateDaysBetween(selectedPhoto1, selectedPhoto2);
+                        return days === 0 ? 'Same day' : `${formatDuration(days)} apart`;
+                      })()}
                     </p>
                   </div>
                 </div>

@@ -5,6 +5,8 @@
  * Note: All ages are approximate ranges. Every baby develops at their own pace.
  */
 
+import { parseLocalDate } from '../lib/dateUtils';
+
 export interface Milestone {
   id: string;
   category: 'physical' | 'social' | 'communication' | 'cognitive';
@@ -386,11 +388,16 @@ export function getUpcomingMilestones(babyAgeWeeks: number): Milestone[] {
  * Calculate baby's age in weeks from birthdate
  */
 export function calculateAgeInWeeks(birthdate: string): number {
-  const birth = new Date(birthdate);
+  // Parse as a local date (consistent with the rest of the app) so the week
+  // count doesn't drift by a day near midnight in non-UTC timezones.
+  const birth = parseLocalDate(birthdate);
   const now = new Date();
-  const diffTime = Math.abs(now.getTime() - birth.getTime());
-  const diffWeeks = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7));
-  return diffWeeks;
+  const diffTime = now.getTime() - birth.getTime();
+  // A future birthdate (e.g. an expected baby, or a typo) is age zero, not a
+  // positive count — Math.abs used to flip the sign and surface milestones for
+  // a baby that hasn't been born yet.
+  if (diffTime <= 0) return 0;
+  return Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7));
 }
 
 /**

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Shield, Lock, Eye, EyeOff, Download, ChevronRight, AlertCircle, Baby, Bell, BellRing, Users, Copy, RefreshCw, Wand2 } from 'lucide-react';
 import { usePhotoStore } from '../stores/usePhotoStore';
 import { hasWhiteCorners } from '../lib/imageUtils';
+import { getTodayLocalDateString } from '../lib/dateUtils';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { subscribeToPushNotifications, unsubscribeFromPushNotifications, getPushSubscriptionStatus, isPushNotificationSupported } from '../lib/notifications';
 
@@ -389,7 +390,7 @@ export function PrivacySettings({ onClose, onJoinSuccess }: PrivacySettingsProps
                       type="date"
                       value={birthdate}
                       onChange={(e) => setBirthdate(e.target.value)}
-                      max={new Date().toISOString().split('T')[0]}
+                      max={getTodayLocalDateString()}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                     />
                   </div>

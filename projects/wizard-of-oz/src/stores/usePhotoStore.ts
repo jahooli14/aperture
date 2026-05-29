@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { logger } from '../lib/logger';
 import { alignPhoto, calculateZoomLevel, hasWhiteCorners } from '../lib/imageUtils';
 import { detectEyesFromImage } from '../lib/faceDetection';
+import { getTodayLocalDateString, toLocalDateString } from '../lib/dateUtils';
 import type { Database } from '../types/database';
 
 type Photo = Database['public']['Tables']['photos']['Row'];
@@ -259,11 +260,11 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
 
       if (!user) throw new Error('Not authenticated');
 
-      // Use provided date or default to today
-      const targetDate = uploadDate || new Date().toISOString().split('T')[0];
+      // Use provided date or default to today (local, not UTC)
+      const targetDate = uploadDate || getTodayLocalDateString();
 
       // Validate date is not in the future
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayLocalDateString();
       if (targetDate > today) {
         throw new Error('Cannot upload photos for future dates');
       }
@@ -271,7 +272,7 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
       // Validate date is not too far in the past (reasonable limit: 5 years)
       const fiveYearsAgo = new Date();
       fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
-      const minDate = fiveYearsAgo.toISOString().split('T')[0];
+      const minDate = toLocalDateString(fiveYearsAgo);
       if (targetDate < minDate) {
         throw new Error('Cannot upload photos older than 5 years');
       }
@@ -465,7 +466,7 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
   },
 
   hasUploadedToday: () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayLocalDateString();
     const photos = get().photos;
     return photos.some(photo => photo.upload_date === today);
   },

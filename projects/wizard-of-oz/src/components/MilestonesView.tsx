@@ -5,7 +5,7 @@ import { useSettingsStore } from '../stores/useSettingsStore';
 import { useMilestoneStore } from '../stores/useMilestoneStore';
 import { usePhotoStore } from '../stores/usePhotoStore';
 import { milestones, calculateAgeInWeeks, formatAgeRange, type Milestone } from '../data/milestones';
-import { formatDateForDisplay } from '../lib/dateUtils';
+import { formatDateForDisplay, getTodayLocalDateString } from '../lib/dateUtils';
 
 export function MilestonesView() {
   const { settings } = useSettingsStore();
@@ -69,7 +69,7 @@ export function MilestonesView() {
       }
     } else {
       // Open achievement dialog to mark as new
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayLocalDateString();
       const todayPhoto = photos.find(photo => photo.upload_date === today);
 
       setSelectedMilestone(milestone);
