@@ -17,16 +17,48 @@
 
 <body>
   <div id="root">
-    <!-- Emergency fallback: shows if JavaScript fails to load -->
-    <div
+    <!-- Boot fallback: shown until React mounts. The watchdog below upgrades
+         this to a connection-aware retry if the app code never boots (e.g. the
+         entry bundle failed to download on a flaky network). -->
+    <div id="boot-screen"
       style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #0a0a0a; color: #fff; font-family: system-ui, sans-serif; padding: 20px; text-align: center;">
       <div>
-        <h1 style="color: #3b82f6; margin-bottom: 20px;">Loading...</h1>
-        <p style="color: #9ca3af;">If this message persists, JavaScript failed to load.</p>
-        <p style="color: #9ca3af; margin-top: 10px; font-size: 14px;">Check console (F12) for errors.</p>
+        <h1 id="boot-title" style="color: #3b82f6; margin-bottom: 16px; font-weight: 600;">Aperture</h1>
+        <p id="boot-message" style="color: #9ca3af;">Loading…</p>
       </div>
     </div>
   </div>
+  <script>
+    // Cold-start watchdog. If main.tsx hasn't set window.__APP_BOOTED within the
+    // timeout, the entry bundle almost certainly failed to download (congested
+    // network). Swap the spinner for an honest, recoverable message instead of
+    // leaving people staring at "Loading…" forever.
+    (function () {
+      var TIMEOUT_MS = 9000;
+      setTimeout(function () {
+        if (window.__APP_BOOTED) return;
+        var title = document.getElementById('boot-title');
+        var msg = document.getElementById('boot-message');
+        var screen = document.getElementById('boot-screen');
+        if (!msg || !screen) return;
+        var offline = (typeof navigator !== 'undefined') && navigator.onLine === false;
+        if (title) title.textContent = offline ? "You're offline" : 'Trouble loading';
+        msg.textContent = offline
+          ? 'Reconnect and tap retry — the app needs a moment of signal to start.'
+          : 'Slow connection? Tap retry to give it another go.';
+        if (!document.getElementById('boot-retry')) {
+          var btn = document.createElement('button');
+          btn.id = 'boot-retry';
+          btn.textContent = 'Retry';
+          btn.setAttribute('style',
+            'margin-top:18px;padding:10px 22px;border-radius:10px;border:0;cursor:pointer;' +
+            'background:#3b82f6;color:#fff;font-size:15px;font-weight:600;');
+          btn.onclick = function () { window.location.reload(); };
+          msg.parentNode.appendChild(btn);
+        }
+      }, TIMEOUT_MS);
+    })();
+  </script>
   <script type="module" src="/src/main.tsx"></script>
 </body>
 

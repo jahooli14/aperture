@@ -137,6 +137,9 @@ console.log('[Main] Global error handlers installed')
 // Emergency fallback - show something if React fails to render
 try {
   console.log('[Main] Starting React render...')
+  // Tell the index.html cold-start watchdog the app code loaded and is booting,
+  // so it won't swap in the "trouble loading" retry screen.
+  ;(window as unknown as { __APP_BOOTED?: boolean }).__APP_BOOTED = true
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <App />
