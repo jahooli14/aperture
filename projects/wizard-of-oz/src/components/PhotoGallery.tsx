@@ -297,6 +297,8 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
     [photos]
   );
 
+  const todayStr = getTodayLocalDateString();
+
   return (
     <div className="space-y-6">
       <div>
@@ -359,12 +361,16 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
           // tile. The old stagger (delay: index * 0.05) blocked the grid for
           // ~5s with 100 photos before everything was visible — now the whole
           // grid paints in one frame, with CSS-only press/hover affordances.
+          const isToday = photo.upload_date === todayStr;
+
           return (
             <button
               key={photo.id}
               type="button"
               onClick={(e) => handlePhotoClick(photo, e)}
-              className="relative aspect-square rounded-lg overflow-hidden bg-gray-200 shadow-md hover:shadow-2xl active:scale-[0.97] hover:-translate-y-0.5 transition-[transform,box-shadow] duration-150 cursor-pointer group select-none touch-manipulation"
+              className={`relative aspect-square rounded-lg overflow-hidden bg-gray-200 shadow-md hover:shadow-2xl active:scale-[0.97] hover:-translate-y-0.5 transition-[transform,box-shadow] duration-150 cursor-pointer group select-none touch-manipulation ${
+                isToday ? 'ring-2 ring-primary-500 ring-offset-2' : ''
+              }`}
             >
               {/* Smooth background placeholder - no more skeleton flash */}
               <div className="absolute inset-0 bg-gray-100" />
