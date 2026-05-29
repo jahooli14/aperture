@@ -7,7 +7,8 @@ import { triggerHaptic } from '../lib/haptics';
 import { logger } from '../lib/logger';
 import { PhotoSkeleton } from './PhotoSkeleton';
 import { getPhotoDisplayUrl } from '../lib/photoUtils';
-import { formatRelativeDate } from '../lib/dateUtils';
+import { formatRelativeDate, getTodayLocalDateString } from '../lib/dateUtils';
+import { calculateAge, formatAge } from '../lib/ageUtils';
 import type { Database } from '../types/database';
 import type { ToastType } from './Toast';
 
@@ -284,13 +285,21 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
   // Check if we have any photos for the overlay
   const hasPhotos = photos.length > 0;
 
+  // Baby's age today, shown in the header for emotional context.
+  const ageToday = settings?.baby_birthdate
+    ? formatAge(calculateAge(settings.baby_birthdate, getTodayLocalDateString()))
+    : null;
+
   return (
     <div className="space-y-6">
       <div>
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Your Journey</h2>
-            <p className="text-sm text-gray-600 mt-1">{filteredPhotos.length} {filteredPhotos.length === 1 ? 'day' : 'days'} captured</p>
+            <p className="text-sm text-gray-600 mt-1">
+              {filteredPhotos.length} {filteredPhotos.length === 1 ? 'day' : 'days'} captured
+              {ageToday && <span className="text-gray-400"> · {ageToday} old</span>}
+            </p>
           </div>
         </div>
 
