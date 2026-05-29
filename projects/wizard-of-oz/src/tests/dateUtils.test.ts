@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
-import { toLocalDateString, getTodayLocalDateString } from '../lib/dateUtils';
+import { toLocalDateString, getTodayLocalDateString, formatRelativeDate } from '../lib/dateUtils';
 
 describe('toLocalDateString', () => {
   it('formats using local calendar fields', () => {
@@ -31,5 +31,28 @@ describe('getTodayLocalDateString', () => {
   it('returns the local YYYY-MM-DD for now', () => {
     expect(getTodayLocalDateString()).toBe(toLocalDateString(new Date()));
     expect(getTodayLocalDateString()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});
+
+describe('formatRelativeDate', () => {
+  const today = '2025-05-29';
+
+  it('labels today and yesterday', () => {
+    expect(formatRelativeDate('2025-05-29', today)).toBe('Today');
+    expect(formatRelativeDate('2025-05-28', today)).toBe('Yesterday');
+  });
+
+  it('uses "N days ago" within the past week', () => {
+    expect(formatRelativeDate('2025-05-26', today)).toBe('3 days ago');
+    expect(formatRelativeDate('2025-05-24', today)).toBe('5 days ago');
+  });
+
+  it('falls back to the short date beyond a week and for future dates', () => {
+    expect(formatRelativeDate('2025-05-01', today)).toBe('May 1');
+    expect(formatRelativeDate('2025-06-10', today)).toBe('Jun 10');
+  });
+
+  it('returns empty string for missing input', () => {
+    expect(formatRelativeDate(null, today)).toBe('');
   });
 });

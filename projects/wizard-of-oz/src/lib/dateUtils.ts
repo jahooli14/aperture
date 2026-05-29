@@ -68,7 +68,7 @@ export function formatDateForDisplay(dateString: string | null | undefined): str
  */
 export function formatShortDate(dateString: string | null | undefined): string {
   if (!dateString) return '';
-  
+
   try {
     const date = parseLocalDate(dateString);
     return date.toLocaleDateString('en-US', {
@@ -78,4 +78,26 @@ export function formatShortDate(dateString: string | null | undefined): string {
   } catch (e) {
     return dateString;
   }
+}
+
+/**
+ * Formats a date for display relative to today: "Today", "Yesterday",
+ * "N days ago" for the last week, otherwise the short date ("Oct 24").
+ * Future dates fall back to the short date.
+ */
+export function formatRelativeDate(
+  dateString: string | null | undefined,
+  today: string = getTodayLocalDateString()
+): string {
+  if (!dateString) return '';
+
+  const MS_PER_DAY = 1000 * 60 * 60 * 24;
+  const diffDays = Math.round(
+    (parseLocalDate(today).getTime() - parseLocalDate(dateString).getTime()) / MS_PER_DAY
+  );
+
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays > 1 && diffDays < 7) return `${diffDays} days ago`;
+  return formatShortDate(dateString);
 }

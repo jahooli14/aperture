@@ -7,6 +7,7 @@ import { triggerHaptic } from '../lib/haptics';
 import { logger } from '../lib/logger';
 import { PhotoSkeleton } from './PhotoSkeleton';
 import { getPhotoDisplayUrl } from '../lib/photoUtils';
+import { formatRelativeDate } from '../lib/dateUtils';
 import type { Database } from '../types/database';
 import type { ToastType } from './Toast';
 
@@ -361,10 +362,7 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity pointer-events-none">
                 <div className="absolute bottom-0 left-0 right-0 p-2 md:p-3 text-left">
                   <p className="text-white text-xs md:text-sm font-medium">
-                    {new Date(photo.upload_date).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                    })}
+                    {formatRelativeDate(photo.upload_date)}
                   </p>
                 </div>
               </div>
@@ -423,10 +421,7 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
                   triggerHaptic('warning');
 
                   // Show undo toast with action
-                  const photoDate = new Date(photoToDelete.upload_date).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                  });
+                  const photoDate = formatRelativeDate(photoToDelete.upload_date);
 
                   // Capture the photo in closure for undo callback
                   const photoToRestore = photoToDelete;
