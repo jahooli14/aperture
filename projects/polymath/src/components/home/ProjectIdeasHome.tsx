@@ -97,6 +97,21 @@ function deriveMode(idea: ProjectIdea): IdeaMode {
   return 'new_idea'
 }
 
+// A project without a finish line can't tell when it's done — so an
+// accepted idea must land with one set, not as an unshaped project the
+// user has to define later. Every idea prompt ends the pitch with "what
+// done looks like in one observable test", so the pitch's last sentence
+// IS the finish line. Pull it out; fall back to a concrete line built
+// from the title when the pitch is a single sentence (template ideas).
+function deriveFinishLine(idea: ProjectIdea): string {
+  const sentences = idea.pitch
+    .split(/(?<=[.!?])\s+/)
+    .map(s => s.trim())
+    .filter(Boolean)
+  if (sentences.length >= 2) return sentences[sentences.length - 1]
+  return `${idea.title.replace(/\.$/, '')} exists as a finished thing you can show someone.`
+}
+
 // Each mode gets a glyph + accent so the card reads as correspondence FROM
 // the harness, not a generic note. The glyphs are typographic ornaments
 // (fleurons, dingbats); the accents are non-brand colours so the card
@@ -319,12 +334,23 @@ export function ProjectIdeasHome() {
         idea.next_step ? `First move: ${idea.next_step}` : null,
       ].filter(Boolean).join('\n\n')
 
+      // Add a finish line so the new project knows what done looks like
+      // from the moment it's created. project_mode 'completion' marks it
+      // as a thing with an end state (not a recurring habit). The user
+      // can still sharpen the finish line later via shaping.
       await createProject({
         title: idea.title,
         description,
         status: 'active',
         type: 'Creative',
-        metadata: { tasks: [], progress: 0, is_shaped: false, from_idea: idea.id },
+        metadata: {
+          tasks: [],
+          progress: 0,
+          is_shaped: false,
+          from_idea: idea.id,
+          end_goal: deriveFinishLine(idea),
+          project_mode: 'completion',
+        },
       })
 
       // Mark it built so the server clears it from the pending queue and
