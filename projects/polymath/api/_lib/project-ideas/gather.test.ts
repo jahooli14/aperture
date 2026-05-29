@@ -9,9 +9,6 @@
 import { describe, it, expect } from 'vitest'
 import { classifyIdeaOutcome } from './gather'
 
-const NOW = Date.now()
-const hours = (n: number) => new Date(NOW - n * 3_600_000).toISOString()
-
 describe('classifyIdeaOutcome', () => {
   it('treats a missing project as a stall (built, never became anything)', () => {
     expect(classifyIdeaOutcome(undefined)).toBe('stalled')
@@ -28,35 +25,31 @@ describe('classifyIdeaOutcome', () => {
     },
   )
 
-  it('reads an active project with progress as worked', () => {
-    expect(classifyIdeaOutcome({ status: 'active', metadata: { progress: 25 } })).toBe('worked')
-  })
-
-  it('reads an active project with a completed task as worked', () => {
+  it('reads an active project with a task crossed off (done flag) as worked', () => {
     const project = { status: 'active', metadata: { tasks: [{ text: 'a', done: true }, { text: 'b' }] } }
     expect(classifyIdeaOutcome(project)).toBe('worked')
   })
 
-  it('reads an active project touched well after creation as worked', () => {
-    const project = { status: 'active', created_at: hours(72), last_active: hours(2) }
+  it('reads an active project with a task crossed off (completed_at) as worked', () => {
+    const project = { status: 'active', metadata: { tasks: [{ text: 'a', completed_at: '2026-05-01T00:00:00Z' }] } }
     expect(classifyIdeaOutcome(project)).toBe('worked')
   })
 
-  it('reads an active, untouched project as merely claimed', () => {
-    // Created and last touched in the same sitting (within the grace window),
-    // no progress, no tasks — the user spun it up but never moved it.
-    const project = { status: 'active', created_at: hours(48), last_active: hours(48), metadata: { progress: 0 } }
+  it('reads an active project with recorded progress as worked', () => {
+    expect(classifyIdeaOutcome({ status: 'active', metadata: { progress: 25 } })).toBe('worked')
+  })
+
+  it('reads an active project with no tasks crossed off as merely claimed', () => {
+    const project = { status: 'active', metadata: { progress: 0, tasks: [{ text: 'a' }, { text: 'b' }] } }
     expect(classifyIdeaOutcome(project)).toBe('claimed')
   })
 
-  it('does not count spin-up edits inside the grace window as work', () => {
-    // last_active only ~1h after creation — that's the shaping pass, not work.
-    const project = { status: 'active', created_at: hours(49), last_active: hours(48) }
-    expect(classifyIdeaOutcome(project)).toBe('claimed')
+  it('reads an active project with no task list at all as claimed', () => {
+    expect(classifyIdeaOutcome({ status: 'active', metadata: {} })).toBe('claimed')
   })
 
-  it('prefers a real status over a stale last_active (completed wins)', () => {
-    const project = { status: 'completed', created_at: hours(48), last_active: hours(48) }
+  it('prefers a terminal status over task state (completed wins)', () => {
+    const project = { status: 'completed', metadata: { tasks: [{ text: 'a' }] } }
     expect(classifyIdeaOutcome(project)).toBe('shipped')
   })
 })

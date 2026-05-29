@@ -19,36 +19,36 @@ import type { GatherResult, IdeaOutcome } from './types.js'
 interface SpawnedProject {
   status?: string | null
   metadata?: { progress?: unknown; tasks?: unknown; from_idea?: unknown } | null
-  last_active?: string | null
-  updated_at?: string | null
   created_at?: string | null
 }
 
-/** Activity within this window of a project's creation counts as the project
- *  not really having moved — anything later is genuine work on it. 6h covers
- *  the spin-up edits (shaping, first task) that happen in the same sitting. */
-const WORKED_GRACE_MS = 6 * 3_600_000
+/** A crossed-off task: the checkbox is ticked, or it carries the timestamp
+ *  we stamp when it's completed. Either way the user did the thing. */
+function isCrossedOff(task: any): boolean {
+  return task?.done === true || task?.completed === true || task?.status === 'done' || !!task?.completed_at
+}
 
 /** Derive the REAL outcome of a built idea from the project it spawned.
  *  Pure + exported so it's unit-testable. `undefined` project means the user
- *  built the idea but no project survives — treat as a stall. */
+ *  built the idea but no project survives — treat as a stall.
+ *
+ *  "worked" is the signal that matters most and the easiest to get wrong, so
+ *  it's grounded in something concrete the user actually did: a task crossed
+ *  off the project (or recorded progress). No activity-timestamp guessing. */
 export function classifyIdeaOutcome(project: SpawnedProject | undefined): IdeaOutcome {
   if (!project) return 'stalled'
   const status = (project.status ?? '').toLowerCase()
   if (status === 'completed') return 'shipped'
   if (['dormant', 'on-hold', 'archived', 'abandoned'].includes(status)) return 'stalled'
 
-  // Active / upcoming / maintaining: did it move after it was created?
+  // Active / upcoming / maintaining: has a task been crossed off, or progress
+  // recorded? That's real work on the thing the idea became.
   const progress = Number(project.metadata?.progress ?? 0)
   const tasks = Array.isArray(project.metadata?.tasks) ? (project.metadata!.tasks as any[]) : []
-  const doneTasks = tasks.filter((t) => t?.done || t?.completed || t?.status === 'done').length
-  const lastActive = project.last_active ?? project.updated_at ?? null
-  const created = project.created_at ?? null
-  const movedSinceCreation =
-    !!lastActive && !!created &&
-    new Date(lastActive).getTime() - new Date(created).getTime() > WORKED_GRACE_MS
+  const crossedOff = tasks.filter(isCrossedOff).length
+  if (progress > 0 || crossedOff > 0) return 'worked'
 
-  if (progress > 0 || doneTasks > 0 || movedSinceCreation) return 'worked'
+  // Active but nothing crossed off since it was spun up from the idea.
   return 'claimed'
 }
 
@@ -202,7 +202,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
     // gone all the way to completed or all the way to abandoned.
     supabase
       .from('projects')
-      .select('status, metadata, last_active, updated_at, created_at')
+      .select('status, metadata')
       .eq('user_id', userId)
       .not('metadata->>from_idea', 'is', null)
       .limit(400),
