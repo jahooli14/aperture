@@ -98,6 +98,16 @@ const pendingRequests = new Map<string, Promise<any>>()
 const cache = new Map<string, { data: any, timestamp: number }>()
 const CACHE_TTL = 60 * 1000 // 1 minute
 
+// A failure worth one retry: a network blip, a request timeout, or a 5xx.
+// 4xx (auth, validation, not-found) won't get better on a retry, so we don't.
+function isTransientFailure(error: unknown): boolean {
+  if (error instanceof ApiError) {
+    return error.status >= 500 || error.status === 408
+  }
+  // Native fetch network failures surface as TypeError.
+  return error instanceof TypeError
+}
+
 export const api = {
   get: async (endpoint: string, options: { timeout?: number } = {}) => {
     // 1. Check Cache
@@ -111,16 +121,29 @@ export const api = {
       return pendingRequests.get(endpoint)
     }
 
-    // 3. Make Request with timeout (default 30s)
+    // 3. Make Request with timeout (default 30s). GETs are safe to retry, so
+    //    a single transient failure (network blip / 5xx / timeout) gets one
+    //    automatic retry with a short backoff before surfacing to the UI.
     const promise = (async () => {
       try {
         const authHeaders = await getAuthHeaders()
-        const response = await fetchWithTimeout(
-          `/api/${endpoint}`,
-          { headers: authHeaders },
-          options.timeout || 30000
-        )
-        const data = await handleResponse(response)
+        const doFetch = async () => {
+          const response = await fetchWithTimeout(
+            `/api/${endpoint}`,
+            { headers: authHeaders },
+            options.timeout || 30000
+          )
+          return handleResponse(response)
+        }
+
+        let data
+        try {
+          data = await doFetch()
+        } catch (err) {
+          if (!isTransientFailure(err)) throw err
+          await new Promise(r => setTimeout(r, 600))
+          data = await doFetch()
+        }
 
         // Update Cache
         cache.set(endpoint, { data, timestamp: Date.now() })

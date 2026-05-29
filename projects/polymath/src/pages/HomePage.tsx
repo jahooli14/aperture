@@ -24,7 +24,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { useProjectStore, usePriorityProject, useMostRecentNonPriorityProject } from '../stores/useProjectStore'
+import { useProjectStore, usePriorityProject, useMostRecentNonPriorityProject, useRecentNonPriorityProjects, useUpNextMiniProjects } from '../stores/useProjectStore'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { useJourneyStore } from '../stores/useJourneyStore'
@@ -36,6 +36,7 @@ import { UpNextMini } from '../components/home/UpNextMini'
 import { ThoughtOfTheDay } from '../components/home/ThoughtOfTheDay'
 import { ProjectIdeasHome } from '../components/home/ProjectIdeasHome'
 import { ConsumingWidget } from '../components/home/ConsumingWidget'
+import { DeferMount } from '../components/DeferMount'
 import { UnauthHome } from '../components/onboarding/UnauthHome'
 import { ease, stagger } from '../lib/motion'
 import { AlertCircle, Search, Moon, Settings, Aperture } from 'lucide-react'
@@ -52,6 +53,11 @@ export function HomePage() {
   const priorityProject = usePriorityProject()
   const recentProject = useMostRecentNonPriorityProject()
   const hasAnyFocus = priorityProject || recentProject
+  // Mirror the minis' selectors here so we can drop the section header +
+  // seam when the row would be empty — a bare "still warm" header over
+  // nothing reads as a bug, not a quiet state.
+  const recentMini = useRecentNonPriorityProjects(2)
+  const upNextMini = useUpNextMiniProjects()
 
   const [error, setError] = useState<string | null>(null)
 
@@ -75,6 +81,27 @@ export function HomePage() {
     if (!isAuthenticated) return
     setContext('home', 'home', 'Home')
     if (onboardingCompletedAt) startSession()
+  }, [isAuthenticated])
+
+  // Warm the chunks for the screens people open from home (a project, a
+  // read, a list) while the browser is idle, so the first navigation doesn't
+  // pay a lazy-load wait. Fire-and-forget; failures are harmless.
+  useEffect(() => {
+    if (!isAuthenticated) return
+    const prefetch = () => {
+      import('./ProjectDetailPage').catch(() => {})
+      import('./ReaderPage').catch(() => {})
+      import('./ListDetailPage').catch(() => {})
+    }
+    const ric = (window as any).requestIdleCallback as
+      | ((cb: () => void, opts?: { timeout: number }) => number)
+      | undefined
+    const cancel = (window as any).cancelIdleCallback as ((id: number) => void) | undefined
+    const id = ric ? ric(prefetch, { timeout: 2500 }) : window.setTimeout(prefetch, 1500)
+    return () => {
+      if (ric && cancel) cancel(id as number)
+      else clearTimeout(id as number)
+    }
   }, [isAuthenticated])
 
   useEffect(() => {
@@ -196,25 +223,43 @@ export function HomePage() {
           ) : !hasAnyFocus ? (
             <motion.div {...stackTransition(2)}>
               <h2 className="section-header" style={{ margin: '0 0 10px' }}>your <span>priority</span></h2>
-              <KeepGoingEmpty />
+              {projects.length === 0 ? (
+                // Brand-new account: point at the core loop (capture), not an
+                // empty projects list they'd just bounce off.
+                <KeepGoingEmpty
+                  message="Nothing here yet. Start by capturing a thought."
+                  actionLabel="Capture a thought"
+                  onAction={() => window.dispatchEvent(new Event('openVoiceCapture'))}
+                />
+              ) : (
+                <KeepGoingEmpty />
+              )}
             </motion.div>
           ) : null}
 
-          <div className="section-seam" aria-hidden />
-
-          {/* Section 2 — Recently active. 2-up glass cards. */}
-          <h2 className="section-header" style={{ margin: '0 0 10px' }}>still <span>warm</span></h2>
-          <motion.div {...stackTransition(3)}>
-            <RecentlyActiveMini />
-          </motion.div>
-
-          <div className="section-seam" aria-hidden />
+          {/* Section 2 — Recently active. 2-up glass cards. Header + seam
+              only when there's something to show, so we never strand a
+              heading over an empty row. */}
+          {recentMini.length > 0 && (
+            <>
+              <div className="section-seam" aria-hidden />
+              <h2 className="section-header" style={{ margin: '0 0 10px' }}>still <span>warm</span></h2>
+              <motion.div {...stackTransition(3)}>
+                <RecentlyActiveMini />
+              </motion.div>
+            </>
+          )}
 
           {/* Section 3 — Up Next. 2-up ghost cards, quieter material. */}
-          <h2 className="section-header" style={{ margin: '0 0 10px' }}>the <span>queue</span></h2>
-          <motion.div {...stackTransition(4)}>
-            <UpNextMini />
-          </motion.div>
+          {upNextMini.length > 0 && (
+            <>
+              <div className="section-seam" aria-hidden />
+              <h2 className="section-header" style={{ margin: '0 0 10px' }}>the <span>queue</span></h2>
+              <motion.div {...stackTransition(4)}>
+                <UpNextMini />
+              </motion.div>
+            </>
+          )}
 
           <div className="section-seam" aria-hidden />
 
@@ -230,18 +275,26 @@ export function HomePage() {
 
           {/* Section 5 — Now consuming. Identity layer.
               Non-article lists in the top strip; Saved reads + New reads
-              dropdowns hold articles from the reading queue and RSS feeds. */}
+              dropdowns hold articles from the reading queue and RSS feeds.
+              Deferred: it fetches the reading queue + RSS on mount, so we
+              hold it back until it's near the viewport rather than letting
+              it compete with the first paint. */}
           <h2 className="section-header" style={{ margin: '0 0 10px' }}>now <span>consuming</span></h2>
           <motion.div {...stackTransition(6)}>
-            <ConsumingWidget />
+            <DeferMount minHeight={120}>
+              <ConsumingWidget />
+            </DeferMount>
           </motion.div>
 
           <div className="section-seam" aria-hidden />
 
           {/* Section 6 — Thought of the day. Component renders its own
-              section-header internally. */}
+              section-header internally. Deferred for the same reason — it
+              fetches a batch of resurfaced memories on mount. */}
           <motion.div {...stackTransition(7)}>
-            <ThoughtOfTheDay />
+            <DeferMount minHeight={160}>
+              <ThoughtOfTheDay />
+            </DeferMount>
           </motion.div>
 
           {/* Quiet exit to Settings — small, centred, low-contrast.

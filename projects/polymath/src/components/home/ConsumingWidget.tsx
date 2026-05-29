@@ -16,7 +16,7 @@
  */
 import React, { useEffect, useState, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence, useMotionValue, useTransform, type PanInfo } from 'framer-motion'
+import { motion, AnimatePresence, useMotionValue, useTransform, animate, type PanInfo } from 'framer-motion'
 import {
   ArrowRight, ChevronDown, ChevronRight,
   X, Bookmark, Archive, Pin, RotateCcw, WifiOff, Plus, Settings2,
@@ -126,6 +126,7 @@ function SwipeableArticleRow({
   rightLabel,
   rightIcon: RightIcon,
   rightColor,
+  showHint = false,
 }: {
   article: ConsumingArticle
   onTap: () => void
@@ -137,12 +138,26 @@ function SwipeableArticleRow({
   rightLabel: string
   rightIcon: React.ElementType
   rightColor: string
+  showHint?: boolean
 }) {
   const x = useMotionValue(0)
   const leftBgOpacity = useTransform(x, [-SWIPE_THRESHOLD_PX, -20, 0], [1, 0.25, 0])
   const rightBgOpacity = useTransform(x, [0, 20, SWIPE_THRESHOLD_PX], [0, 0.25, 1])
   const age = relativeAge(article.published_date || article.created_at)
   const isPinned = !!article.pinned_at
+
+  // One-time discoverability nudge: a gentle peek both ways teaches that
+  // rows swipe for quick actions. Transform-only and a single row, so it
+  // stays cheap on Android. Gated by the parent via localStorage.
+  useEffect(() => {
+    if (!showHint) return
+    const controls = animate(x, [0, 40, 0, -40, 0], {
+      duration: 1.7,
+      times: [0, 0.22, 0.46, 0.68, 1],
+      ease: 'easeInOut',
+    })
+    return () => controls.stop()
+  }, [showHint, x])
 
   const handleDragEnd = (_: unknown, info: PanInfo) => {
     // info.point.x is the release position, info.offset.x is the
@@ -329,6 +344,8 @@ export function ConsumingWidget() {
   // user opens whichever drawer they want.
   const [openSaved, setOpenSaved] = useState(false)
   const [openNew, setOpenNew] = useState(false)
+  // Arm the one-time swipe hint the first time a reads dropdown is opened.
+  const [swipeHintArmed, setSwipeHintArmed] = useState(false)
   // Undo state — last 24h of swipe-left actions are recoverable from
   // within their respective dropdowns.
   const [recentlyDismissed, setRecentlyDismissed] = useState<ConsumingArticle[]>([])
@@ -343,6 +360,32 @@ export function ConsumingWidget() {
   // Prime the feeds store so the sheet can show "already subscribed" badges
   // and so /rss has fresh data when the user navigates.
   useEffect(() => { fetchFeeds() }, [fetchFeeds])
+
+  // The swipe actions on reads are invisible until you swipe. The first time
+  // a user opens either reads dropdown, peek the top row once so the gesture
+  // is discoverable. Remember it per-device so we never nag.
+  useEffect(() => {
+    if (!(openSaved || openNew)) return
+    try {
+      if (localStorage.getItem('consuming-swipe-hint-seen')) return
+      localStorage.setItem('consuming-swipe-hint-seen', '1')
+    } catch { /* private mode — just show it this once */ }
+    setSwipeHintArmed(true)
+  }, [openSaved, openNew])
+
+  // When an article is archived from another surface (reader, article list),
+  // drop it from these lists immediately so "Saved reads" doesn't show a
+  // stale, already-archived item until the next refetch.
+  useEffect(() => {
+    const onStatusChanged = (e: Event) => {
+      const { id, status } = (e as CustomEvent).detail || {}
+      if (!id || status !== 'archived') return
+      setSaved(prev => prev.filter(a => a.id !== id))
+      setFeedReads(prev => prev.filter(a => a.id !== id))
+    }
+    window.addEventListener('article-status-changed', onStatusChanged)
+    return () => window.removeEventListener('article-status-changed', onStatusChanged)
+  }, [])
   // navigator.onLine plus event listeners. Drives the "offline" badge and
   // disables Load more / shows stale data freely.
   const [isOnline, setIsOnline] = useState(() =>
@@ -788,7 +831,7 @@ export function ConsumingWidget() {
             {openSaved && (
               <div className="max-h-[60vh] overflow-y-auto border-t border-white/[0.04]">
                 <AnimatePresence initial={false} mode="popLayout">
-                  {saved.map(article => (
+                  {saved.map((article, idx) => (
                     <motion.div
                       key={article.id}
                       layout
@@ -798,6 +841,7 @@ export function ConsumingWidget() {
                     >
                       <SwipeableArticleRow
                         article={article}
+                        showHint={swipeHintArmed && openSaved && idx === 0}
                         onTap={() => navigate(`/reading/${article.id}`)}
                         onSwipeLeft={() => archiveSaved(article.id)}
                         onSwipeRight={() => togglePinSaved(article)}
@@ -841,7 +885,7 @@ export function ConsumingWidget() {
                   </div>
                 )}
                 <AnimatePresence initial={false} mode="popLayout">
-                  {feedReads.map(article => (
+                  {feedReads.map((article, idx) => (
                     <motion.div
                       key={article.id}
                       layout
@@ -851,6 +895,7 @@ export function ConsumingWidget() {
                     >
                       <SwipeableArticleRow
                         article={article}
+                        showHint={swipeHintArmed && openNew && !openSaved && idx === 0}
                         onTap={() => openNewRead(article)}
                         onSwipeLeft={() => dismissNew(article.id)}
                         onSwipeRight={() => saveNew(article)}

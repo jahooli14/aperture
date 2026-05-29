@@ -507,6 +507,13 @@ export const useReadingStore = create<ReadingState>((set, get) => {
         }
       }
 
+      // Let other surfaces (e.g. home's ConsumingWidget, which fetches the
+      // reading queue separately and caches it) react immediately — otherwise
+      // an archived article lingers in "Saved reads" until the next refetch.
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('article-status-changed', { detail: { id, status } }))
+      }
+
       // If offline, queue operation and return (optimistic update already done)
       const { isOnline } = useOfflineStore.getState()
       if (!isOnline) {

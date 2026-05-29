@@ -8,6 +8,7 @@ import { useThemeStore, DEFAULT_ACCENT_COLOR, DEFAULT_BG_ACCENT_COLOR } from '..
 import { SubtleBackground } from '../components/SubtleBackground'
 import { useToast } from '../components/ui/toast'
 import { useNotificationSettings } from '../stores/useNotificationSettings'
+import { useJourneyStore } from '../stores/useJourneyStore'
 
 const intensityOptions = [
   { value: 'subtle' as const, label: 'Subtle', description: 'Quiet — less glow, less motion' },
@@ -23,6 +24,7 @@ const fontSizeOptions = [
 
 export function SettingsPage() {
   const navigate = useNavigate()
+  const onboardingCompletedAt = useJourneyStore(s => s.onboardingCompletedAt)
   const {
     accentColor, bgAccentColor, intensity, fontSize, showBugTracker,
     setAccentColor, setBgAccentColor, resetThemeColors,
@@ -602,6 +604,45 @@ export function SettingsPage() {
             </div>
 
             <div className="space-y-4">
+              {/* Setup status — tells the user plainly whether onboarding
+                  finished (it can bail mid-way on a flaky voice connection)
+                  and gives a way back in. */}
+              <div
+                className="w-full flex items-center gap-4 p-4 rounded-xl border"
+                style={{ background: 'var(--glass-surface)', borderColor: 'var(--glass-surface)' }}
+              >
+                <div
+                  className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{
+                    background: onboardingCompletedAt
+                      ? 'rgba(var(--brand-primary-rgb), 0.15)'
+                      : 'rgba(var(--color-error-rgb), 0.15)',
+                  }}
+                >
+                  <Check className="w-5 h-5" style={{ color: 'var(--brand-primary)' }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold premium-text-platinum text-sm">
+                    {onboardingCompletedAt ? 'Setup complete' : 'Finish setup'}
+                  </h3>
+                  <p className="text-xs" style={{ color: 'var(--brand-text-secondary)' }}>
+                    {onboardingCompletedAt
+                      ? `Done ${new Date(onboardingCompletedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+                      : 'The intro voice chat never finished — pick it back up.'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => navigate('/onboarding')}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold flex-shrink-0 transition-all"
+                  style={{
+                    background: 'rgba(var(--brand-primary-rgb), 0.15)',
+                    color: 'var(--brand-primary)',
+                  }}
+                >
+                  {onboardingCompletedAt ? 'Run again' : 'Finish'}
+                </button>
+              </div>
+
               {/* Bug Tracker Toggle */}
               <button
                 onClick={() => setShowBugTracker(!showBugTracker)}

@@ -124,11 +124,17 @@ export function VoiceFAB({
       }
     }
     const handleTooShort = () => setIsVoiceOpen(false)
+    // When a recording is saved offline (no network), close the modal — the
+    // audio is safe and FloatingNav shows the "saved offline" toast. Leaving
+    // the modal open on "Tap to talk" reads as if nothing happened.
+    const handleQueuedOffline = () => setIsVoiceOpen(false)
     window.addEventListener('openVoiceCapture', handleOpenVoiceCapture)
     window.addEventListener('voice-capture-too-short', handleTooShort)
+    window.addEventListener('voice-capture-queued-offline', handleQueuedOffline)
     return () => {
       window.removeEventListener('openVoiceCapture', handleOpenVoiceCapture)
       window.removeEventListener('voice-capture-too-short', handleTooShort)
+      window.removeEventListener('voice-capture-queued-offline', handleQueuedOffline)
     }
   }, [hidden])
 

@@ -27,12 +27,19 @@ export function useMediaRecorderVoice({
   const [isProcessing, setIsProcessing] = useState(false)
   const [hasPermission, setHasPermission] = useState(false)
   const [isSupported, setIsSupported] = useState(true)
+  // When transcription fails for a non-network reason we keep the recording
+  // around so the user can retry without re-recording — losing a voice note
+  // to a transient blip is the worst thing this flow can do.
+  const [error, setError] = useState<string | null>(null)
+  const [canRetry, setCanRetry] = useState(false)
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const recordingStartTimeRef = useRef<number>(0)
+  // The last recorded blob, retained so retry() can resend it.
+  const lastBlobRef = useRef<Blob | null>(null)
 
   const MIN_RECORDING_MS = 2000 // Discard recordings shorter than 2 seconds
 
@@ -100,40 +107,128 @@ export function useMediaRecorderVoice({
 
     console.log('[Transcribe] Sending to API:', fileName)
 
-    const response = await fetch('/api/memories?action=transcribe', {
-      method: 'POST',
-      body: formData
-    })
+    // Send once, and on a transient failure (network blip or 5xx) retry a
+    // single time after a short backoff before giving up. A flaky connection
+    // shouldn't cost the user their recording.
+    const sendOnce = async () => {
+      const response = await fetch('/api/memories?action=transcribe', {
+        method: 'POST',
+        body: formData
+      })
 
-    console.log('[Transcribe] Response status:', response.status)
+      console.log('[Transcribe] Response status:', response.status)
 
-    if (!response.ok) {
-      const contentType = response.headers.get('content-type')
-      if (contentType?.includes('text/html')) {
-        throw new Error('Transcription API not available. Please check deployment.')
+      if (!response.ok) {
+        const contentType = response.headers.get('content-type')
+        if (contentType?.includes('text/html')) {
+          throw new Error('Transcription API not available. Please check deployment.')
+        }
+
+        let errorMessage = 'Transcription failed'
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.details || errorData.error || errorMessage
+        } catch (e) {
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`
+        }
+
+        const err = new Error(errorMessage) as Error & { status?: number }
+        err.status = response.status
+        throw err
       }
 
-      let errorMessage = 'Transcription failed'
-      try {
-        const errorData = await response.json()
-        errorMessage = errorData.details || errorData.error || errorMessage
-      } catch (e) {
-        errorMessage = `HTTP ${response.status}: ${response.statusText}`
+      const result = await response.json()
+      console.log('[Transcribe] API response:', result)
+
+      if (!result.text || result.text.trim().length === 0) {
+        throw new Error('No transcription returned from API')
       }
 
-      throw new Error(errorMessage)
+      console.log('[Transcribe] Success:', result.text)
+      return result.text as string
     }
 
-    const result = await response.json()
-    console.log('[Transcribe] API response:', result)
-
-    if (!result.text || result.text.trim().length === 0) {
-      throw new Error('No transcription returned from API')
+    try {
+      return await sendOnce()
+    } catch (firstErr: any) {
+      const isTransient =
+        firstErr instanceof TypeError || // network failure
+        firstErr?.message?.includes('Failed to fetch') ||
+        firstErr?.message?.includes('NetworkError') ||
+        (typeof firstErr?.status === 'number' && firstErr.status >= 500)
+      if (!isTransient) throw firstErr
+      console.warn('[Transcribe] Transient failure, retrying once:', firstErr?.message)
+      await new Promise(r => setTimeout(r, 800))
+      return await sendOnce()
     }
-
-    console.log('[Transcribe] Success:', result.text)
-    return result.text
   }
+
+  /**
+   * Shared post-recording path: transcribe, and route failures sensibly.
+   * - Success → emit transcript.
+   * - Real network failure → queue offline so nothing is lost.
+   * - Any other failure → keep the blob, surface a retryable error.
+   */
+  const processAndTranscribe = async (audioBlob: Blob, mimeType: string) => {
+    lastBlobRef.current = audioBlob
+    setError(null)
+    setCanRetry(false)
+    setIsProcessing(true)
+    try {
+      const text = await transcribeAudio(audioBlob)
+      setTranscript(text)
+      onTranscript(text)
+      lastBlobRef.current = null
+      if (autoSubmit) setTranscript('')
+    } catch (transcribeError: any) {
+      console.error('[Transcribe] Failed:', transcribeError?.message)
+
+      const isNetworkError =
+        transcribeError?.message?.includes('Failed to fetch') ||
+        transcribeError?.message?.includes('NetworkError') ||
+        transcribeError instanceof TypeError
+
+      if (isNetworkError) {
+        // Genuinely offline — save the audio so the sync manager can
+        // transcribe it once we're back online. Don't create a placeholder note.
+        console.log('[Transcribe] Network error — saving to IndexedDB for later')
+        const { db } = await import('../lib/db')
+        const { queueOperation } = await import('../lib/offlineQueue')
+        const captureId = await db.addPendingCapture({ blob: audioBlob, mimeType })
+        await queueOperation('capture_media', { captureId })
+        // Bump the visible "pending sync" count immediately so the queued
+        // note shows up in the offline indicator — otherwise it stays hidden
+        // until the next sync tick and the capture feels lost.
+        try {
+          const { useOfflineStore } = await import('../stores/useOfflineStore')
+          await useOfflineStore.getState().updateQueueSize()
+        } catch { /* non-critical */ }
+        window.dispatchEvent(new CustomEvent('voice-capture-queued-offline', {
+          detail: { message: 'Voice note saved offline and will be transcribed when back online' }
+        }))
+        lastBlobRef.current = null
+        setTranscript('')
+      } else {
+        // Server/API error while online — keep the recording so the user can
+        // retry without speaking again, and surface a plain-English message.
+        setError("Couldn't transcribe that — your recording is safe. Tap to try again.")
+        setCanRetry(true)
+        onError?.("Couldn't transcribe that — tap to try again.")
+      }
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  /**
+   * Retry transcription on the last recording without re-recording.
+   */
+  const retry = useCallback(async () => {
+    const blob = lastBlobRef.current
+    if (!blob || isProcessing) return
+    await processAndTranscribe(blob, blob.type || 'audio/webm')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isProcessing])
 
   /**
    * Start recording - Native platform
@@ -281,6 +376,8 @@ export function useMediaRecorderVoice({
     }
 
     try {
+      // Show the processing state immediately while we stop + transcribe so
+      // the button never flashes back to "Tap to talk" mid-flight.
       setIsProcessing(true)
       const result = await VoiceRecorder.stopRecording()
 
@@ -290,58 +387,12 @@ export function useMediaRecorderVoice({
 
       console.log('[Native] Recording stopped, transcribing...')
 
-      // Convert to blob
+      // Convert to blob and hand off to the shared transcribe/retry/offline path.
       const audioBlob = base64ToBlob(result.value.recordDataBase64, 'audio/aac')
-
-      // Always attempt transcription first - don't trust navigator.onLine
-      // Only save offline if transcription actually fails with a network error
-      try {
-        const text = await transcribeAudio(audioBlob)
-        setTranscript(text)
-        onTranscript(text)
-      } catch (transcribeError: any) {
-        console.error('[Native] Transcription failed:', transcribeError.message)
-
-        // Check if this is a network error (actual offline state)
-        // Only treat as offline if it's a real network failure, not an API error
-        const isNetworkError =
-          transcribeError.message?.includes('Failed to fetch') ||
-          transcribeError.message?.includes('NetworkError') ||
-          transcribeError instanceof TypeError
-
-        if (isNetworkError) {
-          console.log('[Native] Network error detected - saving to IndexedDB for later transcription')
-          const { db } = await import('../lib/db')
-          const { queueOperation } = await import('../lib/offlineQueue')
-
-          const captureId = await db.addPendingCapture({
-            blob: audioBlob,
-            mimeType: 'audio/aac'
-          })
-
-          await queueOperation('capture_media', { captureId })
-
-          // DON'T call onTranscript with placeholder - this would create a note with placeholder text!
-          // The sync manager will transcribe and create the note when back online.
-          // Dispatch event so UI can show feedback without creating a note
-          window.dispatchEvent(new CustomEvent('voice-capture-queued-offline', {
-            detail: { message: 'Voice note saved offline and will be transcribed when back online' }
-          }))
-          setTranscript('')
-          return
-        } else {
-          // Non-network error - rethrow to show user
-          throw transcribeError
-        }
-      }
-
-      if (autoSubmit) {
-        setTranscript('')
-      }
+      await processAndTranscribe(audioBlob, 'audio/aac')
     } catch (error) {
       console.error('[Native] Failed to process recording:', error)
       onError?.('Failed to process recording. Please try again.')
-    } finally {
       setIsProcessing(false)
     }
   }
@@ -372,6 +423,10 @@ export function useMediaRecorderVoice({
       stopTimer()
       return
     }
+
+    // Show the processing state immediately so the button doesn't flash back
+    // to "Tap to talk" during the stop wait (can be up to 3s).
+    setIsProcessing(true)
 
     // Stop MediaRecorder and wait for ondataavailable + onstop events
     const waitForStop = new Promise<void>((resolve) => {
@@ -409,10 +464,9 @@ export function useMediaRecorderVoice({
       if (chunksRef.current.length === 0) {
         console.error('[Web] No audio chunks recorded - this indicates the dataavailable event never fired')
         onError?.('No audio was recorded. Please try again and make sure to speak.')
+        setIsProcessing(false)
         return
       }
-
-      setIsProcessing(true)
 
       // Combine chunks into single blob
       const mimeType = mediaRecorderRef.current?.mimeType || 'audio/webm'
@@ -424,59 +478,14 @@ export function useMediaRecorderVoice({
         throw new Error('Audio blob is empty')
       }
 
-      setIsProcessing(true)
-
-      // Always attempt transcription first - don't trust navigator.onLine
-      // Only save offline if transcription actually fails with a network error
-      try {
-        const text = await transcribeAudio(audioBlob)
-        setTranscript(text)
-        onTranscript(text)
-      } catch (transcribeError: any) {
-        console.error('[Web] Transcription failed:', transcribeError.message)
-
-        // Check if this is a network error (actual offline state)
-        // Only treat as offline if it's a real network failure, not an API error
-        const isNetworkError =
-          transcribeError.message?.includes('Failed to fetch') ||
-          transcribeError.message?.includes('NetworkError') ||
-          transcribeError instanceof TypeError
-
-        if (isNetworkError) {
-          console.log('[Web] Network error detected - saving to IndexedDB for later transcription')
-          const { db } = await import('../lib/db')
-          const { queueOperation } = await import('../lib/offlineQueue')
-
-          const captureId = await db.addPendingCapture({
-            blob: audioBlob,
-            mimeType: mimeType
-          })
-
-          await queueOperation('capture_media', { captureId })
-
-          // DON'T call onTranscript with placeholder - this would create a note with placeholder text!
-          // The sync manager will transcribe and create the note when back online.
-          // Dispatch event so UI can show feedback without creating a note
-          window.dispatchEvent(new CustomEvent('voice-capture-queued-offline', {
-            detail: { message: 'Voice note saved offline and will be transcribed when back online' }
-          }))
-          setTranscript('')
-          return
-        } else {
-          // Non-network error - rethrow to show user
-          throw transcribeError
-        }
-      }
-
-      if (autoSubmit) {
-        setTranscript('')
-      }
+      // Hand off to the shared transcribe/retry/offline path.
+      await processAndTranscribe(audioBlob, mimeType)
     } catch (error) {
       console.error('[Web] Failed to process recording:', error)
       const message = error instanceof Error ? error.message : 'Unknown error'
       onError?.(`Failed to process recording: ${message}`)
-    } finally {
       setIsProcessing(false)
+    } finally {
       chunksRef.current = []
     }
   }
@@ -519,6 +528,12 @@ export function useMediaRecorderVoice({
     }
   }, [isRecording, startRecording, stopRecording])
 
+  const clearError = useCallback(() => {
+    setError(null)
+    setCanRetry(false)
+    lastBlobRef.current = null
+  }, [])
+
   return {
     isRecording,
     transcript,
@@ -526,6 +541,10 @@ export function useMediaRecorderVoice({
     hasPermission,
     isProcessing,
     isSupported,
+    error,
+    canRetry,
+    retry,
+    clearError,
     startRecording,
     stopRecording,
     toggleRecording

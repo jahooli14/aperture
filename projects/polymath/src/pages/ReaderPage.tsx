@@ -6,9 +6,10 @@
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, ExternalLink, Archive, Loader2, Highlighter, Clock, Type, Mic, X } from 'lucide-react'
+import { ArrowLeft, ExternalLink, Archive, Loader2, Highlighter, Clock, Type, Mic, X, Check } from 'lucide-react'
 import DOMPurify from 'dompurify'
 import { useReadingStore } from '../stores/useReadingStore'
+import { useMemoryStore } from '../stores/useMemoryStore'
 import { useArticle } from '../hooks/useArticle'
 import { useScrollDirection } from '../hooks/useScrollDirection'
 import { useToast } from '../components/ui/toast'
@@ -16,6 +17,8 @@ import { useOfflineArticle } from '../hooks/useOfflineArticle'
 import { useReadingProgress } from '../hooks/useReadingProgress'
 import { ArticleCompletionDialog } from '../components/reading/ArticleCompletionDialog'
 import { VoiceInput } from '../components/VoiceInput'
+import { ConnectionsList } from '../components/connections/ConnectionsList'
+import { useConnectionStore } from '../stores/useConnectionStore'
 import { DateRule } from '../components/ui/DateRule'
 import { spring, ease } from '../lib/motion'
 
@@ -62,6 +65,11 @@ export function ReaderPage() {
   const [isHighlighterMode, setIsHighlighterMode] = useState(false)
   const [showVoiceNote, setShowVoiceNote] = useState(false)
   const [savingNote, setSavingNote] = useState(false)
+  const [noteText, setNoteText] = useState('')
+  // Bumped after a thought is saved so the "Connected" list remounts and
+  // shows the new link without a page refresh.
+  const [connRefreshKey, setConnRefreshKey] = useState(0)
+  const invalidateConnections = useConnectionStore(s => s.invalidateConnections)
 
   // Automatic offline caching
   useEffect(() => {
@@ -298,30 +306,72 @@ export function ReaderPage() {
     }
   }
 
-  const handleVoiceNote = async (text: string) => {
-    if (!article || !text.trim()) return
+  // Save a thought tied to this article. Goes through the memory store's
+  // createMemory, which handles optimistic UI, the capture endpoint, AND
+  // offline queueing (carrying the article source_reference so the link
+  // survives the sync). When online, we also create an explicit
+  // article→thought connection so "related" is actually true rather than
+  // relying on background embedding similarity.
+  const handleSaveNote = async (text: string) => {
+    const trimmed = text.trim()
+    if (!article || !trimmed) return
     setSavingNote(true)
     try {
-      await fetch('/api/memories', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: `Thought on: ${article.title}`,
-          body: text,
-          tags: ['reading-thought'],
-          source_reference: { type: 'article', id: article.id }
+      const memory = await useMemoryStore.getState().createMemory({
+        body: trimmed,
+        tags: ['reading-thought'],
+        source_reference: {
+          type: 'article',
+          id: article.id,
+          title: article.title ?? undefined,
+          url: article.url || undefined,
+        },
+      })
+
+      // Offline: createMemory queued it (id is an offline placeholder). The
+      // source_reference rides along, so it gets linked when it syncs.
+      const isOfflineQueued = typeof memory?.id === 'string' && memory.id.startsWith('offline_')
+
+      if (isOfflineQueued) {
+        addToast({
+          title: 'Saved offline',
+          description: 'It’ll sync and link to this article when you’re back online.',
+          variant: 'default',
         })
-      })
-      addToast({
-        title: 'Thought captured',
-        description: 'Saved to your thoughts',
-        variant: 'success',
-      })
+      } else if (memory?.id) {
+        // Online: link the thought to the article explicitly. Non-fatal.
+        try {
+          await fetch('/api/connections?action=create-spark', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              source_type: 'article',
+              source_id: article.id,
+              target_type: 'thought',
+              target_id: memory.id,
+              connection_type: 'reading_thought',
+            }),
+          })
+        } catch (linkErr) {
+          console.warn('[ReaderPage] Failed to link thought to article:', linkErr)
+        }
+        // Refresh the "Connected" list so the new thought shows immediately.
+        invalidateConnections('article', article.id)
+        setConnRefreshKey(k => k + 1)
+        addToast({
+          title: 'Thought saved',
+          description: `Linked to "${article.title}"`,
+          variant: 'success',
+        })
+      }
+
+      setNoteText('')
       setShowVoiceNote(false)
-    } catch {
+    } catch (error) {
+      console.error('[ReaderPage] Failed to save thought:', error)
       addToast({
         title: 'Failed to save',
-        description: 'Could not save your thought. Try again.',
+        description: 'Your text is still here — tap Save to try again.',
         variant: 'destructive',
       })
     } finally {
@@ -692,6 +742,29 @@ export function ReaderPage() {
               </p>
             </motion.div>
           )}
+
+          {/* Connected — thoughts you've captured here plus anything in your
+              corpus this article links to. Closes the loop on "save a thought
+              from an article": the note shows up right here afterwards. */}
+          <motion.section
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="mt-14 pt-8 border-t border-white/[0.08]"
+          >
+            <h2
+              className="text-[11px] uppercase tracking-[0.32em] font-semibold mb-5"
+              style={{ color: 'rgba(255,255,255,0.4)' }}
+            >
+              Connected
+            </h2>
+            <ConnectionsList
+              key={connRefreshKey}
+              itemType="article"
+              itemId={article.id}
+              itemTitle={article.title ?? undefined}
+            />
+          </motion.section>
         </main>
 
         {/* Highlight Menu */}
@@ -763,7 +836,7 @@ export function ReaderPage() {
                 WebkitBackdropFilter: 'blur(16px)',
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 0 10px var(--glass-surface)',
               }}
-              aria-label="Record a thought about this article"
+              aria-label="Add a thought about this article"
             >
               <Mic className="h-6 w-6 text-white" />
             </motion.button>
@@ -809,12 +882,41 @@ export function ReaderPage() {
                       <X className="h-6 w-6 text-brand-text-muted" />
                     </button>
                   </div>
-                  <div className="px-8 pb-10">
+                  <div className="px-8 pb-10 space-y-4">
+                    {/* Type it or talk it. Voice transcribes into the same
+                        box so you can read it back and edit before saving —
+                        nothing gets fired off behind your back. */}
+                    <textarea
+                      value={noteText}
+                      onChange={(e) => setNoteText(e.target.value)}
+                      autoFocus
+                      rows={4}
+                      placeholder="What did this spark? Type, or tap the mic to talk."
+                      className="w-full resize-none rounded-2xl p-4 text-[15px] leading-relaxed text-[var(--brand-text-primary)] bg-[var(--glass-surface)] placeholder:text-[var(--brand-text-muted)] focus:outline-none"
+                      style={{ boxShadow: 'inset 0 0 0 1px var(--glass-surface-hover)' }}
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => handleSaveNote(noteText)}
+                      disabled={savingNote || !noteText.trim()}
+                      className="w-full py-3.5 rounded-xl flex items-center justify-center gap-2 font-semibold text-white transition-all disabled:opacity-40"
+                      style={{ backgroundColor: 'var(--brand-primary)' }}
+                    >
+                      {savingNote ? (
+                        <><Loader2 className="h-5 w-5 animate-spin" /> Saving…</>
+                      ) : (
+                        <><Check className="h-5 w-5" /> Save thought</>
+                      )}
+                    </button>
+
                     <VoiceInput
-                      onTranscript={handleVoiceNote}
                       maxDuration={60}
                       autoSubmit={true}
-                      autoStart={true}
+                      autoStart={false}
+                      onTranscript={(t) =>
+                        setNoteText((prev) => (prev.trim() ? `${prev.trim()} ${t}` : t))
+                      }
                     />
                   </div>
                 </div>

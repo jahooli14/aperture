@@ -19,14 +19,28 @@ export function ThoughtOfTheDay() {
   const [card, setCard] = useState<Memory | null>(null)
 
   useEffect(() => {
-    fetch('/api/memories?resurfacing=true&limit=30')
+    // The quote only changes once a day, so there's no reason to refetch a
+    // batch every time the user lands back on home. Cache the chosen card
+    // for the day in sessionStorage; the network call happens once.
+    const cacheKey = `thought-of-the-day:${new Date().toISOString().slice(0, 10)}`
+    try {
+      const cached = sessionStorage.getItem(cacheKey)
+      if (cached) {
+        setCard(JSON.parse(cached) as Memory)
+        return
+      }
+    } catch { /* ignore parse/storage errors and just fetch */ }
+
+    fetch('/api/memories?resurfacing=true&limit=20')
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         const list: Memory[] = data?.memories || []
         if (list.length === 0) return
         // Rotate deterministically by day-of-year so it changes daily.
         const idx = dayOfYear() % list.length
-        setCard(list[idx])
+        const chosen = list[idx]
+        setCard(chosen)
+        try { sessionStorage.setItem(cacheKey, JSON.stringify(chosen)) } catch { /* quota/full — fine */ }
       })
       .catch(() => {})
   }, [])

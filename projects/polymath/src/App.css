@@ -597,3 +597,12 @@
     background: rgba(0, 0, 0, 0.15);
   }
 }
+/* Voice transcription progress — a moving rule that reads as deliberate work
+   while the audio is being transcribed (used by VoiceInput). */
+@keyframes voice-progress {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(420%); }
+}
+.animate-voice-progress {
+  animation: voice-progress 1.4s ease-in-out infinite;
+}
