@@ -9,6 +9,7 @@ import { PhotoSkeleton } from './PhotoSkeleton';
 import { getPhotoDisplayUrl } from '../lib/photoUtils';
 import { formatRelativeDate, getTodayLocalDateString } from '../lib/dateUtils';
 import { calculateAge, formatAge } from '../lib/ageUtils';
+import { currentStreak } from '../lib/streak';
 import type { Database } from '../types/database';
 import type { ToastType } from './Toast';
 
@@ -290,6 +291,12 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
     ? formatAge(calculateAge(settings.baby_birthdate, getTodayLocalDateString()))
     : null;
 
+  // Consecutive-day capture streak — gently reinforces the one-a-day habit.
+  const streak = useMemo(
+    () => currentStreak(photos.map((p) => p.upload_date)),
+    [photos]
+  );
+
   return (
     <div className="space-y-6">
       <div>
@@ -301,6 +308,14 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
               {ageToday && <span className="text-gray-400"> · {ageToday} old</span>}
             </p>
           </div>
+          {streak >= 2 && (
+            <div className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 border border-orange-200 rounded-full">
+              <span className="text-base leading-none">🔥</span>
+              <span className="text-sm font-semibold text-orange-700">
+                {streak} day streak
+              </span>
+            </div>
+          )}
         </div>
 
         {hasPhotos && photos.length > 1 && (
