@@ -190,10 +190,12 @@ export async function generateIdeaFromBlock(
 
 ${mutationInstruction}
 
+**The description must name a concrete first move** — a real thing someone could build, run, or measure on day one (a dataset, an experiment, a prototype). Not "build a system that…" or "explore how…". If you can't name what you'd actually do first, the spawn isn't ready.
+
 **Output a JSON object with this exact shape:**
 {
   "title": "Short, punchy title in plain English",
-  "description": "2-3 sentences describing the new idea concretely",
+  "description": "3-4 short sentences: what the new idea is, then the concrete first thing you'd build/run/measure, then why it's interesting if it works",
   "reasoning": "1-2 sentences on how it extends/mutates the parent",
   "tractability_estimate": "1-5 (5 = buildable this quarter)"
 }`;

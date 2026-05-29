@@ -104,15 +104,22 @@ Cross-Domain Distance: ${idea.cross_domain_distance?.toFixed(2) || 'N/A'}
 Tractability Score: ${idea.tractability_score?.toFixed(2) || 'N/A'}
 
 **Review Criteria:**
-1. **Clarity (hard gate)** - Can a smart non-specialist understand it on first read? REJECT if it leans on academic dress-up like "endogenous", "isomorphism", "stochastic", "modular", "paradigm", "leverage", "systemic", "polymorphic", "cascading", "entropy", "robust control", "autonomous" (when "runs by itself" would do), "dynamically adjust", or stacked abstract nouns. The description should also tell the reader what they could actually build, run, or test — if it doesn't, REJECT as too_vague.
-2. **Insight** - Does this reveal something genuinely new or useful?
-3. **Actionable** - Could someone actually build/test this within 3-12 months?
-4. **Interesting** - Would this be exciting to work on or talk about?
+1. **Clarity (hard gate)** - Can a smart non-specialist understand it on first read? REJECT if it leans on academic dress-up like "endogenous", "isomorphism", "stochastic", "modular", "paradigm", "leverage", "systemic", "polymorphic", "cascading", "entropy", "robust control", "autonomous" (when "runs by itself" would do), "dynamically adjust", or stacked abstract nouns.
+2. **Specific first move (hard gate)** - The description must name a concrete thing you could actually build, run, or measure first — a real workpiece, dataset, experiment, or prototype. REJECT as too_vague if the "next step" is admin dressed up as build ("research X", "create a framework for", "explore the relationship between", "design a system that") with no concrete handle. A good idea passes the test: *what do you do on day one?*
+
+BAD (reject): "Build a system that models how ideas spread through social networks to optimize information flow." — no concrete first move; "system", "optimize", and "information flow" hide the absence of a thing to do.
+GOOD (build): "Take the 2.5M-edge Twitter retweet graph and check whether the same equation that predicts forest-fire size predicts how big a retweet cascade gets. One afternoon's work to fit it; if it holds you can predict a tweet's reach from its first hour."
+
+3. **Insight** - Does this reveal something genuinely new or useful, not a restatement of the obvious?
+4. **Tractable** - Could someone actually build/test this within 3-12 months without an unsolved breakthrough first?
+5. **Interesting** - Would this be exciting to work on or talk about?
 
 **Verdicts:**
-- **BUILD**: Clear, insightful, tractable, and exciting. Worth dedicating serious time.
-- **SPARK**: Has a kernel of something interesting but needs refinement. Save for later.
-- **REJECT**: Too vague, obvious, jargon-heavy without substance, or not feasible.
+- **BUILD**: Clear, specific (names a real first move), insightful, tractable, and exciting. Worth dedicating serious time.
+- **SPARK**: A real kernel, but the first move isn't concrete yet or it needs sharpening. Save for later.
+- **REJECT**: Too vague, obvious, jargon-heavy without substance, no concrete first move, or not feasible.
+
+Hold the line on the two hard gates (clarity, specific first move). Do not lower the bar for an idea just because the underlying connection sounds clever — a clever connection with no concrete first move is a SPARK, not a BUILD.
 
 **Rejection Categories** (if REJECT):
 - poor_fit: Doesn't match personal interests or skills
