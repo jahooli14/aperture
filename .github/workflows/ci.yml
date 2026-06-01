@@ -51,6 +51,49 @@ jobs:
         npm test --if-present
       continue-on-error: true
 
+  polymath:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x, 22.x]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: 'projects/polymath/package-lock.json'
+
+    - name: Install dependencies
+      run: |
+        cd projects/polymath
+        npm ci
+
+    - name: Run linter
+      run: |
+        cd projects/polymath
+        npm run lint
+
+    - name: Type check
+      run: |
+        cd projects/polymath
+        npm run type-check
+
+    - name: Run tests
+      run: |
+        cd projects/polymath
+        npm test
+
+    - name: Build project
+      run: |
+        cd projects/polymath
+        npm run build
+
   security-scan:
     runs-on: ubuntu-latest
     steps:
