@@ -98,6 +98,14 @@ const pendingRequests = new Map<string, Promise<any>>()
 const cache = new Map<string, { data: any, timestamp: number }>()
 const CACHE_TTL = 60 * 1000 // 1 minute
 
+// The cache is keyed only by endpoint, not by user. Clear it on any auth
+// change (sign-in / sign-out / token refresh) so a cached GET from a previous
+// session can't be served to a different account within the TTL window.
+supabase.auth.onAuthStateChange(() => {
+  cache.clear()
+  pendingRequests.clear()
+})
+
 // A failure worth one retry: a network blip, a request timeout, or a 5xx.
 // 4xx (auth, validation, not-found) won't get better on a retry, so we don't.
 function isTransientFailure(error: unknown): boolean {
