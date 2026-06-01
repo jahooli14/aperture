@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { v4 as uuidv4 } from 'uuid'
 import { logger } from '../lib/logger'
 import { supabase } from '../lib/supabase'
 import type { Memory, Bridge, BridgeWithMemories, SourceReference, ChecklistItem } from '../types'
@@ -393,7 +394,10 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
 
       // Queue for sync when back online — strip the fallback title so the
       // server can generate a proper Gemini summary once we're online again.
-      await queueOperation('create_memory', { ...newMemory, title: input.title || null })
+      // Carry a real client UUID as the eventual server id (so a retry after a
+      // lost response upserts rather than duplicates) plus the optimistic
+      // tempId, so any edit queued before sync maps to the real row.
+      await queueOperation('create_memory', { ...newMemory, title: input.title || null, tempId, id: uuidv4() })
       await useOfflineStore.getState().updateQueueSize()
 
       logger.debug('[MemoryStore] Memory queued for offline sync')

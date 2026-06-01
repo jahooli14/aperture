@@ -13,6 +13,7 @@ import { persist } from 'zustand/middleware'
 import type { Project } from '../types'
 import { api } from '../lib/apiClient'
 import { logger } from '../lib/logger'
+import { v4 as uuidv4 } from 'uuid'
 import { queueOperation } from '../lib/offlineQueue'
 import { useOfflineStore } from './useOfflineStore'
 import { scheduleAIEnrichment } from '../lib/aiEnrichmentManager'
@@ -276,7 +277,10 @@ export const useProjectStore = create<ProjectState>()(
           import('../lib/db').then(({ readingDb }) => {
             readingDb.cacheProjects(newAllProjects).catch(e => logger.warn('Failed to cache projects after offline create:', e))
           })
-          await queueOperation('create_project', { tempId, ...data })
+          // Carry a real client UUID as the eventual server id plus the tempId
+          // the optimistic row uses, so the sync layer can map temp→real and
+          // any edits queued before sync land on the right project.
+          await queueOperation('create_project', { ...data, tempId, id: uuidv4() })
           await useOfflineStore.getState().updateQueueSize()
           return
         }
