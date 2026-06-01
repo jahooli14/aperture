@@ -211,15 +211,19 @@ async function getRecentArticles(userId: string, days: number) {
   const cutoff = new Date()
   cutoff.setDate(cutoff.getDate() - days)
 
+  // reading_queue stores the blurb as `excerpt` (not `summary`) and has no
+  // `completed_at`. Selecting those non-existent columns failed the whole
+  // query, so bedtime prompts silently generated with zero reading context.
   const { data } = await supabase
     .from('reading_queue')
-    .select('id, title, summary, url, tags, completed_at, created_at')
+    .select('id, title, excerpt, url, tags, created_at')
     .eq('user_id', userId)
     .gte('created_at', cutoff.toISOString())
     .order('created_at', { ascending: false })
     .limit(8)
 
-  return data || []
+  // Surface as `summary` for the downstream prompt builder.
+  return (data || []).map(a => ({ ...a, summary: (a as any).excerpt ?? null }))
 }
 
 async function getRecentMemories(userId: string, days: number) {
