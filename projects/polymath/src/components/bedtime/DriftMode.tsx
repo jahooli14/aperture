@@ -32,6 +32,9 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
   }, [stage])
 
   const triggerInsight = useCallback(() => {
+    // No prompts → nothing to advance to. Guard against % 0 = NaN, which would
+    // index prompts[NaN] = undefined and strand the user in an empty session.
+    if (prompts.length === 0) return
     setShowFlash(true)
     setTimeout(() => setShowFlash(false), 500)
     celebrate.success()

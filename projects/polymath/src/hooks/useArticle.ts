@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import type { Article, ArticleHighlight } from '../types/reading'
 import { readingDb } from '../lib/db'
 
@@ -6,6 +6,10 @@ export function useArticle(id: string | undefined, options?: { noPromote?: boole
   const [data, setData] = useState<{ article: Article | null, highlights: ArticleHighlight[] } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // The article the consumer currently wants. Async responses for a previous
+  // article (including the fire-and-forget background revalidate) must not
+  // clobber state once the user has navigated to a newer one.
+  const activeIdRef = useRef<string | undefined>(id)
 
   // When set, the server skips the unread -> reading auto-promotion. Used
   // by the home Consuming widget when Saved is at cap — opening an article
@@ -31,6 +35,7 @@ export function useArticle(id: string | undefined, options?: { noPromote?: boole
           .equals(articleId)
           .toArray()
 
+        if (activeIdRef.current !== articleId) return
         setData({
           article: cachedArticle as Article,
           highlights: cachedHighlights as ArticleHighlight[]
@@ -60,6 +65,8 @@ export function useArticle(id: string | undefined, options?: { noPromote?: boole
                 processed: articleData.processed || (!!cachedArticle.content && !articleData.content)
               }
 
+              // Bail if the user has since navigated to a different article.
+              if (activeIdRef.current !== articleId) return
               setData({
                 article: mergedArticle,
                 highlights: highlightsData
@@ -97,19 +104,21 @@ export function useArticle(id: string | undefined, options?: { noPromote?: boole
       const highlightsData = result.highlights || []
 
       if (articleData) {
+        // Cache for offline regardless, but only render if still the active article.
+        readingDb.cacheArticle(articleData).catch(console.warn)
+        if (activeIdRef.current !== articleId) return
         setData({
           article: articleData,
           highlights: highlightsData
         })
-
-        // Cache for offline
-        readingDb.cacheArticle(articleData).catch(console.warn)
       } else {
         throw new Error('Article not found')
       }
 
     } catch (err) {
       console.error('[useArticle] Failed to load article:', err)
+      // Don't surface a stale article's error over the one now in view.
+      if (activeIdRef.current !== articleId) return
       setError(err instanceof Error ? err.message : 'Failed to load article')
       setData(null)
     } finally {
@@ -118,6 +127,7 @@ export function useArticle(id: string | undefined, options?: { noPromote?: boole
   }, [queryString])
 
   useEffect(() => {
+    activeIdRef.current = id
     if (id) {
       fetchArticle(id)
     } else {

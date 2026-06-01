@@ -45,6 +45,10 @@ export function useItemInsights(title: string, themes?: string[]) {
   const [insights, setInsights] = useState<CachedInsight[]>([])
   const [loaded, setLoaded] = useState(false)
 
+  // Stable key so themes arriving/changing async re-runs the filter. Without
+  // it (deps were [title] only) theme-matched insights never appeared once
+  // themes loaded after the first render.
+  const themesKey = themes?.join('|') ?? ''
   useEffect(() => {
     if (!title) return
     readingDb.getDashboard('evolution').then(cached => {
@@ -52,7 +56,8 @@ export function useItemInsights(title: string, themes?: string[]) {
       setInsights(all.filter(i => isRelevant(i, title, themes)).slice(0, 3))
       setLoaded(true)
     }).catch(() => setLoaded(true))
-  }, [title])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, themesKey])
 
   return { insights, loaded }
 }

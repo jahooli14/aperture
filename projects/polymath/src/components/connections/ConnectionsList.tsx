@@ -4,7 +4,7 @@
  * "Connections from a project - they should be auto populated, you cannot delete, should be max 5 connections (most relevant)"
  */
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, Brain, Layers, BookOpen, Plus, Zap, Route } from 'lucide-react'
@@ -68,11 +68,17 @@ export function ConnectionsList({ itemType, itemId, itemTitle, onConnectionDelet
     onLoadingChange?.(loading)
   }, [loading, onLoadingChange])
 
+  // Guards against a stale fetch (for a previously-selected item) resolving
+  // after a newer one and overwriting the wrong item's connections.
+  const activeKeyRef = useRef('')
+
   useEffect(() => {
+    activeKeyRef.current = `${itemType}:${itemId}`
     loadData()
   }, [itemType, itemId])
 
   const loadData = async () => {
+    const key = `${itemType}:${itemId}`
     setLoading(true)
 
     // 1. Fetch Persisted Connections
@@ -89,14 +95,14 @@ export function ConnectionsList({ itemType, itemId, itemTitle, onConnectionDelet
         }
       }
 
-      if (fetchedConnections) {
+      if (fetchedConnections && activeKeyRef.current === key) {
         setConnections(fetchedConnections)
       }
 
     } catch (err) {
       console.error('Error loading connections data:', err)
     } finally {
-      setLoading(false)
+      if (activeKeyRef.current === key) setLoading(false)
     }
   }
 

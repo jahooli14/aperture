@@ -883,8 +883,9 @@ function MemoriesPageInner() {
         />
       )}
 
-      {/* Drift Mode Overlay */}
-      {driftModeOpen && (
+      {/* Drift Mode Overlay — guard on prompts so an empty/failed fetch can't
+          drop the user into a dead-end session (DriftMode does % prompts.length). */}
+      {driftModeOpen && driftPrompts.length > 0 && (
         <DriftMode mode={driftVariant} prompts={driftPrompts} onClose={() => setDriftModeOpen(false)} />
       )}
     </>

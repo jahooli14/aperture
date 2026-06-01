@@ -48,6 +48,11 @@ export function useOfflineSync() {
       let failCount = 0
 
       for (const capture of pending) {
+        // Blob captures (audio_blob, no transcript) are owned by the
+        // 'capture_media' queue op in syncManager, which transcribes them
+        // first. Posting them here would create an empty memory AND delete the
+        // audio before it's ever transcribed — permanent loss of the note.
+        if (capture.audio_blob || !capture.transcript) continue
         try {
           // Use same API as online voice captures
           const response = await fetch('/api/memories?capture=true', {

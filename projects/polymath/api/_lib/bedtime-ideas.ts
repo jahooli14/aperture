@@ -152,14 +152,14 @@ export async function generateBedtimePrompts(userId: string): Promise<BedtimePro
   // Learn from past breakthroughs
   const { data: breakthroughs } = await supabase
     .from('bedtime_prompts')
-    .select('prompt_type, prompt, response')
+    .select('type, prompt')
     .eq('user_id', userId)
     .eq('resulted_in_breakthrough', true)
     .order('created_at', { ascending: false })
     .limit(5)
 
   const breakthroughContext = breakthroughs && breakthroughs.length > 0
-    ? `\n\nPREVIOUS BREAKTHROUGHS (prompts that led to insights):\n${breakthroughs.map(b => `- Type: ${b.prompt_type}, Prompt: "${b.prompt?.substring(0, 100)}"`).join('\n')}\nGenerate more prompts in the style and format that produced these breakthroughs.`
+    ? `\n\nPREVIOUS BREAKTHROUGHS (prompts that led to insights):\n${breakthroughs.map(b => `- Type: ${b.type}, Prompt: "${b.prompt?.substring(0, 100)}"`).join('\n')}\nGenerate more prompts in the style and format that produced these breakthroughs.`
     : ''
 
   // Fetch prompt type effectiveness scores

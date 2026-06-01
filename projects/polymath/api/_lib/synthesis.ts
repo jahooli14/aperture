@@ -189,7 +189,7 @@ async function loadRichListItems(userId: string): Promise<RichListItem[]> {
     .from('list_items')
     .select('id, content, list_id, metadata, embedding')
     .eq('user_id', userId)
-    .eq('enrichment_status', 'complete')
+    .eq('enrichment_status', 'completed')
     .order('created_at', { ascending: false })
     .limit(30)
 

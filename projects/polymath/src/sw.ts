@@ -254,13 +254,24 @@ async function syncCaptures() {
     console.log(`[ServiceWorker] Found ${pendingCaptures.length} pending captures.`)
 
     for (const capture of pendingCaptures) {
+      // Blob captures (audio_blob, no transcript) are owned by the
+      // 'capture_media' queue op, which transcribes the audio first. Posting
+      // them here would create an empty memory and delete the blob before it's
+      // ever transcribed — permanent loss of the voice note.
+      if (capture.audio_blob || !capture.transcript) continue
       try {
         console.log(`[ServiceWorker] Attempting to sync capture with ID: ${capture.id}`)
-        await fetch('/api/memories?capture=true', {
+        const response = await fetch('/api/memories?capture=true', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ transcript: capture.transcript })
         })
+
+        // Only delete on a confirmed success — a 4xx/5xx must not drop the capture.
+        if (!response.ok) {
+          console.error(`[ServiceWorker] Capture ${capture.id} failed: HTTP ${response.status}`)
+          continue
+        }
 
         // Remove from pending queue on success
         await new Promise<void>((resolve, reject) => {
