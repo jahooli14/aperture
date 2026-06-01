@@ -144,4 +144,33 @@ describe('syncPendingOperations — offline hardening', () => {
     expect(dlIds).toContain(2) // its now-orphaned dependent
     expect(removed).not.toContain(1) // not silently deleted
   })
+
+  it('never defers an op that targets a real (non-temp) uuid, even while a create is failing', async () => {
+    // Lists use client UUIDs end-to-end, so their edits must process normally
+    // regardless of an unrelated project create stalling this pass.
+    failTables = new Set(['projects'])
+    queue = [
+      { id: 1, type: 'create_project', data: { id: 'real-uuid', tempId: 'temp-99', title: 'X' }, timestamp: 1, retryCount: 0 },
+      { id: 2, type: 'update_list_item', data: { id: '11111111-2222-3333-4444-555555555555', status: 'done' }, timestamp: 2, retryCount: 0 },
+    ]
+    await syncPendingOperations()
+    // The list-item edit (real uuid) is processed + removed; only the project create is retried.
+    expect(removed).toContain(2)
+    expect(retried).toEqual([1])
+  })
+
+  it('remaps each create to its own dependents independently', async () => {
+    queue = [
+      { id: 1, type: 'create_project', data: { id: 'real-A', tempId: 'temp-A', title: 'A' }, timestamp: 1, retryCount: 0 },
+      { id: 2, type: 'create_project', data: { id: 'real-B', tempId: 'temp-B', title: 'B' }, timestamp: 2, retryCount: 0 },
+      { id: 3, type: 'update_project', data: { id: 'temp-B', title: 'B2' }, timestamp: 3, retryCount: 0 },
+      { id: 4, type: 'update_project', data: { id: 'temp-A', title: 'A2' }, timestamp: 4, retryCount: 0 },
+    ]
+    await syncPendingOperations()
+    const projectEqs = eqCalls.filter((c) => c.table === 'projects').map((c) => c.value)
+    expect(projectEqs).toContain('real-A')
+    expect(projectEqs).toContain('real-B')
+    expect(projectEqs).not.toContain('temp-A')
+    expect(projectEqs).not.toContain('temp-B')
+  })
 })
