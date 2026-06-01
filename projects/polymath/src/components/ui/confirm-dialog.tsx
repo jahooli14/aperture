@@ -105,6 +105,9 @@ export function useConfirmDialog() {
   const confirm = React.useCallback((
     options: Omit<ConfirmDialogProps, "open" | "onOpenChange" | "onConfirm">
   ): Promise<boolean> => {
+    // If a prior confirm is still pending (re-entrant call, e.g. double-tap),
+    // resolve it as cancelled so its awaiter doesn't hang forever.
+    resolveRef.current?.(false)
     setConfig(options)
     setIsOpen(true)
     return new Promise((resolve) => {

@@ -187,8 +187,12 @@ export function ProjectDetailPage() {
   const endGoalInputRef = useRef<HTMLTextAreaElement>(null)
   const { addToast } = useToast()
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
+  // The project currently in view. A fetch for a previous project (after
+  // navigating A->B) must not write its notes/memories onto B's page.
+  const activeIdRef = useRef(id)
 
   useEffect(() => {
+    activeIdRef.current = id
     loadProjectDetails()
     return () => clearContext()
   }, [id])
@@ -251,6 +255,9 @@ export function ProjectDetailPage() {
       const data = await response.json()
 
       if (data.project) {
+        // Bail if the user navigated to a different project mid-flight — don't
+        // paint this project's notes/memories onto the one now in view.
+        if (activeIdRef.current !== id) return
         // Sync project to store - this will trigger a re-render because we're subscribed
         syncProject(data.project)
         if (data.notes) setNotes(data.notes)
@@ -262,7 +269,7 @@ export function ProjectDetailPage() {
           .contains('source_reference', { id: id, type: 'project' })
           .order('created_at', { ascending: false })
 
-        if (linkedMemories) {
+        if (linkedMemories && activeIdRef.current === id) {
           setProjectMemories(linkedMemories)
         }
       }

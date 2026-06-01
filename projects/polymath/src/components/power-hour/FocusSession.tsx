@@ -98,13 +98,19 @@ export function FocusSession() {
         haptic.success()
         completeTask(currentTask.id)
 
-        // Sync to actual project in background
-        const projectTasks = [...(project.metadata?.tasks || [])]
-        const taskToUpdate = projectTasks.find((t: any) => t.id === currentTask.id || t.text === currentTask.text)
+        // Sync to actual project in background. Map to NEW task objects — a
+        // shallow [...] copy still shares the objects with the store, so
+        // mutating taskToUpdate.done would change store state outside React's
+        // update path.
+        const existingTasks = (project.metadata?.tasks || []) as any[]
+        const matched = existingTasks.some((t: any) => t.id === currentTask.id || t.text === currentTask.text)
 
-        if (taskToUpdate) {
-            taskToUpdate.done = true
-            taskToUpdate.completed_at = new Date().toISOString()
+        if (matched) {
+            const projectTasks = existingTasks.map((t: any) =>
+                (t.id === currentTask.id || t.text === currentTask.text)
+                    ? { ...t, done: true, completed_at: new Date().toISOString() }
+                    : t
+            )
             await updateProject(project.id, {
                 metadata: {
                     ...project.metadata,

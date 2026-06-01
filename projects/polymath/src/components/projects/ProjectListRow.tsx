@@ -33,7 +33,9 @@ export function ProjectListRow({
   const isPinned = pinnedItem?.type === 'project' && pinnedItem?.id === project.id
 
   const tasks = (project.metadata?.tasks || []) as any[]
-  const nextTask = tasks
+  // Copy before sorting — .sort() mutates in place and `tasks` is the
+  // store-owned array; sorting it here would silently reorder store state.
+  const nextTask = [...tasks]
     .sort((a, b) => a.order - b.order)
     .find(task => !task.done)
   const totalTasks = tasks.length

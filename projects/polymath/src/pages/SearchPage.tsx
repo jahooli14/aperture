@@ -111,17 +111,21 @@ export function SearchPage() {
   const [searchFocused, setSearchFocused] = useState(false)
   const [showVoiceSearch, setShowVoiceSearch] = useState(false)
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
+  // Monotonic search id — only the most recent query's results may land, so a
+  // slow earlier search can't overwrite a faster later one.
+  const searchReqRef = useRef(0)
 
   // Handle ?similar=<id> parameter for "find similar" searches
   useEffect(() => {
     const params = new URLSearchParams(location.search)
     const similarId = params.get('similar')
     if (similarId) {
+      const myReq = ++searchReqRef.current
       setLoading(true)
       fetch(`/api/memories?similar=${encodeURIComponent(similarId)}`)
         .then(r => r.ok ? r.json() : null)
         .then(data => {
-          if (data?.results) {
+          if (data?.results && searchReqRef.current === myReq) {
             setResults({
               query: `Similar to: ${data.source_title || 'memory'}`,
               total: data.total || data.results.length,
@@ -144,7 +148,7 @@ export function SearchPage() {
             variant: 'destructive'
           })
         })
-        .finally(() => setLoading(false))
+        .finally(() => { if (searchReqRef.current === myReq) setLoading(false) })
     }
   }, [location.search])
 
@@ -170,13 +174,17 @@ export function SearchPage() {
       return
     }
 
+    const myReq = ++searchReqRef.current
     setLoading(true)
+    // Ignore this result if a newer search has since started.
+    const isStale = () => searchReqRef.current !== myReq
     try {
       const { isOnline } = useOfflineStore.getState()
 
       if (!isOnline) {
         console.log('[SearchPage] Offline mode - performing local search.')
         const offlineResults = await searchOffline(searchQuery)
+        if (isStale()) return
         setResults(offlineResults)
         haptic.light()
       } else {
@@ -187,16 +195,19 @@ export function SearchPage() {
           }
 
           const data: SearchResponse = await response.json()
+          if (isStale()) return
           setResults(data)
           haptic.light()
         } catch (onlineError) {
           console.error('[SearchPage] Online search failed, falling back to offline:', onlineError)
+          if (isStale()) return
           addToast({
             title: 'Online search failed',
             description: 'Falling back to offline results.',
             variant: 'default'
           })
           const offlineResults = await searchOffline(searchQuery)
+          if (isStale()) return
           setResults(offlineResults)
           haptic.light()
         }
@@ -209,7 +220,7 @@ export function SearchPage() {
         variant: 'destructive'
       })
     } finally {
-      setLoading(false)
+      if (!isStale()) setLoading(false)
     }
   }
 
