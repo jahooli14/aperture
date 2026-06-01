@@ -51,12 +51,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // (extend to loop over all users when multi-user is needed)
   const { data: users } = await supabase.from('memories').select('user_id').not('user_id', 'is', null).limit(1)
   const userId = users?.[0]?.user_id || null
-  // Verify authorization
+  // Verify authorization.
+  // Only Vercel's own scheduler is trusted without a secret — it sets the
+  // x-vercel-cron header, which Vercel strips from inbound external requests
+  // so it can't be forged. Anything else (including a manual POST) must carry
+  // the CRON_SECRET bearer. Previously a POST lacking the cron header was
+  // treated as an authorized "manual trigger", which let anyone run these
+  // expensive jobs / fire user notifications unauthenticated.
   const authHeader = req.headers['authorization']
   const cronSecret = process.env.CRON_SECRET
-  const isManualTrigger = req.method === 'POST' && !req.headers['x-vercel-cron']
+  const isVercelCron = !!req.headers['x-vercel-cron']
+  const isManualTrigger = req.method === 'POST' && !isVercelCron
 
-  if (!isManualTrigger && cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!isVercelCron && cronSecret && authHeader !== `Bearer ${cronSecret}`) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
@@ -292,8 +299,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      // 5. Send Bedtime Push Notifications (if enabled)
-      if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY && now.getHours() === 21 && now.getMinutes() >= 30) { // Check if it's 9:30 PM UTC
+      // 5. Send Bedtime Push Notifications (if enabled).
+      // Gate only on VAPID config — the daily job is itself scheduled for
+      // 21:30 UTC, so re-checking the wall clock here just meant a delayed
+      // cron run (common, per CLAUDE.md) silently skipped the push. Also the
+      // env var must match the one configured above (NEXT_PUBLIC_VAPID_PUBLIC_KEY);
+      // the old VAPID_PUBLIC_KEY was always undefined, so this never ran.
+      if (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
         try {
           const { data: subscriptions, error: subError } = await supabase
             .from('push_subscriptions')
