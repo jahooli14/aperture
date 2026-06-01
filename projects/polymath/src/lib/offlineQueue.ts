@@ -14,13 +14,26 @@ export interface QueuedOperation {
   lastError?: string
 }
 
+// Operations that exhausted their retries land here instead of being silently
+// deleted, so a user's offline work is never thrown away without a trace.
+export interface DeadLetterOperation extends QueuedOperation {
+  deadLetteredAt: number
+}
+
 class OfflineQueueDB extends Dexie {
   operations!: Table<QueuedOperation, number>
+  deadLetter!: Table<DeadLetterOperation, number>
 
   constructor() {
     super('OfflineQueue')
     this.version(1).stores({
       operations: '++id, type, timestamp',
+    })
+    // v2 adds a dead-letter table. Additive only — existing operations
+    // survive the upgrade untouched.
+    this.version(2).stores({
+      operations: '++id, type, timestamp',
+      deadLetter: '++id, type, timestamp, deadLetteredAt',
     })
   }
 }
@@ -73,6 +86,42 @@ export async function updateOperationRetry(
       lastError: error,
     })
   }
+}
+
+/**
+ * Persist a mutated operation payload (e.g. after a temp->real id remap), so
+ * the rewritten id survives to the next sync pass even if this op then fails.
+ */
+export async function persistOperationData(id: number, data: any): Promise<void> {
+  await offlineQueue.operations.update(id, { data })
+}
+
+/**
+ * Move an operation that exhausted its retries to the dead-letter table.
+ * Preserves the payload so it can be inspected or replayed, rather than
+ * silently discarding the user's work.
+ */
+export async function moveToDeadLetter(operation: QueuedOperation): Promise<void> {
+  const { id: _id, ...rest } = operation
+  await offlineQueue.deadLetter.add({ ...rest, deadLetteredAt: Date.now() } as DeadLetterOperation)
+  if (operation.id != null) {
+    await offlineQueue.operations.delete(operation.id)
+  }
+  console.error('[OfflineQueue] Operation moved to dead-letter:', operation.type, operation.lastError)
+}
+
+/**
+ * Read dead-lettered operations (for surfacing / manual replay).
+ */
+export async function getDeadLetterOperations(): Promise<DeadLetterOperation[]> {
+  return await offlineQueue.deadLetter.orderBy('deadLetteredAt').toArray()
+}
+
+/**
+ * Clear the dead-letter table.
+ */
+export async function clearDeadLetter(): Promise<void> {
+  await offlineQueue.deadLetter.clear()
 }
 
 /**

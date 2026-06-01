@@ -69,7 +69,12 @@ export async function detectProjectGenesis(userId: string): Promise<GeneratedIns
       .from('projects')
       .select('title, description, status')
       .eq('user_id', userId)
-      .in('status', ['active', 'paused']),
+      // Any non-terminal project "covers" a theme. 'paused' isn't a real
+      // status (constraint allows upcoming/active/dormant/on-hold/maintaining/
+      // completed/archived/abandoned), so the old filter only ever matched
+      // active — falsely flagging themes owned by dormant/on-hold projects as
+      // uncovered and telling the user to start something they already have.
+      .in('status', ['active', 'on-hold', 'dormant', 'upcoming', 'maintaining']),
   ])
 
   const memories = memoriesResult.data || []

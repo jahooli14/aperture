@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { X, Lightbulb, BookOpen, Layers, Brain, Loader2, TrendingUp, RefreshCw, HelpCircle, Shuffle, Database, GitBranch, Zap } from 'lucide-react'
@@ -37,6 +37,8 @@ export function ContextSidebar() {
     const [analysisLoading, setAnalysisLoading] = useState(false)
     const [actionResult, setActionResult] = useState<{ type: string; result: string; totalContextItems?: number; semanticCount?: number } | null>(null)
     const [actionLoading, setActionLoading] = useState<string | null>(null)
+    // Tracks the in-view context so a stale analysis fetch can't overwrite a newer one.
+    const activeKeyRef = useRef('')
 
     const executeAction = async (actionType: string) => {
         if (!activeContext.id || activeContext.type === 'page' || activeContext.type === 'home') {
@@ -83,11 +85,14 @@ export function ContextSidebar() {
             return
         }
 
+        const key = `${activeContext.type}:${activeContext.id}`
         setAnalysisLoading(true)
         try {
             const response = await fetch(
                 `/api/connections?action=analyze&id=${activeContext.id}&type=${activeContext.type}`
             )
+            // Bail if the active context changed while this request was in flight.
+            if (activeKeyRef.current !== key) return
             if (response.ok) {
                 const data = await response.json()
                 setAnalysisData(data)
@@ -102,6 +107,7 @@ export function ContextSidebar() {
             }
         } catch (error) {
             console.error('Failed to fetch analysis:', error)
+            if (activeKeyRef.current !== key) return
             addToast({
                 title: 'Couldn\'t pull this together',
                 description: 'Check your connection.',
@@ -109,12 +115,13 @@ export function ContextSidebar() {
             })
             setAnalysisData(null) // Clear analysis data on fetch error
         } finally {
-            setAnalysisLoading(false)
+            if (activeKeyRef.current === key) setAnalysisLoading(false)
         }
     }
 
     // Auto-refresh when sidebar is open and context changes
     useEffect(() => {
+        activeKeyRef.current = `${activeContext.type}:${activeContext.id}`
         if (sidebarOpen) {
             fetchRelatedContext()
             fetchAnalysis()

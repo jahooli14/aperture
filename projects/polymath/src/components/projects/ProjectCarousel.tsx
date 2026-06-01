@@ -161,7 +161,10 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-3 auto-rows-fr">
               {section.projects.map((project, projectIndex) => {
                 const tasks = (project.metadata?.tasks || []) as any[]
-                const nextTask = tasks
+                // Copy before sorting — .sort() mutates in place, and `tasks`
+                // is the store-owned array; reordering it here would silently
+                // persist on the next updateProject.
+                const nextTask = [...tasks]
                   .sort((a, b) => a.order - b.order)
                   .find(task => !task.done)
                 const totalTasks = tasks.length

@@ -69,7 +69,7 @@ export async function updateItemConnections(
     const { data: memories } = await supabase
       .from('memories')
       .select('id, title, body, embedding')
-      // .eq('user_id', userId) // Memories table might not have user_id in some schemas, check if needed
+      .eq('user_id', userId) // scope to the owner — service-role client bypasses RLS, so without this connections leak across users
       .neq('id', sourceId)
       .not('embedding', 'is', null)
 

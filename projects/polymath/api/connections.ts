@@ -1037,8 +1037,14 @@ Be specific: mention actual shared concepts. Do not say "both are about X".`
             await supabase.from('connections').insert({ user_id: userId, source_type: normSourceType, source_id: itemId, target_type: c.type, target_id: c.id, connection_type: r.type || 'relates_to', created_by: 'ai', ai_reasoning: r.reason })
             autoLinkedIds.push(c.id)
           } else {
-            await supabase.from('connection_suggestions').insert({ user_id: userId, from_item_type: normSourceType, from_item_id: itemId, to_item_type: c.type, to_item_id: c.id, reasoning: r.reason, confidence: c.similarity, status: 'pending' })
-            suggestedIds.push(c.id)
+            const { error: suggestErr } = await supabase.from('connection_suggestions').insert({ user_id: userId, from_item_type: normSourceType, from_item_id: itemId, to_item_type: c.type, to_item_id: c.id, reasoning: r.reason, confidence: c.similarity, status: 'pending' })
+            // Don't let a failed suggestion insert (e.g. a CHECK rejecting an
+            // item type) vanish silently — log it so it's diagnosable.
+            if (suggestErr) {
+              console.error('[connections] Failed to persist suggestion:', suggestErr.message, { from: normSourceType, to: c.type })
+            } else {
+              suggestedIds.push(c.id)
+            }
           }
         }
 

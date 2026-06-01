@@ -87,7 +87,7 @@ export async function generateWeeklyIntersections(
       .limit(50),
     supabase
       .from('reading_queue')
-      .select('id, title, summary, embedding')
+      .select('id, title, excerpt, embedding')
       .eq('user_id', userId)
       .gte('created_at', ninetyDaysAgo.toISOString())
       .not('embedding', 'is', null)
@@ -103,8 +103,15 @@ export async function generateWeeklyIntersections(
       .limit(40),
   ])
 
+  // Surface query errors instead of silently starving the deck — a bad column
+  // or RLS failure here used to drop reading inputs to zero with no trace.
+  if (memoriesRes.error) console.error('[intersection-weekly] memories query failed:', memoriesRes.error.message)
+  if (articlesRes.error) console.error('[intersection-weekly] reading_queue query failed:', articlesRes.error.message)
+  if (listItemsRes.error) console.error('[intersection-weekly] list_items query failed:', listItemsRes.error.message)
+
   const memories = memoriesRes.data || []
-  const articles = articlesRes.data || []
+  // reading_queue stores the blurb as `excerpt`; the engine reads `summary`.
+  const articles = (articlesRes.data || []).map(a => ({ ...a, summary: (a as any).excerpt ?? null }))
   const listItems = listItemsRes.data || []
 
   // --- 2. Pull feedback history (recent ratings + full title history) ---

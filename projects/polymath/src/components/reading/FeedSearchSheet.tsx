@@ -82,18 +82,21 @@ export function FeedSearchSheet({ open, onOpenChange, onSubscribed }: FeedSearch
       setSearching(false)
       return
     }
+    // ignore guards against an in-flight discover for an earlier query
+    // resolving after a newer one and overwriting its results.
+    let ignore = false
     const timer = setTimeout(async () => {
       setSearching(true)
       try {
         const data = await discoverFeeds(trimmedQuery)
-        setResults(Array.isArray(data) ? data : [])
+        if (!ignore) setResults(Array.isArray(data) ? data : [])
       } catch {
-        setResults([])
+        if (!ignore) setResults([])
       } finally {
-        setSearching(false)
+        if (!ignore) setSearching(false)
       }
     }, 350)
-    return () => clearTimeout(timer)
+    return () => { ignore = true; clearTimeout(timer) }
   }, [trimmedQuery, queryIsUrl, discoverFeeds])
 
   const handleSubscribe = async (feedUrl: string) => {

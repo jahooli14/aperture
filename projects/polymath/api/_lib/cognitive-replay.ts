@@ -111,21 +111,20 @@ export async function generateCognitiveReplay(
   // Collect breakthroughs from bedtime prompts
   let breakthroughs: string[] = []
   try {
+    // bedtime_prompts is one prompt per row (columns: prompt, type,
+    // resulted_in_breakthrough) — not an array column. Filter to breakthrough
+    // rows and pull their prompt text directly.
     const { data: breakthroughData } = await supabase
       .from('bedtime_prompts')
-      .select('prompts')
+      .select('prompt')
       .eq('user_id', userId)
+      .eq('resulted_in_breakthrough', true)
       .gte('created_at', startDate)
       .lte('created_at', endDate)
 
     if (breakthroughData) {
       for (const row of breakthroughData) {
-        const prompts = row.prompts || []
-        for (const p of prompts) {
-          if (p.breakthrough) {
-            breakthroughs.push(p.content || p.prompt || '')
-          }
-        }
+        if (row.prompt) breakthroughs.push(row.prompt)
       }
     }
   } catch {

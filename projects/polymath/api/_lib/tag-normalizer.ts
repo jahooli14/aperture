@@ -260,7 +260,7 @@ export async function identifyTagMerges(): Promise<any[]> {
       generationConfig: { responseMimeType: 'application/json' },
     })
     const text = result.response.text()
-    const jsonMatch = text.match(/[\[][\s\S]*[/\]]/)
+    const jsonMatch = text.match(/\[[\s\S]*\]/)
     if (!jsonMatch) return []
 
     const clusters = JSON.parse(jsonMatch[0])

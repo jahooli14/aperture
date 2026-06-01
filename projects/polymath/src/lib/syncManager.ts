@@ -8,6 +8,8 @@ import {
   getPendingOperations,
   removeOperation,
   updateOperationRetry,
+  moveToDeadLetter,
+  persistOperationData,
   type QueuedOperation,
 } from './offlineQueue'
 import { triggerImmediateEnrichment } from './aiEnrichmentManager'
@@ -30,14 +32,18 @@ async function processOperation(operation: QueuedOperation): Promise<boolean> {
         // Strip any client-only fallback title — the offline path may have
         // stuffed in a "first 8 words" placeholder so the optimistic memory
         // wasn't blank. We want Gemini to write the real title server-side.
-        const insertPayload = { ...operation.data }
+        // tempId is the optimistic-row id used for temp→real remapping; it's
+        // not a memories column, so drop it before the upsert.
+        const { tempId: _tempId, ...insertPayload } = operation.data
         if (typeof insertPayload.title === 'string' && insertPayload.title.trim() === '') {
           insertPayload.title = null
         }
 
+        // Upsert (not insert) keyed on the client-supplied id so a retry after
+        // a lost response doesn't create a duplicate memory.
         const { data, error } = await supabase
           .from('memories')
-          .insert(insertPayload)
+          .upsert(insertPayload, { onConflict: 'id' })
           .select()
           .single()
 
@@ -91,11 +97,14 @@ async function processOperation(operation: QueuedOperation): Promise<boolean> {
       }
 
       case 'create_project': {
-        // tempId was used client-side for the optimistic row; strip it before insert.
+        // tempId was the optimistic-row id; strip it before insert. The real
+        // id is the client-supplied UUID (operation.data.id), which the sync
+        // loop maps temp→real so any offline edits queued against tempId land.
         const { tempId: _tempId, ...insertData } = operation.data
+        // Upsert keyed on id so a retry after a lost response is idempotent.
         const { data, error } = await supabase
           .from('projects')
-          .insert(insertData)
+          .upsert(insertData, { onConflict: 'id' })
           .select()
           .single()
 
@@ -137,9 +146,10 @@ async function processOperation(operation: QueuedOperation): Promise<boolean> {
 
       // List operations
       case 'create_list': {
+        // Lists already carry a client UUID id; upsert on it so a retry is idempotent.
         const { error } = await supabase
           .from('lists')
-          .insert(operation.data)
+          .upsert(operation.data, { onConflict: 'id' })
 
         if (error) throw error
         return true
@@ -156,9 +166,10 @@ async function processOperation(operation: QueuedOperation): Promise<boolean> {
       }
 
       case 'add_list_item': {
+        // List items already carry a client UUID id; upsert for idempotent retries.
         const { data, error } = await supabase
           .from('list_items')
-          .insert(operation.data)
+          .upsert(operation.data, { onConflict: 'id' })
           .select()
           .single()
 
@@ -309,6 +320,15 @@ async function processOperation(operation: QueuedOperation): Promise<boolean> {
   }
 }
 
+// Offline-created projects/memories use a client temp id for the optimistic
+// row. Their create op carries the real (client UUID) id plus that tempId; any
+// edit/delete queued before the create syncs targets the tempId and must be
+// rewritten to the real id at sync time, or it would update zero rows.
+function isTempId(id: unknown): id is string {
+  return typeof id === 'string' &&
+    (id.startsWith('temp-') || id.startsWith('temp_') || id.startsWith('offline_'))
+}
+
 /**
  * Sync all pending operations
  */
@@ -328,28 +348,68 @@ export async function syncPendingOperations(): Promise<{
   syncScheduled = false
 
   try {
+    // Operations are timestamp-ordered, so a create always precedes the edits
+    // queued against it. As each create succeeds we learn its temp→real id and
+    // rewrite later ops; ops whose create hasn't synced yet are deferred (left
+    // queued) rather than run against a non-existent row.
     const operations = await getPendingOperations()
     let success = 0
     let failed = 0
+    const idRemap = new Map<string, string>()
+    const preDeadLettered = new Set<number>()
 
     console.log(`[SyncManager] Starting sync of ${operations.length} operations`)
 
     for (const operation of operations) {
       if (!operation.id) continue
+      if (preDeadLettered.has(operation.id)) continue
 
-      // Skip if already retried too many times
+      // Resolve a temp-id reference to the real id now that its create ran,
+      // and persist it — otherwise a transient failure here would reload the
+      // original temp id next pass (the create is gone, so the remap can't be
+      // rebuilt) and the op would defer forever.
+      if (isTempId(operation.data?.id) && idRemap.has(operation.data.id)) {
+        operation.data.id = idRemap.get(operation.data.id)
+        await persistOperationData(operation.id, operation.data)
+      }
+
+      // Give up after too many retries — but preserve the payload in the
+      // dead-letter table instead of silently discarding the user's work.
       if (operation.retryCount >= MAX_RETRIES) {
-        console.warn(
-          `[SyncManager] Max retries reached for operation ${operation.id}, removing from queue`
-        )
-        await removeOperation(operation.id)
+        console.warn(`[SyncManager] Max retries reached for operation ${operation.id}, dead-lettering`)
+        await moveToDeadLetter(operation)
         failed++
+        // A create giving up means its dependent edits can never apply — dead-letter them too.
+        const tempId = operation.data?.tempId
+        if (tempId) {
+          for (const dep of operations) {
+            if (dep.id && dep.id !== operation.id && dep.data?.id === tempId) {
+              await moveToDeadLetter(dep)
+              preDeadLettered.add(dep.id)
+            }
+          }
+        }
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('sync-operation-dead-lettered', { detail: { type: operation.type } }))
+        }
+        continue
+      }
+
+      // Defer an edit/delete whose target row hasn't been created server-side
+      // yet (its create failed earlier this pass). Keep it queued, no retry
+      // bump — it'll resolve once the create succeeds.
+      if (isTempId(operation.data?.id)) {
+        console.warn(`[SyncManager] Deferring ${operation.type} until its create syncs:`, operation.data.id)
         continue
       }
 
       const succeeded = await processOperation(operation)
 
       if (succeeded) {
+        // Record temp→real so later ops this pass hit the real row.
+        if (operation.data?.tempId && operation.data?.id) {
+          idRemap.set(operation.data.tempId, operation.data.id)
+        }
         await removeOperation(operation.id)
         success++
         console.log(`[SyncManager] Successfully processed operation ${operation.id}`)

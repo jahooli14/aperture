@@ -79,7 +79,7 @@ export async function generatePowerHourPlan(userId: string, projectId?: string, 
         .from('list_items')
         .select('id, content, metadata, list_id')
         .eq('user_id', userId)
-        .eq('enrichment_status', 'complete')
+        .eq('enrichment_status', 'completed')
         .order('created_at', { ascending: false })
         .limit(10)
 
