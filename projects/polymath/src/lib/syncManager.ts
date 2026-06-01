@@ -9,6 +9,7 @@ import {
   removeOperation,
   updateOperationRetry,
   moveToDeadLetter,
+  persistOperationData,
   type QueuedOperation,
 } from './offlineQueue'
 import { triggerImmediateEnrichment } from './aiEnrichmentManager'
@@ -363,9 +364,13 @@ export async function syncPendingOperations(): Promise<{
       if (!operation.id) continue
       if (preDeadLettered.has(operation.id)) continue
 
-      // Resolve a temp-id reference to the real id now that its create ran.
+      // Resolve a temp-id reference to the real id now that its create ran,
+      // and persist it — otherwise a transient failure here would reload the
+      // original temp id next pass (the create is gone, so the remap can't be
+      // rebuilt) and the op would defer forever.
       if (isTempId(operation.data?.id) && idRemap.has(operation.data.id)) {
         operation.data.id = idRemap.get(operation.data.id)
+        await persistOperationData(operation.id, operation.data)
       }
 
       // Give up after too many retries — but preserve the payload in the

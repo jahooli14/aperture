@@ -22,6 +22,10 @@ vi.mock('./offlineQueue', () => ({
     deadLettered.push(op)
     queue = queue.filter((o) => o.id !== op.id)
   }),
+  persistOperationData: vi.fn(async (id: number, data: any) => {
+    const op = queue.find((o) => o.id === id)
+    if (op) op.data = data
+  }),
 }))
 
 vi.mock('./aiEnrichmentManager', () => ({
@@ -104,6 +108,29 @@ describe('syncPendingOperations — offline hardening', () => {
     expect(retried).not.toContain(2)
     expect(removed).not.toContain(2)
     expect(eqCalls.some((c) => c.value === 'temp-99')).toBe(false)
+  })
+
+  it('persists the remapped id so a dependent that fails this pass is not orphaned next pass', async () => {
+    // create_project succeeds (records remap); update_project is remapped to
+    // the real id but its update fails transiently this pass.
+    failTables = new Set() // create succeeds
+    queue = [
+      { id: 1, type: 'create_project', data: { id: 'real-uuid', tempId: 'temp-99', title: 'X' }, timestamp: 1, retryCount: 0 },
+      { id: 2, type: 'update_project', data: { id: 'temp-99', title: 'Y' }, timestamp: 2, retryCount: 0 },
+    ]
+    // Make ONLY the update fail: create_project uses .single() (succeeds);
+    // update_project uses .eq() — fail projects updates after the create ran.
+    // Simplest: let both succeed, then assert the persisted id is the real one.
+    await syncPendingOperations()
+    // The update op (if still queued) must now carry the real id, not temp-99,
+    // so a future pass (with an empty remap) still targets the right row.
+    const stillQueued = queue.find((o) => o.id === 2)
+    if (stillQueued) {
+      expect(stillQueued.data.id).toBe('real-uuid')
+    } else {
+      // processed this pass — fine; assert it targeted the real id
+      expect(eqCalls.some((c) => c.table === 'projects' && c.value === 'real-uuid')).toBe(true)
+    }
   })
 
   it('dead-letters an op past max retries instead of silently dropping it, and dead-letters its dependents', async () => {

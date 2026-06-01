@@ -89,6 +89,14 @@ export async function updateOperationRetry(
 }
 
 /**
+ * Persist a mutated operation payload (e.g. after a temp->real id remap), so
+ * the rewritten id survives to the next sync pass even if this op then fails.
+ */
+export async function persistOperationData(id: number, data: any): Promise<void> {
+  await offlineQueue.operations.update(id, { data })
+}
+
+/**
  * Move an operation that exhausted its retries to the dead-letter table.
  * Preserves the payload so it can be inspected or replayed, rather than
  * silently discarding the user's work.
