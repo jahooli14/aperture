@@ -214,7 +214,12 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       const sessionOptimistic = currentMemories.filter(m =>
         m.id.startsWith('temp_') &&
         !queuedMemories.some(q => q.body === m.body) &&
-        !queuedCaptures.some(q => q.body === m.body)
+        !queuedCaptures.some(q => q.body === m.body) &&
+        // Drop the optimistic temp once the server has returned the real row
+        // (its create POST landed between this fetch and the temp→real swap).
+        // Without this, the temp and the real row coexist — and after the swap
+        // both share the same id, colliding React keys.
+        !(data || []).some((d: Memory) => d.body === m.body)
       )
 
       const mergedMemories = [

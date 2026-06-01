@@ -262,14 +262,10 @@ export function useMediaRecorderVoice({
   const startTimer = () => {
     setTimeLeft(maxDuration)
     timerRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          // Call stop via the public API
-          stopRecording()
-          return 0
-        }
-        return prev - 1
-      })
+      // Pure updater — just count down. Hitting zero triggers the auto-stop
+      // effect below; calling stopRecording() from inside the updater would
+      // fire side effects mid-render (and run twice under StrictMode).
+      setTimeLeft((prev) => (prev <= 1 ? 0 : prev - 1))
     }, 1000)
   }
 
@@ -514,6 +510,33 @@ export function useMediaRecorderVoice({
       await stopNativeRecording()
     } else {
       await stopWebRecording()
+    }
+  }, [])
+
+  // Auto-stop when the countdown runs out. Driven off committed state rather
+  // than from inside the timer's setState updater, so the stop side effects
+  // never run mid-render.
+  useEffect(() => {
+    if (isRecording && timeLeft <= 0) {
+      stopRecording()
+    }
+  }, [isRecording, timeLeft, stopRecording])
+
+  // Release the mic + timer if we unmount mid-recording. We deliberately don't
+  // transcribe here — navigating away abandons the take, and leaving the
+  // MediaStream live keeps the OS mic indicator on and holds the device.
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+        timerRef.current = null
+      }
+      streamRef.current?.getTracks().forEach((t) => t.stop())
+      try {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+          mediaRecorderRef.current.stop()
+        }
+      } catch { /* already stopped */ }
     }
   }, [])
 

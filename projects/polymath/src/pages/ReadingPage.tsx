@@ -108,9 +108,13 @@ export function ReadingPage() {
 
     // Auto-cleanup: Remove items dismissed more than 90 days ago
     const now = Date.now()
-    const dismissalTimestamps: Record<string, number> = JSON.parse(
-      localStorage.getItem('rss-dismissed-timestamps') || '{}'
-    )
+    let dismissalTimestamps: Record<string, number> = {}
+    try {
+      dismissalTimestamps = JSON.parse(localStorage.getItem('rss-dismissed-timestamps') || '{}')
+    } catch {
+      // Corrupt timestamp map — start fresh rather than letting the dismiss fail.
+      dismissalTimestamps = {}
+    }
     dismissalTimestamps[guid] = now
 
     // Filter out old dismissals (90 days). Treat untimestamped legacy entries

@@ -1383,10 +1383,18 @@ Return JSON only:
             processed: false
           }).select().single()
 
-          // Link memory to the bedtime prompt
+          // Link memory to the bedtime prompt. follow_up_memory_ids is an
+          // array — append so a second morning's follow-up doesn't wipe the
+          // first instead of overwriting it.
           if (memory && id) {
+            const { data: prompt } = await supabase
+              .from('bedtime_prompts')
+              .select('follow_up_memory_ids')
+              .eq('id', id)
+              .single()
+            const existing: string[] = prompt?.follow_up_memory_ids ?? []
             await supabase.from('bedtime_prompts').update({
-              follow_up_memory_ids: [memory.id]
+              follow_up_memory_ids: [...existing, memory.id]
             }).eq('id', id)
           }
 
