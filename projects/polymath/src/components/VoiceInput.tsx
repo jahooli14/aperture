@@ -118,7 +118,14 @@ export function VoiceInput({
         ) : isRecording ? (
           <>
             <Square className="h-5 w-5 animate-pulse" />
-            Stop Recording ({timeLeft}s)
+            Stop Recording{' '}
+            {/* Amber in the last 15s so the auto-stop cutoff isn't a surprise. */}
+            <span
+              className={timeLeft <= 15 ? 'font-semibold' : undefined}
+              style={timeLeft <= 15 ? { color: '#f59e0b' } : undefined}
+            >
+              ({timeLeft}s)
+            </span>
           </>
         ) : (
           <>

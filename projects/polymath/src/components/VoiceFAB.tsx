@@ -102,7 +102,10 @@ function getOptionForDy(dy: number): StripOptionId | null {
 
 export function VoiceFAB({
   onTranscript,
-  maxDuration = 60,
+  // 3 minutes — long enough to talk through a whole thought without getting
+  // cut off mid-sentence. Recording auto-stops and still saves at the cap, so
+  // nothing is lost. Stays well within the 25MB audio + Vercel-timeout margins.
+  maxDuration = 180,
   hidden = false,
   onTap,
 }: VoiceFABProps) {
