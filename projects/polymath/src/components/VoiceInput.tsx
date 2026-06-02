@@ -82,7 +82,9 @@ export function VoiceInput({
   const elapsed = Math.max(0, maxDuration - timeLeft)
   const progressPct = maxDuration > 0 ? Math.min(100, (elapsed / maxDuration) * 100) : 0
   const lowTime = timeLeft <= 15
-  const WARN_COLOR = '#f59e0b'
+  // Matches the app's existing amber (FocusSession blocker, priority star).
+  // The chrome is cyan-only, so amber is reserved for "time running out".
+  const WARN_COLOR = 'rgb(245, 158, 11)'
   const fmtTime = (s: number) => {
     const total = Math.max(0, Math.floor(s))
     const m = Math.floor(total / 60)
@@ -122,9 +124,7 @@ export function VoiceInput({
                 <span className="absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75 animate-ping" />
                 <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
               </span>
-              <span className="text-xs font-medium uppercase tracking-wide text-[var(--brand-text-secondary)]">
-                Recording
-              </span>
+              <span className="meta-caps">Recording</span>
             </div>
             <span
               className="text-sm font-medium tabular-nums"
@@ -134,9 +134,10 @@ export function VoiceInput({
             </span>
           </div>
 
-          {/* Hero: elapsed time, counting up */}
+          {/* Hero: elapsed time, counting up. Serif + light matches the app's
+              display-number convention (e.g. the Power Hour focus timer). */}
           <div
-            className="text-center tabular-nums font-semibold leading-none mb-3"
+            className="text-center font-serif font-light tabular-nums leading-none mb-3"
             style={{ fontSize: '2.75rem', color: 'var(--brand-text-primary)' }}
           >
             {fmtTime(elapsed)}
