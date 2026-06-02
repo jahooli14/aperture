@@ -5,6 +5,7 @@ import { updateItemConnections } from './connection-logic.js'
 import { detectProjectGenesis, mergeGenesisInsights } from './project-genesis.js'
 import { generateText } from './gemini-chat.js'
 import { MODELS } from './models.js'
+import { thinkingFragment } from './gemini-thinking.js'
 import { draftFix } from './fix-queue/drafter.js'
 import { ExtractMetadataResponse, validate } from './schemas.js'
 import { PLAIN_ENGLISH_RULES } from './plain-english.js'
@@ -474,7 +475,7 @@ async function extractMetadata(
   bodyFormat: 'prose' | 'bullets' = 'prose',
   tagVocabulary: string[] = [],
 ): Promise<ExtractedMetadata> {
-  const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT, generationConfig: { responseMimeType: 'application/json' } })
+  const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT, generationConfig: { responseMimeType: 'application/json', ...thinkingFragment('low') } })
 
   const projectList = projects.map(p => `- ${p.title} (ID: ${p.id}): ${p.description}`).join('\n')
 

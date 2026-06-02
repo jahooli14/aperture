@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import type { Idea, OpusVerdict, RejectionCategory } from './types.js';
 import { MODELS } from './models.js';
+import { thinkingFragment } from '../gemini-thinking.js';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
@@ -62,6 +63,7 @@ Frontier Mode: ${idea.frontier_mode}
       temperature: 0.2,
       maxOutputTokens: 500,
       responseMimeType: 'application/json',
+      ...thinkingFragment('low'),
     },
   });
 
