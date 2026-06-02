@@ -1,7 +1,9 @@
 /**
  * Universal Action FAB
  *
- * TAP    Voice capture modal (auto-starts recording)
+ * TAP         Create menu (thought / project / list item)
+ * DOUBLE-TAP  Voice capture modal (auto-starts recording) — no need to hold
+ * HOLD        Push-to-talk voice capture; release to stop
  * HOLD   Slide-up option strip appears above FAB:
  *            Slide up slightly   Thought
  *            Slide up more       Project
@@ -33,6 +35,9 @@ interface VoiceFABProps {
 }
 
 const LONG_PRESS_DELAY = 400 // ms
+// Window to catch a second tap. A single tap opens the create menu, so we wait
+// this long before committing to it — if a second tap lands, it's voice instead.
+const DOUBLE_TAP_DELAY = 280 // ms
 
 // FAB position in px (matches Tailwind bottom-28 right-6 on mobile)
 const FAB_BOTTOM = 112
@@ -97,7 +102,10 @@ function getOptionForDy(dy: number): StripOptionId | null {
 
 export function VoiceFAB({
   onTranscript,
-  maxDuration = 60,
+  // 3 minutes — long enough to talk through a whole thought without getting
+  // cut off mid-sentence. Recording auto-stops and still saves at the cap, so
+  // nothing is lost. Stays well within the 25MB audio + Vercel-timeout margins.
+  maxDuration = 180,
   hidden = false,
   onTap,
 }: VoiceFABProps) {
@@ -115,6 +123,10 @@ export function VoiceFAB({
   const pressTimerRef = useRef<NodeJS.Timeout | null>(null)
   const pressStartTimeRef = useRef<number>(0)
   const pressStartPosRef = useRef<{ x: number; y: number } | null>(null)
+  // Double-tap detection: a single tap defers the menu by DOUBLE_TAP_DELAY so a
+  // second tap can claim the gesture for voice instead.
+  const lastTapTimeRef = useRef<number>(0)
+  const tapMenuTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     const handleOpenVoiceCapture = () => {
@@ -143,6 +155,14 @@ export function VoiceFAB({
     setIsVoiceOpen(false)
   }
 
+  // Clear any pending timers when the FAB unmounts.
+  useEffect(() => {
+    return () => {
+      if (pressTimerRef.current) clearTimeout(pressTimerRef.current)
+      if (tapMenuTimerRef.current) clearTimeout(tapMenuTimerRef.current)
+    }
+  }, [])
+
   const closeVoice = useCallback(() => {
     setIsVoiceOpen(false)
     setShouldStopRecording(false)
@@ -157,6 +177,12 @@ export function VoiceFAB({
     pressStartTimeRef.current = Date.now()
     pressStartPosRef.current = { x: e.clientX, y: e.clientY }
     if (pressTimerRef.current) clearTimeout(pressTimerRef.current)
+    // A new press begins before the deferred menu fired — hold the menu so this
+    // press can resolve as the second tap (voice) or a hold (voice).
+    if (tapMenuTimerRef.current) {
+      clearTimeout(tapMenuTimerRef.current)
+      tapMenuTimerRef.current = null
+    }
 
     pressTimerRef.current = setTimeout(() => {
       setIsLongPressRecording(true)
@@ -194,12 +220,32 @@ export function VoiceFAB({
       return
     }
 
-    // Short tap — open the create menu so the user picks thought / project
-    // / list item. Hold is still the voice path. Direct thought capture
-    // moved into the menu's first card.
+    // Short tap. Two paths:
+    //  - single tap  → create menu (thought / project / list item)
+    //  - double tap  → voice capture, so you don't have to hold the FAB down
+    // Hold is still the push-to-talk voice path.
     if (duration < LONG_PRESS_DELAY) {
-      haptic.light()
-      setIsMenuOpen(true)
+      const now = Date.now()
+      if (now - lastTapTimeRef.current < DOUBLE_TAP_DELAY) {
+        // Second tap landed in time — record without holding.
+        lastTapTimeRef.current = 0
+        if (tapMenuTimerRef.current) {
+          clearTimeout(tapMenuTimerRef.current)
+          tapMenuTimerRef.current = null
+        }
+        haptic.medium()
+        setIsVoiceOpen(true)
+        return
+      }
+      // First tap — defer the menu so a second tap can override it.
+      lastTapTimeRef.current = now
+      if (tapMenuTimerRef.current) clearTimeout(tapMenuTimerRef.current)
+      tapMenuTimerRef.current = setTimeout(() => {
+        tapMenuTimerRef.current = null
+        lastTapTimeRef.current = 0
+        haptic.light()
+        setIsMenuOpen(true)
+      }, DOUBLE_TAP_DELAY)
     }
   }, [isLongPressRecording])
 
@@ -219,6 +265,10 @@ export function VoiceFAB({
     if (pressTimerRef.current) {
       clearTimeout(pressTimerRef.current)
       pressTimerRef.current = null
+    }
+    if (tapMenuTimerRef.current) {
+      clearTimeout(tapMenuTimerRef.current)
+      tapMenuTimerRef.current = null
     }
     pressStartPosRef.current = null
     setIsLongPressRecording(false)
@@ -288,7 +338,7 @@ export function VoiceFAB({
             'inset 0 1px 0 rgba(255, 255, 255, 0.32),' +
             'inset 0 -2px 6px rgba(0, 0, 0, 0.22)',
         }}
-        aria-label="New thought — tap to write, hold to record"
+        aria-label="New thought — tap for menu, double-tap or hold to record"
       >
         <Plus
           className="h-6 w-6 text-white transition-transform duration-300 group-hover:rotate-90 relative z-10"

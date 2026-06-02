@@ -184,7 +184,9 @@ export function ReadingPage() {
       const dismissed = getDismissedItems()
       const filteredItems = allItems.filter(item => !dismissed.has(item.guid))
 
-      setRssItems(filteredItems)
+      // Cap the whole section at 20 (newest first, already sorted above) so a
+      // few days of unread feeds can't take over the page.
+      setRssItems(filteredItems.slice(0, 20))
     } catch (error) {
       console.error('Failed to fetch RSS items:', error)
       addToast({
