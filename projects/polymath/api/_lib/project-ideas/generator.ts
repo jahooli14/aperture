@@ -18,10 +18,12 @@
  * stays silent, crossover carries the surface as before. The UI checks
  * `mode` per row and renders Read with a leading pattern block.
  *
- * Permissive fallback: when crossover's locked-pair pass returns nothing AND
- * the user explicitly clicked "show me ideas", fall back to a permissive
- * single-idea prompt so the button is never dead. Cron stays strict —
- * silence is acceptable on cron.
+ * Permissive fallback: when Read + crossover both return nothing, fall back
+ * to a permissive single-idea prompt, then to a no-LLM template floor, so a
+ * run is never empty. Both the user button and cron now run with force=true:
+ * a silent cron run inserts nothing, never supersedes the prior pending idea,
+ * and that stale row then short-circuits every user press — the "no new idea
+ * for a month" deadlock. The floor keeps the queue refreshing.
  */
 
 import { generateText } from '../gemini-chat.js'
@@ -55,10 +57,12 @@ const MIN_SIGNALS = 8
 export type SessionFeeling = 'focused' | 'scattered' | 'restless'
 
 export interface GenerateOptions {
-  /** force=true falls back to the permissive prompt when the seed-pair
-   *  pass returns nothing. Used by the manual "show me ideas" button —
-   *  the user explicitly asked, so silence is not an acceptable reply.
-   *  The cron path stays strict and is allowed to return empty. */
+  /** force=true falls back to the permissive prompt — then a no-LLM
+   *  template floor — when Read + crossover both return nothing, so the
+   *  result is never empty. Both the user button and cron pass force=true:
+   *  an empty cron run leaves a stale pending idea that the user button
+   *  then re-serves forever. The `fast` flag, not this one, is what
+   *  distinguishes the cron and user pipelines. */
   force?: boolean
   /** fast=true is the on-demand user path: skip Read (the slow
    *  reasoning-heavy mode), and ask Flash for ONE idea instead of three.
@@ -143,9 +147,18 @@ export async function generateProjectIdeas(
     console.log(`[project-ideas] read+crossover produced 0; force=true, falling back to permissive`)
     const fallback = await runPermissive(gathered)
     if (fallback.length > 0) return { ideas: fallback, attempts: 2 }
+    // Permissive also came back empty (LLM error / parse-fail). Returning
+    // [] here is what let a stale pending idea sit in the queue and get
+    // re-served forever, so synthesise a no-LLM template idea as the floor.
+    // Flagged fallback:true so the caller stores it 'superseded', not
+    // 'pending' — it clears the stale row without parking filler at the
+    // front of the queue.
+    console.warn(`[project-ideas] permissive also empty; serving template floor`)
+    const synth = synthesiseFallbackIdea(gathered)
+    return { ideas: [{ ...synth, mode: 'crossover' }], attempts: 3, fallback: true }
   }
 
-  return { ideas: [], reason: 'parse_failure', attempts: opts.force ? 2 : 1 }
+  return { ideas: [], reason: 'parse_failure', attempts: 1 }
 }
 
 /** Merge Read (0 or 1) and crossover (0–3) into a single ranked deck capped
