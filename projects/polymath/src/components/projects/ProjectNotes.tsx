@@ -1,26 +1,35 @@
 /**
  * Project Notes — the project's freeform "Content" space.
  *
- * One continuous markdown document per project: drop text, links and images
- * in any order. View mode renders it; tap Edit for a textarea with an image
- * button (and paste-to-upload). Saves to projects.notes_doc.
- *
- * The AI can append to the same document via the project chat, so notes is the
- * shared scratch space for both the user and the guide.
+ * A Notion/Capacities-style WYSIWYG built on TipTap (headless ProseMirror),
+ * styled to the Polymath glass theme. Always-editable inline: type and it
+ * formats live, drop/paste images and they upload inline, select text for a
+ * floating format menu. Autosaves as markdown to projects.notes_doc — so the
+ * doc stays portable and the AI can read/append to it from the chat.
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { ImagePlus, Pencil, Check, Loader2 } from 'lucide-react'
-import { Button } from '../ui/button'
+import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEditor, EditorContent, type Editor } from '@tiptap/react'
+import { BubbleMenu } from '@tiptap/react/menus'
+import StarterKit from '@tiptap/starter-kit'
+import Image from '@tiptap/extension-image'
+import Placeholder from '@tiptap/extension-placeholder'
+import { Markdown } from 'tiptap-markdown'
+import { Bold, Italic, Strikethrough, Link2, Heading1, Heading2, List, Quote, ImagePlus, Loader2, Check } from 'lucide-react'
 import { useToast } from '../ui/toast'
-import { MarkdownRenderer } from '../ui/MarkdownRenderer'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { api } from '../../lib/apiClient'
-import { handleInputFocus } from '../../utils/keyboard'
+import '../../styles/project-notes.css'
 
 interface ProjectNotesProps {
   projectId: string
   notesDoc?: string | null
+}
+
+// tiptap-markdown augments editor.storage at runtime but ships no storage types.
+const getMarkdown = (editor: Editor): string => {
+  const md = (editor.storage as unknown as Record<string, unknown>).markdown as { getMarkdown: () => string } | undefined
+  return md?.getMarkdown() ?? ''
 }
 
 async function uploadImage(file: File): Promise<string> {
@@ -40,194 +49,173 @@ async function uploadImage(file: File): Promise<string> {
   return publicUrl
 }
 
+type SaveState = 'idle' | 'saving' | 'saved'
+
 export function ProjectNotes({ projectId, notesDoc }: ProjectNotesProps) {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(notesDoc ?? '')
-  const [saving, setSaving] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const { addToast } = useToast()
   const updateProject = useProjectStore(state => state.updateProject)
+  const [saveState, setSaveState] = useState<SaveState>('idle')
+  const [uploading, setUploading] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastSaved = useRef<string>(notesDoc ?? '')
+  const savedFlash = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Keep the draft in sync with the stored doc whenever we're not actively
-  // editing — so an AI append from the chat shows up here without a refresh.
+  const persist = useCallback(async (md: string) => {
+    const next = md.trim()
+    if (next === lastSaved.current.trim()) return
+    lastSaved.current = next
+    setSaveState('saving')
+    try {
+      await updateProject(projectId, { notes_doc: next || null })
+      setSaveState('saved')
+      if (savedFlash.current) clearTimeout(savedFlash.current)
+      savedFlash.current = setTimeout(() => setSaveState('idle'), 1800)
+    } catch {
+      setSaveState('idle')
+      addToast({ title: 'Failed to save notes', description: 'Changes are still here — try again.', variant: 'destructive' })
+    }
+  }, [projectId, updateProject, addToast])
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        heading: { levels: [1, 2, 3] },
+        link: { openOnClick: false, autolink: true, HTMLAttributes: { target: '_blank', rel: 'noopener noreferrer' } },
+      }),
+      Image.configure({ inline: false, allowBase64: false }),
+      Placeholder.configure({ placeholder: 'Drop text, links, or images for this project…' }),
+      Markdown.configure({ html: false, linkify: true, transformPastedText: true, transformCopiedText: true }),
+    ],
+    content: notesDoc || '',
+    editorProps: { attributes: { class: 'focus:outline-none' } },
+    onUpdate: ({ editor }) => {
+      if (saveTimer.current) clearTimeout(saveTimer.current)
+      const md = getMarkdown(editor)
+      saveTimer.current = setTimeout(() => persist(md), 900)
+    },
+    onBlur: ({ editor }) => {
+      if (saveTimer.current) clearTimeout(saveTimer.current)
+      persist(getMarkdown(editor))
+    },
+  })
+
+  // Pull in external changes (e.g. an AI append from the chat) — but only when
+  // the user isn't mid-edit, so we never clobber what they're typing.
   useEffect(() => {
-    if (!editing) setDraft(notesDoc ?? '')
-  }, [notesDoc, editing])
+    if (!editor) return
+    const incoming = notesDoc ?? ''
+    if (editor.isFocused) return
+    if (incoming.trim() === getMarkdown(editor).trim()) return
+    editor.commands.setContent(incoming, { emitUpdate: false })
+    lastSaved.current = incoming
+  }, [notesDoc, editor])
 
-  // Insert text at the cursor (or append) inside the textarea.
-  const insertAtCursor = useCallback((snippet: string) => {
-    const el = textareaRef.current
-    setDraft(prev => {
-      if (!el) return prev ? `${prev}\n${snippet}` : snippet
-      const start = el.selectionStart ?? prev.length
-      const end = el.selectionEnd ?? prev.length
-      const next = prev.slice(0, start) + snippet + prev.slice(end)
-      // Restore caret just after the inserted snippet on the next tick.
-      requestAnimationFrame(() => {
-        el.focus()
-        const pos = start + snippet.length
-        el.setSelectionRange(pos, pos)
-      })
-      return next
-    })
+  useEffect(() => () => {
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    if (savedFlash.current) clearTimeout(savedFlash.current)
   }, [])
 
-  const addImages = useCallback(async (files: File[]) => {
+  const insertImageFiles = useCallback(async (files: File[]) => {
     const images = files.filter(f => f.type.startsWith('image/'))
-    if (images.length === 0) return
+    if (images.length === 0 || !editor) return
     setUploading(true)
     try {
       for (const file of images) {
         const url = await uploadImage(file)
-        insertAtCursor(`\n\n![](${url})\n\n`)
+        editor.chain().focus().setImage({ src: url }).run()
       }
     } catch (err) {
-      addToast({
-        title: 'Image upload failed',
-        description: err instanceof Error ? err.message : 'Try again in a moment.',
-        variant: 'destructive',
-      })
+      addToast({ title: 'Image upload failed', description: err instanceof Error ? err.message : 'Try again.', variant: 'destructive' })
     } finally {
       setUploading(false)
     }
-  }, [insertAtCursor, addToast])
+  }, [editor, addToast])
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.length) addImages(Array.from(e.target.files))
-    e.target.value = '' // allow re-selecting the same file
+  const onPaste = (e: React.ClipboardEvent) => {
+    const files = Array.from(e.clipboardData?.files || []).filter(f => f.type.startsWith('image/'))
+    if (files.length) { e.preventDefault(); insertImageFiles(files) }
+  }
+  const onDrop = (e: React.DragEvent) => {
+    const files = Array.from(e.dataTransfer?.files || []).filter(f => f.type.startsWith('image/'))
+    if (files.length) { e.preventDefault(); insertImageFiles(files) }
+    setDragOver(false)
+  }
+  const onDragOver = (e: React.DragEvent) => {
+    if (Array.from(e.dataTransfer?.items || []).some(i => i.kind === 'file')) { e.preventDefault(); setDragOver(true) }
   }
 
-  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-    const files = Array.from(e.clipboardData.files || [])
-    if (files.some(f => f.type.startsWith('image/'))) {
-      e.preventDefault()
-      addImages(files)
-    }
+  const toggleLink = () => {
+    if (!editor) return
+    if (editor.isActive('link')) { editor.chain().focus().unsetLink().run(); return }
+    const url = window.prompt('Link URL', editor.getAttributes('link').href || 'https://')
+    if (url === null) return
+    if (url.trim() === '') { editor.chain().focus().unsetLink().run(); return }
+    editor.chain().focus().extendMarkRange('link').setLink({ href: url.trim() }).run()
   }
 
-  const save = async () => {
-    setSaving(true)
-    const next = draft.trim() ? draft : null
-    try {
-      await updateProject(projectId, { notes_doc: next })
-      setEditing(false)
-    } catch {
-      addToast({ title: 'Failed to save notes', description: 'Try again in a moment.', variant: 'destructive' })
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const cancel = () => {
-    setDraft(notesDoc ?? '')
-    setEditing(false)
-  }
-
-  const hasContent = !!(notesDoc && notesDoc.trim())
+  const btn = (active: boolean, onClick: () => void, label: string, Icon: typeof Bold) => (
+    <button type="button" onClick={onClick} aria-label={label} className={active ? 'is-active' : ''}>
+      <Icon className="h-4 w-4" strokeWidth={2.25} />
+    </button>
+  )
 
   return (
-    <div>
+    <div className="project-notes">
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--brand-text-secondary)]">
-          Notes
-        </span>
+        <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--brand-text-secondary)]">Notes</span>
         <div className="h-px flex-grow" style={{ background: 'rgba(255,255,255,0.1)' }} />
-        {!editing && (
-          <button
-            onClick={() => setEditing(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors hover:bg-white/[0.06]"
-            style={{ color: 'var(--brand-text-secondary)' }}
-          >
-            <Pencil className="h-3 w-3" /> {hasContent ? 'Edit' : 'Add'}
-          </button>
-        )}
+        <span className="flex items-center gap-1.5 text-[10px] tracking-wide" style={{ color: 'var(--brand-text-secondary)', opacity: saveState === 'idle' ? 0 : 0.55, transition: 'opacity 0.25s' }}>
+          {saveState === 'saving' ? <><Loader2 className="h-3 w-3 animate-spin" /> Saving</> : saveState === 'saved' ? <><Check className="h-3 w-3" /> Saved</> : null}
+        </span>
       </div>
 
-      {editing ? (
-        <div className="space-y-3">
-          <textarea
-            ref={textareaRef}
-            value={draft}
-            onChange={e => setDraft(e.target.value)}
-            onPaste={handlePaste}
-            onFocus={handleInputFocus}
-            autoFocus
-            placeholder="Drop text, links, or images here. Markdown works — # heading, **bold**, - list."
-            rows={10}
-            className="w-full px-4 py-3 rounded-xl text-[15px] leading-relaxed focus:outline-none focus:ring-2 resize-y"
-            style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              color: 'var(--brand-text-primary)',
-              '--tw-ring-color': 'var(--brand-primary)',
-            } as React.CSSProperties}
-          />
-
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <input
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleFileSelect}
-                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
-                aria-label="Add image"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                disabled={uploading}
-                className="h-9 px-3 text-xs flex items-center gap-1.5"
-                style={{ background: 'rgba(255,255,255,0.04)', color: 'var(--brand-text-secondary)', borderRadius: '9999px' }}
-              >
-                {uploading
-                  ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading…</>
-                  : <><ImagePlus className="h-3.5 w-3.5" /> Image</>}
-              </Button>
-            </div>
-
-            <div className="flex-grow" />
-
-            <button
-              onClick={cancel}
-              disabled={saving}
-              className="h-9 px-3 rounded-lg text-[13px] font-medium transition-colors hover:bg-white/[0.05]"
-              style={{ color: 'var(--brand-text-secondary)' }}
-            >
-              Cancel
-            </button>
-            <Button
-              onClick={save}
-              disabled={saving || uploading}
-              size="sm"
-              className="h-9 px-4 text-[13px] font-semibold"
-              style={{ background: 'var(--brand-primary)', color: 'var(--brand-text-primary)' }}
-            >
-              {saving ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> Saving…</> : <><Check className="h-3.5 w-3.5 mr-1.5" /> Save</>}
-            </Button>
-          </div>
-        </div>
-      ) : hasContent ? (
-        <button
-          onClick={() => setEditing(true)}
-          className="block w-full text-left rounded-xl px-4 py-3 transition-colors hover:bg-white/[0.02]"
-          style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}
-        >
-          <MarkdownRenderer content={notesDoc!} className="text-[15px]" />
-        </button>
-      ) : (
-        <button
-          onClick={() => setEditing(true)}
-          className="flex items-center gap-2 w-full rounded-xl px-4 py-4 text-left transition-colors hover:bg-white/[0.03]"
-          style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.1)', color: 'var(--brand-text-secondary)', opacity: 0.7 }}
-        >
-          <ImagePlus className="h-4 w-4" />
-          <span className="text-[13px]">Drop text, links, or images for this project.</span>
-        </button>
+      {editor && (
+        <BubbleMenu editor={editor} className="notes-bubble">
+          {btn(editor.isActive('bold'), () => editor.chain().focus().toggleBold().run(), 'Bold', Bold)}
+          {btn(editor.isActive('italic'), () => editor.chain().focus().toggleItalic().run(), 'Italic', Italic)}
+          {btn(editor.isActive('strike'), () => editor.chain().focus().toggleStrike().run(), 'Strikethrough', Strikethrough)}
+          {btn(editor.isActive('link'), toggleLink, 'Link', Link2)}
+          <span className="notes-bubble-sep" />
+          {btn(editor.isActive('heading', { level: 1 }), () => editor.chain().focus().toggleHeading({ level: 1 }).run(), 'Heading 1', Heading1)}
+          {btn(editor.isActive('heading', { level: 2 }), () => editor.chain().focus().toggleHeading({ level: 2 }).run(), 'Heading 2', Heading2)}
+          {btn(editor.isActive('bulletList'), () => editor.chain().focus().toggleBulletList().run(), 'Bullet list', List)}
+          {btn(editor.isActive('blockquote'), () => editor.chain().focus().toggleBlockquote().run(), 'Quote', Quote)}
+        </BubbleMenu>
       )}
+
+      {/* Editor surface */}
+      <div
+        onPaste={onPaste}
+        onDrop={onDrop}
+        onDragOver={onDragOver}
+        onDragLeave={() => setDragOver(false)}
+        className="rounded-xl px-4 py-3.5 transition-colors"
+        style={{
+          background: dragOver ? 'rgba(var(--brand-primary-rgb),0.06)' : 'rgba(255,255,255,0.02)',
+          border: `1px ${dragOver ? 'dashed' : 'solid'} ${dragOver ? 'rgba(var(--brand-primary-rgb),0.4)' : 'rgba(255,255,255,0.06)'}`,
+        }}
+        onClick={() => editor?.chain().focus().run()}
+      >
+        <EditorContent editor={editor} />
+      </div>
+
+      {/* Footer affordance */}
+      <div className="flex items-center gap-3 mt-2.5 px-1">
+        <label className="flex items-center gap-1.5 text-[12px] cursor-pointer transition-opacity hover:opacity-100" style={{ color: 'var(--brand-text-secondary)', opacity: 0.55 }}>
+          <input
+            type="file"
+            multiple
+            accept="image/*"
+            className="hidden"
+            onChange={e => { if (e.target.files?.length) insertImageFiles(Array.from(e.target.files)); e.target.value = '' }}
+          />
+          {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
+          {uploading ? 'Uploading…' : 'Add image'}
+        </label>
+        <span className="text-[11px]" style={{ color: 'var(--brand-text-muted)', opacity: 0.4 }}>or drag, paste, or select text to format</span>
+      </div>
     </div>
   )
 }

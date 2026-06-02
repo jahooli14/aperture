@@ -140,16 +140,6 @@ export function ProjectDetailPage() {
   const prevTasksRef = useRef<{ id: string; done: boolean }[]>([])
   const seededPrevTasksRef = useRef(false)
 
-  // Listen for custom event from FloatingNav to open AddNote dialog
-  useEffect(() => {
-    const handleOpenAddNote = () => {
-      console.log('[ProjectDetailPage] Received openAddNote event')
-      setShowAddNote(true)
-    }
-    window.addEventListener('openProjectAddNote', handleOpenAddNote)
-    return () => window.removeEventListener('openProjectAddNote', handleOpenAddNote)
-  }, [])
-
   // Listen for AI enrichment completion to refresh tasks
   useEffect(() => {
     const handleEnriched = (e: CustomEvent<{ projectId: string }>) => {
