@@ -1499,6 +1499,14 @@ async function handleProjectIdeasFeedback(req: VercelRequest, res: VercelRespons
 // frustrating dismiss-then-regenerate. Cron is exempt.
 const GENERATION_COOLDOWN_MS = 5_000
 
+// How long a cron-baked (or otherwise queued) pending idea may be served
+// before the user button regenerates instead of re-serving it. Cron refreshes
+// the queue daily, so a pending row older than this means cron has been
+// silently producing nothing — without this guard the same idea gets served
+// on every press for weeks. Falling through past this age self-heals the
+// queue via the fast path even when cron stays silent.
+const PENDING_STALE_MS = 3 * 24 * 60 * 60 * 1000
+
 // Hard cap so a runaway paste can't blow past Gemini's input window. The
 // default brief is ~1.6KB; this lets the user write a couple of pages
 // before we refuse the save.
@@ -1598,18 +1606,29 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
         .order('rank', { ascending: true })
         .limit(3)
       if (queued && queued.length > 0) {
-        // Served from the pending queue — NOT regenerated. If a user
-        // reports "same idea every press", this line proves it: a pending
-        // row is short-circuiting generation. (Fallback rows are stored
-        // 'superseded' now, so they no longer get stuck here.)
-        console.log(`[generate-project-ideas] served from queue (no regen): "${queued[0].title}" generated_at=${queued[0].generated_at}`)
-        return res.status(200).json({
-          ideas: queued,
-          batch_id: queued[0].batch_id,
-          generated_at: queued[0].generated_at,
-          via: 'queue',
-          took_ms: Date.now() - started,
-        })
+        // Staleness guard. A pending row only short-circuits while it's
+        // fresh. If cron has been silently producing nothing (Read +
+        // crossover both empty, no fallback), the newest pending could be
+        // weeks old — re-serving it is exactly the "same idea for a month"
+        // complaint. Past PENDING_STALE_MS we fall through and regenerate
+        // via the fast path, which supersedes the stale row and bakes a
+        // fresh one. This self-heals the queue without waiting on cron.
+        const queuedAgeMs = Date.now() - new Date(queued[0].generated_at).getTime()
+        if (queuedAgeMs <= PENDING_STALE_MS) {
+          // Served from the pending queue — NOT regenerated. If a user
+          // reports "same idea every press", this line proves it: a pending
+          // row is short-circuiting generation. (Fallback rows are stored
+          // 'superseded' now, so they no longer get stuck here.)
+          console.log(`[generate-project-ideas] served from queue (no regen): "${queued[0].title}" generated_at=${queued[0].generated_at}`)
+          return res.status(200).json({
+            ideas: queued,
+            batch_id: queued[0].batch_id,
+            generated_at: queued[0].generated_at,
+            via: 'queue',
+            took_ms: Date.now() - started,
+          })
+        }
+        console.log(`[generate-project-ideas] pending idea is stale (${Math.round(queuedAgeMs / 86_400_000)}d old) — regenerating instead of re-serving "${queued[0].title}"`)
       }
     }
 
@@ -1684,8 +1703,15 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
       if (typeof raw === 'string' && raw.trim().length > 0) brief = raw.trim()
     }
 
+    // force=true on BOTH paths now: the generator must never return empty.
+    // Cron used to run with force=false ("silence is acceptable on cron"),
+    // but a silent cron run inserts nothing, never supersedes the prior
+    // pending idea, and that stale row then short-circuits every user press
+    // — the "no new idea for a month" deadlock. force=true lets cron fall
+    // back to permissive (then a template floor) so each run produces
+    // something to refresh the queue. fast stays cron/user-specific.
     const result = await generateProjectIdeas(gathered, {
-      force: !viaCron,
+      force: true,
       fast: !viaCron,
       feeling,
       brief,
