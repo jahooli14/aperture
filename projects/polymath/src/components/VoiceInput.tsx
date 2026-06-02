@@ -77,6 +77,19 @@ export function VoiceInput({
     }
   }, [isRecording, stopRecording])
 
+  // Recording progress: elapsed counts up, the bar fills toward the cap, and
+  // both turn amber in the final 15s so the auto-stop isn't a surprise.
+  const elapsed = Math.max(0, maxDuration - timeLeft)
+  const progressPct = maxDuration > 0 ? Math.min(100, (elapsed / maxDuration) * 100) : 0
+  const lowTime = timeLeft <= 15
+  const WARN_COLOR = '#f59e0b'
+  const fmtTime = (s: number) => {
+    const total = Math.max(0, Math.floor(s))
+    const m = Math.floor(total / 60)
+    const sec = total % 60
+    return `${m}:${sec.toString().padStart(2, '0')}`
+  }
+
   if (!isSupported) {
     return (
       <div className="p-6 text-center glass-card border-red-500/30 bg-brand-primary/10">
@@ -91,6 +104,61 @@ export function VoiceInput({
 
   return (
     <div className="space-y-3">
+      {/* Active-recording panel: a big count-up timer is the hero, with a
+          progress bar filling toward the cap and an explicit "time left" so
+          you always know how much you've used and how much remains. */}
+      {isRecording && !isProcessing && (
+        <div
+          className="rounded-2xl px-5 py-4"
+          style={{
+            background: 'var(--glass-surface)',
+            boxShadow: 'inset 0 0 0 1px var(--glass-surface-hover)',
+          }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              {/* Pulsing live dot */}
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75 animate-ping" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
+              </span>
+              <span className="text-xs font-medium uppercase tracking-wide text-[var(--brand-text-secondary)]">
+                Recording
+              </span>
+            </div>
+            <span
+              className="text-sm font-medium tabular-nums"
+              style={{ color: lowTime ? WARN_COLOR : 'var(--brand-text-secondary)' }}
+            >
+              {fmtTime(timeLeft)} left
+            </span>
+          </div>
+
+          {/* Hero: elapsed time, counting up */}
+          <div
+            className="text-center tabular-nums font-semibold leading-none mb-3"
+            style={{ fontSize: '2.75rem', color: 'var(--brand-text-primary)' }}
+          >
+            {fmtTime(elapsed)}
+          </div>
+
+          {/* Progress toward the cap */}
+          <div className="h-1.5 w-full overflow-hidden rounded-full" style={{ background: 'rgba(255,255,255,0.08)' }}>
+            <div
+              className="h-full rounded-full transition-[width] duration-1000 ease-linear"
+              style={{
+                width: `${progressPct}%`,
+                background: lowTime ? WARN_COLOR : 'rgb(var(--brand-primary-rgb))',
+              }}
+            />
+          </div>
+          <div className="mt-1.5 flex justify-between text-[11px] tabular-nums text-[var(--brand-text-secondary)] opacity-60">
+            <span>0:00</span>
+            <span>{fmtTime(maxDuration)}</span>
+          </div>
+        </div>
+      )}
+
       <Button
         type="button"
         onClick={canRetry ? retry : toggleRecording}
@@ -117,15 +185,8 @@ export function VoiceInput({
           </>
         ) : isRecording ? (
           <>
-            <Square className="h-5 w-5 animate-pulse" />
-            Stop Recording{' '}
-            {/* Amber in the last 15s so the auto-stop cutoff isn't a surprise. */}
-            <span
-              className={timeLeft <= 15 ? 'font-semibold' : undefined}
-              style={timeLeft <= 15 ? { color: '#f59e0b' } : undefined}
-            >
-              ({timeLeft}s)
-            </span>
+            <Square className="h-5 w-5" />
+            Stop Recording
           </>
         ) : (
           <>
