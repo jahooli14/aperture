@@ -7,6 +7,7 @@ import type {
 } from './types.js';
 import type { MutationType } from './block-sampler.js';
 import { MODELS } from './models.js';
+import { thinkingFragment } from '../gemini-thinking.js';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -299,6 +300,7 @@ ${existingIdeas.slice(0, 10).map((e) => `- ${e.title}`).join('\n')}
         temperature: 0.3,
         maxOutputTokens: 2000,
         responseMimeType: 'application/json',
+        ...thinkingFragment('low'),
       },
     });
 
@@ -378,6 +380,7 @@ Your turn (no JSON, just the pattern text):`;
       generationConfig: {
         temperature: 0.5,
         maxOutputTokens: 150,
+        ...thinkingFragment('minimal'),
       },
     });
 

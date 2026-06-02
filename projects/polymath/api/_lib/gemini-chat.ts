@@ -5,6 +5,7 @@
 
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai'
 import { MODELS } from './models.js'
+import { thinkingFragment, type ThinkingLevel } from './gemini-thinking.js'
 
 // Validate API key at module load
 if (!process.env.GEMINI_API_KEY) {
@@ -78,6 +79,10 @@ export async function generateText(
     temperature?: number
     responseFormat?: 'text' | 'json'
     model?: string
+    // Gemini 3.x thinking depth. Unset leaves the model default (no behaviour
+    // change). Pass 'minimal'/'low' for mechanical calls to save output tokens,
+    // or set GEMINI_THINKING_LEVEL to dial every wired call globally.
+    thinkingLevel?: ThinkingLevel
   } = {}
 ): Promise<string> {
   if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'dummy-key-for-initialization') {
@@ -102,7 +107,8 @@ export async function generateText(
         temperature: options.temperature || 0.7,
         ...(options.responseFormat === 'json' && {
           responseMimeType: 'application/json'
-        })
+        }),
+        ...thinkingFragment(options.thinkingLevel)
       }
     })
 

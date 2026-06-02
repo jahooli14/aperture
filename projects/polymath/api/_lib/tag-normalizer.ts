@@ -6,6 +6,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getSupabaseClient } from './supabase.js'
 import { MODELS } from './models.js'
+import { thinkingFragment } from './gemini-thinking.js'
 
 // Use process.env directly, similar to other API lib modules
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
@@ -145,7 +146,7 @@ async function incrementTagUsage(tag: string): Promise<void> {
  * Infer category for a new tag using Gemini
  */
 async function inferCategory(tag: string): Promise<string> {
-  const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
+  const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT, generationConfig: { ...thinkingFragment('minimal') } })
 
   const prompt = `Categorize this tag into ONE of these categories:
 - Technology

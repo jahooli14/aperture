@@ -14,6 +14,7 @@ import { Readability } from '@mozilla/readability'
 import { parseHTML } from 'linkedom'
 import { updateItemConnections } from './_lib/connection-logic.js' // New import
 import { MODELS } from './_lib/models.js'
+import { thinkingFragment } from './_lib/gemini-thinking.js'
 
 // rss-parser is used only for XML parsing now — fetching is done manually
 // in robustParseFeed below so we can present a full browser identity to
@@ -2020,7 +2021,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
       // We use the same model config as memories for consistency
       const { GoogleGenerativeAI } = await import('@google/generative-ai')
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
-      const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
+      const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT, generationConfig: { ...thinkingFragment('low') } })
 
       const prompt = `Analyze this article and extract key information.
 
