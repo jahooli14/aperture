@@ -124,9 +124,11 @@ export function VoiceFAB({
   const pressStartTimeRef = useRef<number>(0)
   const pressStartPosRef = useRef<{ x: number; y: number } | null>(null)
   // Double-tap detection: a single tap defers the menu by DOUBLE_TAP_DELAY so a
-  // second tap can claim the gesture for voice instead.
+  // second tap can claim the gesture for voice instead. Detected on the second
+  // pointer-DOWN (gap between taps), so it doesn't matter how long that tap is held.
   const lastTapTimeRef = useRef<number>(0)
   const tapMenuTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const isDoubleTapRef = useRef<boolean>(false)
 
   useEffect(() => {
     const handleOpenVoiceCapture = () => {
@@ -177,8 +179,23 @@ export function VoiceFAB({
     pressStartTimeRef.current = Date.now()
     pressStartPosRef.current = { x: e.clientX, y: e.clientY }
     if (pressTimerRef.current) clearTimeout(pressTimerRef.current)
-    // A new press begins before the deferred menu fired — hold the menu so this
-    // press can resolve as the second tap (voice) or a hold (voice).
+
+    // Second tap landed in time (a first tap deferred the menu) → record without
+    // holding. Detected here on pointer-down so the second tap's length is
+    // irrelevant. Don't arm a long-press; this press is spent on voice.
+    if (tapMenuTimerRef.current && Date.now() - lastTapTimeRef.current < DOUBLE_TAP_DELAY) {
+      clearTimeout(tapMenuTimerRef.current)
+      tapMenuTimerRef.current = null
+      lastTapTimeRef.current = 0
+      isDoubleTapRef.current = true
+      haptic.medium()
+      setIsVoiceOpen(true)
+      return
+    }
+
+    isDoubleTapRef.current = false
+    // A new press before the deferred menu fired — hold the menu so this press
+    // can still resolve as a hold (voice).
     if (tapMenuTimerRef.current) {
       clearTimeout(tapMenuTimerRef.current)
       tapMenuTimerRef.current = null
@@ -211,6 +228,13 @@ export function VoiceFAB({
       pressTimerRef.current = null
     }
     pressStartPosRef.current = null
+
+    // This press was the second tap — voice already opened on pointer-down.
+    if (isDoubleTapRef.current) {
+      isDoubleTapRef.current = false
+      return
+    }
+
     const duration = Date.now() - pressStartTimeRef.current
 
     if (isLongPressRecording) {
@@ -225,20 +249,9 @@ export function VoiceFAB({
     //  - double tap  → voice capture, so you don't have to hold the FAB down
     // Hold is still the push-to-talk voice path.
     if (duration < LONG_PRESS_DELAY) {
-      const now = Date.now()
-      if (now - lastTapTimeRef.current < DOUBLE_TAP_DELAY) {
-        // Second tap landed in time — record without holding.
-        lastTapTimeRef.current = 0
-        if (tapMenuTimerRef.current) {
-          clearTimeout(tapMenuTimerRef.current)
-          tapMenuTimerRef.current = null
-        }
-        haptic.medium()
-        setIsVoiceOpen(true)
-        return
-      }
-      // First tap — defer the menu so a second tap can override it.
-      lastTapTimeRef.current = now
+      // First tap — defer the menu so a second tap (caught in onStart) can
+      // claim the gesture for voice instead.
+      lastTapTimeRef.current = Date.now()
       if (tapMenuTimerRef.current) clearTimeout(tapMenuTimerRef.current)
       tapMenuTimerRef.current = setTimeout(() => {
         tapMenuTimerRef.current = null
@@ -271,6 +284,12 @@ export function VoiceFAB({
       tapMenuTimerRef.current = null
     }
     pressStartPosRef.current = null
+    // A double tap opens voice on pointer-down; a trailing pointercancel from
+    // that same tap must not slam it shut.
+    if (isDoubleTapRef.current) {
+      isDoubleTapRef.current = false
+      return
+    }
     setIsLongPressRecording(false)
     setIsVoiceOpen(false)
   }, [])
