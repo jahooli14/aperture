@@ -12,7 +12,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { ArrowUp, Plus, Check, X, Target, Trash2, Pencil, RotateCcw } from 'lucide-react'
+import { ArrowUp, Plus, Check, X, Target, Trash2, Pencil, RotateCcw, FileText } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../../lib/supabase'
 import type { Project, ChatTurn } from '../../types'
@@ -59,6 +59,11 @@ interface GoalUpdate {
   reasoning?: string
 }
 
+interface NoteAppend {
+  text: string
+  reasoning?: string
+}
+
 type Message =
   | {
       kind: 'guide'
@@ -67,10 +72,13 @@ type Message =
       echoes?: EchoItem[]
       pendingOps?: TaskOp[]
       pendingGoal?: GoalUpdate | null
+      pendingNote?: NoteAppend | null
       resolvedOpIds?: string[]
       resolvedGoal?: boolean
+      resolvedNote?: boolean
       dismissedOpIds?: string[]
       goalDismissed?: boolean
+      noteDismissed?: boolean
       undoSnapshot?: { tasks: Task[]; goal: string; goalChanged: boolean } | null
     }
   | { kind: 'you'; content: string }
@@ -86,6 +94,7 @@ interface InlineGuideProps {
   }) => void | Promise<void>
   onUpdateTasks?: (tasks: Task[]) => Promise<void>
   onUpdateGoal?: (newGoal: string) => Promise<void>
+  onAppendNote?: (text: string) => Promise<void>
 }
 
 
@@ -95,6 +104,7 @@ export function InlineGuide({
   onAddTask,
   onUpdateTasks,
   onUpdateGoal,
+  onAppendNote,
 }: InlineGuideProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -209,6 +219,7 @@ export function InlineGuide({
           projectDescription: project.description,
           projectMotivation: project.metadata?.motivation,
           projectGoal: project.metadata?.end_goal,
+          projectNotes: project.notes_doc,
           tasks: tasks.map(t => ({
             id: t.id,
             text: t.text,
@@ -245,6 +256,11 @@ export function InlineGuide({
         rawGoal && typeof rawGoal.newGoal === 'string' && rawGoal.newGoal.trim()
           ? { newGoal: rawGoal.newGoal.trim(), reasoning: rawGoal.reasoning }
           : null
+      const rawNote = data.noteAppend as NoteAppend | null | undefined
+      const pendingNote: NoteAppend | null =
+        onAppendNote && rawNote && typeof rawNote.text === 'string' && rawNote.text.trim()
+          ? { text: rawNote.text.trim(), reasoning: rawNote.reasoning }
+          : null
 
       setMessages(prev => {
         const next: Message[] = [
@@ -256,8 +272,10 @@ export function InlineGuide({
             echoes: (data.echoes as EchoItem[]) || [],
             pendingOps,
             pendingGoal,
+            pendingNote,
             resolvedOpIds: [],
             resolvedGoal: false,
+            resolvedNote: false,
           },
         ]
         persistConversation(next)
@@ -366,6 +384,21 @@ export function InlineGuide({
 
   const dismissGoalUpdate = (msgIndex: number) => {
     setMessages(prev => prev.map((m, i) => (i === msgIndex && m.kind === 'guide') ? { ...m, goalDismissed: true } : m))
+  }
+
+  const applyNoteAppend = async (msgIndex: number, note: NoteAppend) => {
+    if (!onAppendNote) return
+    writeQueue.current = writeQueue.current.catch(() => {}).then(() => onAppendNote(note.text))
+    try {
+      await writeQueue.current
+      setMessages(prev => prev.map((m, i) => (i === msgIndex && m.kind === 'guide') ? { ...m, resolvedNote: true } : m))
+    } catch (err) {
+      console.error('[InlineGuide] append note failed:', err)
+    }
+  }
+
+  const dismissNoteAppend = (msgIndex: number) => {
+    setMessages(prev => prev.map((m, i) => (i === msgIndex && m.kind === 'guide') ? { ...m, noteDismissed: true } : m))
   }
 
   // One tap applies every still-pending change in this message — task ops
@@ -656,6 +689,55 @@ export function InlineGuide({
                               }}
                             >
                               <Check className="h-3 w-3" /> Apply
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Pending note — guide wants to drop something into the project's notes */}
+                    {msg.pendingNote && (
+                      <div
+                        className="px-3 py-3 rounded-xl space-y-2"
+                        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-3.5 w-3.5" style={{ color: 'var(--brand-text-secondary)', opacity: 0.7 }} />
+                          <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--brand-text-secondary)', opacity: 0.65 }}>
+                            Add to notes
+                          </p>
+                        </div>
+                        <p className="text-[13px] leading-snug whitespace-pre-wrap" style={{ color: 'var(--brand-text-primary)', opacity: 0.8 }}>
+                          {msg.pendingNote.text}
+                        </p>
+                        {msg.pendingNote.reasoning && (
+                          <p className="text-[11px] leading-snug italic" style={{ color: 'var(--brand-text-muted)', opacity: 0.7 }}>
+                            {msg.pendingNote.reasoning}
+                          </p>
+                        )}
+                        {msg.resolvedNote ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium" style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--brand-text-secondary)', opacity: 0.4 }}>
+                            <Check className="h-3 w-3" /> Added to notes
+                          </span>
+                        ) : msg.noteDismissed ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium" style={{ color: 'var(--brand-text-muted)', opacity: 0.5 }}>
+                            <X className="h-3 w-3" /> Skipped
+                          </span>
+                        ) : (
+                          <div className="flex items-center gap-1 justify-end">
+                            <button
+                              onClick={() => dismissNoteAppend(i)}
+                              className="px-2.5 py-1 text-[11px] font-medium rounded-lg hover:bg-white/[0.05] transition-colors"
+                              style={{ color: 'var(--brand-text-secondary)', opacity: 0.5 }}
+                            >
+                              Skip
+                            </button>
+                            <button
+                              onClick={() => msg.pendingNote && applyNoteAppend(i, msg.pendingNote)}
+                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all text-[11px] font-medium"
+                              style={{ background: 'rgba(var(--brand-primary-rgb),0.1)', color: 'rgb(var(--brand-primary-rgb))', opacity: 0.85 }}
+                            >
+                              <Check className="h-3 w-3" /> Add
                             </button>
                           </div>
                         )}

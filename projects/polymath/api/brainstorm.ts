@@ -431,6 +431,11 @@ interface GoalUpdate {
   reasoning?: string
 }
 
+interface NoteAppend {
+  text: string
+  reasoning?: string
+}
+
 interface PowerHourSuggestion {
   task_title: string
   task_description?: string
@@ -490,19 +495,21 @@ async function handleProjectChat(
     projectDescription?: string
     projectMotivation?: string
     projectGoal?: string
+    projectNotes?: string | null
     tasks?: ProjectTask[]
     powerHourSuggestions?: PowerHourSuggestion[]
     message: string
     history?: ConversationMessage[]
   },
   userId: string
-): Promise<{ reply: string; suggestedTasks: SuggestedTask[]; taskOps: TaskOp[]; goalUpdate: GoalUpdate | null; echoes: EchoItem[] }> {
+): Promise<{ reply: string; suggestedTasks: SuggestedTask[]; taskOps: TaskOp[]; goalUpdate: GoalUpdate | null; noteAppend: NoteAppend | null; echoes: EchoItem[] }> {
   const {
     projectId,
     projectTitle,
     projectDescription,
     projectMotivation,
     projectGoal,
+    projectNotes,
     tasks = [],
     powerHourSuggestions = [],
     message,
@@ -544,11 +551,13 @@ async function handleProjectChat(
     ? `\nRELEVANT FROM KNOWLEDGE LAKE:\n${echoes.map(e => `- "${e.title}" (${e.type}): ${e.snippet}`).join('\n')}`
     : ''
 
+  const notesTrimmed = (projectNotes || '').trim().slice(0, 2000)
   const projectContext = [
     `PROJECT: ${projectTitle}`,
     projectDescription ? `DESCRIPTION: ${projectDescription}` : '',
     projectMotivation ? `MOTIVATION: ${projectMotivation}` : '',
     projectGoal ? `GOAL: ${projectGoal}` : '',
+    notesTrimmed ? `NOTES (the project's freeform content space):\n${notesTrimmed}` : '',
   ].filter(Boolean).join('\n')
 
   const priorTurns = history
@@ -632,7 +641,8 @@ OUTPUT — JSON ONLY
   "reply": "your response",
   "suggestedTasks": [],
   "taskOps": [],
-  "goalUpdate": null
+  "goalUpdate": null,
+  "noteAppend": null
 }
 
 suggestedTasks format (reserve for when the user asks for options to pick from; prefer taskOps.add for anything you genuinely recommend):
@@ -648,6 +658,14 @@ taskOps format (each is a confirm/dismiss proposal — include reasoning so the 
 goalUpdate format (propose once you have enough to write a concrete finish line, or when new info should sharpen the existing one):
   { "newGoal": "the new finish line text", "reasoning": "why" }
 
+noteAppend format (use ONLY when the user asks you to note/save/jot something, or hands you a fact/decision/link/reference worth keeping on the project — NOT for tasks, NOT for chit-chat):
+  { "text": "the note text in plain markdown — headings/bold/lists/links are fine", "reasoning": "why it's worth keeping" }
+  - This appends to the project's NOTES content space (the user confirms before it lands).
+  - Write the note as the user would: plain and concrete. No analyst voice, no "this reveals", no scare-quote jargon.
+  - BAD: "A note capturing the user's evolving narrative substrate around backgrounds."
+  - GOOD: "Try non-white backgrounds — warm ochre or grey-green — to push the usual style."
+  - Default to null. Most replies don't need a note.
+
 HARD RULES:
 - If the finish line is NOT set, taskOps MUST be [] and suggestedTasks MUST be []. Focus entirely on extracting the goal.
 - If the finish line exists but is thin/vague, you MAY propose a goalUpdate to sharpen it — but don't force it; only when the user has said enough for you to write something better.
@@ -662,6 +680,7 @@ HARD RULES:
   let suggestedTasks: SuggestedTask[] = []
   let taskOps: TaskOp[] = []
   let goalUpdate: GoalUpdate | null = null
+  let noteAppend: NoteAppend | null = null
 
   try {
     const parsed = JSON.parse(raw)
@@ -674,11 +693,17 @@ HARD RULES:
         reasoning: typeof parsed.goalUpdate.reasoning === 'string' ? parsed.goalUpdate.reasoning : undefined,
       }
     }
+    if (parsed.noteAppend && typeof parsed.noteAppend === 'object' && typeof parsed.noteAppend.text === 'string' && parsed.noteAppend.text.trim()) {
+      noteAppend = {
+        text: parsed.noteAppend.text.trim(),
+        reasoning: typeof parsed.noteAppend.reasoning === 'string' ? parsed.noteAppend.reasoning : undefined,
+      }
+    }
   } catch {
     reply = raw.trim()
   }
 
-  return { reply, suggestedTasks, taskOps, goalUpdate, echoes }
+  return { reply, suggestedTasks, taskOps, goalUpdate, noteAppend, echoes }
 }
 
 // ─── Mode: project-reveal ────────────────────────────────────────────────────

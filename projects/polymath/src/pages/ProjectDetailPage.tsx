@@ -5,9 +5,9 @@
 
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
-import { Loader2, MoreVertical, Plus, Check, X, GripVertical, Zap, Target, Star, Sprout, Pin, PinOff, Skull, ArrowLeft } from 'lucide-react'
+import { Loader2, MoreVertical, Check, X, GripVertical, Zap, Target, Star, Sprout, Pin, PinOff, Skull, ArrowLeft } from 'lucide-react'
 import { useProjectStore } from '../stores/useProjectStore'
-import { AddNoteDialog } from '../components/projects/AddNoteDialog'
+import { ProjectNotes } from '../components/projects/ProjectNotes'
 import { ProjectPath } from '../components/projects/ProjectPath'
 import type { Task } from '../components/projects/TaskList'
 import { PinnedTaskList } from '../components/projects/PinnedTaskList'
@@ -28,14 +28,6 @@ import { usePin } from '../contexts/PinContext'
 
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { SubtleBackground } from '../components/SubtleBackground'
-
-interface ProjectNote {
-  id: string
-  bullets: string[]
-  created_at: string
-  note_type?: 'voice' | 'text'
-  image_urls?: string[]
-}
 
 function BlockerField({ blocker, onSave }: { blocker?: string; onSave: (text: string) => Promise<void> }) {
   const [editing, setEditing] = useState(false)
@@ -130,14 +122,12 @@ export function ProjectDetailPage() {
   // Reactive selection from store
   const project = useProjectStore(state => state.allProjects.find(p => p.id === id))
 
-  const [notes, setNotes] = useState<ProjectNote[]>([])
   const [projectMemories, setProjectMemories] = useState<Memory[]>([])
   const [sparkedByMemories, setSparkedByMemories] = useState<Memory[]>([])
 
   // Local-first: Only show blocking loader if we don't have the project in cache/store
   const [loading, setLoading] = useState(!project)
   const [isUpdating, setIsUpdating] = useState(false)
-  const [showAddNote, setShowAddNote] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [showCreateConnection, setShowCreateConnection] = useState(false)
 
@@ -246,7 +236,7 @@ export function ProjectDetailPage() {
 
     try {
       // Fetch fresh data from API
-      const response = await fetch(`/api/projects?id=${id}&include_notes=true`)
+      const response = await fetch(`/api/projects?id=${id}`)
 
       if (!response.ok) {
         throw new Error('Failed to fetch project details')
@@ -260,7 +250,6 @@ export function ProjectDetailPage() {
         if (activeIdRef.current !== id) return
         // Sync project to store - this will trigger a re-render because we're subscribed
         syncProject(data.project)
-        if (data.notes) setNotes(data.notes)
 
         // Fetch linked memories (Quick Notes)
         const { data: linkedMemories } = await supabase
@@ -534,10 +523,14 @@ export function ProjectDetailPage() {
     setShowCategoryMenu(false)
   }
 
-  const handleNoteAdded = (note: ProjectNote) => {
-    setNotes([note, ...notes])
-    setShowAddNote(false)
-    loadProjectDetails() // Refresh to get updated last_active
+  // The guide can drop a note into the project's content space. Append to the
+  // existing doc (with a blank line) rather than overwrite, then persist.
+  const handleChatAppendNote = async (text: string) => {
+    const fresh = getFreshProject()
+    if (!fresh) return
+    const existing = (fresh.notes_doc || '').trim()
+    const next = existing ? `${existing}\n\n${text.trim()}` : text.trim()
+    await updateProject(fresh.id, { notes_doc: next })
   }
 
   // Read the freshest project from the store at call time. Using props here
@@ -920,6 +913,7 @@ export function ProjectDetailPage() {
                   onAddTask={handleChatAddTask}
                   onUpdateTasks={handleChatUpdateTasks}
                   onUpdateGoal={handleChatUpdateGoal}
+                  onAppendNote={handleChatAppendNote}
                 />
               )}
 
@@ -981,26 +975,12 @@ export function ProjectDetailPage() {
                 />
               </div>
 
-              {/* Add Note */}
-              <div className="pb-32">
-                <button
-                  onClick={() => setShowAddNote(true)}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[12px] font-medium transition-all active:scale-95 hover:bg-white/[0.04]"
-                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', color: 'var(--brand-text-secondary)', opacity: 0.5 }}
-                >
-                  <Plus className="h-3 w-3" /> Add Note
-                </button>
+              {/* Notes — the project's freeform content space */}
+              <div className="pb-32 pt-2">
+                <ProjectNotes projectId={project.id} notesDoc={project.notes_doc} />
               </div>
       </div>
 
-
-      {/* Add Note Dialog */}
-      <AddNoteDialog
-        open={showAddNote}
-        onClose={() => setShowAddNote(false)}
-        projectId={project.id}
-        onNoteAdded={handleNoteAdded}
-      />
 
       {/* Confirmation Dialog */}
       {confirmDialog}
