@@ -20,6 +20,17 @@ export function MarkdownRenderer({ content, className, style }: MarkdownRenderer
           ul: ({ node, ...props }) => <ul className="list-outside pl-6 mb-4 space-y-2 marker:text-brand-primary" {...props} />,
           ol: ({ node, ...props }) => <ol className="list-decimal pl-6 mb-4 space-y-2 marker:text-brand-primary" {...props} />,
           li: ({ node, ...props }) => <li className="mb-1 leading-relaxed pl-1" {...props} />,
+          img: ({ node, ...props }) => (
+            <img
+              {...props}
+              loading="lazy"
+              className="w-full h-auto rounded-xl my-3"
+              style={{ border: '1px solid rgba(255,255,255,0.08)' }}
+            />
+          ),
+          a: ({ node, ...props }) => (
+            <a {...props} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brand-primary)' }} />
+          ),
           p: ({ node, ...props }) => {
             // Handle unicode bullets (• or ·) — children may be string or array
             const children = props.children

@@ -2063,7 +2063,9 @@ Return JSON only:
           return res.status(404).json({ error: 'Project not found' })
         }
 
-        // Fetch notes if requested
+        // Legacy notes (project_notes bullets table). The notes space now lives
+        // in projects.notes_doc; this stays only so old callers don't break, and
+        // a missing/empty table must never 500 the whole project fetch.
         let notes = []
         if (include_notes === 'true') {
           const { data: notesData, error: notesError } = await supabase
@@ -2072,8 +2074,11 @@ Return JSON only:
             .eq('project_id', id)
             .order('created_at', { ascending: false })
 
-          if (notesError) throw notesError
-          notes = notesData || []
+          if (notesError) {
+            console.warn('[projects] legacy project_notes fetch failed (ignored):', notesError.message)
+          } else {
+            notes = notesData || []
+          }
         }
 
         return res.status(200).json({

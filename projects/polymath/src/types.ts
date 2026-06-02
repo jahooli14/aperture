@@ -511,6 +511,7 @@ export interface Project {
   is_favourite?: boolean // User-marked favourite — multi-select, surfaces in the home Favourites carousel
   up_next_position?: number | null // 1, 2, or 3 — pinned to the Up Next shelf
   metadata?: ProjectMetadata
+  notes_doc?: string | null // Freeform notes document (markdown + inline images) — the project's "Content" space
   embedding?: number[] // Vector embedding (1536 dims)
 
   // Metabolism fields (Phase 3+)
