@@ -12,6 +12,7 @@ import {
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
 import { Textarea } from '../ui/textarea'
+import { RichTextEditor } from '../ui/RichTextEditor'
 import { useToast } from '../ui/toast'
 import { useReadingStore } from '../../stores/useReadingStore'
 import { handleInputFocus } from '../../utils/keyboard'
@@ -138,14 +139,12 @@ export function EditArticleDialog({ article, open, onOpenChange }: EditArticleDi
 
           <div className="space-y-2 pb-4">
             <Label htmlFor="notes" className="font-bold text-xs uppercase tracking-widest text-[var(--brand-text-muted)]">Personal Notes</Label>
-            <Textarea
-              id="notes"
-              placeholder="Your thoughts, highlights, and reflections..."
+            <RichTextEditor
               value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              onFocus={handleInputFocus}
-              rows={4}
-              className="bg-[var(--glass-surface)] border-[var(--glass-surface-hover)] focus:border-brand-primary placeholder:text-[var(--brand-text-primary)]/20"
+              onChange={(md) => setFormData({ ...formData, notes: md })}
+              placeholder="Your thoughts, highlights, and reflections..."
+              minHeight={112}
+              scrollOnFocus
             />
             <p className="text-[10px] text-[var(--brand-text-muted)]">Add your personal insights and highlights</p>
           </div>

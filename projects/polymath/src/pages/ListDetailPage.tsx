@@ -26,6 +26,8 @@ import { useReadingStore } from '../stores/useReadingStore'
 import type { Article } from '../types/reading'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
+import { RichTextEditor } from '../components/ui/RichTextEditor'
+import { MarkdownRenderer } from '../components/ui/MarkdownRenderer'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import { ItemInsightStrip } from '../components/ItemInsightStrip'
 import { VoiceInput } from '../components/VoiceInput'
@@ -1185,7 +1187,7 @@ function ArticleListMode({ list, navigate }: ArticleListModeProps) {
                         </div>
 
                         <h1 className="page-hero-sm mb-2">{list.title}</h1>
-                        {list.description && <p className="text-brand-text-muted text-sm max-w-xl mb-4">{list.description}</p>}
+                        {list.description && <MarkdownRenderer content={list.description} className="text-brand-text-muted text-sm max-w-xl mb-4" />}
                     </div>
                     <div className="page-masthead-actions">
                         <button
@@ -1643,7 +1645,7 @@ export default function ListDetailPage() {
                         </div>
 
                         <h1 className="page-hero-sm mb-1 break-words">{list.title}</h1>
-                        {list.description && <p className="text-[var(--brand-text-secondary)] text-sm max-w-xl mb-2 leading-relaxed">{list.description}</p>}
+                        {list.description && <MarkdownRenderer content={list.description} className="text-[var(--brand-text-secondary)] text-sm max-w-xl mb-2 leading-relaxed" />}
                     </div>
                     <div className="page-masthead-actions">
                         {/* Sort picker */}
@@ -2018,18 +2020,17 @@ export default function ListDetailPage() {
                                 </div>
                                 <div>
                                     <label className="text-[10px] font-bold uppercase tracking-widest text-brand-text-muted mb-1 block">Description</label>
-                                    <textarea
-                                        defaultValue={list?.description || ''}
-                                        key={`desc-${list?.id}`}
-                                        onBlur={(e) => {
-                                            const val = e.target.value.trim()
+                                    <RichTextEditor
+                                        value={list?.description || ''}
+                                        onBlurSave={(md) => {
+                                            const val = md.trim()
                                             if (list && val !== (list.description ?? '')) {
                                                 updateList(list.id, { description: val || null })
                                             }
                                         }}
-                                        rows={2}
-                                        className="w-full bg-[var(--glass-surface)] border border-[var(--glass-surface-hover)] rounded-lg px-3 py-2 text-sm text-[var(--brand-text-primary)] focus:outline-none focus:border-white/30 transition-colors resize-none"
                                         placeholder="Add a description..."
+                                        minHeight={64}
+                                        scrollOnFocus
                                     />
                                 </div>
                             </div>

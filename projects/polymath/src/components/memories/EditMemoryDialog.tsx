@@ -14,9 +14,9 @@ import {
 import { Input } from '../ui/input'
 import { useMemoryStore } from '../../stores/useMemoryStore'
 import { useToast } from '../ui/toast'
-import { Image as ImageIcon, X, ChevronDown, Bold, Italic, List } from 'lucide-react'
+import { Image as ImageIcon, X, ChevronDown } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { handleInputFocus } from '../../utils/keyboard'
+import { RichTextEditor } from '../ui/RichTextEditor'
 import { useBodyEditor } from '../../hooks/useBodyEditor'
 import type { Memory } from '../../types'
 
@@ -50,8 +50,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
   const [showOptions, setShowOptions] = useState(false)
 
   const {
-    body, setBody, bodyRef, bodyFocused, setBodyFocused,
-    wordCount, handleBodyChange, handleBodyKeyDown, applyFormat, initHeight,
+    body, setBody, bodyFocused, setBodyFocused, wordCount,
   } = useBodyEditor({ minHeight: 160 })
 
   // Image state
@@ -85,7 +84,6 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
       setBody(memory.body)
       setExistingImages(memory.image_urls || [])
       setSelectedFiles([])
-      initHeight()
     }
   }, [memory, open])
 
@@ -238,23 +236,17 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
 
         <form onSubmit={handleSubmit} className="space-y-3 pt-2">
           {/* Body — the hero */}
-          <textarea
-            ref={bodyRef}
-            id="body"
-            placeholder="Write your thoughts..."
+          <RichTextEditor
             value={body}
-            onChange={handleBodyChange}
-            onKeyDown={handleBodyKeyDown}
-            onFocus={(e) => { setBodyFocused(true); handleInputFocus(e) }}
+            onChange={setBody}
+            onFocus={() => setBodyFocused(true)}
             onBlur={() => setBodyFocused(false)}
-            required
+            placeholder="Write your thoughts..."
+            variant="bare"
+            minHeight={160}
             autoFocus
-            className="w-full border-0 focus:outline-none focus:ring-0 resize-none appearance-none bg-transparent text-lg"
-            style={{
-              color: 'var(--brand-text-primary)',
-              lineHeight: '1.65',
-              minHeight: '160px',
-            }}
+            scrollOnFocus
+            className="text-lg"
           />
 
           {/* Title — subtle secondary */}
@@ -268,19 +260,8 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
             autoComplete="off"
           />
 
-          {/* Bottom bar: Formatting + Photo + Options toggle */}
+          {/* Bottom bar: Photo + Options toggle */}
           <div className="flex items-center gap-0.5 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-            {/* Formatting: Bold · Italic · List */}
-            <ToolbarBtn title="Bold" onClick={() => applyFormat('bold')}>
-              <Bold className="h-4 w-4" />
-            </ToolbarBtn>
-            <ToolbarBtn title="Italic" onClick={() => applyFormat('italic')}>
-              <Italic className="h-4 w-4" />
-            </ToolbarBtn>
-            <ToolbarBtn title="Bullet list" onClick={() => applyFormat('bullet')}>
-              <List className="h-4 w-4" />
-            </ToolbarBtn>
-
             {/* Photo */}
             <div className="relative ml-0.5">
               <input

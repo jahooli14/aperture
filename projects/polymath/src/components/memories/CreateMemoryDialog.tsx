@@ -22,13 +22,14 @@ import { useMemoryStore } from '../../stores/useMemoryStore'
 import { useToast } from '../ui/toast'
 import { useOfflineStore } from '../../stores/useOfflineStore'
 import {
-  Plus, Bold, Italic, List, Image as ImageIcon, X, CheckSquare, Square, MoreHorizontal,
+  Plus, Image as ImageIcon, X, CheckSquare, Square, MoreHorizontal,
 } from 'lucide-react'
 import { celebrate, checkThoughtMilestone, getMilestoneMessage } from '../../utils/celebrations'
 import { handleInputFocus } from '../../utils/keyboard'
 import { useAutoSuggestion } from '../../contexts/AutoSuggestionContext'
 import { SuggestionToast } from '../SuggestionToast'
 import { motion, AnimatePresence } from 'framer-motion'
+import { RichTextEditor } from '../ui/RichTextEditor'
 import { useBodyEditor } from '../../hooks/useBodyEditor'
 import { useNoteDraft } from '../../hooks/useNoteDraft'
 import type { ChecklistItem } from '../../types'
@@ -303,8 +304,7 @@ export function CreateMemoryDialog({
   const { isOnline } = useOfflineStore()
 
   const {
-    body, setBody, bodyRef, bodyFocused, setBodyFocused,
-    wordCount, handleBodyChange, handleBodyKeyDown, applyFormat,
+    body, setBody, bodyFocused, setBodyFocused, wordCount,
   } = useBodyEditor({ minHeight: 160 })
 
   // Restore body draft once on first render
@@ -590,22 +590,17 @@ export function CreateMemoryDialog({
             {isChecklistMode ? (
               <ChecklistEditor items={checklistItems} onChange={setChecklistItems} />
             ) : (
-              <textarea
-                ref={bodyRef}
-                id="body"
-                placeholder="What's on your mind?"
+              <RichTextEditor
                 value={body}
-                onChange={handleBodyChange}
-                onKeyDown={handleBodyKeyDown}
-                onFocus={(e) => { setBodyFocused(true); handleInputFocus(e) }}
+                onChange={setBody}
+                onFocus={() => setBodyFocused(true)}
                 onBlur={() => setBodyFocused(false)}
+                placeholder="What's on your mind?"
+                variant="bare"
+                minHeight={160}
                 autoFocus
-                className="w-full border-0 focus:outline-none focus:ring-0 resize-none appearance-none bg-transparent text-lg"
-                style={{
-                  color: 'var(--brand-text-primary)',
-                  lineHeight: '1.65',
-                  minHeight: '160px',
-                }}
+                scrollOnFocus
+                className="text-lg"
               />
             )}
 
@@ -676,21 +671,6 @@ export function CreateMemoryDialog({
               >
                 <CheckSquare className="h-4 w-4" />
               </ToolbarBtn>
-
-              {/* Formatting (text mode only) */}
-              {!isChecklistMode && (
-                <>
-                  <ToolbarBtn title="Bold" onClick={() => applyFormat('bold')}>
-                    <Bold className="h-4 w-4" />
-                  </ToolbarBtn>
-                  <ToolbarBtn title="Italic" onClick={() => applyFormat('italic')}>
-                    <Italic className="h-4 w-4" />
-                  </ToolbarBtn>
-                  <ToolbarBtn title="Bullet list" onClick={() => applyFormat('bullet')}>
-                    <List className="h-4 w-4" />
-                  </ToolbarBtn>
-                </>
-              )}
 
               {/* Photo */}
               <div className="relative ml-0.5">
@@ -836,18 +816,7 @@ export function CreateMemoryDialog({
               <VoiceSeeds
                 hasContent={!!body.trim()}
                 isOpen={open}
-                onSelect={(text) => {
-                  setBody(text)
-                  requestAnimationFrame(() => {
-                    if (bodyRef.current) {
-                      bodyRef.current.style.height = 'auto'
-                      bodyRef.current.style.height =
-                        Math.max(120, bodyRef.current.scrollHeight) + 'px'
-                      bodyRef.current.focus()
-                      bodyRef.current.setSelectionRange(text.length, text.length)
-                    }
-                  })
-                }}
+                onSelect={(text) => setBody(text)}
               />
             )}
           </form>
