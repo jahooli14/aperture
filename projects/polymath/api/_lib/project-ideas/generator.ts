@@ -28,7 +28,7 @@
 
 import { generateText } from '../gemini-chat.js'
 import { MODELS } from '../models.js'
-import { pickSeedPairs, tokenise, topicalOverlap, type SeedCandidate } from './seed-picker.js'
+import { pickSeedPairs, tokenise, relatedness, parseEmbedding, type SeedCandidate } from './seed-picker.js'
 import { PLAIN_ENGLISH_RULES } from '../plain-english.js'
 import { DEFAULT_IDEA_BRIEF } from './default-prompt.js'
 import type { ArrivalKind, CentreKind, GatherResult, GenerationResult, IdeaEvidence, IdeaOutcome, ProjectIdea, SeedPair } from './types.js'
@@ -91,7 +91,7 @@ export async function generateProjectIdeas(
   }
 
   const seeds = pickSeedPairs(gathered, { count: 3 })
-  console.log(`[project-ideas] seed picker chose ${seeds.length} pair(s)${seeds.length ? `: ${seeds.map(s => `${s.centre.kind}#${s.centre.id.slice(0, 8)}×${s.arrival.kind}#${s.arrival.id.slice(0, 8)} (score=${s.score.toFixed(2)}, overlap=${s.topical_overlap.toFixed(2)})`).join('; ')}` : ''}`)
+  console.log(`[project-ideas] seed picker chose ${seeds.length} pair(s)${seeds.length ? `: ${seeds.map(s => `${s.centre.kind}#${s.centre.id.slice(0, 8)}×${s.arrival.kind}#${s.arrival.id.slice(0, 8)} (score=${s.score.toFixed(2)}, rel=${s.relatedness.toFixed(2)}${s.semantic ? ' sem' : ' tok'})`).join('; ')}` : ''}`)
 
   if (opts.fast) {
     // Fast path — user is waiting. ONE Flash call over the WHOLE gathered
@@ -633,16 +633,22 @@ function parseFastIdea(
  *  second evidence row. */
 function pickResonantMemory(
   g: GatherResult,
-  centre: { title: string; description?: string | null } | null,
+  centre: { title: string; description?: string | null; embedding?: number[] | string | null } | null,
 ): GatherResult['memories'][number] | null {
   if (g.memories.length === 0) return null
   if (centre) {
     const centreTokens = tokenise(`${centre.title} ${centre.description ?? ''}`)
-    if (centreTokens.size > 0) {
-      let best: { m: GatherResult['memories'][number]; overlap: number } | null = null
+    const centreEmbedding = parseEmbedding(centre.embedding)
+    if (centreTokens.size > 0 || centreEmbedding) {
+      // Same relatedness as the seed picker: cosine when both sides are
+      // embedded, token overlap otherwise.
+      let best: { m: GatherResult['memories'][number]; rel: number } | null = null
       for (const m of g.memories) {
-        const overlap = topicalOverlap(centreTokens, tokenise(`${m.title ?? ''} ${m.body} ${m.themes.join(' ')}`))
-        if (overlap > 0 && (!best || overlap > best.overlap)) best = { m, overlap }
+        const rel = relatedness(
+          { embedding: centreEmbedding, tokens: centreTokens },
+          { embedding: parseEmbedding(m.embedding), tokens: tokenise(`${m.title ?? ''} ${m.body} ${m.themes.join(' ')}`) },
+        ).value
+        if (rel > 0 && (!best || rel > best.rel)) best = { m, rel }
       }
       if (best) return best.m
     }
@@ -813,21 +819,33 @@ function findResonantDormantProject(
 
   const now = Date.now()
   const NINETY_DAYS_MS = 90 * 86_400_000
-  const recentMemories = g.memories.filter((m) => {
-    const t = new Date(m.created_at).getTime()
-    return !Number.isNaN(t) && now - t <= NINETY_DAYS_MS
-  })
+  // Pre-parse each recent memory's tokens + embedding once so the pool ×
+  // memory loop below isn't re-tokenising / re-parsing on every project.
+  const recentMemories = g.memories
+    .filter((m) => {
+      const t = new Date(m.created_at).getTime()
+      return !Number.isNaN(t) && now - t <= NINETY_DAYS_MS
+    })
+    .map((m) => ({
+      memory: m,
+      tokens: tokenise(`${m.title ?? ''} ${m.body} ${m.themes.join(' ')}`),
+      embedding: parseEmbedding(m.embedding),
+    }))
 
   let best: DormantMatch | null = null
   for (const project of pool) {
     const projectTokens = tokenise(`${project.title} ${project.description ?? ''}`)
-    if (projectTokens.size === 0) continue
-    for (const memory of recentMemories) {
-      const memTokens = tokenise(`${memory.title ?? ''} ${memory.body} ${memory.themes.join(' ')}`)
-      const overlap = topicalOverlap(projectTokens, memTokens)
-      if (overlap <= 0) continue
-      if (!best || overlap > best.overlap) {
-        best = { project, memory, overlap }
+    const projectEmbedding = parseEmbedding(project.embedding)
+    if (projectTokens.size === 0 && !projectEmbedding) continue
+    for (const cand of recentMemories) {
+      // Cosine when both embedded, token overlap otherwise (see seed-picker).
+      const rel = relatedness(
+        { embedding: projectEmbedding, tokens: projectTokens },
+        { embedding: cand.embedding, tokens: cand.tokens },
+      ).value
+      if (rel <= 0) continue
+      if (!best || rel > best.overlap) {
+        best = { project, memory: cand.memory, overlap: rel }
       }
     }
   }

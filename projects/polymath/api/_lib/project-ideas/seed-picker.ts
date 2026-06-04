@@ -8,8 +8,12 @@
  *     excluded. Rejected pairs are dead via prior-titles, not cooldown.
  *   - Distinct centres: top picks must lead from different project-centres
  *     so two ideas can't both be variations on the same dormant project.
- *   - Topical proxy: tokenised keyword overlap between centre text and
- *     arrival text. Rough but enough to surface ripe pairs first.
+ *   - Relatedness: how much the arrival is "about" the centre. Cosine over
+ *     the two stored embeddings when both exist (real semantic match — a
+ *     synth project and a note about "sound that decays slowly" converge
+ *     even with no shared words); Jaccard token overlap as the fallback when
+ *     either side hasn't been embedded yet. Strict upgrade where vectors
+ *     exist, exactly the old behaviour where they don't.
  *   - Recency × dormancy: arrivals score by recency (≤7d > ≤14d > ≤30d);
  *     centres score by dormancy depth (a 6-month dormant project beats a
  *     2-week dormant one, all else equal).
@@ -19,6 +23,7 @@
  * case that slot is dropped. So a weak pair doesn't force a bad idea.
  */
 
+import { cosineSimilarity } from '../gemini-embeddings.js'
 import type { ArrivalKind, CentreKind, GatherResult, SeedPair } from './types.js'
 
 export interface SeedCandidate {
@@ -38,7 +43,14 @@ export interface SeedCandidate {
   }
   pair: SeedPair
   score: number
-  topical_overlap: number
+  /** Centre↔arrival relatedness in [0,1]: cosine (rescaled) when both rows
+   *  are embedded, Jaccard token overlap otherwise. Drives the score's
+   *  topical multiplier; surfaced for logging. */
+  relatedness: number
+  /** True when `relatedness` came from embeddings, false when it fell back
+   *  to token overlap. Logged so a sudden drop in semantic coverage (e.g.
+   *  embeddings not yet computed) is visible. */
+  semantic: boolean
 }
 
 export interface PickOptions {
@@ -68,21 +80,23 @@ export function pickSeedPairs(g: GatherResult, opts: PickOptions = {}): SeedCand
       const key = `${c.id}::${a.id}`
       if (cooldown.has(key)) continue
 
-      const overlap = topicalOverlap(c.tokens, a.tokens)
+      const rel = relatedness(c, a)
       const recencyScore = arrivalRecencyScore(a.date)
       const centreScore = c.score
-      // Topical overlap matters but isn't the only thing — a recent arrival
-      // can supply context (a tool, a skill) that doesn't share keywords
-      // with the centre. Floor at 1.0 so zero-overlap pairs still rank by
-      // recency × dormancy.
-      const score = centreScore * recencyScore * (1 + overlap * 1.5)
+      // Relatedness matters but isn't the only thing — a recent arrival can
+      // supply context (a tool, a skill) that's only loosely about the
+      // centre. Floor at 1.0 so unrelated pairs still rank by recency ×
+      // dormancy. Same multiplier the Jaccard version used, so the rest of
+      // the tuning is untouched; the input is just smarter now.
+      const score = centreScore * recencyScore * (1 + rel.value * 1.5)
 
       candidates.push({
         centre: { kind: c.kind, id: c.id, title: c.title, description: c.description, last_touched: c.last_touched },
         arrival: { kind: a.kind, id: a.id, label: a.label, date: a.date, excerpt: a.excerpt },
         pair: { centre_kind: c.kind, centre_id: c.id, arrival_kind: a.kind, arrival_id: a.id },
         score,
-        topical_overlap: overlap,
+        relatedness: rel.value,
+        semantic: rel.semantic,
       })
     }
   }
@@ -128,6 +142,7 @@ interface CentreRow {
   description: string
   last_touched: string
   tokens: Set<string>
+  embedding: number[] | null
   score: number
 }
 
@@ -148,6 +163,7 @@ function enumerateCentres(g: GatherResult): CentreRow[] {
       description: p.description ?? '',
       last_touched: p.updated_at,
       tokens: tokenise(text),
+      embedding: parseEmbedding(p.embedding),
       score: dormancyScore,
     })
   }
@@ -164,6 +180,7 @@ function enumerateCentres(g: GatherResult): CentreRow[] {
       description: p.description ?? '',
       last_touched: p.updated_at,
       tokens: tokenise(text),
+      embedding: parseEmbedding(p.embedding),
       score: 0.6,
     })
   }
@@ -178,6 +195,7 @@ interface ArrivalRow {
   date: string
   excerpt: string
   tokens: Set<string>
+  embedding: number[] | null
 }
 
 function enumerateArrivals(g: GatherResult, windowDays: number): ArrivalRow[] {
@@ -195,6 +213,7 @@ function enumerateArrivals(g: GatherResult, windowDays: number): ArrivalRow[] {
       date: m.created_at,
       excerpt: m.body,
       tokens: tokenise(`${m.title ?? ''} ${m.body} ${m.themes.join(' ')}`),
+      embedding: parseEmbedding(m.embedding),
     })
   }
 
@@ -208,6 +227,7 @@ function enumerateArrivals(g: GatherResult, windowDays: number): ArrivalRow[] {
       date: r.created_at,
       excerpt: r.excerpt ?? r.title ?? '',
       tokens: tokenise(`${r.title ?? ''} ${r.excerpt ?? ''}`),
+      embedding: parseEmbedding(r.embedding),
     })
   }
 
@@ -221,6 +241,8 @@ function enumerateArrivals(g: GatherResult, windowDays: number): ArrivalRow[] {
       date: h.created_at,
       excerpt: h.quote,
       tokens: tokenise(`${h.article_title ?? ''} ${h.quote}`),
+      // article_highlights has no embedding column → always token-fallback.
+      embedding: null,
     })
   }
 
@@ -270,4 +292,56 @@ export function topicalOverlap(a: Set<string>, b: Set<string>): number {
   // Jaccard. Caps at 1.0 even when one side is much smaller than the other.
   const union = a.size + b.size - inter
   return inter / union
+}
+
+/** Parse a stored embedding into a number[] once, so the picker isn't
+ *  re-parsing the same JSON string on every pair. Supabase returns pgvector
+ *  as a JSON string; we also accept an already-parsed array. Anything else
+ *  (null, malformed, empty) → null, which routes the pair to the token
+ *  fallback. */
+export function parseEmbedding(v: unknown): number[] | null {
+  if (!v) return null
+  if (Array.isArray(v)) return v.length ? (v as number[]) : null
+  if (typeof v === 'string') {
+    try {
+      const parsed = JSON.parse(v)
+      return Array.isArray(parsed) && parsed.length ? (parsed as number[]) : null
+    } catch {
+      return null
+    }
+  }
+  return null
+}
+
+// Cosine band → relatedness. gemini-embedding-001 cosines don't sit near 0
+// for unrelated text — same-corpus pairs cluster well above it — so raw
+// cosine can't drop straight into the old `(1 + x * 1.5)` multiplier that
+// expected a [0,1] Jaccard input. We rescale: at/below FLOOR → 0 (treat as
+// unrelated, rank on recency × dormancy alone), at/above CEIL → 1 (a real
+// "this is about that" hit), linear between. Conservative band; tune against
+// observed cosine distributions if semantic ranking feels too flat or too
+// hot. Monotonic, so ordering is preserved within the band either way.
+export const SEMANTIC_FLOOR = 0.5
+export const SEMANTIC_CEIL = 0.82
+
+export function cosineToRelatedness(cos: number): number {
+  if (!Number.isFinite(cos) || cos <= SEMANTIC_FLOOR) return 0
+  if (cos >= SEMANTIC_CEIL) return 1
+  return (cos - SEMANTIC_FLOOR) / (SEMANTIC_CEIL - SEMANTIC_FLOOR)
+}
+
+/** Centre↔arrival relatedness in [0,1]. Cosine over embeddings when BOTH
+ *  sides are embedded (the real semantic signal — finds pairs about the same
+ *  thing in different words); Jaccard token overlap when either embedding is
+ *  missing (a just-captured note may not be embedded yet; highlights have no
+ *  embedding column at all). Strict upgrade where vectors exist, exactly the
+ *  prior behaviour where they don't. `semantic` reports which path ran. */
+export function relatedness(
+  centre: { embedding: number[] | null; tokens: Set<string> },
+  arrival: { embedding: number[] | null; tokens: Set<string> },
+): { value: number; semantic: boolean } {
+  if (centre.embedding && arrival.embedding) {
+    return { value: cosineToRelatedness(cosineSimilarity(centre.embedding, arrival.embedding)), semantic: true }
+  }
+  return { value: topicalOverlap(centre.tokens, arrival.tokens), semantic: false }
 }
