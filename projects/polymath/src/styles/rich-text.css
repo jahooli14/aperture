@@ -1,0 +1,158 @@
+/* Shared rich-text styling — used by both the TipTap editor (.rich-text .ProseMirror)
+   and the read-only markdown renderer (.markdown-renderer). Keeping them on one
+   sheet means what you type looks identical to what gets rendered back. */
+
+/* ── Editor + rendered prose: shared typography ──────────────────────────── */
+.rich-text .ProseMirror,
+.markdown-renderer {
+  font-family: var(--brand-font-body);
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--brand-text-primary);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.rich-text .ProseMirror {
+  outline: none;
+  caret-color: var(--brand-primary);
+}
+
+.rich-text .ProseMirror > * + *,
+.markdown-renderer > * + * { margin-top: 0.75em; }
+
+.rich-text .ProseMirror p { margin: 0; }
+.markdown-renderer p { margin: 0; }
+
+/* Headings */
+.rich-text .ProseMirror h1,
+.rich-text .ProseMirror h2,
+.rich-text .ProseMirror h3,
+.markdown-renderer h1,
+.markdown-renderer h2,
+.markdown-renderer h3,
+.markdown-renderer h4 {
+  font-family: var(--brand-font-header, var(--brand-font-body));
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--brand-text-primary);
+}
+.rich-text .ProseMirror h1, .markdown-renderer h1 { font-size: 1.5rem; margin-top: 1.1em; }
+.rich-text .ProseMirror h2, .markdown-renderer h2 { font-size: 1.25rem; margin-top: 1em; }
+.rich-text .ProseMirror h3, .markdown-renderer h3 { font-size: 1.08rem; margin-top: 0.9em; }
+.markdown-renderer h4 { font-size: 1rem; margin-top: 0.85em; }
+
+/* Lists */
+.rich-text .ProseMirror ul,
+.rich-text .ProseMirror ol,
+.markdown-renderer ul,
+.markdown-renderer ol {
+  padding-left: 1.4em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3em;
+}
+.rich-text .ProseMirror ul, .markdown-renderer ul { list-style: disc; }
+.rich-text .ProseMirror ol, .markdown-renderer ol { list-style: decimal; }
+.rich-text .ProseMirror li, .markdown-renderer li { padding-left: 0.2em; }
+.rich-text .ProseMirror li::marker, .markdown-renderer li::marker { color: var(--brand-primary); }
+.rich-text .ProseMirror li > p, .markdown-renderer li > p { margin: 0; }
+
+/* Blockquote */
+.rich-text .ProseMirror blockquote,
+.markdown-renderer blockquote {
+  border-left: 2px solid rgba(var(--brand-primary-rgb), 0.5);
+  padding-left: 0.9em;
+  color: var(--brand-text-secondary);
+  font-style: italic;
+}
+
+/* Links */
+.rich-text .ProseMirror a,
+.markdown-renderer a {
+  color: var(--brand-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+/* Inline code + code blocks */
+.rich-text .ProseMirror code,
+.markdown-renderer code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0.12em 0.36em;
+  border-radius: 6px;
+}
+.rich-text .ProseMirror pre,
+.markdown-renderer pre {
+  background: var(--glass-surface, rgba(255, 255, 255, 0.04));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 0.85em 1em;
+  overflow-x: auto;
+}
+.rich-text .ProseMirror pre code,
+.markdown-renderer pre code { background: none; padding: 0; }
+
+/* Horizontal rule */
+.rich-text .ProseMirror hr,
+.markdown-renderer hr {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 1.2em 0;
+}
+
+/* Images */
+.rich-text .ProseMirror img,
+.markdown-renderer img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  margin: 0.4em 0;
+}
+.rich-text .ProseMirror img.ProseMirror-selectednode {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
+/* Placeholder (extension-placeholder adds is-editor-empty + data-placeholder) */
+.rich-text .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: var(--brand-text-secondary);
+  opacity: 0.45;
+}
+
+/* ── Floating formatting menu — a glass pill ─────────────────────────────── */
+.rich-text-bubble {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 9999px;
+  background: var(--brand-glass-bg, rgba(20, 20, 24, 0.85));
+  -webkit-backdrop-filter: blur(var(--brand-glass-blur, 16px));
+  backdrop-filter: blur(var(--brand-glass-blur, 16px));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+}
+.rich-text-bubble button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  min-width: 32px;
+  padding: 0 7px;
+  border-radius: 9999px;
+  color: var(--brand-text-secondary);
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.rich-text-bubble button:hover { background: rgba(255, 255, 255, 0.08); color: var(--brand-text-primary); }
+.rich-text-bubble button.is-active { background: rgba(var(--brand-primary-rgb), 0.18); color: rgb(var(--brand-primary-rgb)); }
+.rich-text-bubble .rich-text-bubble-sep { width: 1px; height: 18px; background: rgba(255, 255, 255, 0.12); margin: 0 2px; }
