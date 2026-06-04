@@ -297,6 +297,12 @@ export function VoiceFAB({
   // --- Pill positions (measured from actual FAB rect, so they work with any safe-area-inset) ---
   const stripOverlay = null; // Removed strip menu
 
+  // Hide the FAB while the voice modal is open from a double-tap — otherwise the
+  // + sits on top of the modal's stop button (FAB is z-[25001], modal z-[21000]).
+  // Keep it visible during a hold/push-to-talk recording: there the FAB is the
+  // press target and its pointer-up is what stops the recording.
+  const fabConcealed = hidden || isMenuOpen || (isVoiceOpen && !isLongPressRecording)
+
   // Position wrapper holds the centering transform so framer-motion's inline
   // `transform` (driven by scale/opacity animations on the button) doesn't
   // clobber `-translate-x-1/2` and shove the FAB right of centre.
@@ -319,7 +325,7 @@ export function VoiceFAB({
           height: '72px',
           background:
             'radial-gradient(circle, rgba(var(--brand-primary-rgb), 0.16) 0%, rgba(var(--brand-primary-rgb), 0.05) 45%, rgba(var(--brand-primary-rgb), 0) 72%)',
-          opacity: hidden || isMenuOpen ? 0 : 1,
+          opacity: fabConcealed ? 0 : 1,
           transition: 'opacity 200ms ease-out',
         }}
       />
@@ -329,9 +335,9 @@ export function VoiceFAB({
         key="fab-button"
         initial={{ scale: 0, opacity: 0 }}
         animate={{
-          scale: (hidden || isMenuOpen) ? 0 : 1,
-          opacity: (hidden || isMenuOpen) ? 0 : 1,
-          pointerEvents: (hidden || isMenuOpen) ? 'none' : 'auto',
+          scale: fabConcealed ? 0 : 1,
+          opacity: fabConcealed ? 0 : 1,
+          pointerEvents: fabConcealed ? 'none' : 'auto',
         }}
         transition={{ type: 'spring', damping: 20, stiffness: 300 }}
         onPointerDown={onStart}
