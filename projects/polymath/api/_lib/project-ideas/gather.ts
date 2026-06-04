@@ -114,7 +114,11 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       // context window and we want the full arc (growth + resurfacing old
       // gems). The high row cap is only a serverless safety bound — for
       // virtually every real user it means "all of it".
-      .select('id, title, body, themes, memory_type, created_at')
+      // `embedding` rides along so the seed picker can score relatedness by
+      // meaning (cosine) rather than shared keywords. Safe to select — the
+      // column exists (unlike `triage` above); a missing/unembedded row just
+      // comes back null and the picker falls back to token overlap.
+      .select('id, title, body, themes, memory_type, created_at, embedding')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(500),
@@ -127,21 +131,21 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       .limit(400),
     supabase
       .from('projects')
-      .select('id, title, description, status, metadata, updated_at')
+      .select('id, title, description, status, metadata, updated_at, embedding')
       .eq('user_id', userId)
       .in('status', ['active', 'upcoming'])
       .order('updated_at', { ascending: false })
       .limit(100),
     supabase
       .from('projects')
-      .select('id, title, description, status, metadata, updated_at')
+      .select('id, title, description, status, metadata, updated_at, embedding')
       .eq('user_id', userId)
       .in('status', ['dormant', 'on-hold', 'archived', 'abandoned'])
       .order('updated_at', { ascending: false })
       .limit(150),
     supabase
       .from('reading_queue')
-      .select('id, title, excerpt, source, created_at, status')
+      .select('id, title, excerpt, source, created_at, status, embedding')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(150),
@@ -229,6 +233,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
       memory_type: m.memory_type as string | null,
       triage_category: null,
       created_at: m.created_at as string,
+      embedding: (m.embedding ?? null) as number[] | string | null,
     }))
 
   // Memory pipeline diagnostic. mem=0 with notes present is the failure
@@ -265,6 +270,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
     blocker: pickString(p.metadata?.blocker),
     last_bookmark: pickString(p.metadata?.next_step),
     updated_at: (p.updated_at as string) ?? '',
+    embedding: (p.embedding ?? null) as number[] | string | null,
   }))
 
   const dormant_projects = (dormantProjectsRes.data ?? []).map((p: any) => ({
@@ -275,6 +281,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
     blocker: pickString(p.metadata?.blocker),
     last_bookmark: pickString(p.metadata?.next_step),
     updated_at: (p.updated_at as string) ?? '',
+    embedding: (p.embedding ?? null) as number[] | string | null,
   }))
 
   const reading = (readingRes.data ?? []).map((r: any) => ({
@@ -283,6 +290,7 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
     excerpt: r.excerpt as string | null,
     source: r.source as string | null,
     created_at: r.created_at as string,
+    embedding: (r.embedding ?? null) as number[] | string | null,
   }))
 
   // Highlights are linked to reading_queue articles, so pull them in a
