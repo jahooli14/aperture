@@ -90,22 +90,34 @@ async function getVaultIdea(userId: string): Promise<Idea | null> {
 }
 
 /**
- * Send daily digest email. Caller passes the curated high-signal subset of
- * today's approved ideas — the engine promotes every BUILD to a frontier
- * block, but only the meaningful ones surface here. Use progress.today.approved
- * for the true day's count.
+ * Send daily digest email.
+ *
+ * `cleared` = today's approved ideas that also cleared the FAS/novelty bar
+ * (the ones genuinely worth featuring). `fallback` = the single best approved
+ * idea to feature when nothing cleared the bar, so a day with good-but-familiar
+ * ideas still shows the engine's best pick instead of an empty inbox. Use
+ * progress.today.approved for the true day's count.
  */
-export async function sendDailyDigest(userId: string, ideas: Idea[]) {
+export async function sendDailyDigest(
+  userId: string,
+  picks: { cleared: Idea[]; fallback: Idea | null }
+) {
   const resend = getResend();
 
-  const highlights = ideas.filter(i => i.status === 'approved');
+  const highlights = picks.cleared.filter(i => i.status === 'approved');
+  const fallback =
+    picks.fallback && picks.fallback.status === 'approved' ? picks.fallback : null;
 
   const progress = await getProgressStats(userId);
-  const vaultIdea = highlights.length === 0 ? await getVaultIdea(userId) : null;
+  // Only reach into the vault when there's truly nothing approved to show.
+  const vaultIdea =
+    highlights.length === 0 && !fallback ? await getVaultIdea(userId) : null;
 
   const html = highlights.length > 0
     ? generateDigestHTML(highlights, progress)
-    : generateEmptyDigestHTML(progress, vaultIdea);
+    : fallback
+      ? generateBestOfDigestHTML(fallback, progress)
+      : generateEmptyDigestHTML(progress, vaultIdea);
 
   const n = highlights.length;
   const total = progress.today.approved;
@@ -146,8 +158,17 @@ export async function sendDailyDigest(userId: string, ideas: Idea[]) {
     throw error;
   }
 
-  console.log(`Digest email sent to ${DIGEST_EMAIL} with ${highlights.length} highlights (of ${progress.today.approved} approved today)`);
-  return { success: true, data, message: highlights.length > 0 ? 'Digest sent' : 'Empty digest sent (no high-signal ideas today)' };
+  console.log(`Digest email sent to ${DIGEST_EMAIL} with ${highlights.length} highlights${fallback ? ' (none cleared the bar — featured best approved)' : ''} (of ${progress.today.approved} approved today)`);
+  return {
+    success: true,
+    data,
+    message:
+      highlights.length > 0
+        ? 'Digest sent'
+        : fallback
+          ? 'Digest sent (best approved idea featured — none cleared the bar)'
+          : 'Empty digest sent (no approved ideas today)',
+  };
 }
 
 function ideaCardHTML(idea: Idea, index?: number): string {
@@ -173,7 +194,7 @@ function ideaCardHTML(idea: Idea, index?: number): string {
     </div>`;
 }
 
-function progressBlockHTML(progress: ProgressStats): string {
+function progressBlockHTML(progress: ProgressStats, featured: number): string {
   const approvalRate = progress.allTime.generated > 0
     ? ((progress.allTime.approved / progress.allTime.generated) * 100).toFixed(1)
     : '0';
@@ -188,14 +209,22 @@ function progressBlockHTML(progress: ProgressStats): string {
         'How the Engine\'s Doing',
       ])}</h2>
 
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px;">
         <div>
           <div style="font-size: 24px; font-weight: 700; margin-bottom: 4px;">${progress.today.generated}</div>
-          <div style="font-size: 13px; opacity: 0.9;">Generated Today</div>
+          <div style="font-size: 13px; opacity: 0.9;">Generated</div>
+        </div>
+        <div>
+          <div style="font-size: 24px; font-weight: 700; margin-bottom: 4px;">${progress.today.reviewed}</div>
+          <div style="font-size: 13px; opacity: 0.9;">Reviewed</div>
         </div>
         <div>
           <div style="font-size: 24px; font-weight: 700; margin-bottom: 4px;">${progress.today.approved}</div>
-          <div style="font-size: 13px; opacity: 0.9;">Approved Today</div>
+          <div style="font-size: 13px; opacity: 0.9;">Approved</div>
+        </div>
+        <div>
+          <div style="font-size: 24px; font-weight: 700; margin-bottom: 4px;">${featured}</div>
+          <div style="font-size: 13px; opacity: 0.9;">Featured</div>
         </div>
       </div>
 
@@ -255,8 +284,52 @@ function generateDigestHTML(ideas: Idea[], progress: ProgressStats): string {
       </p>
     </div>
 
-    ${progressBlockHTML(progress)}
+    ${progressBlockHTML(progress, ideas.length)}
     ${ideaRows}
+    ${footerHTML()}
+  </div>
+</body>
+</html>
+  `;
+}
+
+/**
+ * Render when the reviewer approved ideas today but none cleared the FAS bar.
+ * Feature the single best one, honestly framed — good, but close to ground the
+ * engine has covered, so not flagged as new.
+ */
+function generateBestOfDigestHTML(idea: Idea, progress: ProgressStats): string {
+  const n = progress.today.approved;
+  const s = n === 1 ? '' : 's';
+  const intro = pick([
+    `The engine kept ${n} idea${s} today. None broke genuinely new ground — they sit close to combinations it's tried before — so nothing's flagged as new. Here's the strongest of the lot; the rest are in the app.`,
+    `${n} idea${s} cleared review today: good, but familiar. None were new enough to feature up top, so here's the best of them. The full set is in the app.`,
+    `Two bars here: an idea has to be good, then new. Today's ${n} idea${s} cleared the first but not the second. The best one's below; the rest are in the app.`,
+  ]);
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #ffffff;">
+  <div style="max-width: 680px; margin: 0 auto; padding: 40px 20px;">
+    <div style="margin-bottom: 32px;">
+      <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; color: #0f172a;">
+        Daily Idea Digest
+      </h1>
+      <p style="margin: 0; font-size: 16px; color: #64748b;">
+        ${intro}
+      </p>
+    </div>
+
+    ${progressBlockHTML(progress, 0)}
+    <h2 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: #0f172a;">
+      ${pick(['Today\'s best', 'Pick of the day', 'Strongest of today\'s batch'])}
+    </h2>
+    ${ideaCardHTML(idea)}
     ${footerHTML()}
   </div>
 </body>
@@ -356,7 +429,7 @@ function generateEmptyDigestHTML(progress: ProgressStats, vaultIdea: Idea | null
       </p>
     </div>
 
-    ${progressBlockHTML(progress)}
+    ${progressBlockHTML(progress, 0)}
     ${diagnosticHTML}
     ${vaultHTML}
     ${footerHTML()}

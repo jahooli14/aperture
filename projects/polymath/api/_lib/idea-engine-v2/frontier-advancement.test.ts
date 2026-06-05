@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   structuralNoveltyFromCount,
   HIGH_SIGNAL_THRESHOLD,
+  RECENT_MINING_WINDOW_DAYS,
 } from './frontier-advancement.js';
 
 describe('structuralNoveltyFromCount', () => {
@@ -46,5 +47,28 @@ describe('structuralNoveltyFromCount', () => {
       0 * 0.2 +
       0.55 * 0.25;
     expect(fas).toBeLessThan(HIGH_SIGNAL_THRESHOLD);
+  });
+});
+
+describe('renewable novelty window', () => {
+  // The count fed to structuralNoveltyFromCount is now scoped to a rolling
+  // window (calculateDomainPairNovelty counts ie_ideas in the last
+  // RECENT_MINING_WINDOW_DAYS), not all-time. This is what makes novelty
+  // recover: a pair mined heavily long ago, then left alone, ages back to a
+  // low recent count and reads as novel again — so a finite pair space can't
+  // permanently drain the structural slice and lock the digest bar shut.
+  it('uses a positive, finite recency window', () => {
+    expect(RECENT_MINING_WINDOW_DAYS).toBeGreaterThan(0);
+    expect(Number.isFinite(RECENT_MINING_WINDOW_DAYS)).toBe(true);
+  });
+
+  it('a pair that has gone quiet (low recent count) reads as novel again', () => {
+    // Same pair, two moments in time. Once it has 8 mines inside the window its
+    // structural novelty is suppressed; after it ages out to 1 recent mine it
+    // is fully novel again — the all-time counter could never do this.
+    const whileHot = structuralNoveltyFromCount(8); // 0.3
+    const onceQuiet = structuralNoveltyFromCount(1); // 1.0
+    expect(onceQuiet).toBeGreaterThan(whileHot);
+    expect(onceQuiet).toBe(1.0);
   });
 });
