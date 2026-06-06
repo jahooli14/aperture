@@ -435,10 +435,25 @@ async function handleReview(res: VercelResponse) {
     (r) => 'promoted_block_id' in r && r.promoted_block_id
   ).length;
 
+  // Verdict split — the cheapest signal for which gate is starving the digest.
+  // If BUILD is ~0 the reviewer's the bottleneck; if BUILD is healthy but the
+  // email still features nothing, the FAS/novelty bar is.
+  const hasVerdict = (r: typeof results[number]): r is typeof r & { verdict: string } =>
+    'verdict' in r;
+  const verdicts = {
+    build: results.filter((r) => hasVerdict(r) && r.verdict === 'BUILD').length,
+    spark: results.filter((r) => hasVerdict(r) && r.verdict === 'SPARK').length,
+    reject: results.filter((r) => hasVerdict(r) && r.verdict === 'REJECT').length,
+  };
+  console.log(
+    `[review] verdicts — BUILD:${verdicts.build} SPARK:${verdicts.spark} REJECT:${verdicts.reject} (of ${results.length}, flash-rejected ${flashRejected})`
+  );
+
   return res.status(200).json({
     success: true,
     reviewed: successCount,
     total: results.length,
+    verdicts,
     flash_rejected: flashRejected,
     pro_reviewed: proReviewed,
     promoted_blocks: promotedBlocks,
@@ -472,6 +487,10 @@ async function handleSendDigest(res: VercelResponse) {
   // subset. FAS lives on the block; pull it via source_idea_id.
   const allApproved = (approvedIdeas ?? []) as Idea[];
   let highlights: Idea[] = [];
+  // When nothing clears the FAS bar but the reviewer still approved ideas
+  // today, feature the single strongest one rather than showing none — the
+  // reviewer's BUILD judgment shouldn't be fully vetoed by the novelty proxy.
+  let bestApproved: Idea | null = null;
   if (allApproved.length > 0) {
     const ideaIds = allApproved.map(i => i.id);
     const { data: blocks } = await supabase
@@ -483,15 +502,15 @@ async function handleSendDigest(res: VercelResponse) {
         [b.source_idea_id, b.frontier_advancement_score ?? 0]
       )
     );
-    highlights = allApproved
+    const ranked = allApproved
       .map(idea => ({ idea, fas: fasByIdea.get(idea.id) ?? 0 }))
-      .filter(x => x.fas > HIGH_SIGNAL_THRESHOLD)
-      .sort((a, b) => b.fas - a.fas)
-      .map(x => x.idea);
+      .sort((a, b) => b.fas - a.fas);
+    highlights = ranked.filter(x => x.fas > HIGH_SIGNAL_THRESHOLD).map(x => x.idea);
+    if (highlights.length === 0) bestApproved = ranked[0].idea;
   }
 
   try {
-    const result = await sendDailyDigest(USER_ID!, highlights);
+    const result = await sendDailyDigest(USER_ID!, { cleared: highlights, fallback: bestApproved });
 
     // Mark every approved-today idea as sent — they've all been considered
     // for the digest. Low-FAS ones stay accessible via the UI but won't

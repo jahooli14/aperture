@@ -31,21 +31,31 @@ export interface FASResult extends FASComponents {
 // × 0.3 + ~0.5 distance × 0.25 + ~0 leap × 0.2 + ~0.5 surprise × 0.25 = ~0.55.
 // So the threshold sits right at "novel pair, decent distance and surprise":
 // strong cross-domain ideas clear it, safe restatements don't. Anything that
-// reuses a well-mined pair loses most of the structural slice and falls short.
+// reuses a recently-mined pair loses most of the structural slice and falls short.
 export const HIGH_SIGNAL_THRESHOLD = 0.55;
 
+// Structural novelty counts only mining inside this rolling window, not all
+// time. The domain space is finite (20 domains → 210 pairs). An all-time
+// counter only ever rises, so once every pair has been mined a handful of
+// times the structural slice (30% of FAS) collapses toward 0 permanently and
+// the digest bar becomes unreachable again — the exact "nothing clears the bar
+// for weeks" failure this score has already hit once. A window lets a pair go
+// quiet and read as novel again, so novelty is renewable rather than a one-way
+// drain.
+export const RECENT_MINING_WINDOW_DAYS = 21;
+
 /**
- * Structural novelty from a domain pair's raw generation count.
+ * Structural novelty from how many times a pair was mined in the recent window.
  *
- * `timesGenerated` includes the *current* idea's own generation — the pair is
- * stamped (recordDomainPairGeneration) at generate time, hours before review
- * computes FAS — so we subtract one. A connection tried for the first time
- * reads as fully novel; novelty then erodes 0.1 per prior exploration.
+ * `timesGenerated` includes the *current* idea's own generation — by review
+ * time the idea is already stored, so we subtract one. A connection mined for
+ * the first time *in the window* reads as fully novel; novelty then erodes 0.1
+ * per prior recent exploration.
  *
- * This replaced a time-decay formula (timeDecay = daysSince(last_generated)/90)
- * that was always ~0: last_generated_at is "now" by the time FAS runs, so
- * structural novelty collapsed to ~0 for every idea and the digest bar became
- * mathematically unreachable. Pure + exported so it's unit-testable.
+ * The count is windowed (see RECENT_MINING_WINDOW_DAYS), not all-time: a pure
+ * all-time counter only rises, so structural novelty would decay to ~0 for good
+ * once the finite pair space saturates and the digest bar would go unreachable
+ * — the failure this score has hit before. Pure + exported so it's unit-testable.
  */
 export function structuralNoveltyFromCount(timesGenerated: number): number {
   const priorExplorations = Math.max(0, timesGenerated - 1);
@@ -114,24 +124,30 @@ async function calculateDomainPairNovelty(
   userId: string,
   domainPair: [string, string]
 ): Promise<number> {
-  const [a, b] = domainPair.sort();
+  const [a, b] = [...domainPair].sort();
 
-  const { data, error } = await supabase
-    .from('ie_domain_pairs')
-    .select('times_generated')
+  const cutoff = new Date(
+    Date.now() - RECENT_MINING_WINDOW_DAYS * 24 * 60 * 60 * 1000
+  ).toISOString();
+
+  // Count how many times this pair was mined inside the recent window. The
+  // current idea is already in ie_ideas by review time, so a pair mined for the
+  // first time in the window reads as count 1 → fully novel (the count-1 step
+  // lives in structuralNoveltyFromCount). `.contains` maps to the TEXT[] @>
+  // operator, so element order in domain_pair doesn't matter.
+  const { count, error } = await supabase
+    .from('ie_ideas')
+    .select('id', { count: 'exact', head: true })
     .eq('user_id', userId)
-    .eq('domain_a', a)
-    .eq('domain_b', b)
-    .single();
+    .gte('created_at', cutoff)
+    .contains('domain_pair', [a, b]);
 
-  if (error || !data) {
-    // No row at all = never explored = maximum novelty
+  if (error || count === null) {
+    // Unknown = treat as novel (matches the prior "no data = max novelty" rule).
     return 1.0;
   }
 
-  // Novelty erodes with how many times this connection was mined *before* the
-  // current idea. See structuralNoveltyFromCount for why we don't time-decay.
-  return structuralNoveltyFromCount(data.times_generated ?? 0);
+  return structuralNoveltyFromCount(count);
 }
 
 /**
