@@ -118,6 +118,7 @@ export function VoiceFAB({
 
   const [shouldStopRecording, setShouldStopRecording] = useState(false)
   const [isLongPressRecording, setIsLongPressRecording] = useState(false)
+  const [isDoubleTapRecording, setIsDoubleTapRecording] = useState(false)
   const fabRef = useRef<HTMLButtonElement>(null)
   const { isOnline } = useOnlineStatus()
   const pressTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -169,7 +170,17 @@ export function VoiceFAB({
     setIsVoiceOpen(false)
     setShouldStopRecording(false)
     setIsLongPressRecording(false)
+    setIsDoubleTapRecording(false)
   }, [])
+
+  // Reset recording state whenever the voice modal closes (via any path).
+  useEffect(() => {
+    if (!isVoiceOpen) {
+      setIsDoubleTapRecording(false)
+      setIsLongPressRecording(false)
+      setShouldStopRecording(false)
+    }
+  }, [isVoiceOpen])
 
   // --- Press handlers ---
 
@@ -180,6 +191,16 @@ export function VoiceFAB({
     pressStartPosRef.current = { x: e.clientX, y: e.clientY }
     if (pressTimerRef.current) clearTimeout(pressTimerRef.current)
 
+    // Third tap: FAB tapped while double-tap recording is active → stop it.
+    // Reuse isDoubleTapRef so onEnd bails out and doesn't re-open the menu.
+    if (isDoubleTapRecording && isVoiceOpen) {
+      isDoubleTapRef.current = true
+      setIsDoubleTapRecording(false)
+      haptic.light()
+      setShouldStopRecording(true)
+      return
+    }
+
     // Second tap landed in time (a first tap deferred the menu) → record without
     // holding. Detected here on pointer-down so the second tap's length is
     // irrelevant. Don't arm a long-press; this press is spent on voice.
@@ -189,6 +210,7 @@ export function VoiceFAB({
       lastTapTimeRef.current = 0
       isDoubleTapRef.current = true
       haptic.medium()
+      setIsDoubleTapRecording(true)
       setIsVoiceOpen(true)
       return
     }
@@ -207,7 +229,7 @@ export function VoiceFAB({
       haptic.medium()
       setIsVoiceOpen(true)
     }, LONG_PRESS_DELAY)
-  }, [])
+  }, [isDoubleTapRecording, isVoiceOpen])
 
   // Cancel the long-press timer if the finger moves far enough to be a scroll.
   // Prevents the FAB from hijacking vertical scrolls that start on top of it.
@@ -301,7 +323,9 @@ export function VoiceFAB({
   // + sits on top of the modal's stop button (FAB is z-[25001], modal z-[21000]).
   // Keep it visible during a hold/push-to-talk recording: there the FAB is the
   // press target and its pointer-up is what stops the recording.
-  const fabConcealed = hidden || isMenuOpen || (isVoiceOpen && !isLongPressRecording)
+  // During double-tap recording, keep the FAB visible so the user can tap it again to stop.
+  // During hold recording, keep it visible as it's the release target.
+  const fabConcealed = hidden || isMenuOpen || (isVoiceOpen && !isLongPressRecording && !isDoubleTapRecording)
 
   // Position wrapper holds the centering transform so framer-motion's inline
   // `transform` (driven by scale/opacity animations on the button) doesn't
@@ -365,11 +389,19 @@ export function VoiceFAB({
         }}
         aria-label="New thought — tap for menu, double-tap or hold to record"
       >
-        <Plus
-          className="h-6 w-6 text-white transition-transform duration-300 group-hover:rotate-90 relative z-10"
-          strokeWidth={2.25}
-          style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.30))' }}
-        />
+        {isDoubleTapRecording ? (
+          <Mic
+            className="h-6 w-6 text-white relative z-10 animate-pulse"
+            strokeWidth={2.25}
+            style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.30))' }}
+          />
+        ) : (
+          <Plus
+            className="h-6 w-6 text-white transition-transform duration-300 group-hover:rotate-90 relative z-10"
+            strokeWidth={2.25}
+            style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.30))' }}
+          />
+        )}
         <div
           className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
           style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0))' }}
