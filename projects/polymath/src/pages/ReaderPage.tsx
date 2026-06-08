@@ -3,7 +3,7 @@
  * Inspired by Readwise Reader and Omnivore
  */
 
-import { useEffect, useState, useMemo, useRef } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, ExternalLink, Archive, Loader2, Highlighter, Clock, Type, Mic, X, Check } from 'lucide-react'
@@ -15,7 +15,6 @@ import { useScrollDirection } from '../hooks/useScrollDirection'
 import { useToast } from '../components/ui/toast'
 import { useOfflineArticle } from '../hooks/useOfflineArticle'
 import { useReadingProgress } from '../hooks/useReadingProgress'
-import { ArticleCompletionDialog } from '../components/reading/ArticleCompletionDialog'
 import { VoiceInput } from '../components/VoiceInput'
 import { ConnectionsList } from '../components/connections/ConnectionsList'
 import { useConnectionStore } from '../stores/useConnectionStore'
@@ -60,7 +59,6 @@ export function ReaderPage() {
   const [fontSize, setFontSize] = useState<'compact' | 'comfortable' | 'spacious'>('comfortable')
   const [isOfflineCached, setIsOfflineCached] = useState(false)
   const [cachedImageUrls, setCachedImageUrls] = useState<Map<string, string>>(new Map())
-  const [showCompletionDialog, setShowCompletionDialog] = useState(false)
 
   const [isHighlighterMode, setIsHighlighterMode] = useState(false)
   const [showVoiceNote, setShowVoiceNote] = useState(false)
@@ -208,22 +206,6 @@ export function ReaderPage() {
     }
   }, [article?.id, processedContent, restoreProgress])
 
-  // Auto-trigger completion dialog when user reaches end of article
-  const hasTriggeredCompletion = useRef(false)
-  useEffect(() => {
-    if (
-      progress >= 95 &&
-      !hasTriggeredCompletion.current &&
-      !showCompletionDialog &&
-      article?.status !== 'archived'
-    ) {
-      hasTriggeredCompletion.current = true
-      // Small delay so the user sees they've reached the bottom
-      const timer = setTimeout(() => setShowCompletionDialog(true), 800)
-      return () => clearTimeout(timer)
-    }
-  }, [progress, showCompletionDialog, article?.status])
-
   const handleTextSelection = (event: React.MouseEvent | React.TouchEvent) => {
     if (!isHighlighterMode) return
     event.preventDefault()
@@ -282,19 +264,28 @@ export function ReaderPage() {
     }
   }
 
+  // One tap files the article away and takes you back. Capturing a
+  // thought is optional and never blocks the archive — the mic is always
+  // there, and the end-of-article bar offers it too. An Undo toast covers
+  // mis-taps so there's no confirmation step to wade through.
   const handleArchive = async () => {
     if (!article) return
-    setShowCompletionDialog(true)
-  }
-
-  const handleArchiveComplete = async () => {
-    if (!article) return
+    const prevStatus = article.status
     try {
       await useReadingStore.getState().updateArticleStatus(article.id, 'archived')
       addToast({
         title: 'Archived',
-        description: 'Article moved to archive',
+        description: 'Filed away.',
         variant: 'success',
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            useReadingStore.getState().updateArticleStatus(
+              article.id,
+              prevStatus === 'archived' ? 'unread' : prevStatus,
+            )
+          },
+        },
       })
       navigate(-1)
     } catch (error) {
@@ -765,6 +756,43 @@ export function ReaderPage() {
               itemTitle={article.title ?? undefined}
             />
           </motion.section>
+
+          {/* End-of-article finish bar — the calm way out. One tap files it
+              away and takes you back. Capturing a thought first is optional;
+              it just opens the mic. No modal, no "skip". */}
+          {article.status !== 'archived' && (
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-80px' }}
+              transition={{ duration: 0.5 }}
+              className="mt-16 pt-10 border-t border-white/[0.08] flex flex-col items-center text-center"
+            >
+              <span
+                className="text-[11px] uppercase tracking-[0.32em] font-semibold mb-6"
+                style={{ color: 'rgba(255,255,255,0.4)' }}
+              >
+                You reached the end
+              </span>
+              <button
+                onClick={handleArchive}
+                className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full font-semibold text-white transition-all press-spring"
+                style={{
+                  backgroundColor: 'var(--brand-primary)',
+                  boxShadow: '0 8px 28px -8px rgba(var(--brand-primary-rgb), 0.7)',
+                }}
+              >
+                <Archive className="h-4 w-4" /> Archive
+              </button>
+              <button
+                onClick={() => setShowVoiceNote(true)}
+                className="mt-4 text-[13px] opacity-60 hover:opacity-100 transition-opacity press-spring py-2"
+                style={{ color: 'var(--brand-text-secondary)' }}
+              >
+                Add a thought first
+              </button>
+            </motion.div>
+          )}
         </main>
 
         {/* Highlight Menu */}
@@ -793,36 +821,9 @@ export function ReaderPage() {
           )}
         </AnimatePresence>
 
-
-        <ArticleCompletionDialog
-          open={showCompletionDialog}
-          onOpenChange={setShowCompletionDialog}
-          article={article}
-          onCapture={async ({ text }) => {
-            if (text) {
-              // Create a thought from the capture
-              const res = await fetch('/api/memories', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  title: `Learned from: ${article.title}`,
-                  body: text,
-                  tags: ['reading-thought']
-                })
-              })
-              if (!res.ok) {
-                addToast({ title: "Couldn't save your thought", description: 'Try again in a moment.', variant: 'destructive' })
-                return
-              }
-            }
-            await handleArchiveComplete()
-          }}
-          onSkip={handleArchiveComplete}
-        />
-
         {/* Voice Note FAB — consistent with global VoiceFAB design */}
         <AnimatePresence>
-          {!hideUI && !showCompletionDialog && (
+          {!hideUI && !showVoiceNote && (
             <motion.button
               initial={{ scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
