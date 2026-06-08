@@ -541,11 +541,6 @@ export function ProjectIdeasHome() {
           const visual = mode ? MODE_VISUAL[mode] : { glyph: '✦', accentRgb: 'var(--brand-primary-rgb)', eyebrow: 'for you' }
           const accent = visual.accentRgb
           const glyph = visual.glyph
-          // Drop cap is only worth it on pitches longer than ~80 chars; on
-          // short ones it crowds the layout and looks accidental.
-          const useDropCap = (active.pitch?.length ?? 0) > 80
-          const pitchFirstChar = active.pitch?.charAt(0) ?? ''
-          const pitchRest = active.pitch?.slice(1) ?? ''
           return (
           <div className="max-w-2xl mx-auto">
             <AnimatePresence mode="wait">
@@ -573,26 +568,20 @@ export function ProjectIdeasHome() {
                   }}
                 />
 
-                {/* Editorial stamp at the top — glyph · rule · mode label.
-                    Reads as the masthead of an issue from the harness. */}
-                <div className="relative flex items-center gap-3 mb-7">
+                {/* Eyebrow — one quiet line naming what kind of note this is
+                    ("you set this down", "a new idea taking shape", …).
+                    Mode-tinted so each idea still reads as a distinct kind of
+                    correspondence, but without a heavy masthead. */}
+                <div className="relative flex items-center gap-2 mb-5">
                   <span
                     aria-hidden
-                    className="text-[24px] leading-none flex-shrink-0"
-                    style={{
-                      color: `rgb(${accent})`,
-                      fontFamily: 'var(--brand-font-body)',
-                      textShadow: `0 0 18px rgba(${accent}, 0.45)`,
-                    }}
+                    className="text-[13px] leading-none flex-shrink-0"
+                    style={{ color: `rgb(${accent})`, fontFamily: 'var(--brand-font-body)' }}
                   >
                     {glyph}
                   </span>
                   <span
-                    className="h-px w-8 flex-shrink-0"
-                    style={{ background: `linear-gradient(to right, rgba(${accent}, 0.6), rgba(${accent}, 0.1))` }}
-                  />
-                  <span
-                    className="text-[10px] uppercase tracking-[0.32em] font-semibold flex-1 truncate"
+                    className="text-[10px] uppercase tracking-[0.3em] font-semibold flex-1 truncate"
                     style={{ color: `rgb(${accent})`, opacity: 0.85 }}
                   >
                     {visual.eyebrow}
@@ -611,169 +600,83 @@ export function ProjectIdeasHome() {
                   )}
                 </div>
 
-                {/* Read mode — the pattern is the hero. Render it first, large
-                    serif, italic, mode-tinted. The project title sits below
-                    as the consequence. The wow lands in the pattern; the
-                    title is just the natural "so do this." */}
+                {/* Read mode — the pattern is the hero insight. The project
+                    title right below is the natural "so do this". */}
                 {mode === 'read' && active.pattern && (
-                  <>
-                    <p
-                      className="relative text-[26px] sm:text-[36px] leading-[1.18] italic mb-6"
-                      style={{
-                        color: 'var(--brand-text-primary)',
-                        fontFamily: 'var(--brand-font-body)',
-                        fontWeight: 400,
-                        letterSpacing: '-0.018em',
-                      }}
-                    >
-                      {active.pattern}
-                    </p>
-                    <span
-                      className="block text-[10px] uppercase tracking-[0.32em] mb-2 font-semibold"
-                      style={{ color: `rgb(${accent})`, opacity: 0.85 }}
-                    >
-                      the project this points to
-                    </span>
-                  </>
+                  <p
+                    className="relative text-[21px] sm:text-[26px] leading-[1.28] italic mb-5"
+                    style={{
+                      color: 'var(--brand-text-primary)',
+                      fontFamily: 'var(--brand-font-body)',
+                      fontWeight: 400,
+                      letterSpacing: '-0.015em',
+                    }}
+                  >
+                    {active.pattern}
+                  </p>
                 )}
 
-                {/* Title — generous serif, with a mode-tinted underline that
-                    acts as a printer's slug rule. In Read mode the title is
-                    a sub-headline (the consequence of the pattern above), so
-                    it gets a slightly smaller treatment. */}
+                {/* Title — the project. */}
                 <h3
-                  className={`relative leading-[1.05] mb-3 ${mode === 'read' ? 'text-[22px] sm:text-[28px]' : 'text-[30px] sm:text-[42px]'}`}
+                  className={`relative leading-[1.1] mb-4 ${mode === 'read' ? 'text-[20px] sm:text-[24px]' : 'text-[26px] sm:text-[34px]'}`}
                   style={{
                     color: 'var(--brand-text-primary)',
                     fontFamily: 'var(--brand-font-body)',
                     fontWeight: 500,
-                    letterSpacing: '-0.022em',
+                    letterSpacing: '-0.02em',
                   }}
                 >
                   {active.title}
                 </h3>
-                <div
-                  aria-hidden
-                  className="h-[2px] w-16 mb-8 rounded-full"
-                  style={{
-                    background: `linear-gradient(to right, rgb(${accent}), rgba(${accent}, 0.15))`,
-                    boxShadow: `0 0 12px rgba(${accent}, 0.4)`,
-                  }}
-                />
 
-                {/* Pitch — serif body with a drop cap on the first letter.
-                    Drop cap is mode-tinted and slightly glowing so the
-                    paragraph feels like the start of a chapter. */}
+                {/* Pitch — what it is, plain prose. */}
                 <p
-                  className="relative text-[15.5px] sm:text-[17px] leading-[1.7] mb-10"
+                  className="relative text-[15.5px] sm:text-[16.5px] leading-[1.65] mb-6"
                   style={{
                     color: 'var(--brand-text-primary)',
                     fontFamily: 'var(--brand-font-body)',
                     fontWeight: 400,
-                    opacity: 0.95,
+                    opacity: 0.92,
                   }}
                 >
-                  {useDropCap ? (
-                    <>
-                      <span
-                        aria-hidden
-                        className="float-left mr-2 mt-1 text-[58px] sm:text-[68px] leading-[0.85] font-medium select-none"
-                        style={{
-                          color: `rgb(${accent})`,
-                          fontFamily: 'var(--brand-font-body)',
-                          textShadow: `0 0 24px rgba(${accent}, 0.35)`,
-                        }}
-                      >
-                        {pitchFirstChar}
-                      </span>
-                      <span aria-hidden className="sr-only">{pitchFirstChar}</span>
-                      {pitchRest}
-                    </>
-                  ) : (
-                    active.pitch
-                  )}
+                  {active.pitch}
                 </p>
 
-                {/* Decorative fleuron divider — typographic ornament centred
-                    between body and pull-quote. Stops the page from reading
-                    as a uniform column of text. */}
-                <div aria-hidden className="flex items-center gap-4 my-8 px-2">
-                  <span
-                    className="h-px flex-1"
-                    style={{ background: `linear-gradient(to right, transparent, rgba(${accent}, 0.3))` }}
-                  />
-                  <span
-                    className="text-[14px] leading-none"
-                    style={{ color: `rgb(${accent})`, opacity: 0.7, fontFamily: 'var(--brand-font-body)' }}
-                  >
-                    {glyph}
-                  </span>
-                  <span
-                    className="h-px flex-1"
-                    style={{ background: `linear-gradient(to left, transparent, rgba(${accent}, 0.3))` }}
-                  />
-                </div>
-
-                {/* why_now — proper pull-quote treatment with a large opening
-                    quotation mark glyph, mode-tinted. */}
-                <figure className="relative mb-10 pl-2">
-                  <span
-                    aria-hidden
-                    className="absolute -top-6 -left-2 text-[78px] leading-none select-none font-serif"
-                    style={{
-                      color: `rgb(${accent})`,
-                      opacity: 0.28,
-                      fontFamily: 'var(--brand-font-body)',
-                    }}
-                  >
-                    “
-                  </span>
-                  <blockquote
-                    className="relative pl-7 text-[15px] sm:text-[17px] leading-[1.65] italic"
-                    style={{
-                      color: 'var(--brand-text-primary)',
-                      fontFamily: 'var(--brand-font-body)',
-                      opacity: 0.92,
-                    }}
-                  >
-                    {active.why_now}
-                  </blockquote>
-                  <figcaption
-                    className="mt-3 pl-7 text-[10px] uppercase tracking-[0.32em] font-semibold"
-                    style={{ color: `rgb(${accent})`, opacity: 0.7 }}
-                  >
-                    — why now
-                  </figcaption>
-                </figure>
-
-                {/* What's next — visual CTA panel with mode-tinted gradient.
-                    NOT a button (the build/save/dismiss row below is where
-                    decisions land), but visually weighty so the user knows
-                    this is the concrete first move. */}
-                <div
-                  className="relative mb-8 p-5 sm:p-6 rounded-2xl overflow-hidden"
+                {/* Why now — one quiet line, not a monument. */}
+                <p
+                  className="relative text-[14px] sm:text-[15px] leading-[1.6] mb-7 pl-3 italic"
                   style={{
-                    background: `linear-gradient(135deg, rgba(${accent}, 0.14), rgba(${accent}, 0.04) 60%, transparent)`,
-                    border: `1px solid rgba(${accent}, 0.22)`,
-                    boxShadow: `0 8px 32px -12px rgba(${accent}, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)`,
+                    color: 'var(--brand-text-secondary)',
+                    fontFamily: 'var(--brand-font-body)',
+                    borderLeft: `2px solid rgba(${accent}, 0.4)`,
                   }}
                 >
-                  {/* Subtle corner glyph as decoration */}
                   <span
-                    aria-hidden
-                    className="absolute top-3 right-4 text-[32px] leading-none opacity-15 select-none"
-                    style={{ color: `rgb(${accent})`, fontFamily: 'var(--brand-font-body)' }}
+                    className="not-italic mr-1.5 text-[10px] uppercase tracking-[0.26em] font-semibold"
+                    style={{ color: `rgb(${accent})`, opacity: 0.85 }}
                   >
-                    {glyph}
+                    why now ·
                   </span>
+                  {active.why_now}
+                </p>
+
+                {/* Your move — the one emphasised block, because it's the
+                    concrete first action. */}
+                <div
+                  className="relative mb-8 p-4 sm:p-5 rounded-2xl"
+                  style={{
+                    background: `linear-gradient(135deg, rgba(${accent}, 0.12), rgba(${accent}, 0.03) 70%, transparent)`,
+                    border: `1px solid rgba(${accent}, 0.22)`,
+                  }}
+                >
                   <span
-                    className="block text-[10px] uppercase tracking-[0.32em] mb-3 font-semibold"
+                    className="block text-[10px] uppercase tracking-[0.3em] mb-2 font-semibold"
                     style={{ color: `rgb(${accent})` }}
                   >
                     your move
                   </span>
                   <p
-                    className="text-[16px] sm:text-[19px] leading-[1.45] font-medium pr-8"
+                    className="text-[15.5px] sm:text-[17px] leading-[1.45] font-medium"
                     style={{
                       color: 'var(--brand-text-primary)',
                       fontFamily: 'var(--brand-font-body)',
