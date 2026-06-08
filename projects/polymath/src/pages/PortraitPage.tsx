@@ -196,6 +196,16 @@ function PortraitPageInner() {
                   )}
                 </p>
               )}
+              {payload?.snapshot && (
+                <p
+                  className="text-[12.5px] leading-[1.55] italic opacity-60 mt-3 max-w-md"
+                  style={{ color: 'var(--brand-text-muted)' }}
+                >
+                  Each week I write back what you actually did, then make one
+                  guess about your next week. The guess opens with a grade once
+                  the week's done.
+                </p>
+              )}
             </div>
             <div className="page-masthead-actions">
               <button
@@ -360,7 +370,8 @@ function PortraitPageInner() {
                     className="text-[14px] leading-[1.6] italic opacity-80"
                     style={{ color: 'var(--brand-text-secondary)' }}
                   >
-                    First prediction is sealed. We'll grade it once the week's done.
+                    Your first guess is sealed. It opens here with a grade once
+                    the week's done.
                   </p>
                 </section>
               )}
@@ -394,7 +405,9 @@ function PortraitPageInner() {
                       className="text-[13px] sm:text-[14px] leading-[1.55] italic flex-1 min-w-0"
                       style={{ color: 'var(--brand-text-secondary)', fontFamily: 'var(--brand-font-body)' }}
                     >
-                      A prediction is sealed. You'll find out what it was — and whether it landed — next week.
+                      One guess about your next week is sealed — kept hidden so
+                      knowing it can't change what you do. It opens right here,
+                      with a grade, once the week's done.
                     </p>
                   </div>
                   <p

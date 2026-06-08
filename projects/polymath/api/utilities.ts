@@ -1890,51 +1890,31 @@ async function handlePortraitGenerate(req: VercelRequest, res: VercelResponse) {
       })
     }
 
-    // One sealed prediction per cycle. Before inserting a fresh one,
-    // remove any in-flight un-reckoned prediction (sealed_until still in
-    // the future). The user just regenerated — that signals they want
-    // the harness to take a new shot at next week. The cron continues
-    // to grade older predictions whose sealed_until has already passed
-    // (those land in the "last week" verdict UI on next render).
+    // The sealed prediction runs on a WEEKLY cadence that is decoupled
+    // from the snapshot. Refreshing the read-back can happen every 6h, so
+    // it must NOT reset the prediction clock. The original bug was exactly
+    // that: every refresh deleted the in-flight prediction and resealed a
+    // fresh 7-day one, so a prediction almost never survived long enough
+    // to be graded — meaning the "last week, the harness predicted" reveal
+    // never fired and the user only ever saw a permanently sealed box.
+    //
+    // Fix: only seal a NEW prediction when the slot is free — when there's
+    // no un-reckoned prediction still inside its sealed window. If one is
+    // already in flight, leave it running and just write the new snapshot.
+    // The cron grades it once sealed_until passes and the reveal lands on
+    // the next render.
     const todayIso = new Date().toISOString().slice(0, 10)
     const { data: inFlight } = await supabase
       .from('portrait_predictions')
       .select('id, portrait_reckonings(id)')
       .eq('user_id', userId)
       .gt('sealed_until', todayIso)
-    const orphanIds = (inFlight ?? [])
-      .filter((r: any) => !r.portrait_reckonings || r.portrait_reckonings.length === 0)
-      .map((r: any) => r.id)
-    if (orphanIds.length > 0) {
-      const { error: delErr } = await supabase
-        .from('portrait_predictions')
-        .delete()
-        .in('id', orphanIds)
-      if (delErr) {
-        console.warn('[portrait] failed to clear in-flight predictions:', delErr.message)
-        // Non-fatal — the new prediction will still write; UI will
-        // pick the latest as next_prediction and ignore the stragglers.
-      }
-    }
+    const hasLivePrediction = (inFlight ?? []).some(
+      (r: any) => !r.portrait_reckonings || r.portrait_reckonings.length === 0
+    )
 
-    // Insert prediction FIRST, then snapshot. If snapshot fails, roll
-    // the prediction back so we never end up with a half-state. (We
-    // don't have a transaction wrapper here, so this is the best we
-    // can do without an RPC.)
-    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000)
-    const sealedUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-    const { data: predictionRow, error: predErr } = await supabase
-      .from('portrait_predictions')
-      .insert({
-        user_id: userId,
-        prediction: result.output.next_prediction,
-        week_starting: tomorrow.toISOString().slice(0, 10),
-        sealed_until: sealedUntil.toISOString().slice(0, 10),
-      })
-      .select('id')
-      .single()
-    if (predErr) throw predErr
-
+    // Always write the fresh snapshot — that's the read-back the user
+    // asked for, and it's independent of any prediction.
     const { error: snapErr } = await supabase
       .from('portrait_snapshots')
       .insert({
@@ -1942,13 +1922,26 @@ async function handlePortraitGenerate(req: VercelRequest, res: VercelResponse) {
         body: result.output.body,
         evidence_refs: result.output.evidence_refs,
       })
-    if (snapErr) {
-      // Roll back the prediction so the next refresh isn't blocked by
-      // an orphan "in-flight" row that doesn't correspond to any
-      // snapshot. Best-effort — if this also fails, the user just sees
-      // an error and the row will be cleaned up by the next regenerate.
-      await supabase.from('portrait_predictions').delete().eq('id', predictionRow.id)
-      throw snapErr
+    if (snapErr) throw snapErr
+
+    // Seal a new prediction only if one isn't already running.
+    if (!hasLivePrediction) {
+      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000)
+      const sealedUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+      const { error: predErr } = await supabase
+        .from('portrait_predictions')
+        .insert({
+          user_id: userId,
+          prediction: result.output.next_prediction,
+          week_starting: tomorrow.toISOString().slice(0, 10),
+          sealed_until: sealedUntil.toISOString().slice(0, 10),
+        })
+      if (predErr) {
+        // Non-fatal — the snapshot is already written (the thing the user
+        // asked for). A missing seal just means no new prediction this
+        // cycle; the next refresh after the current one elapses will seal.
+        console.warn('[portrait] failed to seal prediction:', predErr.message)
+      }
     }
 
     const payload = await buildPortraitPayload(supabase, userId)
