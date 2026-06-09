@@ -27,12 +27,16 @@ export interface FASResult extends FASComponents {
 // block so the sampler has more compositional material; the sampler weights
 // by FAS, so low-FAS blocks get drawn rarely.
 //
-// A genuinely new idea on an unexplored domain pair now scores: 1.0 structural
-// × 0.3 + ~0.5 distance × 0.25 + ~0 leap × 0.2 + ~0.5 surprise × 0.25 = ~0.55.
-// So the threshold sits right at "novel pair, decent distance and surprise":
-// strong cross-domain ideas clear it, safe restatements don't. Anything that
-// reuses a recently-mined pair loses most of the structural slice and falls short.
-export const HIGH_SIGNAL_THRESHOLD = 0.55;
+// Calibration: after ~6 weeks of operation most pairs have been mined 4-6
+// times inside the 21-day window, collapsing structural novelty from 1.0 to
+// ~0.6-0.7. A typical mature-system FAS (mined 4×, decent distance, mid
+// surprise) = 0.7×0.3 + 0.5×0.25 + 0×0.2 + 0.5×0.25 ≈ 0.46. The original
+// 0.55 bar was calibrated for a fresh system and becomes unreachable once
+// the domain space saturates — turning every BUILD into "good but not new"
+// indefinitely. 0.45 keeps the bar meaningful (heavily-mined pairs with low
+// distance can't clear it) while letting well-composed mature-system ideas
+// through.
+export const HIGH_SIGNAL_THRESHOLD = 0.45;
 
 // Structural novelty counts only mining inside this rolling window, not all
 // time. The domain space is finite (20 domains → 210 pairs). An all-time

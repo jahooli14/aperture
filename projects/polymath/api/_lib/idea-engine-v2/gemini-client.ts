@@ -117,7 +117,8 @@ RULES:
 2. No square brackets or colons in titles
 3. Use active voice and concrete examples
 4. Sound excited, not academic
-5. If you can't explain it simply, you don't understand it well enough`;
+5. If you can't explain it simply, you don't understand it well enough
+6. Name a concrete first step — a specific dataset, tool, experiment, or thing to build. "Use the 2.5M-row Stack Overflow dataset" beats "analyze programming data". "Test on 50 volunteer participants" beats "conduct user research". No "build a system that…" or "explore how…"`;
 
   // Call Gemini with retry logic
   const response = await retryWithBackoff(async () => {
@@ -125,7 +126,7 @@ RULES:
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: mode.temperature,
-        maxOutputTokens: 500,
+        maxOutputTokens: 800,
         responseMimeType: 'application/json',
       },
       systemInstruction: 'You are a JSON API. Return only valid JSON with no additional text, explanations, or formatting.',
