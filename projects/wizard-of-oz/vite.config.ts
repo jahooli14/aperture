@@ -44,8 +44,9 @@ export default defineConfig({
       workbox: {
         // Enable navigation preload for faster page loads
         navigationPreload: true,
-        // Immediately activate new service workers
-        skipWaiting: true,
+        // Don't skip waiting — let the UpdateNotification prompt control activation.
+        // skipWaiting was defeating registerType:'prompt', causing the new SW to
+        // claim mid-session and break in-flight lazy chunk loads.
         clientsClaim: true,
         // Runtime caching strategies
         runtimeCaching: [

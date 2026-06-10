@@ -116,9 +116,9 @@ function App() {
         join_code_prompted: settings.join_code_prompted,
         onboarding_completed: settings.onboarding_completed
       });
-      if (!settings.join_code_prompted) {
+      if (settings.join_code_prompted === false) {
         setShowJoinCodePrompt(true);
-      } else if (!settings.onboarding_completed) {
+      } else if (settings.onboarding_completed === false) {
         setShowOnboarding(true);
       }
 
