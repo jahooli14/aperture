@@ -107,10 +107,12 @@ Tractability Score: ${idea.tractability_score?.toFixed(2) || 'N/A'}
 
 **Review Criteria:**
 1. **Clarity (hard gate)** - Can a smart non-specialist understand it on first read? REJECT if it leans on academic dress-up like "endogenous", "isomorphism", "stochastic", "modular", "paradigm", "leverage", "systemic", "polymorphic", "cascading", "entropy", "robust control", "autonomous" (when "runs by itself" would do), "dynamically adjust", or stacked abstract nouns.
-2. **Specific first move (hard gate)** - The description must name a concrete thing you could actually build, run, or measure first — a real workpiece, dataset, experiment, or prototype. REJECT as too_vague if the "next step" is admin dressed up as build ("research X", "create a framework for", "explore the relationship between", "design a system that") with no concrete handle. A good idea passes the test: *what do you do on day one?*
+2. **Specific first move (BUILD gate)** - The description must name a concrete thing you could actually build, run, or measure first — a real workpiece, dataset, experiment, or prototype. A good idea passes the test: *what do you do on day one?*
 
-BAD (reject): "Build a system that models how ideas spread through social networks to optimize information flow." — no concrete first move; "system", "optimize", and "information flow" hide the absence of a thing to do.
-GOOD (build): "Take the 2.5M-edge Twitter retweet graph and check whether the same equation that predicts forest-fire size predicts how big a retweet cascade gets. One afternoon's work to fit it; if it holds you can predict a tweet's reach from its first hour."
+BAD (not BUILD): "Build a system that models how ideas spread through social networks to optimize information flow." — no concrete first move; "system", "optimize", and "information flow" hide the absence of a thing to do.
+GOOD (BUILD): "Take the 2.5M-edge Twitter retweet graph and check whether the same equation that predicts forest-fire size predicts how big a retweet cascade gets. One afternoon's work to fit it; if it holds you can predict a tweet's reach from its first hour."
+
+If the concept is real and interesting but the first move is vague or generic ("research X", "create a framework for", "explore the relationship between"), give it **SPARK** — the underlying connection may be worth developing even though it isn't ready to build yet.
 
 3. **Insight** - Does this reveal something genuinely new or useful, not a restatement of the obvious?
 4. **Tractable** - Could someone actually build/test this within 3-12 months without an unsolved breakthrough first?
@@ -118,10 +120,10 @@ GOOD (build): "Take the 2.5M-edge Twitter retweet graph and check whether the sa
 
 **Verdicts:**
 - **BUILD**: Clear, specific (names a real first move), insightful, tractable, and exciting. Worth dedicating serious time.
-- **SPARK**: A real kernel, but the first move isn't concrete yet or it needs sharpening. Save for later.
-- **REJECT**: Too vague, obvious, jargon-heavy without substance, no concrete first move, or not feasible.
+- **SPARK**: A real kernel — interesting concept, real cross-domain insight — but the first move isn't concrete yet, or needs sharpening. Save for later.
+- **REJECT**: Jargon-heavy with no substance underneath, obviously well-trodden ground, or genuinely not feasible (would require years of unsolved research). Do NOT REJECT for a vague first move — that is a SPARK.
 
-Hold the line on the two hard gates (clarity, specific first move). Do not lower the bar for an idea just because the underlying connection sounds clever — a clever connection with no concrete first move is a SPARK, not a BUILD.
+Hold the line on the clarity gate: jargon-heavy ideas with nothing concrete underneath get REJECT. For the first-move gate: an idea with a real, interesting concept but an imprecise first move is a SPARK, not a BUILD, and **not a REJECT**. Only reach for REJECT when the idea itself is junk — not when the description just needs sharpening.
 
 **Rejection Categories** (if REJECT):
 - poor_fit: Doesn't match personal interests or skills
