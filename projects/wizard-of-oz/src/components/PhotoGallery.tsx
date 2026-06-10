@@ -162,6 +162,15 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
     [photos]
   );
 
+  // Consecutive-day capture streak — gently reinforces the one-a-day habit.
+  // Must be computed here, ABOVE the early returns below: hooks can't sit after
+  // a conditional `return` or the hook count changes between the loading render
+  // and the loaded render, which crashes the whole tree (white screen).
+  const streak = useMemo(
+    () => currentStreak(photos.map((p) => p.upload_date)),
+    [photos]
+  );
+
   const handleFixAlignment = async () => {
     if (realignState) return;
     setRealignState({ done: 0, total: unalignedCount });
@@ -290,12 +299,6 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
   const ageToday = settings?.baby_birthdate
     ? formatAge(calculateAge(settings.baby_birthdate, getTodayLocalDateString()))
     : null;
-
-  // Consecutive-day capture streak — gently reinforces the one-a-day habit.
-  const streak = useMemo(
-    () => currentStreak(photos.map((p) => p.upload_date)),
-    [photos]
-  );
 
   const todayStr = getTodayLocalDateString();
 
