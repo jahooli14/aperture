@@ -21,8 +21,6 @@ interface PhotoBottomSheetProps {
 }
 
 export function PhotoBottomSheet({ photo: photoProp, isOpen, onClose, onDelete }: PhotoBottomSheetProps) {
-  if (!photoProp) return null;
-
   const { settings } = useSettingsStore();
   const { updatePhotoNote, reAlignPhoto, photos } = usePhotoStore();
   const { fetchPlaces, fetchPhotoPlaces } = usePlaceStore();
@@ -32,10 +30,10 @@ export function PhotoBottomSheet({ photo: photoProp, isOpen, onClose, onDelete }
   // stale after mutations like reAlignPhoto() replace the stored row. Reading
   // from the store ensures the sheet re-renders with new URLs / coords.
   //
-  // Memoized so we don't rescan the entire photos array on every state change
-  // inside this sheet (note edit, adjust phase, place modal, etc.).
+  // Must be computed here, ABOVE the early return below: hooks can't sit after
+  // a conditional return without violating the Rules of Hooks.
   const photo = useMemo(
-    () => photos.find((p) => p.id === photoProp.id) ?? photoProp,
+    () => photoProp ? (photos.find((p) => p.id === photoProp.id) ?? photoProp) : null,
     [photos, photoProp]
   );
 
@@ -47,6 +45,33 @@ export function PhotoBottomSheet({ photo: photoProp, isOpen, onClose, onDelete }
     | { phase: 'saving' }
   >({ phase: 'idle' });
   const [adjustError, setAdjustError] = useState('');
+
+  // Get existing note and emoji — safe when photo is null (returns defaults).
+  // These are intentionally before the useState calls below so they can serve
+  // as initial values for noteText / selectedEmoji.
+  const existingNote = (() => {
+    if (!photo?.metadata || typeof photo.metadata !== 'object') return '';
+    const metadata = photo.metadata as Record<string, unknown>;
+    return ('note' in metadata && metadata.note) ? String(metadata.note) : '';
+  })();
+
+  const existingEmoji = (() => {
+    if (!photo?.metadata || typeof photo.metadata !== 'object') return '💬';
+    const metadata = photo.metadata as Record<string, unknown>;
+    return ('emoji' in metadata && metadata.emoji) ? String(metadata.emoji) : '💬';
+  })();
+
+  const [isEditingNote, setIsEditingNote] = useState(false);
+  const [noteText, setNoteText] = useState(existingNote);
+  const [selectedEmoji, setSelectedEmoji] = useState(existingEmoji);
+  const [isSavingNote, setIsSavingNote] = useState(false);
+  const [noteError, setNoteError] = useState('');
+
+  // All hooks are above this line — safe to return early now.
+  if (!photo) return null;
+
+  // From here photo is guaranteed non-null. Function definitions that reference
+  // photo must live below this guard so TypeScript can see the narrowed type.
 
   const openAdjust = async () => {
     try {
@@ -154,25 +179,6 @@ export function PhotoBottomSheet({ photo: photoProp, isOpen, onClose, onDelete }
       });
     }
   };
-
-  // Get existing note and emoji from metadata
-  const existingNote = (() => {
-    if (!photo.metadata || typeof photo.metadata !== 'object') return '';
-    const metadata = photo.metadata as Record<string, unknown>;
-    return ('note' in metadata && metadata.note) ? String(metadata.note) : '';
-  })();
-
-  const existingEmoji = (() => {
-    if (!photo.metadata || typeof photo.metadata !== 'object') return '💬';
-    const metadata = photo.metadata as Record<string, unknown>;
-    return ('emoji' in metadata && metadata.emoji) ? String(metadata.emoji) : '💬';
-  })();
-
-  const [isEditingNote, setIsEditingNote] = useState(false);
-  const [noteText, setNoteText] = useState(existingNote);
-  const [selectedEmoji, setSelectedEmoji] = useState(existingEmoji);
-  const [isSavingNote, setIsSavingNote] = useState(false);
-  const [noteError, setNoteError] = useState('');
 
   const handleSaveNote = async () => {
     try {
