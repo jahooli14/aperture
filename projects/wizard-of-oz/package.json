@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "npx tsc -b && vite build",
     "lint": "echo 'Linting disabled - TypeScript already provides type checking'",
     "preview": "vite preview",
     "test": "vitest",
