@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'
 import './index.css'
 import App from './App.tsx'
+import { ErrorBoundary } from './components/ErrorBoundary.tsx'
 
 // Register the service worker BEFORE React mounts. Previously this only ran
 // when <UpdateNotification> mounted (inside App, after auth resolved), which
@@ -46,7 +47,9 @@ window.addEventListener('unhandledrejection', (event) => {
 try {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
-      <App />
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
     </StrictMode>,
   );
 } catch (error) {
