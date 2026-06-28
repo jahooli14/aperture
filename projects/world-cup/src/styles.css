@@ -721,18 +721,23 @@ body {
   z-index: 0;
   overflow: hidden;
 }
+/* Each half is its own 60%-wide box with a centred photo (overlap hides the
+   seam), so the landmark stays in view instead of being cropped to an edge. */
 .phalf {
   position: absolute;
-  inset: 0;
+  top: 0;
+  bottom: 0;
+  width: 60%;
   background-size: cover;
   background-position: center;
 }
-/* Diagonal split: home country left, away country right */
 .phome {
-  clip-path: polygon(0 0, 56% 0, 44% 100%, 0 100%);
+  left: 0;
+  clip-path: polygon(0 0, 100% 0, 74% 100%, 0 100%);
 }
 .paway {
-  clip-path: polygon(56% 0, 100% 0, 100% 100%, 44% 100%);
+  right: 0;
+  clip-path: polygon(26% 0, 100% 0, 100% 100%, 0 100%);
 }
 /* Dark veil — strongest down the centre seam so the score stays readable */
 .place-veil {
