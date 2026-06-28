@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import confetti from 'canvas-confetti'
 import {
-  predictions,
+  resolvePerson,
   stageOrder,
   flags,
   countryImage,
@@ -100,6 +100,13 @@ export function App() {
   const { data, loading, lastUpdated } = useLiveData()
   const scorers = data?.scorers ?? []
 
+  // Whose predictions to show (from the URL path, e.g. /sarjack).
+  const person = resolvePerson(window.location.pathname)
+  const predictions = person.predictions
+  useEffect(() => {
+    document.title = `${person.title} World Cup 2026`
+  }, [person.title])
+
   // Preview helpers: ?demoLive=1 forces the first game live; ?weather=<cond>
   // forces that game's weather; ?demoBracket=1 injects a sample real bracket so
   // you can preview the prediction-vs-reality check on later rounds.
@@ -166,7 +173,11 @@ export function App() {
   return (
     <div className="app">
       <div className="backdrop" aria-hidden="true" />
-      <Header lastUpdated={lastUpdated} live={matches.some((m) => phaseOf(m.status) === 'live')} />
+      <Header
+        title={person.title}
+        lastUpdated={lastUpdated}
+        live={matches.some((m) => phaseOf(m.status) === 'live')}
+      />
 
       {data && !data.configured && (
         <div className="notice">
@@ -204,11 +215,19 @@ export function App() {
 
 // --- Header --------------------------------------------------------------
 
-function Header({ lastUpdated, live }: { lastUpdated: Date | null; live: boolean }) {
+function Header({
+  title,
+  lastUpdated,
+  live,
+}: {
+  title: string
+  lastUpdated: Date | null
+  live: boolean
+}) {
   const share = async () => {
     const shareData = {
-      title: 'KatDan World Cup 2026',
-      text: 'KatDan World Cup 2026 — predictions vs the live scores',
+      title: `${title} World Cup 2026`,
+      text: `${title} World Cup 2026 — predictions vs the live scores`,
       url: window.location.href,
     }
     try {
@@ -237,7 +256,7 @@ function Header({ lastUpdated, live }: { lastUpdated: Date | null; live: boolean
         </button>
       </div>
       <h1>
-        KatDan World Cup <span className="year">2026</span>
+        {title} World Cup <span className="year">2026</span>
       </h1>
       {lastUpdated && (
         <p className="updated">
