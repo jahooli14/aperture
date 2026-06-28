@@ -420,35 +420,27 @@ body {
   color: #5cf0a6 !important;
 }
 .team-tick {
-  margin-top: 4px;
-  font-size: 9.5px;
-  font-weight: 800;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
+  margin-top: 3px;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1;
   color: #2fe08a;
 }
 .card.lighttext .team-tick {
   color: #5cf0a6;
 }
 
-/* Wrong pick: demote the struck prediction, show the real team clearly below */
-.tname.team-wrong {
-  font-size: 12.5px;
+/* My prediction that didn't make it — small, struck through, beneath the
+   team that actually went through. */
+.mini-out {
+  margin-top: 4px;
+  font-size: 11.5px;
   font-weight: 600;
+  text-align: center;
   text-decoration: line-through;
   text-decoration-color: var(--red);
   text-decoration-thickness: 2px;
   opacity: 0.6;
-}
-.replacement {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 3px;
-  font-size: 14px;
-  font-weight: 800;
-  color: #fff;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
 }
 
 .center {

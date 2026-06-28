@@ -408,18 +408,22 @@ function PredictionCard({
 }
 
 function Side({ team, check }: { team: string; check?: TeamCheck }) {
-  const cls =
-    check?.status === 'correct' ? 'team-correct' : check?.status === 'wrong' ? 'team-wrong' : ''
+  // Wrong pick with a known replacement: the team that actually went through is
+  // big on top (with its flag); my crossed-out prediction sits small beneath.
+  if (check?.status === 'wrong' && check.replacement) {
+    return (
+      <div className="side">
+        <span className="crest">{flag(check.replacement)}</span>
+        <span className="tname">{check.replacement}</span>
+        <span className="mini-out">{team}</span>
+      </div>
+    )
+  }
   return (
     <div className="side">
       <span className="crest">{flag(team)}</span>
-      <span className={`tname ${cls}`}>{team}</span>
-      {check?.status === 'correct' && <span className="team-tick">✓ through</span>}
-      {check?.status === 'wrong' && check.replacement && (
-        <span className="replacement">
-          {flag(check.replacement)} {check.replacement}
-        </span>
-      )}
+      <span className={`tname ${check?.status === 'correct' ? 'team-correct' : ''}`}>{team}</span>
+      {check?.status === 'correct' && <span className="team-tick">✓</span>}
     </div>
   )
 }
