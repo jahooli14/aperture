@@ -419,36 +419,36 @@ body {
 .card.lighttext .team-correct {
   color: #5cf0a6 !important;
 }
-.team-wrong {
-  text-decoration: line-through;
-  text-decoration-color: var(--red);
-  text-decoration-thickness: 2px;
-  opacity: 0.7;
-}
 .team-tick {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  color: #2fe08a;
+  margin-top: 4px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
+  color: #2fe08a;
 }
 .card.lighttext .team-tick {
   color: #5cf0a6;
 }
+
+/* Wrong pick: demote the struck prediction, show the real team clearly below */
+.tname.team-wrong {
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: line-through;
+  text-decoration-color: var(--red);
+  text-decoration-thickness: 2px;
+  opacity: 0.6;
+}
 .replacement {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 13px;
-  font-weight: 700;
+  gap: 6px;
+  margin-top: 3px;
+  font-size: 14px;
+  font-weight: 800;
   color: #fff;
-  margin-top: 2px;
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
-}
-.replacement::before {
-  content: '↓';
-  font-size: 11px;
-  opacity: 0.8;
 }
 
 .center {
