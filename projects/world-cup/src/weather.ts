@@ -28,6 +28,22 @@ export const cityCoords: Record<string, { lat: number; lon: number }> = {
   'Kansas City, USA': { lat: 39.05, lon: -94.48 }, // Arrowhead
 }
 
+export const conditionInfo: Record<Condition, { icon: string; label: string }> = {
+  sunny: { icon: '☀️', label: 'Sunny' },
+  'clear-night': { icon: '🌙', label: 'Clear' },
+  cloudy: { icon: '☁️', label: 'Cloudy' },
+  rain: { icon: '🌧️', label: 'Rain' },
+  snow: { icon: '🌨️', label: 'Snow' },
+  thunder: { icon: '⛈️', label: 'Storm' },
+  fog: { icon: '🌫️', label: 'Fog' },
+}
+
+// Build a placeholder Weather for the ?weather= preview override.
+export function syntheticWeather(condition: Condition): Weather {
+  const info = conditionInfo[condition]
+  return { condition, label: info.label, icon: info.icon, tempC: 15 }
+}
+
 // WMO weather code → our condition buckets.
 function classify(code: number, isDay: boolean): { condition: Condition; label: string; icon: string } {
   if (code === 0 || code === 1)

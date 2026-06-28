@@ -10,7 +10,7 @@ import {
 } from './predictions'
 import { scorePrediction, findLiveMatch, phaseOf, pairKey, type Scored } from './logic'
 import { useLiveData } from './useLiveData'
-import { fetchWeather, type Weather, type Condition } from './weather'
+import { fetchWeather, syntheticWeather, type Weather, type Condition } from './weather'
 import type { LiveScorer, LiveMatch } from './types'
 
 const flag = (team: string) => flags[normaliseName(team)] ?? '🏳️'
@@ -45,8 +45,11 @@ export function App() {
   const matches = data?.matches ?? []
   const scorers = data?.scorers ?? []
 
-  // ?demoLive=1 forces the first game "live" so you can preview the live styling.
-  const demoLive = new URLSearchParams(window.location.search).get('demoLive') === '1'
+  // Preview helpers: ?demoLive=1 forces the first game live; ?weather=<cond>
+  // forces that game's weather (and implies demoLive so you can see it).
+  const params = new URLSearchParams(window.location.search)
+  const demoWeather = params.get('weather') as Condition | null
+  const demoLive = params.get('demoLive') === '1' || !!demoWeather
 
   const scored: Scored[] = useMemo(
     () =>
@@ -85,7 +88,7 @@ export function App() {
 
   useConfettiOnCorrect(scored, loading)
 
-  // Cities with a live game → fetch their weather to theme the background.
+  // Cities with a live game → fetch their weather for the card backgrounds.
   const liveCities = useMemo(() => {
     const set = new Set<string>()
     for (const s of scored) {
@@ -93,18 +96,18 @@ export function App() {
     }
     return [...set]
   }, [scored])
-  const weather = useWeather(liveCities)
+  const fetched = useWeather(liveCities)
 
-  // ?weather=rain|snow|sunny|thunder|cloudy|fog|clear-night previews an effect.
-  const demoWeather = new URLSearchParams(window.location.search).get('weather') as Condition | null
-  const firstLiveCity = liveCities[0]
-  const bgCondition: Condition | null =
-    demoWeather ?? (firstLiveCity ? weather[firstLiveCity]?.condition ?? null : null)
+  // Apply the ?weather= override to the first live game's city for preview.
+  const weather: Record<string, Weather> = useMemo(() => {
+    if (!demoWeather) return fetched
+    const city = predictions.find((_, i) => i === 0)?.city
+    return city ? { ...fetched, [city]: syntheticWeather(demoWeather) } : fetched
+  }, [fetched, demoWeather])
 
   return (
     <div className="app">
       <div className="backdrop" aria-hidden="true" />
-      <WeatherLayer condition={bgCondition} />
       <Header lastUpdated={lastUpdated} live={matches.some((m) => phaseOf(m.status) === 'live')} />
 
       {data && !data.configured && (
@@ -218,7 +221,18 @@ function StageSection({
   scored: Scored[]
   weather: Record<string, Weather>
 }) {
-  const rows = scored.filter((s) => s.pred.stage === stage)
+  // Live games pinned to the top, then most recent kickoff first.
+  const rows = scored
+    .filter((s) => s.pred.stage === stage)
+    .slice()
+    .sort((a, b) => {
+      const aLive = a.phase === 'live' ? 1 : 0
+      const bLive = b.phase === 'live' ? 1 : 0
+      if (aLive !== bLive) return bLive - aLive
+      const ta = a.live?.utcDate ? Date.parse(a.live.utcDate) : -Infinity
+      const tb = b.live?.utcDate ? Date.parse(b.live.utcDate) : -Infinity
+      return tb - ta
+    })
   // Round of 32 is open by default; later rounds collapse to cut scrolling.
   const [open, setOpen] = useState(stage === 'Round of 32')
 
@@ -278,8 +292,13 @@ function PredictionCard({ scored, weather }: { scored: Scored; weather?: Weather
   const pickCls =
     result === 'exact' || result === 'outcome' ? 'correct' : result === 'wrong' ? 'wrong' : 'pending'
 
+  // Live games get a cinematic weather scene as the card background.
+  const wxCondition = isLive && weather ? weather.condition : null
+
   return (
-    <article className={`card ${meta.cls} ${phase}`}>
+    <article className={`card ${meta.cls} ${phase} ${wxCondition ? `wx wx-${wxCondition}` : ''}`}>
+      {wxCondition && <CardWeather condition={wxCondition} />}
+      <div className="card-inner">
       <div className="card-top">
         <span className="caption">
           {isLive ? (
@@ -336,6 +355,7 @@ function PredictionCard({ scored, weather }: { scored: Scored; weather?: Weather
           <span className="advances">{flag(pred.advances)} {pred.advances} advance</span>
         )}
       </div>
+      </div>
     </article>
   )
 }
@@ -369,22 +389,21 @@ function KickOff({ iso, inline }: { iso?: string; inline?: boolean }) {
   )
 }
 
-// --- Weather background layer --------------------------------------------
+// --- Cinematic weather scene (lives inside a live game card) --------------
 
-function WeatherLayer({ condition }: { condition: Condition | null }) {
-  if (!condition) return null
-  // Rain/snow get animated particles; others are pure CSS tints.
+function CardWeather({ condition }: { condition: Condition }) {
   const particles = condition === 'rain' || condition === 'thunder' || condition === 'snow'
   return (
-    <div className={`weather-layer weather-${condition}`} aria-hidden="true">
+    <div className={`card-weather wx-bg-${condition}`} aria-hidden="true">
       {particles && (
         <div className="precip">
-          {Array.from({ length: 60 }).map((_, i) => (
+          {Array.from({ length: 36 }).map((_, i) => (
             <span key={i} className="drop" style={dropStyle(i)} />
           ))}
         </div>
       )}
       {condition === 'thunder' && <div className="lightning" />}
+      <div className="card-scrim" />
     </div>
   )
 }
