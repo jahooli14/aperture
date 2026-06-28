@@ -320,6 +320,15 @@ function PredictionCard({
   const checks =
     pred.stage !== 'Round of 32' ? checkParticipants(pred, matches) : null
 
+  // My "advances on a draw" pick — strike it if that team didn't actually get here.
+  const advCheck =
+    pred.advances && checks
+      ? normaliseName(pred.advances).toLowerCase() === normaliseName(pred.home).toLowerCase()
+        ? checks.home
+        : checks.away
+      : undefined
+  const advWrong = advCheck?.status === 'wrong'
+
   let liveHome: number | null = null
   let liveAway: number | null = null
   if (live && live.homeScore != null && live.awayScore != null) {
@@ -399,7 +408,13 @@ function PredictionCard({
           </span>
         </span>
         {pred.advances && (
-          <span className="advances">{flag(pred.advances)} {pred.advances} advance</span>
+          <span className="advances">
+            <span className="adv-label">my pick</span>
+            <span className="adv-team">
+              {flag(pred.advances)}{' '}
+              <span className={advWrong ? 'struck' : ''}>{pred.advances} go through</span>
+            </span>
+          </span>
         )}
       </div>
       </div>
