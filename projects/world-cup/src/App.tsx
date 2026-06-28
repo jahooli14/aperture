@@ -469,7 +469,9 @@ function PredictionCard({
             <span className="adv-label">my pick</span>
             <span className="adv-team">
               {flag(pred.advances)}{' '}
-              <span className={advWrong ? 'struck' : ''}>{pred.advances} go through</span>
+              <span className={advWrong ? 'struck' : ''}>
+                {pred.stage === 'Final' ? `${pred.advances} win it 🏆` : `${pred.advances} go through`}
+              </span>
             </span>
           </span>
         )}
