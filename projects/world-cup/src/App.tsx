@@ -5,7 +5,6 @@ import {
   stageOrder,
   flags,
   countryImage,
-  goldenBootPick,
   normaliseName,
   type Stage,
 } from './predictions'
@@ -30,6 +29,16 @@ const DEMO_BRACKET: LiveMatch[] = [
   { id: -101, utcDate: '2026-07-14T19:00:00Z', status: 'TIMED', stage: 'SEMI_FINALS', home: 'France', away: 'Brazil', homeScore: null, awayScore: null, venue: null },
   { id: -102, utcDate: '2026-07-15T19:00:00Z', status: 'TIMED', stage: 'SEMI_FINALS', home: 'England', away: 'Argentina', homeScore: null, awayScore: null, venue: null },
   { id: -103, utcDate: '2026-07-19T19:00:00Z', status: 'TIMED', stage: 'FINAL', home: 'France', away: 'England', homeScore: null, awayScore: null, venue: null },
+]
+
+// ?demoFinished=1 — sample full-time R32 results to preview finished cards.
+const DEMO_FINISHED: LiveMatch[] = [
+  // exact match to the KatDan pick (3-1) → "Exact score"
+  { id: -201, utcDate: '2026-06-28T18:00:00Z', status: 'FINISHED', stage: 'LAST_32', home: 'Germany', away: 'Paraguay', homeScore: 3, awayScore: 1, venue: null },
+  // France win but not the exact scoreline (pick 2-1) → "Right result"
+  { id: -202, utcDate: '2026-06-28T20:00:00Z', status: 'FINISHED', stage: 'LAST_32', home: 'France', away: 'Sweden', homeScore: 1, awayScore: 0, venue: null },
+  // Canada win, pick was a draw → "Missed"
+  { id: -203, utcDate: '2026-06-28T22:00:00Z', status: 'FINISHED', stage: 'LAST_32', home: 'South Africa', away: 'Canada', homeScore: 0, awayScore: 2, venue: null },
 ]
 
 // Fetch live weather for the cities that currently have a game in play.
@@ -114,7 +123,10 @@ export function App() {
   const demoWeather = params.get('weather') as Condition | null
   const demoLive = params.get('demoLive') === '1' || !!demoWeather
   const demoBracket = params.get('demoBracket') === '1'
-  const matches = demoBracket ? [...(data?.matches ?? []), ...DEMO_BRACKET] : data?.matches ?? []
+  const demoFinished = params.get('demoFinished') === '1'
+  let matches = data?.matches ?? []
+  if (demoFinished) matches = [...DEMO_FINISHED, ...matches]
+  if (demoBracket) matches = [...matches, ...DEMO_BRACKET]
 
   const scored: Scored[] = useMemo(
     () =>
@@ -203,7 +215,7 @@ export function App() {
         ))}
       </main>
 
-      <GoldenBoot scorers={scorers} />
+      <GoldenBoot scorers={scorers} pick={person.goldenBoot} />
 
       <footer className="footer">
         My World Cup 2026 predictions · live data via football-data.org · photo by Alex Simpson /
@@ -591,9 +603,15 @@ function dropStyle(i: number): CSSProperties {
 
 // --- Golden Boot ---------------------------------------------------------
 
-function GoldenBoot({ scorers }: { scorers: LiveScorer[] }) {
-  const pickLast = goldenBootPick.player.toLowerCase().split(' ').pop()!
-  const pickFirst = goldenBootPick.player.toLowerCase().split(' ')[0]
+function GoldenBoot({
+  scorers,
+  pick,
+}: {
+  scorers: LiveScorer[]
+  pick: { player: string; team: string }
+}) {
+  const pickLast = pick.player.toLowerCase().split(' ').pop()!
+  const pickFirst = pick.player.toLowerCase().split(' ')[0]
   const isMyPick = (name: string) =>
     name.toLowerCase().includes(pickLast) && name.toLowerCase().includes(pickFirst)
 
@@ -607,7 +625,7 @@ function GoldenBoot({ scorers }: { scorers: LiveScorer[] }) {
       <div className="pick-banner">
         <span className="pick-tag">MY PICK</span>
         <span className="pick-body">
-          {flag(goldenBootPick.team)} <strong>{goldenBootPick.player}</strong>
+          {flag(pick.team)} <strong>{pick.player}</strong>
           {pickRank >= 0 ? (
             <span className="pick-rank"> · #{pickRank + 1}, {scorers[pickRank].goals} goals</span>
           ) : (

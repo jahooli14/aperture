@@ -280,15 +280,68 @@ export const sarjackPredictions: Prediction[] = [
   { stage: 'Final', home: 'France', away: 'Argentina', homeScore: 1, awayScore: 1, advances: 'Argentina', dateText: 'Sun 19 Jul', venue: 'MetLife Stadium', city: 'New York, USA' },
 ]
 
+// Gavin's predictions (his bracket — champions: Spain).
+export const gavinPredictions: Prediction[] = [
+  // Round of 32
+  { stage: 'Round of 32', home: 'Germany', away: 'Paraguay', homeScore: 2, awayScore: 0, venue: 'Gillette Stadium', city: 'Boston, USA' },
+  { stage: 'Round of 32', home: 'France', away: 'Sweden', homeScore: 3, awayScore: 1, venue: 'MetLife Stadium', city: 'New York, USA' },
+  { stage: 'Round of 32', home: 'South Africa', away: 'Canada', homeScore: 0, awayScore: 1, venue: 'SoFi Stadium', city: 'Los Angeles, USA' },
+  { stage: 'Round of 32', home: 'Netherlands', away: 'Morocco', homeScore: 1, awayScore: 1, advances: 'Morocco', venue: 'Estadio BBVA', city: 'Monterrey, Mexico' },
+  { stage: 'Round of 32', home: 'Portugal', away: 'Croatia', homeScore: 2, awayScore: 1, venue: 'BMO Field', city: 'Toronto, Canada' },
+  { stage: 'Round of 32', home: 'Spain', away: 'Austria', homeScore: 3, awayScore: 0, venue: 'SoFi Stadium', city: 'Los Angeles, USA' },
+  { stage: 'Round of 32', home: 'USA', away: 'Bosnia', homeScore: 2, awayScore: 0, venue: "Levi's Stadium", city: 'San Francisco, USA' },
+  { stage: 'Round of 32', home: 'Belgium', away: 'Senegal', homeScore: 1, awayScore: 2, venue: 'Lumen Field', city: 'Seattle, USA' },
+  { stage: 'Round of 32', home: 'Brazil', away: 'Japan', homeScore: 2, awayScore: 1, venue: 'NRG Stadium', city: 'Houston, USA' },
+  { stage: 'Round of 32', home: 'Ivory Coast', away: 'Norway', homeScore: 2, awayScore: 1, venue: 'AT&T Stadium', city: 'Dallas, USA' },
+  { stage: 'Round of 32', home: 'Mexico', away: 'Ecuador', homeScore: 2, awayScore: 0, venue: 'Estadio Azteca', city: 'Mexico City, Mexico' },
+  { stage: 'Round of 32', home: 'England', away: 'DR Congo', homeScore: 2, awayScore: 1, venue: 'Mercedes-Benz Stadium', city: 'Atlanta, USA' },
+  { stage: 'Round of 32', home: 'Argentina', away: 'Cape Verde', homeScore: 3, awayScore: 0, venue: 'Hard Rock Stadium', city: 'Miami, USA' },
+  { stage: 'Round of 32', home: 'Australia', away: 'Egypt', homeScore: 1, awayScore: 1, advances: 'Egypt', venue: 'AT&T Stadium', city: 'Dallas, USA' },
+  { stage: 'Round of 32', home: 'Switzerland', away: 'Algeria', homeScore: 0, awayScore: 1, venue: 'BC Place', city: 'Vancouver, Canada' },
+  { stage: 'Round of 32', home: 'Colombia', away: 'Ghana', homeScore: 2, awayScore: 1, venue: 'Arrowhead Stadium', city: 'Kansas City, USA' },
+
+  // Round of 16
+  { stage: 'Round of 16', home: 'France', away: 'Germany', homeScore: 2, awayScore: 1, dateText: 'Sat 4 Jul', venue: 'NRG Stadium', city: 'Houston, USA' },
+  { stage: 'Round of 16', home: 'Canada', away: 'Morocco', homeScore: 1, awayScore: 1, advances: 'Canada', dateText: 'Sat 4 Jul', venue: 'Lincoln Financial Field', city: 'Philadelphia, USA' },
+  { stage: 'Round of 16', home: 'Spain', away: 'Portugal', homeScore: 2, awayScore: 1, dateText: 'Sun 5 Jul', venue: 'MetLife Stadium', city: 'New York, USA' },
+  { stage: 'Round of 16', home: 'USA', away: 'Senegal', homeScore: 1, awayScore: 0, dateText: 'Sun 5 Jul', venue: 'Estadio Azteca', city: 'Mexico City, Mexico' },
+  { stage: 'Round of 16', home: 'Brazil', away: 'Ivory Coast', homeScore: 3, awayScore: 0, dateText: 'Mon 6 Jul', venue: 'AT&T Stadium', city: 'Dallas, USA' },
+  { stage: 'Round of 16', home: 'England', away: 'Mexico', homeScore: 1, awayScore: 1, advances: 'England', dateText: 'Mon 6 Jul', venue: 'Lumen Field', city: 'Seattle, USA' },
+  { stage: 'Round of 16', home: 'Argentina', away: 'Egypt', homeScore: 3, awayScore: 1, dateText: 'Tue 7 Jul', venue: 'Mercedes-Benz Stadium', city: 'Atlanta, USA' },
+  { stage: 'Round of 16', home: 'Colombia', away: 'Algeria', homeScore: 2, awayScore: 1, dateText: 'Tue 7 Jul', venue: 'BC Place', city: 'Vancouver, Canada' },
+
+  // Quarter-finals
+  { stage: 'Quarter-finals', home: 'France', away: 'Canada', homeScore: 2, awayScore: 0, dateText: 'Thu 9 Jul', venue: 'Gillette Stadium', city: 'Boston, USA' },
+  { stage: 'Quarter-finals', home: 'Spain', away: 'USA', homeScore: 3, awayScore: 1, dateText: 'Fri 10 Jul', venue: 'SoFi Stadium', city: 'Los Angeles, USA' },
+  { stage: 'Quarter-finals', home: 'Brazil', away: 'England', homeScore: 2, awayScore: 1, dateText: 'Sat 11 Jul', venue: 'Hard Rock Stadium', city: 'Miami, USA' },
+  { stage: 'Quarter-finals', home: 'Argentina', away: 'Colombia', homeScore: 2, awayScore: 0, dateText: 'Sat 11 Jul', venue: 'Arrowhead Stadium', city: 'Kansas City, USA' },
+
+  // Semi-finals
+  { stage: 'Semi-finals', home: 'Spain', away: 'France', homeScore: 2, awayScore: 1, dateText: 'Tue 14 Jul', venue: 'AT&T Stadium', city: 'Dallas, USA' },
+  { stage: 'Semi-finals', home: 'Brazil', away: 'Argentina', homeScore: 2, awayScore: 1, dateText: 'Wed 15 Jul', venue: 'Mercedes-Benz Stadium', city: 'Atlanta, USA' },
+
+  // Final
+  { stage: 'Final', home: 'Spain', away: 'Brazil', homeScore: 3, awayScore: 1, dateText: 'Sun 19 Jul', venue: 'MetLife Stadium', city: 'New York, USA' },
+]
+
 export interface Person {
   slug: string
   title: string
   predictions: Prediction[]
+  goldenBoot: { player: string; team: string }
 }
 
+const KANE = { player: 'Harry Kane', team: 'England' }
+
 export const people: Record<string, Person> = {
-  katdan: { slug: 'katdan', title: 'KatDan', predictions: katdanPredictions },
-  sarjack: { slug: 'sarjack', title: 'SarJack', predictions: sarjackPredictions },
+  katdan: { slug: 'katdan', title: 'KatDan', predictions: katdanPredictions, goldenBoot: KANE },
+  sarjack: { slug: 'sarjack', title: 'SarJack', predictions: sarjackPredictions, goldenBoot: KANE },
+  gavin: {
+    slug: 'gavin',
+    title: 'Gavin',
+    predictions: gavinPredictions,
+    goldenBoot: { player: 'Kylian Mbappé', team: 'France' },
+  },
 }
 
 // Pick whose predictions to show from the URL path (e.g. /sarjack). Defaults to KatDan.
