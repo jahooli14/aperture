@@ -57,6 +57,45 @@ function useWeather(liveCities: string[]): Record<string, Weather> {
   return map
 }
 
+// Fetch player headshots from Wikipedia (CORS-enabled, no key). Cached per name.
+function usePlayerPhotos(names: string[]): Record<string, string> {
+  const [map, setMap] = useState<Record<string, string>>({})
+  const cache = useRef<Record<string, boolean>>({})
+
+  useEffect(() => {
+    let active = true
+    names.forEach(async (name) => {
+      if (cache.current[name]) return
+      cache.current[name] = true
+      try {
+        const url =
+          'https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*' +
+          '&prop=pageimages&piprop=thumbnail&pithumbsize=160&redirects=1&titles=' +
+          encodeURIComponent(name)
+        const resp = await fetch(url)
+        const data = await resp.json()
+        const pages = data?.query?.pages ?? {}
+        let src = ''
+        for (const k in pages) {
+          const t = pages[k]?.thumbnail?.source
+          if (t) {
+            src = t
+            break
+          }
+        }
+        if (src && active) setMap((m) => ({ ...m, [name]: src }))
+      } catch {
+        /* no photo — fall back to flag */
+      }
+    })
+    return () => {
+      active = false
+    }
+  }, [names.join('|')])
+
+  return map
+}
+
 export function App() {
   const { data, loading, lastUpdated } = useLiveData()
   const scorers = data?.scorers ?? []
@@ -539,6 +578,7 @@ function GoldenBoot({ scorers }: { scorers: LiveScorer[] }) {
 
   const pickRank = scorers.findIndex((s) => isMyPick(s.name))
   const top = scorers.slice(0, 10)
+  const photos = usePlayerPhotos(top.map((s) => s.name))
 
   return (
     <section className="golden">
@@ -564,6 +604,11 @@ function GoldenBoot({ scorers }: { scorers: LiveScorer[] }) {
           {top.map((s, i) => (
             <li key={`${s.name}-${i}`} className={`scorer-row ${isMyPick(s.name) ? 'my-pick' : ''}`}>
               <span className="rank">{i + 1}</span>
+              {photos[s.name] ? (
+                <img className="savatar" src={photos[s.name]} alt="" loading="lazy" />
+              ) : (
+                <span className="savatar savatar-fallback">{flag(s.team)}</span>
+              )}
               <span className="who">
                 <span className="sname">{s.name}</span>
                 <span className="steam">
