@@ -790,6 +790,15 @@ body {
     ),
     linear-gradient(180deg, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.4) 100%);
 }
+/* Lighter veil for live cards so the country photos show behind the weather */
+.place-veil.light {
+  background: linear-gradient(
+    90deg,
+    rgba(4, 16, 10, 0.22) 0%,
+    rgba(4, 16, 10, 0.4) 50%,
+    rgba(4, 16, 10, 0.22) 100%
+  );
+}
 
 /* Light text for photo treatments that use a dark wash (A, C, D) */
 .card.lighttext .tname,
@@ -869,6 +878,33 @@ body {
 }
 .wx-bg-fog {
   --cloud: #e2e7ec;
+}
+
+/* Over-photo mode (live cards): translucent skies so the country photos show
+   through, with the clouds/rain/sun still on top. */
+.card-weather.wx-over .card-scrim {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.28));
+}
+.card-weather.wx-over.wx-bg-rain {
+  background: linear-gradient(160deg, rgba(22, 34, 54, 0.42), rgba(8, 16, 30, 0.6));
+}
+.card-weather.wx-over.wx-bg-thunder {
+  background: linear-gradient(160deg, rgba(16, 20, 40, 0.5), rgba(4, 6, 16, 0.66));
+}
+.card-weather.wx-over.wx-bg-snow {
+  background: linear-gradient(160deg, rgba(70, 86, 110, 0.4), rgba(36, 48, 70, 0.55));
+}
+.card-weather.wx-over.wx-bg-sunny {
+  background: linear-gradient(160deg, rgba(255, 160, 70, 0.32), rgba(140, 60, 40, 0.5));
+}
+.card-weather.wx-over.wx-bg-clear-night {
+  background: linear-gradient(160deg, rgba(16, 30, 70, 0.45), rgba(4, 8, 26, 0.62));
+}
+.card-weather.wx-over.wx-bg-cloudy {
+  background: linear-gradient(160deg, rgba(74, 84, 96, 0.42), rgba(40, 46, 54, 0.55));
+}
+.card-weather.wx-over.wx-bg-fog {
+  background: linear-gradient(160deg, rgba(150, 160, 172, 0.42), rgba(90, 100, 112, 0.5));
 }
 
 /* Puffy drifting clouds (weather-app style) */

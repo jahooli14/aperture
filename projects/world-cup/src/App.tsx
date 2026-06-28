@@ -24,6 +24,14 @@ import type { LiveScorer, LiveMatch } from './types'
 
 const flag = (team: string) => flags[normaliseName(team)] ?? '🏳️'
 
+// Sample "real" bracket for ?demoBracket=1 — lets you preview the
+// prediction-vs-reality check before the actual teams are decided.
+const DEMO_BRACKET: LiveMatch[] = [
+  { id: -101, utcDate: '2026-07-14T19:00:00Z', status: 'TIMED', stage: 'SEMI_FINALS', home: 'France', away: 'Brazil', homeScore: null, awayScore: null, venue: null },
+  { id: -102, utcDate: '2026-07-15T19:00:00Z', status: 'TIMED', stage: 'SEMI_FINALS', home: 'England', away: 'Argentina', homeScore: null, awayScore: null, venue: null },
+  { id: -103, utcDate: '2026-07-19T19:00:00Z', status: 'TIMED', stage: 'FINAL', home: 'France', away: 'England', homeScore: null, awayScore: null, venue: null },
+]
+
 // Fetch live weather for the cities that currently have a game in play.
 // Cached ~10 min per city so we don't hammer the API on every poll.
 function useWeather(liveCities: string[]): Record<string, Weather> {
@@ -51,14 +59,16 @@ function useWeather(liveCities: string[]): Record<string, Weather> {
 
 export function App() {
   const { data, loading, lastUpdated } = useLiveData()
-  const matches = data?.matches ?? []
   const scorers = data?.scorers ?? []
 
   // Preview helpers: ?demoLive=1 forces the first game live; ?weather=<cond>
-  // forces that game's weather (and implies demoLive so you can see it).
+  // forces that game's weather; ?demoBracket=1 injects a sample real bracket so
+  // you can preview the prediction-vs-reality check on later rounds.
   const params = new URLSearchParams(window.location.search)
   const demoWeather = params.get('weather') as Condition | null
   const demoLive = params.get('demoLive') === '1' || !!demoWeather
+  const demoBracket = params.get('demoBracket') === '1'
+  const matches = demoBracket ? [...(data?.matches ?? []), ...DEMO_BRACKET] : data?.matches ?? []
 
   const scored: Scored[] = useMemo(
     () =>
@@ -332,7 +342,10 @@ function PredictionCard({
       }`}
     >
       {wxCondition ? (
-        <CardWeather condition={wxCondition} />
+        <>
+          <CardPlace home={pred.home} away={pred.away} light />
+          <CardWeather condition={wxCondition} overPhoto />
+        </>
       ) : (
         <CardPlace home={pred.home} away={pred.away} />
       )}
@@ -442,25 +455,25 @@ function KickOff({ iso, inline }: { iso?: string; inline?: boolean }) {
 
 // --- Half-and-half country photos (non-live cards) ------------------------
 
-function CardPlace({ home, away }: { home: string; away: string }) {
+function CardPlace({ home, away, light }: { home: string; away: string; light?: boolean }) {
   const h = countryImage(home)
   const a = countryImage(away)
   return (
     <div className="card-place" aria-hidden="true">
       {h && <div className="phalf phome" style={{ backgroundImage: `url(${h})` }} />}
       {a && <div className="phalf paway" style={{ backgroundImage: `url(${a})` }} />}
-      <div className="place-veil" />
+      <div className={`place-veil ${light ? 'light' : ''}`} />
     </div>
   )
 }
 
 // --- Cinematic weather scene (lives inside a live game card) --------------
 
-function CardWeather({ condition }: { condition: Condition }) {
+function CardWeather({ condition, overPhoto }: { condition: Condition; overPhoto?: boolean }) {
   const particles = condition === 'rain' || condition === 'thunder' || condition === 'snow'
   const hasClouds = condition !== 'clear-night'
   return (
-    <div className={`card-weather wx-bg-${condition}`} aria-hidden="true">
+    <div className={`card-weather wx-bg-${condition} ${overPhoto ? 'wx-over' : ''}`} aria-hidden="true">
       {condition === 'sunny' && <div className="wx-sun" />}
       {condition === 'clear-night' && <div className="wx-moon" />}
       {hasClouds && (
