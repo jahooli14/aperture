@@ -2192,12 +2192,24 @@ Return ONLY the JSON, no other text.`
               totalArticlesAdded++
             }
 
-            // 2. Cleanup: keep latest 20 LIVE unread items per feed.
-            // "Live" = not dismissed. Dismissed items used to count against
-            // the cap, which meant dismissing 15 articles starved the feed
-            // down to 5 fresh slots. Now they're handled separately below.
-            // Items with status 'reading' / 'read' / 'archived' stay PROTECTED.
+            // 2. Cleanup: keep a combined 20 live items per feed (opened + unread).
+            // Opened items ('reading') hold a slot permanently — they count
+            // toward the 20 but are never purged here. Unread items fill the
+            // remaining slots, with newer ones displacing older ones.
+            // Dismissed items are excluded from both counts and handled below.
             const sourceHost = new URL(feed.feed_url).hostname.replace('www.', '')
+
+            const { count: openedCount } = await supabase
+              .from('reading_queue')
+              .select('id', { count: 'exact', head: true })
+              .eq('user_id', userId)
+              .eq('status', 'reading')
+              .is('dismissed_at', null)
+              .contains('tags', ['rss'])
+              .eq('source', sourceHost)
+
+            const unreadSlotCap = Math.max(0, 20 - (openedCount ?? 0))
+
             const { data: currentUnread } = await supabase
               .from('reading_queue')
               .select('id, created_at')
@@ -2208,10 +2220,10 @@ Return ONLY the JSON, no other text.`
               .eq('source', sourceHost)
               .order('created_at', { ascending: false })
 
-            if (currentUnread && currentUnread.length > 20) {
-              const toDelete = currentUnread.slice(20).map(i => i.id)
+            if (currentUnread && currentUnread.length > unreadSlotCap) {
+              const toDelete = currentUnread.slice(unreadSlotCap).map(i => i.id)
               await supabase.from('reading_queue').delete().in('id', toDelete)
-              console.log(`[RSS Sync] Purged ${toDelete.length} old unread RSS items for ${feed.title}`)
+              console.log(`[RSS Sync] Purged ${toDelete.length} old unread RSS items for ${feed.title} (${openedCount ?? 0} slots held by opened items)`)
             }
 
             // 3. Cleanup dismissed: delete anything the user explicitly
