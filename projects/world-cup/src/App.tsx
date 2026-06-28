@@ -168,8 +168,8 @@ export function App() {
 function Header({ lastUpdated, live }: { lastUpdated: Date | null; live: boolean }) {
   const share = async () => {
     const shareData = {
-      title: 'My World Cup 2026 Predictions',
-      text: 'Tracking my World Cup predictions against the live scores',
+      title: 'KatDan World Cup 2026',
+      text: 'KatDan World Cup 2026 — predictions vs the live scores',
       url: window.location.href,
     }
     try {
@@ -198,9 +198,8 @@ function Header({ lastUpdated, live }: { lastUpdated: Date | null; live: boolean
         </button>
       </div>
       <h1>
-        My World Cup <span className="year">2026</span>
+        KatDan World Cup <span className="year">2026</span>
       </h1>
-      <p className="subtitle">My predictions, tracked against the live scores</p>
       {lastUpdated && (
         <p className="updated">
           Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
