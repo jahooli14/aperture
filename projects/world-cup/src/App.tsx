@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import confetti from 'canvas-confetti'
 import {
   predictions,
@@ -10,18 +10,64 @@ import {
 } from './predictions'
 import { scorePrediction, findLiveMatch, phaseOf, pairKey, type Scored } from './logic'
 import { useLiveData } from './useLiveData'
-import type { LiveScorer } from './types'
+import { fetchWeather, type Weather, type Condition } from './weather'
+import type { LiveScorer, LiveMatch } from './types'
 
 const flag = (team: string) => flags[normaliseName(team)] ?? '🏳️'
+
+// Fetch live weather for the cities that currently have a game in play.
+// Cached ~10 min per city so we don't hammer the API on every poll.
+function useWeather(liveCities: string[]): Record<string, Weather> {
+  const [map, setMap] = useState<Record<string, Weather>>({})
+  const cache = useRef<Record<string, { w: Weather; t: number }>>({})
+
+  useEffect(() => {
+    let active = true
+    liveCities.forEach(async (city) => {
+      const cached = cache.current[city]
+      if (cached && Date.now() - cached.t < 600_000) return
+      const w = await fetchWeather(city)
+      if (w && active) {
+        cache.current[city] = { w, t: Date.now() }
+        setMap((m) => ({ ...m, [city]: w }))
+      }
+    })
+    return () => {
+      active = false
+    }
+  }, [liveCities.join('|')])
+
+  return map
+}
 
 export function App() {
   const { data, loading, lastUpdated } = useLiveData()
   const matches = data?.matches ?? []
   const scorers = data?.scorers ?? []
 
+  // ?demoLive=1 forces the first game "live" so you can preview the live styling.
+  const demoLive = new URLSearchParams(window.location.search).get('demoLive') === '1'
+
   const scored: Scored[] = useMemo(
-    () => predictions.map((p) => scorePrediction(p, findLiveMatch(p, matches))),
-    [matches]
+    () =>
+      predictions.map((p, idx) => {
+        if (demoLive && idx === 0) {
+          const fake: LiveMatch = {
+            id: -1,
+            utcDate: new Date().toISOString(),
+            status: 'IN_PLAY',
+            stage: '',
+            home: p.home,
+            away: p.away,
+            homeScore: 2,
+            awayScore: 1,
+            venue: null,
+          }
+          return scorePrediction(p, fake)
+        }
+        return scorePrediction(p, findLiveMatch(p, matches))
+      }),
+    [matches, demoLive]
   )
 
   const totals = useMemo(() => {
@@ -39,9 +85,26 @@ export function App() {
 
   useConfettiOnCorrect(scored, loading)
 
+  // Cities with a live game → fetch their weather to theme the background.
+  const liveCities = useMemo(() => {
+    const set = new Set<string>()
+    for (const s of scored) {
+      if (s.phase === 'live' && s.pred.city) set.add(s.pred.city)
+    }
+    return [...set]
+  }, [scored])
+  const weather = useWeather(liveCities)
+
+  // ?weather=rain|snow|sunny|thunder|cloudy|fog|clear-night previews an effect.
+  const demoWeather = new URLSearchParams(window.location.search).get('weather') as Condition | null
+  const firstLiveCity = liveCities[0]
+  const bgCondition: Condition | null =
+    demoWeather ?? (firstLiveCity ? weather[firstLiveCity]?.condition ?? null : null)
+
   return (
     <div className="app">
       <div className="backdrop" aria-hidden="true" />
+      <WeatherLayer condition={bgCondition} />
       <Header lastUpdated={lastUpdated} live={matches.some((m) => phaseOf(m.status) === 'live')} />
 
       {data && !data.configured && (
@@ -58,7 +121,7 @@ export function App() {
 
       <main>
         {stageOrder.map((stage) => (
-          <StageSection key={stage} stage={stage} scored={scored} />
+          <StageSection key={stage} stage={stage} scored={scored} weather={weather} />
         ))}
       </main>
 
@@ -146,7 +209,15 @@ function Scoreboard({
 
 // --- Stage section -------------------------------------------------------
 
-function StageSection({ stage, scored }: { stage: Stage; scored: Scored[] }) {
+function StageSection({
+  stage,
+  scored,
+  weather,
+}: {
+  stage: Stage
+  scored: Scored[]
+  weather: Record<string, Weather>
+}) {
   const rows = scored.filter((s) => s.pred.stage === stage)
   // Round of 32 is open by default; later rounds collapse to cut scrolling.
   const [open, setOpen] = useState(stage === 'Round of 32')
@@ -163,7 +234,11 @@ function StageSection({ stage, scored }: { stage: Stage; scored: Scored[] }) {
       {open && (
         <div className="cards">
           {rows.map((s) => (
-            <PredictionCard key={pairKey(s.pred.home, s.pred.away)} scored={s} />
+            <PredictionCard
+              key={pairKey(s.pred.home, s.pred.away)}
+              scored={s}
+              weather={s.pred.city ? weather[s.pred.city] : undefined}
+            />
           ))}
         </div>
       )}
@@ -186,9 +261,10 @@ function resultMeta(result: Scored['result']) {
   }
 }
 
-function PredictionCard({ scored }: { scored: Scored }) {
+function PredictionCard({ scored, weather }: { scored: Scored; weather?: Weather }) {
   const { pred, live, phase, result } = scored
   const meta = resultMeta(result)
+  const isLive = phase === 'live'
 
   let liveHome: number | null = null
   let liveAway: number | null = null
@@ -206,7 +282,7 @@ function PredictionCard({ scored }: { scored: Scored }) {
     <article className={`card ${meta.cls} ${phase}`}>
       <div className="card-top">
         <span className="caption">
-          {phase === 'live' ? (
+          {isLive ? (
             <span className="pill live">
               <span className="dot" /> LIVE
             </span>
@@ -216,6 +292,11 @@ function PredictionCard({ scored }: { scored: Scored }) {
             <KickOff iso={live?.utcDate} inline />
           )}
         </span>
+        {isLive && weather && (
+          <span className="weather-chip">
+            {weather.icon} {weather.tempC}° · {weather.label}
+          </span>
+        )}
         {phase === 'final' && meta.label && (
           <span className={`result-pill ${meta.cls}`}>
             <span className="dot" />
@@ -286,6 +367,38 @@ function KickOff({ iso, inline }: { iso?: string; inline?: boolean }) {
       {time}
     </span>
   )
+}
+
+// --- Weather background layer --------------------------------------------
+
+function WeatherLayer({ condition }: { condition: Condition | null }) {
+  if (!condition) return null
+  // Rain/snow get animated particles; others are pure CSS tints.
+  const particles = condition === 'rain' || condition === 'thunder' || condition === 'snow'
+  return (
+    <div className={`weather-layer weather-${condition}`} aria-hidden="true">
+      {particles && (
+        <div className="precip">
+          {Array.from({ length: 60 }).map((_, i) => (
+            <span key={i} className="drop" style={dropStyle(i)} />
+          ))}
+        </div>
+      )}
+      {condition === 'thunder' && <div className="lightning" />}
+    </div>
+  )
+}
+
+// Deterministic per-index positions/timing (no Math.random, stable across renders).
+function dropStyle(i: number): CSSProperties {
+  const left = (i * 37) % 100
+  const delay = ((i * 13) % 100) / 100
+  const dur = 0.5 + ((i * 7) % 60) / 100
+  return {
+    left: `${left}%`,
+    animationDelay: `-${delay * dur}s`,
+    animationDuration: `${dur}s`,
+  }
 }
 
 // --- Golden Boot ---------------------------------------------------------
