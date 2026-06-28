@@ -4,6 +4,7 @@ import {
   predictions,
   stageOrder,
   flags,
+  countryImage,
   goldenBootPick,
   normaliseName,
   type Stage,
@@ -221,7 +222,7 @@ function StageSection({
   scored: Scored[]
   weather: Record<string, Weather>
 }) {
-  // Live games pinned to the top, then most recent kickoff first.
+  // Live games pinned to the top, then chronological (earliest kickoff first).
   const rows = scored
     .filter((s) => s.pred.stage === stage)
     .slice()
@@ -229,9 +230,9 @@ function StageSection({
       const aLive = a.phase === 'live' ? 1 : 0
       const bLive = b.phase === 'live' ? 1 : 0
       if (aLive !== bLive) return bLive - aLive
-      const ta = a.live?.utcDate ? Date.parse(a.live.utcDate) : -Infinity
-      const tb = b.live?.utcDate ? Date.parse(b.live.utcDate) : -Infinity
-      return tb - ta
+      const ta = a.live?.utcDate ? Date.parse(a.live.utcDate) : Infinity
+      const tb = b.live?.utcDate ? Date.parse(b.live.utcDate) : Infinity
+      return ta - tb
     })
   // Round of 32 is open by default; later rounds collapse to cut scrolling.
   const [open, setOpen] = useState(stage === 'Round of 32')
@@ -296,8 +297,16 @@ function PredictionCard({ scored, weather }: { scored: Scored; weather?: Weather
   const wxCondition = isLive && weather ? weather.condition : null
 
   return (
-    <article className={`card ${meta.cls} ${phase} ${wxCondition ? `wx wx-${wxCondition}` : ''}`}>
-      {wxCondition && <CardWeather condition={wxCondition} />}
+    <article
+      className={`card ${meta.cls} ${phase} ${wxCondition ? `wx wx-${wxCondition}` : ''} ${
+        !isLive ? 'placed lighttext' : ''
+      }`}
+    >
+      {wxCondition ? (
+        <CardWeather condition={wxCondition} />
+      ) : (
+        <CardPlace home={pred.home} away={pred.away} />
+      )}
       <div className="card-inner">
       <div className="card-top">
         <span className="caption">
@@ -386,6 +395,20 @@ function KickOff({ iso, inline }: { iso?: string; inline?: boolean }) {
       <br />
       {time}
     </span>
+  )
+}
+
+// --- Half-and-half country photos (non-live cards) ------------------------
+
+function CardPlace({ home, away }: { home: string; away: string }) {
+  const h = countryImage(home)
+  const a = countryImage(away)
+  return (
+    <div className="card-place" aria-hidden="true">
+      {h && <div className="phalf phome" style={{ backgroundImage: `url(${h})` }} />}
+      {a && <div className="phalf paway" style={{ backgroundImage: `url(${a})` }} />}
+      <div className="place-veil" />
+    </div>
   )
 }
 

@@ -134,6 +134,70 @@ export const flags: Record<string, string> = {
   Wales: '🏴󠁧󠁢󠁷󠁬󠁳󠁿',
 }
 
+// ISO codes for flag images (flagcdn.com). England/Scotland/Wales use GB subtags.
+export const countryCode: Record<string, string> = {
+  Germany: 'de',
+  Paraguay: 'py',
+  France: 'fr',
+  Sweden: 'se',
+  'South Africa': 'za',
+  Canada: 'ca',
+  Netherlands: 'nl',
+  Morocco: 'ma',
+  Portugal: 'pt',
+  Croatia: 'hr',
+  Spain: 'es',
+  Austria: 'at',
+  USA: 'us',
+  Bosnia: 'ba',
+  Belgium: 'be',
+  Senegal: 'sn',
+  Brazil: 'br',
+  Japan: 'jp',
+  'Ivory Coast': 'ci',
+  Norway: 'no',
+  Mexico: 'mx',
+  Ecuador: 'ec',
+  England: 'gb-eng',
+  'DR Congo': 'cd',
+  Argentina: 'ar',
+  'Cape Verde': 'cv',
+  Australia: 'au',
+  Egypt: 'eg',
+  Switzerland: 'ch',
+  Algeria: 'dz',
+  Colombia: 'co',
+  Ghana: 'gh',
+  'New Zealand': 'nz',
+  'South Korea': 'kr',
+  'Saudi Arabia': 'sa',
+  Iran: 'ir',
+  Qatar: 'qa',
+  Tunisia: 'tn',
+  Uruguay: 'uy',
+  Jordan: 'jo',
+  Uzbekistan: 'uz',
+  Panama: 'pa',
+  'Costa Rica': 'cr',
+  Curacao: 'cw',
+  Haiti: 'ht',
+  Italy: 'it',
+  Denmark: 'dk',
+  Scotland: 'gb-sct',
+  Wales: 'gb-wls',
+}
+
+export function flagUrl(team: string): string {
+  const code = countryCode[normaliseName(team)]
+  return code ? `https://flagcdn.com/w640/${code}.png` : ''
+}
+
+// Thematic landmark photo for a country (used half-and-half on non-live cards).
+export function countryImage(team: string): string {
+  const code = countryCode[normaliseName(team)]
+  return code ? `/countries/${code}.jpg` : ''
+}
+
 // Aliases to reconcile my names with various live-feed spellings.
 // Keys are normalised (lowercased, punctuation stripped) feed names → my name.
 export const nameAliases: Record<string, string> = {

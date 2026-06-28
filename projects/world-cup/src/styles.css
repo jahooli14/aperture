@@ -714,6 +714,59 @@ body {
   }
 }
 
+/* ---- Half-and-half country photos (non-live cards) ---- */
+.card-place {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+.phalf {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+}
+/* Diagonal split: home country left, away country right */
+.phome {
+  clip-path: polygon(0 0, 56% 0, 44% 100%, 0 100%);
+}
+.paway {
+  clip-path: polygon(56% 0, 100% 0, 100% 100%, 44% 100%);
+}
+/* Dark veil — strongest down the centre seam so the score stays readable */
+.place-veil {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+      90deg,
+      rgba(4, 16, 10, 0.5) 0%,
+      rgba(4, 16, 10, 0.72) 50%,
+      rgba(4, 16, 10, 0.5) 100%
+    ),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.4) 100%);
+}
+
+/* Light text for photo treatments that use a dark wash (A, C, D) */
+.card.lighttext .tname,
+.card.lighttext .bigscore,
+.card.lighttext .vstadium {
+  color: #fff;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.7);
+}
+.card.lighttext .caption,
+.card.lighttext .vcity,
+.card.lighttext .advances,
+.card.lighttext .stadium-icon {
+  color: rgba(255, 255, 255, 0.82);
+}
+.card.lighttext .card-foot {
+  border-top-color: rgba(255, 255, 255, 0.22);
+}
+.card.lighttext .pick.pending {
+  color: var(--gold-soft);
+}
+
 /* ---- Cinematic weather on live game cards ---- */
 .card-inner {
   position: relative;
