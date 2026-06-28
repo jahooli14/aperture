@@ -9,7 +9,15 @@ import {
   normaliseName,
   type Stage,
 } from './predictions'
-import { scorePrediction, findLiveMatch, phaseOf, pairKey, type Scored } from './logic'
+import {
+  scorePrediction,
+  findLiveMatch,
+  phaseOf,
+  pairKey,
+  checkParticipants,
+  type Scored,
+  type TeamCheck,
+} from './logic'
 import { useLiveData } from './useLiveData'
 import { fetchWeather, syntheticWeather, type Weather, type Condition } from './weather'
 import type { LiveScorer, LiveMatch } from './types'
@@ -125,7 +133,13 @@ export function App() {
 
       <main>
         {stageOrder.map((stage) => (
-          <StageSection key={stage} stage={stage} scored={scored} weather={weather} />
+          <StageSection
+            key={stage}
+            stage={stage}
+            scored={scored}
+            weather={weather}
+            matches={matches}
+          />
         ))}
       </main>
 
@@ -217,10 +231,12 @@ function StageSection({
   stage,
   scored,
   weather,
+  matches,
 }: {
   stage: Stage
   scored: Scored[]
   weather: Record<string, Weather>
+  matches: LiveMatch[]
 }) {
   // Live games pinned to the top, then chronological (earliest kickoff first).
   const rows = scored
@@ -253,6 +269,7 @@ function StageSection({
               key={pairKey(s.pred.home, s.pred.away)}
               scored={s}
               weather={s.pred.city ? weather[s.pred.city] : undefined}
+              matches={matches}
             />
           ))}
         </div>
@@ -276,10 +293,22 @@ function resultMeta(result: Scored['result']) {
   }
 }
 
-function PredictionCard({ scored, weather }: { scored: Scored; weather?: Weather }) {
+function PredictionCard({
+  scored,
+  weather,
+  matches,
+}: {
+  scored: Scored
+  weather?: Weather
+  matches: LiveMatch[]
+}) {
   const { pred, live, phase, result } = scored
   const meta = resultMeta(result)
   const isLive = phase === 'live'
+
+  // For rounds past the R32, check whether my predicted teams actually got here.
+  const checks =
+    pred.stage !== 'Round of 32' ? checkParticipants(pred, matches) : null
 
   let liveHome: number | null = null
   let liveAway: number | null = null
@@ -316,8 +345,10 @@ function PredictionCard({ scored, weather }: { scored: Scored; weather?: Weather
             </span>
           ) : phase === 'final' ? (
             'Full time'
+          ) : live?.utcDate ? (
+            <KickOff iso={live.utcDate} inline />
           ) : (
-            <KickOff iso={live?.utcDate} inline />
+            pred.dateText ?? 'Date TBC'
           )}
         </span>
         {isLive && weather && (
@@ -334,10 +365,7 @@ function PredictionCard({ scored, weather }: { scored: Scored; weather?: Weather
       </div>
 
       <div className="match">
-        <div className="side">
-          <span className="crest">{flag(pred.home)}</span>
-          <span className="tname">{pred.home}</span>
-        </div>
+        <Side team={pred.home} check={checks?.home} />
 
         <div className="center">
           <span className={`bigscore ${phase}`}>{hasLive ? `${liveHome}–${liveAway}` : 'vs'}</span>
@@ -346,10 +374,7 @@ function PredictionCard({ scored, weather }: { scored: Scored; weather?: Weather
           </span>
         </div>
 
-        <div className="side">
-          <span className="crest">{flag(pred.away)}</span>
-          <span className="tname">{pred.away}</span>
-        </div>
+        <Side team={pred.away} check={checks?.away} />
       </div>
 
       <div className="card-foot">
@@ -366,6 +391,23 @@ function PredictionCard({ scored, weather }: { scored: Scored; weather?: Weather
       </div>
       </div>
     </article>
+  )
+}
+
+function Side({ team, check }: { team: string; check?: TeamCheck }) {
+  const cls =
+    check?.status === 'correct' ? 'team-correct' : check?.status === 'wrong' ? 'team-wrong' : ''
+  return (
+    <div className="side">
+      <span className="crest">{flag(team)}</span>
+      <span className={`tname ${cls}`}>{team}</span>
+      {check?.status === 'correct' && <span className="team-tick">✓ through</span>}
+      {check?.status === 'wrong' && check.replacement && (
+        <span className="replacement">
+          {flag(check.replacement)} {check.replacement}
+        </span>
+      )}
+    </div>
   )
 }
 

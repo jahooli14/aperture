@@ -412,6 +412,45 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Prediction-vs-reality on the team name (later rounds) */
+.team-correct {
+  color: #2fe08a !important;
+}
+.card.lighttext .team-correct {
+  color: #5cf0a6 !important;
+}
+.team-wrong {
+  text-decoration: line-through;
+  text-decoration-color: var(--red);
+  text-decoration-thickness: 2px;
+  opacity: 0.7;
+}
+.team-tick {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #2fe08a;
+  text-transform: uppercase;
+}
+.card.lighttext .team-tick {
+  color: #5cf0a6;
+}
+.replacement {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  margin-top: 2px;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
+}
+.replacement::before {
+  content: '↓';
+  font-size: 11px;
+  opacity: 0.8;
+}
+
 .center {
   display: flex;
   flex-direction: column;

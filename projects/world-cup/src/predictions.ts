@@ -20,6 +20,8 @@ export interface Prediction {
   /** Stadium name and city — the free live feed doesn't provide these, so baked in. */
   venue?: string
   city?: string
+  /** Scheduled date for later rounds (the feed has no date until teams are set). */
+  dateText?: string
 }
 
 export const predictions: Prediction[] = [
@@ -41,28 +43,28 @@ export const predictions: Prediction[] = [
   { stage: 'Round of 32', home: 'Switzerland', away: 'Algeria', homeScore: 1, awayScore: 0, venue: 'BC Place', city: 'Vancouver, Canada' },
   { stage: 'Round of 32', home: 'Colombia', away: 'Ghana', homeScore: 3, awayScore: 1, venue: 'Arrowhead Stadium', city: 'Kansas City, USA' },
 
-  // Round of 16
-  { stage: 'Round of 16', home: 'Germany', away: 'France', homeScore: 1, awayScore: 2 },
-  { stage: 'Round of 16', home: 'Canada', away: 'Netherlands', homeScore: 2, awayScore: 1 },
-  { stage: 'Round of 16', home: 'Portugal', away: 'Spain', homeScore: 1, awayScore: 1, advances: 'Spain' },
-  { stage: 'Round of 16', home: 'USA', away: 'Belgium', homeScore: 0, awayScore: 2 },
-  { stage: 'Round of 16', home: 'Brazil', away: 'Norway', homeScore: 2, awayScore: 1 },
-  { stage: 'Round of 16', home: 'Mexico', away: 'England', homeScore: 0, awayScore: 1 },
-  { stage: 'Round of 16', home: 'Argentina', away: 'Egypt', homeScore: 3, awayScore: 0 },
-  { stage: 'Round of 16', home: 'Switzerland', away: 'Colombia', homeScore: 0, awayScore: 2 },
+  // Round of 16 (dates/venues from the official 2026 schedule)
+  { stage: 'Round of 16', home: 'Germany', away: 'France', homeScore: 1, awayScore: 2, dateText: 'Sat 4 Jul', venue: 'NRG Stadium', city: 'Houston, USA' },
+  { stage: 'Round of 16', home: 'Canada', away: 'Netherlands', homeScore: 2, awayScore: 1, dateText: 'Sat 4 Jul', venue: 'Lincoln Financial Field', city: 'Philadelphia, USA' },
+  { stage: 'Round of 16', home: 'Portugal', away: 'Spain', homeScore: 1, awayScore: 1, advances: 'Spain', dateText: 'Sun 5 Jul', venue: 'MetLife Stadium', city: 'New York, USA' },
+  { stage: 'Round of 16', home: 'USA', away: 'Belgium', homeScore: 0, awayScore: 2, dateText: 'Sun 5 Jul', venue: 'Estadio Azteca', city: 'Mexico City, Mexico' },
+  { stage: 'Round of 16', home: 'Brazil', away: 'Norway', homeScore: 2, awayScore: 1, dateText: 'Mon 6 Jul', venue: 'AT&T Stadium', city: 'Dallas, USA' },
+  { stage: 'Round of 16', home: 'Mexico', away: 'England', homeScore: 0, awayScore: 1, dateText: 'Mon 6 Jul', venue: 'Lumen Field', city: 'Seattle, USA' },
+  { stage: 'Round of 16', home: 'Argentina', away: 'Egypt', homeScore: 3, awayScore: 0, dateText: 'Tue 7 Jul', venue: 'Mercedes-Benz Stadium', city: 'Atlanta, USA' },
+  { stage: 'Round of 16', home: 'Switzerland', away: 'Colombia', homeScore: 0, awayScore: 2, dateText: 'Tue 7 Jul', venue: 'BC Place', city: 'Vancouver, Canada' },
 
   // Quarter-finals
-  { stage: 'Quarter-finals', home: 'France', away: 'Canada', homeScore: 3, awayScore: 0 },
-  { stage: 'Quarter-finals', home: 'Spain', away: 'Belgium', homeScore: 1, awayScore: 0 },
-  { stage: 'Quarter-finals', home: 'Brazil', away: 'England', homeScore: 1, awayScore: 2 },
-  { stage: 'Quarter-finals', home: 'Argentina', away: 'Colombia', homeScore: 3, awayScore: 1 },
+  { stage: 'Quarter-finals', home: 'France', away: 'Canada', homeScore: 3, awayScore: 0, dateText: 'Thu 9 Jul', venue: 'Gillette Stadium', city: 'Boston, USA' },
+  { stage: 'Quarter-finals', home: 'Spain', away: 'Belgium', homeScore: 1, awayScore: 0, dateText: 'Fri 10 Jul', venue: 'SoFi Stadium', city: 'Los Angeles, USA' },
+  { stage: 'Quarter-finals', home: 'Brazil', away: 'England', homeScore: 1, awayScore: 2, dateText: 'Sat 11 Jul', venue: 'Hard Rock Stadium', city: 'Miami, USA' },
+  { stage: 'Quarter-finals', home: 'Argentina', away: 'Colombia', homeScore: 3, awayScore: 1, dateText: 'Sat 11 Jul', venue: 'Arrowhead Stadium', city: 'Kansas City, USA' },
 
   // Semi-finals
-  { stage: 'Semi-finals', home: 'France', away: 'Spain', homeScore: 1, awayScore: 1, advances: 'Spain' },
-  { stage: 'Semi-finals', home: 'England', away: 'Argentina', homeScore: 2, awayScore: 1 },
+  { stage: 'Semi-finals', home: 'France', away: 'Spain', homeScore: 1, awayScore: 1, advances: 'Spain', dateText: 'Tue 14 Jul', venue: 'AT&T Stadium', city: 'Dallas, USA' },
+  { stage: 'Semi-finals', home: 'England', away: 'Argentina', homeScore: 2, awayScore: 1, dateText: 'Wed 15 Jul', venue: 'Mercedes-Benz Stadium', city: 'Atlanta, USA' },
 
   // Final
-  { stage: 'Final', home: 'Spain', away: 'England', homeScore: 0, awayScore: 1 },
+  { stage: 'Final', home: 'Spain', away: 'England', homeScore: 0, awayScore: 1, dateText: 'Sun 19 Jul', venue: 'MetLife Stadium', city: 'New York, USA' },
 ]
 
 // My Golden Boot (top scorer) pick for the tournament.
