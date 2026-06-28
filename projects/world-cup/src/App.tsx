@@ -393,8 +393,18 @@ function KickOff({ iso, inline }: { iso?: string; inline?: boolean }) {
 
 function CardWeather({ condition }: { condition: Condition }) {
   const particles = condition === 'rain' || condition === 'thunder' || condition === 'snow'
+  const hasClouds = condition !== 'clear-night'
   return (
     <div className={`card-weather wx-bg-${condition}`} aria-hidden="true">
+      {condition === 'sunny' && <div className="wx-sun" />}
+      {condition === 'clear-night' && <div className="wx-moon" />}
+      {hasClouds && (
+        <>
+          <div className="cloud cloud-a" />
+          <div className="cloud cloud-b" />
+          <div className="cloud cloud-c" />
+        </>
+      )}
       {particles && (
         <div className="precip">
           {Array.from({ length: 36 }).map((_, i) => (
