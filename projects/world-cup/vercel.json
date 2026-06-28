@@ -1,0 +1,10 @@
+{
+  "ignoreCommand": "if [[ \"$VERCEL_GIT_COMMIT_REF\" != \"main\" ]]; then exit 0; fi; ROOT=$(git rev-parse --show-toplevel); BASE=\"${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}\"; git rev-parse \"$BASE\" >/dev/null 2>&1 || exit 1; git diff --quiet \"$BASE\" HEAD -- \"$ROOT/projects/world-cup\"",
+  "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/((?!api).*)",
+      "destination": "/index.html"
+    }
+  ]
+}
