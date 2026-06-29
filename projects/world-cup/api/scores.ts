@@ -1,38 +1,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
-// Proxies live World Cup data from football-data.org so the browser never sees
-// the API key and CORS is avoided. Set FOOTBALL_DATA_API_KEY in Vercel.
+// Live World Cup data, served to the browser without CORS issues or an API key.
 //
-// Free-tier docs: https://www.football-data.org/documentation/quickstart
-// Competition code for the FIFA World Cup is "WC".
-
-interface FeedTeam {
-  name: string | null
-  shortName?: string | null
-  tla?: string | null
-}
-
-interface FeedMatch {
-  id: number
-  utcDate: string
-  status: string
-  stage: string
-  venue?: string | null
-  homeTeam: FeedTeam
-  awayTeam: FeedTeam
-  score: {
-    winner: string | null
-    fullTime: { home: number | null; away: number | null }
-  }
-}
-
-interface FeedScorer {
-  player: { name: string | null }
-  team: { name: string | null }
-  goals: number | null
-  assists: number | null
-  penalties: number | null
-}
+// BBC Sport's public scores-fixtures feed is the primary (and only required)
+// source — it carries score, status, minute and goalscorers, and it's fresher
+// than the free football-data.org tier. football-data is used ONLY as a
+// best-effort golden-boot leaderboard, and is skipped entirely if no key is set
+// or the account is unavailable. Everything still works with BBC alone.
 
 export interface LiveMatch {
   id: number
@@ -54,8 +28,6 @@ export interface LiveScorer {
   assists: number
 }
 
-const COMP = 'https://api.football-data.org/v4/competitions/WC'
-
 export interface Goal {
   name: string
   minute: string
@@ -67,18 +39,7 @@ export interface MatchGoals {
   awayScorers: Goal[]
 }
 
-export interface BbcMatch {
-  home: string
-  away: string
-  homeScore: number | null
-  awayScore: number | null
-  status: string | null
-  minute: string
-  homeScorers: Goal[]
-  awayScorers: Goal[]
-}
-
-// Reconcile team names between BBC and football-data for matching.
+// Normalise team names so the static predictions line up with BBC's names.
 const TEAM_ALIAS: Record<string, string> = {
   unitedstates: 'usa',
   usa: 'usa',
@@ -103,6 +64,13 @@ export function teamPairKey(a: string, b: string): string {
   return [normTeam(a), normTeam(b)].sort().join('|')
 }
 
+// Stable-ish numeric id from the BBC event id (or pair key) so React keys hold.
+function hashId(s: string): number {
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0
+  return Math.abs(h)
+}
+
 function bbcScorers(team: any): Goal[] {
   const out: Goal[] = []
   for (const a of team?.actions ?? []) {
@@ -111,26 +79,30 @@ function bbcScorers(team: any): Goal[] {
   }
   return out
 }
-function bbcStatus(s: string): string | null {
+function bbcStatus(s: string): string {
   const v = (s || '').toLowerCase()
   if (v.includes('post')) return 'FINISHED'
   if (v.includes('half')) return 'PAUSED'
   if (v.includes('mid') || v.includes('live') || v.includes('play')) return 'IN_PLAY'
-  return null
+  return 'SCHEDULED'
 }
 function toNum(s: any): number | null {
   const n = parseInt(s, 10)
   return Number.isFinite(n) ? n : null
 }
 
-// Live score, status and goalscorers from BBC Sport — fresher than the free
-// football-data feed, and keeps score + scorers consistent.
-async function fetchBbc(): Promise<BbcMatch[]> {
+// Build the full match list straight from BBC. Queries yesterday → tomorrow so
+// just-finished, live, and next-up games all appear.
+async function fetchBbc(): Promise<{ matches: LiveMatch[]; goals: MatchGoals[] }> {
   const fmt = (d: Date) => d.toISOString().slice(0, 10)
   const now = new Date()
   const today = fmt(now)
-  const dates = [today, fmt(new Date(now.getTime() - 86_400_000))]
-  const byPair: Record<string, BbcMatch> = {}
+  const dates = [
+    fmt(new Date(now.getTime() - 86_400_000)),
+    today,
+    fmt(new Date(now.getTime() + 86_400_000)),
+  ]
+  const byPair: Record<string, { match: LiveMatch; goals: MatchGoals }> = {}
 
   for (const d of dates) {
     try {
@@ -153,112 +125,79 @@ async function fetchBbc(): Promise<BbcMatch[]> {
       }
       walk(wc)
       for (const e of events) {
-        byPair[teamPairKey(e.home.fullName, e.away.fullName)] = {
-          home: e.home.fullName,
-          away: e.away.fullName,
-          homeScore: toNum(e.home.score),
-          awayScore: toNum(e.away.score),
-          status: bbcStatus(e.status),
-          minute: e?.periodLabel?.value ?? e?.statusComment?.value ?? '',
-          homeScorers: bbcScorers(e.home),
-          awayScorers: bbcScorers(e.away),
+        const home = e.home.fullName
+        const away = e.away.fullName
+        const key = teamPairKey(home, away)
+        byPair[key] = {
+          match: {
+            id: hashId(e.id ?? key),
+            utcDate: e.startDateTime ?? e?.date?.iso ?? '',
+            status: bbcStatus(e.status),
+            stage: '',
+            home,
+            away,
+            homeScore: toNum(e.home.score),
+            awayScore: toNum(e.away.score),
+            venue: null,
+            minute: e?.periodLabel?.value ?? e?.statusComment?.value ?? '',
+          },
+          goals: {
+            home,
+            away,
+            homeScorers: bbcScorers(e.home),
+            awayScorers: bbcScorers(e.away),
+          },
         }
       }
     } catch {
-      /* BBC unavailable — fall back to football-data only */
+      /* skip this date */
     }
   }
-  return Object.values(byPair)
+  const matches: LiveMatch[] = []
+  const goals: MatchGoals[] = []
+  for (const v of Object.values(byPair)) {
+    matches.push(v.match)
+    goals.push(v.goals)
+  }
+  return { matches, goals }
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+// Best-effort golden-boot leaderboard from football-data. Optional — if the key
+// is missing or the account is unavailable, we just return no scorers.
+async function fetchScorers(key: string | undefined): Promise<LiveScorer[]> {
+  if (!key) return []
+  try {
+    const r = await fetch('https://api.football-data.org/v4/competitions/WC/scorers?limit=20', {
+      headers: { 'X-Auth-Token': key },
+    })
+    if (!r.ok) return []
+    const data: any = await r.json()
+    return (data.scorers ?? []).map((s: any) => ({
+      name: s.player?.name ?? 'Unknown',
+      team: s.team?.name ?? '',
+      goals: s.goals ?? 0,
+      assists: s.assists ?? 0,
+    }))
+  } catch {
+    return []
+  }
+}
+
+export default async function handler(_req: VercelRequest, res: VercelResponse) {
   const key = process.env.FOOTBALL_DATA_API_KEY
 
-  // Edge-cache 20s. Live score/status now come from BBC (fresh); football-data
-  // only supplies the schedule + golden boot. 2 calls/20s stays under the limit,
-  // and the client keeps the last good data if a poll is ever rate-limited.
+  // Edge-cache 20s; client keeps last-good data between polls.
   res.setHeader('Cache-Control', 's-maxage=20, stale-while-revalidate=40')
 
-  if (!key) {
-    res.status(200).json({
-      configured: false,
-      matches: [] as LiveMatch[],
-      scorers: [] as LiveScorer[],
-      message:
-        'No FOOTBALL_DATA_API_KEY set. Add a free key from football-data.org in your Vercel env vars to see live scores.',
-    })
-    return
-  }
-
-  const headers = { 'X-Auth-Token': key }
-
   try {
-    const [matchesResp, scorersResp, bbc] = await Promise.all([
-      fetch(`${COMP}/matches`, { headers }),
-      fetch(`${COMP}/scorers?limit=20`, { headers }),
-      fetchBbc(),
-    ])
+    const [{ matches, goals }, scorers] = await Promise.all([fetchBbc(), fetchScorers(key)])
 
-    const matches: LiveMatch[] = []
-    if (matchesResp.ok) {
-      const data = (await matchesResp.json()) as { matches?: FeedMatch[] }
-      for (const m of data.matches ?? []) {
-        matches.push({
-          id: m.id,
-          utcDate: m.utcDate,
-          status: m.status,
-          stage: m.stage,
-          home: m.homeTeam?.name ?? m.homeTeam?.shortName ?? 'TBD',
-          away: m.awayTeam?.name ?? m.awayTeam?.shortName ?? 'TBD',
-          homeScore: m.score?.fullTime?.home ?? null,
-          awayScore: m.score?.fullTime?.away ?? null,
-          venue: m.venue ?? null,
-        })
-      }
-    }
-
-    // Overlay BBC's fresher score/status onto the football-data fixtures, and
-    // build the per-match goalscorer list (oriented to our home/away order).
-    const bbcByPair: Record<string, BbcMatch> = {}
-    for (const b of bbc) bbcByPair[teamPairKey(b.home, b.away)] = b
-    const goals: MatchGoals[] = []
-    for (const m of matches) {
-      const b = bbcByPair[teamPairKey(m.home, m.away)]
-      if (!b) continue
-      const swapped = normTeam(b.home) !== normTeam(m.home)
-      if (b.homeScore != null && b.awayScore != null) {
-        m.homeScore = swapped ? b.awayScore : b.homeScore
-        m.awayScore = swapped ? b.homeScore : b.awayScore
-      }
-      if (b.status) m.status = b.status
-      if (b.minute) m.minute = b.minute
-      goals.push({
-        home: m.home,
-        away: m.away,
-        homeScorers: swapped ? b.awayScorers : b.homeScorers,
-        awayScorers: swapped ? b.homeScorers : b.awayScorers,
-      })
-    }
-
-    const scorers: LiveScorer[] = []
-    if (scorersResp.ok) {
-      const data = (await scorersResp.json()) as { scorers?: FeedScorer[] }
-      for (const s of data.scorers ?? []) {
-        scorers.push({
-          name: s.player?.name ?? 'Unknown',
-          team: s.team?.name ?? '',
-          goals: s.goals ?? 0,
-          assists: s.assists ?? 0,
-        })
-      }
-    }
-
-    // Don't cache an empty/rate-limited result for long — retry soon instead.
+    // Don't cache an empty result for long — retry soon.
     if (matches.length === 0) {
       res.setHeader('Cache-Control', 's-maxage=5, stale-while-revalidate=10')
     }
     res.status(200).json({ configured: true, matches, scorers, goals })
-  } catch (err) {
+  } catch {
     res.setHeader('Cache-Control', 's-maxage=5')
     res.status(200).json({
       configured: true,

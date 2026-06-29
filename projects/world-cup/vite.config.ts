@@ -18,20 +18,30 @@ function normTeam(n: string): string {
 function teamPairKey(a: string, b: string): string {
   return [normTeam(a), normTeam(b)].sort().join('|')
 }
-function bbcStatus(s: string): string | null {
+function bbcStatus(s: string): string {
   const v = (s || '').toLowerCase()
   if (v.includes('post')) return 'FINISHED'
   if (v.includes('half')) return 'PAUSED'
   if (v.includes('mid') || v.includes('live') || v.includes('play')) return 'IN_PLAY'
-  return null
+  return 'SCHEDULED'
+}
+function hashId(s: string): number {
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0
+  return Math.abs(h)
 }
 
-async function fetchBbc(): Promise<any[]> {
+// Build the full match list straight from BBC (yesterday → tomorrow).
+async function fetchBbc(): Promise<{ matches: any[]; goals: any[] }> {
   const fmt = (d: Date) => d.toISOString().slice(0, 10)
   const now = new Date()
   const today = fmt(now)
-  const dates = [today, fmt(new Date(now.getTime() - 86_400_000))]
-  const byPair: Record<string, any> = {}
+  const dates = [
+    fmt(new Date(now.getTime() - 86_400_000)),
+    today,
+    fmt(new Date(now.getTime() + 86_400_000)),
+  ]
+  const byPair: Record<string, { match: any; goals: any }> = {}
   const num = (s: any) => (Number.isFinite(parseInt(s, 10)) ? parseInt(s, 10) : null)
   const sc = (t: any) =>
     (t?.actions ?? [])
@@ -56,81 +66,65 @@ async function fetchBbc(): Promise<any[]> {
       }
       walk(wc)
       for (const e of events) {
-        byPair[teamPairKey(e.home.fullName, e.away.fullName)] = {
-          home: e.home.fullName,
-          away: e.away.fullName,
-          homeScore: num(e.home.score),
-          awayScore: num(e.away.score),
-          status: bbcStatus(e.status),
-          minute: e?.periodLabel?.value ?? e?.statusComment?.value ?? '',
-          homeScorers: sc(e.home),
-          awayScorers: sc(e.away),
+        const home = e.home.fullName
+        const away = e.away.fullName
+        const key = teamPairKey(home, away)
+        byPair[key] = {
+          match: {
+            id: hashId(e.id ?? key),
+            utcDate: e.startDateTime ?? e?.date?.iso ?? '',
+            status: bbcStatus(e.status),
+            stage: '',
+            home,
+            away,
+            homeScore: num(e.home.score),
+            awayScore: num(e.away.score),
+            venue: null,
+            minute: e?.periodLabel?.value ?? e?.statusComment?.value ?? '',
+          },
+          goals: { home, away, homeScorers: sc(e.home), awayScorers: sc(e.away) },
         }
       }
     } catch {
       /* skip */
     }
   }
-  return Object.values(byPair)
+  const matches: any[] = []
+  const goals: any[] = []
+  for (const v of Object.values(byPair)) {
+    matches.push(v.match)
+    goals.push(v.goals)
+  }
+  return { matches, goals }
+}
+
+async function fetchScorers(key: string): Promise<any[]> {
+  if (!key) return []
+  try {
+    const r = await fetch('https://api.football-data.org/v4/competitions/WC/scorers?limit=20', {
+      headers: { 'X-Auth-Token': key },
+    })
+    if (!r.ok) return []
+    const data: any = await r.json()
+    return (data.scorers ?? []).map((s: any) => ({
+      name: s.player?.name ?? 'Unknown',
+      team: s.team?.name ?? '',
+      goals: s.goals ?? 0,
+      assists: s.assists ?? 0,
+    }))
+  } catch {
+    return []
+  }
 }
 
 function devScoresApi(key: string): Plugin {
-  const COMP = 'https://api.football-data.org/v4/competitions/WC'
   return {
     name: 'dev-scores-api',
     configureServer(server) {
       server.middlewares.use('/api/scores', async (_req, res) => {
         res.setHeader('Content-Type', 'application/json')
-        if (!key) {
-          res.end(JSON.stringify({ configured: false, matches: [], scorers: [] }))
-          return
-        }
         try {
-          const headers = { 'X-Auth-Token': key }
-          const [mRes, sRes, bbc] = await Promise.all([
-            fetch(`${COMP}/matches`, { headers }),
-            fetch(`${COMP}/scorers?limit=20`, { headers }),
-            fetchBbc(),
-          ])
-          const mJson: any = mRes.ok ? await mRes.json() : { matches: [] }
-          const sJson: any = sRes.ok ? await sRes.json() : { scorers: [] }
-          const matches = (mJson.matches ?? []).map((m: any) => ({
-            id: m.id,
-            utcDate: m.utcDate,
-            status: m.status,
-            stage: m.stage,
-            home: m.homeTeam?.name ?? 'TBD',
-            away: m.awayTeam?.name ?? 'TBD',
-            homeScore: m.score?.fullTime?.home ?? null,
-            awayScore: m.score?.fullTime?.away ?? null,
-            venue: m.venue ?? null,
-          }))
-          const bbcByPair: Record<string, any> = {}
-          for (const b of bbc) bbcByPair[teamPairKey(b.home, b.away)] = b
-          const goals: any[] = []
-          for (const m of matches) {
-            const b = bbcByPair[teamPairKey(m.home, m.away)]
-            if (!b) continue
-            const swapped = normTeam(b.home) !== normTeam(m.home)
-            if (b.homeScore != null && b.awayScore != null) {
-              m.homeScore = swapped ? b.awayScore : b.homeScore
-              m.awayScore = swapped ? b.homeScore : b.awayScore
-            }
-            if (b.status) m.status = b.status
-            if (b.minute) m.minute = b.minute
-            goals.push({
-              home: m.home,
-              away: m.away,
-              homeScorers: swapped ? b.awayScorers : b.homeScorers,
-              awayScorers: swapped ? b.homeScorers : b.awayScorers,
-            })
-          }
-          const scorers = (sJson.scorers ?? []).map((s: any) => ({
-            name: s.player?.name ?? 'Unknown',
-            team: s.team?.name ?? '',
-            goals: s.goals ?? 0,
-            assists: s.assists ?? 0,
-          }))
+          const [{ matches, goals }, scorers] = await Promise.all([fetchBbc(), fetchScorers(key)])
           res.end(JSON.stringify({ configured: true, matches, scorers, goals }))
         } catch {
           res.end(JSON.stringify({ configured: true, matches: [], scorers: [] }))
