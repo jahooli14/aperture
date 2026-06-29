@@ -129,6 +129,21 @@ export function App() {
   if (demoFinished) matches = [...DEMO_FINISHED, ...matches]
   if (demoBracket) matches = [...matches, ...DEMO_BRACKET]
 
+  // On first load with a game in play, scroll it into view.
+  const scrolledRef = useRef(false)
+  useEffect(() => {
+    if (scrolledRef.current) return
+    if (!matches.some((m) => m.status === 'IN_PLAY' || m.status === 'PAUSED')) return
+    const t = setTimeout(() => {
+      const el = document.querySelector('.card.live')
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        scrolledRef.current = true
+      }
+    }, 500)
+    return () => clearTimeout(t)
+  }, [matches])
+
   const scored: Scored[] = useMemo(
     () =>
       predictions.map((p, idx) => {
@@ -321,72 +336,40 @@ function StageSection({
   matches: LiveMatch[]
   goals?: MatchGoals[]
 }) {
-  const all = scored.filter((s) => s.pred.stage === stage)
-
-  // Active = live + upcoming: live pinned top, then chronological.
-  const active = all
-    .filter((s) => s.phase !== 'final')
+  // One chronological list (earliest kickoff first). Finished games stay inline,
+  // just greyed out; the page auto-scrolls to the live game on load.
+  const rows = scored
+    .filter((s) => s.pred.stage === stage)
+    .slice()
     .sort((a, b) => {
-      const aLive = a.phase === 'live' ? 1 : 0
-      const bLive = b.phase === 'live' ? 1 : 0
-      if (aLive !== bLive) return bLive - aLive
       const ta = a.live?.utcDate ? Date.parse(a.live.utcDate) : Infinity
       const tb = b.live?.utcDate ? Date.parse(b.live.utcDate) : Infinity
       return ta - tb
     })
 
-  // Finished games: tucked into a collapsed, greyed-out group (most recent first).
-  const finished = all
-    .filter((s) => s.phase === 'final')
-    .sort((a, b) => {
-      const ta = a.live?.utcDate ? Date.parse(a.live.utcDate) : 0
-      const tb = b.live?.utcDate ? Date.parse(b.live.utcDate) : 0
-      return tb - ta
-    })
-
   const [open, setOpen] = useState(stage === 'Round of 32')
-  const [finOpen, setFinOpen] = useState(false)
-
-  const card = (s: Scored) => (
-    <PredictionCard
-      key={pairKey(s.pred.home, s.pred.away)}
-      scored={s}
-      weather={s.pred.city ? weather[s.pred.city] : undefined}
-      matches={matches}
-      goals={goals}
-    />
-  )
 
   return (
     <section className="stage">
       <button className="stage-title" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
         <span className="stage-name">{stage}</span>
-        <span className="stage-count">{all.length}</span>
+        <span className="stage-count">{rows.length}</span>
         <span className={`chevron ${open ? 'open' : ''}`} aria-hidden="true">
           ⌄
         </span>
       </button>
       {open && (
-        <>
-          {active.length > 0 && <div className="cards">{active.map(card)}</div>}
-          {finished.length > 0 && (
-            <div className="finished-group">
-              <button
-                className="fin-toggle"
-                onClick={() => setFinOpen((o) => !o)}
-                aria-expanded={finOpen}
-              >
-                <span className="fin-tick">✓</span>
-                <span className="fin-name">Finished</span>
-                <span className="fin-count">{finished.length}</span>
-                <span className={`chevron ${finOpen ? 'open' : ''}`} aria-hidden="true">
-                  ⌄
-                </span>
-              </button>
-              {finOpen && <div className="cards">{finished.map(card)}</div>}
-            </div>
-          )}
-        </>
+        <div className="cards">
+          {rows.map((s) => (
+            <PredictionCard
+              key={pairKey(s.pred.home, s.pred.away)}
+              scored={s}
+              weather={s.pred.city ? weather[s.pred.city] : undefined}
+              matches={matches}
+              goals={goals}
+            />
+          ))}
+        </div>
       )}
     </section>
   )

@@ -327,12 +327,18 @@ body {
 .finished-group .cards {
   margin-top: 12px;
 }
-/* Grey out finished cards: desaturate the photo, dim slightly */
+/* Finished cards: clearly greyed out and recessed vs live/upcoming */
 .card.final {
-  opacity: 0.9;
+  opacity: 0.62;
+  box-shadow: none;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 .card.final .card-place {
-  filter: grayscale(0.85) brightness(0.7);
+  filter: grayscale(1) brightness(0.4);
+}
+.card.final:hover {
+  opacity: 0.85;
+  transform: none;
 }
 
 /* ---- Card (white) ---- */
