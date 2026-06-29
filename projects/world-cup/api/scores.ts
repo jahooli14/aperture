@@ -123,9 +123,9 @@ async function fetchBbcGoals(): Promise<MatchGoals[]> {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const key = process.env.FOOTBALL_DATA_API_KEY
 
-  // Cache at the edge for 15s (well under the feed's 10 req/min limit) so live
-  // scores refresh quickly without hammering the upstream API.
-  res.setHeader('Cache-Control', 's-maxage=15, stale-while-revalidate=30')
+  // Edge-cache for 30s. The free feed allows only 10 requests/min and each call
+  // here uses 2, so 30s (≈4/min) keeps us safely under the limit.
+  res.setHeader('Cache-Control', 's-maxage=30, stale-while-revalidate=60')
 
   if (!key) {
     res.status(200).json({
@@ -178,8 +178,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    // Don't cache an empty/rate-limited result for long — retry soon instead.
+    if (matches.length === 0) {
+      res.setHeader('Cache-Control', 's-maxage=5, stale-while-revalidate=10')
+    }
     res.status(200).json({ configured: true, matches, scorers, goals })
   } catch (err) {
+    res.setHeader('Cache-Control', 's-maxage=5')
     res.status(200).json({
       configured: true,
       matches: [] as LiveMatch[],

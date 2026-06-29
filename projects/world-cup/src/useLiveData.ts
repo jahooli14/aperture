@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ScoresResponse } from './types'
 
-const POLL_LIVE_MS = 15_000 // a game is in play — refresh fast
-const POLL_IDLE_MS = 45_000 // nothing live — ease off
+const POLL_LIVE_MS = 30_000 // a game is in play — refresh (kept >= edge cache)
+const POLL_IDLE_MS = 60_000 // nothing live — ease off
 
 interface State {
   data: ScoresResponse | null
@@ -31,8 +31,15 @@ export function useLiveData() {
       const resp = await fetch('/api/scores')
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
       const data = (await resp.json()) as ScoresResponse
-      liveRef.current = anyLive(data)
-      setState({ data, loading: false, error: null, lastUpdated: new Date() })
+      if (data.matches?.length) liveRef.current = anyLive(data)
+      setState((prev) => {
+        // If a poll comes back empty (e.g. a transient rate-limit) but we already
+        // have data, keep the existing data rather than blanking the screen.
+        if ((!data.matches || data.matches.length === 0) && prev.data?.matches?.length) {
+          return { ...prev, loading: false }
+        }
+        return { data, loading: false, error: null, lastUpdated: new Date() }
+      })
     } catch (err) {
       setState((s) => ({
         ...s,
