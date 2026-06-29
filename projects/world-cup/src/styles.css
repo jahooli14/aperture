@@ -581,6 +581,68 @@ body {
   max-width: 100%;
 }
 
+/* Tap-to-compare everyone's picks */
+.compare-toggle {
+  position: relative;
+  width: 100%;
+  margin-top: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--r-pill);
+  padding: 7px 12px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.compare {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cmp-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.25);
+}
+.cmp-row.me {
+  background: rgba(232, 182, 71, 0.18);
+}
+.cmp-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+}
+.cmp-score {
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+.cmp-score.cmp-exact {
+  color: #5cf0a6;
+}
+.cmp-score.cmp-ok {
+  color: #5cf0a6;
+}
+.cmp-score.cmp-wrong {
+  color: #ff8d9a;
+}
+.cmp-na {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
 /* Card footer */
 .card-foot {
   display: flex;

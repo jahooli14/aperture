@@ -2,11 +2,13 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import confetti from 'canvas-confetti'
 import {
   resolvePerson,
+  people,
   stageOrder,
   flags,
   countryImage,
   normaliseName,
   type Stage,
+  type Prediction,
 } from './predictions'
 import {
   scorePrediction,
@@ -23,6 +25,8 @@ import { fetchWeather, syntheticWeather, type Weather, type Condition } from './
 import type { LiveScorer, LiveMatch, MatchGoals } from './types'
 
 const flag = (team: string) => flags[normaliseName(team)] ?? '🏳️'
+
+type CompareEntry = { slug: string; title: string; byPair: Record<string, Prediction> }
 
 // Sample "real" bracket for ?demoBracket=1 — lets you preview the
 // prediction-vs-reality check before the actual teams are decided.
@@ -113,6 +117,17 @@ export function App() {
   // Whose predictions to show (from the URL path, e.g. /sarjack).
   const person = resolvePerson(window.location.pathname)
   const predictions = person.predictions
+
+  // Index every person's predictions by fixture, for the tap-to-compare panel.
+  const compareIndex = useMemo(
+    () =>
+      Object.values(people).map((p) => {
+        const byPair: Record<string, Prediction> = {}
+        for (const pr of p.predictions) byPair[pairKey(pr.home, pr.away)] = pr
+        return { slug: p.slug, title: p.title, byPair }
+      }),
+    []
+  )
   useEffect(() => {
     document.title = `${person.title} World Cup 2026`
   }, [person.title])
@@ -228,6 +243,8 @@ export function App() {
             weather={weather}
             matches={matches}
             goals={data?.goals}
+            compareIndex={compareIndex}
+            currentSlug={person.slug}
           />
         ))}
       </main>
@@ -329,12 +346,16 @@ function StageSection({
   weather,
   matches,
   goals,
+  compareIndex,
+  currentSlug,
 }: {
   stage: Stage
   scored: Scored[]
   weather: Record<string, Weather>
   matches: LiveMatch[]
   goals?: MatchGoals[]
+  compareIndex: CompareEntry[]
+  currentSlug: string
 }) {
   // One chronological list (earliest kickoff first). Finished games stay inline,
   // just greyed out; the page auto-scrolls to the live game on load.
@@ -367,6 +388,8 @@ function StageSection({
               weather={s.pred.city ? weather[s.pred.city] : undefined}
               matches={matches}
               goals={goals}
+              compareIndex={compareIndex}
+              currentSlug={currentSlug}
             />
           ))}
         </div>
@@ -395,15 +418,20 @@ function PredictionCard({
   weather,
   matches,
   goals,
+  compareIndex,
+  currentSlug,
 }: {
   scored: Scored
   weather?: Weather
   matches: LiveMatch[]
   goals?: MatchGoals[]
+  compareIndex: CompareEntry[]
+  currentSlug: string
 }) {
   const { pred, live, phase, result } = scored
   const meta = resultMeta(result)
   const isLive = phase === 'live'
+  const [cmpOpen, setCmpOpen] = useState(false)
   const matchGoals = phase === 'upcoming' ? null : goalsFor(pred, goals)
   const hasGoals = !!matchGoals && (matchGoals.home.length > 0 || matchGoals.away.length > 0)
 
@@ -532,6 +560,43 @@ function PredictionCard({
           </span>
         )}
       </div>
+
+      <button
+        className="compare-toggle"
+        onClick={() => setCmpOpen((o) => !o)}
+        aria-expanded={cmpOpen}
+      >
+        Compare picks
+        <span className={`chevron ${cmpOpen ? 'open' : ''}`} aria-hidden="true">
+          ⌄
+        </span>
+      </button>
+      {cmpOpen && (
+        <div className="compare">
+          {compareIndex.map((ci) => {
+            const cp = ci.byPair[pairKey(pred.home, pred.away)]
+            const r = cp && phase === 'final' && live ? scorePrediction(cp, live).result : 'pending'
+            const cls =
+              r === 'exact' ? 'cmp-exact' : r === 'outcome' ? 'cmp-ok' : r === 'wrong' ? 'cmp-wrong' : ''
+            return (
+              <div key={ci.slug} className={`cmp-row ${ci.slug === currentSlug ? 'me' : ''}`}>
+                <span className="cmp-name">
+                  {ci.title}
+                  {ci.slug === currentSlug ? ' (you)' : ''}
+                </span>
+                {cp ? (
+                  <span className={`cmp-score ${cls}`}>
+                    {cp.homeScore}–{cp.awayScore}
+                    {cp.advances ? ` · ${cp.advances}` : ''}
+                  </span>
+                ) : (
+                  <span className="cmp-na">—</span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
       </div>
     </article>
   )
