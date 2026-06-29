@@ -8,6 +8,7 @@ export interface LiveMatch {
   homeScore: number | null
   awayScore: number | null
   venue: string | null
+  minute?: string | null
 }
 
 export interface LiveScorer {

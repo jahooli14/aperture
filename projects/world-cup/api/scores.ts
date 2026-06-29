@@ -44,6 +44,7 @@ export interface LiveMatch {
   homeScore: number | null
   awayScore: number | null
   venue: string | null
+  minute?: string | null
 }
 
 export interface LiveScorer {
@@ -72,6 +73,7 @@ export interface BbcMatch {
   homeScore: number | null
   awayScore: number | null
   status: string | null
+  minute: string
   homeScorers: Goal[]
   awayScorers: Goal[]
 }
@@ -157,6 +159,7 @@ async function fetchBbc(): Promise<BbcMatch[]> {
           homeScore: toNum(e.home.score),
           awayScore: toNum(e.away.score),
           status: bbcStatus(e.status),
+          minute: e?.periodLabel?.value ?? e?.statusComment?.value ?? '',
           homeScorers: bbcScorers(e.home),
           awayScorers: bbcScorers(e.away),
         }
@@ -228,6 +231,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         m.awayScore = swapped ? b.homeScore : b.awayScore
       }
       if (b.status) m.status = b.status
+      if (b.minute) m.minute = b.minute
       goals.push({
         home: m.home,
         away: m.away,

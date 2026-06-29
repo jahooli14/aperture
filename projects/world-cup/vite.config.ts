@@ -62,6 +62,7 @@ async function fetchBbc(): Promise<any[]> {
           homeScore: num(e.home.score),
           awayScore: num(e.away.score),
           status: bbcStatus(e.status),
+          minute: e?.periodLabel?.value ?? e?.statusComment?.value ?? '',
           homeScorers: sc(e.home),
           awayScorers: sc(e.away),
         }
@@ -116,6 +117,7 @@ function devScoresApi(key: string): Plugin {
               m.awayScore = swapped ? b.homeScore : b.awayScore
             }
             if (b.status) m.status = b.status
+            if (b.minute) m.minute = b.minute
             goals.push({
               home: m.home,
               away: m.away,

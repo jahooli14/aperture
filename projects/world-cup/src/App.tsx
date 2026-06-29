@@ -457,7 +457,7 @@ function PredictionCard({
         <span className="caption">
           {isLive ? (
             <span className="pill live">
-              <span className="dot" /> LIVE
+              <span className="dot" /> LIVE{live?.minute ? ` ${live.minute}` : ''}
             </span>
           ) : phase === 'final' ? (
             'Full time'
