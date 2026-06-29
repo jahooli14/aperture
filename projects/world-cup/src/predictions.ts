@@ -236,6 +236,33 @@ export function normaliseName(raw: string): string {
   return nameAliases[cleaned] ?? raw
 }
 
+// Real Round-of-32 kickoff times (UTC), baked in so dates always show even if
+// the live feed is unavailable. Keyed by the two teams (order-independent).
+function rkey(a: string, b: string): string {
+  return [normaliseName(a).toLowerCase(), normaliseName(b).toLowerCase()].sort().join('|')
+}
+const R32_KICKOFFS: Record<string, string> = {
+  [rkey('Germany', 'Paraguay')]: '2026-06-29T20:30:00Z',
+  [rkey('France', 'Sweden')]: '2026-06-30T21:00:00Z',
+  [rkey('South Africa', 'Canada')]: '2026-06-28T19:00:00Z',
+  [rkey('Netherlands', 'Morocco')]: '2026-06-30T01:00:00Z',
+  [rkey('Portugal', 'Croatia')]: '2026-07-02T23:00:00Z',
+  [rkey('Spain', 'Austria')]: '2026-07-02T19:00:00Z',
+  [rkey('USA', 'Bosnia')]: '2026-07-02T00:00:00Z',
+  [rkey('Belgium', 'Senegal')]: '2026-07-01T20:00:00Z',
+  [rkey('Brazil', 'Japan')]: '2026-06-29T17:00:00Z',
+  [rkey('Ivory Coast', 'Norway')]: '2026-06-30T17:00:00Z',
+  [rkey('Mexico', 'Ecuador')]: '2026-07-01T01:00:00Z',
+  [rkey('England', 'DR Congo')]: '2026-07-01T16:00:00Z',
+  [rkey('Argentina', 'Cape Verde')]: '2026-07-03T22:00:00Z',
+  [rkey('Australia', 'Egypt')]: '2026-07-03T18:00:00Z',
+  [rkey('Switzerland', 'Algeria')]: '2026-07-03T03:00:00Z',
+  [rkey('Colombia', 'Ghana')]: '2026-07-04T01:30:00Z',
+}
+export function kickoffFor(home: string, away: string): string | undefined {
+  return R32_KICKOFFS[rkey(home, away)]
+}
+
 // SarJack's predictions (her bracket — champions: Argentina).
 export const sarjackPredictions: Prediction[] = [
   // Round of 32 (same fixtures + venues as everyone)

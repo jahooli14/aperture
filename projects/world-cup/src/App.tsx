@@ -7,6 +7,7 @@ import {
   flags,
   countryImage,
   normaliseName,
+  kickoffFor,
   type Stage,
   type Prediction,
 } from './predictions'
@@ -363,8 +364,10 @@ function StageSection({
     .filter((s) => s.pred.stage === stage)
     .slice()
     .sort((a, b) => {
-      const ta = a.live?.utcDate ? Date.parse(a.live.utcDate) : Infinity
-      const tb = b.live?.utcDate ? Date.parse(b.live.utcDate) : Infinity
+      const ka = a.live?.utcDate ?? kickoffFor(a.pred.home, a.pred.away)
+      const kb = b.live?.utcDate ?? kickoffFor(b.pred.home, b.pred.away)
+      const ta = ka ? Date.parse(ka) : Infinity
+      const tb = kb ? Date.parse(kb) : Infinity
       return ta - tb
     })
 
@@ -489,8 +492,8 @@ function PredictionCard({
             </span>
           ) : phase === 'final' ? (
             'Full time'
-          ) : live?.utcDate ? (
-            <KickOff iso={live.utcDate} inline />
+          ) : live?.utcDate ?? kickoffFor(pred.home, pred.away) ? (
+            <KickOff iso={(live?.utcDate ?? kickoffFor(pred.home, pred.away))!} inline />
           ) : (
             pred.dateText ?? 'Date TBC'
           )}
