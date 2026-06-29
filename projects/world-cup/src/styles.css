@@ -955,6 +955,12 @@ body {
 .card.lighttext .pick.pending {
   color: var(--gold-soft);
 }
+.card.lighttext .pick.correct {
+  color: #5cf0a6;
+}
+.card.lighttext .pick.wrong {
+  color: #ff8d9a;
+}
 
 /* ---- Cinematic weather on live game cards ---- */
 .card-inner {

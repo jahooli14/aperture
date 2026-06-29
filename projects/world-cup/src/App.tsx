@@ -429,8 +429,11 @@ function PredictionCard({
   }
   const hasLive = liveHome != null && liveAway != null
 
+  // The predicted score is only "correct" (green) if it was exact. A right
+  // result with the wrong scoreline shows the score in red (but keeps the green
+  // "Right result" badge).
   const pickCls =
-    result === 'exact' || result === 'outcome' ? 'correct' : result === 'wrong' ? 'wrong' : 'pending'
+    result === 'exact' ? 'correct' : result === 'pending' ? 'pending' : 'wrong'
 
   // Live games get a cinematic weather scene as the card background.
   const wxCondition = isLive && weather ? weather.condition : null
