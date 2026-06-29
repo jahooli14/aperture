@@ -14,12 +14,13 @@ import {
   phaseOf,
   pairKey,
   checkParticipants,
+  goalsFor,
   type Scored,
   type TeamCheck,
 } from './logic'
 import { useLiveData } from './useLiveData'
 import { fetchWeather, syntheticWeather, type Weather, type Condition } from './weather'
-import type { LiveScorer, LiveMatch } from './types'
+import type { LiveScorer, LiveMatch, MatchGoals } from './types'
 
 const flag = (team: string) => flags[normaliseName(team)] ?? '🏳️'
 
@@ -211,6 +212,7 @@ export function App() {
             scored={scored}
             weather={weather}
             matches={matches}
+            goals={data?.goals}
           />
         ))}
       </main>
@@ -311,16 +313,19 @@ function StageSection({
   scored,
   weather,
   matches,
+  goals,
 }: {
   stage: Stage
   scored: Scored[]
   weather: Record<string, Weather>
   matches: LiveMatch[]
+  goals?: MatchGoals[]
 }) {
-  // Live games pinned to the top, then chronological (earliest kickoff first).
-  const rows = scored
-    .filter((s) => s.pred.stage === stage)
-    .slice()
+  const all = scored.filter((s) => s.pred.stage === stage)
+
+  // Active = live + upcoming: live pinned top, then chronological.
+  const active = all
+    .filter((s) => s.phase !== 'final')
     .sort((a, b) => {
       const aLive = a.phase === 'live' ? 1 : 0
       const bLive = b.phase === 'live' ? 1 : 0
@@ -329,29 +334,59 @@ function StageSection({
       const tb = b.live?.utcDate ? Date.parse(b.live.utcDate) : Infinity
       return ta - tb
     })
-  // Round of 32 is open by default; later rounds collapse to cut scrolling.
+
+  // Finished games: tucked into a collapsed, greyed-out group (most recent first).
+  const finished = all
+    .filter((s) => s.phase === 'final')
+    .sort((a, b) => {
+      const ta = a.live?.utcDate ? Date.parse(a.live.utcDate) : 0
+      const tb = b.live?.utcDate ? Date.parse(b.live.utcDate) : 0
+      return tb - ta
+    })
+
   const [open, setOpen] = useState(stage === 'Round of 32')
+  const [finOpen, setFinOpen] = useState(false)
+
+  const card = (s: Scored) => (
+    <PredictionCard
+      key={pairKey(s.pred.home, s.pred.away)}
+      scored={s}
+      weather={s.pred.city ? weather[s.pred.city] : undefined}
+      matches={matches}
+      goals={goals}
+    />
+  )
 
   return (
     <section className="stage">
       <button className="stage-title" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
         <span className="stage-name">{stage}</span>
-        <span className="stage-count">{rows.length}</span>
+        <span className="stage-count">{all.length}</span>
         <span className={`chevron ${open ? 'open' : ''}`} aria-hidden="true">
           ⌄
         </span>
       </button>
       {open && (
-        <div className="cards">
-          {rows.map((s) => (
-            <PredictionCard
-              key={pairKey(s.pred.home, s.pred.away)}
-              scored={s}
-              weather={s.pred.city ? weather[s.pred.city] : undefined}
-              matches={matches}
-            />
-          ))}
-        </div>
+        <>
+          {active.length > 0 && <div className="cards">{active.map(card)}</div>}
+          {finished.length > 0 && (
+            <div className="finished-group">
+              <button
+                className="fin-toggle"
+                onClick={() => setFinOpen((o) => !o)}
+                aria-expanded={finOpen}
+              >
+                <span className="fin-tick">✓</span>
+                <span className="fin-name">Finished</span>
+                <span className="fin-count">{finished.length}</span>
+                <span className={`chevron ${finOpen ? 'open' : ''}`} aria-hidden="true">
+                  ⌄
+                </span>
+              </button>
+              {finOpen && <div className="cards">{finished.map(card)}</div>}
+            </div>
+          )}
+        </>
       )}
     </section>
   )
@@ -376,14 +411,18 @@ function PredictionCard({
   scored,
   weather,
   matches,
+  goals,
 }: {
   scored: Scored
   weather?: Weather
   matches: LiveMatch[]
+  goals?: MatchGoals[]
 }) {
   const { pred, live, phase, result } = scored
   const meta = resultMeta(result)
   const isLive = phase === 'live'
+  const matchGoals = phase === 'upcoming' ? null : goalsFor(pred, goals)
+  const hasGoals = !!matchGoals && (matchGoals.home.length > 0 || matchGoals.away.length > 0)
 
   // For rounds past the R32, check whether my predicted teams actually got here.
   const checks =
@@ -467,6 +506,25 @@ function PredictionCard({
 
         <Side team={pred.away} check={checks?.away} />
       </div>
+
+      {hasGoals && matchGoals && (
+        <div className="goals-line">
+          <div className="gside">
+            {matchGoals.home.map((g, i) => (
+              <span key={i} className="goal">
+                ⚽ {g.name} {g.minute}
+              </span>
+            ))}
+          </div>
+          <div className="gside right">
+            {matchGoals.away.map((g, i) => (
+              <span key={i} className="goal">
+                {g.name} {g.minute} ⚽
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="card-foot">
         <span className="venue">

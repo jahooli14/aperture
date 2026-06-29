@@ -17,9 +17,22 @@ export interface LiveScorer {
   assists: number
 }
 
+export interface Goal {
+  name: string
+  minute: string
+}
+
+export interface MatchGoals {
+  home: string
+  away: string
+  homeScorers: Goal[]
+  awayScorers: Goal[]
+}
+
 export interface ScoresResponse {
   configured: boolean
   matches: LiveMatch[]
   scorers: LiveScorer[]
+  goals?: MatchGoals[]
   message?: string
 }

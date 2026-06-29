@@ -1,5 +1,20 @@
 import { normaliseName, type Prediction, type Stage } from './predictions'
-import type { LiveMatch } from './types'
+import type { LiveMatch, MatchGoals, Goal } from './types'
+
+// Goalscorers for a prediction's fixture, oriented to my home/away order.
+export function goalsFor(
+  pred: Prediction,
+  goals?: MatchGoals[]
+): { home: Goal[]; away: Goal[] } | null {
+  if (!goals) return null
+  const key = pairKey(pred.home, pred.away)
+  const g = goals.find((x) => pairKey(x.home, x.away) === key)
+  if (!g) return null
+  const swapped = normaliseName(g.home).toLowerCase() !== normaliseName(pred.home).toLowerCase()
+  return swapped
+    ? { home: g.awayScorers, away: g.homeScorers }
+    : { home: g.homeScorers, away: g.awayScorers }
+}
 
 // --- Match phase ---------------------------------------------------------
 
@@ -69,7 +84,17 @@ export function scorePrediction(pred: Prediction, live?: LiveMatch): Scored {
   const liveAway = swapped ? live.homeScore : live.awayScore
 
   const exact = liveHome === pred.homeScore && liveAway === pred.awayScore
-  const sameOutcome = sign(pred.homeScore, pred.awayScore) === sign(liveHome, liveAway)
+  let sameOutcome = sign(pred.homeScore, pred.awayScore) === sign(liveHome, liveAway)
+
+  // If I predicted a draw with a team to go through, count it as the right
+  // result when that team actually won (e.g. picked a 1-1 with Canada advancing,
+  // and Canada won) — even though the literal scoreline differs.
+  if (!sameOutcome && pred.advances && liveHome !== liveAway) {
+    const realWinner = liveHome > liveAway ? pred.home : pred.away
+    if (normaliseName(realWinner).toLowerCase() === normaliseName(pred.advances).toLowerCase()) {
+      sameOutcome = true
+    }
+  }
 
   const result: Result = exact ? 'exact' : sameOutcome ? 'outcome' : 'wrong'
   const points = result === 'exact' ? POINTS.exact : result === 'outcome' ? POINTS.outcome : 0
