@@ -129,19 +129,19 @@ export function App() {
   if (demoFinished) matches = [...DEMO_FINISHED, ...matches]
   if (demoBracket) matches = [...matches, ...DEMO_BRACKET]
 
-  // On first load with a game in play, scroll it into view.
+  // On first load with a game in play, scroll it into view. Retry a few times
+  // so late layout shifts (images/fonts on mobile) don't leave us at the top.
   const scrolledRef = useRef(false)
   useEffect(() => {
     if (scrolledRef.current) return
     if (!matches.some((m) => m.status === 'IN_PLAY' || m.status === 'PAUSED')) return
-    const t = setTimeout(() => {
+    scrolledRef.current = true
+    const doScroll = () => {
       const el = document.querySelector('.card.live')
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        scrolledRef.current = true
-      }
-    }, 500)
-    return () => clearTimeout(t)
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+    const timers = [500, 1400, 2800].map((ms) => setTimeout(doScroll, ms))
+    return () => timers.forEach(clearTimeout)
   }, [matches])
 
   const scored: Scored[] = useMemo(

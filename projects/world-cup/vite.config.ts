@@ -4,12 +4,35 @@ import react from '@vitejs/plugin-react'
 // Dev-only: serve /api/scores locally using the key from .env, so `npm run dev`
 // shows real live data without needing `vercel dev`. In production the real
 // serverless function in api/scores.ts handles this instead.
-async function fetchBbcGoals(): Promise<any[]> {
+const TEAM_ALIAS: Record<string, string> = {
+  unitedstates: 'usa', usa: 'usa', drcongo: 'drcongo', congodr: 'drcongo',
+  bosniaandherzegovina: 'bosnia', bosniaherzegovina: 'bosnia', bosnia: 'bosnia',
+  capeverde: 'capeverde', caboverde: 'capeverde', capeverdeislands: 'capeverde',
+  cotedivoire: 'ivorycoast', ivorycoast: 'ivorycoast',
+  southkorea: 'southkorea', korearepublic: 'southkorea',
+}
+function normTeam(n: string): string {
+  const k = (n || '').toLowerCase().normalize('NFD').replace(/[^a-z]/g, '')
+  return TEAM_ALIAS[k] ?? k
+}
+function teamPairKey(a: string, b: string): string {
+  return [normTeam(a), normTeam(b)].sort().join('|')
+}
+function bbcStatus(s: string): string | null {
+  const v = (s || '').toLowerCase()
+  if (v.includes('post')) return 'FINISHED'
+  if (v.includes('half')) return 'PAUSED'
+  if (v.includes('mid') || v.includes('live') || v.includes('play')) return 'IN_PLAY'
+  return null
+}
+
+async function fetchBbc(): Promise<any[]> {
   const fmt = (d: Date) => d.toISOString().slice(0, 10)
   const now = new Date()
   const today = fmt(now)
   const dates = [today, fmt(new Date(now.getTime() - 86_400_000))]
   const byPair: Record<string, any> = {}
+  const num = (s: any) => (Number.isFinite(parseInt(s, 10)) ? parseInt(s, 10) : null)
   const sc = (t: any) =>
     (t?.actions ?? [])
       .filter((a: any) => a?.actionType === 'goal')
@@ -33,9 +56,12 @@ async function fetchBbcGoals(): Promise<any[]> {
       }
       walk(wc)
       for (const e of events) {
-        byPair[`${e.home.fullName}|${e.away.fullName}`.toLowerCase()] = {
+        byPair[teamPairKey(e.home.fullName, e.away.fullName)] = {
           home: e.home.fullName,
           away: e.away.fullName,
+          homeScore: num(e.home.score),
+          awayScore: num(e.away.score),
+          status: bbcStatus(e.status),
           homeScorers: sc(e.home),
           awayScorers: sc(e.away),
         }
@@ -60,10 +86,10 @@ function devScoresApi(key: string): Plugin {
         }
         try {
           const headers = { 'X-Auth-Token': key }
-          const [mRes, sRes, goals] = await Promise.all([
+          const [mRes, sRes, bbc] = await Promise.all([
             fetch(`${COMP}/matches`, { headers }),
             fetch(`${COMP}/scorers?limit=20`, { headers }),
-            fetchBbcGoals(),
+            fetchBbc(),
           ])
           const mJson: any = mRes.ok ? await mRes.json() : { matches: [] }
           const sJson: any = sRes.ok ? await sRes.json() : { scorers: [] }
@@ -78,6 +104,25 @@ function devScoresApi(key: string): Plugin {
             awayScore: m.score?.fullTime?.away ?? null,
             venue: m.venue ?? null,
           }))
+          const bbcByPair: Record<string, any> = {}
+          for (const b of bbc) bbcByPair[teamPairKey(b.home, b.away)] = b
+          const goals: any[] = []
+          for (const m of matches) {
+            const b = bbcByPair[teamPairKey(m.home, m.away)]
+            if (!b) continue
+            const swapped = normTeam(b.home) !== normTeam(m.home)
+            if (b.homeScore != null && b.awayScore != null) {
+              m.homeScore = swapped ? b.awayScore : b.homeScore
+              m.awayScore = swapped ? b.homeScore : b.awayScore
+            }
+            if (b.status) m.status = b.status
+            goals.push({
+              home: m.home,
+              away: m.away,
+              homeScorers: swapped ? b.awayScorers : b.homeScorers,
+              awayScorers: swapped ? b.homeScorers : b.awayScorers,
+            })
+          }
           const scorers = (sJson.scorers ?? []).map((s: any) => ({
             name: s.player?.name ?? 'Unknown',
             team: s.team?.name ?? '',

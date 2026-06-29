@@ -66,6 +66,41 @@ export interface MatchGoals {
   awayScorers: Goal[]
 }
 
+export interface BbcMatch {
+  home: string
+  away: string
+  homeScore: number | null
+  awayScore: number | null
+  status: string | null
+  homeScorers: Goal[]
+  awayScorers: Goal[]
+}
+
+// Reconcile team names between BBC and football-data for matching.
+const TEAM_ALIAS: Record<string, string> = {
+  unitedstates: 'usa',
+  usa: 'usa',
+  drcongo: 'drcongo',
+  congodr: 'drcongo',
+  bosniaandherzegovina: 'bosnia',
+  bosniaherzegovina: 'bosnia',
+  bosnia: 'bosnia',
+  capeverde: 'capeverde',
+  caboverde: 'capeverde',
+  capeverdeislands: 'capeverde',
+  cotedivoire: 'ivorycoast',
+  ivorycoast: 'ivorycoast',
+  southkorea: 'southkorea',
+  korearepublic: 'southkorea',
+}
+function normTeam(n: string): string {
+  const k = (n || '').toLowerCase().normalize('NFD').replace(/[^a-z]/g, '')
+  return TEAM_ALIAS[k] ?? k
+}
+export function teamPairKey(a: string, b: string): string {
+  return [normTeam(a), normTeam(b)].sort().join('|')
+}
+
 function bbcScorers(team: any): Goal[] {
   const out: Goal[] = []
   for (const a of team?.actions ?? []) {
@@ -74,14 +109,26 @@ function bbcScorers(team: any): Goal[] {
   }
   return out
 }
+function bbcStatus(s: string): string | null {
+  const v = (s || '').toLowerCase()
+  if (v.includes('post')) return 'FINISHED'
+  if (v.includes('half')) return 'PAUSED'
+  if (v.includes('mid') || v.includes('live') || v.includes('play')) return 'IN_PLAY'
+  return null
+}
+function toNum(s: any): number | null {
+  const n = parseInt(s, 10)
+  return Number.isFinite(n) ? n : null
+}
 
-// Goalscorers per match from BBC Sport (the free football-data tier has none).
-async function fetchBbcGoals(): Promise<MatchGoals[]> {
+// Live score, status and goalscorers from BBC Sport — fresher than the free
+// football-data feed, and keeps score + scorers consistent.
+async function fetchBbc(): Promise<BbcMatch[]> {
   const fmt = (d: Date) => d.toISOString().slice(0, 10)
   const now = new Date()
   const today = fmt(now)
   const dates = [today, fmt(new Date(now.getTime() - 86_400_000))]
-  const byPair: Record<string, MatchGoals> = {}
+  const byPair: Record<string, BbcMatch> = {}
 
   for (const d of dates) {
     try {
@@ -104,17 +151,18 @@ async function fetchBbcGoals(): Promise<MatchGoals[]> {
       }
       walk(wc)
       for (const e of events) {
-        const home = e.home.fullName as string
-        const away = e.away.fullName as string
-        byPair[`${home}|${away}`.toLowerCase()] = {
-          home,
-          away,
+        byPair[teamPairKey(e.home.fullName, e.away.fullName)] = {
+          home: e.home.fullName,
+          away: e.away.fullName,
+          homeScore: toNum(e.home.score),
+          awayScore: toNum(e.away.score),
+          status: bbcStatus(e.status),
           homeScorers: bbcScorers(e.home),
           awayScorers: bbcScorers(e.away),
         }
       }
     } catch {
-      /* BBC unavailable — just skip goals */
+      /* BBC unavailable — fall back to football-data only */
     }
   }
   return Object.values(byPair)
@@ -123,9 +171,10 @@ async function fetchBbcGoals(): Promise<MatchGoals[]> {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const key = process.env.FOOTBALL_DATA_API_KEY
 
-  // Edge-cache for 30s. The free feed allows only 10 requests/min and each call
-  // here uses 2, so 30s (≈4/min) keeps us safely under the limit.
-  res.setHeader('Cache-Control', 's-maxage=30, stale-while-revalidate=60')
+  // Edge-cache 20s. Live score/status now come from BBC (fresh); football-data
+  // only supplies the schedule + golden boot. 2 calls/20s stays under the limit,
+  // and the client keeps the last good data if a poll is ever rate-limited.
+  res.setHeader('Cache-Control', 's-maxage=20, stale-while-revalidate=40')
 
   if (!key) {
     res.status(200).json({
@@ -141,10 +190,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const headers = { 'X-Auth-Token': key }
 
   try {
-    const [matchesResp, scorersResp, goals] = await Promise.all([
+    const [matchesResp, scorersResp, bbc] = await Promise.all([
       fetch(`${COMP}/matches`, { headers }),
       fetch(`${COMP}/scorers?limit=20`, { headers }),
-      fetchBbcGoals(),
+      fetchBbc(),
     ])
 
     const matches: LiveMatch[] = []
@@ -163,6 +212,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           venue: m.venue ?? null,
         })
       }
+    }
+
+    // Overlay BBC's fresher score/status onto the football-data fixtures, and
+    // build the per-match goalscorer list (oriented to our home/away order).
+    const bbcByPair: Record<string, BbcMatch> = {}
+    for (const b of bbc) bbcByPair[teamPairKey(b.home, b.away)] = b
+    const goals: MatchGoals[] = []
+    for (const m of matches) {
+      const b = bbcByPair[teamPairKey(m.home, m.away)]
+      if (!b) continue
+      const swapped = normTeam(b.home) !== normTeam(m.home)
+      if (b.homeScore != null && b.awayScore != null) {
+        m.homeScore = swapped ? b.awayScore : b.homeScore
+        m.awayScore = swapped ? b.homeScore : b.awayScore
+      }
+      if (b.status) m.status = b.status
+      goals.push({
+        home: m.home,
+        away: m.away,
+        homeScorers: swapped ? b.awayScorers : b.homeScorers,
+        awayScorers: swapped ? b.homeScorers : b.awayScorers,
+      })
     }
 
     const scorers: LiveScorer[] = []
