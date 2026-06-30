@@ -835,7 +835,7 @@ function GoldenBoot({
     name.toLowerCase().includes(pickLast) && name.toLowerCase().includes(pickFirst)
 
   const pickRank = scorers.findIndex((s) => isMyPick(s.name))
-  const top = scorers.slice(0, 10)
+  const top = scorers.slice(0, 15)
   const photos = usePlayerPhotos(top.map((s) => s.name))
 
   return (

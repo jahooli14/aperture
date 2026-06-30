@@ -444,8 +444,13 @@ body {
 .match {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: center;
+  /* Top-align the sides so both flags sit on the same line even when one side
+     carries the extra "my pick" struck note. The centre block stays centred. */
+  align-items: start;
   gap: 10px;
+}
+.match .center {
+  align-self: center;
 }
 .side {
   display: flex;
