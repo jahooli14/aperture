@@ -179,6 +179,17 @@ function koOutcome(m: LiveMatch): { winner: string; loser: string } | null {
   return null
 }
 
+// Every team that has been knocked out — i.e. lost a finished knockout game
+// (including on penalties). Normalised lowercase names, for quick lookup.
+export function eliminatedTeams(matches: LiveMatch[]): Set<string> {
+  const out = new Set<string>()
+  for (const m of matches) {
+    const o = koOutcome(m)
+    if (o) out.add(normaliseName(o.loser).toLowerCase())
+  }
+  return out
+}
+
 // Whether each predicted team actually reached this stage. A team reaches stage S
 // exactly when it wins its game in the round before S — so we read the previous
 // round's finished results: won → correct; lost → wrong (and the winner is who

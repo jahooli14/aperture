@@ -18,6 +18,7 @@ import {
   pairKey,
   checkParticipants,
   actualAdvancer,
+  eliminatedTeams,
   goalsFor,
   type Scored,
   type TeamCheck,
@@ -470,6 +471,8 @@ function PredictionCard({
   const meta = resultMeta(result)
   const isLive = phase === 'live'
   const [cmpOpen, setCmpOpen] = useState(false)
+  // Teams already knocked out — struck through wherever they appear in compare picks.
+  const eliminated = useMemo(() => eliminatedTeams(matches), [matches])
   const matchGoals = phase === 'upcoming' ? null : goalsFor(pred, goals)
   const hasGoals = !!matchGoals && (matchGoals.home.length > 0 || matchGoals.away.length > 0)
 
@@ -672,9 +675,11 @@ function PredictionCard({
             const renderTeam = (name: string) => {
               const champ = !!champion && sameName(name, champion)
               const pens = !!pensAdv && sameName(name, pensAdv)
+              // Strike any team that's already been knocked out of the tournament.
+              const out = eliminated.has(normaliseName(name).toLowerCase())
               return (
                 <span className={champ || pens ? 'cmp-win' : undefined}>
-                  {flag(name)} {name}
+                  {flag(name)} <span className={out ? 'cmp-out' : undefined}>{name}</span>
                   {champ && ' 🏆'}
                   {pens && <span className="cmp-pens"> pens</span>}
                 </span>
