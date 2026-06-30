@@ -667,9 +667,9 @@ body {
   color: rgba(255, 255, 255, 0.4);
   font-weight: 500;
 }
-/* The team going through / champion. */
+/* The team going through / champion — green to read clearly as "advances". */
 .cmp-win {
-  color: #e8b647;
+  color: #5cf0a6;
   font-weight: 800;
 }
 .cmp-pens {
