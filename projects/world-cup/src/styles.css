@@ -634,47 +634,53 @@ body {
 .cmp-row.me {
   border-top-color: transparent;
 }
+/* Name on the left; if the row is cramped the name truncates, never the score. */
 .cmp-name {
-  flex: 0 0 auto;
-  font-size: 13px;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.92);
-  /* No photo behind the panel now, so drop any inherited halo. */
   text-shadow: none;
 }
-.cmp-score {
-  flex: 1 1 auto;
-  min-width: 0;
+/* Teams + score + advance, all on one line, right-aligned. */
+.cmp-right {
+  flex: 0 0 auto;
+  white-space: nowrap;
   text-align: right;
-  font-size: 14px;
+  text-shadow: none;
+}
+.cmp-teams {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.55);
+}
+.cmp-num {
+  font-size: 13.5px;
   font-weight: 800;
   color: #fff;
   font-variant-numeric: tabular-nums;
-  text-shadow: none;
 }
-.cmp-score.cmp-exact,
-.cmp-score.cmp-ok {
+.cmp-num.cmp-exact,
+.cmp-num.cmp-ok {
   color: #5cf0a6;
 }
-.cmp-score.cmp-wrong {
+.cmp-num.cmp-wrong {
   color: #ff8d9a;
 }
+.cmp-adv {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.78);
+}
 .cmp-na {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   text-align: right;
   font-size: 13px;
   color: rgba(255, 255, 255, 0.5);
-}
-/* Teams sit on their own line, dimmer, above the bold score — kept to one line. */
-.cmp-teams {
-  display: block;
-  font-size: 11px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.6);
-  white-space: nowrap;
-}
-.cmp-num {
-  display: block;
 }
 
 /* Card footer */

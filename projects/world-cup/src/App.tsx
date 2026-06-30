@@ -669,16 +669,16 @@ function PredictionCard({
                   {ci.slug === currentSlug ? ' (you)' : ''}
                 </span>
                 {cp ? (
-                  <span className={`cmp-score ${cls}`}>
+                  <span className="cmp-right">
                     {showTeams && t1 && t2 && (
                       <span className="cmp-teams">
-                        {flag(t1)} {t1} v {t2} {flag(t2)}
+                        {t1} v {t2}{' '}
                       </span>
                     )}
-                    <span className="cmp-num">
+                    <span className={`cmp-num ${cls}`}>
                       {sc1}–{sc2}
-                      {cp.advances ? ` · ${cp.advances}` : ''}
                     </span>
+                    {cp.advances && <span className="cmp-adv"> · {cp.advances}</span>}
                   </span>
                 ) : (
                   <span className="cmp-na">—</span>
