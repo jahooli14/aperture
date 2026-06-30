@@ -724,7 +724,7 @@ function Side({ team, check }: { team: string; check?: TeamCheck }) {
     return (
       <div className="side">
         <span className="crest">{flag(check.replacement)}</span>
-        <span className="tname">{check.replacement}</span>
+        <span className="tname team-correct">{check.replacement}</span>
         <span className="mini-out">
           <span className="mo-label">my pick</span>
           <span className="mo-name">{team}</span>
