@@ -826,18 +826,19 @@ body {
   color: var(--on-dark);
   margin-bottom: 12px;
   box-shadow: 0 8px 26px rgba(0, 0, 0, 0.35);
-  border-left: 4px solid var(--gold);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(14px);
 }
 .pick-tag {
   flex: none;
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 800;
-  letter-spacing: 0.08em;
-  color: #3a2c05;
-  background: linear-gradient(135deg, var(--gold-soft), var(--gold));
-  padding: 4px 8px;
-  border-radius: 6px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  padding-right: 11px;
+  margin-right: 1px;
+  border-right: 1px solid rgba(255, 255, 255, 0.14);
 }
 .pick-body {
   min-width: 0;
