@@ -601,37 +601,58 @@ body {
   justify-content: center;
   gap: 6px;
 }
+/* One solid dark panel so rows stay legible over the busy landmark photo. */
 .compare {
   margin-top: 8px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  background: rgba(8, 12, 10, 0.9);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 4px 4px;
+  overflow: hidden;
 }
 .cmp-row {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  padding: 7px 10px;
+  gap: 10px;
+  padding: 9px 10px;
   border-radius: 8px;
-  background: rgba(0, 0, 0, 0.25);
+}
+.cmp-row + .cmp-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 0;
 }
 .cmp-row.me {
-  background: rgba(232, 182, 71, 0.18);
+  background: rgba(232, 182, 71, 0.16);
+  border-radius: 8px;
+}
+.cmp-row.me + .cmp-row,
+.cmp-row.me {
+  border-top-color: transparent;
 }
 .cmp-name {
+  flex: 0 0 auto;
   font-size: 13px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.92);
+  /* No photo behind the panel now, so drop any inherited halo. */
+  text-shadow: none;
 }
 .cmp-score {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: right;
   font-size: 14px;
   font-weight: 800;
   color: #fff;
   font-variant-numeric: tabular-nums;
+  text-shadow: none;
 }
-.cmp-score.cmp-exact {
-  color: #5cf0a6;
-}
+.cmp-score.cmp-exact,
 .cmp-score.cmp-ok {
   color: #5cf0a6;
 }
@@ -639,13 +660,21 @@ body {
   color: #ff8d9a;
 }
 .cmp-na {
+  flex: 1 1 auto;
+  text-align: right;
   font-size: 13px;
   color: rgba(255, 255, 255, 0.5);
 }
+/* Teams sit on their own line, dimmer, above the bold score — kept to one line. */
 .cmp-teams {
-  font-size: 12px;
+  display: block;
+  font-size: 11px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+}
+.cmp-num {
+  display: block;
 }
 
 /* Card footer */

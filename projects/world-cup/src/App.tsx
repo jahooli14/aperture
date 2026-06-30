@@ -644,7 +644,24 @@ function PredictionCard({
                 : 'pending'
             const cls =
               r === 'exact' ? 'cmp-exact' : r === 'outcome' ? 'cmp-ok' : r === 'wrong' ? 'cmp-wrong' : ''
-            const differs = cp && !sameFixture
+            // From R16 on, always show each person's teams — even when they match
+            // the card — so you can read the whole bracket at a glance.
+            const showTeams = !!cp && pred.stage !== 'Round of 32'
+            // Order every row's teams to match the card (same team always first),
+            // flipping the score to match. Where a person picked a different team
+            // for a slot, the team aligned to the card's side keeps its position.
+            const sameName = (a: string, b: string) =>
+              normaliseName(a).toLowerCase() === normaliseName(b).toLowerCase()
+            let t1 = cp?.home
+            let t2 = cp?.away
+            let sc1 = cp?.homeScore
+            let sc2 = cp?.awayScore
+            if (cp && (sameName(cp.home, pred.away) || sameName(cp.away, pred.home))) {
+              t1 = cp.away
+              t2 = cp.home
+              sc1 = cp.awayScore
+              sc2 = cp.homeScore
+            }
             return (
               <div key={ci.slug} className={`cmp-row ${ci.slug === currentSlug ? 'me' : ''}`}>
                 <span className="cmp-name">
@@ -653,13 +670,15 @@ function PredictionCard({
                 </span>
                 {cp ? (
                   <span className={`cmp-score ${cls}`}>
-                    {differs && (
+                    {showTeams && t1 && t2 && (
                       <span className="cmp-teams">
-                        {flag(cp.home)} {cp.home} v {cp.away} {flag(cp.away)}{' '}
+                        {flag(t1)} {t1} v {t2} {flag(t2)}
                       </span>
                     )}
-                    {cp.homeScore}–{cp.awayScore}
-                    {cp.advances ? ` · ${cp.advances}` : ''}
+                    <span className="cmp-num">
+                      {sc1}–{sc2}
+                      {cp.advances ? ` · ${cp.advances}` : ''}
+                    </span>
                   </span>
                 ) : (
                   <span className="cmp-na">—</span>
