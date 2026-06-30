@@ -283,8 +283,8 @@ export function App() {
       <GoldenBoot scorers={scorers} pick={person.goldenBoot} />
 
       <footer className="footer">
-        My World Cup 2026 predictions · live data via football-data.org · photo by Alex Simpson /
-        Unsplash
+        {person.title} World Cup 2026 predictions · live data via football-data.org · photo by Alex
+        Simpson / Unsplash
       </footer>
     </div>
   )
