@@ -137,7 +137,7 @@ async function fetchBbc(): Promise<{ matches: LiveMatch[]; goals: MatchGoals[] }
             id: hashId(e.id ?? key),
             utcDate: e.startDateTime ?? e?.date?.iso ?? '',
             status: bbcStatus(e.status),
-            stage: '',
+            stage: e?.stage?.name ?? '',
             home,
             away,
             homeScore: toNum(e.home.score),

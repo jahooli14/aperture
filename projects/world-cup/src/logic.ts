@@ -1,4 +1,4 @@
-import { normaliseName, type Prediction, type Stage } from './predictions'
+import { normaliseName, stageOrder, type Prediction, type Stage } from './predictions'
 import type { LiveMatch, MatchGoals, Goal } from './types'
 
 // Goalscorers for a prediction's fixture, oriented to my home/away order.
@@ -123,19 +123,27 @@ export function actualAdvancer(pred: Prediction, live?: LiveMatch): string | und
 // --- Real bracket vs mine ------------------------------------------------
 
 const FEED_STAGE: Record<string, Stage> = {
-  ROUND_OF_32: 'Round of 32',
-  LAST_32: 'Round of 32',
-  ROUND_OF_16: 'Round of 16',
-  LAST_16: 'Round of 16',
-  QUARTER_FINALS: 'Quarter-finals',
-  QUARTER_FINAL: 'Quarter-finals',
-  SEMI_FINALS: 'Semi-finals',
-  SEMI_FINAL: 'Semi-finals',
-  FINAL: 'Final',
+  // football-data / demo style
+  round_of_32: 'Round of 32',
+  last_32: 'Round of 32',
+  round_of_16: 'Round of 16',
+  last_16: 'Round of 16',
+  quarter_finals: 'Quarter-finals',
+  quarter_final: 'Quarter-finals',
+  semi_finals: 'Semi-finals',
+  semi_final: 'Semi-finals',
+  final: 'Final',
+  // BBC style ("Last 32", "Quarter-finals", …)
+  'last 32': 'Round of 32',
+  'last 16': 'Round of 16',
+  'quarter-finals': 'Quarter-finals',
+  'quarter-final': 'Quarter-finals',
+  'semi-finals': 'Semi-finals',
+  'semi-final': 'Semi-finals',
 }
 
 export function feedStageToMine(stage: string): Stage | undefined {
-  return FEED_STAGE[stage]
+  return FEED_STAGE[(stage || '').trim().toLowerCase()]
 }
 
 // --- Did my predicted teams actually reach this stage? --------------------
@@ -148,47 +156,59 @@ export interface TeamCheck {
   replacement?: string
 }
 
-const known = (n: string | null | undefined) => !!n && n.toLowerCase() !== 'tbd'
+function prevStage(s: Stage): Stage | undefined {
+  const i = stageOrder.indexOf(s)
+  return i > 0 ? stageOrder[i - 1] : undefined
+}
 
-// For a predicted later-round match, check whether each predicted team is
-// actually in the real bracket at that stage. If not, find who replaced it
-// (the real opponent of the partner team I got right).
+// Winner / loser of a finished knockout game. Decisive scoreline → higher score;
+// a draw → the side the feed marks as advancing (penalty shootout winner).
+function koOutcome(m: LiveMatch): { winner: string; loser: string } | null {
+  if (phaseOf(m.status) !== 'final' || m.homeScore == null || m.awayScore == null) return null
+  if (m.homeScore !== m.awayScore) {
+    return m.homeScore > m.awayScore
+      ? { winner: m.home, loser: m.away }
+      : { winner: m.away, loser: m.home }
+  }
+  if (m.advancer) {
+    const n = (s: string) => normaliseName(s).toLowerCase()
+    const winner = m.advancer
+    const loser = n(winner) === n(m.home) ? m.away : m.home
+    return { winner, loser }
+  }
+  return null
+}
+
+// Whether each predicted team actually reached this stage. A team reaches stage S
+// exactly when it wins its game in the round before S — so we read the previous
+// round's finished results: won → correct; lost → wrong (and the winner is who
+// took the slot); not played yet → pending.
 export function checkParticipants(
   pred: Prediction,
   matches: LiveMatch[]
 ): { home: TeamCheck; away: TeamCheck } {
-  const real = matches.filter(
-    (m) => feedStageToMine(m.stage) === pred.stage && known(m.home) && known(m.away)
-  )
-  if (real.length === 0) {
+  const prev = prevStage(pred.stage)
+  if (!prev) return { home: { status: 'pending' }, away: { status: 'pending' } }
+
+  const n = (s: string) => normaliseName(s).toLowerCase()
+  const outcomes = matches
+    .filter((m) => feedStageToMine(m.stage) === prev)
+    .map(koOutcome)
+    .filter((o): o is { winner: string; loser: string } => o !== null)
+
+  if (outcomes.length === 0) {
     return { home: { status: 'pending' }, away: { status: 'pending' } }
   }
 
-  const norm = (s: string) => normaliseName(s).toLowerCase()
-  const inStage = new Set<string>()
-  for (const m of real) {
-    inStage.add(norm(m.home))
-    inStage.add(norm(m.away))
-  }
-
-  // The real opponent of a team that did qualify (to name a replacement).
-  const opponentOf = (team: string): string | undefined => {
-    const t = norm(team)
-    for (const m of real) {
-      if (norm(m.home) === t) return m.away
-      if (norm(m.away) === t) return m.home
+  const check = (team: string): TeamCheck => {
+    for (const o of outcomes) {
+      if (n(o.winner) === n(team)) return { status: 'correct' }
+      if (n(o.loser) === n(team)) return { status: 'wrong', replacement: o.winner }
     }
-    return undefined
+    return { status: 'pending' }
   }
 
-  const check = (team: string, partner: string): TeamCheck => {
-    if (inStage.has(norm(team))) return { status: 'correct' }
-    // Wrong: if the partner qualified, its real opponent is who took this slot.
-    const replacement = inStage.has(norm(partner)) ? opponentOf(partner) : undefined
-    return { status: 'wrong', replacement }
-  }
-
-  return { home: check(pred.home, pred.away), away: check(pred.away, pred.home) }
+  return { home: check(pred.home), away: check(pred.away) }
 }
 
 // Live fixtures in a given stage that don't correspond to any of my predicted
