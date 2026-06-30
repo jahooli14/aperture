@@ -716,6 +716,18 @@ body {
   text-decoration-color: var(--red);
   text-decoration-thickness: 2px;
 }
+/* The team that actually went through, shown above a struck wrong pick. */
+.adv-real {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--green);
+  white-space: nowrap;
+}
+.card.lighttext .adv-real,
+.card.wx .adv-real {
+  color: #5cf0a6;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.7);
+}
 .card.lighttext .adv-label,
 .card.wx .adv-label {
   color: rgba(255, 255, 255, 0.55);

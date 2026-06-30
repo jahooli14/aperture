@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ScoresResponse } from './types'
 
-const POLL_LIVE_MS = 30_000 // a game is in play — refresh (kept >= edge cache)
+const POLL_LIVE_MS = 12_000 // a game is in play — refresh often (>= edge cache)
 const POLL_IDLE_MS = 60_000 // nothing live — ease off
 
 interface State {

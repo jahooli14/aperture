@@ -31,29 +31,26 @@ function hashId(s: string): number {
   return Math.abs(h)
 }
 
-// Build the full match list straight from BBC (yesterday → tomorrow).
+const KNOCKOUT_START = '2026-06-27'
+
+// Build the full match list straight from BBC (one request, knockout start → +2d).
 async function fetchBbc(): Promise<{ matches: any[]; goals: any[] }> {
   const fmt = (d: Date) => d.toISOString().slice(0, 10)
   const now = new Date()
   const today = fmt(now)
-  const dates = [
-    fmt(new Date(now.getTime() - 86_400_000)),
-    today,
-    fmt(new Date(now.getTime() + 86_400_000)),
-  ]
+  const end = fmt(new Date(now.getTime() + 2 * 86_400_000))
   const byPair: Record<string, { match: any; goals: any }> = {}
   const num = (s: any) => (Number.isFinite(parseInt(s, 10)) ? parseInt(s, 10) : null)
   const sc = (t: any) =>
     (t?.actions ?? [])
       .filter((a: any) => a?.actionType === 'goal')
       .map((a: any) => ({ name: a.playerName ?? '', minute: a?.actions?.[0]?.timeLabel?.value ?? '' }))
-  for (const d of dates) {
-    try {
-      const url =
-        'https://web-cdn.api.bbci.co.uk/wc-poll-data/container/sport-data-scores-fixtures' +
-        `?selectedStartDate=${d}&selectedEndDate=${d}&todayDate=${today}&urn=urn:bbc:sportsdata:football`
-      const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } })
-      if (!r.ok) continue
+  try {
+    const url =
+      'https://web-cdn.api.bbci.co.uk/wc-poll-data/container/sport-data-scores-fixtures' +
+      `?selectedStartDate=${KNOCKOUT_START}&selectedEndDate=${end}&todayDate=${today}&urn=urn:bbc:sportsdata:football`
+    const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } })
+    if (r.ok) {
       const data: any = await r.json()
       const wc = (data.eventGroups ?? []).filter((g: any) => (g.displayLabel ?? '').includes('World Cup'))
       const events: any[] = []
@@ -69,6 +66,7 @@ async function fetchBbc(): Promise<{ matches: any[]; goals: any[] }> {
         const home = e.home.fullName
         const away = e.away.fullName
         const key = teamPairKey(home, away)
+        const advancer = e.winner === 'home' ? home : e.winner === 'away' ? away : null
         byPair[key] = {
           match: {
             id: hashId(e.id ?? key),
@@ -81,13 +79,14 @@ async function fetchBbc(): Promise<{ matches: any[]; goals: any[] }> {
             awayScore: num(e.away.score),
             venue: null,
             minute: e?.periodLabel?.value ?? e?.statusComment?.value ?? '',
+            advancer,
           },
           goals: { home, away, homeScorers: sc(e.home), awayScorers: sc(e.away) },
         }
       }
-    } catch {
-      /* skip */
     }
+  } catch {
+    /* skip */
   }
   const matches: any[] = []
   const goals: any[] = []

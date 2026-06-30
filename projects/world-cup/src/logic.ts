@@ -102,6 +102,24 @@ export function scorePrediction(pred: Prediction, live?: LiveMatch): Scored {
   return { pred, live, phase: 'final', result, points }
 }
 
+// The team that actually progressed from a finished knockout fixture, named to
+// match my prediction's spelling. Decisive games: the higher score. Draws settled
+// on penalties: the feed's `advancer`. Returns undefined until we can tell.
+export function actualAdvancer(pred: Prediction, live?: LiveMatch): string | undefined {
+  if (!live || phaseOf(live.status) !== 'final') return undefined
+  if (live.homeScore == null || live.awayScore == null) return undefined
+  const toMine = (feedName: string): string => {
+    const n = normaliseName(feedName).toLowerCase()
+    if (normaliseName(pred.home).toLowerCase() === n) return pred.home
+    if (normaliseName(pred.away).toLowerCase() === n) return pred.away
+    return feedName
+  }
+  if (live.homeScore !== live.awayScore) {
+    return toMine(live.homeScore > live.awayScore ? live.home : live.away)
+  }
+  return live.advancer ? toMine(live.advancer) : undefined
+}
+
 // --- Real bracket vs mine ------------------------------------------------
 
 const FEED_STAGE: Record<string, Stage> = {

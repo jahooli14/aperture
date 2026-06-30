@@ -19,6 +19,7 @@ export interface LiveMatch {
   awayScore: number | null
   venue: string | null
   minute?: string | null
+  advancer?: string | null
 }
 
 export interface LiveScorer {
@@ -91,26 +92,26 @@ function toNum(s: any): number | null {
   return Number.isFinite(n) ? n : null
 }
 
-// Build the full match list straight from BBC. Queries yesterday → tomorrow so
-// just-finished, live, and next-up games all appear.
+// First day of the knockout stage. We query from here so finished games stay
+// visible (greyed, with their score) for the whole tournament, not just for a
+// day or two after kick-off.
+const KNOCKOUT_START = '2026-06-27'
+
+// Build the full match list straight from BBC. One request for the whole
+// knockout window (start → tomorrow) returns finished, live and next-up games.
 async function fetchBbc(): Promise<{ matches: LiveMatch[]; goals: MatchGoals[] }> {
   const fmt = (d: Date) => d.toISOString().slice(0, 10)
   const now = new Date()
   const today = fmt(now)
-  const dates = [
-    fmt(new Date(now.getTime() - 86_400_000)),
-    today,
-    fmt(new Date(now.getTime() + 86_400_000)),
-  ]
+  const end = fmt(new Date(now.getTime() + 2 * 86_400_000))
   const byPair: Record<string, { match: LiveMatch; goals: MatchGoals }> = {}
 
-  for (const d of dates) {
-    try {
-      const url =
-        'https://web-cdn.api.bbci.co.uk/wc-poll-data/container/sport-data-scores-fixtures' +
-        `?selectedStartDate=${d}&selectedEndDate=${d}&todayDate=${today}&urn=urn:bbc:sportsdata:football`
-      const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } })
-      if (!r.ok) continue
+  try {
+    const url =
+      'https://web-cdn.api.bbci.co.uk/wc-poll-data/container/sport-data-scores-fixtures' +
+      `?selectedStartDate=${KNOCKOUT_START}&selectedEndDate=${end}&todayDate=${today}&urn=urn:bbc:sportsdata:football`
+    const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } })
+    if (r.ok) {
       const data: any = await r.json()
       const wc = (data.eventGroups ?? []).filter((g: any) =>
         (g.displayLabel ?? '').includes('World Cup')
@@ -128,6 +129,9 @@ async function fetchBbc(): Promise<{ matches: LiveMatch[]; goals: MatchGoals[] }
         const home = e.home.fullName
         const away = e.away.fullName
         const key = teamPairKey(home, away)
+        // BBC marks who progressed with winner: 'home' | 'away' (set even when
+        // the 90-min score was a draw and it went to penalties).
+        const advancer = e.winner === 'home' ? home : e.winner === 'away' ? away : null
         byPair[key] = {
           match: {
             id: hashId(e.id ?? key),
@@ -140,6 +144,7 @@ async function fetchBbc(): Promise<{ matches: LiveMatch[]; goals: MatchGoals[] }
             awayScore: toNum(e.away.score),
             venue: null,
             minute: e?.periodLabel?.value ?? e?.statusComment?.value ?? '',
+            advancer,
           },
           goals: {
             home,
@@ -149,9 +154,9 @@ async function fetchBbc(): Promise<{ matches: LiveMatch[]; goals: MatchGoals[] }
           },
         }
       }
-    } catch {
-      /* skip this date */
     }
+  } catch {
+    /* BBC unavailable */
   }
   const matches: LiveMatch[] = []
   const goals: MatchGoals[] = []
@@ -186,8 +191,9 @@ async function fetchScorers(key: string | undefined): Promise<LiveScorer[]> {
 export default async function handler(_req: VercelRequest, res: VercelResponse) {
   const key = process.env.FOOTBALL_DATA_API_KEY
 
-  // Edge-cache 20s; client keeps last-good data between polls.
-  res.setHeader('Cache-Control', 's-maxage=20, stale-while-revalidate=40')
+  // Edge-cache 8s; BBC is a free CDN with no rate limit, so we can refresh often
+  // to keep the live minute current. Client keeps last-good data between polls.
+  res.setHeader('Cache-Control', 's-maxage=8, stale-while-revalidate=20')
 
   try {
     const [{ matches, goals }, scorers] = await Promise.all([fetchBbc(), fetchScorers(key)])

@@ -9,6 +9,8 @@ export interface LiveMatch {
   awayScore: number | null
   venue: string | null
   minute?: string | null
+  /** For a drawn knockout decided on penalties, the team that actually went through. */
+  advancer?: string | null
 }
 
 export interface LiveScorer {

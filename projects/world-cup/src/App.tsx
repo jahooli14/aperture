@@ -17,6 +17,7 @@ import {
   phaseOf,
   pairKey,
   checkParticipants,
+  actualAdvancer,
   goalsFor,
   type Scored,
   type TeamCheck,
@@ -476,14 +477,23 @@ function PredictionCard({
   const checks =
     pred.stage !== 'Round of 32' ? checkParticipants(pred, matches) : null
 
-  // My "advances on a draw" pick — strike it if that team didn't actually get here.
+  // My "advances on a draw" pick. Two ways it can be wrong:
+  //  1. The team didn't even reach this stage (later rounds — checkParticipants).
+  //  2. The fixture happened and the *other* team went through, e.g. a draw lost
+  //     on penalties (Netherlands 1-1 Morocco, Morocco win on pens).
   const advCheck =
     pred.advances && checks
       ? normaliseName(pred.advances).toLowerCase() === normaliseName(pred.home).toLowerCase()
         ? checks.home
         : checks.away
       : undefined
-  const advWrong = advCheck?.status === 'wrong'
+  // The team that actually progressed from this fixture (when it's finished).
+  const realAdvancer = pred.advances ? actualAdvancer(pred, live) : undefined
+  const advWrong =
+    advCheck?.status === 'wrong' ||
+    (!!pred.advances &&
+      !!realAdvancer &&
+      normaliseName(realAdvancer).toLowerCase() !== normaliseName(pred.advances).toLowerCase())
 
   let liveHome: number | null = null
   let liveAway: number | null = null
@@ -586,7 +596,15 @@ function PredictionCard({
           </span>
         </span>
         {pred.advances && (
-          <span className="advances">
+          <span className={`advances ${advWrong ? 'wrong' : ''}`}>
+            {/* When my pick was wrong and we know who really went through, show
+                them on top so the card doesn't imply my team progressed. */}
+            {advWrong && realAdvancer && (
+              <span className="adv-real">
+                {flag(realAdvancer)}{' '}
+                {pred.stage === 'Final' ? `${realAdvancer} won it 🏆` : `${realAdvancer} went through`}
+              </span>
+            )}
             <span className="adv-label">my pick</span>
             <span className="adv-team">
               {flag(pred.advances)}{' '}
