@@ -634,10 +634,10 @@ body {
 .cmp-row.me {
   border-top-color: transparent;
 }
-/* Name on the left; if the row is cramped the name truncates, never the score. */
+/* Three columns: name (fixed) | matchup (left-aligned, flexes) | score (right).
+   Fixed name width makes every matchup start at the same x, so they line up. */
 .cmp-name {
-  flex: 0 1 auto;
-  min-width: 0;
+  flex: 0 0 6.8em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -646,23 +646,42 @@ body {
   color: rgba(255, 255, 255, 0.92);
   text-shadow: none;
 }
-/* Teams + score + advance, all on one line, right-aligned. */
-.cmp-right {
-  flex: 0 0 auto;
+.cmp-mid {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
-  text-align: right;
-  text-shadow: none;
-}
-.cmp-teams {
+  text-align: left;
   font-size: 11.5px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(255, 255, 255, 0.6);
+  text-shadow: none;
+}
+.cmp-v {
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 500;
+}
+/* The team going through / champion. */
+.cmp-win {
+  color: #e8b647;
+  font-weight: 800;
+}
+.cmp-pens {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.5);
 }
 .cmp-num {
+  flex: 0 0 auto;
+  text-align: right;
   font-size: 13.5px;
   font-weight: 800;
   color: #fff;
   font-variant-numeric: tabular-nums;
+  text-shadow: none;
 }
 .cmp-num.cmp-exact,
 .cmp-num.cmp-ok {
@@ -671,13 +690,8 @@ body {
 .cmp-num.cmp-wrong {
   color: #ff8d9a;
 }
-.cmp-adv {
-  font-size: 11.5px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.78);
-}
 .cmp-na {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   text-align: right;
   font-size: 13px;
   color: rgba(255, 255, 255, 0.5);

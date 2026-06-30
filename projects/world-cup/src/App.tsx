@@ -662,6 +662,24 @@ function PredictionCard({
               sc1 = cp.awayScore
               sc2 = cp.homeScore
             }
+            // Mark who this person has progressing. Final: the champion (gets a
+            // 🏆). Earlier rounds: only a drawn pick needs marking (the team they
+            // chose to go through on penalties) — decisive winners are obvious.
+            const isFinal = pred.stage === 'Final'
+            const decisive = sc1 != null && sc2 != null && sc1 !== sc2
+            const champion = isFinal ? (decisive ? (sc1! > sc2! ? t1 : t2) : cp?.advances) : undefined
+            const pensAdv = !isFinal && !decisive ? cp?.advances : undefined
+            const renderTeam = (name: string) => {
+              const champ = !!champion && sameName(name, champion)
+              const pens = !!pensAdv && sameName(name, pensAdv)
+              return (
+                <span className={champ || pens ? 'cmp-win' : undefined}>
+                  {flag(name)} {name}
+                  {champ && ' 🏆'}
+                  {pens && <span className="cmp-pens"> pens</span>}
+                </span>
+              )
+            }
             return (
               <div key={ci.slug} className={`cmp-row ${ci.slug === currentSlug ? 'me' : ''}`}>
                 <span className="cmp-name">
@@ -669,17 +687,18 @@ function PredictionCard({
                   {ci.slug === currentSlug ? ' (you)' : ''}
                 </span>
                 {cp ? (
-                  <span className="cmp-right">
-                    {showTeams && t1 && t2 && (
-                      <span className="cmp-teams">
-                        {t1} v {t2}{' '}
-                      </span>
-                    )}
+                  <>
+                    <span className="cmp-mid">
+                      {showTeams && t1 && t2 && (
+                        <>
+                          {renderTeam(t1)} <span className="cmp-v">v</span> {renderTeam(t2)}
+                        </>
+                      )}
+                    </span>
                     <span className={`cmp-num ${cls}`}>
                       {sc1}–{sc2}
                     </span>
-                    {cp.advances && <span className="cmp-adv"> · {cp.advances}</span>}
-                  </span>
+                  </>
                 ) : (
                   <span className="cmp-na">—</span>
                 )}
