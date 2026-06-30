@@ -642,6 +642,11 @@ body {
   font-size: 13px;
   color: rgba(255, 255, 255, 0.5);
 }
+.cmp-teams {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.72);
+}
 
 /* Card footer */
 .card-foot {

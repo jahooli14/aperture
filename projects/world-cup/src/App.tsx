@@ -27,7 +27,13 @@ import type { LiveScorer, LiveMatch, MatchGoals } from './types'
 
 const flag = (team: string) => flags[normaliseName(team)] ?? '🏳️'
 
-type CompareEntry = { slug: string; title: string; byPair: Record<string, Prediction> }
+type CompareEntry = {
+  slug: string
+  title: string
+  byPair: Record<string, Prediction>
+  // From R16 on, brackets diverge — match by bracket slot ("<stage>#<i>") instead.
+  bySlot: Record<string, Prediction>
+}
 
 // Sample "real" bracket for ?demoBracket=1 — lets you preview the
 // prediction-vs-reality check before the actual teams are decided.
@@ -119,16 +125,38 @@ export function App() {
   const person = resolvePerson(window.location.pathname)
   const predictions = person.predictions
 
-  // Index every person's predictions by fixture, for the tap-to-compare panel.
+  // Index every person's predictions for the tap-to-compare panel: by fixture
+  // (R32, where everyone shares the same matchups) and by bracket slot (R16 on,
+  // where each person's predicted teams differ but the bracket position lines up).
   const compareIndex = useMemo(
     () =>
       Object.values(people).map((p) => {
         const byPair: Record<string, Prediction> = {}
-        for (const pr of p.predictions) byPair[pairKey(pr.home, pr.away)] = pr
-        return { slug: p.slug, title: p.title, byPair }
+        const bySlot: Record<string, Prediction> = {}
+        const seen: Record<string, number> = {}
+        for (const pr of p.predictions) {
+          byPair[pairKey(pr.home, pr.away)] = pr
+          const i = seen[pr.stage] ?? 0
+          bySlot[`${pr.stage}#${i}`] = pr
+          seen[pr.stage] = i + 1
+        }
+        return { slug: p.slug, title: p.title, byPair, bySlot }
       }),
     []
   )
+
+  // Map the current person's fixtures to their bracket slot, so a tapped card can
+  // look up the same slot in everyone else's bracket.
+  const slotByPair = useMemo(() => {
+    const m: Record<string, string> = {}
+    const seen: Record<string, number> = {}
+    for (const pr of predictions) {
+      const i = seen[pr.stage] ?? 0
+      m[pairKey(pr.home, pr.away)] = `${pr.stage}#${i}`
+      seen[pr.stage] = i + 1
+    }
+    return m
+  }, [predictions])
   useEffect(() => {
     document.title = `${person.title} World Cup 2026`
   }, [person.title])
@@ -245,6 +273,7 @@ export function App() {
             matches={matches}
             goals={data?.goals}
             compareIndex={compareIndex}
+            slotByPair={slotByPair}
             currentSlug={person.slug}
           />
         ))}
@@ -348,6 +377,7 @@ function StageSection({
   matches,
   goals,
   compareIndex,
+  slotByPair,
   currentSlug,
 }: {
   stage: Stage
@@ -356,6 +386,7 @@ function StageSection({
   matches: LiveMatch[]
   goals?: MatchGoals[]
   compareIndex: CompareEntry[]
+  slotByPair: Record<string, string>
   currentSlug: string
 }) {
   // One chronological list (earliest kickoff first). Finished games stay inline,
@@ -392,6 +423,7 @@ function StageSection({
               matches={matches}
               goals={goals}
               compareIndex={compareIndex}
+              slotByPair={slotByPair}
               currentSlug={currentSlug}
             />
           ))}
@@ -422,6 +454,7 @@ function PredictionCard({
   matches,
   goals,
   compareIndex,
+  slotByPair,
   currentSlug,
 }: {
   scored: Scored
@@ -429,6 +462,7 @@ function PredictionCard({
   matches: LiveMatch[]
   goals?: MatchGoals[]
   compareIndex: CompareEntry[]
+  slotByPair: Record<string, string>
   currentSlug: string
 }) {
   const { pred, live, phase, result } = scored
@@ -577,10 +611,22 @@ function PredictionCard({
       {cmpOpen && (
         <div className="compare">
           {compareIndex.map((ci) => {
-            const cp = ci.byPair[pairKey(pred.home, pred.away)]
-            const r = cp && phase === 'final' && live ? scorePrediction(cp, live).result : 'pending'
+            // R32: everyone shares the fixture, match by pair. R16 on: brackets
+            // diverge, so match by bracket slot and show each person's own teams.
+            const slot = slotByPair[pairKey(pred.home, pred.away)]
+            const cp =
+              ci.byPair[pairKey(pred.home, pred.away)] ?? (slot ? ci.bySlot[slot] : undefined)
+            // Only score against the live result when this person picked the same
+            // two teams that are actually playing this fixture.
+            const sameFixture =
+              cp && pairKey(cp.home, cp.away) === pairKey(pred.home, pred.away)
+            const r =
+              cp && sameFixture && phase === 'final' && live
+                ? scorePrediction(cp, live).result
+                : 'pending'
             const cls =
               r === 'exact' ? 'cmp-exact' : r === 'outcome' ? 'cmp-ok' : r === 'wrong' ? 'cmp-wrong' : ''
+            const differs = cp && !sameFixture
             return (
               <div key={ci.slug} className={`cmp-row ${ci.slug === currentSlug ? 'me' : ''}`}>
                 <span className="cmp-name">
@@ -589,6 +635,11 @@ function PredictionCard({
                 </span>
                 {cp ? (
                   <span className={`cmp-score ${cls}`}>
+                    {differs && (
+                      <span className="cmp-teams">
+                        {flag(cp.home)} {cp.home} v {cp.away} {flag(cp.away)}{' '}
+                      </span>
+                    )}
                     {cp.homeScore}–{cp.awayScore}
                     {cp.advances ? ` · ${cp.advances}` : ''}
                   </span>
