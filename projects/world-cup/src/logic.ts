@@ -187,10 +187,17 @@ export const SCORE_BASELINE: Record<string, number> = {
 }
 const SCORE_CUTOFF_MS = new Date('2026-06-30T12:00:00Z').getTime()
 
+// Manual corrections while the exact scoring rule is being confirmed. Gavin's
+// real total is 2 higher than the app computes (likely a missing exact-score
+// bonus on his Mexico 2-0). Remove once the rule is finalised in matchPoints.
+export const SCORE_ADJUST: Record<string, number> = {
+  gavin: 2,
+}
+
 // A person's live total: their baseline plus points from every finished knockout
 // game that kicked off at/after the cutoff (games before it are already counted).
 export function personTotal(person: Person, matches: LiveMatch[]): number {
-  let total = SCORE_BASELINE[person.slug] ?? 0
+  let total = (SCORE_BASELINE[person.slug] ?? 0) + (SCORE_ADJUST[person.slug] ?? 0)
   for (const pred of person.predictions) {
     const live = findLiveMatch(pred, matches)
     if (!live || phaseOf(live.status) !== 'final') continue
