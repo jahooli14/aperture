@@ -44,7 +44,13 @@ async function fetchBbc(): Promise<{ matches: any[]; goals: any[] }> {
   const sc = (t: any) =>
     (t?.actions ?? [])
       .filter((a: any) => a?.actionType === 'goal')
-      .map((a: any) => ({ name: a.playerName ?? '', minute: a?.actions?.[0]?.timeLabel?.value ?? '' }))
+      .flatMap((a: any) => {
+        const events: any[] = Array.isArray(a.actions) && a.actions.length ? a.actions : [null]
+        return events.map((ev: any) => ({
+          name: (a.playerName ?? '') + ((ev?.type ?? '').toLowerCase().includes('own') ? ' (OG)' : ''),
+          minute: ev?.timeLabel?.value ?? '',
+        }))
+      })
   try {
     const url =
       'https://web-cdn.api.bbci.co.uk/wc-poll-data/container/sport-data-scores-fixtures' +

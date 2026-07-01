@@ -1,4 +1,11 @@
-import { normaliseName, stageOrder, type Prediction, type Stage } from './predictions'
+import {
+  normaliseName,
+  stageOrder,
+  kickoffFor,
+  type Prediction,
+  type Stage,
+  type Person,
+} from './predictions'
 import type { LiveMatch, MatchGoals, Goal } from './types'
 
 // Goalscorers for a prediction's fixture, oriented to my home/away order.
@@ -118,6 +125,71 @@ export function actualAdvancer(pred: Prediction, live?: LiveMatch): string | und
     return toMine(live.homeScore > live.awayScore ? live.home : live.away)
   }
   return live.advancer ? toMine(live.advancer) : undefined
+}
+
+// --- Pool scoring / leaderboard ------------------------------------------
+
+// Points for a correct result, per round.
+const RESULT_POINTS: Record<Stage, number> = {
+  'Round of 32': 5,
+  'Round of 16': 7,
+  'Quarter-finals': 10,
+  'Semi-finals': 15,
+  Final: 20,
+}
+// Bonus per team whose exact goal count you predicted — awarded ONLY when you
+// also got the result right.
+const GOAL_BONUS: Record<Stage, number> = {
+  'Round of 32': 2,
+  'Round of 16': 3,
+  'Quarter-finals': 4,
+  'Semi-finals': 5,
+  Final: 7,
+}
+
+// Points one prediction earns against a finished fixture. Correct result → the
+// round's base; plus, for each team whose exact goals you nailed, that round's
+// bonus. Wrong result → nothing (the bonus is gated on getting the result right).
+// "Correct result" reuses scorePrediction, so it matches the card badges exactly
+// — including a predicted draw where the team you backed actually went through.
+export function matchPoints(pred: Prediction, live?: LiveMatch): number {
+  const { result } = scorePrediction(pred, live)
+  if (result !== 'exact' && result !== 'outcome') return 0
+  if (!live || live.homeScore == null || live.awayScore == null) return 0
+  const swapped = normaliseName(live.home).toLowerCase() !== normaliseName(pred.home).toLowerCase()
+  const actHome = swapped ? live.awayScore : live.homeScore
+  const actAway = swapped ? live.homeScore : live.awayScore
+  let pts = RESULT_POINTS[pred.stage]
+  const bonus = GOAL_BONUS[pred.stage]
+  if (pred.homeScore === actHome) pts += bonus
+  if (pred.awayScore === actAway) pts += bonus
+  return pts
+}
+
+// Standings baseline: each person's running total up to lunchtime 30 Jun 2026 —
+// i.e. group stage plus the four R32 games that had finished before the Ivory
+// Coast v Norway kick-off. Live points for every game from that one onward get
+// added on top, so we never double-count what's already in these numbers.
+export const SCORE_BASELINE: Record<string, number> = {
+  katdan: 331,
+  sarjack: 292,
+  gavin: 356,
+}
+const SCORE_CUTOFF_MS = new Date('2026-06-30T12:00:00Z').getTime()
+
+// A person's live total: their baseline plus points from every finished knockout
+// game that kicked off at/after the cutoff (games before it are already counted).
+export function personTotal(person: Person, matches: LiveMatch[]): number {
+  let total = SCORE_BASELINE[person.slug] ?? 0
+  for (const pred of person.predictions) {
+    const live = findLiveMatch(pred, matches)
+    if (!live || phaseOf(live.status) !== 'final') continue
+    const iso = live.utcDate || kickoffFor(pred.home, pred.away) || ''
+    const koMs = iso ? new Date(iso).getTime() : 0
+    if (!(koMs >= SCORE_CUTOFF_MS)) continue // already baked into the baseline
+    total += matchPoints(pred, live)
+  }
+  return total
 }
 
 // --- Real bracket vs mine ------------------------------------------------

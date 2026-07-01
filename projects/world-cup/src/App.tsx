@@ -20,6 +20,7 @@ import {
   actualAdvancer,
   eliminatedTeams,
   goalsFor,
+  personTotal,
   type Scored,
   type TeamCheck,
 } from './logic'
@@ -263,6 +264,8 @@ export function App() {
         </div>
       )}
 
+      <Leaderboard matches={matches} currentSlug={person.slug} />
+
       <Scoreboard totals={totals} />
 
       <main>
@@ -342,6 +345,39 @@ function Header({
         </p>
       )}
     </header>
+  )
+}
+
+// --- Leaderboard ---------------------------------------------------------
+
+// Cross-person standings: everyone's running total (group-stage baseline + live
+// knockout points), ranked. The person whose page you're on is highlighted.
+function Leaderboard({ matches, currentSlug }: { matches: LiveMatch[]; currentSlug: string }) {
+  const rows = useMemo(() => {
+    return Object.values(people)
+      .map((p) => ({ slug: p.slug, title: p.title, points: personTotal(p, matches) }))
+      .sort((a, b) => b.points - a.points)
+  }, [matches])
+
+  return (
+    <section className="leaderboard">
+      <div className="lb-head">
+        <span className="lb-title">Leaderboard</span>
+        <span className="lb-note">Golden Boot (+50) decided after the final</span>
+      </div>
+      <ol className="lb-list">
+        {rows.map((r, i) => (
+          <li key={r.slug} className={`lb-row ${r.slug === currentSlug ? 'me' : ''}`}>
+            <span className="lb-rank">{i + 1}</span>
+            <span className="lb-name">
+              {r.title}
+              {r.slug === currentSlug ? ' (you)' : ''}
+            </span>
+            <span className="lb-pts">{r.points}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
   )
 }
 
@@ -604,15 +640,16 @@ function PredictionCard({
                 them on top so the card doesn't imply my team progressed. */}
             {advWrong && realAdvancer && (
               <span className="adv-real">
-                {flag(realAdvancer)}{' '}
-                {pred.stage === 'Final' ? `${realAdvancer} won it 🏆` : `${realAdvancer} went through`}
+                {flag(realAdvancer)} {realAdvancer}
+                {pred.stage === 'Final' ? ' won 🏆' : ' through'}
               </span>
             )}
-            <span className="adv-label">my pick</span>
-            <span className="adv-team">
-              {flag(pred.advances)}{' '}
-              <span className={advWrong ? 'struck' : ''}>
-                {pred.stage === 'Final' ? `${pred.advances} win it 🏆` : `${pred.advances} go through`}
+            <span className="adv-mine">
+              <span className="adv-label">my pick</span>
+              <span className="adv-team">
+                {flag(pred.advances)}{' '}
+                <span className={advWrong ? 'struck' : ''}>{pred.advances}</span>
+                {!advWrong && (pred.stage === 'Final' ? ' 🏆' : ' ✓')}
               </span>
             </span>
           </span>
@@ -690,6 +727,11 @@ function PredictionCard({
                 <span className="cmp-name">
                   {ci.title}
                   {ci.slug === currentSlug ? ' (you)' : ''}
+                  {r === 'exact' && (
+                    <span className="cmp-star" title="Exact score">
+                      ★
+                    </span>
+                  )}
                 </span>
                 {cp ? (
                   <>

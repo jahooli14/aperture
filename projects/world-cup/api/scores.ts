@@ -76,7 +76,16 @@ function bbcScorers(team: any): Goal[] {
   const out: Goal[] = []
   for (const a of team?.actions ?? []) {
     if (a?.actionType !== 'goal') continue
-    out.push({ name: a.playerName ?? '', minute: a?.actions?.[0]?.timeLabel?.value ?? '' })
+    // A player who scored more than once has one entry per goal nested in
+    // `actions` (e.g. Mbappé 45' and 74'). Expand them so every goal shows.
+    const events: any[] = Array.isArray(a.actions) && a.actions.length ? a.actions : [null]
+    for (const ev of events) {
+      const og = (ev?.type ?? '').toLowerCase().includes('own')
+      out.push({
+        name: (a.playerName ?? '') + (og ? ' (OG)' : ''),
+        minute: ev?.timeLabel?.value ?? '',
+      })
+    }
   }
   return out
 }
