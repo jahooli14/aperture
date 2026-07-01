@@ -8,6 +8,7 @@ import {
   normaliseName,
   kickoffFor,
   teamCode,
+  bracketOrder,
   type Stage,
   type Prediction,
 } from './predictions'
@@ -590,12 +591,21 @@ function TrueGameCard({
               let t2 = pick?.away
               let sc1 = pick?.homeScore
               let sc2 = pick?.awayScore
-              // Order each row to match the real card (same team first) when known.
-              if (pick && home && away && (sameName(pick.home, away) || sameName(pick.away, home))) {
-                t1 = pick.away
-                t2 = pick.home
-                sc1 = pick.awayScore
-                sc2 = pick.homeScore
+              const swap = () => {
+                t1 = pick!.away
+                t2 = pick!.home
+                sc1 = pick!.awayScore
+                sc2 = pick!.homeScore
+              }
+              if (pick) {
+                if (home && away) {
+                  // Real teams known → order to match the card (same team first).
+                  if (sameName(pick.home, away) || sameName(pick.away, home)) swap()
+                } else if (bracketOrder(pick.home) > bracketOrder(pick.away)) {
+                  // TBC slot → order by bracket position so the same team is
+                  // always on the same side across everyone's rows.
+                  swap()
+                }
               }
 
               const isFinal = stage === 'Final'
@@ -607,10 +617,10 @@ function TrueGameCard({
                 const pens = !!pensAdv && sameName(name, pensAdv)
                 const out = eliminated.has(normaliseName(name).toLowerCase())
                 return (
-                  <span className={champ || pens ? 'cmp-win' : undefined}>
+                  <span>
                     {flag(name)} <span className={out ? 'cmp-out' : undefined}>{teamCode(name)}</span>
                     {/* Whoever they picked to go through (a drawn pick's advancer,
-                        or the champion in the Final) gets a little 🏆. */}
+                        or the champion in the Final) gets a little 🏆 — no colour. */}
                     {(champ || pens) && ' 🏆'}
                   </span>
                 )

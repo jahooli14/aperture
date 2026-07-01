@@ -218,6 +218,24 @@ export function teamCode(team: string): string {
   return TEAM_CODES[n] ?? n.slice(0, 3).toUpperCase()
 }
 
+// Stable ordering value per team, from its Round-of-32 bracket position. Lets us
+// put the same team on the same side in compare rows even before a later-round
+// fixture's real teams are known. Built lazily on first use (normaliseName +
+// nameAliases are defined further down this file).
+let BRACKET_ORDER: Record<string, number> | null = null
+export function bracketOrder(team: string): number {
+  if (!BRACKET_ORDER) {
+    BRACKET_ORDER = {}
+    katdanPredictions
+      .filter((p) => p.stage === 'Round of 32')
+      .forEach((p, i) => {
+        BRACKET_ORDER![normaliseName(p.home).toLowerCase()] = i * 2
+        BRACKET_ORDER![normaliseName(p.away).toLowerCase()] = i * 2 + 1
+      })
+  }
+  return BRACKET_ORDER[normaliseName(team).toLowerCase()] ?? 999
+}
+
 // Aliases to reconcile my names with various live-feed spellings.
 // Keys are normalised (lowercased, punctuation stripped) feed names → my name.
 export const nameAliases: Record<string, string> = {
