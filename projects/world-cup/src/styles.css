@@ -223,7 +223,7 @@ body {
   text-transform: uppercase;
 }
 
-/* ---- Leaderboard ---- */
+/* ---- Leaderboard (title-race: leader hero band + chasers with gap) ---- */
 .leaderboard {
   background: var(--emerald-glass);
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -233,27 +233,59 @@ body {
   backdrop-filter: blur(14px);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
 }
-.lb-head {
+/* Leader hero */
+.lb-leader {
+  position: relative;
+  padding: 15px 18px 14px;
+  background: linear-gradient(
+    120deg,
+    rgba(232, 182, 71, 0.22),
+    rgba(232, 182, 71, 0.05) 58%,
+    transparent
+  );
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.lb-leader.me {
+  box-shadow: inset 3px 0 0 var(--gold);
+}
+.lb-leader-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold-soft);
+  margin-bottom: 5px;
+}
+.lb-leader-row {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
-  padding: 13px 16px 11px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 12px;
 }
-.lb-title {
+.lb-leader-name {
   font-family: 'Sora', sans-serif;
-  font-size: 15px;
+  font-size: 22px;
   font-weight: 700;
-  letter-spacing: 0.02em;
   color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.lb-note {
-  font-size: 10.5px;
+.lb-leader-pts {
+  flex: none;
+  font-family: 'Sora', sans-serif;
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--gold-soft);
+  font-variant-numeric: tabular-nums;
+}
+.lb-pts-unit {
+  font-size: 13px;
+  font-weight: 600;
   color: var(--on-dark-2);
-  letter-spacing: 0.02em;
-  text-align: right;
 }
+/* Chasers */
 .lb-list {
   list-style: none;
   margin: 0;
@@ -263,24 +295,22 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 12px 18px;
 }
 .lb-row + .lb-row {
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 .lb-row.me {
-  background: rgba(232, 182, 71, 0.1);
+  background: linear-gradient(90deg, rgba(232, 182, 71, 0.14), transparent 70%);
+  box-shadow: inset 3px 0 0 var(--gold);
 }
 .lb-rank {
-  flex: 0 0 1.4em;
+  flex: 0 0 1.3em;
   font-family: 'Sora', sans-serif;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--on-dark-2);
   text-align: center;
-}
-.lb-row:first-child .lb-rank {
-  color: var(--gold);
 }
 .lb-name {
   flex: 1 1 auto;
@@ -292,12 +322,19 @@ body {
   white-space: nowrap;
 }
 .lb-pts {
-  flex: 0 0 auto;
+  flex: none;
   font-family: 'Sora', sans-serif;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
-  line-height: 1;
-  color: var(--gold-soft);
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+.lb-gap {
+  flex: 0 0 3em;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--on-dark-2);
   font-variant-numeric: tabular-nums;
 }
 
@@ -504,6 +541,11 @@ body {
 .result-pill .dot {
   animation: none;
 }
+.rp-icon {
+  font-size: 14px;
+  line-height: 1;
+  letter-spacing: 0;
+}
 .result-pill.exact {
   background: rgba(15, 157, 88, 0.16);
   color: var(--green);
@@ -633,6 +675,10 @@ body {
 .pick.wrong {
   color: var(--red);
 }
+/* Right result, wrong scoreline — neutral, since red means an actual miss. */
+.pick.ok {
+  color: var(--ink-2);
+}
 
 /* Goalscorers row (live + finished games) */
 .goals-line {
@@ -686,32 +732,41 @@ body {
 }
 /* One solid dark panel so rows stay legible over the busy landmark photo. */
 .compare {
-  margin-top: 8px;
+  margin-top: 10px;
   display: flex;
   flex-direction: column;
-  background: rgba(8, 12, 10, 0.9);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 4px 4px;
+  background: linear-gradient(180deg, rgba(12, 17, 14, 0.96), rgba(7, 10, 9, 0.96));
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 6px;
   overflow: hidden;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 .cmp-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 9px 10px;
-  border-radius: 8px;
+  padding: 11px 12px;
+  border-radius: 9px;
+  position: relative;
 }
 .cmp-row + .cmp-row {
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 0;
 }
+/* The person whose page you're on — gold accent bar + soft gradient, not a flat
+   block, so it reads as "highlighted" rather than "filled in". */
 .cmp-row.me {
-  background: rgba(232, 182, 71, 0.16);
-  border-radius: 8px;
+  background: linear-gradient(90deg, rgba(232, 182, 71, 0.2), rgba(232, 182, 71, 0.04));
+  box-shadow: inset 3px 0 0 var(--gold);
+  border-radius: 9px;
+}
+.cmp-row.me .cmp-name {
+  color: var(--gold-soft);
+  font-weight: 700;
 }
 .cmp-row.me + .cmp-row,
 .cmp-row.me {
@@ -774,10 +829,11 @@ body {
 .cmp-num {
   flex: 0 0 auto;
   text-align: right;
-  font-size: 13.5px;
+  font-size: 14.5px;
   font-weight: 800;
   color: #fff;
   font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
   text-shadow: none;
 }
 .cmp-num.cmp-exact,
@@ -864,6 +920,10 @@ body {
   font-weight: 600;
   color: var(--ink-2);
   white-space: nowrap;
+}
+.adv-mark {
+  font-size: 12px;
+  line-height: 1;
 }
 .adv-team .struck {
   text-decoration: line-through;
@@ -1194,6 +1254,9 @@ body {
 }
 .card.lighttext .pick.wrong {
   color: #ff8d9a;
+}
+.card.lighttext .pick.ok {
+  color: rgba(255, 255, 255, 0.9);
 }
 
 /* ---- Cinematic weather on live game cards ---- */

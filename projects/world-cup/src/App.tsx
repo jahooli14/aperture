@@ -213,19 +213,6 @@ export function App() {
     [matches, demoLive]
   )
 
-  const totals = useMemo(() => {
-    let exact = 0
-    let outcome = 0
-    let decided = 0
-    for (const s of scored) {
-      if (s.result === 'pending') continue
-      decided++
-      if (s.result === 'exact') exact++
-      else if (s.result === 'outcome') outcome++
-    }
-    return { exact, outcome, decided, correct: exact + outcome }
-  }, [scored])
-
   useConfettiOnCorrect(scored, loading)
 
   // Cities with a live game → fetch their weather for the card backgrounds.
@@ -265,8 +252,6 @@ export function App() {
       )}
 
       <Leaderboard matches={matches} currentSlug={person.slug} />
-
-      <Scoreboard totals={totals} />
 
       <main>
         {stageOrder.map((stage) => (
@@ -359,49 +344,37 @@ function Leaderboard({ matches, currentSlug }: { matches: LiveMatch[]; currentSl
       .sort((a, b) => b.points - a.points)
   }, [matches])
 
+  const leader = rows[0]
+  const chasers = rows.slice(1)
+
   return (
     <section className="leaderboard">
-      <div className="lb-head">
-        <span className="lb-title">Leaderboard</span>
-        <span className="lb-note">Golden Boot (+50) decided after the final</span>
+      <div className={`lb-leader ${leader.slug === currentSlug ? 'me' : ''}`}>
+        <span className="lb-leader-tag">👑 Leader</span>
+        <div className="lb-leader-row">
+          <span className="lb-leader-name">
+            {leader.title}
+            {leader.slug === currentSlug ? ' (you)' : ''}
+          </span>
+          <span className="lb-leader-pts">
+            {leader.points}
+            <span className="lb-pts-unit"> pts</span>
+          </span>
+        </div>
       </div>
       <ol className="lb-list">
-        {rows.map((r, i) => (
+        {chasers.map((r, i) => (
           <li key={r.slug} className={`lb-row ${r.slug === currentSlug ? 'me' : ''}`}>
-            <span className="lb-rank">{i + 1}</span>
+            <span className="lb-rank">{i + 2}</span>
             <span className="lb-name">
               {r.title}
               {r.slug === currentSlug ? ' (you)' : ''}
             </span>
             <span className="lb-pts">{r.points}</span>
+            <span className="lb-gap">−{leader.points - r.points}</span>
           </li>
         ))}
       </ol>
-    </section>
-  )
-}
-
-// --- Scoreboard ----------------------------------------------------------
-
-function Scoreboard({
-  totals,
-}: {
-  totals: { exact: number; outcome: number; decided: number; correct: number }
-}) {
-  return (
-    <section className="scoreboard">
-      <div className="stat">
-        <span className="stat-value">{totals.correct}</span>
-        <span className="stat-label">Results right</span>
-      </div>
-      <div className="stat">
-        <span className="stat-value">{totals.exact}</span>
-        <span className="stat-label">Exact scores</span>
-      </div>
-      <div className="stat">
-        <span className="stat-value">{totals.decided}</span>
-        <span className="stat-label">Games played</span>
-      </div>
     </section>
   )
 }
@@ -476,13 +449,15 @@ function StageSection({
 function resultMeta(result: Scored['result']) {
   switch (result) {
     case 'exact':
-      return { label: 'Exact score', cls: 'exact' }
+      // Right result AND exact scoreline → trophy + star.
+      return { label: 'Exact score', icon: '🏆 ⭐', cls: 'exact' }
     case 'outcome':
-      return { label: 'Right result', cls: 'outcome' }
+      // Right result only → trophy.
+      return { label: 'Right result', icon: '🏆', cls: 'outcome' }
     case 'wrong':
-      return { label: 'Missed', cls: 'wrong' }
+      return { label: 'Missed', icon: '', cls: 'wrong' }
     default:
-      return { label: '', cls: 'pending' }
+      return { label: '', icon: '', cls: 'pending' }
   }
 }
 
@@ -543,11 +518,17 @@ function PredictionCard({
   }
   const hasLive = liveHome != null && liveAway != null
 
-  // The predicted score is only "correct" (green) if it was exact. A right
-  // result with the wrong scoreline shows the score in red (but keeps the green
-  // "Right result" badge).
+  // Colour the predicted scoreline by how it did: exact → green, a miss (wrong
+  // result) → red, a right result with the wrong scoreline → neutral (not red —
+  // red is reserved for an actual miss), still pending → muted.
   const pickCls =
-    result === 'exact' ? 'correct' : result === 'pending' ? 'pending' : 'wrong'
+    result === 'exact'
+      ? 'correct'
+      : result === 'wrong'
+        ? 'wrong'
+        : result === 'pending'
+          ? 'pending'
+          : 'ok'
 
   // Live games get a cinematic weather scene as the card background.
   const wxCondition = isLive && weather ? weather.condition : null
@@ -586,10 +567,16 @@ function PredictionCard({
             {weather.icon} {weather.tempC}° · {weather.label}
           </span>
         )}
-        {phase === 'final' && meta.label && (
+        {phase === 'final' && result !== 'pending' && (
           <span className={`result-pill ${meta.cls}`}>
-            <span className="dot" />
-            {meta.label}
+            {meta.icon ? (
+              <span className="rp-icon">{meta.icon}</span>
+            ) : (
+              <>
+                <span className="dot" />
+                {meta.label}
+              </>
+            )}
           </span>
         )}
       </div>
@@ -637,20 +624,16 @@ function PredictionCard({
         {pred.advances && (
           <span className={`advances ${advWrong ? 'wrong' : ''}`}>
             {/* When my pick was wrong and we know who really went through, show
-                them on top so the card doesn't imply my team progressed. */}
+                them on top (🏆) so the card doesn't imply my team progressed. */}
             {advWrong && realAdvancer && (
-              <span className="adv-real">
-                {flag(realAdvancer)} {realAdvancer}
-                {pred.stage === 'Final' ? ' won 🏆' : ' through'}
-              </span>
+              <span className="adv-real">🏆 {realAdvancer}</span>
             )}
             <span className="adv-mine">
               <span className="adv-label">my pick</span>
-              <span className="adv-team">
-                {flag(pred.advances)}{' '}
-                <span className={advWrong ? 'struck' : ''}>{pred.advances}</span>
-                {!advWrong && (pred.stage === 'Final' ? ' 🏆' : ' ✓')}
-              </span>
+              <span className={`adv-team ${advWrong ? 'struck' : ''}`}>{pred.advances}</span>
+              {!advWrong && (
+                <span className="adv-mark">🏆{result === 'exact' ? ' ⭐' : ''}</span>
+              )}
             </span>
           </span>
         )}
