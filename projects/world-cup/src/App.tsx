@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import confetti from 'canvas-confetti'
 import {
-  resolvePerson,
   people,
   stageOrder,
   flags,
@@ -14,15 +13,16 @@ import {
 import {
   scorePrediction,
   findLiveMatch,
+  findLive,
   phaseOf,
   pairKey,
-  checkParticipants,
-  actualAdvancer,
   eliminatedTeams,
-  goalsFor,
   personTotal,
+  buildBracket,
+  slotPickResult,
+  goalsForFixture,
   type Scored,
-  type TeamCheck,
+  type BracketSlot,
 } from './logic'
 import { useLiveData } from './useLiveData'
 import { fetchWeather, syntheticWeather, type Weather, type Condition } from './weather'
@@ -33,28 +33,9 @@ const flag = (team: string) => flags[normaliseName(team)] ?? '🏳️'
 type CompareEntry = {
   slug: string
   title: string
-  byPair: Record<string, Prediction>
-  // From R16 on, brackets diverge — match by bracket slot ("<stage>#<i>") instead.
+  // Bracket slot ("<stage>#<i>") → that person's pick for the slot.
   bySlot: Record<string, Prediction>
 }
-
-// Sample "real" bracket for ?demoBracket=1 — lets you preview the
-// prediction-vs-reality check before the actual teams are decided.
-const DEMO_BRACKET: LiveMatch[] = [
-  { id: -101, utcDate: '2026-07-14T19:00:00Z', status: 'TIMED', stage: 'SEMI_FINALS', home: 'France', away: 'Brazil', homeScore: null, awayScore: null, venue: null },
-  { id: -102, utcDate: '2026-07-15T19:00:00Z', status: 'TIMED', stage: 'SEMI_FINALS', home: 'England', away: 'Argentina', homeScore: null, awayScore: null, venue: null },
-  { id: -103, utcDate: '2026-07-19T19:00:00Z', status: 'TIMED', stage: 'FINAL', home: 'France', away: 'England', homeScore: null, awayScore: null, venue: null },
-]
-
-// ?demoFinished=1 — sample full-time R32 results to preview finished cards.
-const DEMO_FINISHED: LiveMatch[] = [
-  // exact match to the KatDan pick (3-1) → "Exact score"
-  { id: -201, utcDate: '2026-06-28T18:00:00Z', status: 'FINISHED', stage: 'LAST_32', home: 'Germany', away: 'Paraguay', homeScore: 3, awayScore: 1, venue: null },
-  // France win but not the exact scoreline (pick 2-1) → "Right result"
-  { id: -202, utcDate: '2026-06-28T20:00:00Z', status: 'FINISHED', stage: 'LAST_32', home: 'France', away: 'Sweden', homeScore: 1, awayScore: 0, venue: null },
-  // Canada win, pick was a draw → "Missed"
-  { id: -203, utcDate: '2026-06-28T22:00:00Z', status: 'FINISHED', stage: 'LAST_32', home: 'South Africa', away: 'Canada', homeScore: 0, awayScore: 2, venue: null },
-]
 
 // Fetch live weather for the cities that currently have a game in play.
 // Cached ~10 min per city so we don't hammer the API on every poll.
@@ -120,64 +101,60 @@ function usePlayerPhotos(names: string[]): Record<string, string> {
   return map
 }
 
+// Who "you" are — remembered between visits. Old /gavin, /sarjack paths just
+// pre-select that person the first time; there's one shared link otherwise.
+function initialSlug(): string {
+  if (typeof window === 'undefined') return 'katdan'
+  const path = window.location.pathname.replace(/[^a-z]/gi, '').toLowerCase()
+  if (people[path]) return path
+  try {
+    const saved = window.localStorage.getItem('wc-person')
+    if (saved && people[saved]) return saved
+  } catch {
+    /* no storage */
+  }
+  return 'katdan'
+}
+
 export function App() {
   const { data, loading, lastUpdated } = useLiveData()
   const scorers = data?.scorers ?? []
 
-  // Whose predictions to show (from the URL path, e.g. /sarjack).
-  const person = resolvePerson(window.location.pathname)
-  const predictions = person.predictions
+  const [currentSlug, setCurrentSlug] = useState<string>(initialSlug)
+  const person = people[currentSlug] ?? people.katdan
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('wc-person', currentSlug)
+    } catch {
+      /* no storage */
+    }
+    document.title = 'World Cup 2026'
+  }, [currentSlug])
 
-  // Index every person's predictions for the tap-to-compare panel: by fixture
-  // (R32, where everyone shares the same matchups) and by bracket slot (R16 on,
-  // where each person's predicted teams differ but the bracket position lines up).
-  const compareIndex = useMemo(
+  const matches = data?.matches ?? []
+
+  // The real bracket, filled from actual results (TBC where undecided). The R32
+  // fixtures + each slot's venue/date come from a canonical set — same for all.
+  const canonical = people.katdan.predictions
+  const bracket = useMemo(() => buildBracket(canonical, matches), [canonical, matches])
+
+  // Everyone's picks, indexed by bracket slot, for the compare panel.
+  const compareIndex: CompareEntry[] = useMemo(
     () =>
       Object.values(people).map((p) => {
-        const byPair: Record<string, Prediction> = {}
         const bySlot: Record<string, Prediction> = {}
         const seen: Record<string, number> = {}
         for (const pr of p.predictions) {
-          byPair[pairKey(pr.home, pr.away)] = pr
           const i = seen[pr.stage] ?? 0
           bySlot[`${pr.stage}#${i}`] = pr
           seen[pr.stage] = i + 1
         }
-        return { slug: p.slug, title: p.title, byPair, bySlot }
+        return { slug: p.slug, title: p.title, bySlot }
       }),
     []
   )
 
-  // Map the current person's fixtures to their bracket slot, so a tapped card can
-  // look up the same slot in everyone else's bracket.
-  const slotByPair = useMemo(() => {
-    const m: Record<string, string> = {}
-    const seen: Record<string, number> = {}
-    for (const pr of predictions) {
-      const i = seen[pr.stage] ?? 0
-      m[pairKey(pr.home, pr.away)] = `${pr.stage}#${i}`
-      seen[pr.stage] = i + 1
-    }
-    return m
-  }, [predictions])
-  useEffect(() => {
-    document.title = `${person.title} World Cup 2026`
-  }, [person.title])
-
-  // Preview helpers: ?demoLive=1 forces the first game live; ?weather=<cond>
-  // forces that game's weather; ?demoBracket=1 injects a sample real bracket so
-  // you can preview the prediction-vs-reality check on later rounds.
-  const params = new URLSearchParams(window.location.search)
-  const demoWeather = params.get('weather') as Condition | null
-  const demoLive = params.get('demoLive') === '1' || !!demoWeather
-  const demoBracket = params.get('demoBracket') === '1'
-  const demoFinished = params.get('demoFinished') === '1'
-  let matches = data?.matches ?? []
-  if (demoFinished) matches = [...DEMO_FINISHED, ...matches]
-  if (demoBracket) matches = [...matches, ...DEMO_BRACKET]
-
-  // On first load with a game in play, scroll it into view. Retry a few times
-  // so late layout shifts (images/fonts on mobile) don't leave us at the top.
+  // On first load with a game in play, scroll it into view.
   const scrolledRef = useRef(false)
   useEffect(() => {
     if (scrolledRef.current) return
@@ -191,55 +168,41 @@ export function App() {
     return () => timers.forEach(clearTimeout)
   }, [matches])
 
-  const scored: Scored[] = useMemo(
-    () =>
-      predictions.map((p, idx) => {
-        if (demoLive && idx === 0) {
-          const fake: LiveMatch = {
-            id: -1,
-            utcDate: new Date().toISOString(),
-            status: 'IN_PLAY',
-            stage: '',
-            home: p.home,
-            away: p.away,
-            homeScore: 2,
-            awayScore: 1,
-            venue: null,
-          }
-          return scorePrediction(p, fake)
-        }
-        return scorePrediction(p, findLiveMatch(p, matches))
-      }),
-    [matches, demoLive]
+  // Celebrate when the selected person's pick comes good.
+  const myScored: Scored[] = useMemo(
+    () => person.predictions.map((p) => scorePrediction(p, findLiveMatch(p, matches))),
+    [person, matches]
   )
+  useConfettiOnCorrect(myScored, loading)
 
-  useConfettiOnCorrect(scored, loading)
-
-  // Cities with a live game → fetch their weather for the card backgrounds.
+  // Cities with a live game → fetch weather for the card backgrounds.
   const liveCities = useMemo(() => {
     const set = new Set<string>()
-    for (const s of scored) {
-      if (s.phase === 'live' && s.pred.city) set.add(s.pred.city)
+    for (const stage of stageOrder) {
+      for (const slot of bracket[stage] ?? []) {
+        if (!slot.city) continue
+        const live = findLive(slot.home, slot.away, matches)
+        if (live && phaseOf(live.status) === 'live') set.add(slot.city)
+      }
     }
     return [...set]
-  }, [scored])
+  }, [bracket, matches])
   const fetched = useWeather(liveCities)
 
-  // Apply the ?weather= override to the first live game's city for preview.
+  const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
+  const demoWeather = params.get('weather') as Condition | null
   const weather: Record<string, Weather> = useMemo(() => {
     if (!demoWeather) return fetched
-    const city = predictions.find((_, i) => i === 0)?.city
+    const city = bracket['Round of 32']?.[0]?.city
     return city ? { ...fetched, [city]: syntheticWeather(demoWeather) } : fetched
-  }, [fetched, demoWeather])
+  }, [fetched, demoWeather, bracket])
 
   return (
     <div className="app">
       <div className="backdrop" aria-hidden="true" />
-      <Header
-        title={person.title}
-        lastUpdated={lastUpdated}
-        live={matches.some((m) => phaseOf(m.status) === 'live')}
-      />
+      <Header lastUpdated={lastUpdated} live={matches.some((m) => phaseOf(m.status) === 'live')} />
+
+      <PersonToggle currentSlug={currentSlug} onSelect={setCurrentSlug} />
 
       {data && !data.configured && (
         <div className="notice">
@@ -251,20 +214,19 @@ export function App() {
         </div>
       )}
 
-      <Leaderboard matches={matches} currentSlug={person.slug} />
+      <Leaderboard matches={matches} currentSlug={currentSlug} />
 
       <main>
         {stageOrder.map((stage) => (
           <StageSection
             key={stage}
             stage={stage}
-            scored={scored}
+            slots={bracket[stage] ?? []}
             weather={weather}
             matches={matches}
             goals={data?.goals}
             compareIndex={compareIndex}
-            slotByPair={slotByPair}
-            currentSlug={person.slug}
+            currentSlug={currentSlug}
           />
         ))}
       </main>
@@ -272,8 +234,7 @@ export function App() {
       <GoldenBoot scorers={scorers} pick={person.goldenBoot} />
 
       <footer className="footer">
-        {person.title} World Cup 2026 predictions · live data via football-data.org · photo by Alex
-        Simpson / Unsplash
+        World Cup 2026 · live data via football-data.org · photo by Alex Simpson / Unsplash
       </footer>
     </div>
   )
@@ -281,19 +242,11 @@ export function App() {
 
 // --- Header --------------------------------------------------------------
 
-function Header({
-  title,
-  lastUpdated,
-  live,
-}: {
-  title: string
-  lastUpdated: Date | null
-  live: boolean
-}) {
+function Header({ lastUpdated, live }: { lastUpdated: Date | null; live: boolean }) {
   const share = async () => {
     const shareData = {
-      title: `${title} World Cup 2026`,
-      text: `${title} World Cup 2026 — predictions vs the live scores`,
+      title: 'World Cup 2026',
+      text: 'World Cup 2026 — predictions vs the live scores',
       url: window.location.href,
     }
     try {
@@ -322,7 +275,7 @@ function Header({
         </button>
       </div>
       <h1>
-        {title} World Cup <span className="year">2026</span>
+        World Cup <span className="year">2026</span>
       </h1>
       {lastUpdated && (
         <p className="updated">
@@ -333,10 +286,37 @@ function Header({
   )
 }
 
+// --- Person toggle -------------------------------------------------------
+
+function PersonToggle({
+  currentSlug,
+  onSelect,
+}: {
+  currentSlug: string
+  onSelect: (slug: string) => void
+}) {
+  return (
+    <div className="person-toggle">
+      <span className="pt-label">Viewing as</span>
+      <div className="pt-seg" role="tablist">
+        {Object.values(people).map((p) => (
+          <button
+            key={p.slug}
+            role="tab"
+            aria-selected={p.slug === currentSlug}
+            className={`pt-btn ${p.slug === currentSlug ? 'active' : ''}`}
+            onClick={() => onSelect(p.slug)}
+          >
+            {p.title}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // --- Leaderboard ---------------------------------------------------------
 
-// Cross-person standings: everyone's running total (group-stage baseline + live
-// knockout points), ranked. The person whose page you're on is highlighted.
 function Leaderboard({ matches, currentSlug }: { matches: LiveMatch[]; currentSlug: string }) {
   const rows = useMemo(() => {
     return Object.values(people)
@@ -378,33 +358,28 @@ function Leaderboard({ matches, currentSlug }: { matches: LiveMatch[]; currentSl
 
 function StageSection({
   stage,
-  scored,
+  slots,
   weather,
   matches,
   goals,
   compareIndex,
-  slotByPair,
   currentSlug,
 }: {
   stage: Stage
-  scored: Scored[]
+  slots: BracketSlot[]
   weather: Record<string, Weather>
   matches: LiveMatch[]
   goals?: MatchGoals[]
   compareIndex: CompareEntry[]
-  slotByPair: Record<string, string>
   currentSlug: string
 }) {
-  // One chronological list (earliest kickoff first). Finished games stay inline,
-  // just greyed out; the page auto-scrolls to the live game on load.
-  const rows = scored
-    .filter((s) => s.pred.stage === stage)
-    .slice()
+  // Keep each slot's bracket index (the compare panel keys off it), then order
+  // for display by kickoff — finished/live/next, earliest first.
+  const games = slots
+    .map((slot, index) => ({ slot, index }))
     .sort((a, b) => {
-      const ka = a.live?.utcDate ?? kickoffFor(a.pred.home, a.pred.away)
-      const kb = b.live?.utcDate ?? kickoffFor(b.pred.home, b.pred.away)
-      const ta = ka ? Date.parse(ka) : Infinity
-      const tb = kb ? Date.parse(kb) : Infinity
+      const ta = slotTime(a.slot, matches, a.index)
+      const tb = slotTime(b.slot, matches, b.index)
       return ta - tb
     })
 
@@ -414,22 +389,23 @@ function StageSection({
     <section className="stage">
       <button className="stage-title" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
         <span className="stage-name">{stage}</span>
-        <span className="stage-count">{rows.length}</span>
+        <span className="stage-count">{slots.length}</span>
         <span className={`chevron ${open ? 'open' : ''}`} aria-hidden="true">
           ⌄
         </span>
       </button>
       {open && (
         <div className="cards">
-          {rows.map((s) => (
-            <PredictionCard
-              key={pairKey(s.pred.home, s.pred.away)}
-              scored={s}
-              weather={s.pred.city ? weather[s.pred.city] : undefined}
+          {games.map(({ slot, index }) => (
+            <TrueGameCard
+              key={`${stage}#${index}`}
+              stage={stage}
+              slotIndex={index}
+              slot={slot}
+              weather={slot.city ? weather[slot.city] : undefined}
               matches={matches}
               goals={goals}
               compareIndex={compareIndex}
-              slotByPair={slotByPair}
               currentSlug={currentSlug}
             />
           ))}
@@ -439,325 +415,242 @@ function StageSection({
   )
 }
 
-// --- Prediction card -----------------------------------------------------
-
-function resultMeta(result: Scored['result']) {
-  switch (result) {
-    case 'exact':
-      // Right result AND exact scoreline → trophy + star.
-      return { label: 'Exact score', icon: '🏆 ⭐', cls: 'exact' }
-    case 'outcome':
-      // Right result only → trophy.
-      return { label: 'Right result', icon: '🏆', cls: 'outcome' }
-    case 'wrong':
-      return { label: 'Missed', icon: '', cls: 'wrong' }
-    default:
-      return { label: '', icon: '', cls: 'pending' }
-  }
+// Sort key: real kickoff if we have one, else keep bracket order.
+function slotTime(slot: BracketSlot, matches: LiveMatch[], index: number): number {
+  const live = findLive(slot.home, slot.away, matches)
+  const iso = live?.utcDate || (slot.home && slot.away ? kickoffFor(slot.home, slot.away) : '')
+  return iso ? Date.parse(iso) : 1e15 + index
 }
 
-function PredictionCard({
-  scored,
+// --- True game card ------------------------------------------------------
+
+function TrueGameCard({
+  stage,
+  slotIndex,
+  slot,
   weather,
   matches,
   goals,
   compareIndex,
-  slotByPair,
   currentSlug,
 }: {
-  scored: Scored
+  stage: Stage
+  slotIndex: number
+  slot: BracketSlot
   weather?: Weather
   matches: LiveMatch[]
   goals?: MatchGoals[]
   compareIndex: CompareEntry[]
-  slotByPair: Record<string, string>
   currentSlug: string
 }) {
-  const { pred, live, phase, result } = scored
-  const meta = resultMeta(result)
+  const { home, away } = slot
+  const known = !!home && !!away
+  const live = findLive(home, away, matches)
+  const phase = live ? phaseOf(live.status) : 'upcoming'
   const isLive = phase === 'live'
   const [cmpOpen, setCmpOpen] = useState(false)
-  // Teams already knocked out — struck through wherever they appear in compare picks.
   const eliminated = useMemo(() => eliminatedTeams(matches), [matches])
-  const matchGoals = phase === 'upcoming' ? null : goalsFor(pred, goals)
-  const hasGoals = !!matchGoals && (matchGoals.home.length > 0 || matchGoals.away.length > 0)
 
-  // For rounds past the R32, check whether my predicted teams actually got here.
-  const checks =
-    pred.stage !== 'Round of 32' ? checkParticipants(pred, matches) : null
-
-  // My "advances on a draw" pick. Two ways it can be wrong:
-  //  1. The team didn't even reach this stage (later rounds — checkParticipants).
-  //  2. The fixture happened and the *other* team went through, e.g. a draw lost
-  //     on penalties (Netherlands 1-1 Morocco, Morocco win on pens).
-  const advCheck =
-    pred.advances && checks
-      ? normaliseName(pred.advances).toLowerCase() === normaliseName(pred.home).toLowerCase()
-        ? checks.home
-        : checks.away
-      : undefined
-  // The team that actually progressed from this fixture (when it's finished).
-  const realAdvancer = pred.advances ? actualAdvancer(pred, live) : undefined
-  const advWrong =
-    advCheck?.status === 'wrong' ||
-    (!!pred.advances &&
-      !!realAdvancer &&
-      normaliseName(realAdvancer).toLowerCase() !== normaliseName(pred.advances).toLowerCase())
-
-  let liveHome: number | null = null
-  let liveAway: number | null = null
-  if (live && live.homeScore != null && live.awayScore != null) {
-    const swapped = normaliseName(live.home).toLowerCase() !== normaliseName(pred.home).toLowerCase()
-    liveHome = swapped ? live.awayScore : live.homeScore
-    liveAway = swapped ? live.homeScore : live.awayScore
+  // Orient the real score to home/away (the feed may list teams swapped).
+  let sHome: number | null = null
+  let sAway: number | null = null
+  if (known && live && live.homeScore != null && live.awayScore != null) {
+    const swapped = normaliseName(live.home).toLowerCase() !== normaliseName(home!).toLowerCase()
+    sHome = swapped ? live.awayScore : live.homeScore
+    sAway = swapped ? live.homeScore : live.awayScore
   }
-  const hasLive = liveHome != null && liveAway != null
+  const hasScore = sHome != null && sAway != null
 
-  // Colour the predicted scoreline by how it did: exact → green, a miss (wrong
-  // result) → red, a right result with the wrong scoreline → neutral (not red —
-  // red is reserved for an actual miss), still pending → muted.
-  const pickCls =
-    result === 'exact'
-      ? 'correct'
-      : result === 'wrong'
-        ? 'wrong'
-        : result === 'pending'
-          ? 'pending'
-          : 'ok'
+  const g = known && phase !== 'upcoming' ? goalsForFixture(home!, away!, goals) : null
+  const hasGoals = !!g && (g.home.length > 0 || g.away.length > 0)
 
-  // Live games get a cinematic weather scene as the card background.
   const wxCondition = isLive && weather ? weather.condition : null
+  const koIso = live?.utcDate || (known ? kickoffFor(home!, away!) : undefined)
+
+  const cmpRows = useMemo(() => {
+    const me = compareIndex.find((c) => c.slug === currentSlug)
+    const rest = compareIndex.filter((c) => c.slug !== currentSlug)
+    return me ? [me, ...rest] : compareIndex
+  }, [compareIndex, currentSlug])
 
   return (
     <article
-      className={`card ${meta.cls} ${phase} ${wxCondition ? `wx wx-${wxCondition}` : ''} ${
+      className={`card ${phase} ${wxCondition ? `wx wx-${wxCondition}` : ''} ${
         !isLive ? 'placed lighttext' : ''
       }`}
     >
-      {wxCondition ? (
-        <>
-          <CardPlace home={pred.home} away={pred.away} light />
-          <CardWeather condition={wxCondition} overPhoto />
-        </>
-      ) : (
-        <CardPlace home={pred.home} away={pred.away} />
-      )}
+      {known &&
+        (wxCondition ? (
+          <>
+            <CardPlace home={home!} away={away!} light />
+            <CardWeather condition={wxCondition} overPhoto />
+          </>
+        ) : (
+          <CardPlace home={home!} away={away!} />
+        ))}
       <div className="card-inner">
-      <div className="card-top">
-        <span className="caption">
-          {isLive ? (
-            <span className="pill live">
-              <span className="dot" /> LIVE{live?.minute ? ` ${live.minute}` : ''}
-            </span>
-          ) : phase === 'final' ? (
-            'Full time'
-          ) : live?.utcDate ?? kickoffFor(pred.home, pred.away) ? (
-            <KickOff iso={(live?.utcDate ?? kickoffFor(pred.home, pred.away))!} inline />
-          ) : (
-            pred.dateText ?? 'Date TBC'
-          )}
-        </span>
-        {isLive && weather && (
-          <span className="weather-chip">
-            {weather.icon} {weather.tempC}° · {weather.label}
-          </span>
-        )}
-        {phase === 'final' && result !== 'pending' && (
-          <span className={`result-pill ${meta.cls}`}>
-            {meta.icon ? (
-              <span className="rp-icon">{meta.icon}</span>
+        <div className="card-top">
+          <span className="caption">
+            {isLive ? (
+              <span className="pill live">
+                <span className="dot" /> LIVE{live?.minute ? ` ${live.minute}` : ''}
+              </span>
+            ) : phase === 'final' ? (
+              'Full time'
+            ) : koIso ? (
+              <KickOff iso={koIso} inline />
             ) : (
-              <>
-                <span className="dot" />
-                {meta.label}
-              </>
+              slot.dateText ?? 'Date TBC'
             )}
           </span>
+          {isLive && weather && (
+            <span className="weather-chip">
+              {weather.icon} {weather.tempC}° · {weather.label}
+            </span>
+          )}
+        </div>
+
+        <div className="match">
+          <TeamSide name={home} />
+          <div className="center">
+            <span className={`bigscore ${phase}`}>{hasScore ? `${sHome}–${sAway}` : 'vs'}</span>
+          </div>
+          <TeamSide name={away} />
+        </div>
+
+        {hasGoals && g && (
+          <div className="goals-line">
+            <div className="gside">
+              {g.home.map((goal, i) => (
+                <span key={i} className="goal">
+                  ⚽ {goal.name} {goal.minute}
+                </span>
+              ))}
+            </div>
+            <div className="gside right">
+              {g.away.map((goal, i) => (
+                <span key={i} className="goal">
+                  {goal.name} {goal.minute} ⚽
+                </span>
+              ))}
+            </div>
+          </div>
         )}
-      </div>
 
-      <div className="match">
-        <Side team={pred.home} check={checks?.home} />
-
-        <div className="center">
-          <span className={`bigscore ${phase}`}>{hasLive ? `${liveHome}–${liveAway}` : 'vs'}</span>
-          <span className={`pick ${pickCls}`}>
-            Pick {pred.homeScore}–{pred.awayScore}
-          </span>
-        </div>
-
-        <Side team={pred.away} check={checks?.away} />
-      </div>
-
-      {hasGoals && matchGoals && (
-        <div className="goals-line">
-          <div className="gside">
-            {matchGoals.home.map((g, i) => (
-              <span key={i} className="goal">
-                ⚽ {g.name} {g.minute}
-              </span>
-            ))}
-          </div>
-          <div className="gside right">
-            {matchGoals.away.map((g, i) => (
-              <span key={i} className="goal">
-                {g.name} {g.minute} ⚽
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="card-foot">
-        <span className="venue">
-          <StadiumIcon />
-          <span className="venue-text">
-            <span className="vstadium">{pred.venue ?? live?.venue ?? 'Venue TBC'}</span>
-            {pred.city && <span className="vcity">{pred.city}</span>}
-          </span>
-        </span>
-        {pred.advances && (
-          <span className={`advances ${advWrong ? 'wrong' : ''}`}>
-            {/* When my pick was wrong and we know who really went through, show
-                them on top (🏆) so the card doesn't imply my team progressed. */}
-            {advWrong && realAdvancer && (
-              <span className="adv-real">🏆 {realAdvancer}</span>
-            )}
-            <span className="adv-mine">
-              <span className="adv-label">my pick</span>
-              <span className={`adv-team ${advWrong ? 'struck' : ''}`}>{pred.advances}</span>
-              {!advWrong && (
-                <span className="adv-mark">🏆{result === 'exact' ? ' ⭐' : ''}</span>
-              )}
+        <div className="card-foot">
+          <span className="venue">
+            <StadiumIcon />
+            <span className="venue-text">
+              <span className="vstadium">{slot.venue ?? live?.venue ?? 'Venue TBC'}</span>
+              {slot.city && <span className="vcity">{slot.city}</span>}
             </span>
           </span>
-        )}
-      </div>
-
-      <button
-        className="compare-toggle"
-        onClick={() => setCmpOpen((o) => !o)}
-        aria-expanded={cmpOpen}
-      >
-        Compare picks
-        <span className={`chevron ${cmpOpen ? 'open' : ''}`} aria-hidden="true">
-          ⌄
-        </span>
-      </button>
-      {cmpOpen && (
-        <div className="compare">
-          {compareIndex.map((ci) => {
-            // R32: everyone shares the fixture, match by pair. R16 on: brackets
-            // diverge, so match by bracket slot and show each person's own teams.
-            const slot = slotByPair[pairKey(pred.home, pred.away)]
-            const cp =
-              ci.byPair[pairKey(pred.home, pred.away)] ?? (slot ? ci.bySlot[slot] : undefined)
-            // Only score against the live result when this person picked the same
-            // two teams that are actually playing this fixture.
-            const sameFixture =
-              cp && pairKey(cp.home, cp.away) === pairKey(pred.home, pred.away)
-            const r =
-              cp && sameFixture && phase === 'final' && live
-                ? scorePrediction(cp, live).result
-                : 'pending'
-            const cls =
-              r === 'exact' ? 'cmp-exact' : r === 'outcome' ? 'cmp-ok' : r === 'wrong' ? 'cmp-wrong' : ''
-            // From R16 on, always show each person's teams — even when they match
-            // the card — so you can read the whole bracket at a glance.
-            const showTeams = !!cp && pred.stage !== 'Round of 32'
-            // Order every row's teams to match the card (same team always first),
-            // flipping the score to match. Where a person picked a different team
-            // for a slot, the team aligned to the card's side keeps its position.
-            const sameName = (a: string, b: string) =>
-              normaliseName(a).toLowerCase() === normaliseName(b).toLowerCase()
-            let t1 = cp?.home
-            let t2 = cp?.away
-            let sc1 = cp?.homeScore
-            let sc2 = cp?.awayScore
-            if (cp && (sameName(cp.home, pred.away) || sameName(cp.away, pred.home))) {
-              t1 = cp.away
-              t2 = cp.home
-              sc1 = cp.awayScore
-              sc2 = cp.homeScore
-            }
-            // Mark who this person has progressing. Final: the champion (gets a
-            // 🏆). Earlier rounds: only a drawn pick needs marking (the team they
-            // chose to go through on penalties) — decisive winners are obvious.
-            const isFinal = pred.stage === 'Final'
-            const decisive = sc1 != null && sc2 != null && sc1 !== sc2
-            const champion = isFinal ? (decisive ? (sc1! > sc2! ? t1 : t2) : cp?.advances) : undefined
-            const pensAdv = !isFinal && !decisive ? cp?.advances : undefined
-            const renderTeam = (name: string) => {
-              const champ = !!champion && sameName(name, champion)
-              const pens = !!pensAdv && sameName(name, pensAdv)
-              // Strike any team that's already been knocked out of the tournament.
-              const out = eliminated.has(normaliseName(name).toLowerCase())
-              return (
-                <span className={champ || pens ? 'cmp-win' : undefined}>
-                  {flag(name)} <span className={out ? 'cmp-out' : undefined}>{name}</span>
-                  {champ && ' 🏆'}
-                  {pens && <span className="cmp-pens"> pens</span>}
-                </span>
-              )
-            }
-            return (
-              <div key={ci.slug} className={`cmp-row ${ci.slug === currentSlug ? 'me' : ''}`}>
-                <span className="cmp-name">
-                  {ci.title}
-                  {ci.slug === currentSlug ? ' (you)' : ''}
-                </span>
-                {cp ? (
-                  <>
-                    <span className="cmp-mid">
-                      {showTeams && t1 && t2 && (
-                        <>
-                          {renderTeam(t1)} <span className="cmp-v">v</span> {renderTeam(t2)}
-                        </>
-                      )}
-                    </span>
-                    {/* Same badges as the card pill: 🏆 right result, 🏆⭐ exact. */}
-                    {(r === 'exact' || r === 'outcome') && (
-                      <span className="cmp-mark" title={r === 'exact' ? 'Exact score' : 'Right result'}>
-                        {r === 'exact' ? '🏆⭐' : '🏆'}
-                      </span>
-                    )}
-                    <span className={`cmp-num ${cls}`}>
-                      {sc1}–{sc2}
-                    </span>
-                  </>
-                ) : (
-                  <span className="cmp-na">—</span>
-                )}
-              </div>
-            )
-          })}
         </div>
-      )}
+
+        <button
+          className="compare-toggle"
+          onClick={() => setCmpOpen((o) => !o)}
+          aria-expanded={cmpOpen}
+        >
+          Compare picks
+          <span className={`chevron ${cmpOpen ? 'open' : ''}`} aria-hidden="true">
+            ⌄
+          </span>
+        </button>
+        {cmpOpen && (
+          <div className="compare">
+            {cmpRows.map((ci) => {
+              const pick = ci.bySlot[`${stage}#${slotIndex}`]
+              const r = slotPickResult(pick, home, away, live)
+              const cls =
+                r === 'exact' ? 'cmp-exact' : r === 'outcome' ? 'cmp-ok' : r === 'wrong' ? 'cmp-wrong' : ''
+              // From R16 on show each person's own teams; R32 everyone shares them.
+              const showTeams = !!pick && stage !== 'Round of 32'
+              const sameName = (a: string, b: string) =>
+                normaliseName(a).toLowerCase() === normaliseName(b).toLowerCase()
+
+              let t1 = pick?.home
+              let t2 = pick?.away
+              let sc1 = pick?.homeScore
+              let sc2 = pick?.awayScore
+              // Order each row to match the real card (same team first) when known.
+              if (pick && home && away && (sameName(pick.home, away) || sameName(pick.away, home))) {
+                t1 = pick.away
+                t2 = pick.home
+                sc1 = pick.awayScore
+                sc2 = pick.homeScore
+              }
+
+              const isFinal = stage === 'Final'
+              const decisive = sc1 != null && sc2 != null && sc1 !== sc2
+              const champion = isFinal ? (decisive ? (sc1! > sc2! ? t1 : t2) : pick?.advances) : undefined
+              const pensAdv = !isFinal && !decisive ? pick?.advances : undefined
+              const renderTeam = (name: string) => {
+                const champ = !!champion && sameName(name, champion)
+                const pens = !!pensAdv && sameName(name, pensAdv)
+                const out = eliminated.has(normaliseName(name).toLowerCase())
+                return (
+                  <span className={champ || pens ? 'cmp-win' : undefined}>
+                    {flag(name)} <span className={out ? 'cmp-out' : undefined}>{name}</span>
+                    {champ && ' 🏆'}
+                    {pens && <span className="cmp-pens"> pens</span>}
+                  </span>
+                )
+              }
+
+              return (
+                <div key={ci.slug} className={`cmp-row ${ci.slug === currentSlug ? 'me' : ''}`}>
+                  <span className="cmp-name">
+                    {ci.title}
+                    {ci.slug === currentSlug ? ' (you)' : ''}
+                  </span>
+                  {pick ? (
+                    <>
+                      <span className="cmp-mid">
+                        {showTeams && t1 && t2 && (
+                          <>
+                            {renderTeam(t1)} <span className="cmp-v">v</span> {renderTeam(t2)}
+                          </>
+                        )}
+                      </span>
+                      {(r === 'exact' || r === 'outcome') && (
+                        <span
+                          className="cmp-mark"
+                          title={r === 'exact' ? 'Exact score' : 'Right result'}
+                        >
+                          {r === 'exact' ? '🏆⭐' : '🏆'}
+                        </span>
+                      )}
+                      <span className={`cmp-num ${cls}`}>
+                        {sc1}–{sc2}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="cmp-na">—</span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
     </article>
   )
 }
 
-function Side({ team, check }: { team: string; check?: TeamCheck }) {
-  // Wrong pick with a known replacement: the team that actually went through is
-  // big on top (with its flag); my crossed-out prediction sits small beneath.
-  if (check?.status === 'wrong' && check.replacement) {
+function TeamSide({ name }: { name: string | null }) {
+  if (!name) {
     return (
       <div className="side">
-        <span className="crest">{flag(check.replacement)}</span>
-        <span className="tname team-correct">{check.replacement}</span>
-        <span className="mini-out">
-          <span className="mo-label">my pick</span>
-          <span className="mo-name">{team}</span>
-        </span>
+        <span className="crest crest-tbc">🏳️</span>
+        <span className="tname tbc">TBC</span>
       </div>
     )
   }
   return (
     <div className="side">
-      <span className="crest">{flag(team)}</span>
-      <span className={`tname ${check?.status === 'correct' ? 'team-correct' : ''}`}>{team}</span>
-      {check?.status === 'correct' && <span className="team-tick">✓</span>}
+      <span className="crest">{flag(name)}</span>
+      <span className="tname">{name}</span>
     </div>
   )
 }

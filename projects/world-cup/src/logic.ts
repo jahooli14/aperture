@@ -316,3 +316,111 @@ export function divergentFixtures(
     (m) => feedStageToMine(m.stage) === stage && !myKeys.has(pairKey(m.home, m.away))
   )
 }
+
+// --- The real bracket (true games, no predictions) -----------------------
+
+export interface BracketSlot {
+  /** Real team in this slot, or null when its feeder game hasn't been decided (TBC). */
+  home: string | null
+  away: string | null
+  venue?: string
+  city?: string
+  dateText?: string
+}
+
+// Find the live fixture for two teams (order-independent).
+export function findLive(
+  home: string | null,
+  away: string | null,
+  matches: LiveMatch[]
+): LiveMatch | undefined {
+  if (!home || !away) return undefined
+  const key = pairKey(home, away)
+  return matches.find((m) => pairKey(m.home, m.away) === key)
+}
+
+// The canonical winner of a slot's game (returned as whichever of home/away won),
+// or null if the teams aren't both known yet or the game isn't decided.
+function slotWinner(home: string | null, away: string | null, matches: LiveMatch[]): string | null {
+  const live = findLive(home, away, matches)
+  if (!live) return null
+  const o = koOutcome(live)
+  if (!o) return null
+  const n = (s: string) => normaliseName(s).toLowerCase()
+  return n(o.winner) === n(home!) ? home : n(o.winner) === n(away!) ? away : normaliseName(o.winner)
+}
+
+// Build the real bracket round by round from actual results. The R32 fixtures and
+// each later slot's venue/date come from a canonical prediction set (they're the
+// same for everyone — only the teams differ). A later slot fills with the real
+// team once its feeder game has a winner; otherwise it stays null (TBC).
+export function buildBracket(
+  canonical: Prediction[],
+  matches: LiveMatch[]
+): Record<Stage, BracketSlot[]> {
+  const byStage: Record<string, Prediction[]> = {}
+  for (const p of canonical) (byStage[p.stage] ??= []).push(p)
+
+  const out = {} as Record<Stage, BracketSlot[]>
+  out['Round of 32'] = (byStage['Round of 32'] ?? []).map((p) => ({
+    home: p.home,
+    away: p.away,
+    venue: p.venue,
+    city: p.city,
+    dateText: p.dateText,
+  }))
+  for (let s = 1; s < stageOrder.length; s++) {
+    const stage = stageOrder[s]
+    const prev = out[stageOrder[s - 1]]
+    const meta = byStage[stage] ?? []
+    const cur: BracketSlot[] = []
+    for (let i = 0; i < prev.length / 2; i++) {
+      const a = prev[2 * i]
+      const b = prev[2 * i + 1]
+      const m = meta[i]
+      cur.push({
+        home: slotWinner(a.home, a.away, matches),
+        away: slotWinner(b.home, b.away, matches),
+        venue: m?.venue,
+        city: m?.city,
+        dateText: m?.dateText,
+      })
+    }
+    out[stage] = cur
+  }
+  return out
+}
+
+// How a person's pick for a bracket slot did against the real game. If the real
+// teams aren't both known yet → pending. If they picked the wrong teams for this
+// slot (their team didn't make it), it's a miss once the real game is decided.
+export function slotPickResult(
+  pick: Prediction | undefined,
+  home: string | null,
+  away: string | null,
+  live: LiveMatch | undefined
+): Result {
+  if (!pick || !home || !away) return 'pending'
+  const decided = !!live && phaseOf(live.status) === 'final'
+  if (pairKey(pick.home, pick.away) !== pairKey(home, away)) {
+    return decided ? 'wrong' : 'pending'
+  }
+  if (!decided) return 'pending'
+  return scorePrediction(pick, live).result
+}
+
+// Goalscorers for a real fixture, oriented to the given home/away order.
+export function goalsForFixture(
+  home: string,
+  away: string,
+  goals?: MatchGoals[]
+): { home: Goal[]; away: Goal[] } | null {
+  if (!goals) return null
+  const key = pairKey(home, away)
+  const g = goals.find((x) => pairKey(x.home, x.away) === key)
+  if (!g) return null
+  const swapped = normaliseName(g.home).toLowerCase() !== normaliseName(home).toLowerCase()
+  return swapped
+    ? { home: g.awayScorers, away: g.homeScorers }
+    : { home: g.homeScorers, away: g.awayScorers }
+}

@@ -115,6 +115,62 @@ body {
   text-transform: uppercase;
   margin: 8px 0 0;
 }
+
+/* ---- Person toggle (who "you" are) ---- */
+.person-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 16px;
+}
+.pt-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--on-dark-3);
+  flex: none;
+}
+.pt-seg {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 4px;
+  padding: 4px;
+  background: var(--emerald-glass);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--r-pill);
+  backdrop-filter: blur(10px);
+}
+.pt-btn {
+  flex: 1 1 0;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: calc(var(--r-pill) - 4px);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: 'Sora', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.pt-btn:hover {
+  color: #fff;
+}
+.pt-btn.active {
+  background: linear-gradient(135deg, var(--gold-soft), var(--gold));
+  color: #1a1206;
+  box-shadow: 0 2px 10px rgba(232, 182, 71, 0.3);
+}
+/* TBC placeholder team */
+.tname.tbc {
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.06em;
+}
+.crest.crest-tbc {
+  opacity: 0.4;
+  filter: grayscale(1);
+}
 .share-btn {
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.22);
