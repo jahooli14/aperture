@@ -223,7 +223,7 @@ body {
   text-transform: uppercase;
 }
 
-/* ---- Leaderboard (title-race: leader hero band + chasers with gap) ---- */
+/* ---- Leaderboard (one ranked list; row 1 is the leader, emphasized) ---- */
 .leaderboard {
   background: var(--emerald-glass);
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -233,87 +233,50 @@ body {
   backdrop-filter: blur(14px);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
 }
-/* Leader hero */
-.lb-leader {
-  position: relative;
-  padding: 15px 18px 14px;
-  background: linear-gradient(
-    120deg,
-    rgba(232, 182, 71, 0.22),
-    rgba(232, 182, 71, 0.05) 58%,
-    transparent
-  );
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-.lb-leader.me {
-  box-shadow: inset 3px 0 0 var(--gold);
-}
-.lb-leader-tag {
-  display: inline-block;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--gold-soft);
-  margin-bottom: 5px;
-}
-.lb-leader-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-}
-.lb-leader-name {
-  font-family: 'Sora', sans-serif;
-  font-size: 22px;
-  font-weight: 700;
-  color: #fff;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.lb-leader-pts {
-  flex: none;
-  font-family: 'Sora', sans-serif;
-  font-size: 26px;
-  font-weight: 800;
-  color: var(--gold-soft);
-  font-variant-numeric: tabular-nums;
-}
-.lb-pts-unit {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--on-dark-2);
-}
-/* Chasers */
 .lb-list {
   list-style: none;
   margin: 0;
   padding: 0;
 }
+/* Fixed rem-based columns (NOT em) so the leader's larger font doesn't widen
+   its cells — names all start at the same x, scores all end at the same x. */
 .lb-row {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 18px;
+  padding: 13px 18px;
 }
 .lb-row + .lb-row {
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
+.lb-row.leader {
+  background: linear-gradient(90deg, rgba(232, 182, 71, 0.16), rgba(232, 182, 71, 0.03) 72%);
+  padding-top: 15px;
+  padding-bottom: 15px;
+}
+/* Your row — quiet neutral accent bar (no gold fill); layers over .leader. */
 .lb-row.me {
-  background: linear-gradient(90deg, rgba(232, 182, 71, 0.14), transparent 70%);
-  box-shadow: inset 3px 0 0 var(--gold);
+  box-shadow: inset 3px 0 0 rgba(255, 255, 255, 0.5);
+}
+.lb-row.me:not(.leader) {
+  background: rgba(255, 255, 255, 0.05);
 }
 .lb-rank {
-  flex: 0 0 1.3em;
+  flex: 0 0 1.6rem;
   font-family: 'Sora', sans-serif;
   font-size: 14px;
   font-weight: 700;
   color: var(--on-dark-2);
   text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.lb-row.leader .lb-rank {
+  color: var(--gold);
+  font-size: 16px;
 }
 .lb-name {
   flex: 1 1 auto;
+  min-width: 0;
   font-size: 15px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.95);
@@ -321,16 +284,29 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.lb-row.leader .lb-name {
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+}
+.lb-crown {
+  font-size: 13px;
+}
 .lb-pts {
-  flex: none;
+  flex: 0 0 3.4rem;
+  text-align: right;
   font-family: 'Sora', sans-serif;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
   color: #fff;
   font-variant-numeric: tabular-nums;
 }
+.lb-row.leader .lb-pts {
+  font-size: 21px;
+  color: var(--gold-soft);
+}
 .lb-gap {
-  flex: 0 0 3em;
+  flex: 0 0 3rem;
   text-align: right;
   font-size: 12px;
   font-weight: 600;
@@ -757,15 +733,15 @@ body {
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 0;
 }
-/* The person whose page you're on — gold accent bar + soft gradient, not a flat
-   block, so it reads as "highlighted" rather than "filled in". */
+/* The person whose page you're on — a quiet neutral highlight + subtle accent
+   bar (no gold fill), so your row stands out without shouting. */
 .cmp-row.me {
-  background: linear-gradient(90deg, rgba(232, 182, 71, 0.2), rgba(232, 182, 71, 0.04));
-  box-shadow: inset 3px 0 0 var(--gold);
+  background: rgba(255, 255, 255, 0.055);
+  box-shadow: inset 3px 0 0 rgba(255, 255, 255, 0.45);
   border-radius: 9px;
 }
 .cmp-row.me .cmp-name {
-  color: var(--gold-soft);
+  color: #fff;
   font-weight: 700;
 }
 .cmp-row.me + .cmp-row,
@@ -784,12 +760,13 @@ body {
   color: rgba(255, 255, 255, 0.92);
   text-shadow: none;
 }
-/* Gold star — this person nailed the exact scoreline. */
-.cmp-star {
-  margin-left: 4px;
-  color: var(--gold);
+/* Result badge — mirrors the card pill: 🏆 right result, 🏆⭐ exact score. */
+.cmp-mark {
+  flex: none;
   font-size: 12px;
-  text-shadow: 0 0 6px rgba(232, 182, 71, 0.5);
+  line-height: 1;
+  margin-right: 2px;
+  white-space: nowrap;
 }
 .cmp-mid {
   flex: 1 1 auto;
@@ -925,9 +902,10 @@ body {
   font-size: 12px;
   line-height: 1;
 }
-.adv-team .struck {
+.adv-team.struck {
+  color: #ff8d9a;
   text-decoration: line-through;
-  text-decoration-color: var(--red);
+  text-decoration-color: #ff8d9a;
   text-decoration-thickness: 2px;
 }
 /* The team that actually went through, shown above a struck wrong pick. */

@@ -344,36 +344,31 @@ function Leaderboard({ matches, currentSlug }: { matches: LiveMatch[]; currentSl
       .sort((a, b) => b.points - a.points)
   }, [matches])
 
-  const leader = rows[0]
-  const chasers = rows.slice(1)
+  const leaderPts = rows[0]?.points ?? 0
 
   return (
     <section className="leaderboard">
-      <div className={`lb-leader ${leader.slug === currentSlug ? 'me' : ''}`}>
-        <span className="lb-leader-tag">👑 Leader</span>
-        <div className="lb-leader-row">
-          <span className="lb-leader-name">
-            {leader.title}
-            {leader.slug === currentSlug ? ' (you)' : ''}
-          </span>
-          <span className="lb-leader-pts">
-            {leader.points}
-            <span className="lb-pts-unit"> pts</span>
-          </span>
-        </div>
-      </div>
       <ol className="lb-list">
-        {chasers.map((r, i) => (
-          <li key={r.slug} className={`lb-row ${r.slug === currentSlug ? 'me' : ''}`}>
-            <span className="lb-rank">{i + 2}</span>
-            <span className="lb-name">
-              {r.title}
-              {r.slug === currentSlug ? ' (you)' : ''}
-            </span>
-            <span className="lb-pts">{r.points}</span>
-            <span className="lb-gap">−{leader.points - r.points}</span>
-          </li>
-        ))}
+        {rows.map((r, i) => {
+          const isLeader = i === 0
+          return (
+            <li
+              key={r.slug}
+              className={`lb-row ${isLeader ? 'leader' : ''} ${
+                r.slug === currentSlug ? 'me' : ''
+              }`}
+            >
+              <span className="lb-rank">{i + 1}</span>
+              <span className="lb-name">
+                {r.title}
+                {r.slug === currentSlug ? ' (you)' : ''}
+                {isLeader && <span className="lb-crown"> 👑</span>}
+              </span>
+              <span className="lb-pts">{r.points}</span>
+              <span className="lb-gap">{isLeader ? '' : `−${leaderPts - r.points}`}</span>
+            </li>
+          )
+        })}
       </ol>
     </section>
   )
@@ -710,11 +705,6 @@ function PredictionCard({
                 <span className="cmp-name">
                   {ci.title}
                   {ci.slug === currentSlug ? ' (you)' : ''}
-                  {r === 'exact' && (
-                    <span className="cmp-star" title="Exact score">
-                      ★
-                    </span>
-                  )}
                 </span>
                 {cp ? (
                   <>
@@ -725,6 +715,12 @@ function PredictionCard({
                         </>
                       )}
                     </span>
+                    {/* Same badges as the card pill: 🏆 right result, 🏆⭐ exact. */}
+                    {(r === 'exact' || r === 'outcome') && (
+                      <span className="cmp-mark" title={r === 'exact' ? 'Exact score' : 'Right result'}>
+                        {r === 'exact' ? '🏆⭐' : '🏆'}
+                      </span>
+                    )}
                     <span className={`cmp-num ${cls}`}>
                       {sc1}–{sc2}
                     </span>

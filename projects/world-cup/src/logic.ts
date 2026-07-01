@@ -90,20 +90,30 @@ export function scorePrediction(pred: Prediction, live?: LiveMatch): Scored {
   const liveHome = swapped ? live.awayScore : live.homeScore
   const liveAway = swapped ? live.homeScore : live.awayScore
 
-  const exact = liveHome === pred.homeScore && liveAway === pred.awayScore
+  const exactScore = liveHome === pred.homeScore && liveAway === pred.awayScore
   let sameOutcome = sign(pred.homeScore, pred.awayScore) === sign(liveHome, liveAway)
 
-  // If I predicted a draw with a team to go through, count it as the right
-  // result when that team actually won (e.g. picked a 1-1 with Canada advancing,
-  // and Canada won) — even though the literal scoreline differs.
-  if (!sameOutcome && pred.advances && liveHome !== liveAway) {
-    const realWinner = liveHome > liveAway ? pred.home : pred.away
-    if (normaliseName(realWinner).toLowerCase() === normaliseName(pred.advances).toLowerCase()) {
-      sameOutcome = true
+  // For a predicted draw I also name the team I think goes through, and THAT is
+  // what the result hinges on. An exact 1-1 doesn't count if the other side
+  // advanced on penalties (e.g. picked 1-1 Netherlands, but Morocco went through).
+  let advanceCorrect = true
+  if (pred.homeScore === pred.awayScore && pred.advances) {
+    const backed = normaliseName(pred.advances).toLowerCase()
+    if (liveHome === liveAway) {
+      // Actual draw too → decided on penalties; match against the real advancer.
+      advanceCorrect = live.advancer
+        ? normaliseName(live.advancer).toLowerCase() === backed
+        : true // advancer unknown yet — don't penalise
+    } else {
+      // Actual was decisive → the winner must be who I backed to go through.
+      const realWinner = liveHome > liveAway ? pred.home : pred.away
+      advanceCorrect = normaliseName(realWinner).toLowerCase() === backed
+      if (advanceCorrect) sameOutcome = true
     }
   }
 
-  const result: Result = exact ? 'exact' : sameOutcome ? 'outcome' : 'wrong'
+  const exact = exactScore && advanceCorrect
+  const result: Result = exact ? 'exact' : sameOutcome && advanceCorrect ? 'outcome' : 'wrong'
   const points = result === 'exact' ? POINTS.exact : result === 'outcome' ? POINTS.outcome : 0
 
   return { pred, live, phase: 'final', result, points }
