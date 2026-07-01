@@ -7,6 +7,7 @@ import {
   countryImage,
   normaliseName,
   kickoffFor,
+  teamCode,
   type Stage,
   type Prediction,
 } from './predictions'
@@ -162,9 +163,9 @@ export function App() {
     scrolledRef.current = true
     const doScroll = () => {
       const el = document.querySelector('.card.live')
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      if (el) el.scrollIntoView({ behavior: 'auto', block: 'center' })
     }
-    const timers = [500, 1400, 2800].map((ms) => setTimeout(doScroll, ms))
+    const timers = [200, 700, 1500].map((ms) => setTimeout(doScroll, ms))
     return () => timers.forEach(clearTimeout)
   }, [matches])
 
@@ -341,8 +342,7 @@ function Leaderboard({ matches, currentSlug }: { matches: LiveMatch[]; currentSl
               <span className="lb-rank">{i + 1}</span>
               <span className="lb-name">
                 {r.title}
-                {r.slug === currentSlug ? ' (you)' : ''}
-                {isLeader && <span className="lb-crown"> 👑</span>}
+                {isLeader && <span className="lb-crown"> 🏆</span>}
               </span>
               <span className="lb-pts">{r.points}</span>
               <span className="lb-gap">{isLeader ? '' : `−${leaderPts - r.points}`}</span>
@@ -418,7 +418,10 @@ function StageSection({
 // Sort key: real kickoff if we have one, else keep bracket order.
 function slotTime(slot: BracketSlot, matches: LiveMatch[], index: number): number {
   const live = findLive(slot.home, slot.away, matches)
-  const iso = live?.utcDate || (slot.home && slot.away ? kickoffFor(slot.home, slot.away) : '')
+  const iso =
+    live?.utcDate ||
+    slot.kickoff ||
+    (slot.home && slot.away ? kickoffFor(slot.home, slot.away) : '')
   return iso ? Date.parse(iso) : 1e15 + index
 }
 
@@ -461,11 +464,18 @@ function TrueGameCard({
   }
   const hasScore = sHome != null && sAway != null
 
+  // Draw settled on penalties — mark the side that went through with a 🏆.
+  const pensAdvancer =
+    phase === 'final' && hasScore && sHome === sAway && live?.advancer ? live.advancer : null
+  const wentThrough = (name: string | null) =>
+    !!name && !!pensAdvancer && normaliseName(name).toLowerCase() === normaliseName(pensAdvancer).toLowerCase()
+
   const g = known && phase !== 'upcoming' ? goalsForFixture(home!, away!, goals) : null
   const hasGoals = !!g && (g.home.length > 0 || g.away.length > 0)
 
   const wxCondition = isLive && weather ? weather.condition : null
-  const koIso = live?.utcDate || (known ? kickoffFor(home!, away!) : undefined)
+  const koIso =
+    live?.utcDate || slot.kickoff || (known ? kickoffFor(home!, away!) : undefined)
 
   const cmpRows = useMemo(() => {
     const me = compareIndex.find((c) => c.slug === currentSlug)
@@ -479,15 +489,22 @@ function TrueGameCard({
         !isLive ? 'placed lighttext' : ''
       }`}
     >
-      {known &&
-        (wxCondition ? (
+      {known ? (
+        wxCondition ? (
           <>
             <CardPlace home={home!} away={away!} light />
             <CardWeather condition={wxCondition} overPhoto />
           </>
         ) : (
           <CardPlace home={home!} away={away!} />
-        ))}
+        )
+      ) : (
+        // TBC slot — no teams yet, so show a World Cup stadium behind it.
+        <div className="card-place" aria-hidden="true">
+          <div className="pfull" style={{ backgroundImage: 'url(/stadium.jpg)' }} />
+          <div className="place-veil" />
+        </div>
+      )}
       <div className="card-inner">
         <div className="card-top">
           <span className="caption">
@@ -511,11 +528,11 @@ function TrueGameCard({
         </div>
 
         <div className="match">
-          <TeamSide name={home} />
+          <TeamSide name={home} advanced={wentThrough(home)} />
           <div className="center">
             <span className={`bigscore ${phase}`}>{hasScore ? `${sHome}–${sAway}` : 'vs'}</span>
           </div>
-          <TeamSide name={away} />
+          <TeamSide name={away} advanced={wentThrough(away)} />
         </div>
 
         {hasGoals && g && (
@@ -591,19 +608,17 @@ function TrueGameCard({
                 const out = eliminated.has(normaliseName(name).toLowerCase())
                 return (
                   <span className={champ || pens ? 'cmp-win' : undefined}>
-                    {flag(name)} <span className={out ? 'cmp-out' : undefined}>{name}</span>
-                    {champ && ' 🏆'}
-                    {pens && <span className="cmp-pens"> pens</span>}
+                    {flag(name)} <span className={out ? 'cmp-out' : undefined}>{teamCode(name)}</span>
+                    {/* Whoever they picked to go through (a drawn pick's advancer,
+                        or the champion in the Final) gets a little 🏆. */}
+                    {(champ || pens) && ' 🏆'}
                   </span>
                 )
               }
 
               return (
                 <div key={ci.slug} className={`cmp-row ${ci.slug === currentSlug ? 'me' : ''}`}>
-                  <span className="cmp-name">
-                    {ci.title}
-                    {ci.slug === currentSlug ? ' (you)' : ''}
-                  </span>
+                  <span className="cmp-name">{ci.title}</span>
                   {pick ? (
                     <>
                       <span className="cmp-mid">
@@ -613,14 +628,17 @@ function TrueGameCard({
                           </>
                         )}
                       </span>
-                      {(r === 'exact' || r === 'outcome') && (
-                        <span
-                          className="cmp-mark"
-                          title={r === 'exact' ? 'Exact score' : 'Right result'}
-                        >
-                          {r === 'exact' ? '🏆⭐' : '🏆'}
-                        </span>
-                      )}
+                      {/* Fixed columns so stars line up under stars and trophies
+                          under trophies across every row. */}
+                      <span className="cmp-star" title={r === 'exact' ? 'Exact score' : undefined}>
+                        {r === 'exact' ? '⭐' : ''}
+                      </span>
+                      <span
+                        className="cmp-trophy"
+                        title={r === 'exact' || r === 'outcome' ? 'Right result' : undefined}
+                      >
+                        {r === 'exact' || r === 'outcome' ? '🏆' : ''}
+                      </span>
                       <span className={`cmp-num ${cls}`}>
                         {sc1}–{sc2}
                       </span>
@@ -638,7 +656,7 @@ function TrueGameCard({
   )
 }
 
-function TeamSide({ name }: { name: string | null }) {
+function TeamSide({ name, advanced }: { name: string | null; advanced?: boolean }) {
   if (!name) {
     return (
       <div className="side">
@@ -650,7 +668,10 @@ function TeamSide({ name }: { name: string | null }) {
   return (
     <div className="side">
       <span className="crest">{flag(name)}</span>
-      <span className="tname">{name}</span>
+      <span className="tname">
+        {name}
+        {advanced && <span className="pens-trophy" title="Won on penalties"> 🏆</span>}
+      </span>
     </div>
   )
 }
@@ -672,8 +693,11 @@ function StadiumIcon() {
 function KickOff({ iso, inline }: { iso?: string; inline?: boolean }) {
   if (!iso) return <span className="kickoff">Date TBC</span>
   const d = new Date(iso)
-  const date = d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })
-  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  // Always show UK time (Europe/London → BST in summer) so everyone in the pool
+  // sees the same kickoff regardless of their device timezone.
+  const tz = { timeZone: 'Europe/London' } as const
+  const date = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', ...tz })
+  const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', ...tz })
   if (inline) return <>{`${date} · ${time}`}</>
   return (
     <span className="kickoff">

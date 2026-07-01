@@ -105,14 +105,17 @@ function toNum(s: any): number | null {
 // visible (greyed, with their score) for the whole tournament, not just for a
 // day or two after kick-off.
 const KNOCKOUT_START = '2026-06-27'
+// Query to the end of the tournament so later-round fixtures (and their real
+// kickoff times) load as soon as they're scheduled — not just 2 days out.
+const KNOCKOUT_END = '2026-07-20'
 
 // Build the full match list straight from BBC. One request for the whole
-// knockout window (start → tomorrow) returns finished, live and next-up games.
+// knockout window returns finished, live and every upcoming game (with times).
 async function fetchBbc(): Promise<{ matches: LiveMatch[]; goals: MatchGoals[] }> {
   const fmt = (d: Date) => d.toISOString().slice(0, 10)
   const now = new Date()
   const today = fmt(now)
-  const end = fmt(new Date(now.getTime() + 2 * 86_400_000))
+  const end = KNOCKOUT_END
   const byPair: Record<string, { match: LiveMatch; goals: MatchGoals }> = {}
 
   try {

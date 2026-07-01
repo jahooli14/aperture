@@ -2,6 +2,8 @@ import {
   normaliseName,
   stageOrder,
   kickoffFor,
+  scheduledKickoff,
+  scheduledVenue,
   type Prediction,
   type Stage,
   type Person,
@@ -333,6 +335,8 @@ export interface BracketSlot {
   venue?: string
   city?: string
   dateText?: string
+  /** Baked kickoff time (ISO), shown while the teams are still TBC. */
+  kickoff?: string
 }
 
 // Find the live fixture for two teams (order-independent).
@@ -385,12 +389,15 @@ export function buildBracket(
       const a = prev[2 * i]
       const b = prev[2 * i + 1]
       const m = meta[i]
+      // Real venue by bracket slot takes priority over the predicted one.
+      const sv = scheduledVenue(stage, i)
       cur.push({
         home: slotWinner(a.home, a.away, matches),
         away: slotWinner(b.home, b.away, matches),
-        venue: m?.venue,
-        city: m?.city,
+        venue: sv?.venue ?? m?.venue,
+        city: sv?.city ?? m?.city,
         dateText: m?.dateText,
+        kickoff: scheduledKickoff(stage, i),
       })
     }
     out[stage] = cur

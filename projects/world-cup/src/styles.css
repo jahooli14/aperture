@@ -310,12 +310,17 @@ body {
   padding-top: 15px;
   padding-bottom: 15px;
 }
-/* Your row — quiet neutral accent bar (no gold fill); layers over .leader. */
+/* Your row — clearly highlighted (bright bar + brighter fill + bold name), so
+   it's obvious which is you without needing a "(you)" label. */
 .lb-row.me {
-  box-shadow: inset 3px 0 0 rgba(255, 255, 255, 0.5);
+  box-shadow: inset 4px 0 0 #ffffff;
 }
 .lb-row.me:not(.leader) {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.12);
+}
+.lb-row.me .lb-name {
+  font-weight: 800;
+  color: #fff;
 }
 .lb-rank {
   flex: 0 0 1.6rem;
@@ -499,6 +504,9 @@ body {
   backdrop-filter: blur(12px);
   transition: transform 0.15s var(--ease), box-shadow 0.2s var(--ease);
   animation: rise 0.3s var(--ease) both;
+  /* Skip rendering off-screen cards so a long bracket scrolls smoothly. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 360px;
 }
 .card:hover {
   transform: translateY(-2px);
@@ -789,16 +797,16 @@ body {
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 0;
 }
-/* The person whose page you're on — a quiet neutral highlight + subtle accent
-   bar (no gold fill), so your row stands out without shouting. */
+/* The person you're viewing as — clearly highlighted (bright bar + fill + bold
+   name), so it's obvious which row is you without a "(you)" label. */
 .cmp-row.me {
-  background: rgba(255, 255, 255, 0.055);
-  box-shadow: inset 3px 0 0 rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.13);
+  box-shadow: inset 4px 0 0 #ffffff;
   border-radius: 9px;
 }
 .cmp-row.me .cmp-name {
   color: #fff;
-  font-weight: 700;
+  font-weight: 800;
 }
 .cmp-row.me + .cmp-row,
 .cmp-row.me {
@@ -807,7 +815,7 @@ body {
 /* Three columns: name (fixed) | matchup (left-aligned, flexes) | score (right).
    Fixed name width makes every matchup start at the same x, so they line up. */
 .cmp-name {
-  flex: 0 0 7.8em;
+  flex: 0 0 4.8em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -816,13 +824,17 @@ body {
   color: rgba(255, 255, 255, 0.92);
   text-shadow: none;
 }
-/* Result badge — mirrors the card pill: 🏆 right result, 🏆⭐ exact score. */
-.cmp-mark {
-  flex: none;
+/* Result badges in fixed columns: star column then trophy column, so they line
+   up vertically across rows (🏆 right result, +⭐ when the score was exact). */
+.cmp-star,
+.cmp-trophy {
+  flex: 0 0 1.2em;
+  text-align: center;
   font-size: 12px;
   line-height: 1;
-  margin-right: 2px;
-  white-space: nowrap;
+}
+.cmp-trophy {
+  margin-right: 4px;
 }
 .cmp-mid {
   flex: 1 1 auto;
@@ -1231,6 +1243,13 @@ body {
   top: 0;
   bottom: 0;
   width: 60%;
+  background-size: cover;
+  background-position: center;
+}
+/* Full-bleed photo (TBC slots — one stadium image across the whole card). */
+.pfull {
+  position: absolute;
+  inset: 0;
   background-size: cover;
   background-position: center;
 }

@@ -32,13 +32,14 @@ function hashId(s: string): number {
 }
 
 const KNOCKOUT_START = '2026-06-27'
+const KNOCKOUT_END = '2026-07-20'
 
-// Build the full match list straight from BBC (one request, knockout start → +2d).
+// Build the full match list straight from BBC (one request, whole knockout window).
 async function fetchBbc(): Promise<{ matches: any[]; goals: any[] }> {
   const fmt = (d: Date) => d.toISOString().slice(0, 10)
   const now = new Date()
   const today = fmt(now)
-  const end = fmt(new Date(now.getTime() + 2 * 86_400_000))
+  const end = KNOCKOUT_END
   const byPair: Record<string, { match: any; goals: any }> = {}
   const num = (s: any) => (Number.isFinite(parseInt(s, 10)) ? parseInt(s, 10) : null)
   const sc = (t: any) =>

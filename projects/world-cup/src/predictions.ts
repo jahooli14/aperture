@@ -200,6 +200,24 @@ export function countryImage(team: string): string {
   return code ? `/countries/${code}.jpg` : ''
 }
 
+// FIFA 3-letter codes — compact team labels for the tight compare-picks rows.
+const TEAM_CODES: Record<string, string> = {
+  Germany: 'GER', Paraguay: 'PAR', France: 'FRA', Sweden: 'SWE', 'South Africa': 'RSA',
+  Canada: 'CAN', Netherlands: 'NED', Morocco: 'MAR', Portugal: 'POR', Croatia: 'CRO',
+  Spain: 'ESP', Austria: 'AUT', USA: 'USA', Bosnia: 'BIH', Belgium: 'BEL', Senegal: 'SEN',
+  Brazil: 'BRA', Japan: 'JPN', 'Ivory Coast': 'CIV', Norway: 'NOR', Mexico: 'MEX',
+  Ecuador: 'ECU', England: 'ENG', 'DR Congo': 'COD', Argentina: 'ARG', 'Cape Verde': 'CPV',
+  Australia: 'AUS', Egypt: 'EGY', Switzerland: 'SUI', Algeria: 'ALG', Colombia: 'COL',
+  Ghana: 'GHA', 'New Zealand': 'NZL', 'South Korea': 'KOR', 'Saudi Arabia': 'KSA', Iran: 'IRN',
+  Qatar: 'QAT', Tunisia: 'TUN', Uruguay: 'URU', Jordan: 'JOR', Uzbekistan: 'UZB', Panama: 'PAN',
+  'Costa Rica': 'CRC', Curacao: 'CUW', Haiti: 'HAI', 'New Caledonia': 'NCL', Italy: 'ITA',
+  Denmark: 'DEN', Scotland: 'SCO', Wales: 'WAL',
+}
+export function teamCode(team: string): string {
+  const n = normaliseName(team)
+  return TEAM_CODES[n] ?? n.slice(0, 3).toUpperCase()
+}
+
 // Aliases to reconcile my names with various live-feed spellings.
 // Keys are normalised (lowercased, punctuation stripped) feed names → my name.
 export const nameAliases: Record<string, string> = {
@@ -261,6 +279,60 @@ const R32_KICKOFFS: Record<string, string> = {
 }
 export function kickoffFor(home: string, away: string): string | undefined {
   return R32_KICKOFFS[rkey(home, away)]
+}
+
+// Real kickoff times (UTC) and venues for the later rounds, keyed by bracket
+// slot ("<stage>#<index>"). From the official FIFA 2026 match schedule (match
+// numbers cross-checked against the BBC bracket). Baked so a game shows its time
+// + venue even while its teams are TBC; once teams are known the live feed's
+// time takes over. Times are UTC — the UI renders them in UK time.
+const KO_SCHEDULE: Record<string, string> = {
+  'Round of 16#0': '2026-07-04T21:00:00Z', // Philadelphia
+  'Round of 16#1': '2026-07-04T17:00:00Z', // Houston
+  'Round of 16#2': '2026-07-06T19:00:00Z', // Arlington
+  'Round of 16#3': '2026-07-07T00:00:00Z', // Seattle
+  'Round of 16#4': '2026-07-05T20:00:00Z', // East Rutherford
+  'Round of 16#5': '2026-07-06T00:00:00Z', // Mexico City (1am Mon UK)
+  'Round of 16#6': '2026-07-07T16:00:00Z', // Atlanta
+  'Round of 16#7': '2026-07-07T20:00:00Z', // Vancouver
+  'Quarter-finals#0': '2026-07-09T20:00:00Z', // Boston
+  'Quarter-finals#1': '2026-07-10T19:00:00Z', // Los Angeles
+  'Quarter-finals#2': '2026-07-11T21:00:00Z', // Miami
+  'Quarter-finals#3': '2026-07-12T01:00:00Z', // Kansas City
+  'Semi-finals#0': '2026-07-14T19:00:00Z', // Dallas
+  'Semi-finals#1': '2026-07-15T19:00:00Z', // Atlanta
+  'Final#0': '2026-07-19T19:00:00Z', // New York
+}
+export function scheduledKickoff(stage: string, index: number): string | undefined {
+  return KO_SCHEDULE[`${stage}#${index}`]
+}
+
+// Official venue per later-round bracket slot [stadium, city]. The team-based
+// slots (0,1,4,5 in R16) were verified against the real fixtures; the rest come
+// from the FIFA bracket by match number.
+const VENUE_SCHEDULE: Record<string, [string, string]> = {
+  'Round of 16#0': ['Lincoln Financial Field', 'Philadelphia, USA'],
+  'Round of 16#1': ['NRG Stadium', 'Houston, USA'],
+  'Round of 16#2': ['AT&T Stadium', 'Dallas, USA'],
+  'Round of 16#3': ['Lumen Field', 'Seattle, USA'],
+  'Round of 16#4': ['MetLife Stadium', 'New York, USA'],
+  'Round of 16#5': ['Estadio Azteca', 'Mexico City, Mexico'],
+  'Round of 16#6': ['Mercedes-Benz Stadium', 'Atlanta, USA'],
+  'Round of 16#7': ['BC Place', 'Vancouver, Canada'],
+  'Quarter-finals#0': ['Gillette Stadium', 'Boston, USA'],
+  'Quarter-finals#1': ['SoFi Stadium', 'Los Angeles, USA'],
+  'Quarter-finals#2': ['Hard Rock Stadium', 'Miami, USA'],
+  'Quarter-finals#3': ['Arrowhead Stadium', 'Kansas City, USA'],
+  'Semi-finals#0': ['AT&T Stadium', 'Dallas, USA'],
+  'Semi-finals#1': ['Mercedes-Benz Stadium', 'Atlanta, USA'],
+  'Final#0': ['MetLife Stadium', 'New York, USA'],
+}
+export function scheduledVenue(
+  stage: string,
+  index: number
+): { venue: string; city: string } | undefined {
+  const v = VENUE_SCHEDULE[`${stage}#${index}`]
+  return v ? { venue: v[0], city: v[1] } : undefined
 }
 
 // SarJack's predictions (her bracket — champions: Argentina).
