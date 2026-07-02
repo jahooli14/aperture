@@ -58,9 +58,21 @@ export function useLiveData() {
       timer.current = setTimeout(loop, liveRef.current ? POLL_LIVE_MS : POLL_IDLE_MS)
     }
     loop()
+
+    // Backgrounded tabs get their timers throttled by the browser, so a stalled
+    // first load (or a missed poll) can sit stale for a long time. Refetch the
+    // moment the tab is looked at again instead of waiting on the poll timer.
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return
+      if (timer.current) clearTimeout(timer.current)
+      loop()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+
     return () => {
       active = false
       if (timer.current) clearTimeout(timer.current)
+      document.removeEventListener('visibilitychange', onVisible)
     }
   }, [fetchOnce])
 
