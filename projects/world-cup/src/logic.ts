@@ -163,7 +163,8 @@ const GOAL_BONUS: Record<Stage, number> = {
 // round's base; plus, for each team whose exact goals you nailed, that round's
 // bonus. Wrong result → nothing (the bonus is gated on getting the result right).
 // "Correct result" reuses scorePrediction, so it matches the card badges exactly
-// — including a predicted draw where the team you backed actually went through.
+// — including a predicted draw where the team you backed actually went through
+// (getting the shootout winner right earns the base points, no separate bonus).
 export function matchPoints(pred: Prediction, live?: LiveMatch): number {
   const { result } = scorePrediction(pred, live)
   if (result !== 'exact' && result !== 'outcome') return 0
@@ -182,24 +183,23 @@ export function matchPoints(pred: Prediction, live?: LiveMatch): number {
 // i.e. group stage plus the four R32 games that had finished before the Ivory
 // Coast v Norway kick-off. Live points for every game from that one onward get
 // added on top, so we never double-count what's already in these numbers.
+// Gavin's +4 over the naively-computed group-stage figure is unexplained —
+// checked and ruled out: penalty bonus, relaxed goal bonus, total-goals bonus,
+// alias/swap bugs, a missing 5th pre-cutoff game. KatDan's and SarJack's totals
+// both reduce exactly to baseline + live points with no rule changes needed, so
+// the gap isn't a scoring rule; it's most likely a group-stage tally the app
+// doesn't track. Trusting the known-correct total (394) until the source turns up.
 export const SCORE_BASELINE: Record<string, number> = {
   katdan: 331,
   sarjack: 292,
-  gavin: 356,
+  gavin: 360,
 }
 const SCORE_CUTOFF_MS = new Date('2026-06-30T12:00:00Z').getTime()
-
-// Manual corrections while the exact scoring rule is being confirmed. Gavin's
-// real total is 2 higher than the app computes (likely a missing exact-score
-// bonus on his Mexico 2-0). Remove once the rule is finalised in matchPoints.
-export const SCORE_ADJUST: Record<string, number> = {
-  gavin: 2,
-}
 
 // A person's live total: their baseline plus points from every finished knockout
 // game that kicked off at/after the cutoff (games before it are already counted).
 export function personTotal(person: Person, matches: LiveMatch[]): number {
-  let total = (SCORE_BASELINE[person.slug] ?? 0) + (SCORE_ADJUST[person.slug] ?? 0)
+  let total = SCORE_BASELINE[person.slug] ?? 0
   for (const pred of person.predictions) {
     const live = findLiveMatch(pred, matches)
     if (!live || phaseOf(live.status) !== 'final') continue
