@@ -39,3 +39,17 @@ export interface ScoresResponse {
   goals?: MatchGoals[]
   message?: string
 }
+
+export interface MatchOdds {
+  home: string
+  away: string
+  /** Whichever of the two teams Paddy Power prices shorter. */
+  favorite: string
+  /** Fractional odds for the favorite, e.g. "4/11". */
+  fractional: string
+}
+
+export interface OddsResponse {
+  configured: boolean
+  odds: MatchOdds[]
+}

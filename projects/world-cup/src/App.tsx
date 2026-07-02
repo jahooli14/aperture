@@ -27,8 +27,9 @@ import {
   type BracketSlot,
 } from './logic'
 import { useLiveData } from './useLiveData'
+import { useOdds } from './useOdds'
 import { fetchWeather, syntheticWeather, type Weather, type Condition } from './weather'
-import type { LiveScorer, LiveMatch, MatchGoals } from './types'
+import type { LiveScorer, LiveMatch, MatchGoals, MatchOdds } from './types'
 
 const flag = (team: string) => flags[normaliseName(team)] ?? '🏳️'
 
@@ -121,6 +122,7 @@ function initialSlug(): string {
 export function App() {
   const { data, loading, lastUpdated } = useLiveData()
   const scorers = data?.scorers ?? []
+  const odds = useOdds()
 
   const [currentSlug, setCurrentSlug] = useState<string>(initialSlug)
   const person = people[currentSlug] ?? people.katdan
@@ -216,7 +218,7 @@ export function App() {
         </div>
       )}
 
-      <Leaderboard matches={matches} currentSlug={currentSlug} />
+      <Leaderboard matches={matches} currentSlug={currentSlug} ready={data !== null} />
 
       <main>
         {stageOrder.map((stage) => (
@@ -226,6 +228,7 @@ export function App() {
             slots={bracket[stage] ?? []}
             weather={weather}
             matches={matches}
+            odds={odds}
             goals={data?.goals}
             compareIndex={compareIndex}
             currentSlug={currentSlug}
@@ -319,12 +322,23 @@ function PersonToggle({
 
 // --- Leaderboard ---------------------------------------------------------
 
-function Leaderboard({ matches, currentSlug }: { matches: LiveMatch[]; currentSlug: string }) {
+function Leaderboard({
+  matches,
+  currentSlug,
+  ready,
+}: {
+  matches: LiveMatch[]
+  currentSlug: string
+  ready: boolean
+}) {
+  // Before the first live fetch resolves, `matches` is empty and points would
+  // read as baseline-only — misleadingly low, and the ranking/crown could be
+  // wrong. Show a placeholder instead of a number that's about to jump.
   const rows = useMemo(() => {
     return Object.values(people)
       .map((p) => ({ slug: p.slug, title: p.title, points: personTotal(p, matches) }))
-      .sort((a, b) => b.points - a.points)
-  }, [matches])
+      .sort((a, b) => (ready ? b.points - a.points : 0))
+  }, [matches, ready])
 
   const leaderPts = rows[0]?.points ?? 0
 
@@ -332,7 +346,7 @@ function Leaderboard({ matches, currentSlug }: { matches: LiveMatch[]; currentSl
     <section className="leaderboard">
       <ol className="lb-list">
         {rows.map((r, i) => {
-          const isLeader = i === 0
+          const isLeader = ready && i === 0
           return (
             <li
               key={r.slug}
@@ -345,8 +359,8 @@ function Leaderboard({ matches, currentSlug }: { matches: LiveMatch[]; currentSl
                 {r.title}
                 {isLeader && <span className="lb-crown"> 🏆</span>}
               </span>
-              <span className="lb-pts">{r.points}</span>
-              <span className="lb-gap">{isLeader ? '' : `−${leaderPts - r.points}`}</span>
+              <span className="lb-pts">{ready ? r.points : '···'}</span>
+              <span className="lb-gap">{!ready || isLeader ? '' : `−${leaderPts - r.points}`}</span>
             </li>
           )
         })}
@@ -362,6 +376,7 @@ function StageSection({
   slots,
   weather,
   matches,
+  odds,
   goals,
   compareIndex,
   currentSlug,
@@ -370,6 +385,7 @@ function StageSection({
   slots: BracketSlot[]
   weather: Record<string, Weather>
   matches: LiveMatch[]
+  odds: MatchOdds[]
   goals?: MatchGoals[]
   compareIndex: CompareEntry[]
   currentSlug: string
@@ -405,6 +421,7 @@ function StageSection({
               slot={slot}
               weather={slot.city ? weather[slot.city] : undefined}
               matches={matches}
+              odds={odds}
               goals={goals}
               compareIndex={compareIndex}
               currentSlug={currentSlug}
@@ -434,6 +451,7 @@ function TrueGameCard({
   slot,
   weather,
   matches,
+  odds,
   goals,
   compareIndex,
   currentSlug,
@@ -443,6 +461,7 @@ function TrueGameCard({
   slot: BracketSlot
   weather?: Weather
   matches: LiveMatch[]
+  odds: MatchOdds[]
   goals?: MatchGoals[]
   compareIndex: CompareEntry[]
   currentSlug: string
@@ -454,6 +473,14 @@ function TrueGameCard({
   const isLive = phase === 'live'
   const [cmpOpen, setCmpOpen] = useState(false)
   const eliminated = useMemo(() => eliminatedTeams(matches), [matches])
+
+  // Pre-match favorite, shown through kickoff and the live phase (frozen at
+  // its last fetched price), gone once the result is known — a 90-min-only
+  // price stops meaning anything once we already know who actually won.
+  const matchOdds =
+    known && phase !== 'final'
+      ? odds.find((o) => pairKey(o.home, o.away) === pairKey(home!, away!))
+      : undefined
 
   // Orient the real score to home/away (the feed may list teams swapped).
   let sHome: number | null = null
@@ -535,6 +562,16 @@ function TrueGameCard({
           </div>
           <TeamSide name={away} advanced={wentThrough(away)} />
         </div>
+
+        {matchOdds && (
+          <div className="odds-line">
+            <span className="odds-label">Bookies favourite (90 mins):</span>
+            <span className="odds-value">
+              {matchOdds.favorite === 'Draw' ? 'Draw' : `${matchOdds.favorite} to win`}{' '}
+              {matchOdds.fractional}
+            </span>
+          </div>
+        )}
 
         {hasGoals && g && (
           <div className="goals-line">

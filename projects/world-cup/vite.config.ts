@@ -140,9 +140,90 @@ function devScoresApi(key: string): Plugin {
   }
 }
 
+// Dev-only: serve /api/odds locally the same way, so `npm run dev` shows real
+// Paddy Power prices without needing `vercel dev` (whose SPA rewrite emulation
+// breaks Vite's own dev asset requests — see api/odds.ts for the real function).
+const ODDS_LADDER: [number, number][] = [
+  [1, 100], [1, 50], [1, 33], [1, 25], [1, 20], [1, 16], [1, 14], [1, 12],
+  [1, 10], [1, 9], [1, 8], [2, 15], [1, 7], [2, 13], [1, 6], [2, 11],
+  [1, 5], [2, 9], [1, 4], [2, 7], [1, 3], [4, 11], [2, 5], [4, 9],
+  [1, 2], [8, 15], [4, 7], [8, 13], [2, 3], [5, 6], [10, 11], [1, 1],
+  [11, 10], [6, 5], [5, 4], [11, 8], [3, 2], [13, 8], [7, 4], [15, 8],
+  [2, 1], [9, 4], [5, 2], [11, 4], [3, 1], [10, 3], [7, 2], [4, 1],
+  [9, 2], [5, 1], [11, 2], [6, 1], [13, 2], [7, 1], [15, 2], [8, 1],
+  [9, 1], [10, 1], [11, 1], [12, 1], [14, 1], [16, 1], [20, 1], [25, 1],
+  [33, 1], [50, 1], [66, 1], [100, 1],
+]
+function decimalToFractional(decimal: number): string {
+  const x = decimal - 1
+  let best = ODDS_LADDER[0]
+  let bestErr = Infinity
+  for (const [num, den] of ODDS_LADDER) {
+    const err = Math.abs(num / den - x)
+    if (err < bestErr) {
+      bestErr = err
+      best = [num, den]
+    }
+  }
+  return `${best[0]}/${best[1]}`
+}
+async function fetchOdds(key: string): Promise<any[]> {
+  if (!key) return []
+  const url =
+    'https://api.the-odds-api.com/v4/sports/soccer_fifa_world_cup/odds/' +
+    `?apiKey=${key}&bookmakers=paddypower&markets=h2h&oddsFormat=decimal`
+  const r = await fetch(url)
+  if (!r.ok) return []
+  const events: any[] = await r.json()
+  const out: any[] = []
+  for (const ev of events) {
+    const pp = (ev.bookmakers ?? []).find((b: any) => b.key === 'paddypower')
+    const h2h = pp?.markets?.find((m: any) => m.key === 'h2h')
+    const outcomes: { name: string; price: number }[] = h2h?.outcomes ?? []
+    const home = outcomes.find((o) => o.name === ev.home_team)
+    const away = outcomes.find((o) => o.name === ev.away_team)
+    const draw = outcomes.find((o) => o.name === 'Draw')
+    if (!home || !away) continue
+    const candidates = [home, away, ...(draw ? [draw] : [])]
+    const favorite = candidates.reduce((a, b) => (b.price < a.price ? b : a))
+    if (candidates.filter((o) => o.price === favorite.price).length > 1) continue
+    out.push({
+      home: ev.home_team,
+      away: ev.away_team,
+      favorite: favorite.name,
+      fractional: decimalToFractional(favorite.price),
+    })
+  }
+  return out
+}
+function devOddsApi(key: string): Plugin {
+  return {
+    name: 'dev-odds-api',
+    configureServer(server) {
+      server.middlewares.use('/api/odds', async (_req, res) => {
+        res.setHeader('Content-Type', 'application/json')
+        if (!key) {
+          res.end(JSON.stringify({ configured: false, odds: [] }))
+          return
+        }
+        try {
+          const odds = await fetchOdds(key)
+          res.end(JSON.stringify({ configured: true, odds }))
+        } catch {
+          res.end(JSON.stringify({ configured: true, odds: [] }))
+        }
+      })
+    },
+  }
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   return {
-    plugins: [react(), devScoresApi(env.FOOTBALL_DATA_API_KEY || '')],
+    plugins: [
+      react(),
+      devScoresApi(env.FOOTBALL_DATA_API_KEY || ''),
+      devOddsApi(env.ODDS_API_KEY || ''),
+    ],
   }
 })

@@ -720,6 +720,28 @@ body {
   color: var(--ink-2);
 }
 
+/* Pre-match favorite (upcoming/live only, gone once the result's known) */
+.odds-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+  margin: 6px 0 0;
+  white-space: nowrap;
+}
+.odds-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.odds-value {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
 /* Goalscorers row (live + finished games) */
 .goals-line {
   display: flex;
@@ -1286,14 +1308,16 @@ body {
 /* Light text for photo treatments that use a dark wash (A, C, D) */
 .card.lighttext .tname,
 .card.lighttext .bigscore,
-.card.lighttext .vstadium {
+.card.lighttext .vstadium,
+.card.lighttext .odds-value {
   color: #fff;
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.7);
 }
 .card.lighttext .caption,
 .card.lighttext .vcity,
 .card.lighttext .advances,
-.card.lighttext .stadium-icon {
+.card.lighttext .stadium-icon,
+.card.lighttext .odds-label {
   color: rgba(255, 255, 255, 0.82);
 }
 .card.lighttext .card-foot {
@@ -1547,14 +1571,16 @@ body {
 /* Light text + adjusted accents over a weather scene */
 .card.wx .tname,
 .card.wx .bigscore,
-.card.wx .vstadium {
+.card.wx .vstadium,
+.card.wx .odds-value {
   color: #fff;
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.7);
 }
 .card.wx .caption,
 .card.wx .vcity,
 .card.wx .advances,
-.card.wx .stadium-icon {
+.card.wx .stadium-icon,
+.card.wx .odds-label {
   color: rgba(255, 255, 255, 0.82);
 }
 .card.wx .card-foot {
