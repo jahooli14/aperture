@@ -4,6 +4,7 @@ export interface ActivityGuidance {
   activity: string;
   status: ActivityStatus;
   detail: string;
+  why?: string;
   action?: { label: string; href: string };
 }
 
@@ -41,13 +42,13 @@ export const RECOVERY_PHASES: RecoveryPhase[] = [
     why: 'Both the heart muscle and the puncture site are still healing. Pacing now protects everything you build after this.',
     milestone: 'Cardiac rehab usually makes first contact around the end of this week.',
     activities: [
-      { activity: 'Driving', status: 'not-yet', detail: 'No driving at all yet — this comes later, and only once your doctor confirms it.' },
-      { activity: 'Farm / manual work', status: 'not-yet', detail: 'Nothing beyond a short walk around the yard.' },
-      { activity: 'Lifting', status: 'not-yet', detail: 'Avoid lifting anything heavier than a full kettle.' },
+      { activity: 'Driving', status: 'not-yet', detail: 'No driving at all yet — this comes later, and only once your doctor confirms it.', why: 'Your heart and the puncture site both need this first week to settle before you’re behind the wheel.' },
+      { activity: 'Farm / manual work', status: 'not-yet', detail: 'Nothing beyond a short walk around the yard.', why: 'Manual work asks a lot more of your heart than a walk does — even a short burst of heavy effort is more strain than it’s ready for yet.' },
+      { activity: 'Lifting', status: 'not-yet', detail: 'Avoid lifting anything heavier than a full kettle.', why: 'A sudden strain from lifting pushes your blood pressure up fast — not what a healing heart needs right now.' },
       { activity: 'Walking / exercise', status: 'go', detail: 'Short walks around the house or garden are good — build up gradually.' },
-      { activity: 'Return to work', status: 'not-yet', detail: 'Too soon either way — revisit this in a couple of weeks.' },
-      { activity: 'Intimacy', status: 'not-yet', detail: 'Give it a bit longer — usually fine once you can manage two flights of stairs without symptoms.' },
-      { activity: 'Alcohol', status: 'ask-first', detail: 'Check with your care team before any alcohol while medication doses are still settling.', action: CALL_TEAM_ACTION },
+      { activity: 'Return to work', status: 'not-yet', detail: 'Too soon either way — revisit this in a couple of weeks.', why: 'Even a desk job means travel, sitting up, concentrating — all real load this early on.' },
+      { activity: 'Intimacy', status: 'not-yet', detail: 'Give it a bit longer — usually fine once you can manage two flights of stairs without symptoms.', why: 'Same reasoning as exercise — your heart needs a bit more time before any exertion, gentle or otherwise.' },
+      { activity: 'Alcohol', status: 'ask-first', detail: 'Check with your care team before any alcohol while medication doses are still settling.', why: 'Alcohol interacts with several heart medications, and your doses are still being finalised.', action: CALL_TEAM_ACTION },
       { activity: 'Diet & salt', status: 'go', detail: 'Eat well, go easy on salt — helps your heart do less work while it heals.' },
     ],
     farm: {
@@ -65,13 +66,13 @@ export const RECOVERY_PHASES: RecoveryPhase[] = [
     why: 'The puncture site is close to healed, but the heart itself is still the priority — steady, gradual load beats a big push.',
     milestone: 'Cardiac rehab contact usually starts properly in this window.',
     activities: [
-      { activity: 'Driving', status: 'not-yet', detail: 'Still not yet — the usual wait after a heart attack like this is around 4 weeks.' },
-      { activity: 'Farm / manual work', status: 'not-yet', detail: 'Still off the table — same reasoning as driving.' },
-      { activity: 'Lifting', status: 'not-yet', detail: 'Light household items only, nothing that makes you strain.' },
+      { activity: 'Driving', status: 'not-yet', detail: 'Still not yet — the usual wait after a heart attack like this is around 4 weeks.', why: 'The 4-week guideline gives your heart’s recovery and the driving decision time to get made together, not guessed at early.' },
+      { activity: 'Farm / manual work', status: 'not-yet', detail: 'Still off the table — same reasoning as driving.', why: 'Manual work is a bigger, more sustained load on your heart than anything you’re cleared for yet.' },
+      { activity: 'Lifting', status: 'not-yet', detail: 'Light household items only, nothing that makes you strain.', why: 'The puncture site and your medication levels are still settling — heavy lifting is one of the more strain-heavy things you could do to either.' },
       { activity: 'Walking / exercise', status: 'go', detail: 'Slightly longer, slightly more often — let it feel easy, not a workout.' },
-      { activity: 'Return to work', status: 'ask-first', detail: 'Light desk work might be possible with your doctor’s sign-off — ask.', action: CALL_TEAM_ACTION },
-      { activity: 'Intimacy', status: 'ask-first', detail: 'Usually fine once you can manage two flights of stairs without symptoms — ask if unsure.', action: CALL_TEAM_ACTION },
-      { activity: 'Alcohol', status: 'ask-first', detail: 'Still worth checking with your care team first.', action: CALL_TEAM_ACTION },
+      { activity: 'Return to work', status: 'ask-first', detail: 'Light desk work might be possible with your doctor’s sign-off — ask.', why: 'It depends entirely on your specific job and how your doctor reads your progress so far.', action: CALL_TEAM_ACTION },
+      { activity: 'Intimacy', status: 'ask-first', detail: 'Usually fine once you can manage two flights of stairs without symptoms — ask if unsure.', why: 'The stairs test is a genuinely useful stand-in your care team relies on — it shows your heart can handle a burst of exertion safely.', action: CALL_TEAM_ACTION },
+      { activity: 'Alcohol', status: 'ask-first', detail: 'Still worth checking with your care team first.', why: 'Your medications may still be settling, so it’s worth a quick check rather than assuming.', action: CALL_TEAM_ACTION },
       { activity: 'Diet & salt', status: 'go', detail: 'Keep it up — this one matters for the long run, not just recovery.' },
     ],
     farm: {
@@ -89,13 +90,13 @@ export const RECOVERY_PHASES: RecoveryPhase[] = [
     why: 'The standard wait after a heart attack like this is about 4 weeks, mainly so your heart’s recovery and any driving/exertion decisions are made with proper information, not guesswork.',
     milestone: 'Driving clearance and cardiac rehab follow-up both typically land around the end of this window.',
     activities: [
-      { activity: 'Driving', status: 'ask-first', detail: 'Getting close — this is your doctor’s call to make, not a date on a calendar.', action: CALL_TEAM_ACTION },
-      { activity: 'Farm / manual work', status: 'not-yet', detail: 'Not yet, even though driving is close — manual work is a different, higher load on the heart.' },
-      { activity: 'Lifting', status: 'not-yet', detail: 'Still light only — save the heavier stuff for once you’re properly cleared.' },
+      { activity: 'Driving', status: 'ask-first', detail: 'Getting close — this is your doctor’s call to make, not a date on a calendar.', why: 'You’re close to the usual 4-week mark, but the actual go-ahead depends on how you’re doing, not the calendar alone.', action: CALL_TEAM_ACTION },
+      { activity: 'Farm / manual work', status: 'not-yet', detail: 'Not yet, even though driving is close — manual work is a different, higher load on the heart.', why: 'Clearing driving doesn’t clear manual work — they put very different demands on your heart.' },
+      { activity: 'Lifting', status: 'not-yet', detail: 'Still light only — save the heavier stuff for once you’re properly cleared.', why: 'Same reasoning throughout recovery — heavy lifting is a sudden strain you’re not fully cleared for yet.' },
       { activity: 'Walking / exercise', status: 'go', detail: 'Longer, more frequent walks — this is genuinely building your capacity back up.' },
-      { activity: 'Return to work', status: 'ask-first', detail: 'Depends on the job — ask your care team specifically about yours.', action: CALL_TEAM_ACTION },
+      { activity: 'Return to work', status: 'ask-first', detail: 'Depends on the job — ask your care team specifically about yours.', why: 'Desk work and physical work put very different demands on you, so this one’s genuinely job-specific.', action: CALL_TEAM_ACTION },
       { activity: 'Intimacy', status: 'go', detail: 'Usually fine now if you can manage two flights of stairs without symptoms.' },
-      { activity: 'Alcohol', status: 'ask-first', detail: 'Check current guidance with your care team — depends on your medications.', action: CALL_TEAM_ACTION },
+      { activity: 'Alcohol', status: 'ask-first', detail: 'Check current guidance with your care team — depends on your medications.', why: 'Depends on your current medications, so it’s worth a quick confirm rather than assuming.', action: CALL_TEAM_ACTION },
       { activity: 'Diet & salt', status: 'go', detail: 'Still the quiet workhorse of recovery — keep it up.' },
     ],
     farm: {
@@ -114,12 +115,12 @@ export const RECOVERY_PHASES: RecoveryPhase[] = [
     milestone: 'Cardiac rehab follow-up typically happens in this window.',
     activities: [
       { activity: 'Driving', status: 'go', detail: 'Cleared once your doctor has confirmed it — many people get the go-ahead right in this window.' },
-      { activity: 'Farm / manual work', status: 'not-yet', detail: 'Still not yet — this needs its own clearance, separate from driving.' },
-      { activity: 'Lifting', status: 'ask-first', detail: 'Ask specifically about weight limits at your next rehab appointment.', action: CALL_TEAM_ACTION },
+      { activity: 'Farm / manual work', status: 'not-yet', detail: 'Still not yet — this needs its own clearance, separate from driving.', why: 'Manual work needs its own clearance because it’s a bigger, more sustained load on your heart than getting behind the wheel.' },
+      { activity: 'Lifting', status: 'ask-first', detail: 'Ask specifically about weight limits at your next rehab appointment.', why: 'Limits usually start easing around now, but your rehab team needs to confirm what’s safe for you specifically.', action: CALL_TEAM_ACTION },
       { activity: 'Walking / exercise', status: 'go', detail: 'Keep building — cardiac rehab will start structuring this properly.' },
-      { activity: 'Return to work', status: 'ask-first', detail: 'Ask your team about your specific job — desk work and physical work differ a lot here.', action: CALL_TEAM_ACTION },
+      { activity: 'Return to work', status: 'ask-first', detail: 'Ask your team about your specific job — desk work and physical work differ a lot here.', why: 'Desk work and physical work differ a lot here, so ask about your specific job rather than work in general.', action: CALL_TEAM_ACTION },
       { activity: 'Intimacy', status: 'go', detail: 'Should be back to normal by now if you’re managing two flights of stairs comfortably.' },
-      { activity: 'Alcohol', status: 'ask-first', detail: 'Confirm with your team, especially if your medications have changed.', action: CALL_TEAM_ACTION },
+      { activity: 'Alcohol', status: 'ask-first', detail: 'Confirm with your team, especially if your medications have changed.', why: 'Worth confirming again if your medications have changed since your last check-in.', action: CALL_TEAM_ACTION },
       { activity: 'Diet & salt', status: 'go', detail: 'This is now just how you eat, not a temporary recovery measure.' },
     ],
     farm: {
@@ -143,12 +144,12 @@ export const RECOVERY_PHASES: RecoveryPhase[] = [
     milestone: 'A symptom-limited exercise test, often done around the end of formal rehab, is usually what decides readiness for heavier work.',
     activities: [
       { activity: 'Driving', status: 'go', detail: 'Should be settled by now.' },
-      { activity: 'Farm / manual work', status: 'ask-first', detail: 'Light, short farm tasks may start being discussed with your rehab team — ask specifically.', action: CALL_TEAM_ACTION },
-      { activity: 'Lifting', status: 'ask-first', detail: 'Limits usually ease here, but confirm before anything heavy.', action: CALL_TEAM_ACTION },
+      { activity: 'Farm / manual work', status: 'ask-first', detail: 'Light, short farm tasks may start being discussed with your rehab team — ask specifically.', why: 'Light, short tasks might be realistic now, but your rehab team is best placed to say which ones and for how long.', action: CALL_TEAM_ACTION },
+      { activity: 'Lifting', status: 'ask-first', detail: 'Limits usually ease here, but confirm before anything heavy.', why: 'Limits usually ease in this window, but confirm before anything genuinely heavy.', action: CALL_TEAM_ACTION },
       { activity: 'Walking / exercise', status: 'go', detail: 'Rehab-supervised exercise should be building real capacity now.' },
       { activity: 'Return to work', status: 'go', detail: 'Most people are back to their normal work pattern by now, with clearance.' },
       { activity: 'Intimacy', status: 'go', detail: 'Normal.' },
-      { activity: 'Alcohol', status: 'ask-first', detail: 'Confirm current limits with your team.', action: CALL_TEAM_ACTION },
+      { activity: 'Alcohol', status: 'ask-first', detail: 'Confirm current limits with your team.', why: 'Limits can shift as your medications change — quick to confirm, easy to get wrong by guessing.', action: CALL_TEAM_ACTION },
       { activity: 'Diet & salt', status: 'go', detail: 'Long-term habit now.' },
     ],
     farm: {
@@ -171,12 +172,12 @@ export const RECOVERY_PHASES: RecoveryPhase[] = [
     why: 'Farm and manual work becomes realistic for a lot of people around here — but with your heart function, your team decides this one, not a calendar.',
     activities: [
       { activity: 'Driving', status: 'go', detail: 'Normal.' },
-      { activity: 'Farm / manual work', status: 'ask-first', detail: 'Realistic for many people by now — get your team’s specific sign-off before going back to full manual work.', action: CALL_TEAM_ACTION },
-      { activity: 'Lifting', status: 'ask-first', detail: 'Confirm your limits directly with your rehab team.', action: CALL_TEAM_ACTION },
+      { activity: 'Farm / manual work', status: 'ask-first', detail: 'Realistic for many people by now — get your team’s specific sign-off before going back to full manual work.', why: 'Realistic for a lot of people by now — but with your heart function specifically, this needs your team’s direct sign-off rather than a general rule.', action: CALL_TEAM_ACTION },
+      { activity: 'Lifting', status: 'ask-first', detail: 'Confirm your limits directly with your rehab team.', why: 'Your rehab team can confirm real limits based on how your heart’s actually performing, not a generic guideline.', action: CALL_TEAM_ACTION },
       { activity: 'Walking / exercise', status: 'go', detail: 'Keep going — rehab if you’re enrolled, otherwise your own routine.' },
       { activity: 'Return to work', status: 'go', detail: 'Normal, if not already back.' },
       { activity: 'Intimacy', status: 'go', detail: 'Normal.' },
-      { activity: 'Alcohol', status: 'ask-first', detail: 'Confirm current limits with your team, since they can change with medication.', action: CALL_TEAM_ACTION },
+      { activity: 'Alcohol', status: 'ask-first', detail: 'Confirm current limits with your team, since they can change with medication.', why: 'Limits can still shift with medication changes, so it’s worth confirming rather than assuming it’s fully open-ended.', action: CALL_TEAM_ACTION },
       { activity: 'Diet & salt', status: 'go', detail: 'This is the steady state now — daily weight checks and taking every medication as prescribed matter just as much as the exercise.' },
     ],
     farm: {
@@ -203,6 +204,7 @@ export function getPhaseForDay(day: number): RecoveryPhase | null {
 export interface NextMilestone {
   daysUntil: number;
   weekLabel: string;
+  title: string;
 }
 
 /**
@@ -220,7 +222,7 @@ export function getNextMilestone(day: number, phases: RecoveryPhase[]): NextMile
   const next = phases[currentIndex + 1];
   if (current.dayRange.end === null || !next) return null;
 
-  return { daysUntil: next.dayRange.start - day, weekLabel: next.weekLabel };
+  return { daysUntil: next.dayRange.start - day, weekLabel: next.weekLabel, title: next.title };
 }
 
 export const EMERGENCY_SIGNS_999: string[] = [

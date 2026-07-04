@@ -13,7 +13,7 @@ export default function Timeline({ phases, currentPhaseId }: TimelineProps) {
     <details className="group">
       <summary className="font-bold cursor-pointer flex items-center gap-1.5">
         <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
-        See the full recovery timeline
+        See your full path to recovery
       </summary>
       <ul className="space-y-2 mt-3">
         {phases.map((phase, index) => {
@@ -40,6 +40,9 @@ export default function Timeline({ phases, currentPhaseId }: TimelineProps) {
                 )}
               </div>
               <p className="text-recovery-ink/80">{phase.title}</p>
+              {phase.milestone && (
+                <p className="text-recovery-ink/50 text-sm mt-1">{phase.milestone}</p>
+              )}
             </li>
           );
         })}

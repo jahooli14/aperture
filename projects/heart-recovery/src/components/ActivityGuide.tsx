@@ -40,6 +40,12 @@ export default function ActivityGuide({ activities, farm }: ActivityGuideProps) 
               </summary>
               <div className="mt-2 pl-6 text-sm text-recovery-ink/80 space-y-3 leading-relaxed">
                 <p>{row.detail}</p>
+                {row.why && (
+                  <p>
+                    <span className="font-semibold text-recovery-ink/60">Why: </span>
+                    {row.why}
+                  </p>
+                )}
                 {row.action && (
                   <a
                     href={row.action.href}
