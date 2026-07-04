@@ -734,7 +734,7 @@ body {
   font-weight: 600;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  color: var(--ink-3);
+  color: var(--ink-2);
 }
 .odds-value {
   font-size: 10px;
@@ -792,7 +792,6 @@ body {
   justify-content: center;
   gap: 6px;
 }
-/* One solid dark panel so rows stay legible over the busy landmark photo. */
 .compare {
   margin-top: 10px;
   display: flex;
@@ -955,7 +954,7 @@ body {
 }
 .vcity {
   font-size: 11.5px;
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-weight: 500;
   line-height: 1.3;
 }
@@ -1305,23 +1304,17 @@ body {
   );
 }
 
-/* Light text for photo treatments that use a dark wash (A, C, D) */
+/* Light text for photo treatments that use a dark wash (A, C, D) — only
+   card-header content (over the photo) needs this; card-extra sits on the
+   plain card background below and keeps the normal dark-ink colors. */
 .card.lighttext .tname,
-.card.lighttext .bigscore,
-.card.lighttext .vstadium,
-.card.lighttext .odds-value {
+.card.lighttext .bigscore {
   color: #fff;
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.7);
 }
 .card.lighttext .caption,
-.card.lighttext .vcity,
-.card.lighttext .advances,
-.card.lighttext .stadium-icon,
-.card.lighttext .odds-label {
+.card.lighttext .advances {
   color: rgba(255, 255, 255, 0.82);
-}
-.card.lighttext .card-foot {
-  border-top-color: rgba(255, 255, 255, 0.22);
 }
 .card.lighttext .pick.pending {
   color: var(--gold-soft);
@@ -1339,7 +1332,27 @@ body {
 /* ---- Cinematic weather on live game cards ---- */
 .card-inner {
   position: relative;
+}
+/* Sits above the (absolutely-positioned) photo/weather background — needed
+   because any positioned element paints over static in-flow content
+   regardless of z-index, not just when z-index is explicitly higher. Holds
+   only card-top + match, which never vary in height by match state — that's
+   what keeps the photo the same size on every card. */
+.card-header {
+  position: relative;
   z-index: 1;
+  /* card-top + match only need ~100px, but that crops each landmark photo to
+     a thin sliver of mostly bland sky/ground. Give the photo more room to
+     show its actual subject, and centre the (shorter) content within it. */
+  min-height: 190px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+/* Everything that DOES vary in height (odds, goals, venue) — off the photo
+   entirely, on the card's plain background, so it can't affect its size. */
+.card-extra {
+  margin-top: 14px;
 }
 .card-weather {
   position: absolute;
@@ -1568,23 +1581,16 @@ body {
   }
 }
 
-/* Light text + adjusted accents over a weather scene */
+/* Light text + adjusted accents over a weather scene — again, only
+   card-header content sits over the weather art; card-extra is below it. */
 .card.wx .tname,
-.card.wx .bigscore,
-.card.wx .vstadium,
-.card.wx .odds-value {
+.card.wx .bigscore {
   color: #fff;
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.7);
 }
 .card.wx .caption,
-.card.wx .vcity,
-.card.wx .advances,
-.card.wx .stadium-icon,
-.card.wx .odds-label {
+.card.wx .advances {
   color: rgba(255, 255, 255, 0.82);
-}
-.card.wx .card-foot {
-  border-top-color: rgba(255, 255, 255, 0.22);
 }
 .card.wx .pick.pending {
   color: var(--gold-soft);

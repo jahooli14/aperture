@@ -172,6 +172,36 @@ export function App() {
     return () => timers.forEach(clearTimeout)
   }, [matches])
 
+  // Whichever stage still has games left to play — that's the one that opens
+  // expanded by default, and every earlier (fully finished) stage collapses.
+  const openStage = useMemo(() => {
+    const undone = stageOrder.find((stage) =>
+      (bracket[stage] ?? []).some((slot) => {
+        if (!slot.home || !slot.away) return true // TBC, not played yet
+        const live = findLive(slot.home, slot.away, matches)
+        return !live || phaseOf(live.status) !== 'final'
+      })
+    )
+    return undone ?? stageOrder[stageOrder.length - 1]
+  }, [bracket, matches])
+
+  // If nothing's live (the live-game scroll above already covers that case),
+  // scroll to the current stage on first load so a finished round doesn't
+  // leave you staring at a wall of collapsed, done-and-dusted matches.
+  const stageScrolledRef = useRef(false)
+  useEffect(() => {
+    if (stageScrolledRef.current) return
+    if (matches.some((m) => m.status === 'IN_PLAY' || m.status === 'PAUSED')) return
+    if (openStage === stageOrder[0]) return // already at the top, nothing to do
+    stageScrolledRef.current = true
+    const doScroll = () => {
+      const el = document.querySelector(`[data-stage="${openStage}"]`)
+      if (el) el.scrollIntoView({ behavior: 'auto', block: 'start' })
+    }
+    const timers = [200, 700, 1500].map((ms) => setTimeout(doScroll, ms))
+    return () => timers.forEach(clearTimeout)
+  }, [openStage, matches])
+
   // Celebrate when the selected person's pick comes good.
   const myScored: Scored[] = useMemo(
     () => person.predictions.map((p) => scorePrediction(p, findLiveMatch(p, matches))),
@@ -232,6 +262,7 @@ export function App() {
             goals={data?.goals}
             compareIndex={compareIndex}
             currentSlug={currentSlug}
+            defaultOpen={stage === openStage}
           />
         ))}
       </main>
@@ -380,6 +411,7 @@ function StageSection({
   goals,
   compareIndex,
   currentSlug,
+  defaultOpen,
 }: {
   stage: Stage
   slots: BracketSlot[]
@@ -389,6 +421,7 @@ function StageSection({
   goals?: MatchGoals[]
   compareIndex: CompareEntry[]
   currentSlug: string
+  defaultOpen: boolean
 }) {
   // Keep each slot's bracket index (the compare panel keys off it), then order
   // for display by kickoff — finished/live/next, earliest first.
@@ -400,11 +433,25 @@ function StageSection({
       return ta - tb
     })
 
-  const [open, setOpen] = useState(stage === 'Round of 32')
+  const [open, setOpen] = useState(defaultOpen)
+  // Live match data loads async, so the very first defaultOpen (computed
+  // before any results are in) can be wrong — keep following it until the
+  // user actually clicks the toggle themselves.
+  const userToggled = useRef(false)
+  useEffect(() => {
+    if (!userToggled.current) setOpen(defaultOpen)
+  }, [defaultOpen])
 
   return (
-    <section className="stage">
-      <button className="stage-title" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+    <section className="stage" data-stage={stage}>
+      <button
+        className="stage-title"
+        onClick={() => {
+          userToggled.current = true
+          setOpen((o) => !o)
+        }}
+        aria-expanded={open}
+      >
         <span className="stage-name">{stage}</span>
         <span className="stage-count">{slots.length}</span>
         <span className={`chevron ${open ? 'open' : ''}`} aria-hidden="true">
@@ -517,52 +564,62 @@ function TrueGameCard({
         !isLive ? 'placed lighttext' : ''
       }`}
     >
-      {known ? (
-        wxCondition ? (
-          <>
-            <CardPlace home={home!} away={away!} light />
-            <CardWeather condition={wxCondition} overPhoto />
-          </>
-        ) : (
-          <CardPlace home={home!} away={away!} />
-        )
-      ) : (
-        // TBC slot — no teams yet, so show a World Cup stadium behind it.
-        <div className="card-place" aria-hidden="true">
-          <div className="pfull" style={{ backgroundImage: 'url(/stadium.jpg)' }} />
-          <div className="place-veil" />
-        </div>
-      )}
       <div className="card-inner">
-        <div className="card-top">
-          <span className="caption">
-            {isLive ? (
-              <span className="pill live">
-                <span className="dot" /> LIVE{live?.minute ? ` ${live.minute}` : ''}
-              </span>
-            ) : phase === 'final' ? (
-              'Full time'
-            ) : koIso ? (
-              <KickOff iso={koIso} inline />
-            ) : (
-              slot.dateText ?? 'Date TBC'
-            )}
-          </span>
-          {isLive && weather && (
-            <span className="weather-chip">
-              {weather.icon} {weather.tempC}° · {weather.label}
-            </span>
-          )}
-        </div>
-
-        <div className="match">
-          <TeamSide name={home} advanced={wentThrough(home)} />
-          <div className="center">
-            <span className={`bigscore ${phase}`}>{hasScore ? `${sHome}–${sAway}` : 'vs'}</span>
+        {known ? (
+          wxCondition ? (
+            <>
+              <CardPlace home={home!} away={away!} light />
+              <CardWeather condition={wxCondition} overPhoto />
+            </>
+          ) : (
+            <CardPlace home={home!} away={away!} />
+          )
+        ) : (
+          // TBC slot — no teams yet, so show a World Cup stadium behind it.
+          <div className="card-place" aria-hidden="true">
+            <div className="pfull" style={{ backgroundImage: 'url(/stadium.jpg)' }} />
+            <div className="place-veil" />
           </div>
-          <TeamSide name={away} advanced={wentThrough(away)} />
-        </div>
+        )}
+        {/* Positioned above the (absolutely-positioned) photo — without this,
+            the photo paints over plain in-flow text regardless of z-index.
+            Only ever holds card-top + match: neither one's height varies by
+            match state, so the photo behind them is the same size on every
+            card. Anything that DOES vary (odds, goals, venue) lives below,
+            off the photo, so it can never affect the photo's size. */}
+        <div className="card-header">
+          <div className="card-top">
+            <span className="caption">
+              {isLive ? (
+                <span className="pill live">
+                  <span className="dot" /> LIVE{live?.minute ? ` ${live.minute}` : ''}
+                </span>
+              ) : phase === 'final' ? (
+                'Full time'
+              ) : koIso ? (
+                <KickOff iso={koIso} inline />
+              ) : (
+                slot.dateText ?? 'Date TBC'
+              )}
+            </span>
+            {isLive && weather && (
+              <span className="weather-chip">
+                {weather.icon} {weather.tempC}° · {weather.label}
+              </span>
+            )}
+          </div>
 
+          <div className="match">
+            <TeamSide name={home} advanced={wentThrough(home)} />
+            <div className="center">
+              <span className={`bigscore ${phase}`}>{hasScore ? `${sHome}–${sAway}` : 'vs'}</span>
+            </div>
+            <TeamSide name={away} advanced={wentThrough(away)} />
+          </div>
+        </div>
+      </div>
+
+      <div className="card-extra">
         {matchOdds && (
           <div className="odds-line">
             <span className="odds-label">Bookies favourite (90 mins):</span>
@@ -601,7 +658,11 @@ function TrueGameCard({
             </span>
           </span>
         </div>
+      </div>
 
+      {/* Outside the photo header so opening this never stretches the photo
+          to cover it — the photo only ever fills the header above. */}
+      <div className="card-compare">
         <button
           className="compare-toggle"
           onClick={() => setCmpOpen((o) => !o)}
