@@ -12,8 +12,8 @@ export default function ProgressHeader({ dayNumber, phase, nextMilestone, onChan
 
   const countdownText = nextMilestone
     ? nextMilestone.daysUntil <= 0
-      ? `Your next stage starts today — ${nextMilestone.weekLabel}`
-      : `${nextMilestone.daysUntil} day${nextMilestone.daysUntil === 1 ? '' : 's'} until ${nextMilestone.weekLabel}`
+      ? `Your next stage starts today — ${nextMilestone.weekLabel}: ${nextMilestone.title}`
+      : `${nextMilestone.daysUntil} day${nextMilestone.daysUntil === 1 ? '' : 's'} until ${nextMilestone.weekLabel}: ${nextMilestone.title}`
     : null;
 
   return (
