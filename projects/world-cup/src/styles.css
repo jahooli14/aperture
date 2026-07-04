@@ -1304,18 +1304,6 @@ body {
   );
 }
 
-/* Light text for photo treatments that use a dark wash (A, C, D) — only
-   card-header content (over the photo) needs this; card-extra sits on the
-   plain card background below and keeps the normal dark-ink colors. */
-.card.lighttext .tname,
-.card.lighttext .bigscore {
-  color: #fff;
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.7);
-}
-.card.lighttext .caption,
-.card.lighttext .advances {
-  color: rgba(255, 255, 255, 0.82);
-}
 .card.lighttext .pick.pending {
   color: var(--gold-soft);
 }
@@ -1348,6 +1336,19 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
+}
+/* Unconditional, not gated on .lighttext/.wx/live state — card-header always
+   sits over a photo (real photo, weather art, or the TBC stadium shot), so
+   this text always needs to be light. Gating it on card state used to leave
+   a live-without-weather card with dark, near-invisible text on a photo. */
+.card-header .tname,
+.card-header .bigscore:not(.live) {
+  color: #fff;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.7);
+}
+.card-header .caption,
+.card-header .advances {
+  color: rgba(255, 255, 255, 0.82);
 }
 /* Everything that DOES vary in height (odds, goals, venue) — off the photo
    entirely, on the card's plain background, so it can't affect its size. */
@@ -1581,17 +1582,6 @@ body {
   }
 }
 
-/* Light text + adjusted accents over a weather scene — again, only
-   card-header content sits over the weather art; card-extra is below it. */
-.card.wx .tname,
-.card.wx .bigscore {
-  color: #fff;
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.7);
-}
-.card.wx .caption,
-.card.wx .advances {
-  color: rgba(255, 255, 255, 0.82);
-}
 .card.wx .pick.pending {
   color: var(--gold-soft);
 }
