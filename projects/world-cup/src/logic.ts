@@ -191,16 +191,15 @@ export function matchPoints(pred: Prediction, live?: LiveMatch): number {
 // i.e. group stage plus the four R32 games that had finished before the Ivory
 // Coast v Norway kick-off. Live points for every game from that one onward get
 // added on top, so we never double-count what's already in these numbers.
-// Gavin's +4 over the naively-computed group-stage figure is unexplained —
-// checked and ruled out: penalty bonus, relaxed goal bonus, total-goals bonus,
-// alias/swap bugs, a missing 5th pre-cutoff game. KatDan's and SarJack's totals
-// both reduce exactly to baseline + live points with no rule changes needed, so
-// the gap isn't a scoring rule; it's most likely a group-stage tally the app
-// doesn't track. Trusting the known-correct total (394) until the source turns up.
+// Gavin's -2 vs the naively-computed group-stage figure is unexplained — the
+// pens-advancer rule fix resolved KatDan's and SarJack's equivalent gaps
+// exactly, but doesn't touch Gavin's total, and his live results all check
+// out clean against the raw feed. Trusting the known-correct total (431)
+// until the source turns up.
 export const SCORE_BASELINE: Record<string, number> = {
   katdan: 331,
   sarjack: 292,
-  gavin: 360,
+  gavin: 358,
 }
 const SCORE_CUTOFF_MS = new Date('2026-06-30T12:00:00Z').getTime()
 
