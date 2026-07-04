@@ -146,6 +146,7 @@ Hold the line on the clarity gate: jargon-heavy ideas with nothing concrete unde
       temperature: 0.3,
       maxOutputTokens: 2000, // Increased significantly to ensure full response
       responseMimeType: 'application/json',
+      ...thinkingFragment('low'),
     },
   });
 
