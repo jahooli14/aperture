@@ -6,6 +6,7 @@ import { RECOVERY_PHASES, getPhaseForDay, getNextMilestone } from './data/recove
 import DateSetup from './components/DateSetup';
 import ProgressHeader from './components/ProgressHeader';
 import JourneyBar from './components/JourneyBar';
+import TodaysMove from './components/TodaysMove';
 import ActivityGuide from './components/ActivityGuide';
 import MedicationReminder from './components/MedicationReminder';
 import WarningSigns from './components/WarningSigns';
@@ -67,6 +68,7 @@ function App() {
           onChangeDate={() => setEditingDate(true)}
         />
         <JourneyBar dayNumber={dayNumber} phases={RECOVERY_PHASES} />
+        <TodaysMove dayNumber={dayNumber} />
         <WarningSigns />
         <MedicationReminder />
         <ActivityGuide activities={phase.activities} farm={phase.farm} />
