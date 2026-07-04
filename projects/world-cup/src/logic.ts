@@ -112,6 +112,14 @@ export function scorePrediction(pred: Prediction, live?: LiveMatch): Scored {
       advanceCorrect = normaliseName(realWinner).toLowerCase() === backed
       if (advanceCorrect) sameOutcome = true
     }
+  } else if (pred.homeScore !== pred.awayScore && liveHome === liveAway && live.advancer) {
+    // I predicted a decisive result but it actually went to penalties. Still
+    // credit a correct call on who advances — picking the right team to go
+    // through matters more than whether it happened in 90 minutes or on pens.
+    const backed = pred.homeScore > pred.awayScore ? pred.home : pred.away
+    if (normaliseName(live.advancer).toLowerCase() === normaliseName(backed).toLowerCase()) {
+      sameOutcome = true
+    }
   }
 
   const exact = exactScore && advanceCorrect
