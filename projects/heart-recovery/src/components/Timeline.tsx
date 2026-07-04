@@ -1,3 +1,4 @@
+import { ChevronDown } from 'lucide-react';
 import type { RecoveryPhase } from '../data/recoveryPlan';
 
 interface TimelineProps {
@@ -9,9 +10,12 @@ export default function Timeline({ phases, currentPhaseId }: TimelineProps) {
   const currentIndex = phases.findIndex((p) => p.id === currentPhaseId);
 
   return (
-    <section>
-      <h2 className="font-bold mb-3">The full timeline</h2>
-      <ul className="space-y-2">
+    <details className="group">
+      <summary className="font-bold cursor-pointer flex items-center gap-1.5">
+        <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+        See the full recovery timeline
+      </summary>
+      <ul className="space-y-2 mt-3">
         {phases.map((phase, index) => {
           const isCurrent = phase.id === currentPhaseId;
           const isPast = currentIndex >= 0 && index < currentIndex;
@@ -40,6 +44,6 @@ export default function Timeline({ phases, currentPhaseId }: TimelineProps) {
           );
         })}
       </ul>
-    </section>
+    </details>
   );
 }

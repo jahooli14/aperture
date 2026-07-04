@@ -1,41 +1,44 @@
-import { Sprout } from 'lucide-react';
 import type { FarmGuidance } from '../data/recoveryPlan';
 
-interface FarmWorkCalloutProps {
+interface FarmWorkDetailProps {
   farm: FarmGuidance;
 }
 
-export default function FarmWorkCallout({ farm }: FarmWorkCalloutProps) {
+/**
+ * Nested inside the "Farm / manual work" row of ActivityGuide, not a
+ * standalone section — this is the one part of the guide he's most likely
+ * to push back on, so it gets a direct-address explanation rather than a
+ * bare status pill.
+ */
+export default function FarmWorkDetail({ farm }: FarmWorkDetailProps) {
   return (
-    <section className="card border-recovery-teal/20">
-      <div className="flex items-center gap-2 mb-3">
-        <Sprout className="w-4 h-4 text-recovery-teal shrink-0" />
-        <h2 className="font-bold">About the farm</h2>
-      </div>
-      <p className="mb-3">{farm.headline}</p>
-      <p className="text-recovery-ink/80 mb-4">{farm.ifTempted}</p>
+    <div className="space-y-3 border-t border-black/5 pt-3">
+      <p className="font-medium text-recovery-ink">{farm.headline}</p>
+      <p>{farm.ifTempted}</p>
 
-      <h3 className="font-semibold text-sm uppercase tracking-wide text-recovery-ink/60 mb-2">
-        What you can do instead, right now
-      </h3>
-      <ul className="list-disc list-inside space-y-1 mb-4">
-        {farm.canDoInstead.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
+      <div>
+        <p className="font-semibold text-xs uppercase tracking-wide text-recovery-ink/50 mb-1">
+          What you can do instead, right now
+        </p>
+        <ul className="list-disc list-inside space-y-1">
+          {farm.canDoInstead.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      </div>
 
       {farm.askYourTeam && (
-        <>
-          <h3 className="font-semibold text-sm uppercase tracking-wide text-recovery-ink/60 mb-2">
+        <div>
+          <p className="font-semibold text-xs uppercase tracking-wide text-recovery-ink/50 mb-1">
             Take these questions to your next rehab appointment
-          </h3>
+          </p>
           <ul className="list-disc list-inside space-y-1">
             {farm.askYourTeam.map((item) => (
               <li key={item}>{item}</li>
             ))}
           </ul>
-        </>
+        </div>
       )}
-    </section>
+    </div>
   );
 }

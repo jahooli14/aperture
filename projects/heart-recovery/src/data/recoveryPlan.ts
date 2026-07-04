@@ -200,6 +200,29 @@ export function getPhaseForDay(day: number): RecoveryPhase | null {
   );
 }
 
+export interface NextMilestone {
+  daysUntil: number;
+  weekLabel: string;
+}
+
+/**
+ * How many days until the next phase starts, so the app can show a live,
+ * day-by-day countdown even though the underlying content only changes at
+ * phase boundaries. Returns null once in the final, open-ended phase.
+ */
+export function getNextMilestone(day: number, phases: RecoveryPhase[]): NextMilestone | null {
+  const currentIndex = phases.findIndex(
+    (p) => day >= p.dayRange.start && (p.dayRange.end === null || day <= p.dayRange.end),
+  );
+  if (currentIndex === -1) return null;
+
+  const current = phases[currentIndex];
+  const next = phases[currentIndex + 1];
+  if (current.dayRange.end === null || !next) return null;
+
+  return { daysUntil: next.dayRange.start - day, weekLabel: next.weekLabel };
+}
+
 export const EMERGENCY_SIGNS_999: string[] = [
   'Severe chest pain, pressure, or tightness — or pain spreading to your arm, jaw, or back',
   'Severe breathlessness, gasping, choking, or being unable to get your words out',

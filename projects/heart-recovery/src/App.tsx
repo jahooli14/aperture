@@ -2,12 +2,11 @@ import { useState } from 'react';
 import { useEventDate } from './hooks/useEventDate';
 import { getDayNumber } from './lib/recoveryDay';
 import { formatDateForDisplay } from './lib/dateUtils';
-import { RECOVERY_PHASES, getPhaseForDay } from './data/recoveryPlan';
+import { RECOVERY_PHASES, getPhaseForDay, getNextMilestone } from './data/recoveryPlan';
 import DateSetup from './components/DateSetup';
 import ProgressHeader from './components/ProgressHeader';
-import TodayCard from './components/TodayCard';
+import JourneyBar from './components/JourneyBar';
 import ActivityGuide from './components/ActivityGuide';
-import FarmWorkCallout from './components/FarmWorkCallout';
 import MedicationReminder from './components/MedicationReminder';
 import WarningSigns from './components/WarningSigns';
 import Timeline from './components/Timeline';
@@ -56,15 +55,21 @@ function App() {
     );
   }
 
+  const nextMilestone = getNextMilestone(dayNumber, RECOVERY_PHASES);
+
   return (
     <div className="min-h-screen">
-      <main className="max-w-2xl mx-auto px-4 pb-12 space-y-5">
-        <ProgressHeader dayNumber={dayNumber} phase={phase} onChangeDate={() => setEditingDate(true)} />
-        <MedicationReminder />
+      <main className="max-w-2xl mx-auto px-4 pb-12 space-y-6">
+        <ProgressHeader
+          dayNumber={dayNumber}
+          phase={phase}
+          nextMilestone={nextMilestone}
+          onChangeDate={() => setEditingDate(true)}
+        />
+        <JourneyBar dayNumber={dayNumber} phases={RECOVERY_PHASES} />
         <WarningSigns />
-        <TodayCard phase={phase} />
-        <ActivityGuide activities={phase.activities} />
-        <FarmWorkCallout farm={phase.farm} />
+        <MedicationReminder />
+        <ActivityGuide activities={phase.activities} farm={phase.farm} />
         <Timeline phases={RECOVERY_PHASES} currentPhaseId={phase.id} />
         <SourcesFooter />
       </main>
