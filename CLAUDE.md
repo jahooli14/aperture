@@ -21,6 +21,7 @@ This file is the **single source of truth** for working on this repo. If somethi
 | **Analogue** | `projects/analogue/` | Active | Book publishing / manuscript editing IDE |
 | **Idea Engine** | `projects/idea-engine/` | Active | Standalone evolutionary ideation system — emails a curated daily digest of frontier-of-human-knowledge ideas. **Not part of Polymath.** Don't conflate when working on Polymath's homepage surfaces. |
 | **Golf Masters** | `projects/golf-masters/` | Active | Masters pool tracker with live ESPN scores |
+| **Heart Recovery** | `projects/heart-recovery/` | Active | Day-by-day post-heart-attack (stent/PCI) recovery guide — single user, no backend, localStorage only |
 | **Fix Queue** | `projects/polymath/` (feature) | **Needs review** — owner doesn't actively use this; code may still be running. Don't extend without checking. |
 
 > **Sonically Sound** ships from outside this repo.

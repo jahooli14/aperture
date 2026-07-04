@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-size: 112.5%; /* ~18px base, easier reading on a phone */
+  }
+  body {
+    @apply font-sans text-recovery-ink antialiased;
+    min-height: 100vh;
+    background-color: #fafaf7;
+  }
+  a {
+    @apply underline;
+  }
+}
+
+@layer components {
+  .card {
+    @apply relative rounded-xl bg-white p-5 shadow-sm border border-black/5;
+  }
+
+  .status-pill {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold;
+  }
+  .status-pill-go {
+    @apply bg-recovery-go-bg text-recovery-go;
+  }
+  .status-pill-wait {
+    @apply bg-recovery-wait-bg text-recovery-wait;
+  }
+  .status-pill-ask {
+    @apply bg-recovery-ask-bg text-recovery-ask;
+  }
+
+  .btn-primary {
+    @apply w-full inline-flex items-center justify-center rounded-lg bg-recovery-teal px-6 py-3 text-white font-semibold text-lg;
+    min-height: 44px;
+  }
+  .btn-primary:active {
+    @apply bg-recovery-teal-dark;
+  }
+
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}

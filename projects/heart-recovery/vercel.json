@@ -1,0 +1,5 @@
+{
+  "outputDirectory": "dist",
+  "ignoreCommand": "bash ../../scripts/vercel-ignore.sh projects/heart-recovery",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
