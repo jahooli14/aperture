@@ -507,6 +507,15 @@ body {
   /* Skip rendering off-screen cards so a long bracket scrolls smoothly. */
   content-visibility: auto;
   contain-intrinsic-size: auto 360px;
+  /* Cards in a row stretch to match the tallest (grid default) — without
+     this, whichever card has less content (fewer goals, no odds line, etc.)
+     ends up with dead space wherever the stretch lands, and its "Compare
+     picks" button sits at a different height than its row neighbour's. */
+  display: flex;
+  flex-direction: column;
+}
+.card-compare {
+  margin-top: auto;
 }
 .card:hover {
   transform: translateY(-2px);
