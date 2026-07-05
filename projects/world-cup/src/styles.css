@@ -413,7 +413,8 @@ body {
 /* Finished cards: clearly greyed out and recessed vs live/upcoming */
 .card.final {
   opacity: 0.62;
-  box-shadow: none;
+  /* Faded, not none — a whisper of presence rather than a dead flat panel. */
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 .card.final .card-place {
@@ -426,11 +427,13 @@ body {
 
 /* ---- Card (white) ---- */
 .card {
+  --card-pad-x: 16px;
+  --card-pad-y: 16px;
   position: relative;
   overflow: hidden;
   background: var(--card);
   border-radius: var(--r-card);
-  padding: 16px;
+  padding: var(--card-pad-y) var(--card-pad-x);
   box-shadow: 0 6px 22px rgba(0, 0, 0, 0.22);
   backdrop-filter: blur(12px);
   transition: transform 0.15s var(--ease), box-shadow 0.2s var(--ease);
@@ -457,6 +460,22 @@ body {
     opacity: 0;
     transform: translateY(10px);
   }
+}
+/* Anticipation glow — fairly strong, since these are the games worth looking
+   forward to. Quieter than live (no pulse, no ring) but clearly warmer than
+   a finished card. */
+.card.upcoming {
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.22), 0 0 26px rgba(232, 182, 71, 0.3);
+}
+.card.upcoming:hover {
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28), 0 0 30px rgba(232, 182, 71, 0.38);
+}
+/* The one specific "next game to be played" — a gold ring on top of the
+   ordinary upcoming glow, same visual language as live's red ring one
+   notch down in intensity (no pulse — that's reserved for actually live). */
+.card.next-up {
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.26), 0 0 0 2px var(--gold),
+    0 0 32px rgba(232, 182, 71, 0.5);
 }
 /* Live games really stand out: red ring, lift, glow, gold top accent */
 .card.live {
@@ -525,7 +544,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 11px;
   min-width: 0;
 }
 .crest {
@@ -1022,7 +1041,9 @@ body {
     gap: 10px;
   }
   .card {
-    padding: 13px 14px;
+    --card-pad-x: 14px;
+    --card-pad-y: 13px;
+    padding: var(--card-pad-y) var(--card-pad-x);
   }
   .card-top {
     margin-bottom: 10px;
@@ -1096,6 +1117,12 @@ body {
 /* ---- Cinematic weather on live game cards ---- */
 .card-inner {
   position: relative;
+  /* Full-bleed to the card's own edges instead of sitting inset inside its
+     padding — the card's own overflow:hidden + border-radius clips this to
+     match its rounded top corners for free, no need to duplicate the radius.
+     Pulls back by the same --card-pad-* the card itself pads with, so this
+     can't drift out of sync at the mobile breakpoint that shrinks it. */
+  margin: calc(-1 * var(--card-pad-y)) calc(-1 * var(--card-pad-x)) 0;
 }
 /* Sits above the (absolutely-positioned) photo/weather background — needed
    because any positioned element paints over static in-flow content
@@ -1105,6 +1132,9 @@ body {
 .card-header {
   position: relative;
   z-index: 1;
+  /* Restore the inset .card-inner just gave up, so text still sits clear of
+     the now full-bleed photo's edges instead of touching them. */
+  padding: var(--card-pad-y) var(--card-pad-x);
   /* card-top + match only need ~100px, but that crops each landmark photo to
      a thin sliver of mostly bland sky/ground. Give the photo more room to
      show its actual subject, and centre the (shorter) content within it. */

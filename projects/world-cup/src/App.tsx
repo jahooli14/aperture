@@ -185,22 +185,48 @@ export function App() {
     return undone ?? stageOrder[stageOrder.length - 1]
   }, [bracket, matches])
 
+  // The single next game to be played (earliest kickoff among known-team,
+  // not-yet-finished slots) — moot whenever something's already live, since
+  // the live-game scroll above takes priority in that case.
+  const nextGame = useMemo(() => {
+    if (matches.some((m) => m.status === 'IN_PLAY' || m.status === 'PAUSED')) return null
+    let best: string | null = null
+    let bestTime = Infinity
+    for (const stage of stageOrder) {
+      const slots = bracket[stage] ?? []
+      slots.forEach((slot, index) => {
+        if (!slot.home || !slot.away) return // TBC — not a concrete "next game" yet
+        const live = findLive(slot.home, slot.away, matches)
+        if (live && phaseOf(live.status) === 'final') return // already played
+        const t = slotTime(slot, matches, index)
+        if (t < bestTime) {
+          bestTime = t
+          best = `${stage}#${index}`
+        }
+      })
+    }
+    return best
+  }, [bracket, matches])
+
   // If nothing's live (the live-game scroll above already covers that case),
-  // scroll to the current stage on first load so a finished round doesn't
-  // leave you staring at a wall of collapsed, done-and-dusted matches.
+  // scroll to the next game to be played so a finished round doesn't leave
+  // you staring at a wall of collapsed, done-and-dusted matches.
   const stageScrolledRef = useRef(false)
   useEffect(() => {
     if (stageScrolledRef.current) return
+    if (!data) return // live data hasn't loaded yet — nextGame/openStage aren't trustworthy
     if (matches.some((m) => m.status === 'IN_PLAY' || m.status === 'PAUSED')) return
-    if (openStage === stageOrder[0]) return // already at the top, nothing to do
+    if (!nextGame && openStage === stageOrder[0]) return // already at the top, nothing to do
     stageScrolledRef.current = true
     const doScroll = () => {
-      const el = document.querySelector(`[data-stage="${openStage}"]`)
-      if (el) el.scrollIntoView({ behavior: 'auto', block: 'start' })
+      const el = nextGame
+        ? document.querySelector(`[data-slot-key="${nextGame}"]`)
+        : document.querySelector(`[data-stage="${openStage}"]`)
+      if (el) el.scrollIntoView({ behavior: 'auto', block: 'center' })
     }
     const timers = [200, 700, 1500].map((ms) => setTimeout(doScroll, ms))
     return () => timers.forEach(clearTimeout)
-  }, [openStage, matches])
+  }, [openStage, nextGame, matches, data])
 
   // Celebrate when the selected person's pick comes good.
   const myScored: Scored[] = useMemo(
@@ -263,6 +289,7 @@ export function App() {
             compareIndex={compareIndex}
             currentSlug={currentSlug}
             defaultOpen={stage === openStage}
+            nextGame={nextGame}
           />
         ))}
       </main>
@@ -412,6 +439,7 @@ function StageSection({
   compareIndex,
   currentSlug,
   defaultOpen,
+  nextGame,
 }: {
   stage: Stage
   slots: BracketSlot[]
@@ -422,6 +450,7 @@ function StageSection({
   compareIndex: CompareEntry[]
   currentSlug: string
   defaultOpen: boolean
+  nextGame: string | null
 }) {
   // Keep each slot's bracket index (the compare panel keys off it), then order
   // for display by kickoff — finished/live/next, earliest first.
@@ -472,6 +501,7 @@ function StageSection({
               goals={goals}
               compareIndex={compareIndex}
               currentSlug={currentSlug}
+              isNextUp={nextGame === `${stage}#${index}`}
             />
           ))}
         </div>
@@ -502,6 +532,7 @@ function TrueGameCard({
   goals,
   compareIndex,
   currentSlug,
+  isNextUp,
 }: {
   stage: Stage
   slotIndex: number
@@ -512,6 +543,7 @@ function TrueGameCard({
   goals?: MatchGoals[]
   compareIndex: CompareEntry[]
   currentSlug: string
+  isNextUp: boolean
 }) {
   const { home, away } = slot
   const known = !!home && !!away
@@ -562,7 +594,8 @@ function TrueGameCard({
     <article
       className={`card ${phase} ${wxCondition ? `wx wx-${wxCondition}` : ''} ${
         !isLive ? 'placed lighttext' : ''
-      }`}
+      } ${isNextUp && phase !== 'live' ? 'next-up' : ''}`}
+      data-slot-key={`${stage}#${slotIndex}`}
     >
       <div className="card-inner">
         {known ? (
