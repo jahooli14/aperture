@@ -396,6 +396,11 @@ body {
   color: var(--on-dark);
   cursor: pointer;
   text-align: left;
+  transition: background 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+.stage-title:hover {
+  background: var(--emerald-glass-2);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 .stage-title::before {
   content: '';
@@ -800,6 +805,15 @@ body {
   align-items: center;
   justify-content: center;
   gap: 6px;
+  transition: background 0.15s var(--ease), border-color 0.15s var(--ease),
+    transform 0.1s var(--ease);
+}
+.compare-toggle:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.24);
+}
+.compare-toggle:active {
+  transform: scale(0.98);
 }
 .compare {
   margin-top: 10px;
@@ -813,6 +827,15 @@ body {
   padding: 6px;
   overflow: hidden;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  /* Same rise-and-fade motion language as the cards themselves — snapping
+     open with no transition at all read as flat/unfinished. */
+  animation: compareIn 0.22s var(--ease) both;
+}
+@keyframes compareIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
 }
 .cmp-row {
   display: flex;
