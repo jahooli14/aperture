@@ -967,6 +967,9 @@ function useConfettiOnCorrect(scored: Scored[], loading: boolean, personSlug: st
 }
 
 function fireConfetti() {
+  // Canvas-based, so the CSS prefers-reduced-motion rule doesn't touch it —
+  // check directly rather than fire a big moving animation regardless.
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
   const burst = (originX: number) =>
     confetti({
       particleCount: 80,
