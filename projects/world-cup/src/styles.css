@@ -408,6 +408,14 @@ body {
   display: grid;
   grid-template-columns: 1fr;
   gap: 12px;
+  /* Grid's default stretch made every card in a row match the tallest one —
+     fine when heights only differ by a little, but "Compare picks" opens
+     independently per card, so one card can end up 5-6x taller than its row
+     neighbour. Stretching the short one to match left a huge blank gap of
+     plain card background between its content and its bottom-anchored
+     button. Natural height per card, even if that means buttons land at
+     slightly different heights sometimes, beats that. */
+  align-items: start;
 }
 
 /* Finished cards: clearly greyed out and recessed vs live/upcoming */
