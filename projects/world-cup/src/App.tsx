@@ -207,7 +207,7 @@ export function App() {
     () => person.predictions.map((p) => scorePrediction(p, findLiveMatch(p, matches))),
     [person, matches]
   )
-  useConfettiOnCorrect(myScored, loading)
+  useConfettiOnCorrect(myScored, loading, currentSlug)
 
   // Cities with a live game → fetch weather for the card backgrounds.
   const liveCities = useMemo(() => {
@@ -938,26 +938,32 @@ function GoldenBoot({
 
 // --- Confetti when a prediction comes true -------------------------------
 
-function useConfettiOnCorrect(scored: Scored[], loading: boolean) {
-  const celebrated = useRef<Set<string>>(new Set())
-  const initialised = useRef(false)
+function useConfettiOnCorrect(scored: Scored[], loading: boolean, personSlug: string) {
+  // Keyed per-person — otherwise switching "viewing as" surfaces a whole new
+  // set of already-correct picks that just aren't in the celebrated set yet
+  // (seeded from whoever was viewed first), firing confetti for old results
+  // instead of only for a result that's genuinely just turned correct.
+  const celebrated = useRef<Map<string, Set<string>>>(new Map())
+  const initialised = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     if (loading) return
     const correctNow = scored.filter((s) => s.result === 'exact' || s.result === 'outcome')
+    const seen = celebrated.current.get(personSlug) ?? new Set<string>()
+    celebrated.current.set(personSlug, seen)
 
-    if (!initialised.current) {
-      correctNow.forEach((s) => celebrated.current.add(pairKey(s.pred.home, s.pred.away)))
-      initialised.current = true
+    if (!initialised.current.has(personSlug)) {
+      correctNow.forEach((s) => seen.add(pairKey(s.pred.home, s.pred.away)))
+      initialised.current.add(personSlug)
       return
     }
 
-    const fresh = correctNow.filter((s) => !celebrated.current.has(pairKey(s.pred.home, s.pred.away)))
+    const fresh = correctNow.filter((s) => !seen.has(pairKey(s.pred.home, s.pred.away)))
     if (fresh.length === 0) return
 
-    fresh.forEach((s) => celebrated.current.add(pairKey(s.pred.home, s.pred.away)))
+    fresh.forEach((s) => seen.add(pairKey(s.pred.home, s.pred.away)))
     fireConfetti()
-  }, [scored, loading])
+  }, [scored, loading, personSlug])
 }
 
 function fireConfetti() {
