@@ -166,7 +166,7 @@ export function App() {
     scrolledRef.current = true
     const doScroll = () => {
       const el = document.querySelector('.card.live')
-      if (el) el.scrollIntoView({ behavior: 'auto', block: 'center' })
+      if (el) el.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'center' })
     }
     const timers = [200, 700, 1500].map((ms) => setTimeout(doScroll, ms))
     return () => timers.forEach(clearTimeout)
@@ -222,7 +222,7 @@ export function App() {
       const el = nextGame
         ? document.querySelector(`[data-slot-key="${nextGame}"]`)
         : document.querySelector(`[data-stage="${openStage}"]`)
-      if (el) el.scrollIntoView({ behavior: 'auto', block: 'center' })
+      if (el) el.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'center' })
     }
     const timers = [200, 700, 1500].map((ms) => setTimeout(doScroll, ms))
     return () => timers.forEach(clearTimeout)
@@ -260,9 +260,10 @@ export function App() {
   return (
     <div className="app">
       <div className="backdrop" aria-hidden="true" />
-      <Header lastUpdated={lastUpdated} live={matches.some((m) => phaseOf(m.status) === 'live')} />
-
-      <PersonToggle currentSlug={currentSlug} onSelect={setCurrentSlug} />
+      <Header
+        lastUpdated={lastUpdated}
+        personToggle={<PersonToggle currentSlug={currentSlug} onSelect={setCurrentSlug} />}
+      />
 
       {data && !data.configured && (
         <div className="notice">
@@ -305,46 +306,26 @@ export function App() {
 
 // --- Header --------------------------------------------------------------
 
-function Header({ lastUpdated, live }: { lastUpdated: Date | null; live: boolean }) {
-  const share = async () => {
-    const shareData = {
-      title: 'World Cup 2026',
-      text: 'World Cup 2026 — predictions vs the live scores',
-      url: window.location.href,
-    }
-    try {
-      if (navigator.share) await navigator.share(shareData)
-      else {
-        await navigator.clipboard.writeText(window.location.href)
-        alert('Link copied to clipboard!')
-      }
-    } catch {
-      /* dismissed */
-    }
-  }
-
+function Header({
+  lastUpdated,
+  personToggle,
+}: {
+  lastUpdated: Date | null
+  personToggle: React.ReactNode
+}) {
   return (
     <header className="header">
-      <div className="header-top">
-        {live ? (
-          <span className="pill live">
-            <span className="dot" /> LIVE
-          </span>
-        ) : (
-          <span />
-        )}
-        <button className="share-btn" onClick={share}>
-          Share
-        </button>
-      </div>
-      <h1>
-        World Cup <span className="year">2026</span>
-      </h1>
       {lastUpdated && (
         <p className="updated">
           Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </p>
       )}
+      <div className="header-row">
+        <h1>
+          World Cup <span className="year">2026</span>
+        </h1>
+        {personToggle}
+      </div>
     </header>
   )
 }
@@ -391,13 +372,21 @@ const LB_COLLAPSED_COUNT = 3
 
 const MEDALS = ['🥇', '🥈', '🥉']
 
-// Deterministic colour per person (no real photos to show) — same hash-based
-// approach as bracketOrder, just for a hue instead of a sort index.
+// Hand-picked, deliberately distinct on a dark background — a hashed hue
+// produced muddy/clashing/repeated colours (two people landing on near-
+// identical greens). Gold's reserved for the leader/leaderboard accent, so
+// it's left out of this set to avoid competing with that.
+const AVATAR_PALETTE = [
+  '#e05c5c', '#4a90d9', '#5cb85c', '#a566c9', '#e07b39',
+  '#3fb8af', '#d9527a', '#7d8fd4', '#c9973f', '#5c8fe0',
+  '#c15c9e', '#4fae6e',
+]
+const avatarIndex: Record<string, number> = {}
+Object.keys(people).forEach((slug, i) => {
+  avatarIndex[slug] = i
+})
 function avatarColor(slug: string): string {
-  let hash = 0
-  for (let i = 0; i < slug.length; i++) hash = (hash * 31 + slug.charCodeAt(i)) | 0
-  const hue = Math.abs(hash) % 360
-  return `hsl(${hue}, 55%, 42%)`
+  return AVATAR_PALETTE[(avatarIndex[slug] ?? 0) % AVATAR_PALETTE.length]
 }
 
 function Leaderboard({
@@ -795,9 +784,15 @@ function TrueGameCard({
               // team in any other round. 🏆 either way, plus a bold/gold
               // highlight on the name itself so it doesn't rely on the emoji
               // alone to read clearly.
-              const advancer = champion ?? pensAdv
+              // Every winning pick gets the gold/bold highlight, decisive or
+              // not — the 🏆 stays reserved for the Final's champion or a
+              // penalties call, where the scoreline alone doesn't already
+              // make the winner obvious.
+              const trophyWorthy = champion ?? pensAdv
+              const winner = decisive ? (sc1! > sc2! ? t1 : t2) : trophyWorthy
               const renderTeam = (name: string) => {
-                const wins = !!advancer && sameName(name, advancer)
+                const wins = !!winner && sameName(name, winner)
+                const trophy = !!trophyWorthy && sameName(name, trophyWorthy)
                 const out = eliminated.has(normaliseName(name).toLowerCase())
                 return (
                   <span>
@@ -805,7 +800,7 @@ function TrueGameCard({
                     <span className={`${out ? 'cmp-out' : ''} ${wins ? 'cmp-advancer' : ''}`}>
                       {teamCode(name)}
                     </span>
-                    {wins && ' 🏆'}
+                    {trophy && ' 🏆'}
                   </span>
                 )
               }
@@ -966,6 +961,11 @@ function GoldenBoot({
   scorers: LiveScorer[]
   pick: { player: string; team: string }
 }) {
+  // Collapsed by default — same "just the viewed person's info, full list is
+  // one tap away" pattern as the leaderboard. The pick banner already says
+  // what matters most; the full top-15 is extra detail, not the headline.
+  const [expanded, setExpanded] = useState(false)
+
   const pickLast = pick.player.toLowerCase().split(' ').pop()!
   const pickFirst = pick.player.toLowerCase().split(' ')[0]
   const isMyPick = (name: string) =>
@@ -995,28 +995,38 @@ function GoldenBoot({
           The live top-scorer list appears here once the app is connected to the live feed.
         </p>
       ) : (
-        <ol className="scorer-list">
-          {top.map((s, i) => (
-            <li key={`${s.name}-${i}`} className={`scorer-row ${isMyPick(s.name) ? 'my-pick' : ''}`}>
-              <span className="rank">{i + 1}</span>
-              {photos[s.name] ? (
-                <img className="savatar" src={photos[s.name]} alt="" loading="lazy" />
-              ) : (
-                <span className="savatar savatar-fallback">{flag(s.team)}</span>
-              )}
-              <span className="who">
-                <span className="sname">{s.name}</span>
-                <span className="steam">
-                  {flag(s.team)} {s.team}
-                </span>
-              </span>
-              <span className="sgoals">
-                {s.goals}
-                <span className="sgoals-label">goals</span>
-              </span>
-            </li>
-          ))}
-        </ol>
+        <>
+          {expanded && (
+            <ol className="scorer-list">
+              {top.map((s, i) => (
+                <li key={`${s.name}-${i}`} className={`scorer-row ${isMyPick(s.name) ? 'my-pick' : ''}`}>
+                  <span className="rank">{i + 1}</span>
+                  {photos[s.name] ? (
+                    <img className="savatar" src={photos[s.name]} alt="" loading="lazy" />
+                  ) : (
+                    <span className="savatar savatar-fallback">{flag(s.team)}</span>
+                  )}
+                  <span className="who">
+                    <span className="sname">{s.name}</span>
+                    <span className="steam">
+                      {flag(s.team)} {s.team}
+                    </span>
+                  </span>
+                  <span className="sgoals">
+                    {s.goals}
+                    <span className="sgoals-label">goals</span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
+          <button className="lb-toggle" onClick={() => setExpanded((e) => !e)}>
+            {expanded ? 'Show less' : 'See top 15'}
+            <span className={`chevron ${expanded ? 'open' : ''}`} aria-hidden="true">
+              ⌄
+            </span>
+          </button>
+        </>
       )}
     </section>
   )

@@ -82,21 +82,23 @@ body {
 
 /* ---- Header (over photo) ---- */
 .header {
-  padding: 24px 0 16px;
-  text-align: center;
+  position: relative;
+  padding: 20px 0 16px;
 }
-.header-top {
+.header-row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  min-height: 32px;
+  justify-content: space-between;
+  gap: 16px;
 }
 .header h1 {
+  flex: 1 1 auto;
+  min-width: 0;
   font-family: 'Sora', sans-serif;
-  font-size: 30px;
+  font-size: 28px;
   line-height: 1.15;
   font-weight: 800;
-  margin: 16px 0 6px;
+  margin: 12px 0 0;
   letter-spacing: -0.02em;
   color: var(--on-dark);
   text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
@@ -108,19 +110,31 @@ body {
   color: transparent;
 }
 .updated {
+  /* Small, top-left — this was a centered line below the title plus a
+     separate LIVE badge up top; neither earned that much prominence. */
+  position: absolute;
+  top: 2px;
+  left: 0;
   color: var(--on-dark-3);
-  font-size: 11px;
+  font-size: 10px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  margin: 8px 0 0;
+  margin: 0;
 }
 
 /* ---- Person toggle (who "you" are) ---- */
 .person-toggle {
+  /* Label sits above the control, not squeezed beside it — inline left of a
+     dropdown just steals width from it and reads cramped/amateur. Sits
+     beside the title (not full-width below it), so the title keeps the
+     room it needs and this only takes what it needs. */
+  flex: 0 1 auto;
+  min-width: 0;
   display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 4px 0 16px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  margin: 12px 0 0;
 }
 .pt-label {
   font-size: 11px;
@@ -132,8 +146,10 @@ body {
 }
 .pt-select-wrap {
   position: relative;
-  flex: 1 1 auto;
-  min-width: 0;
+  /* Compact, sized to its content — sits beside the title now, not full
+     width below it. */
+  flex: none;
+  min-width: 140px;
 }
 .pt-select {
   /* Native <select> — with a dozen+ names, a real dropdown (tap to reveal,
@@ -186,28 +202,6 @@ body {
   opacity: 0.4;
   filter: grayscale(1);
 }
-.share-btn {
-  min-height: 44px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  color: var(--on-dark);
-  padding: 7px 16px;
-  border-radius: var(--r-pill);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  backdrop-filter: blur(8px);
-  display: inline-flex;
-  align-items: center;
-  transition: background 0.2s var(--ease), transform 0.15s var(--ease);
-}
-.share-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-.share-btn:active {
-  transform: scale(0.97);
-}
-
 /* ---- Pills ---- */
 .pill {
   display: inline-flex;
@@ -270,6 +264,11 @@ body {
   margin: 16px 0 20px;
   backdrop-filter: blur(14px);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  /* Stays visible (in its collapsed form) while scrolling through games —
+     "who's winning" stays one glance away without losing your place. */
+  position: sticky;
+  top: 8px;
+  z-index: 5;
 }
 .lb-list {
   list-style: none;
@@ -463,17 +462,27 @@ body {
   transform: rotate(180deg);
 }
 .cards {
-  display: grid;
-  grid-template-columns: 1fr;
+  /* One game at a time, swipeable — scroll right for the next game in this
+     round instead of stacking every card vertically down the page. Desktop
+     (640px+) reverts to a 2-up grid instead, see the media query below. */
+  display: flex;
+  /* flex's default stretch would force every card to the height of the
+     tallest one in the row — the same huge-blank-gap bug fixed earlier for
+     the grid layout, just flex's version of it. */
+  align-items: flex-start;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
   gap: 12px;
-  /* Grid's default stretch made every card in a row match the tallest one —
-     fine when heights only differ by a little, but "Compare picks" opens
-     independently per card, so one card can end up 5-6x taller than its row
-     neighbour. Stretching the short one to match left a huge blank gap of
-     plain card background between its content and its bottom-anchored
-     button. Natural height per card, even if that means buttons land at
-     slightly different heights sometimes, beats that. */
-  align-items: start;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+.cards::-webkit-scrollbar {
+  display: none;
+}
+.cards > .card {
+  flex: 0 0 100%;
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
 }
 
 /* Finished cards: clearly greyed out and recessed vs live/upcoming */
@@ -1099,7 +1108,16 @@ body {
     font-size: 38px;
   }
   .cards {
+    /* The swipe carousel is a touch-first pattern — wider viewports get the
+       original 2-up grid back instead of a click-and-drag horizontal drag. */
+    display: grid;
     grid-template-columns: 1fr 1fr;
+    overflow-x: visible;
+    scroll-snap-type: none;
+  }
+  .cards > .card {
+    flex: initial;
+    scroll-snap-align: none;
   }
   .stage-title {
     font-size: 22px;
