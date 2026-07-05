@@ -452,6 +452,27 @@ body {
   padding: 0 6px;
   border-radius: 999px;
 }
+/* Finished rounds, demoted to the bottom of the page — muted gold accents
+   (grey instead) so they read as done-and-archived, not the same weight as
+   whatever's actually still in play. */
+.stage-past .stage-title::before {
+  background: var(--on-dark-3);
+}
+.stage-past .stage-count {
+  background: var(--on-dark-3);
+  color: var(--emerald-deep);
+}
+.past-rounds {
+  margin-top: 8px;
+}
+.past-rounds-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--on-dark-3);
+  margin: 0 0 10px 4px;
+}
 .chevron {
   font-size: 18px;
   line-height: 1;

@@ -172,17 +172,41 @@ export function App() {
     return () => timers.forEach(clearTimeout)
   }, [matches])
 
+  // A stage is "done" once every one of its slots is a decided, finished
+  // fixture — not just "no live game right now" (that's also true before a
+  // stage's teams are even set).
+  const isStageDone = (stage: Stage) => {
+    const slots = bracket[stage] ?? []
+    return (
+      slots.length > 0 &&
+      slots.every((slot) => {
+        if (!slot.home || !slot.away) return false
+        const live = findLive(slot.home, slot.away, matches)
+        return !!live && phaseOf(live.status) === 'final'
+      })
+    )
+  }
+
   // Whichever stage still has games left to play — that's the one that opens
   // expanded by default, and every earlier (fully finished) stage collapses.
   const openStage = useMemo(() => {
-    const undone = stageOrder.find((stage) =>
-      (bracket[stage] ?? []).some((slot) => {
-        if (!slot.home || !slot.away) return true // TBC, not played yet
-        const live = findLive(slot.home, slot.away, matches)
-        return !live || phaseOf(live.status) !== 'final'
-      })
-    )
+    const undone = stageOrder.find((stage) => !isStageDone(stage))
     return undone ?? stageOrder[stageOrder.length - 1]
+  }, [bracket, matches])
+
+  // Fully-finished stages move to a demoted "Past rounds" group at the
+  // bottom instead of sitting at their normal chronological spot — a done
+  // Round of 32 isn't what anyone opens the app to see, and it was pushing
+  // the rounds that matter further down the page.
+  const { activeStages, pastStages } = useMemo(() => {
+    const active: Stage[] = []
+    const past: Stage[] = []
+    for (const stage of stageOrder) {
+      // The Final never demotes, even once decided — the champion result is
+      // the one thing worth staying prominent for good.
+      ;(isStageDone(stage) && stage !== 'Final' ? past : active).push(stage)
+    }
+    return { activeStages: active, pastStages: past }
   }, [bracket, matches])
 
   // The single next game to be played (earliest kickoff among known-team,
@@ -278,7 +302,7 @@ export function App() {
       <Leaderboard matches={matches} currentSlug={currentSlug} ready={data !== null} />
 
       <main>
-        {stageOrder.map((stage) => (
+        {activeStages.map((stage) => (
           <StageSection
             key={stage}
             stage={stage}
@@ -293,6 +317,28 @@ export function App() {
             nextGame={nextGame}
           />
         ))}
+
+        {pastStages.length > 0 && (
+          <div className="past-rounds">
+            <p className="past-rounds-label">Past rounds</p>
+            {pastStages.map((stage) => (
+              <StageSection
+                key={stage}
+                stage={stage}
+                slots={bracket[stage] ?? []}
+                weather={weather}
+                matches={matches}
+                odds={odds}
+                goals={data?.goals}
+                compareIndex={compareIndex}
+                currentSlug={currentSlug}
+                defaultOpen={false}
+                nextGame={nextGame}
+                past
+              />
+            ))}
+          </div>
+        )}
       </main>
 
       <GoldenBoot scorers={scorers} pick={person.goldenBoot} />
@@ -476,6 +522,7 @@ function StageSection({
   currentSlug,
   defaultOpen,
   nextGame,
+  past,
 }: {
   stage: Stage
   slots: BracketSlot[]
@@ -487,6 +534,7 @@ function StageSection({
   currentSlug: string
   defaultOpen: boolean
   nextGame: string | null
+  past?: boolean
 }) {
   // Keep each slot's bracket index (the compare panel keys off it), then order
   // for display by kickoff — finished/live/next, earliest first.
@@ -508,7 +556,7 @@ function StageSection({
   }, [defaultOpen])
 
   return (
-    <section className="stage" data-stage={stage}>
+    <section className={`stage ${past ? 'stage-past' : ''}`} data-stage={stage}>
       <button
         className="stage-title"
         onClick={() => {
