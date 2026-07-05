@@ -361,24 +361,44 @@ function PersonToggle({
   return (
     <div className="person-toggle">
       <span className="pt-label">Viewing as</span>
-      <div className="pt-seg" role="tablist">
-        {Object.values(people).map((p) => (
-          <button
-            key={p.slug}
-            role="tab"
-            aria-selected={p.slug === currentSlug}
-            className={`pt-btn ${p.slug === currentSlug ? 'active' : ''}`}
-            onClick={() => onSelect(p.slug)}
-          >
-            {p.title}
-          </button>
-        ))}
+      <div className="pt-select-wrap">
+        <select
+          className="pt-select"
+          value={currentSlug}
+          onChange={(e) => onSelect(e.target.value)}
+        >
+          {Object.values(people).map((p) => (
+            <option key={p.slug} value={p.slug}>
+              {p.title}
+            </option>
+          ))}
+        </select>
+        <span className="pt-select-chevron" aria-hidden="true">
+          ⌄
+        </span>
       </div>
     </div>
   )
 }
 
 // --- Leaderboard ---------------------------------------------------------
+
+// Collapsed by default at 3+ people — a dozen-plus rows of history/ranking
+// on every page load pushed the actual games (the point of the app) far
+// down the screen. Top 3 plus "your rank" is enough to answer "who's
+// winning" at a glance; the full list is one tap away.
+const LB_COLLAPSED_COUNT = 3
+
+const MEDALS = ['🥇', '🥈', '🥉']
+
+// Deterministic colour per person (no real photos to show) — same hash-based
+// approach as bracketOrder, just for a hue instead of a sort index.
+function avatarColor(slug: string): string {
+  let hash = 0
+  for (let i = 0; i < slug.length; i++) hash = (hash * 31 + slug.charCodeAt(i)) | 0
+  const hue = Math.abs(hash) % 360
+  return `hsl(${hue}, 55%, 42%)`
+}
 
 function Leaderboard({
   matches,
@@ -389,6 +409,8 @@ function Leaderboard({
   currentSlug: string
   ready: boolean
 }) {
+  const [expanded, setExpanded] = useState(false)
+
   // Before the first live fetch resolves, `matches` is empty and points would
   // read as baseline-only — misleadingly low, and the ranking/crown could be
   // wrong. Show a placeholder instead of a number that's about to jump.
@@ -399,30 +421,55 @@ function Leaderboard({
   }, [matches, ready])
 
   const leaderPts = rows[0]?.points ?? 0
+  const myIndex = rows.findIndex((r) => r.slug === currentSlug)
+  const collapsible = rows.length > LB_COLLAPSED_COUNT
+  const visible = expanded || !collapsible ? rows : rows.slice(0, LB_COLLAPSED_COUNT)
+  const showMeSeparately = collapsible && !expanded && myIndex >= LB_COLLAPSED_COUNT
+
+  const renderRow = (r: (typeof rows)[number], i: number) => {
+    const isLeader = ready && i === 0
+    const medal = ready ? MEDALS[i] : undefined
+    return (
+      <li
+        key={r.slug}
+        className={`lb-row ${isLeader ? 'leader' : ''} ${r.slug === currentSlug ? 'me' : ''}`}
+      >
+        <span className="lb-rank">
+          {/* Top 3 get a medal instead of a bare number — the standard
+              podium treatment, easier to scan at a glance than digits. */}
+          {medal ? <span aria-hidden="true">{medal}</span> : i + 1}
+        </span>
+        <span className="lb-avatar" style={{ background: avatarColor(r.slug) }} aria-hidden="true">
+          {r.title.slice(0, 1).toUpperCase()}
+        </span>
+        <span className="lb-name">{r.title}</span>
+        <span className="lb-pts">{ready ? r.points : '···'}</span>
+        <span className="lb-gap">{!ready || isLeader ? '' : `−${leaderPts - r.points}`}</span>
+      </li>
+    )
+  }
 
   return (
     <section className="leaderboard">
       <ol className="lb-list">
-        {rows.map((r, i) => {
-          const isLeader = ready && i === 0
-          return (
-            <li
-              key={r.slug}
-              className={`lb-row ${isLeader ? 'leader' : ''} ${
-                r.slug === currentSlug ? 'me' : ''
-              }`}
-            >
-              <span className="lb-rank">{i + 1}</span>
-              <span className="lb-name">
-                {r.title}
-                {isLeader && <span className="lb-crown"> 🏆</span>}
-              </span>
-              <span className="lb-pts">{ready ? r.points : '···'}</span>
-              <span className="lb-gap">{!ready || isLeader ? '' : `−${leaderPts - r.points}`}</span>
+        {visible.map((r, i) => renderRow(r, i))}
+        {showMeSeparately && (
+          <>
+            <li className="lb-ellipsis" aria-hidden="true">
+              ⋯
             </li>
-          )
-        })}
+            {renderRow(rows[myIndex], myIndex)}
+          </>
+        )}
       </ol>
+      {collapsible && (
+        <button className="lb-toggle" onClick={() => setExpanded((e) => !e)}>
+          {expanded ? 'Show less' : `See all ${rows.length}`}
+          <span className={`chevron ${expanded ? 'open' : ''}`} aria-hidden="true">
+            ⌄
+          </span>
+        </button>
+      )}
     </section>
   )
 }
@@ -743,16 +790,22 @@ function TrueGameCard({
               const decisive = sc1 != null && sc2 != null && sc1 !== sc2
               const champion = isFinal ? (decisive ? (sc1! > sc2! ? t1 : t2) : pick?.advances) : undefined
               const pensAdv = !isFinal && !decisive ? pick?.advances : undefined
+              // One advancer per row: the Final's champion (however they won —
+              // still the trophy, penalties or not), or a drawn pick's backed
+              // team in any other round. 🏆 either way, plus a bold/gold
+              // highlight on the name itself so it doesn't rely on the emoji
+              // alone to read clearly.
+              const advancer = champion ?? pensAdv
               const renderTeam = (name: string) => {
-                const champ = !!champion && sameName(name, champion)
-                const pens = !!pensAdv && sameName(name, pensAdv)
+                const wins = !!advancer && sameName(name, advancer)
                 const out = eliminated.has(normaliseName(name).toLowerCase())
                 return (
                   <span>
-                    {flag(name)} <span className={out ? 'cmp-out' : undefined}>{teamCode(name)}</span>
-                    {/* Whoever they picked to go through (a drawn pick's advancer,
-                        or the champion in the Final) gets a little 🏆 — no colour. */}
-                    {(champ || pens) && ' 🏆'}
+                    {flag(name)}{' '}
+                    <span className={`${out ? 'cmp-out' : ''} ${wins ? 'cmp-advancer' : ''}`}>
+                      {teamCode(name)}
+                    </span>
+                    {wins && ' 🏆'}
                   </span>
                 )
               }
