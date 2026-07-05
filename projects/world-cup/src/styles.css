@@ -74,10 +74,7 @@ body {
   background-position: center 28%;
 }
 
-.stat-value,
 .bigscore,
-.pick,
-.scorers .num,
 .kickoff,
 .caption {
   font-variant-numeric: tabular-nums;
@@ -109,12 +106,6 @@ body {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-}
-.subtitle {
-  color: var(--on-dark-2);
-  font-size: 15px;
-  margin: 0;
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.4);
 }
 .updated {
   color: var(--on-dark-3);
@@ -249,42 +240,6 @@ body {
   padding: 1px 6px;
   border-radius: 6px;
   font-size: 12px;
-}
-
-/* ---- Scoreboard (emerald glass over photo) ---- */
-.scoreboard {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  background: var(--emerald-glass);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: var(--r-card);
-  overflow: hidden;
-  margin: 16px 0 32px;
-  backdrop-filter: blur(14px);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
-}
-.stat {
-  padding: 18px 12px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.stat + .stat {
-  border-left: 1px solid rgba(255, 255, 255, 0.12);
-}
-.stat-value {
-  font-family: 'Sora', sans-serif;
-  font-size: 30px;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--gold-soft);
-}
-.stat-label {
-  font-size: 11px;
-  color: var(--on-dark-2);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 
 /* ---- Leaderboard (one ranked list; row 1 is the leader, emphasized) ---- */
@@ -449,49 +404,6 @@ body {
   gap: 12px;
 }
 
-/* Finished-games group — collapsed + greyed out */
-.finished-group {
-  margin-top: 12px;
-}
-.fin-toggle {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(6, 28, 18, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--r-pill);
-  padding: 9px 14px;
-  color: var(--on-dark-2);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  backdrop-filter: blur(8px);
-}
-.fin-tick {
-  color: #2fe08a;
-  font-weight: 800;
-}
-.fin-name {
-  flex: 1;
-  text-align: left;
-}
-.fin-count {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--on-dark);
-  background: rgba(255, 255, 255, 0.12);
-  min-width: 22px;
-  height: 22px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 6px;
-  border-radius: 999px;
-}
-.finished-group .cards {
-  margin-top: 12px;
-}
 /* Finished cards: clearly greyed out and recessed vs live/upcoming */
 .card.final {
   opacity: 0.62;
@@ -590,37 +502,6 @@ body {
   font-weight: 600;
 }
 
-.result-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  padding: 4px 10px;
-  border-radius: 999px;
-}
-.result-pill .dot {
-  animation: none;
-}
-.rp-icon {
-  font-size: 14px;
-  line-height: 1;
-  letter-spacing: 0;
-}
-.result-pill.exact {
-  background: rgba(15, 157, 88, 0.16);
-  color: var(--green);
-}
-.result-pill.outcome {
-  background: rgba(15, 157, 88, 0.1);
-  color: var(--green);
-}
-.result-pill.wrong {
-  background: rgba(216, 58, 74, 0.12);
-  color: var(--red);
-}
-
 /* Match: home | score | away — minmax(0,1fr) lets the team columns shrink
    and truncate instead of overflowing the card on narrow screens. */
 .match {
@@ -656,50 +537,6 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* Prediction-vs-reality on the team name (later rounds) */
-.team-correct {
-  color: #2fe08a !important;
-}
-.card.lighttext .team-correct {
-  color: #5cf0a6 !important;
-}
-.team-tick {
-  margin-top: 3px;
-  font-size: 14px;
-  font-weight: 900;
-  line-height: 1;
-  color: #2fe08a;
-}
-.card.lighttext .team-tick {
-  color: #5cf0a6;
-}
-
-/* My prediction that didn't make it — small, labelled and struck through,
-   beneath the team that actually went through. */
-.mini-out {
-  margin-top: 5px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-}
-.mo-label {
-  font-size: 8.5px;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.55);
-}
-.mo-name {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.82);
-  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.75);
-  text-decoration: line-through;
-  text-decoration-color: var(--red);
-  text-decoration-thickness: 2px;
-}
-
 .center {
   display: flex;
   flex-direction: column;
@@ -725,23 +562,6 @@ body {
 .bigscore.live {
   color: var(--red);
 }
-.pick {
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
-  color: var(--gold-deep);
-}
-.pick.correct {
-  color: var(--green);
-}
-.pick.wrong {
-  color: var(--red);
-}
-/* Right result, wrong scoreline — neutral, since red means an actual miss. */
-.pick.ok {
-  color: var(--ink-2);
-}
-
 /* Pre-match favorite (upcoming/live only, gone once the result's known) */
 .odds-line {
   display: flex;
@@ -913,18 +733,6 @@ body {
   color: rgba(255, 255, 255, 0.4);
   font-weight: 500;
 }
-/* The team going through / champion — green to read clearly as "advances". */
-.cmp-win {
-  color: #5cf0a6;
-  font-weight: 800;
-}
-.cmp-pens {
-  font-size: 9px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: rgba(255, 255, 255, 0.5);
-}
 /* A team that's been knocked out — struck through wherever it's listed. */
 .cmp-out {
   text-decoration: line-through;
@@ -1008,59 +816,6 @@ body {
   flex: none;
   text-align: right;
 }
-/* "my pick" label + team sit on one line, so a wrong pick reads as two tidy
-   rows: who actually went through (green) above, my struck pick below. */
-.adv-mine {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
-  white-space: nowrap;
-}
-.adv-label {
-  font-size: 8.5px;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-}
-.adv-team {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ink-2);
-  white-space: nowrap;
-}
-.adv-mark {
-  font-size: 12px;
-  line-height: 1;
-}
-.adv-team.struck {
-  color: #ff8d9a;
-  text-decoration: line-through;
-  text-decoration-color: #ff8d9a;
-  text-decoration-thickness: 2px;
-}
-/* The team that actually went through, shown above a struck wrong pick. */
-.adv-real {
-  font-size: 12.5px;
-  font-weight: 800;
-  color: var(--green);
-  white-space: nowrap;
-}
-.card.lighttext .adv-real,
-.card.wx .adv-real {
-  color: #5cf0a6;
-  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.7);
-}
-.card.lighttext .adv-label,
-.card.wx .adv-label {
-  color: rgba(255, 255, 255, 0.55);
-}
-.card.lighttext .adv-team,
-.card.wx .adv-team {
-  color: rgba(255, 255, 255, 0.85);
-  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.7);
-}
-
 /* ---- Golden Boot ---- */
 .golden {
   margin-top: 24px;
@@ -1256,21 +1011,6 @@ body {
     font-size: 27px;
     margin: 12px 0 4px;
   }
-  .subtitle {
-    font-size: 13.5px;
-  }
-  .scoreboard {
-    margin: 12px 0 24px;
-  }
-  .stat {
-    padding: 14px 8px;
-  }
-  .stat-value {
-    font-size: 26px;
-  }
-  .stat-label {
-    font-size: 10px;
-  }
   .cards {
     gap: 10px;
   }
@@ -1344,19 +1084,6 @@ body {
     rgba(4, 16, 10, 0.4) 50%,
     rgba(4, 16, 10, 0.22) 100%
   );
-}
-
-.card.lighttext .pick.pending {
-  color: var(--gold-soft);
-}
-.card.lighttext .pick.correct {
-  color: #5cf0a6;
-}
-.card.lighttext .pick.wrong {
-  color: #ff8d9a;
-}
-.card.lighttext .pick.ok {
-  color: rgba(255, 255, 255, 0.9);
 }
 
 /* ---- Cinematic weather on live game cards ---- */
@@ -1624,15 +1351,6 @@ body {
   }
 }
 
-.card.wx .pick.pending {
-  color: var(--gold-soft);
-}
-.card.wx .pick.correct {
-  color: #67f0a8;
-}
-.card.wx .pick.wrong {
-  color: #ff8d9a;
-}
 .card.wx .weather-chip {
   background: rgba(255, 255, 255, 0.2);
   color: #fff;
