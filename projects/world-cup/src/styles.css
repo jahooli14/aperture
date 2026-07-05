@@ -976,7 +976,9 @@ body {
   width: 16px;
   height: 16px;
   flex: none;
-  color: var(--ink-3);
+  /* --ink-3 fails WCAG AA (2.84:1) against the card background — same
+     issue .vcity/.odds-label had before they moved off the photo. */
+  color: var(--ink-2);
 }
 .venue-text {
   display: flex;
