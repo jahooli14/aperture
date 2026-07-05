@@ -200,20 +200,78 @@ export const SCORE_BASELINE: Record<string, number> = {
   katdan: 331,
   sarjack: 292,
   gavin: 358,
+  steph: 380,
+  duncan: 413,
 }
-const SCORE_CUTOFF_MS = new Date('2026-06-30T12:00:00Z').getTime()
+const DEFAULT_CUTOFF_MS = new Date('2026-06-30T12:00:00Z').getTime()
+
+// People with no Round of 32 predictions on record (they only ever gave us
+// Round of 16 onward) can't have a 30 June baseline worked out from real
+// results — there's nothing to reconcile it against. Their whole current
+// total becomes the baseline instead, cut off from today, so only games
+// finishing from here on add anything further.
+const CUTOFF_OVERRIDE: Record<string, number> = {
+  steph: new Date('2026-07-05T23:59:59Z').getTime(),
+  duncan: new Date('2026-07-05T23:59:59Z').getTime(),
+}
+function cutoffFor(slug: string): number {
+  return CUTOFF_OVERRIDE[slug] ?? DEFAULT_CUTOFF_MS
+}
+
+// Credit for backing the right team to advance even when the bracket diverged
+// from what you predicted — e.g. you picked Germany to reach the round of 16
+// and lose to France, but Paraguay upset Germany a round earlier, so the real
+// game was Paraguay v France instead. If France still won for real, backing
+// them was the correct call; you just don't get the exact-score bonus, since
+// there's no actual "Germany v France" scoreline to compare goals against.
+// Only applies when findLiveMatch finds nothing — an exact fixture match is
+// scored normally by matchPoints, divergence or not.
+function divergentBracketPoints(pred: Prediction, matches: LiveMatch[], cutoffMs: number): number {
+  const backed =
+    pred.homeScore === pred.awayScore
+      ? pred.advances
+      : pred.homeScore > pred.awayScore
+        ? pred.home
+        : pred.away
+  if (!backed) return 0
+  const backedKey = normaliseName(backed).toLowerCase()
+  const real = matches.find(
+    (m) =>
+      feedStageToMine(m.stage) === pred.stage &&
+      phaseOf(m.status) === 'final' &&
+      m.homeScore != null &&
+      m.awayScore != null &&
+      (normaliseName(m.home).toLowerCase() === backedKey ||
+        normaliseName(m.away).toLowerCase() === backedKey)
+  )
+  if (!real) return 0
+  const iso = real.utcDate || ''
+  const koMs = iso ? new Date(iso).getTime() : 0
+  if (!(koMs >= cutoffMs)) return 0 // already baked into the baseline
+  const winner =
+    real.homeScore === real.awayScore
+      ? real.advancer
+      : real.homeScore! > real.awayScore!
+        ? real.home
+        : real.away
+  if (!winner || normaliseName(winner).toLowerCase() !== backedKey) return 0
+  return RESULT_POINTS[pred.stage]
+}
 
 // A person's live total: their baseline plus points from every finished knockout
 // game that kicked off at/after the cutoff (games before it are already counted).
 export function personTotal(person: Person, matches: LiveMatch[]): number {
+  const cutoffMs = cutoffFor(person.slug)
   let total = SCORE_BASELINE[person.slug] ?? 0
   for (const pred of person.predictions) {
     const live = findLiveMatch(pred, matches)
-    if (!live || phaseOf(live.status) !== 'final') continue
-    const iso = live.utcDate || kickoffFor(pred.home, pred.away) || ''
-    const koMs = iso ? new Date(iso).getTime() : 0
-    if (!(koMs >= SCORE_CUTOFF_MS)) continue // already baked into the baseline
-    total += matchPoints(pred, live)
+    if (live && phaseOf(live.status) === 'final') {
+      const iso = live.utcDate || kickoffFor(pred.home, pred.away) || ''
+      const koMs = iso ? new Date(iso).getTime() : 0
+      if (koMs >= cutoffMs) total += matchPoints(pred, live)
+      continue
+    }
+    total += divergentBracketPoints(pred, matches, cutoffMs)
   }
   return total
 }
@@ -424,7 +482,27 @@ export function slotPickResult(
   if (!pick || !home || !away) return 'pending'
   const decided = !!live && phaseOf(live.status) === 'final'
   if (pairKey(pick.home, pick.away) !== pairKey(home, away)) {
-    return decided ? 'wrong' : 'pending'
+    if (!decided) return 'pending'
+    // Bracket diverged from this pick (an upset meant their predicted
+    // opponent never actually reached this game) — still a right result if
+    // the team they backed to advance is who actually won, for real. Never
+    // 'exact': there's no matching real scoreline to compare goals against.
+    const backed =
+      pick.homeScore === pick.awayScore
+        ? pick.advances
+        : pick.homeScore > pick.awayScore
+          ? pick.home
+          : pick.away
+    if (!backed || !live || live.homeScore == null || live.awayScore == null) return 'wrong'
+    const winner =
+      live.homeScore === live.awayScore
+        ? live.advancer
+        : live.homeScore > live.awayScore
+          ? live.home
+          : live.away
+    return winner && normaliseName(winner).toLowerCase() === normaliseName(backed).toLowerCase()
+      ? 'outcome'
+      : 'wrong'
   }
   if (!decided) return 'pending'
   return scorePrediction(pick, live).result
