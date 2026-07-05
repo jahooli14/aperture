@@ -32,6 +32,14 @@
 * {
   box-sizing: border-box;
 }
+/* On-brand keyboard focus ring — without this, tabbing through buttons/links
+   falls back to the browser default (usually blue), which clashes with the
+   app's gold/emerald palette. */
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
 html,
 body {
   margin: 0;
