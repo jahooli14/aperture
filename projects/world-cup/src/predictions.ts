@@ -441,6 +441,339 @@ export const gavinPredictions: Prediction[] = [
   { stage: 'Final', home: 'Spain', away: 'Brazil', homeScore: 3, awayScore: 1, dateText: 'Sun 19 Jul', venue: 'MetLife Stadium', city: 'New York, USA' },
 ]
 
+// --- Compact builder for the 11 people added after the original three -----
+// Same fixtures/venues/dates as everyone else — only home/away/scores/advances
+// differ per person, so this fills in the repeated venue/city/dateText by
+// bracket position instead of repeating it by hand for every entry.
+
+type Pick = [string, number, string, number, string?] // home, homeScore, away, awayScore, advances?
+
+const R32_VENUES: [string, string][] = [
+  ['Gillette Stadium', 'Boston, USA'],
+  ['MetLife Stadium', 'New York, USA'],
+  ['SoFi Stadium', 'Los Angeles, USA'],
+  ['Estadio BBVA', 'Monterrey, Mexico'],
+  ['BMO Field', 'Toronto, Canada'],
+  ['SoFi Stadium', 'Los Angeles, USA'],
+  ["Levi's Stadium", 'San Francisco, USA'],
+  ['Lumen Field', 'Seattle, USA'],
+  ['NRG Stadium', 'Houston, USA'],
+  ['AT&T Stadium', 'Dallas, USA'],
+  ['Estadio Azteca', 'Mexico City, Mexico'],
+  ['Mercedes-Benz Stadium', 'Atlanta, USA'],
+  ['Hard Rock Stadium', 'Miami, USA'],
+  ['AT&T Stadium', 'Dallas, USA'],
+  ['BC Place', 'Vancouver, Canada'],
+  ['Arrowhead Stadium', 'Kansas City, USA'],
+]
+
+const LATER_SCHEDULE: Partial<Record<Stage, [string, string, string][]>> = {
+  'Round of 16': [
+    ['Sat 4 Jul', 'NRG Stadium', 'Houston, USA'],
+    ['Sat 4 Jul', 'Lincoln Financial Field', 'Philadelphia, USA'],
+    ['Sun 5 Jul', 'MetLife Stadium', 'New York, USA'],
+    ['Sun 5 Jul', 'Estadio Azteca', 'Mexico City, Mexico'],
+    ['Mon 6 Jul', 'AT&T Stadium', 'Dallas, USA'],
+    ['Mon 6 Jul', 'Lumen Field', 'Seattle, USA'],
+    ['Tue 7 Jul', 'Mercedes-Benz Stadium', 'Atlanta, USA'],
+    ['Tue 7 Jul', 'BC Place', 'Vancouver, Canada'],
+  ],
+  'Quarter-finals': [
+    ['Thu 9 Jul', 'Gillette Stadium', 'Boston, USA'],
+    ['Fri 10 Jul', 'SoFi Stadium', 'Los Angeles, USA'],
+    ['Sat 11 Jul', 'Hard Rock Stadium', 'Miami, USA'],
+    ['Sat 11 Jul', 'Arrowhead Stadium', 'Kansas City, USA'],
+  ],
+  'Semi-finals': [
+    ['Tue 14 Jul', 'AT&T Stadium', 'Dallas, USA'],
+    ['Wed 15 Jul', 'Mercedes-Benz Stadium', 'Atlanta, USA'],
+  ],
+  Final: [['Sun 19 Jul', 'MetLife Stadium', 'New York, USA']],
+}
+
+// Builds a full bracket from compact per-stage pick lists — R32 always 16
+// picks in canonical fixture order, R16 always 8, QF 4, SF 2, Final 1.
+function buildBracketPredictions(stages: {
+  r32: Pick[]
+  r16: Pick[]
+  qf: Pick[]
+  sf: Pick[]
+  final: Pick[]
+}): Prediction[] {
+  const out: Prediction[] = []
+  stages.r32.forEach(([home, homeScore, away, awayScore, advances], i) => {
+    const [venue, city] = R32_VENUES[i]
+    out.push({ stage: 'Round of 32', home, homeScore, away, awayScore, advances, venue, city })
+  })
+  ;(
+    [
+      ['Round of 16', stages.r16],
+      ['Quarter-finals', stages.qf],
+      ['Semi-finals', stages.sf],
+      ['Final', stages.final],
+    ] as [Stage, Pick[]][]
+  ).forEach(([stage, picks]) => {
+    picks.forEach(([home, homeScore, away, awayScore, advances], i) => {
+      const [dateText, venue, city] = LATER_SCHEDULE[stage]![i]
+      out.push({ stage, home, homeScore, away, awayScore, advances, dateText, venue, city })
+    })
+  })
+  return out
+}
+
+export const anjuPredictions = buildBracketPredictions({
+  r32: [
+    ['Germany', 2, 'Paraguay', 1], ['France', 4, 'Sweden', 1],
+    ['South Africa', 2, 'Canada', 2, 'Canada'], ['Netherlands', 3, 'Morocco', 1],
+    ['Portugal', 1, 'Croatia', 1, 'Portugal'], ['Spain', 2, 'Austria', 0],
+    ['USA', 3, 'Bosnia', 0], ['Belgium', 1, 'Senegal', 0],
+    ['Brazil', 2, 'Japan', 2, 'Brazil'], ['Ivory Coast', 1, 'Norway', 2],
+    ['Mexico', 3, 'Ecuador', 0], ['England', 2, 'DR Congo', 0],
+    ['Argentina', 3, 'Cape Verde', 0], ['Australia', 2, 'Egypt', 3],
+    ['Switzerland', 2, 'Algeria', 1], ['Colombia', 0, 'Ghana', 0, 'Colombia'],
+  ],
+  r16: [
+    ['Germany', 1, 'France', 3], ['Netherlands', 2, 'Canada', 0],
+    ['Portugal', 1, 'Spain', 1, 'Spain'], ['USA', 1, 'Belgium', 0],
+    ['Brazil', 2, 'Norway', 1], ['Mexico', 1, 'England', 1, 'Mexico'],
+    ['Argentina', 4, 'Egypt', 0], ['Switzerland', 0, 'Colombia', 0, 'Colombia'],
+  ],
+  qf: [
+    ['France', 2, 'Netherlands', 0], ['Spain', 2, 'USA', 1],
+    ['Brazil', 1, 'Mexico', 1, 'Brazil'], ['Argentina', 2, 'Colombia', 0],
+  ],
+  sf: [['France', 2, 'Spain', 1], ['Brazil', 1, 'Argentina', 1, 'Argentina']],
+  final: [['France', 1, 'Argentina', 1, 'France']],
+})
+
+export const nikPredictions = buildBracketPredictions({
+  r32: [
+    ['Germany', 3, 'Paraguay', 1], ['France', 4, 'Sweden', 1],
+    ['South Africa', 1, 'Canada', 2], ['Netherlands', 3, 'Morocco', 2],
+    ['Portugal', 1, 'Croatia', 0], ['Spain', 2, 'Austria', 0],
+    ['USA', 2, 'Bosnia', 0], ['Belgium', 2, 'Senegal', 1],
+    ['Brazil', 2, 'Japan', 2, 'Brazil'], ['Ivory Coast', 1, 'Norway', 2],
+    ['Mexico', 1, 'Ecuador', 1, 'Mexico'], ['England', 2, 'DR Congo', 0],
+    ['Argentina', 3, 'Cape Verde', 0], ['Australia', 1, 'Egypt', 2],
+    ['Switzerland', 2, 'Algeria', 1], ['Colombia', 2, 'Ghana', 2, 'Ghana'],
+  ],
+  r16: [
+    ['Germany', 1, 'France', 3], ['Canada', 1, 'Netherlands', 1, 'Netherlands'],
+    ['Portugal', 1, 'Spain', 2], ['USA', 1, 'Belgium', 1, 'USA'],
+    ['Brazil', 4, 'Norway', 2], ['Mexico', 1, 'England', 1, 'England'],
+    ['Argentina', 3, 'Egypt', 0], ['Switzerland', 1, 'Ghana', 0],
+  ],
+  qf: [
+    ['France', 4, 'Netherlands', 2], ['Spain', 2, 'USA', 0],
+    ['Brazil', 3, 'England', 2], ['Argentina', 2, 'Switzerland', 0],
+  ],
+  sf: [['France', 2, 'Spain', 2, 'France'], ['Brazil', 1, 'Argentina', 3]],
+  final: [['France', 1, 'Argentina', 1, 'France']],
+})
+
+export const jamesPredictions = buildBracketPredictions({
+  r32: [
+    ['Germany', 3, 'Paraguay', 0], ['France', 4, 'Sweden', 1],
+    ['South Africa', 1, 'Canada', 2], ['Netherlands', 1, 'Morocco', 1, 'Morocco'],
+    ['Portugal', 2, 'Croatia', 2, 'Portugal'], ['Spain', 3, 'Austria', 2],
+    ['USA', 3, 'Bosnia', 0], ['Belgium', 3, 'Senegal', 1],
+    ['Brazil', 3, 'Japan', 0], ['Ivory Coast', 1, 'Norway', 4],
+    ['Mexico', 2, 'Ecuador', 2, 'Mexico'], ['England', 3, 'DR Congo', 1],
+    ['Argentina', 4, 'Cape Verde', 0], ['Australia', 0, 'Egypt', 2],
+    ['Switzerland', 1, 'Algeria', 0], ['Colombia', 3, 'Ghana', 0],
+  ],
+  r16: [
+    ['Germany', 2, 'France', 3], ['Canada', 2, 'Morocco', 3],
+    ['Portugal', 1, 'Spain', 4], ['USA', 2, 'Belgium', 1],
+    ['Brazil', 2, 'Norway', 3], ['Mexico', 1, 'England', 1, 'England'],
+    ['Argentina', 3, 'Egypt', 2], ['Switzerland', 2, 'Colombia', 4],
+  ],
+  qf: [
+    ['France', 4, 'Morocco', 2], ['Spain', 4, 'USA', 1],
+    ['Norway', 2, 'England', 4], ['Argentina', 3, 'Colombia', 1],
+  ],
+  sf: [['France', 3, 'Spain', 3, 'France'], ['England', 3, 'Argentina', 2]],
+  final: [['England', 2, 'France', 2, 'England']],
+})
+
+export const martinPredictions = buildBracketPredictions({
+  r32: [
+    ['Germany', 3, 'Paraguay', 1], ['France', 3, 'Sweden', 1],
+    ['South Africa', 1, 'Canada', 2], ['Netherlands', 1, 'Morocco', 1, 'Morocco'],
+    ['Portugal', 1, 'Croatia', 1, 'Portugal'], ['Spain', 3, 'Austria', 0],
+    ['United States', 2, 'Bosnia and Herzegovina', 0], ['Belgium', 2, 'Senegal', 1],
+    ['Brazil', 3, 'Japan', 2], ['Ivory Coast', 2, 'Norway', 1],
+    ['Mexico', 2, 'Ecuador', 3], ['England', 2, 'DR Congo', 0],
+    ['Argentina', 3, 'Cape Verde', 0], ['Australia', 0, 'Egypt', 0, 'Egypt'],
+    ['Switzerland', 2, 'Algeria', 1], ['Colombia', 2, 'Ghana', 2, 'Colombia'],
+  ],
+  r16: [
+    ['Germany', 2, 'France', 3], ['Canada', 0, 'Morocco', 2],
+    ['Portugal', 1, 'Spain', 1, 'Portugal'], ['United States', 1, 'Belgium', 0],
+    ['Brazil', 2, 'Ivory Coast', 1], ['Ecuador', 1, 'England', 3],
+    ['Argentina', 3, 'Egypt', 0], ['Switzerland', 1, 'Colombia', 2],
+  ],
+  qf: [
+    ['France', 3, 'Morocco', 1], ['Portugal', 2, 'United States', 0],
+    ['Brazil', 1, 'England', 1, 'England'], ['Argentina', 2, 'Colombia', 2, 'Argentina'],
+  ],
+  sf: [['France', 3, 'Portugal', 0], ['England', 1, 'Argentina', 2]],
+  final: [['France', 1, 'Argentina', 2]],
+})
+
+export const rachePredictions = buildBracketPredictions({
+  r32: [
+    ['Germany', 3, 'Paraguay', 1], ['France', 2, 'Sweden', 0],
+    ['South Africa', 1, 'Canada', 1, 'Canada'], ['Netherlands', 2, 'Morocco', 2, 'Morocco'],
+    ['Portugal', 1, 'Croatia', 0], ['Spain', 3, 'Austria', 0],
+    ['USA', 1, 'Bosnia', 1, 'USA'], ['Belgium', 1, 'Senegal', 0],
+    ['Brazil', 3, 'Japan', 1], ['Ivory Coast', 2, 'Norway', 1],
+    ['Mexico', 2, 'Ecuador', 0], ['England', 2, 'DR Congo', 1],
+    ['Argentina', 4, 'Cape Verde', 0], ['Australia', 0, 'Egypt', 1],
+    ['Switzerland', 0, 'Algeria', 0, 'Switzerland'], ['Colombia', 1, 'Ghana', 0],
+  ],
+  r16: [
+    ['Germany', 1, 'France', 3], ['Canada', 0, 'Morocco', 1],
+    ['Portugal', 0, 'Spain', 2], ['USA', 1, 'Belgium', 1, 'Belgium'],
+    ['Brazil', 3, 'Ivory Coast', 2], ['Mexico', 1, 'England', 2],
+    ['Argentina', 3, 'Egypt', 0], ['Switzerland', 0, 'Colombia', 2],
+  ],
+  qf: [
+    ['France', 2, 'Morocco', 1], ['Spain', 3, 'Belgium', 0],
+    ['Brazil', 2, 'England', 1], ['Argentina', 2, 'Colombia', 0],
+  ],
+  sf: [['France', 2, 'Spain', 1], ['Brazil', 0, 'Argentina', 2]],
+  final: [['France', 2, 'Argentina', 1]],
+})
+
+export const gusPredictions = buildBracketPredictions({
+  r32: [
+    ['Germany', 2, 'Paraguay', 0], ['France', 3, 'Sweden', 1],
+    ['South Africa', 1, 'Canada', 1, 'Canada'], ['Netherlands', 0, 'Morocco', 1],
+    ['Portugal', 2, 'Croatia', 0], ['Spain', 3, 'Austria', 0],
+    ['USA', 2, 'Bosnia', 0], ['Belgium', 1, 'Senegal', 2],
+    ['Brazil', 2, 'Japan', 1], ['Ivory Coast', 1, 'Norway', 1, 'Norway'],
+    ['Mexico', 1, 'Ecuador', 1, 'Mexico'], ['England', 2, 'DR Congo', 0],
+    ['Argentina', 4, 'Cape Verde', 0], ['Australia', 0, 'Egypt', 1],
+    ['Switzerland', 2, 'Algeria', 1], ['Colombia', 2, 'Ghana', 1],
+  ],
+  r16: [
+    ['Germany', 1, 'France', 3], ['Canada', 0, 'Morocco', 1],
+    ['Portugal', 0, 'Spain', 2], ['USA', 2, 'Senegal', 1],
+    ['Brazil', 3, 'Norway', 1], ['Mexico', 1, 'England', 1, 'England'],
+    ['Argentina', 3, 'Egypt', 1], ['Switzerland', 0, 'Colombia', 0, 'Colombia'],
+  ],
+  qf: [
+    ['France', 2, 'Morocco', 1], ['Spain', 2, 'USA', 0],
+    ['Brazil', 1, 'England', 2], ['Argentina', 3, 'Colombia', 1],
+  ],
+  sf: [['France', 2, 'Spain', 1], ['England', 1, 'Argentina', 2]],
+  final: [['France', 1, 'Argentina', 2]],
+})
+
+export const stuPredictions = buildBracketPredictions({
+  r32: [
+    ['Germany', 2, 'Paraguay', 0], ['France', 1, 'Sweden', 0],
+    ['South Africa', 0, 'Canada', 2], ['Netherlands', 0, 'Morocco', 1],
+    ['Portugal', 1, 'Croatia', 3], ['Spain', 0, 'Austria', 0, 'Spain'],
+    ['USA', 2, 'Bosnia', 0], ['Belgium', 0, 'Senegal', 1],
+    ['Brazil', 2, 'Japan', 1], ['Ivory Coast', 1, 'Norway', 0],
+    ['Mexico', 1, 'Ecuador', 0], ['England', 3, 'DR Congo', 0],
+    ['Argentina', 4, 'Cape Verde', 0], ['Australia', 1, 'Egypt', 1, 'Egypt'],
+    ['Switzerland', 0, 'Algeria', 2], ['Colombia', 0, 'Ghana', 1],
+  ],
+  r16: [
+    ['Germany', 3, 'France', 0], ['Canada', 1, 'Morocco', 1, 'Morocco'],
+    ['Croatia', 1, 'Spain', 0], ['USA', 1, 'Senegal', 0],
+    ['Brazil', 2, 'Ivory Coast', 0], ['Mexico', 2, 'England', 0],
+    ['Argentina', 3, 'Egypt', 0], ['Algeria', 0, 'Ghana', 1],
+  ],
+  qf: [
+    ['Germany', 1, 'Morocco', 2], ['Croatia', 0, 'USA', 1],
+    ['Brazil', 1, 'Mexico', 2], ['Argentina', 2, 'Ghana', 0],
+  ],
+  sf: [['USA', 0, 'Morocco', 1], ['Argentina', 2, 'Mexico', 1]],
+  final: [['Argentina', 1, 'Morocco', 0]],
+})
+
+// Duncan and Steph never sent Round of 32 picks — cutoffFor() in logic.ts
+// gives them a "baselined from today" cutoff instead of the shared 30 June
+// one, so there's no gap where an un-scoreable round would otherwise sit.
+export const duncanPredictions = buildBracketPredictions({
+  r32: [],
+  r16: [
+    ['Germany', 1, 'France', 3], ['Canada', 0, 'Morocco', 2],
+    ['Croatia', 0, 'Spain', 1], ['USA', 2, 'Senegal', 1],
+    ['Japan', 2, 'Norway', 1], ['Mexico', 0, 'England', 0, 'England'],
+    ['Argentina', 3, 'Australia', 0], ['Switzerland', 1, 'Colombia', 0],
+  ],
+  qf: [
+    ['France', 2, 'Morocco', 1], ['Spain', 1, 'USA', 2],
+    ['Japan', 1, 'England', 2], ['Argentina', 2, 'Switzerland', 0],
+  ],
+  sf: [['France', 3, 'USA', 0], ['England', 0, 'Argentina', 2]],
+  final: [['France', 3, 'Argentina', 1]],
+})
+
+export const stephPredictions = buildBracketPredictions({
+  r32: [],
+  r16: [
+    ['Germany', 1, 'France', 2], ['South Africa', 0, 'Netherlands', 1],
+    ['Portugal', 2, 'Spain', 3], ['Bosnia', 0, 'Belgium', 2],
+    ['Brazil', 2, 'Norway', 0], ['Mexico', 0, 'England', 1],
+    ['Argentina', 3, 'Australia', 0], ['Switzerland', 0, 'Colombia', 0, 'Colombia'],
+  ],
+  qf: [
+    ['France', 2, 'Netherlands', 0], ['Spain', 2, 'Belgium', 0],
+    ['Brazil', 2, 'England', 1], ['Argentina', 2, 'Colombia', 0],
+  ],
+  sf: [['France', 2, 'Spain', 1], ['Brazil', 2, 'Argentina', 1]],
+  final: [['France', 2, 'Brazil', 1]],
+})
+
+export const robbie2Predictions = buildBracketPredictions({
+  r32: [],
+  r16: [
+    ['Canada', 1, 'Netherlands', 2], ['Germany', 1, 'France', 2],
+    ['Brazil', 2, 'Norway', 0], ['England', 2, 'Mexico', 1],
+    ['Spain', 2, 'Portugal', 1], ['Belgium', 1, 'United States', 2],
+    ['Argentina', 3, 'Australia', 1], ['Colombia', 1, 'Switzerland', 2],
+  ],
+  qf: [
+    ['France', 2, 'Netherlands', 1], ['Brazil', 3, 'England', 1],
+    ['Spain', 2, 'United States', 0], ['Argentina', 2, 'Switzerland', 1],
+  ],
+  sf: [['France', 2, 'Spain', 1], ['Argentina', 2, 'Brazil', 2, 'Argentina']],
+  final: [['Argentina', 2, 'France', 1]],
+})
+
+// Every game 1-1, higher FIFA-ranked team wins on pens (per the June 2026
+// official ranking) — Robbie1.0's stated rule, applied mechanically.
+export const robbie1Predictions = buildBracketPredictions({
+  r32: [
+    ['Germany', 1, 'Paraguay', 1, 'Germany'], ['France', 1, 'Sweden', 1, 'France'],
+    ['South Africa', 1, 'Canada', 1, 'Canada'], ['Netherlands', 1, 'Morocco', 1, 'Morocco'],
+    ['Portugal', 1, 'Croatia', 1, 'Portugal'], ['Spain', 1, 'Austria', 1, 'Spain'],
+    ['USA', 1, 'Bosnia', 1, 'USA'], ['Belgium', 1, 'Senegal', 1, 'Belgium'],
+    ['Brazil', 1, 'Japan', 1, 'Brazil'], ['Ivory Coast', 1, 'Norway', 1, 'Norway'],
+    ['Mexico', 1, 'Ecuador', 1, 'Mexico'], ['England', 1, 'DR Congo', 1, 'England'],
+    ['Argentina', 1, 'Cape Verde', 1, 'Argentina'], ['Australia', 1, 'Egypt', 1, 'Australia'],
+    ['Switzerland', 1, 'Algeria', 1, 'Switzerland'], ['Colombia', 1, 'Ghana', 1, 'Colombia'],
+  ],
+  r16: [
+    ['Germany', 1, 'France', 1, 'France'], ['Canada', 1, 'Morocco', 1, 'Morocco'],
+    ['Portugal', 1, 'Spain', 1, 'Spain'], ['USA', 1, 'Belgium', 1, 'Belgium'],
+    ['Brazil', 1, 'Norway', 1, 'Brazil'], ['Mexico', 1, 'England', 1, 'England'],
+    ['Argentina', 1, 'Australia', 1, 'Argentina'], ['Switzerland', 1, 'Colombia', 1, 'Colombia'],
+  ],
+  qf: [
+    ['France', 1, 'Morocco', 1, 'France'], ['Spain', 1, 'Belgium', 1, 'Spain'],
+    ['Brazil', 1, 'England', 1, 'England'], ['Argentina', 1, 'Colombia', 1, 'Argentina'],
+  ],
+  sf: [['France', 1, 'Spain', 1, 'Spain'], ['England', 1, 'Argentina', 1, 'Argentina']],
+  final: [['Spain', 1, 'Argentina', 1, 'Argentina']],
+})
+
 export interface Person {
   slug: string
   title: string
@@ -453,16 +786,27 @@ const KANE = { player: 'Harry Kane', team: 'England' }
 export const people: Record<string, Person> = {
   katdan: { slug: 'katdan', title: 'KatDan', predictions: katdanPredictions, goldenBoot: KANE },
   sarjack: { slug: 'sarjack', title: 'SarJack', predictions: sarjackPredictions, goldenBoot: KANE },
-  gavin: {
-    slug: 'gavin',
-    title: 'Gavin',
+  gav: {
+    slug: 'gav',
+    title: 'Gav',
     predictions: gavinPredictions,
     goldenBoot: { player: 'Kylian Mbappé', team: 'France' },
   },
+  anju: { slug: 'anju', title: 'AnnaJules', predictions: anjuPredictions, goldenBoot: KANE },
+  nik: { slug: 'nik', title: 'Nik', predictions: nikPredictions, goldenBoot: KANE },
+  james: { slug: 'james', title: 'James', predictions: jamesPredictions, goldenBoot: KANE },
+  martin: { slug: 'martin', title: 'Martin', predictions: martinPredictions, goldenBoot: KANE },
+  rache: { slug: 'rache', title: 'Rache', predictions: rachePredictions, goldenBoot: KANE },
+  gus: { slug: 'gus', title: 'Gus', predictions: gusPredictions, goldenBoot: KANE },
+  stu: { slug: 'stu', title: 'Stu', predictions: stuPredictions, goldenBoot: KANE },
+  duncan: { slug: 'duncan', title: 'Duncan', predictions: duncanPredictions, goldenBoot: KANE },
+  steph: { slug: 'steph', title: 'Steph', predictions: stephPredictions, goldenBoot: KANE },
+  robbie1: { slug: 'robbie1', title: 'Robbie1.0', predictions: robbie1Predictions, goldenBoot: KANE },
+  robbie2: { slug: 'robbie2', title: 'Robbie2.0', predictions: robbie2Predictions, goldenBoot: KANE },
 }
 
 // Pick whose predictions to show from the URL path (e.g. /sarjack). Defaults to KatDan.
 export function resolvePerson(pathname: string): Person {
-  const slug = pathname.replace(/[^a-z]/gi, '').toLowerCase()
+  const slug = pathname.replace(/[^a-z0-9]/gi, '').toLowerCase()
   return people[slug] ?? people.katdan
 }

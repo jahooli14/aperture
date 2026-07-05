@@ -191,17 +191,26 @@ export function matchPoints(pred: Prediction, live?: LiveMatch): number {
 // i.e. group stage plus the four R32 games that had finished before the Ivory
 // Coast v Norway kick-off. Live points for every game from that one onward get
 // added on top, so we never double-count what's already in these numbers.
-// Gavin's -2 vs the naively-computed group-stage figure is unexplained — the
-// pens-advancer rule fix resolved KatDan's and SarJack's equivalent gaps
-// exactly, but doesn't touch Gavin's total, and his live results all check
-// out clean against the raw feed. Trusting the known-correct total (431)
-// until the source turns up.
+// Gav's old unexplained gap turned out to be the same missing rule as
+// KatDan's/SarJack's — the divergentBracketPoints fix (crediting a correct
+// pick even when the bracket diverged from an upset) closed it exactly.
+// SarJack's is still 3 points short of his stated current total with no
+// rule found to explain it.
 export const SCORE_BASELINE: Record<string, number> = {
   katdan: 331,
   sarjack: 292,
-  gavin: 358,
+  gav: 358,
+  nik: 333,
   steph: 380,
   duncan: 413,
+  robbie2: 402,
+  anju: 342,
+  james: 274,
+  martin: 309,
+  rache: 337,
+  gus: 352,
+  stu: 359,
+  robbie1: 262,
 }
 const DEFAULT_CUTOFF_MS = new Date('2026-06-30T12:00:00Z').getTime()
 
@@ -213,6 +222,7 @@ const DEFAULT_CUTOFF_MS = new Date('2026-06-30T12:00:00Z').getTime()
 const CUTOFF_OVERRIDE: Record<string, number> = {
   steph: new Date('2026-07-05T23:59:59Z').getTime(),
   duncan: new Date('2026-07-05T23:59:59Z').getTime(),
+  robbie2: new Date('2026-07-05T23:59:59Z').getTime(),
 }
 function cutoffFor(slug: string): number {
   return CUTOFF_OVERRIDE[slug] ?? DEFAULT_CUTOFF_MS
