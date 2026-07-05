@@ -645,7 +645,11 @@ body {
   width: 100%;
   min-height: 44px;
   margin-top: 12px;
-  background: rgba(255, 255, 255, 0.08);
+  /* A near-transparent white overlay here just tints the light card
+     background it sits on rather than replacing it — same "light green"
+     issue .card-extra had, and needs the same near-opaque fix (not just
+     dark — at ~55% it still visibly blends with the light card behind it). */
+  background: linear-gradient(180deg, rgba(12, 17, 14, 0.94), rgba(7, 10, 9, 0.94));
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: var(--r-pill);
   padding: 7px 12px;
@@ -663,7 +667,7 @@ body {
     transform 0.1s var(--ease);
 }
 .compare-toggle:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: linear-gradient(180deg, rgba(18, 25, 20, 0.94), rgba(11, 15, 13, 0.94));
   border-color: rgba(255, 255, 255, 0.24);
 }
 .compare-toggle:active {
