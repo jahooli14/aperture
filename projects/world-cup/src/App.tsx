@@ -422,11 +422,13 @@ function PersonToggle({
 
 // --- Leaderboard ---------------------------------------------------------
 
-// Collapsed by default at 3+ people — a dozen-plus rows of history/ranking
-// on every page load pushed the actual games (the point of the app) far
-// down the screen. Top 3 plus "your rank" is enough to answer "who's
-// winning" at a glance; the full list is one tap away.
-const LB_COLLAPSED_COUNT = 3
+// Used to collapse to top-3-plus-you when the leaderboard shared a page
+// with the games carousel — a dozen rows pushed the actual games (the
+// point of the app) far down the screen. Now that Leaderboard is its own
+// tab it isn't competing with anything, so everyone shows by default —
+// it's a small family group, and half the fun is seeing where everyone
+// landed, not just the podium.
+const LB_COLLAPSED_COUNT = 14
 
 const MEDALS = ['🥇', '🥈', '🥉']
 
@@ -467,6 +469,24 @@ function Leaderboard({
   const visible = expanded || !collapsible ? rows : rows.slice(0, LB_COLLAPSED_COUNT)
   const showMeSeparately = collapsible && !expanded && myIndex >= LB_COLLAPSED_COUNT
 
+  // "You've moved up" since their last visit — a reason to open the app
+  // between games, not just during kick-off. Snapshotted once per page
+  // load (not on every live-score poll) so it doesn't flicker mid-session;
+  // compares against the rank stored the last time they had it ready.
+  const [movement, setMovement] = useState<{ from: number; to: number } | null>(null)
+  const checkedRef = useRef(false)
+  useEffect(() => {
+    if (checkedRef.current || !ready || myIndex < 0) return
+    checkedRef.current = true
+    const myRank = ranks[myIndex]
+    const key = `wc-rank-${currentSlug}`
+    const prev = window.localStorage.getItem(key)
+    if (prev != null && Number(prev) !== myRank) {
+      setMovement({ from: Number(prev), to: myRank })
+    }
+    window.localStorage.setItem(key, String(myRank))
+  }, [ready, myIndex, ranks, currentSlug])
+
   const renderRow = (r: (typeof rows)[number], i: number) => {
     const rank = ranks[i]
     const isLeader = ready && rank === 1
@@ -490,6 +510,13 @@ function Leaderboard({
 
   return (
     <section className="leaderboard">
+      {movement && (
+        <p className={`lb-movement ${movement.to < movement.from ? 'up' : 'down'}`}>
+          {movement.to < movement.from
+            ? `You've moved up ${movement.from - movement.to} place${movement.from - movement.to === 1 ? '' : 's'}${movement.to === 1 ? " — you're in the lead!" : '!'}`
+            : `You've dropped to ${movement.to}${movement.to === 2 ? 'nd' : movement.to === 3 ? 'rd' : 'th'} since you last checked.`}
+        </p>
+      )}
       <ol className="lb-list">
         {visible.map((r, i) => renderRow(r, i))}
         {showMeSeparately && (
@@ -672,6 +699,51 @@ function StageSection({
   )
 }
 
+// "Who wins it all" — everyone's outright champion pick in one place,
+// instead of buried a tap away inside the single Final card. Grouped by
+// team so it reads as a tally ("6 of you: ...") rather than a flat list.
+function FinalPredictionsSummary({
+  compareIndex,
+  currentSlug,
+}: {
+  compareIndex: CompareEntry[]
+  currentSlug: string
+}) {
+  const groups = useMemo(() => {
+    const byTeam: Record<string, { team: string; names: string[] }> = {}
+    for (const ci of compareIndex) {
+      const pick = ci.bySlot['Final#0']
+      if (!pick) continue
+      const decisive = pick.homeScore !== pick.awayScore
+      const champion = decisive ? (pick.homeScore! > pick.awayScore! ? pick.home : pick.away) : pick.advances
+      if (!champion) continue
+      const key = normaliseName(champion).toLowerCase()
+      const entry = (byTeam[key] ??= { team: champion, names: [] })
+      entry.names.push(ci.slug === currentSlug ? `${ci.title} (you)` : ci.title)
+    }
+    return Object.values(byTeam).sort((a, b) => b.names.length - a.names.length)
+  }, [compareIndex, currentSlug])
+
+  if (!groups.length) return null
+
+  return (
+    <section className="final-summary">
+      <h2 className="final-summary-title">Who wins it all</h2>
+      <ul className="final-summary-list">
+        {groups.map((g) => (
+          <li key={g.team} className="final-summary-row">
+            <span className="final-summary-team">
+              {flag(g.team)} {teamCode(g.team)}
+            </span>
+            <span className="final-summary-count">{g.names.length}</span>
+            <span className="final-summary-names">{g.names.join(', ')}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
 // Timeline tab bar (Round of 16 / Quarter-finals / Semi-finals / Final) —
 // one stage selected at a time, its games shown below in a single carousel,
 // instead of every stage stacked as its own accordion + carousel.
@@ -731,6 +803,9 @@ function StageTabs({
           </button>
         ))}
       </div>
+      {activeStage === 'Final' && (
+        <FinalPredictionsSummary compareIndex={compareIndex} currentSlug={currentSlug} />
+      )}
       {activeStage && (
         <GamesCarousel
           // Forces a fresh mount per stage — without this, switching tabs
@@ -832,6 +907,24 @@ function TrueGameCard({
     return me ? [me, ...rest] : compareIndex
   }, [compareIndex, currentSlug])
 
+  // Who backed which side, visible on the closed card — answers "who's
+  // still alive on this one" at a glance, without opening Compare picks.
+  const backed = useMemo(() => {
+    if (!known) return null
+    let homeCount = 0
+    let awayCount = 0
+    for (const ci of cmpRows) {
+      const pick = ci.bySlot[`${stage}#${slotIndex}`]
+      if (!pick) continue
+      const decisive = pick.homeScore !== pick.awayScore
+      const backedName = decisive ? (pick.homeScore! > pick.awayScore! ? pick.home : pick.away) : pick.advances
+      if (!backedName) continue
+      if (normaliseName(backedName).toLowerCase() === normaliseName(home!).toLowerCase()) homeCount++
+      else if (normaliseName(backedName).toLowerCase() === normaliseName(away!).toLowerCase()) awayCount++
+    }
+    return homeCount + awayCount > 0 ? { homeCount, awayCount } : null
+  }, [known, cmpRows, stage, slotIndex, home, away])
+
   return (
     <article
       className={`card ${phase} ${wxCondition ? `wx wx-${wxCondition}` : ''} ${
@@ -921,6 +1014,13 @@ function TrueGameCard({
                 </span>
               ))}
             </div>
+          </div>
+        )}
+
+        {backed && (
+          <div className="backed-line">
+            {flag(home!)} {backed.homeCount} backed {teamCode(home!)} · {flag(away!)} {backed.awayCount} backed{' '}
+            {teamCode(away!)}
           </div>
         )}
 

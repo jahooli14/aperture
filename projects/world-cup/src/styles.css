@@ -271,6 +271,24 @@ body {
   backdrop-filter: blur(14px);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
 }
+/* "You've moved up" since their last visit — sits outside .lb-list so it
+   doesn't get clipped by the collapse/expand, one snapshot per page load. */
+.lb-movement {
+  margin: 0;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.lb-movement.up {
+  color: #5cf0a6;
+  background: rgba(92, 240, 166, 0.1);
+}
+.lb-movement.down {
+  color: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.04);
+}
 .lb-list {
   list-style: none;
   margin: 0;
@@ -439,7 +457,7 @@ body {
   display: flex;
   gap: 4px;
   padding: 4px;
-  margin-bottom: 12px;
+  margin-bottom: 22px;
   background: var(--emerald-glass);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: var(--r-pill);
@@ -812,6 +830,17 @@ body {
   font-size: 10px;
   font-weight: 700;
   color: #fff;
+}
+
+/* Who backed which side — visible on the closed card, no tap needed. */
+.backed-line {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.65);
 }
 
 /* Goalscorers row (live + finished games) */
@@ -1210,6 +1239,58 @@ body {
 .scorer-row.my-pick .sname {
   color: var(--gold-soft);
 }
+/* "Who wins it all" — everyone's outright champion pick, above the Final
+   card. Same glass-card language as the leaderboard, so it reads as part
+   of the same family rather than a bolted-on extra. */
+.final-summary {
+  background: var(--emerald-glass);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--r-card);
+  overflow: hidden;
+  margin-bottom: 18px;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+}
+.final-summary-title {
+  margin: 0;
+  padding: 14px 16px 10px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--gold-soft);
+}
+.final-summary-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.final-summary-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding: 10px 16px;
+}
+.final-summary-row + .final-summary-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.final-summary-team {
+  font-weight: 800;
+  color: #fff;
+  font-size: 14px;
+}
+.final-summary-count {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gold-soft);
+}
+.final-summary-names {
+  flex-basis: 100%;
+  font-size: 12.5px;
+  color: var(--on-dark-2);
+}
+
 .empty {
   color: var(--on-dark-2);
   font-size: 14px;
