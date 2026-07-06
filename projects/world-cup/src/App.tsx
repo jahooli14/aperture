@@ -136,6 +136,7 @@ export function App() {
 
   const [currentSlug, setCurrentSlug] = useState<string>(initialSlug)
   const person = people[currentSlug] ?? people.katdan
+  const [mainTab, setMainTab] = useState<'games' | 'leaderboard' | 'scorers'>('games')
   useEffect(() => {
     try {
       window.localStorage.setItem('wc-person', currentSlug)
@@ -301,27 +302,51 @@ export function App() {
         </div>
       )}
 
-      <Leaderboard matches={matches} currentSlug={currentSlug} ready={data !== null} />
+      <div className="main-tabs" role="tablist">
+        {(
+          [
+            ['games', 'Games'],
+            ['leaderboard', 'Leaderboard'],
+            ['scorers', 'Top Scorers'],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            role="tab"
+            aria-selected={mainTab === key}
+            className={`main-tab ${mainTab === key ? 'active' : ''}`}
+            onClick={() => setMainTab(key)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
-      <main>
-        {/* One unified timeline — every stage is a tab, finished ones just
-            styled grey instead of living in a separate section. */}
-        <StageTabs
-          stages={stageOrder}
-          pastStages={pastStages}
-          bracket={bracket}
-          weather={weather}
-          matches={matches}
-          odds={odds}
-          goals={data?.goals}
-          compareIndex={compareIndex}
-          currentSlug={currentSlug}
-          openStage={openStage}
-          nextGame={nextGame}
-        />
-      </main>
+      {mainTab === 'leaderboard' && (
+        <Leaderboard matches={matches} currentSlug={currentSlug} ready={data !== null} />
+      )}
 
-      <GoldenBoot scorers={scorers} pick={person.goldenBoot} />
+      {mainTab === 'games' && (
+        <main>
+          {/* One unified timeline — every stage is a tab, finished ones just
+              styled grey instead of living in a separate section. */}
+          <StageTabs
+            stages={stageOrder}
+            pastStages={pastStages}
+            bracket={bracket}
+            weather={weather}
+            matches={matches}
+            odds={odds}
+            goals={data?.goals}
+            compareIndex={compareIndex}
+            currentSlug={currentSlug}
+            openStage={openStage}
+            nextGame={nextGame}
+          />
+        </main>
+      )}
+
+      {mainTab === 'scorers' && <GoldenBoot scorers={scorers} pick={person.goldenBoot} />}
     </div>
   )
 }

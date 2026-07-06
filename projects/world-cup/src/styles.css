@@ -270,12 +270,6 @@ body {
   margin: 10px 0 16px;
   backdrop-filter: blur(14px);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
-  /* Stays visible (in its collapsed form) while scrolling through games —
-     "who's winning" stays one glance away without losing your place.
-     Sits right below the sticky header, not overlapping it. */
-  position: sticky;
-  top: 50px;
-  z-index: 5;
 }
 .lb-list {
   list-style: none;
@@ -406,6 +400,41 @@ body {
 .stage-tabs-wrap {
   margin-bottom: 20px;
 }
+/* Top-level sections — Games / Leaderboard / Top Scorers. Only one shows
+   at a time instead of all three stacked on one long scroll. */
+.main-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin: 10px 0 16px;
+  background: var(--emerald-glass);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--r-pill);
+  backdrop-filter: blur(10px);
+}
+.main-tab {
+  flex: 1 1 0;
+  min-height: 44px;
+  padding: 8px 6px;
+  border: 0;
+  border-radius: calc(var(--r-pill) - 4px);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: 'Sora', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease);
+}
+.main-tab:hover {
+  color: #fff;
+}
+.main-tab.active {
+  background: linear-gradient(135deg, var(--gold-soft), var(--gold));
+  color: #1a1206;
+  box-shadow: 0 2px 10px rgba(232, 182, 71, 0.3);
+}
+
 .stage-tabs {
   display: flex;
   gap: 4px;
