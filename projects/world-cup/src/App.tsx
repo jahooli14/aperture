@@ -204,19 +204,11 @@ export function App() {
     return undone ?? stageOrder[stageOrder.length - 1]
   }, [bracket, matches])
 
-  // Fully-finished stages move to a demoted "Past rounds" group at the
-  // bottom instead of sitting at their normal chronological spot — a done
-  // Round of 32 isn't what anyone opens the app to see, and it was pushing
-  // the rounds that matter further down the page.
-  const { activeStages, pastStages } = useMemo(() => {
-    const active: Stage[] = []
-    const past: Stage[] = []
-    for (const stage of stageOrder) {
-      // The Final never demotes, even once decided — the champion result is
-      // the one thing worth staying prominent for good.
-      ;(isStageDone(stage) && stage !== 'Final' ? past : active).push(stage)
-    }
-    return { activeStages: active, pastStages: past }
+  // Fully-finished stages stay in the same tab row as everything else, just
+  // styled grey — the Final never greys out even once decided, since the
+  // champion result is the one thing worth staying prominent for good.
+  const pastStages = useMemo(() => {
+    return stageOrder.filter((stage) => isStageDone(stage) && stage !== 'Final')
   }, [bracket, matches])
 
   // The single next game to be played (earliest kickoff among known-team,
@@ -312,68 +304,24 @@ export function App() {
       <Leaderboard matches={matches} currentSlug={currentSlug} ready={data !== null} />
 
       <main>
-        {/* Round of 32 only ever appears here if it's somehow still active
-            (not the case for this tournament any more) — everything else
-            active is a timeline of tabs sharing one carousel instead of
-            each stage stacking its own accordion. */}
-        {activeStages.includes('Round of 32') && (
-          <StageSection
-            stage="Round of 32"
-            slots={bracket['Round of 32'] ?? []}
-            weather={weather}
-            matches={matches}
-            odds={odds}
-            goals={data?.goals}
-            compareIndex={compareIndex}
-            currentSlug={currentSlug}
-            defaultOpen={openStage === 'Round of 32'}
-            nextGame={nextGame}
-          />
-        )}
-
-        {activeStages.filter((s) => s !== 'Round of 32').length > 0 && (
-          <StageTabs
-            stages={activeStages.filter((s) => s !== 'Round of 32')}
-            bracket={bracket}
-            weather={weather}
-            matches={matches}
-            odds={odds}
-            goals={data?.goals}
-            compareIndex={compareIndex}
-            currentSlug={currentSlug}
-            openStage={openStage}
-            nextGame={nextGame}
-          />
-        )}
-
-        {pastStages.length > 0 && (
-          <div className="past-rounds">
-            <p className="past-rounds-label">Past rounds</p>
-            {pastStages.map((stage) => (
-              <StageSection
-                key={stage}
-                stage={stage}
-                slots={bracket[stage] ?? []}
-                weather={weather}
-                matches={matches}
-                odds={odds}
-                goals={data?.goals}
-                compareIndex={compareIndex}
-                currentSlug={currentSlug}
-                defaultOpen={false}
-                nextGame={nextGame}
-                past
-              />
-            ))}
-          </div>
-        )}
+        {/* One unified timeline — every stage is a tab, finished ones just
+            styled grey instead of living in a separate section. */}
+        <StageTabs
+          stages={stageOrder}
+          pastStages={pastStages}
+          bracket={bracket}
+          weather={weather}
+          matches={matches}
+          odds={odds}
+          goals={data?.goals}
+          compareIndex={compareIndex}
+          currentSlug={currentSlug}
+          openStage={openStage}
+          nextGame={nextGame}
+        />
       </main>
 
       <GoldenBoot scorers={scorers} pick={person.goldenBoot} />
-
-      <footer className="footer">
-        World Cup 2026 · live data via football-data.org · photo by Alex Simpson / Unsplash
-      </footer>
     </div>
   )
 }
@@ -389,15 +337,17 @@ function Header({
 }) {
   return (
     <header className="header">
-      {lastUpdated && (
-        <p className="updated">
-          Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </p>
-      )}
+      {/* Title gets its own full-width row — competing with the dropdown for
+          space on one line is what caused it to truncate/overlap. */}
+      <h1>
+        Merelie World Cup <span className="year">2026</span>
+      </h1>
       <div className="header-row">
-        <h1>
-          World Cup <span className="year">2026</span>
-        </h1>
+        {lastUpdated && (
+          <p className="updated">
+            Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </p>
+        )}
         {personToggle}
       </div>
     </header>
@@ -446,13 +396,6 @@ const LB_COLLAPSED_COUNT = 3
 
 const MEDALS = ['🥇', '🥈', '🥉']
 
-// One uniform colour for every avatar circle — per-person colour-coding
-// wasn't wanted after all; this still reads as an avatar (initial in a
-// filled circle) without the varied-palette identity layer.
-function avatarColor(_slug: string): string {
-  return '#1a7a4a'
-}
-
 function Leaderboard({
   matches,
   currentSlug,
@@ -470,8 +413,19 @@ function Leaderboard({
   const rows = useMemo(() => {
     return Object.values(people)
       .map((p) => ({ slug: p.slug, title: p.title, points: personTotal(p, matches) }))
-      .sort((a, b) => (ready ? b.points - a.points : 0))
+      .sort((a, b) => (ready ? b.points - a.points || a.title.localeCompare(b.title) : 0))
   }, [matches, ready])
+
+  // Competition ranking — a tie shares the same rank number (the next rank
+  // then skips ahead, e.g. 1, 2, 2, 4 not 1, 2, 2, 3), with the alphabetical
+  // sort above deciding which tied name sits higher in the list.
+  const ranks = useMemo(() => {
+    const r: number[] = []
+    rows.forEach((row, i) => {
+      r.push(i > 0 && row.points === rows[i - 1].points ? r[i - 1] : i + 1)
+    })
+    return r
+  }, [rows])
 
   const leaderPts = rows[0]?.points ?? 0
   const myIndex = rows.findIndex((r) => r.slug === currentSlug)
@@ -480,8 +434,9 @@ function Leaderboard({
   const showMeSeparately = collapsible && !expanded && myIndex >= LB_COLLAPSED_COUNT
 
   const renderRow = (r: (typeof rows)[number], i: number) => {
-    const isLeader = ready && i === 0
-    const medal = ready ? MEDALS[i] : undefined
+    const rank = ranks[i]
+    const isLeader = ready && rank === 1
+    const medal = ready ? MEDALS[rank - 1] : undefined
     return (
       <li
         key={r.slug}
@@ -490,10 +445,7 @@ function Leaderboard({
         <span className="lb-rank">
           {/* Top 3 get a medal instead of a bare number — the standard
               podium treatment, easier to scan at a glance than digits. */}
-          {medal ? <span aria-hidden="true">{medal}</span> : i + 1}
-        </span>
-        <span className="lb-avatar" style={{ background: avatarColor(r.slug) }} aria-hidden="true">
-          {r.title.slice(0, 1).toUpperCase()}
+          {medal ? <span aria-hidden="true">{medal}</span> : rank}
         </span>
         <span className="lb-name">{r.title}</span>
         <span className="lb-pts">{ready ? r.points : '···'}</span>
@@ -563,24 +515,59 @@ function GamesCarousel({
       return ta - tb
     })
 
+  // Which card is currently centred, for the dot indicator — also makes it
+  // obvious at a glance there's more than one game to swipe through.
+  const trackRef = useRef<HTMLDivElement>(null)
+  const [activeIndex, setActiveIndex] = useState(0)
+  useEffect(() => {
+    const el = trackRef.current
+    if (!el) return
+    const onScroll = () => {
+      const i = Math.round(el.scrollLeft / (el.clientWidth * 0.92))
+      setActiveIndex(Math.max(0, Math.min(games.length - 1, i)))
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    onScroll()
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [games.length])
+
   return (
-    <div className="cards">
-      {games.map(({ slot, index }) => (
-        <TrueGameCard
-          key={`${stage}#${index}`}
-          stage={stage}
-          slotIndex={index}
-          slot={slot}
-          weather={slot.city ? weather[slot.city] : undefined}
-          matches={matches}
-          odds={odds}
-          goals={goals}
-          compareIndex={compareIndex}
-          currentSlug={currentSlug}
-          isNextUp={nextGame === `${stage}#${index}`}
-        />
-      ))}
-    </div>
+    <>
+      <div className="cards" ref={trackRef}>
+        {games.map(({ slot, index }) => (
+          <TrueGameCard
+            key={`${stage}#${index}`}
+            stage={stage}
+            slotIndex={index}
+            slot={slot}
+            weather={slot.city ? weather[slot.city] : undefined}
+            matches={matches}
+            odds={odds}
+            goals={goals}
+            compareIndex={compareIndex}
+            currentSlug={currentSlug}
+            isNextUp={nextGame === `${stage}#${index}`}
+          />
+        ))}
+      </div>
+      {games.length > 1 && (
+        <div className="carousel-dots" role="tablist" aria-label="Games in this round">
+          {games.map((_, i) => (
+            <button
+              key={i}
+              role="tab"
+              aria-selected={i === activeIndex}
+              aria-label={`Game ${i + 1} of ${games.length}`}
+              className={`carousel-dot ${i === activeIndex ? 'active' : ''}`}
+              onClick={() => {
+                const el = trackRef.current
+                if (el) el.scrollTo({ left: i * el.clientWidth * 0.92, behavior: 'smooth' })
+              }}
+            />
+          ))}
+        </div>
+      )}
+    </>
   )
 }
 
@@ -656,6 +643,7 @@ function StageSection({
 // instead of every stage stacked as its own accordion + carousel.
 function StageTabs({
   stages,
+  pastStages,
   bracket,
   weather,
   matches,
@@ -667,6 +655,7 @@ function StageTabs({
   nextGame,
 }: {
   stages: Stage[]
+  pastStages: Stage[]
   bracket: Record<Stage, BracketSlot[]>
   weather: Record<string, Weather>
   matches: LiveMatch[]
@@ -696,7 +685,9 @@ function StageTabs({
             key={stage}
             role="tab"
             aria-selected={stage === activeStage}
-            className={`stage-tab ${stage === activeStage ? 'active' : ''}`}
+            className={`stage-tab ${stage === activeStage ? 'active' : ''} ${
+              pastStages.includes(stage) ? 'stage-tab-past' : ''
+            }`}
             onClick={() => {
               userSelected.current = true
               setSelected(stage)

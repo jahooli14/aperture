@@ -93,23 +93,19 @@ body {
   -webkit-backdrop-filter: blur(14px);
   margin: 0 -16px;
 }
-.header-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
 .header h1 {
-  flex: 1 1 auto;
-  min-width: 0;
+  /* Its own full-width row — no longer competing with the dropdown for
+     space on one line, which is what caused truncation/overlap. Full width
+     comfortably fits the title even on a narrow phone. */
+  width: 100%;
   font-family: 'Sora', sans-serif;
-  /* Small enough to keep "World Cup 2026" on one line even on a narrow
-     phone, now that this bar is sticky and always on screen. */
-  font-size: 19px;
-  line-height: 1.2;
+  font-size: 20px;
+  line-height: 1.25;
   font-weight: 800;
-  margin: 0;
+  margin: 0 0 8px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   letter-spacing: -0.01em;
   color: var(--on-dark);
 }
@@ -119,13 +115,15 @@ body {
   background-clip: text;
   color: transparent;
 }
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
 .updated {
-  /* Top-right corner, small — out of the way of the title/dropdown row. */
-  position: absolute;
-  top: 4px;
-  right: 16px;
   color: var(--on-dark-3);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   margin: 0;
@@ -134,17 +132,15 @@ body {
 
 /* ---- Person toggle (who "you" are) ---- */
 .person-toggle {
-  /* Label sits above the control, not squeezed beside it — inline left of a
-     dropdown just steals width from it and reads cramped/amateur. Sits
-     beside the title (not full-width below it), so the title keeps the
-     room it needs and this only takes what it needs. */
+  /* Label inline with the dropdown, not stacked above it — this now sits
+     in the header's slim top-right corner, and a stacked label made this
+     column much taller than the title next to it, leaving a big empty gap
+     above the title. Single row keeps this close to the title's height. */
   flex: 0 1 auto;
   min-width: 0;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
-  margin: 12px 0 0;
+  align-items: center;
+  gap: 8px;
 }
 .pt-label {
   font-size: 11px;
@@ -156,10 +152,10 @@ body {
 }
 .pt-select-wrap {
   position: relative;
-  /* Compact, sized to its content — sits beside the title now, not full
-     width below it. */
+  /* Its own row below the title now, not squeezed beside it — plenty of
+     room for a comfortable touch target. */
   flex: none;
-  min-width: 140px;
+  min-width: 130px;
 }
 .pt-select {
   /* Native <select> — with a dozen+ names, a real dropdown (tap to reveal,
@@ -332,20 +328,6 @@ body {
   color: var(--gold);
   font-size: 16px;
 }
-.lb-avatar {
-  flex: none;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Sora', sans-serif;
-  font-size: 12px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.92);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-}
 .lb-name {
   flex: 1 1 auto;
   min-width: 0;
@@ -517,17 +499,6 @@ body {
   color: var(--on-dark-3);
   font-weight: 600;
 }
-.past-rounds {
-  margin-top: 8px;
-}
-.past-rounds-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--on-dark-3);
-  margin: 0 0 10px 4px;
-}
 .chevron {
   font-size: 18px;
   line-height: 1;
@@ -542,10 +513,20 @@ body {
      round instead of stacking every card vertically down the page. Desktop
      (640px+) reverts to a 2-up grid instead, see the media query below. */
   display: flex;
-  /* flex's default stretch would force every card to the height of the
-     tallest one in the row — the same huge-blank-gap bug fixed earlier for
-     the grid layout, just flex's version of it. */
-  align-items: flex-start;
+  /* Stretch, so every card in a round matches the tallest one — natural
+     content-height variance (goals list vs. no goals list, odds line vs.
+     none) was making swiped cards visibly different sizes. Safe now that
+     .compare is capped at 244px (an open compare panel can only grow a
+     card by a bounded amount, not the unbounded 5-6x that motivated
+     flex-start originally) — and in a carousel you see one card at a time
+     anyway, so a taller off-screen neighbour isn't the same visible-gap
+     problem it was in the old fully-visible vertical stack. */
+  align-items: stretch;
+  /* Only matters when there's a single card (e.g. the Final, one slot) —
+     with nothing to scroll to, a lone 92%-wide card otherwise sits flush
+     left instead of centred. Has no effect once there's enough content to
+     scroll, which overrides justify-content by design. */
+  justify-content: center;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   gap: 12px;
@@ -556,9 +537,35 @@ body {
   display: none;
 }
 .cards > .card {
-  flex: 0 0 100%;
+  /* Just short of full width — the next/previous card peeks in at the edge,
+     making it visually obvious there's more to swipe to instead of looking
+     like a single static card. */
+  flex: 0 0 92%;
   scroll-snap-align: center;
   scroll-snap-stop: always;
+}
+
+/* Page-control dots under the carousel — which game you're on, and (via the
+   peeking edges above) that there's more than one to swipe through. */
+.carousel-dots {
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+  margin: 10px 0 4px;
+}
+.carousel-dot {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  transition: background 0.15s var(--ease), transform 0.15s var(--ease);
+}
+.carousel-dot.active {
+  background: var(--gold);
+  transform: scale(1.3);
 }
 
 /* Finished cards: clearly greyed out and recessed vs live/upcoming */
@@ -1171,13 +1178,6 @@ body {
 }
 
 /* ---- Footer ---- */
-.footer {
-  text-align: center;
-  color: var(--on-dark-3);
-  font-size: 12px;
-  margin-top: 36px;
-}
-
 /* ---- Responsive ---- */
 @media (min-width: 640px) {
   .cards {
@@ -1191,6 +1191,9 @@ body {
   .cards > .card {
     flex: initial;
     scroll-snap-align: none;
+  }
+  .carousel-dots {
+    display: none;
   }
   .stage-title {
     font-size: 22px;
@@ -1301,9 +1304,10 @@ body {
      the now full-bleed photo's edges instead of touching them. */
   padding: var(--card-pad-y) var(--card-pad-x);
   /* card-top + match only need ~100px, but that crops each landmark photo to
-     a thin sliver of mostly bland sky/ground. Give the photo more room to
-     show its actual subject, and centre the (shorter) content within it. */
-  min-height: 190px;
+     a thin sliver of mostly bland sky/ground. Give the photo a bit more room
+     to show its subject, and centre the (shorter) content within it — but
+     not as much extra room as before, which read as too much dead space. */
+  min-height: 150px;
   display: flex;
   flex-direction: column;
   justify-content: center;
