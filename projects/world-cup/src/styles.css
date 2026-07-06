@@ -376,6 +376,24 @@ body {
   color: var(--on-dark-2);
   font-variant-numeric: tabular-nums;
 }
+/* Form marker — how a person's rank moved on the last game. Green up /
+   red down, sits between name and points. */
+.lb-move {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.lb-move.up {
+  color: #5cf0a6;
+}
+.lb-move.down {
+  color: #ff8d9a;
+}
 .lb-ellipsis {
   text-align: center;
   padding: 4px 0;
@@ -569,19 +587,58 @@ body {
      anyway, so a taller off-screen neighbour isn't the same visible-gap
      problem it was in the old fully-visible vertical stack. */
   align-items: stretch;
-  /* Only matters when there's a single card (e.g. the Final, one slot) —
-     with nothing to scroll to, a lone 92%-wide card otherwise sits flush
-     left instead of centred. Has no effect once there's enough content to
-     scroll, which overrides justify-content by design. */
-  justify-content: center;
+  /* safe center, NOT plain center: plain center on an overflowing scroll
+     row centres the whole track, which in Safari makes the leading cards
+     unreachable — you couldn't scroll back to the first game (e.g. the
+     first quarter-final). `safe` falls back to flex-start once the content
+     overflows, so every card stays reachable; centring still applies to a
+     lone card (the Final). */
+  justify-content: safe center;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   gap: 12px;
-  padding-bottom: 4px;
+  /* Full-bleed: break out of the .app's 16px side padding so cards swipe
+     right to the screen edges instead of sitting inside a framed inset.
+     scroll-padding keeps a snapped card from sitting flush against the very
+     edge — it rests 16px in, but the track itself reaches the screen. */
+  margin-inline: -16px;
+  scroll-padding-inline: 16px;
+  /* Vertical padding gives the live/next-up card's border + glow room to
+     render inside the track's clip box — overflow-x: auto forces overflow-y
+     to auto too, so without this the top/bottom of the ring gets clipped.
+     Horizontal 16px replaces the negative margin so the first/last card
+     still align to the content column at rest. */
+  padding: 8px 16px 10px;
   scrollbar-width: none;
 }
 .cards::-webkit-scrollbar {
   display: none;
+}
+/* One-time swipe hint — a gentle nudge of the whole track toward the next
+   card and back. Pure transform, so it never changes scrollLeft (can't
+   fight the auto-scroll-to-live). Fires once per session via the JS-added
+   `swipe-hint` class. */
+.cards.swipe-hint {
+  animation: swipeHint 1.15s var(--ease) 1;
+}
+@keyframes swipeHint {
+  0% {
+    transform: translateX(0);
+  }
+  32% {
+    transform: translateX(-52px);
+  }
+  64% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cards.swipe-hint {
+    animation: none;
+  }
 }
 .cards > .card {
   /* Just short of full width — the next/previous card peeks in at the edge,
@@ -637,6 +694,13 @@ body {
   /* Keeps the auto-scroll-into-view (live/next-up cards) from tucking the
      card's top edge — and its gold/red ring — behind the sticky header. */
   scroll-margin-top: 72px;
+  /* Consistent height across every round — content-rich stages (R32/R16,
+     with goalscorers + backed lines) naturally reach ~420px, while
+     TBC-heavy later rounds (SF/Final) would otherwise sit ~300px and the
+     card visibly shrank when you swiped between tabs. This floor brings
+     the sparse ones up to match; an open Compare panel can still grow a
+     card beyond it. */
+  min-height: 420px;
   position: relative;
   overflow: hidden;
   /* Dark, not the light frosted --card tint — every piece of content inside
@@ -651,9 +715,12 @@ body {
   backdrop-filter: blur(12px);
   transition: transform 0.15s var(--ease), box-shadow 0.2s var(--ease);
   animation: rise 0.3s var(--ease) both;
-  /* Skip rendering off-screen cards so a long bracket scrolls smoothly. */
-  content-visibility: auto;
-  contain-intrinsic-size: auto 360px;
+  /* NB: no content-visibility here. It was a leftover from the old
+     vertical-stack layout ("skip off-screen cards for smooth scroll"),
+     but in the current horizontal snap-carousel it silently broke
+     scrolling — a card scrolled off the left collapses to its intrinsic
+     size, which shrinks the track's scrollWidth as you go, so the last
+     card (e.g. the 4th quarter-final) became physically unreachable. */
   /* Cards in a row stretch to match the tallest (grid default) — without
      this, whichever card has less content (fewer goals, no odds line, etc.)
      ends up with dead space wherever the stretch lands, and its "Compare
@@ -694,7 +761,7 @@ body {
   position: relative;
   z-index: 1;
   /* Real border, not just a box-shadow ring — see .card.live for why. */
-  border: 4px solid var(--gold);
+  border: 3px solid var(--gold);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.26), 0 0 32px rgba(232, 182, 71, 0.5);
 }
 /* Live games really stand out: red ring, lift, glow, gold top accent */
@@ -710,8 +777,14 @@ body {
      it). An actual border is basic box-model rendering with no
      compositing ambiguity, so it can't have that failure mode. Kept the
      box-shadow too, for the glow — border is the part that must not fail. */
-  border: 5px solid var(--red);
-  transform: translateY(-2px) scale(1.015);
+  border: 3px solid var(--red);
+  /* No scale/transform. The carousel track has overflow-x: auto, which per
+     spec forces overflow-y to auto as well (they can't be visible + auto),
+     so the track clips anything a card renders past its own top edge. Any
+     scale-up made the live card ~6px taller than its box, and that extra
+     top strip — including the red border — got clipped by the track. The
+     red border + pulsing glow already make it stand out; the 1.5% scale
+     wasn't worth the clipping it caused. */
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 0 0 26px rgba(216, 58, 74, 0.55);
   animation: liveGlow 2.2s ease-in-out infinite;
 }

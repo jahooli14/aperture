@@ -169,25 +169,13 @@ export function App() {
     []
   )
 
-  // On first load with a game in play, scroll it into view — one clean
-  // scroll (not several staggered ones, which could each land on a
-  // different position as photos/layout were still settling and read as
-  // the page visibly jumping up and down). block: 'start' rather than
-  // 'center': centering a near-full-height card ignores .card's own
-  // scroll-margin-top (set specifically so the ring clears the sticky
-  // header), so it could still land tucked under the header regardless of
-  // that margin — 'start' respects it properly.
-  const scrolledRef = useRef(false)
-  useEffect(() => {
-    if (scrolledRef.current) return
-    if (!matches.some((m) => m.status === 'IN_PLAY' || m.status === 'PAUSED')) return
-    scrolledRef.current = true
-    const timer = setTimeout(() => {
-      const el = document.querySelector('.card.live')
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'center' })
-    }, 500)
-    return () => clearTimeout(timer)
-  }, [matches])
+  // NB: "go to the live game" is handled inside GamesCarousel, which centres
+  // the live card within its own horizontal track (deterministic scrollLeft,
+  // no page scroll). The old approach here used el.scrollIntoView({inline:
+  // 'center'}) on the live card, which drove the whole page's vertical
+  // scroll AND the track's horizontal scroll — it was unreliable across
+  // browser engines (landed on the wrong card in Safari) and its vertical
+  // jump kept tucking the card's ring under the sticky header.
 
   // A stage is "done" once every one of its slots is a decided, finished
   // fixture — not just "no live game right now" (that's also true before a
@@ -455,6 +443,54 @@ function Leaderboard({
   const visible = expanded || !collapsible ? rows : rows.slice(0, LB_COLLAPSED_COUNT)
   const showMeSeparately = collapsible && !expanded && myIndex >= LB_COLLAPSED_COUNT
 
+  // Which ranks are shared, so tied people show "=" (e.g. "=4") rather than
+  // reading as a strict order when they're actually level.
+  const tiedRanks = useMemo(() => {
+    const counts: Record<number, number> = {}
+    ranks.forEach((rk) => (counts[rk] = (counts[rk] ?? 0) + 1))
+    return new Set(Object.entries(counts).filter(([, n]) => n > 1).map(([rk]) => Number(rk)))
+  }, [ranks])
+
+  // Per-row "form" arrow — how each person's rank moved because of the most
+  // recent finished game (not since your last visit; that's the banner
+  // above). Snapshots the whole ranking keyed by how many games have
+  // finished, so the arrows appear when a result lands and stay put until
+  // the next one — persisted, so they survive reloads in between.
+  const [movements, setMovements] = useState<Record<string, number>>({})
+  const movesCheckedRef = useRef(false)
+  useEffect(() => {
+    if (movesCheckedRef.current || !ready) return
+    movesCheckedRef.current = true
+    const finishedCount = matches.filter((m) => m.status === 'FINISHED').length
+    const curRanks: Record<string, number> = {}
+    rows.forEach((r, i) => (curRanks[r.slug] = ranks[i]))
+    try {
+      const raw = window.localStorage.getItem('wc-lb-snapshot')
+      const stored = raw ? JSON.parse(raw) : null
+      if (!stored) {
+        window.localStorage.setItem(
+          'wc-lb-snapshot',
+          JSON.stringify({ sig: finishedCount, ranks: curRanks, delta: {} })
+        )
+      } else if (stored.sig !== finishedCount) {
+        const delta: Record<string, number> = {}
+        for (const slug of Object.keys(curRanks)) {
+          const prev = stored.ranks?.[slug]
+          if (prev != null && prev !== curRanks[slug]) delta[slug] = prev - curRanks[slug] // + = moved up
+        }
+        setMovements(delta)
+        window.localStorage.setItem(
+          'wc-lb-snapshot',
+          JSON.stringify({ sig: finishedCount, ranks: curRanks, delta })
+        )
+      } else {
+        setMovements(stored.delta ?? {})
+      }
+    } catch {
+      /* ignore corrupt snapshot */
+    }
+  }, [ready, matches, rows, ranks])
+
   // "You've moved up" since their last visit — a reason to open the app
   // between games, not just during kick-off. Snapshotted once per page
   // load (not on every live-score poll) so it doesn't flicker mid-session;
@@ -477,6 +513,8 @@ function Leaderboard({
     const rank = ranks[i]
     const isLeader = ready && rank === 1
     const medal = ready ? MEDALS[rank - 1] : undefined
+    const tied = ready && tiedRanks.has(rank)
+    const move = movements[r.slug] ?? 0
     return (
       <li
         key={r.slug}
@@ -484,10 +522,24 @@ function Leaderboard({
       >
         <span className="lb-rank">
           {/* Top 3 get a medal instead of a bare number — the standard
-              podium treatment, easier to scan at a glance than digits. */}
-          {medal ? <span aria-hidden="true">{medal}</span> : rank}
+              podium treatment, easier to scan at a glance than digits. A
+              tie shows "=" (e.g. "=4") so level people don't read as ranked. */}
+          {medal ? (
+            <span aria-hidden="true">{medal}</span>
+          ) : (
+            <span>{tied ? `=${rank}` : rank}</span>
+          )}
         </span>
         <span className="lb-name">{r.title}</span>
+        {ready && move !== 0 && (
+          <span
+            className={`lb-move ${move > 0 ? 'up' : 'down'}`}
+            title={`${move > 0 ? 'Up' : 'Down'} ${Math.abs(move)} since the last game`}
+          >
+            {move > 0 ? '▲' : '▼'}
+            {Math.abs(move)}
+          </span>
+        )}
         <span className="lb-pts">{ready ? r.points : '···'}</span>
         <span className="lb-gap">{!ready || isLeader ? '' : `−${leaderPts - r.points}`}</span>
       </li>
@@ -564,23 +616,85 @@ function GamesCarousel({
 
   // Which card is currently centred, for the dot indicator — also makes it
   // obvious at a glance there's more than one game to swipe through.
+  // Measures which card's centre is nearest the track's viewport centre,
+  // reading real child positions rather than dividing by an assumed card
+  // width (the old `scrollLeft / (clientWidth * 0.92)` drifted out of sync
+  // with the actual cards near the end of the row and mismatched the dots).
   const trackRef = useRef<HTMLDivElement>(null)
   const [activeIndex, setActiveIndex] = useState(0)
   useEffect(() => {
     const el = trackRef.current
     if (!el) return
     const onScroll = () => {
-      const i = Math.round(el.scrollLeft / (el.clientWidth * 0.92))
-      setActiveIndex(Math.max(0, Math.min(games.length - 1, i)))
+      const mid = el.scrollLeft + el.clientWidth / 2
+      let nearest = 0
+      let best = Infinity
+      const cards = el.querySelectorAll<HTMLElement>('.card')
+      cards.forEach((card, i) => {
+        const centre = card.offsetLeft + card.offsetWidth / 2
+        const dist = Math.abs(centre - mid)
+        if (dist < best) {
+          best = dist
+          nearest = i
+        }
+      })
+      setActiveIndex(nearest)
     }
     el.addEventListener('scroll', onScroll, { passive: true })
     onScroll()
     return () => el.removeEventListener('scroll', onScroll)
   }, [games.length])
 
+  // "Go to the live game" — centre the live card within this track by setting
+  // scrollLeft directly (deterministic), rather than the old page-level
+  // scrollIntoView({inline:'center'}) which was engine-unreliable and drove a
+  // vertical page jump that clipped the card's ring. If no card is live the
+  // track just stays at its natural start.
+  const liveDisplayIndex = games.findIndex(({ slot }) => {
+    const live = findLive(slot.home, slot.away, matches)
+    return !!live && phaseOf(live.status) === 'live'
+  })
+  const centredRef = useRef(false)
+  useEffect(() => {
+    const el = trackRef.current
+    if (!el || liveDisplayIndex < 0 || centredRef.current) return
+    const t = setTimeout(() => {
+      const card = el.querySelectorAll<HTMLElement>('.card')[liveDisplayIndex]
+      if (!card) return
+      centredRef.current = true
+      const target = card.offsetLeft - (el.clientWidth - card.offsetWidth) / 2
+      el.scrollTo({ left: Math.max(0, target), behavior: 'smooth' })
+    }, 300)
+    return () => clearTimeout(t)
+  }, [liveDisplayIndex])
+
+  // One-time "you can swipe" nudge — a brief translateX bounce of the whole
+  // card track, once per session, after the first multi-card carousel has
+  // settled. Done as a pure CSS transform (via the `hint` class) rather than
+  // a real scroll: transform never touches scrollLeft, so it can't race
+  // with — or corrupt the resting position of — the auto-scroll-to-live
+  // (an earlier scroll-based flick did exactly that, landing on the wrong
+  // card in Safari). The motion teaches swipeability; the static edge peek
+  // keeps hinting it afterwards.
+  const [hint, setHint] = useState(false)
+  useEffect(() => {
+    if (games.length < 2) return
+    if (sessionStorage.getItem('wc-swipe-hinted')) return
+    const t = setTimeout(() => {
+      if (sessionStorage.getItem('wc-swipe-hinted')) return
+      sessionStorage.setItem('wc-swipe-hinted', '1')
+      setHint(true)
+    }, 1400)
+    return () => clearTimeout(t)
+  }, [games.length])
+
   return (
     <>
-      <div className="cards" ref={trackRef}>
+      <div
+        className={`cards ${hint ? 'swipe-hint' : ''}`}
+        ref={trackRef}
+        onAnimationEnd={() => setHint(false)}
+      >
         {games.map(({ slot, index }) => (
           <TrueGameCard
             key={`${stage}#${index}`}
