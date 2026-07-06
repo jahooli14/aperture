@@ -1382,6 +1382,14 @@ body {
   background: linear-gradient(180deg, rgba(12, 17, 14, 0.94), rgba(7, 10, 9, 0.94));
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
+  /* Grows to fill whatever extra height align-items: stretch gives this
+     card (to match a taller sibling) — a shorter card (e.g. no goalscorer
+     list) was otherwise leaving a big flat gap of plain card background
+     between this panel and the Compare picks button below it. */
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 .card-weather {
   position: absolute;
