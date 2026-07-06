@@ -175,12 +175,19 @@ export function App() {
     if (scrolledRef.current) return
     if (!matches.some((m) => m.status === 'IN_PLAY' || m.status === 'PAUSED')) return
     scrolledRef.current = true
-    const doScroll = () => {
+    // One scroll, not three staggered ones — re-firing at 200ms/700ms/1500ms
+    // could each land on a different position as photos/layout were still
+    // settling, reading as the page visibly jumping up and down instead of
+    // a single clean scroll.
+    const timer = setTimeout(() => {
       const el = document.querySelector('.card.live')
-      if (el) el.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'center' })
-    }
-    const timers = [200, 700, 1500].map((ms) => setTimeout(doScroll, ms))
-    return () => timers.forEach(clearTimeout)
+      // block: 'start' (not 'center') — centering a near-full-height card
+      // ignores .card's scroll-margin-top, so the card's top (and its red
+      // ring) could still land tucked under the sticky header regardless
+      // of that safety margin. 'start' respects it.
+      if (el) el.scrollIntoView({ behavior: 'auto', block: 'start', inline: 'center' })
+    }, 500)
+    return () => clearTimeout(timer)
   }, [matches])
 
   // A stage is "done" once every one of its slots is a decided, finished
@@ -245,14 +252,16 @@ export function App() {
     if (matches.some((m) => m.status === 'IN_PLAY' || m.status === 'PAUSED')) return
     if (!nextGame && openStage === stageOrder[0]) return // already at the top, nothing to do
     stageScrolledRef.current = true
-    const doScroll = () => {
+    // One scroll, not three staggered ones — see the live-game scroll above
+    // for why (each re-fire could land on a different position, reading as
+    // the page visibly jumping up and down).
+    const timer = setTimeout(() => {
       const el = nextGame
         ? document.querySelector(`[data-slot-key="${nextGame}"]`)
         : document.querySelector(`[data-stage="${openStage}"]`)
-      if (el) el.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'center' })
-    }
-    const timers = [200, 700, 1500].map((ms) => setTimeout(doScroll, ms))
-    return () => timers.forEach(clearTimeout)
+      if (el) el.scrollIntoView({ behavior: 'auto', block: 'start', inline: 'center' })
+    }, 500)
+    return () => clearTimeout(timer)
   }, [openStage, nextGame, matches, data])
 
   // Celebrate when the selected person's pick comes good.

@@ -702,21 +702,25 @@ body {
      covered by a peeking sibling card in the carousel. */
   position: relative;
   z-index: 1;
-  border-top: 3px solid var(--red);
+  border-top: 5px solid var(--red);
   transform: translateY(-2px) scale(1.015);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 0 0 0 2px var(--red),
-    0 0 26px rgba(216, 58, 74, 0.45);
+  /* Ring widened from 2px to 4px — at 2px it read as basically invisible
+     against a busy match photo (thin line, easy to miss at a glance or on
+     a real phone's rendering), reported several times as "missing" even
+     though it was technically present. */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 0 0 0 4px var(--red),
+    0 0 26px rgba(216, 58, 74, 0.55);
   animation: liveGlow 2.2s ease-in-out infinite;
 }
 @keyframes liveGlow {
   0%,
   100% {
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 0 0 0 2px var(--red),
-      0 0 22px rgba(216, 58, 74, 0.4);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 0 0 0 4px var(--red),
+      0 0 22px rgba(216, 58, 74, 0.5);
   }
   50% {
-    box-shadow: 0 10px 34px rgba(0, 0, 0, 0.32), 0 0 0 2px var(--red),
-      0 0 40px rgba(216, 58, 74, 0.7);
+    box-shadow: 0 10px 34px rgba(0, 0, 0, 0.32), 0 0 0 4px var(--red),
+      0 0 44px rgba(216, 58, 74, 0.85);
   }
 }
 .card.live .bigscore.live {
