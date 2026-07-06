@@ -307,7 +307,7 @@ export function App() {
           [
             ['games', 'Games'],
             ['leaderboard', 'Leaderboard'],
-            ['scorers', 'Top Scorers'],
+            ['scorers', 'Golden Boot'],
           ] as const
         ).map(([key, label]) => (
           <button
@@ -1154,9 +1154,10 @@ function GoldenBoot({
   scorers: LiveScorer[]
   pick: { player: string; team: string }
 }) {
-  // Collapsed by default — same "just the viewed person's info, full list is
-  // one tap away" pattern as the leaderboard. The pick banner already says
-  // what matters most; the full top-15 is extra detail, not the headline.
+  // Shows top 8 automatically — this is its own dedicated tab now (not
+  // competing with the leaderboard/games for space on one long page), so
+  // there's no reason to hide it behind a tap the way the leaderboard does.
+  const AUTO_COUNT = 8
   const [expanded, setExpanded] = useState(false)
 
   const pickLast = pick.player.toLowerCase().split(' ').pop()!
@@ -1166,6 +1167,8 @@ function GoldenBoot({
 
   const pickRank = scorers.findIndex((s) => isMyPick(s.name))
   const top = scorers.slice(0, 15)
+  const collapsible = top.length > AUTO_COUNT
+  const visible = expanded || !collapsible ? top : top.slice(0, AUTO_COUNT)
   const photos = usePlayerPhotos(top.map((s) => s.name))
 
   return (
@@ -1189,36 +1192,36 @@ function GoldenBoot({
         </p>
       ) : (
         <>
-          {expanded && (
-            <ol className="scorer-list">
-              {top.map((s, i) => (
-                <li key={`${s.name}-${i}`} className={`scorer-row ${isMyPick(s.name) ? 'my-pick' : ''}`}>
-                  <span className="rank">{i + 1}</span>
-                  {photos[s.name] ? (
-                    <img className="savatar" src={photos[s.name]} alt="" loading="lazy" />
-                  ) : (
-                    <span className="savatar savatar-fallback">{flag(s.team)}</span>
-                  )}
-                  <span className="who">
-                    <span className="sname">{s.name}</span>
-                    <span className="steam">
-                      {flag(s.team)} {s.team}
-                    </span>
+          <ol className="scorer-list">
+            {visible.map((s, i) => (
+              <li key={`${s.name}-${i}`} className={`scorer-row ${isMyPick(s.name) ? 'my-pick' : ''}`}>
+                <span className="rank">{i + 1}</span>
+                {photos[s.name] ? (
+                  <img className="savatar" src={photos[s.name]} alt="" loading="lazy" />
+                ) : (
+                  <span className="savatar savatar-fallback">{flag(s.team)}</span>
+                )}
+                <span className="who">
+                  <span className="sname">{s.name}</span>
+                  <span className="steam">
+                    {flag(s.team)} {s.team}
                   </span>
-                  <span className="sgoals">
-                    {s.goals}
-                    <span className="sgoals-label">goals</span>
-                  </span>
-                </li>
-              ))}
-            </ol>
+                </span>
+                <span className="sgoals">
+                  {s.goals}
+                  <span className="sgoals-label">goals</span>
+                </span>
+              </li>
+            ))}
+          </ol>
+          {collapsible && (
+            <button className="lb-toggle" onClick={() => setExpanded((e) => !e)}>
+              {expanded ? 'Show less' : `See all ${top.length}`}
+              <span className={`chevron ${expanded ? 'open' : ''}`} aria-hidden="true">
+                ⌄
+              </span>
+            </button>
           )}
-          <button className="lb-toggle" onClick={() => setExpanded((e) => !e)}>
-            {expanded ? 'Show less' : 'See top 15'}
-            <span className={`chevron ${expanded ? 'open' : ''}`} aria-hidden="true">
-              ⌄
-            </span>
-          </button>
         </>
       )}
     </section>
