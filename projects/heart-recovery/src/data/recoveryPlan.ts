@@ -254,6 +254,7 @@ export const SOURCES: { title: string; url: string }[] = [
   { title: 'NHS — Coronary angioplasty recovery', url: 'https://www.nhs.uk/tests-and-treatments/coronary-angioplasty/recovery/' },
   { title: 'GOV.UK — Heart attacks, angioplasty and driving', url: 'https://www.gov.uk/heart-attacks-and-driving' },
   { title: 'GOV.UK — Cardiovascular disorders: assessing fitness to drive', url: 'https://www.gov.uk/guidance/cardiovascular-disorders-assessing-fitness-to-drive' },
+  { title: 'Compendium of Physical Activities — MET values reference', url: 'https://pacompendium.com/corrected-mets/' },
 ];
 
 export const BHF_HELPLINE = '0808 802 1234';
