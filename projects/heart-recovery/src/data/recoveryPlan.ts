@@ -15,6 +15,12 @@ export interface FarmGuidance {
   askYourTeam?: string[];
 }
 
+export interface WalkingStage {
+  label: string;
+  minutes: number;
+  pace: string;
+}
+
 export interface RecoveryPhase {
   id: string;
   dayRange: { start: number; end: number | null };
@@ -25,6 +31,9 @@ export interface RecoveryPhase {
   why?: string;
   milestone?: string;
   farm: FarmGuidance;
+  // Undefined for week-0-1, which uses the general "start gentle, build
+  // daily" guidance instead of a formal stage.
+  walkingStage?: WalkingStage;
 }
 
 const CALL_TEAM_ACTION = {
@@ -78,6 +87,7 @@ export const RECOVERY_PHASES: RecoveryPhase[] = [
       ifTempted: 'If you’re tempted to do "just one small job," swap it for a slow walk of the fence line instead — looking, not lifting.',
       canDoInstead: ['Walk the fence line and note what needs doing (no tools)', 'Plan the season’s jobs in order of priority', 'Point someone else at anything urgent'],
     },
+    walkingStage: { label: 'Stage 1', minutes: 15, pace: 'Gentle pace' },
   },
   {
     id: 'week-2-4',
@@ -101,6 +111,7 @@ export const RECOVERY_PHASES: RecoveryPhase[] = [
       ifTempted: 'If you’re tempted to grab a tool "just for five minutes," do the fence-line walk instead and add to your list.',
       canDoInstead: ['Walk the fence line and keep building the job list', 'Plan out the season’s work in detail', 'Direct someone else for anything that can’t wait'],
     },
+    walkingStage: { label: 'Stage 2', minutes: 20, pace: 'Moderate pace' },
   },
   {
     id: 'week-4-8',
@@ -129,6 +140,7 @@ export const RECOVERY_PHASES: RecoveryPhase[] = [
         'Ask whether heat or exertion limits apply to outdoor work',
       ],
     },
+    walkingStage: { label: 'Stage 3', minutes: 25, pace: 'Moderate to brisk pace' },
   },
   {
     id: 'week-8-12',
@@ -157,6 +169,7 @@ export const RECOVERY_PHASES: RecoveryPhase[] = [
         'Ask whether heat or exertion limits apply to outdoor work',
       ],
     },
+    walkingStage: { label: 'Stage 4', minutes: 30, pace: 'Brisk pace' },
   },
   {
     id: '12-weeks-plus',
@@ -184,6 +197,7 @@ export const RECOVERY_PHASES: RecoveryPhase[] = [
         'Ask whether heat or exertion limits apply to outdoor work',
       ],
     },
+    walkingStage: { label: 'Target', minutes: 30, pace: 'Brisk pace, most days' },
   },
 ];
 
@@ -239,6 +253,19 @@ export const CONTACT_CARE_TEAM_SIGNS: string[] = [
   'Feeling low or frustrated that isn’t lifting — common after a heart attack, worth mentioning',
 ];
 
+// Sourced from a typical NHS cardiac rehab walking programme and BHF's own
+// walking guidance — not an invented formula. Progress a stage once the
+// current one feels comfortable; that's the real pacing method, not the day
+// count.
+export const WALKING_STARTING_GUIDANCE =
+  "Start with whatever feels comfortable, even just a couple of minutes. Do it daily, and stretch it out as it gets easier — pace isn't the point yet.";
+
+export const WALKING_RPE_GUIDANCE =
+  "You should still be able to talk while you walk. If you can't, ease off — that's a more reliable gauge than the clock.";
+
+export const WALKING_STOP_SIGNS =
+  "Stop straight away for dizziness, chest pain, uncomfortable breathing, or an irregular heartbeat. Skip today's walk if you're unwell or running a fever.";
+
 export const MEDICATION_NOTES = {
   dapt:
     "You're likely on two blood-thinning medications together (aspirin plus a second one, often clopidogrel or ticagrelor) for about 12 months after this stent. Don't stop either one — even for a dental appointment or minor procedure — without calling your cardiologist first. Stopping early is the single biggest risk to the stent itself.",
@@ -255,6 +282,8 @@ export const SOURCES: { title: string; url: string }[] = [
   { title: 'GOV.UK — Heart attacks, angioplasty and driving', url: 'https://www.gov.uk/heart-attacks-and-driving' },
   { title: 'GOV.UK — Cardiovascular disorders: assessing fitness to drive', url: 'https://www.gov.uk/guidance/cardiovascular-disorders-assessing-fitness-to-drive' },
   { title: 'Compendium of Physical Activities — MET values reference', url: 'https://pacompendium.com/corrected-mets/' },
+  { title: 'BHF — How do I start exercising again after a heart attack?', url: 'https://www.bhf.org.uk/informationsupport/heart-matters-magazine/activity/first-exercise-steps' },
+  { title: 'NHS (Cambridge University Hospitals) — Cardiac rehabilitation walking programme', url: 'https://www.cuh.nhs.uk/patient-information/cardiac-rehabilitation-walking-programme/' },
 ];
 
 export const BHF_HELPLINE = '0808 802 1234';

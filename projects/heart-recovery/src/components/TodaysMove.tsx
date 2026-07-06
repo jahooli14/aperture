@@ -1,30 +1,36 @@
 import { Footprints } from 'lucide-react';
-import { getWalkingTargetMinutes, getStartingWalkingTargetMinutes } from '../lib/walkingTarget';
+import type { RecoveryPhase } from '../data/recoveryPlan';
+import { WALKING_STARTING_GUIDANCE, WALKING_RPE_GUIDANCE, WALKING_STOP_SIGNS } from '../data/recoveryPlan';
 
 interface TodaysMoveProps {
-  dayNumber: number;
+  phase: RecoveryPhase;
 }
 
-export default function TodaysMove({ dayNumber }: TodaysMoveProps) {
-  const targetMinutes = getWalkingTargetMinutes(dayNumber);
-  const startMinutes = getStartingWalkingTargetMinutes();
-  const isAtCap = targetMinutes >= 30;
+export default function TodaysMove({ phase }: TodaysMoveProps) {
+  const stage = phase.walkingStage;
 
   return (
     <section className="card border-recovery-teal/30 text-center">
       <div className="flex items-center justify-center gap-2 text-recovery-teal mb-1">
         <Footprints className="w-5 h-5" />
-        <h2 className="font-bold uppercase tracking-wide text-sm">Today's move</h2>
+        <h2 className="font-bold uppercase tracking-wide text-sm">Today's walk</h2>
       </div>
-      <p className="text-4xl font-bold">{targetMinutes} min walk</p>
-      <p className="text-recovery-ink/70 mt-1">
-        {isAtCap
-          ? "A steady walk, most days — that's the target now."
-          : `Up from ${startMinutes} minutes when you started — a little more than a few days ago.`}
-      </p>
-      <p className="text-recovery-ink/50 text-sm mt-3">
-        Stop and rest if you feel breathless, dizzy, or notice any chest discomfort. This isn't a race.
-      </p>
+
+      {stage ? (
+        <>
+          <p className="text-4xl font-bold">{stage.minutes} min</p>
+          <p className="text-recovery-ink/70 mt-1">{stage.pace}</p>
+          <p className="text-recovery-ink/50 text-xs mt-1">
+            {stage.label} of a typical NHS cardiac rehab walking plan — move up a stage once this
+            feels easy, not by the calendar.
+          </p>
+        </>
+      ) : (
+        <p className="text-recovery-ink/80 mt-1">{WALKING_STARTING_GUIDANCE}</p>
+      )}
+
+      <p className="text-recovery-ink/70 text-sm mt-3">{WALKING_RPE_GUIDANCE}</p>
+      <p className="text-recovery-ink/50 text-sm mt-2">{WALKING_STOP_SIGNS}</p>
     </section>
   );
 }
