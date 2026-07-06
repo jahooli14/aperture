@@ -169,27 +169,6 @@ export function App() {
     []
   )
 
-  // On first load with a game in play, scroll it into view.
-  const scrolledRef = useRef(false)
-  useEffect(() => {
-    if (scrolledRef.current) return
-    if (!matches.some((m) => m.status === 'IN_PLAY' || m.status === 'PAUSED')) return
-    scrolledRef.current = true
-    // One scroll, not three staggered ones — re-firing at 200ms/700ms/1500ms
-    // could each land on a different position as photos/layout were still
-    // settling, reading as the page visibly jumping up and down instead of
-    // a single clean scroll.
-    const timer = setTimeout(() => {
-      const el = document.querySelector('.card.live')
-      // block: 'start' (not 'center') — centering a near-full-height card
-      // ignores .card's scroll-margin-top, so the card's top (and its red
-      // ring) could still land tucked under the sticky header regardless
-      // of that safety margin. 'start' respects it.
-      if (el) el.scrollIntoView({ behavior: 'auto', block: 'start', inline: 'center' })
-    }, 500)
-    return () => clearTimeout(timer)
-  }, [matches])
-
   // A stage is "done" once every one of its slots is a decided, finished
   // fixture — not just "no live game right now" (that's also true before a
   // stage's teams are even set).
@@ -241,28 +220,6 @@ export function App() {
     }
     return best
   }, [bracket, matches])
-
-  // If nothing's live (the live-game scroll above already covers that case),
-  // scroll to the next game to be played so a finished round doesn't leave
-  // you staring at a wall of collapsed, done-and-dusted matches.
-  const stageScrolledRef = useRef(false)
-  useEffect(() => {
-    if (stageScrolledRef.current) return
-    if (!data) return // live data hasn't loaded yet — nextGame/openStage aren't trustworthy
-    if (matches.some((m) => m.status === 'IN_PLAY' || m.status === 'PAUSED')) return
-    if (!nextGame && openStage === stageOrder[0]) return // already at the top, nothing to do
-    stageScrolledRef.current = true
-    // One scroll, not three staggered ones — see the live-game scroll above
-    // for why (each re-fire could land on a different position, reading as
-    // the page visibly jumping up and down).
-    const timer = setTimeout(() => {
-      const el = nextGame
-        ? document.querySelector(`[data-slot-key="${nextGame}"]`)
-        : document.querySelector(`[data-stage="${openStage}"]`)
-      if (el) el.scrollIntoView({ behavior: 'auto', block: 'start', inline: 'center' })
-    }, 500)
-    return () => clearTimeout(timer)
-  }, [openStage, nextGame, matches, data])
 
   // Celebrate when the selected person's pick comes good.
   const myScored: Scored[] = useMemo(
