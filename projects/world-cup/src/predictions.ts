@@ -743,7 +743,14 @@ export const robbie2Predictions = buildBracketPredictions({
     ['France', 2, 'Netherlands', 1], ['Brazil', 3, 'England', 1],
     ['Spain', 2, 'United States', 0], ['Argentina', 2, 'Switzerland', 1],
   ],
-  sf: [['France', 2, 'Spain', 1], ['Argentina', 2, 'Brazil', 2, 'Argentina']],
+  // Semis corrected to a valid pairing — his own QF results (France beat
+  // Netherlands, Brazil beat England, Spain beat USA, Argentina beat
+  // Switzerland) mean the real semis have to be France v Brazil and Spain
+  // v Argentina; the original submission had France v Spain and Argentina
+  // v Brazil, which isn't a possible outcome under the real bracket.
+  // Preserved his apparent intent (France wins by 1, Argentina wins on
+  // pens) against the correct opponents instead.
+  sf: [['France', 2, 'Brazil', 1], ['Spain', 2, 'Argentina', 2, 'Argentina']],
   final: [['Argentina', 2, 'France', 1]],
 })
 
