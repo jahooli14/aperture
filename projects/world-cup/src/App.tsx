@@ -33,6 +33,16 @@ import type { LiveScorer, LiveMatch, MatchGoals, MatchOdds } from './types'
 
 const flag = (team: string) => flags[normaliseName(team)] ?? '🏳️'
 
+// Short labels for the timeline tabs — full stage names don't fit 4-across
+// on a phone screen.
+const STAGE_TAB_LABEL: Record<Stage, string> = {
+  'Round of 32': 'R32',
+  'Round of 16': 'R16',
+  'Quarter-finals': 'QF',
+  'Semi-finals': 'SF',
+  Final: 'Final',
+}
+
 type CompareEntry = {
   slug: string
   title: string
@@ -302,21 +312,39 @@ export function App() {
       <Leaderboard matches={matches} currentSlug={currentSlug} ready={data !== null} />
 
       <main>
-        {activeStages.map((stage) => (
+        {/* Round of 32 only ever appears here if it's somehow still active
+            (not the case for this tournament any more) — everything else
+            active is a timeline of tabs sharing one carousel instead of
+            each stage stacking its own accordion. */}
+        {activeStages.includes('Round of 32') && (
           <StageSection
-            key={stage}
-            stage={stage}
-            slots={bracket[stage] ?? []}
+            stage="Round of 32"
+            slots={bracket['Round of 32'] ?? []}
             weather={weather}
             matches={matches}
             odds={odds}
             goals={data?.goals}
             compareIndex={compareIndex}
             currentSlug={currentSlug}
-            defaultOpen={stage === openStage}
+            defaultOpen={openStage === 'Round of 32'}
             nextGame={nextGame}
           />
-        ))}
+        )}
+
+        {activeStages.filter((s) => s !== 'Round of 32').length > 0 && (
+          <StageTabs
+            stages={activeStages.filter((s) => s !== 'Round of 32')}
+            bracket={bracket}
+            weather={weather}
+            matches={matches}
+            odds={odds}
+            goals={data?.goals}
+            compareIndex={compareIndex}
+            currentSlug={currentSlug}
+            openStage={openStage}
+            nextGame={nextGame}
+          />
+        )}
 
         {pastStages.length > 0 && (
           <div className="past-rounds">
@@ -511,6 +539,61 @@ function Leaderboard({
 
 // --- Stage section -------------------------------------------------------
 
+// The actual swipeable row of cards for one stage — shared between the
+// accordion (past rounds) and the tab-selected single carousel (active
+// rounds).
+function GamesCarousel({
+  stage,
+  slots,
+  weather,
+  matches,
+  odds,
+  goals,
+  compareIndex,
+  currentSlug,
+  nextGame,
+}: {
+  stage: Stage
+  slots: BracketSlot[]
+  weather: Record<string, Weather>
+  matches: LiveMatch[]
+  odds: MatchOdds[]
+  goals?: MatchGoals[]
+  compareIndex: CompareEntry[]
+  currentSlug: string
+  nextGame: string | null
+}) {
+  // Keep each slot's bracket index (the compare panel keys off it), then order
+  // for display by kickoff — finished/live/next, earliest first.
+  const games = slots
+    .map((slot, index) => ({ slot, index }))
+    .sort((a, b) => {
+      const ta = slotTime(a.slot, matches, a.index)
+      const tb = slotTime(b.slot, matches, b.index)
+      return ta - tb
+    })
+
+  return (
+    <div className="cards">
+      {games.map(({ slot, index }) => (
+        <TrueGameCard
+          key={`${stage}#${index}`}
+          stage={stage}
+          slotIndex={index}
+          slot={slot}
+          weather={slot.city ? weather[slot.city] : undefined}
+          matches={matches}
+          odds={odds}
+          goals={goals}
+          compareIndex={compareIndex}
+          currentSlug={currentSlug}
+          isNextUp={nextGame === `${stage}#${index}`}
+        />
+      ))}
+    </div>
+  )
+}
+
 function StageSection({
   stage,
   slots,
@@ -536,16 +619,6 @@ function StageSection({
   nextGame: string | null
   past?: boolean
 }) {
-  // Keep each slot's bracket index (the compare panel keys off it), then order
-  // for display by kickoff — finished/live/next, earliest first.
-  const games = slots
-    .map((slot, index) => ({ slot, index }))
-    .sort((a, b) => {
-      const ta = slotTime(a.slot, matches, a.index)
-      const tb = slotTime(b.slot, matches, b.index)
-      return ta - tb
-    })
-
   const [open, setOpen] = useState(defaultOpen)
   // Live match data loads async, so the very first defaultOpen (computed
   // before any results are in) can be wrong — keep following it until the
@@ -572,25 +645,91 @@ function StageSection({
         </span>
       </button>
       {open && (
-        <div className="cards">
-          {games.map(({ slot, index }) => (
-            <TrueGameCard
-              key={`${stage}#${index}`}
-              stage={stage}
-              slotIndex={index}
-              slot={slot}
-              weather={slot.city ? weather[slot.city] : undefined}
-              matches={matches}
-              odds={odds}
-              goals={goals}
-              compareIndex={compareIndex}
-              currentSlug={currentSlug}
-              isNextUp={nextGame === `${stage}#${index}`}
-            />
-          ))}
-        </div>
+        <GamesCarousel
+          stage={stage}
+          slots={slots}
+          weather={weather}
+          matches={matches}
+          odds={odds}
+          goals={goals}
+          compareIndex={compareIndex}
+          currentSlug={currentSlug}
+          nextGame={nextGame}
+        />
       )}
     </section>
+  )
+}
+
+// Timeline tab bar (Round of 16 / Quarter-finals / Semi-finals / Final) —
+// one stage selected at a time, its games shown below in a single carousel,
+// instead of every stage stacked as its own accordion + carousel.
+function StageTabs({
+  stages,
+  bracket,
+  weather,
+  matches,
+  odds,
+  goals,
+  compareIndex,
+  currentSlug,
+  openStage,
+  nextGame,
+}: {
+  stages: Stage[]
+  bracket: Record<Stage, BracketSlot[]>
+  weather: Record<string, Weather>
+  matches: LiveMatch[]
+  odds: MatchOdds[]
+  goals?: MatchGoals[]
+  compareIndex: CompareEntry[]
+  currentSlug: string
+  openStage: Stage
+  nextGame: string | null
+}) {
+  const [selected, setSelected] = useState<Stage>(openStage)
+  // Same "keep following the computed default until the user actually picks
+  // a tab themselves" pattern as the old accordion — live data resolves
+  // async, so the first computed default can change underneath us.
+  const userSelected = useRef(false)
+  useEffect(() => {
+    if (!userSelected.current && stages.includes(openStage)) setSelected(openStage)
+  }, [openStage, stages])
+
+  const activeStage = stages.includes(selected) ? selected : stages[0]
+
+  return (
+    <div className="stage-tabs-wrap" data-stage={activeStage}>
+      <div className="stage-tabs" role="tablist">
+        {stages.map((stage) => (
+          <button
+            key={stage}
+            role="tab"
+            aria-selected={stage === activeStage}
+            className={`stage-tab ${stage === activeStage ? 'active' : ''}`}
+            onClick={() => {
+              userSelected.current = true
+              setSelected(stage)
+            }}
+          >
+            {STAGE_TAB_LABEL[stage]}
+          </button>
+        ))}
+      </div>
+      {activeStage && (
+        <GamesCarousel
+          stage={activeStage}
+          slots={bracket[activeStage] ?? []}
+          weather={weather}
+          matches={matches}
+          odds={odds}
+          goals={goals}
+          compareIndex={compareIndex}
+          currentSlug={currentSlug}
+          nextGame={nextGame}
+        />
+      )}
+    </div>
   )
 }
 
