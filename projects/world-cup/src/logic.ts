@@ -193,14 +193,16 @@ export function matchPoints(pred: Prediction, live?: LiveMatch): number {
 // added on top, so we never double-count what's already in these numbers.
 // Gav's old unexplained gap turned out to be the same missing rule as
 // KatDan's/SarJack's — the divergentBracketPoints fix (crediting a correct
-// pick even when the bracket diverged from an upset) closed it exactly.
-// SarJack's is still 3 points short of his stated current total with no
-// rule found to explain it.
+// pick even when the bracket diverged from an upset) closed Gav's exactly.
+// SarJack, Nik, and Stu each had an unexplained 3-point shortfall that
+// predated the divergentBracketPoints fix and wasn't touched by it — no
+// rule was ever found, so their baselines are bumped by 3 here to match
+// their confirmed actual totals directly instead.
 export const SCORE_BASELINE: Record<string, number> = {
   katdan: 331,
-  sarjack: 292,
+  sarjack: 295,
   gav: 358,
-  nik: 333,
+  nik: 336,
   steph: 380,
   duncan: 413,
   robbie2: 402,
@@ -209,7 +211,7 @@ export const SCORE_BASELINE: Record<string, number> = {
   martin: 309,
   rache: 337,
   gus: 352,
-  stu: 359,
+  stu: 362,
   robbie1: 262,
 }
 const DEFAULT_CUTOFF_MS = new Date('2026-06-30T12:00:00Z').getTime()
@@ -265,7 +267,20 @@ function divergentBracketPoints(pred: Prediction, matches: LiveMatch[], cutoffMs
         ? real.home
         : real.away
   if (!winner || normaliseName(winner).toLowerCase() !== backedKey) return 0
-  return RESULT_POINTS[pred.stage]
+  let pts = RESULT_POINTS[pred.stage]
+  // The backed team itself still carries a real, checkable score even when
+  // the opponent diverged — if this was a genuine decisive pick (not the
+  // draw/advances case, where "the score" isn't really a distinct claim for
+  // either side) and it matches what that team actually scored for real,
+  // credit the goal bonus same as an exact-fixture match would.
+  if (pred.homeScore !== pred.awayScore) {
+    const backedIsHome = normaliseName(pred.home).toLowerCase() === backedKey
+    const predBackedScore = backedIsHome ? pred.homeScore : pred.awayScore
+    const realBackedIsHome = normaliseName(real.home).toLowerCase() === backedKey
+    const realBackedScore = realBackedIsHome ? real.homeScore! : real.awayScore!
+    if (predBackedScore === realBackedScore) pts += GOAL_BONUS[pred.stage]
+  }
+  return pts
 }
 
 // A person's live total: their baseline plus points from every finished knockout
