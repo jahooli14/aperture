@@ -669,11 +669,21 @@ body {
    ordinary upcoming glow, same visual language as live's red ring one
    notch down in intensity (no pulse — that's reserved for actually live). */
 .card.next-up {
+  /* Above its siblings in the carousel — otherwise the next card peeking in
+     from the right (only 12px away) paints over this glow where they're
+     close together, making the ring look cut off/"hanging off" on that
+     side instead of wrapping all the way around. */
+  position: relative;
+  z-index: 1;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.26), 0 0 0 2px var(--gold),
     0 0 32px rgba(232, 182, 71, 0.5);
 }
 /* Live games really stand out: red ring, lift, glow, gold top accent */
 .card.live {
+  /* Same reasoning as .next-up above — keeps the ring/scale from being
+     covered by a peeking sibling card in the carousel. */
+  position: relative;
+  z-index: 1;
   border-top: 3px solid var(--red);
   transform: translateY(-2px) scale(1.015);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 0 0 0 2px var(--red),
