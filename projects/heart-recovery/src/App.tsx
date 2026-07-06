@@ -60,7 +60,7 @@ function App() {
 
   return (
     <div className="min-h-screen">
-      <main className="max-w-2xl mx-auto px-4 pb-12 space-y-6">
+      <main className="max-w-2xl mx-auto px-4 pb-12 space-y-4">
         <ProgressHeader
           dayNumber={dayNumber}
           phase={phase}
@@ -68,9 +68,9 @@ function App() {
           onChangeDate={() => setEditingDate(true)}
         />
         <JourneyBar dayNumber={dayNumber} phases={RECOVERY_PHASES} />
+        <MedicationReminder />
         <TodaysMove dayNumber={dayNumber} />
         <WarningSigns />
-        <MedicationReminder />
         <ActivityGuide activities={phase.activities} farm={phase.farm} />
         <Timeline phases={RECOVERY_PHASES} currentPhaseId={phase.id} />
         <SourcesFooter />
