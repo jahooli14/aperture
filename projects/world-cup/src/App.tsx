@@ -169,6 +169,26 @@ export function App() {
     []
   )
 
+  // On first load with a game in play, scroll it into view — one clean
+  // scroll (not several staggered ones, which could each land on a
+  // different position as photos/layout were still settling and read as
+  // the page visibly jumping up and down). block: 'start' rather than
+  // 'center': centering a near-full-height card ignores .card's own
+  // scroll-margin-top (set specifically so the ring clears the sticky
+  // header), so it could still land tucked under the header regardless of
+  // that margin — 'start' respects it properly.
+  const scrolledRef = useRef(false)
+  useEffect(() => {
+    if (scrolledRef.current) return
+    if (!matches.some((m) => m.status === 'IN_PLAY' || m.status === 'PAUSED')) return
+    scrolledRef.current = true
+    const timer = setTimeout(() => {
+      const el = document.querySelector('.card.live')
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'center' })
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [matches])
+
   // A stage is "done" once every one of its slots is a decided, finished
   // fixture — not just "no live game right now" (that's also true before a
   // stage's teams are even set).

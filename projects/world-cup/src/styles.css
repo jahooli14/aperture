@@ -693,8 +693,9 @@ body {
      side instead of wrapping all the way around. */
   position: relative;
   z-index: 1;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.26), 0 0 0 2px var(--gold),
-    0 0 32px rgba(232, 182, 71, 0.5);
+  /* Real border, not just a box-shadow ring — see .card.live for why. */
+  border: 4px solid var(--gold);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.26), 0 0 32px rgba(232, 182, 71, 0.5);
 }
 /* Live games really stand out: red ring, lift, glow, gold top accent */
 .card.live {
@@ -702,25 +703,25 @@ body {
      covered by a peeking sibling card in the carousel. */
   position: relative;
   z-index: 1;
-  border-top: 5px solid var(--red);
+  /* A real border, not just a box-shadow ring — box-shadow rendering next
+     to .card-extra's backdrop-filter has been unreliable on at least one
+     real device (reported missing at the top repeatedly, despite
+     rendering correctly in every automated/headless check run against
+     it). An actual border is basic box-model rendering with no
+     compositing ambiguity, so it can't have that failure mode. Kept the
+     box-shadow too, for the glow — border is the part that must not fail. */
+  border: 5px solid var(--red);
   transform: translateY(-2px) scale(1.015);
-  /* Ring widened from 2px to 4px — at 2px it read as basically invisible
-     against a busy match photo (thin line, easy to miss at a glance or on
-     a real phone's rendering), reported several times as "missing" even
-     though it was technically present. */
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 0 0 0 4px var(--red),
-    0 0 26px rgba(216, 58, 74, 0.55);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 0 0 26px rgba(216, 58, 74, 0.55);
   animation: liveGlow 2.2s ease-in-out infinite;
 }
 @keyframes liveGlow {
   0%,
   100% {
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 0 0 0 4px var(--red),
-      0 0 22px rgba(216, 58, 74, 0.5);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 0 0 22px rgba(216, 58, 74, 0.5);
   }
   50% {
-    box-shadow: 0 10px 34px rgba(0, 0, 0, 0.32), 0 0 0 4px var(--red),
-      0 0 44px rgba(216, 58, 74, 0.85);
+    box-shadow: 0 10px 34px rgba(0, 0, 0, 0.32), 0 0 44px rgba(216, 58, 74, 0.85);
   }
 }
 .card.live .bigscore.live {
