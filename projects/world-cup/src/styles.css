@@ -933,9 +933,11 @@ body {
   border-top-color: transparent;
 }
 /* Three columns: name (fixed) | matchup (left-aligned, flexes) | score (right).
-   Fixed name width makes every matchup start at the same x, so they line up. */
+   Fixed name width makes every matchup start at the same x, so they line up.
+   Wide enough for "Robbie2.0"/"Robbie1.0" (9 characters) — at 4.8em these
+   were truncating to "Robbie...", the only names that didn't fit. */
 .cmp-name {
-  flex: 0 0 4.8em;
+  flex: 0 0 5.3em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

@@ -328,21 +328,30 @@ export function App() {
 
       {mainTab === 'games' && (
         <main>
-          {/* One unified timeline — every stage is a tab, finished ones just
-              styled grey instead of living in a separate section. */}
-          <StageTabs
-            stages={stageOrder}
-            pastStages={pastStages}
-            bracket={bracket}
-            weather={weather}
-            matches={matches}
-            odds={odds}
-            goals={data?.goals}
-            compareIndex={compareIndex}
-            currentSlug={currentSlug}
-            openStage={openStage}
-            nextGame={nextGame}
-          />
+          {/* Doesn't mount StageTabs until live data has actually arrived —
+              openStage defaults to Round of 32 while matches is still empty
+              (there's genuinely no way to know the real current stage
+              before the data exists), so mounting early meant briefly
+              showing R32 before snapping to the real answer once data
+              loaded. Waiting avoids ever showing that wrong intermediate
+              state instead of just reacting to it faster. */}
+          {data ? (
+            <StageTabs
+              stages={stageOrder}
+              pastStages={pastStages}
+              bracket={bracket}
+              weather={weather}
+              matches={matches}
+              odds={odds}
+              goals={data?.goals}
+              compareIndex={compareIndex}
+              currentSlug={currentSlug}
+              openStage={openStage}
+              nextGame={nextGame}
+            />
+          ) : (
+            <p className="empty">Loading live scores…</p>
+          )}
         </main>
       )}
 

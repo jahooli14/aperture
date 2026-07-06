@@ -731,26 +731,32 @@ export const stephPredictions = buildBracketPredictions({
   final: [['France', 2, 'Brazil', 1]],
 })
 
+// Every other person's r16/qf/sf arrays are in canonical bracket-slot order
+// (matching R32 slot pairing 0&1→R16 slot0, 2&3→slot1, etc.) — that's what
+// lets the compare panel line each person's pick up against the right
+// fixture by array position. Robbie2.0 has no R32 picks to anchor that
+// order, and his original submission listed r16/qf in a different sequence
+// (e.g. Portugal v Spain was his 5th R16 entry, not the 3rd/canonical
+// position) — so every stage from R16 on was quietly showing against the
+// wrong fixture in Compare picks. Reordered to canonical position; no pick
+// content changed. (This also reverts an earlier "fix" to his semis made
+// during this same investigation — that fix used his own scrambled QF
+// order to judge whether the semis were a valid pairing, and concluded
+// wrongly that they weren't; his original semis were correct all along
+// once mapped to canonical slots.)
 export const robbie2Predictions = buildBracketPredictions({
   r32: [],
   r16: [
-    ['Canada', 1, 'Netherlands', 2], ['Germany', 1, 'France', 2],
-    ['Brazil', 2, 'Norway', 0], ['England', 2, 'Mexico', 1],
+    ['Germany', 1, 'France', 2], ['Canada', 1, 'Netherlands', 2],
     ['Spain', 2, 'Portugal', 1], ['Belgium', 1, 'United States', 2],
+    ['Brazil', 2, 'Norway', 0], ['England', 2, 'Mexico', 1],
     ['Argentina', 3, 'Australia', 1], ['Colombia', 1, 'Switzerland', 2],
   ],
   qf: [
-    ['France', 2, 'Netherlands', 1], ['Brazil', 3, 'England', 1],
-    ['Spain', 2, 'United States', 0], ['Argentina', 2, 'Switzerland', 1],
+    ['France', 2, 'Netherlands', 1], ['Spain', 2, 'United States', 0],
+    ['Brazil', 3, 'England', 1], ['Argentina', 2, 'Switzerland', 1],
   ],
-  // Semis corrected to a valid pairing — his own QF results (France beat
-  // Netherlands, Brazil beat England, Spain beat USA, Argentina beat
-  // Switzerland) mean the real semis have to be France v Brazil and Spain
-  // v Argentina; the original submission had France v Spain and Argentina
-  // v Brazil, which isn't a possible outcome under the real bracket.
-  // Preserved his apparent intent (France wins by 1, Argentina wins on
-  // pens) against the correct opponents instead.
-  sf: [['France', 2, 'Brazil', 1], ['Spain', 2, 'Argentina', 2, 'Argentina']],
+  sf: [['France', 2, 'Spain', 1], ['Argentina', 2, 'Brazil', 2, 'Argentina']],
   final: [['Argentina', 2, 'France', 1]],
 })
 
