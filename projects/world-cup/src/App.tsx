@@ -724,6 +724,10 @@ function StageTabs({
       </div>
       {activeStage && (
         <GamesCarousel
+          // Forces a fresh mount per stage — without this, switching tabs
+          // reused the same instance, carrying over stale scroll position
+          // and dot-index state from whichever stage was open before.
+          key={activeStage}
           stage={activeStage}
           slots={bracket[activeStage] ?? []}
           weather={weather}

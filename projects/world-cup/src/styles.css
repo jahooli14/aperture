@@ -616,6 +616,9 @@ body {
 .card {
   --card-pad-x: 16px;
   --card-pad-y: 16px;
+  /* Keeps the auto-scroll-into-view (live/next-up cards) from tucking the
+     card's top edge — and its gold/red ring — behind the sticky header. */
+  scroll-margin-top: 72px;
   position: relative;
   overflow: hidden;
   /* Dark, not the light frosted --card tint — every piece of content inside

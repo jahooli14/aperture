@@ -203,16 +203,23 @@ async function fetchScorers(key: string | undefined): Promise<LiveScorer[]> {
 export default async function handler(_req: VercelRequest, res: VercelResponse) {
   const key = process.env.FOOTBALL_DATA_API_KEY
 
-  // Edge-cache 8s; BBC is a free CDN with no rate limit, so we can refresh often
-  // to keep the live minute current. Client keeps last-good data between polls.
-  res.setHeader('Cache-Control', 's-maxage=8, stale-while-revalidate=20')
-
   try {
     const [{ matches, goals }, scorers] = await Promise.all([fetchBbc(), fetchScorers(key)])
 
-    // Don't cache an empty result for long — retry soon.
+    // Short cache only while something's actually live (need the live minute
+    // to stay current); otherwise cache much longer. Short-caching this
+    // unconditionally meant almost every request during the long stretches
+    // with nothing live still hit a cold function instance (~2s), instead
+    // of the ~60ms a warm one takes — most of the reported "slow to load"
+    // was this, not anything client-side.
     if (matches.length === 0) {
       res.setHeader('Cache-Control', 's-maxage=5, stale-while-revalidate=10')
+    } else {
+      const live = matches.some((m) => m.status === 'IN_PLAY' || m.status === 'PAUSED')
+      res.setHeader(
+        'Cache-Control',
+        live ? 's-maxage=8, stale-while-revalidate=20' : 's-maxage=45, stale-while-revalidate=90'
+      )
     }
     res.status(200).json({ configured: true, matches, scorers, goals })
   } catch {
