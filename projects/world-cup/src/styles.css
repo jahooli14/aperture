@@ -513,6 +513,10 @@ body {
   background: var(--on-dark-3);
   color: var(--emerald-deep);
 }
+.stage-past .stage-name {
+  color: var(--on-dark-3);
+  font-weight: 600;
+}
 .past-rounds {
   margin-top: 8px;
 }
@@ -1176,9 +1180,6 @@ body {
 
 /* ---- Responsive ---- */
 @media (min-width: 640px) {
-  .header h1 {
-    font-size: 38px;
-  }
   .cards {
     /* The swipe carousel is a touch-first pattern — wider viewports get the
        original 2-up grid back instead of a click-and-drag horizontal drag. */
@@ -1200,13 +1201,6 @@ body {
 @media (max-width: 480px) {
   .app {
     padding: 0 12px 48px;
-  }
-  .header {
-    padding: 18px 0 12px;
-  }
-  .header h1 {
-    font-size: 27px;
-    margin: 12px 0 4px;
   }
   .cards {
     gap: 10px;

@@ -446,21 +446,11 @@ const LB_COLLAPSED_COUNT = 3
 
 const MEDALS = ['🥇', '🥈', '🥉']
 
-// Hand-picked, deliberately distinct on a dark background — a hashed hue
-// produced muddy/clashing/repeated colours (two people landing on near-
-// identical greens). Gold's reserved for the leader/leaderboard accent, so
-// it's left out of this set to avoid competing with that.
-const AVATAR_PALETTE = [
-  '#e05c5c', '#4a90d9', '#5cb85c', '#a566c9', '#e07b39',
-  '#3fb8af', '#d9527a', '#7d8fd4', '#c9973f', '#5c8fe0',
-  '#c15c9e', '#4fae6e',
-]
-const avatarIndex: Record<string, number> = {}
-Object.keys(people).forEach((slug, i) => {
-  avatarIndex[slug] = i
-})
-function avatarColor(slug: string): string {
-  return AVATAR_PALETTE[(avatarIndex[slug] ?? 0) % AVATAR_PALETTE.length]
+// One uniform colour for every avatar circle — per-person colour-coding
+// wasn't wanted after all; this still reads as an avatar (initial in a
+// filled circle) without the varied-palette identity layer.
+function avatarColor(_slug: string): string {
+  return '#1a7a4a'
 }
 
 function Leaderboard({
