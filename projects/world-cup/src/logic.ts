@@ -264,13 +264,17 @@ function divergentBracketPoints(pred: Prediction, matches: LiveMatch[], cutoffMs
       : real.homeScore! > real.awayScore!
         ? real.home
         : real.away
-  if (!winner || normaliseName(winner).toLowerCase() !== backedKey) return 0
-  let pts = RESULT_POINTS[pred.stage]
-  // The backed team itself still carries a real, checkable score even when
-  // the opponent diverged — if this was a genuine decisive pick (not the
-  // draw/advances case, where "the score" isn't really a distinct claim for
-  // either side) and it matches what that team actually scored for real,
-  // credit the goal bonus same as an exact-fixture match would.
+  const backedWon = !!winner && normaliseName(winner).toLowerCase() === backedKey
+  // Result points only when the backed team actually won (advanced) for real.
+  let pts = backedWon ? RESULT_POINTS[pred.stage] : 0
+  // The backed team itself still carries a real, checkable score even when the
+  // opponent diverged — and even if the backed team lost. If this was a
+  // decisive pick (not the draw/advances case, where "the score" isn't a
+  // distinct claim for either side) and the backed team's predicted score
+  // matches what they really scored, credit the goal bonus. E.g. predicted
+  // USA 1-0 over Senegal but the real game was USA 1-4 Belgium: USA still
+  // qualified and USA's "1" is correct, so the bonus applies even though the
+  // USA win never happened.
   if (pred.homeScore !== pred.awayScore) {
     const backedIsHome = normaliseName(pred.home).toLowerCase() === backedKey
     const predBackedScore = backedIsHome ? pred.homeScore : pred.awayScore
