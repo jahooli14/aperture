@@ -794,28 +794,30 @@ export interface Person {
   goldenBoot: { player: string; team: string }
 }
 
+// Each person's Golden Boot (top scorer) pick for the tournament.
+const MBAPPE = { player: 'Kylian Mbappé', team: 'France' }
 const KANE = { player: 'Harry Kane', team: 'England' }
+const YAMAL = { player: 'Lamine Yamal', team: 'Spain' }
+const OYARZABAL = { player: 'Mikel Oyarzabal', team: 'Spain' }
+const DOUE = { player: 'Désiré Doué', team: 'France' }
+const MESSI = { player: 'Lionel Messi', team: 'Argentina' }
+const KAKUTA = { player: 'Gaël Kakuta', team: 'DR Congo' }
 
 export const people: Record<string, Person> = {
   katdan: { slug: 'katdan', title: 'KatDan', predictions: katdanPredictions, goldenBoot: KANE },
   sarjack: { slug: 'sarjack', title: 'SarJack', predictions: sarjackPredictions, goldenBoot: KANE },
-  gav: {
-    slug: 'gav',
-    title: 'Gav',
-    predictions: gavinPredictions,
-    goldenBoot: { player: 'Kylian Mbappé', team: 'France' },
-  },
-  anju: { slug: 'anju', title: 'AnnaJules', predictions: anjuPredictions, goldenBoot: KANE },
+  gav: { slug: 'gav', title: 'Gav', predictions: gavinPredictions, goldenBoot: MBAPPE },
+  anju: { slug: 'anju', title: 'AnnaJules', predictions: anjuPredictions, goldenBoot: MBAPPE },
   nik: { slug: 'nik', title: 'Nik', predictions: nikPredictions, goldenBoot: KANE },
-  james: { slug: 'james', title: 'James', predictions: jamesPredictions, goldenBoot: KANE },
-  martin: { slug: 'martin', title: 'Martin', predictions: martinPredictions, goldenBoot: KANE },
-  rache: { slug: 'rache', title: 'Rache', predictions: rachePredictions, goldenBoot: KANE },
-  gus: { slug: 'gus', title: 'Gus', predictions: gusPredictions, goldenBoot: KANE },
-  stu: { slug: 'stu', title: 'Stu', predictions: stuPredictions, goldenBoot: KANE },
-  duncan: { slug: 'duncan', title: 'Duncan', predictions: duncanPredictions, goldenBoot: KANE },
-  steph: { slug: 'steph', title: 'Steph', predictions: stephPredictions, goldenBoot: KANE },
-  robbie1: { slug: 'robbie1', title: 'Robbie1.0', predictions: robbie1Predictions, goldenBoot: KANE },
-  robbie2: { slug: 'robbie2', title: 'Robbie2.0', predictions: robbie2Predictions, goldenBoot: KANE },
+  james: { slug: 'james', title: 'James', predictions: jamesPredictions, goldenBoot: YAMAL },
+  martin: { slug: 'martin', title: 'Martin', predictions: martinPredictions, goldenBoot: DOUE },
+  rache: { slug: 'rache', title: 'Rache', predictions: rachePredictions, goldenBoot: YAMAL },
+  gus: { slug: 'gus', title: 'Gus', predictions: gusPredictions, goldenBoot: MBAPPE },
+  stu: { slug: 'stu', title: 'Stu', predictions: stuPredictions, goldenBoot: MBAPPE },
+  duncan: { slug: 'duncan', title: 'Duncan', predictions: duncanPredictions, goldenBoot: OYARZABAL },
+  steph: { slug: 'steph', title: 'Steph', predictions: stephPredictions, goldenBoot: MESSI },
+  robbie1: { slug: 'robbie1', title: 'Robbie1.0', predictions: robbie1Predictions, goldenBoot: KAKUTA },
+  robbie2: { slug: 'robbie2', title: 'Robbie2.0', predictions: robbie2Predictions, goldenBoot: MBAPPE },
 }
 
 // Pick whose predictions to show from the URL path (e.g. /sarjack). Defaults to KatDan.
