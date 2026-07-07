@@ -422,9 +422,23 @@ function Leaderboard({
   // wrong. Show a placeholder instead of a number that's about to jump.
   const rows = useMemo(() => {
     return Object.values(people)
-      .map((p) => ({ slug: p.slug, title: p.title, points: personTotal(p, matches) }))
+      .map((p) => ({
+        slug: p.slug,
+        title: p.title,
+        points: personTotal(p, matches),
+        goldenBoot: p.goldenBoot,
+      }))
       .sort((a, b) => (ready ? b.points - a.points || a.title.localeCompare(b.title) : 0))
   }, [matches, ready])
+
+  // A person's Golden Boot pick is still "possible" while their player's team
+  // is still in the tournament — an eliminated player's goal count is frozen,
+  // so once knocked out they can't climb past players still scoring.
+  const eliminated = useMemo(() => eliminatedTeams(matches), [matches])
+  const bootPossible = (team: string) => !eliminated.has(normaliseName(team).toLowerCase())
+  // Short display name for the boot column — just the surname (last word),
+  // so "Kylian Mbappé" → "Mbappé" and it fits the row.
+  const lastName = (full: string) => full.trim().split(/\s+/).slice(-1)[0]
 
   // Competition ranking — a tie shares the same rank number (the next rank
   // then skips ahead, e.g. 1, 2, 2, 4 not 1, 2, 2, 3), with the alphabetical
@@ -534,14 +548,33 @@ function Leaderboard({
         {ready && move !== 0 && (
           <span
             className={`lb-move ${move > 0 ? 'up' : 'down'}`}
-            title={`${move > 0 ? 'Up' : 'Down'} ${Math.abs(move)} since the last game`}
+            title={`${move > 0 ? 'Up' : 'Down'} ${Math.abs(move)} place${Math.abs(move) === 1 ? '' : 's'} since the last game`}
           >
             {move > 0 ? '▲' : '▼'}
-            {Math.abs(move)}
           </span>
         )}
-        <span className="lb-pts">{ready ? r.points : '···'}</span>
-        <span className="lb-gap">{!ready || isLeader ? '' : `−${leaderPts - r.points}`}</span>
+        <span className="lb-pts">
+          {ready ? r.points : '···'}
+          {/* Points behind the leader, tucked under the score so it keeps its
+              spot without needing a whole extra column on a phone. */}
+          {ready && !isLeader && <small className="lb-behind">−{leaderPts - r.points}</small>}
+        </span>
+        {/* Golden Boot pick — its own column on the right. Boot icon + team
+            flag + surname, gold while still possible, greyed + struck once
+            their player's out. */}
+        <span
+          className={`lb-boot ${bootPossible(r.goldenBoot.team) ? 'alive' : 'out'}`}
+          title={
+            bootPossible(r.goldenBoot.team)
+              ? `Golden Boot pick — still possible`
+              : `Golden Boot pick — ${r.goldenBoot.team} out, no longer possible`
+          }
+        >
+          <span className="boot-icon" aria-hidden="true">
+            👟
+          </span>{' '}
+          {flag(r.goldenBoot.team)} {lastName(r.goldenBoot.player)}
+        </span>
       </li>
     )
   }
@@ -555,6 +588,10 @@ function Leaderboard({
             : `You've dropped to ${movement.to}${movement.to === 2 ? 'nd' : movement.to === 3 ? 'rd' : 'th'} since you last checked.`}
         </p>
       )}
+      <p className="lb-boot-legend">
+        <span aria-hidden="true">👟</span> Golden Boot pick — <span className="alive">gold</span>{' '}
+        still possible, <span className="out">greyed</span> if their player's out
+      </p>
       <ol className="lb-list">
         {visible.map((r, i) => renderRow(r, i))}
         {showMeSeparately && (
@@ -645,28 +682,38 @@ function GamesCarousel({
     return () => el.removeEventListener('scroll', onScroll)
   }, [games.length])
 
-  // "Go to the live game" — centre the live card within this track by setting
+  // On load, centre the most relevant card within this track by setting
   // scrollLeft directly (deterministic), rather than the old page-level
   // scrollIntoView({inline:'center'}) which was engine-unreliable and drove a
-  // vertical page jump that clipped the card's ring. If no card is live the
-  // track just stays at its natural start.
-  const liveDisplayIndex = games.findIndex(({ slot }) => {
-    const live = findLive(slot.home, slot.away, matches)
-    return !!live && phaseOf(live.status) === 'live'
-  })
+  // vertical page jump that clipped the card's ring. Priority: a live game
+  // if one's in play; otherwise the next game to be played (nextGame), so
+  // e.g. with nothing live it lands on this evening's upcoming fixture. If
+  // neither is in this stage, the track stays at its natural start.
+  const targetDisplayIndex = (() => {
+    const liveIdx = games.findIndex(({ slot }) => {
+      const live = findLive(slot.home, slot.away, matches)
+      return !!live && phaseOf(live.status) === 'live'
+    })
+    if (liveIdx >= 0) return liveIdx
+    if (nextGame) {
+      const upNext = games.findIndex(({ index }) => `${stage}#${index}` === nextGame)
+      if (upNext >= 0) return upNext
+    }
+    return -1
+  })()
   const centredRef = useRef(false)
   useEffect(() => {
     const el = trackRef.current
-    if (!el || liveDisplayIndex < 0 || centredRef.current) return
+    if (!el || targetDisplayIndex < 0 || centredRef.current) return
     const t = setTimeout(() => {
-      const card = el.querySelectorAll<HTMLElement>('.card')[liveDisplayIndex]
+      const card = el.querySelectorAll<HTMLElement>('.card')[targetDisplayIndex]
       if (!card) return
       centredRef.current = true
       const target = card.offsetLeft - (el.clientWidth - card.offsetWidth) / 2
       el.scrollTo({ left: Math.max(0, target), behavior: 'smooth' })
     }, 300)
     return () => clearTimeout(t)
-  }, [liveDisplayIndex])
+  }, [targetDisplayIndex])
 
   // One-time "you can swipe" nudge — a brief translateX bounce of the whole
   // card track, once per session, after the first multi-card carousel has

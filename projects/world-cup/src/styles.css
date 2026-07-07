@@ -355,8 +355,60 @@ body {
   font-weight: 700;
   color: #fff;
 }
+/* Golden Boot pick — its own column on the far right of the row. Boot icon
+   + flag + surname, gold while still possible, greyed + struck once out. */
+.lb-boot {
+  /* Fixed width so the points/behind columns to its left stay aligned
+     rather than shifting with each pick's label length. */
+  flex: 0 0 6.6rem;
+  margin-left: 4px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lb-boot.alive {
+  color: var(--gold-soft);
+}
+.lb-boot.out {
+  color: rgba(255, 255, 255, 0.32);
+  text-decoration: line-through;
+  text-decoration-color: rgba(255, 255, 255, 0.4);
+}
+/* The 👟 emoji renders as a grey sneaker — tint it gold so it reads as a
+   Golden Boot. sepia+saturate+hue-rotate keeps the shading while pushing
+   the colour to amber. Eliminated picks get a plain grey boot instead. */
+.boot-icon {
+  display: inline-block;
+}
+.lb-boot.alive .boot-icon {
+  filter: sepia(1) saturate(6) hue-rotate(2deg) brightness(1.05);
+}
+.lb-boot.out .boot-icon {
+  filter: grayscale(1) brightness(0.85);
+}
+.lb-boot-legend {
+  margin: 0;
+  padding: 8px 16px 4px;
+  font-size: 11px;
+  color: var(--on-dark-2);
+}
+.lb-boot-legend .alive {
+  color: var(--gold-soft);
+  font-weight: 700;
+}
+.lb-boot-legend .out {
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 700;
+}
 .lb-pts {
   flex: 0 0 3.4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.05;
   text-align: right;
   font-family: 'Sora', sans-serif;
   font-size: 17px;
@@ -367,6 +419,12 @@ body {
 .lb-row.leader .lb-pts {
   font-size: 21px;
   color: var(--gold-soft);
+}
+/* Points behind the leader, under the score. */
+.lb-behind {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--on-dark-2);
 }
 .lb-gap {
   flex: 0 0 3rem;
