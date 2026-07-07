@@ -174,60 +174,58 @@ const GOAL_BONUS: Record<Stage, number> = {
 // — including a predicted draw where the team you backed actually went through
 // (getting the shootout winner right earns the base points, no separate bonus).
 export function matchPoints(pred: Prediction, live?: LiveMatch): number {
-  const { result } = scorePrediction(pred, live)
-  if (result !== 'exact' && result !== 'outcome') return 0
   if (!live || live.homeScore == null || live.awayScore == null) return 0
+  const { result } = scorePrediction(pred, live)
   const swapped = normaliseName(live.home).toLowerCase() !== normaliseName(pred.home).toLowerCase()
   const actHome = swapped ? live.awayScore : live.homeScore
   const actAway = swapped ? live.homeScore : live.awayScore
-  let pts = RESULT_POINTS[pred.stage]
+  let pts = 0
+  // Result points only when the outcome (or backed advancer) is right.
+  if (result === 'exact' || result === 'outcome') pts += RESULT_POINTS[pred.stage]
+  // Per-team goal bonus for each team whose exact score you nailed — awarded
+  // even when the overall outcome was wrong. E.g. predicted 1-0 to USA, actual
+  // 1-4: the USA "1" is still a correct team score, so it earns that team's
+  // bonus even though the win never happened.
   const bonus = GOAL_BONUS[pred.stage]
   if (pred.homeScore === actHome) pts += bonus
   if (pred.awayScore === actAway) pts += bonus
   return pts
 }
 
-// Standings baseline: each person's running total up to lunchtime 30 Jun 2026 —
-// i.e. group stage plus the four R32 games that had finished before the Ivory
-// Coast v Norway kick-off. Live points for every game from that one onward get
-// added on top, so we never double-count what's already in these numbers.
-// Gav's old unexplained gap turned out to be the same missing rule as
-// KatDan's/SarJack's — the divergentBracketPoints fix (crediting a correct
-// pick even when the bracket diverged from an upset) closed Gav's exactly.
-// SarJack, Nik, and Stu each had an unexplained 3-point shortfall that
-// predated the divergentBracketPoints fix and wasn't touched by it — no
-// rule was ever found, so their baselines are bumped by 3 here to match
-// their confirmed actual totals directly instead.
+// Standings baseline: each person's confirmed total as of the evening of
+// 6 Jul 2026 — i.e. BEFORE the Portugal 0-1 Spain (6 Jul 19:00) and
+// United States 1-4 Belgium (7 Jul 00:00) games. These are the numbers the
+// owner gave directly, so they're taken as ground truth; only those two
+// games (and anything finishing after them) get scored live on top, using
+// the current rules. Re-baselining to here was deliberate: the goal-bonus
+// rule was corrected (a correct team score now earns its bonus even on a
+// wrong outcome), and applying that retroactively to earlier games would
+// have double-counted against totals that were previously reconciled by
+// hand — so history is frozen into these numbers and the fix only affects
+// games from the cutoff onward.
 export const SCORE_BASELINE: Record<string, number> = {
-  katdan: 331,
-  sarjack: 295,
-  gav: 358,
-  nik: 336,
-  steph: 380,
-  duncan: 413,
-  robbie2: 402,
-  anju: 342,
-  james: 274,
-  martin: 309,
-  rache: 337,
-  gus: 352,
-  stu: 362,
-  robbie1: 262,
+  gus: 451,
+  gav: 445,
+  rache: 438,
+  anju: 429,
+  katdan: 429,
+  nik: 423,
+  duncan: 420,
+  stu: 418,
+  robbie2: 409,
+  martin: 404,
+  steph: 387,
+  sarjack: 383,
+  james: 383,
+  robbie1: 346,
 }
-const DEFAULT_CUTOFF_MS = new Date('2026-06-30T12:00:00Z').getTime()
+// Cut off between Mexico 2-3 England (6 Jul 01:00, in the baseline) and
+// Portugal v Spain (6 Jul 19:00, the first game to score on top). Uniform
+// for everyone now that the baseline is a single confirmed snapshot.
+const DEFAULT_CUTOFF_MS = new Date('2026-07-06T12:00:00Z').getTime()
 
-// People with no Round of 32 predictions on record (they only ever gave us
-// Round of 16 onward) can't have a 30 June baseline worked out from real
-// results — there's nothing to reconcile it against. Their whole current
-// total becomes the baseline instead, cut off from today, so only games
-// finishing from here on add anything further.
-const CUTOFF_OVERRIDE: Record<string, number> = {
-  steph: new Date('2026-07-05T23:59:59Z').getTime(),
-  duncan: new Date('2026-07-05T23:59:59Z').getTime(),
-  robbie2: new Date('2026-07-05T23:59:59Z').getTime(),
-}
-function cutoffFor(slug: string): number {
-  return CUTOFF_OVERRIDE[slug] ?? DEFAULT_CUTOFF_MS
+function cutoffFor(_slug: string): number {
+  return DEFAULT_CUTOFF_MS
 }
 
 // Credit for backing the right team to advance even when the bracket diverged

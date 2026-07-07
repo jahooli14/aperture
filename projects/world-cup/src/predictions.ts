@@ -748,7 +748,10 @@ export const robbie2Predictions = buildBracketPredictions({
   r32: [],
   r16: [
     ['Germany', 1, 'France', 2], ['Canada', 1, 'Netherlands', 2],
-    ['Spain', 2, 'Portugal', 1], ['Belgium', 1, 'United States', 2],
+    // Entered as 1-2 Spain after extra time; his 90-min guess is taken as
+    // 1-1 with Spain going through, so against the real 0-1 Spain win he
+    // scores the R16 result (Spain advanced) plus the bonus for Spain's 1.
+    ['Portugal', 1, 'Spain', 1, 'Spain'], ['Belgium', 1, 'United States', 2],
     ['Brazil', 2, 'Norway', 0], ['England', 2, 'Mexico', 1],
     ['Argentina', 3, 'Australia', 1], ['Colombia', 1, 'Switzerland', 2],
   ],
