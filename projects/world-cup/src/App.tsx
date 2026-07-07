@@ -143,7 +143,7 @@ export function App() {
     } catch {
       /* no storage */
     }
-    document.title = 'World Cup 2026'
+    document.title = 'Merelie World Cup 2026'
   }, [currentSlug])
 
   const matches = data?.matches ?? []
