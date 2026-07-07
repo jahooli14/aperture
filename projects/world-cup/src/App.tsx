@@ -1229,25 +1229,24 @@ function TrueGameCard({
               }
 
               const decisive = sc1 != null && sc2 != null && sc1 !== sc2
-              // Who this person backed to go through: the higher score, or, on
-              // a drawn pick, the team they named to advance (on penalties).
-              // The same team always gets both the gold highlight AND the 🏆 —
-              // one simple, consistent rule for "this is the one I've got
-              // winning," whether it's a normal win or a penalty win.
+              // Who this person backed to go through (their predicted winner):
+              // the higher score, or, on a drawn pick, the team they named to
+              // advance on penalties.
               const winner = decisive ? (sc1! > sc2! ? t1 : t2) : pick?.advances
-              // flag + code. The team you backed to go through is always gold
-              // (so you can always see who you picked), and gets a red
-              // strikethrough on top of the gold if they've been knocked out
-              // ("I had them winning, but they're out"). No trophies.
+              // Team display: GOLD = this team is actually in the real fixture
+              // (they correctly have it here); a ⭐ sits by the team they
+              // predicted to win; a knocked-out team is struck through.
               const renderTeam = (name: string) => {
                 const out = eliminated.has(normaliseName(name).toLowerCase())
-                const isPick = !!winner && sameName(name, winner) // backed to go through
+                const isThere = known && (sameName(name, home!) || sameName(name, away!))
+                const isWinPick = !!winner && sameName(name, winner)
                 return (
                   <span>
                     {flag(name)}{' '}
-                    <span className={`${out ? 'cmp-out' : ''} ${isPick ? 'cmp-advancer' : ''}`}>
+                    <span className={`${out ? 'cmp-out' : ''} ${isThere ? 'cmp-advancer' : ''}`}>
                       {teamCode(name)}
                     </span>
+                    {isWinPick && ' ⭐'}
                   </span>
                 )
               }
@@ -1263,17 +1262,6 @@ function TrueGameCard({
                             {renderTeam(t1)} <span className="cmp-v">v</span> {renderTeam(t2)}
                           </>
                         )}
-                      </span>
-                      {/* Fixed columns so stars line up under stars and trophies
-                          under trophies across every row. */}
-                      <span className="cmp-star" title={r === 'exact' ? 'Exact score' : undefined}>
-                        {r === 'exact' ? '⭐' : ''}
-                      </span>
-                      <span
-                        className="cmp-trophy"
-                        title={r === 'exact' || r === 'outcome' ? 'Right result' : undefined}
-                      >
-                        {r === 'exact' || r === 'outcome' ? '🏆' : ''}
                       </span>
                       <span className={`cmp-num ${cls}`}>
                         {sc1}–{sc2}
