@@ -348,6 +348,10 @@ function prevStage(s: Stage): Stage | undefined {
 // a draw → the side the feed marks as advancing (penalty shootout winner).
 function koOutcome(m: LiveMatch): { winner: string; loser: string } | null {
   if (phaseOf(m.status) !== 'final' || m.homeScore == null || m.awayScore == null) return null
+  // Only knockout rounds eliminate — losing a group-stage game doesn't knock
+  // you out (the feed carries group games too). Without this, a team that lost
+  // in the group but went through would be wrongly marked as eliminated.
+  if (/group/i.test(m.stage || '')) return null
   if (m.homeScore !== m.awayScore) {
     return m.homeScore > m.awayScore
       ? { winner: m.home, loser: m.away }

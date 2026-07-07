@@ -1244,9 +1244,13 @@ function TrueGameCard({
               const trophyWorthy = champion ?? pensAdv
               const winner = decisive ? (sc1! > sc2! ? t1 : t2) : trophyWorthy
               const renderTeam = (name: string) => {
-                const wins = !!winner && sameName(name, winner)
-                const trophy = !!trophyWorthy && sameName(name, trophyWorthy)
                 const out = eliminated.has(normaliseName(name).toLowerCase())
+                // A knocked-out team can't be "going through" — don't gold- or
+                // trophy-highlight it even if this person backed it to advance.
+                // (Otherwise it reads as a crossed-out winner, e.g. Duncan's
+                // USA pick showing gold and struck through at once.)
+                const wins = !!winner && sameName(name, winner) && !out
+                const trophy = !!trophyWorthy && sameName(name, trophyWorthy) && !out
                 return (
                   <span>
                     {flag(name)}{' '}
