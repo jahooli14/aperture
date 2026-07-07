@@ -1228,36 +1228,26 @@ function TrueGameCard({
                 }
               }
 
-              const isFinal = stage === 'Final'
               const decisive = sc1 != null && sc2 != null && sc1 !== sc2
-              const champion = isFinal ? (decisive ? (sc1! > sc2! ? t1 : t2) : pick?.advances) : undefined
-              const pensAdv = !isFinal && !decisive ? pick?.advances : undefined
-              // One advancer per row: the Final's champion (however they won —
-              // still the trophy, penalties or not), or a drawn pick's backed
-              // team in any other round. 🏆 either way, plus a bold/gold
-              // highlight on the name itself so it doesn't rely on the emoji
-              // alone to read clearly.
-              // Every winning pick gets the gold/bold highlight, decisive or
-              // not — the 🏆 stays reserved for the Final's champion or a
-              // penalties call, where the scoreline alone doesn't already
-              // make the winner obvious.
-              const trophyWorthy = champion ?? pensAdv
-              const winner = decisive ? (sc1! > sc2! ? t1 : t2) : trophyWorthy
+              // Who this person backed to go through: the higher score, or, on
+              // a drawn pick, the team they named to advance (on penalties).
+              // The same team always gets both the gold highlight AND the 🏆 —
+              // one simple, consistent rule for "this is the one I've got
+              // winning," whether it's a normal win or a penalty win.
+              const winner = decisive ? (sc1! > sc2! ? t1 : t2) : pick?.advances
+              // flag + code. The team you backed to go through is always gold
+              // (so you can always see who you picked), and gets a red
+              // strikethrough on top of the gold if they've been knocked out
+              // ("I had them winning, but they're out"). No trophies.
               const renderTeam = (name: string) => {
                 const out = eliminated.has(normaliseName(name).toLowerCase())
-                // A knocked-out team can't be "going through" — don't gold- or
-                // trophy-highlight it even if this person backed it to advance.
-                // (Otherwise it reads as a crossed-out winner, e.g. Duncan's
-                // USA pick showing gold and struck through at once.)
-                const wins = !!winner && sameName(name, winner) && !out
-                const trophy = !!trophyWorthy && sameName(name, trophyWorthy) && !out
+                const isPick = !!winner && sameName(name, winner) // backed to go through
                 return (
                   <span>
                     {flag(name)}{' '}
-                    <span className={`${out ? 'cmp-out' : ''} ${wins ? 'cmp-advancer' : ''}`}>
+                    <span className={`${out ? 'cmp-out' : ''} ${isPick ? 'cmp-advancer' : ''}`}>
                       {teamCode(name)}
                     </span>
-                    {trophy && ' 🏆'}
                   </span>
                 )
               }
