@@ -15,12 +15,6 @@ export interface FarmGuidance {
   askYourTeam?: string[];
 }
 
-export interface WalkingStage {
-  label: string;
-  minutes: number;
-  pace: string;
-}
-
 export interface RecoveryPhase {
   id: string;
   dayRange: { start: number; end: number | null };
@@ -31,9 +25,6 @@ export interface RecoveryPhase {
   why?: string;
   milestone?: string;
   farm: FarmGuidance;
-  // Undefined for week-0-1, which uses the general "start gentle, build
-  // daily" guidance instead of a formal stage.
-  walkingStage?: WalkingStage;
 }
 
 const CALL_TEAM_ACTION = {
@@ -87,7 +78,6 @@ export const RECOVERY_PHASES: RecoveryPhase[] = [
       ifTempted: 'If you’re tempted to do "just one small job," swap it for a slow walk of the fence line instead — looking, not lifting.',
       canDoInstead: ['Walk the fence line and note what needs doing (no tools)', 'Plan the season’s jobs in order of priority', 'Point someone else at anything urgent'],
     },
-    walkingStage: { label: 'Stage 1', minutes: 15, pace: 'Gentle pace' },
   },
   {
     id: 'week-2-4',
@@ -111,7 +101,6 @@ export const RECOVERY_PHASES: RecoveryPhase[] = [
       ifTempted: 'If you’re tempted to grab a tool "just for five minutes," do the fence-line walk instead and add to your list.',
       canDoInstead: ['Walk the fence line and keep building the job list', 'Plan out the season’s work in detail', 'Direct someone else for anything that can’t wait'],
     },
-    walkingStage: { label: 'Stage 2', minutes: 20, pace: 'Moderate pace' },
   },
   {
     id: 'week-4-8',
@@ -140,7 +129,6 @@ export const RECOVERY_PHASES: RecoveryPhase[] = [
         'Ask whether heat or exertion limits apply to outdoor work',
       ],
     },
-    walkingStage: { label: 'Stage 3', minutes: 25, pace: 'Moderate to brisk pace' },
   },
   {
     id: 'week-8-12',
@@ -169,7 +157,6 @@ export const RECOVERY_PHASES: RecoveryPhase[] = [
         'Ask whether heat or exertion limits apply to outdoor work',
       ],
     },
-    walkingStage: { label: 'Stage 4', minutes: 30, pace: 'Brisk pace' },
   },
   {
     id: '12-weeks-plus',
@@ -197,7 +184,6 @@ export const RECOVERY_PHASES: RecoveryPhase[] = [
         'Ask whether heat or exertion limits apply to outdoor work',
       ],
     },
-    walkingStage: { label: 'Target', minutes: 30, pace: 'Brisk pace, most days' },
   },
 ];
 

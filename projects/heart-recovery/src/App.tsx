@@ -83,7 +83,7 @@ function App() {
         />
         <JourneyBar dayNumber={dayNumber} phases={RECOVERY_PHASES} />
         <MedicationReminder />
-        <TodaysMove phase={phase} />
+        <TodaysMove />
         <WarningSigns />
         <ActivityGuide activities={phase.activities} farm={phase.farm} />
         <Timeline phases={RECOVERY_PHASES} currentPhaseId={phase.id} />
