@@ -1,6 +1,10 @@
 import { SOURCES, BHF_HELPLINE, GENERAL_DISCLAIMER } from '../data/recoveryPlan';
 
-export default function SourcesFooter() {
+interface SourcesFooterProps {
+  onReplayIntro: () => void;
+}
+
+export default function SourcesFooter({ onReplayIntro }: SourcesFooterProps) {
   return (
     <footer className="text-sm text-recovery-ink/60 space-y-4 pb-8">
       <p className="text-recovery-ink/80">{GENERAL_DISCLAIMER}</p>
@@ -23,6 +27,9 @@ export default function SourcesFooter() {
           BHF cardiac nurse helpline: <a href="tel:08088021234" className="underline">{BHF_HELPLINE}</a> (free, Mon–Fri 9am–5pm)
         </p>
       </div>
+      <button type="button" onClick={onReplayIntro} className="underline tap-target">
+        See the intro cards again
+      </button>
     </footer>
   );
 }

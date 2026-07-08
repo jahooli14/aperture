@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { useEventDate } from './hooks/useEventDate';
 import { getDayNumber } from './lib/recoveryDay';
 import { formatDateForDisplay } from './lib/dateUtils';
+import { hasSeenOnboarding, markOnboardingSeen, resetOnboarding } from './lib/onboarding';
 import { RECOVERY_PHASES, getPhaseForDay, getNextMilestone } from './data/recoveryPlan';
+import Onboarding from './components/Onboarding';
 import DateSetup from './components/DateSetup';
 import ProgressHeader from './components/ProgressHeader';
 import JourneyBar from './components/JourneyBar';
@@ -16,6 +18,18 @@ import SourcesFooter from './components/SourcesFooter';
 function App() {
   const { eventDate, setEventDate } = useEventDate();
   const [editingDate, setEditingDate] = useState(false);
+  const [onboardingDone, setOnboardingDone] = useState(() => hasSeenOnboarding());
+
+  if (!onboardingDone) {
+    return (
+      <Onboarding
+        onDone={() => {
+          markOnboardingSeen();
+          setOnboardingDone(true);
+        }}
+      />
+    );
+  }
 
   if (!eventDate || editingDate) {
     return (
@@ -69,11 +83,16 @@ function App() {
         />
         <JourneyBar dayNumber={dayNumber} phases={RECOVERY_PHASES} />
         <MedicationReminder />
-        <TodaysMove dayNumber={dayNumber} />
+        <TodaysMove />
         <WarningSigns />
         <ActivityGuide activities={phase.activities} farm={phase.farm} />
         <Timeline phases={RECOVERY_PHASES} currentPhaseId={phase.id} />
-        <SourcesFooter />
+        <SourcesFooter
+          onReplayIntro={() => {
+            resetOnboarding();
+            setOnboardingDone(false);
+          }}
+        />
       </main>
     </div>
   );
