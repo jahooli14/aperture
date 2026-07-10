@@ -30,7 +30,7 @@ import { generateText } from '../gemini-chat.js'
 import { MODELS } from '../models.js'
 import { pickSeedPairs, tokenise, relatedness, parseEmbedding, type SeedCandidate } from './seed-picker.js'
 import { PLAIN_ENGLISH_RULES } from '../plain-english.js'
-import { DEFAULT_IDEA_BRIEF } from './default-prompt.js'
+import { DEFAULT_IDEA_BRIEF, HOUR_IDEA_BRIEF } from './default-prompt.js'
 import type { ArrivalKind, CentreKind, GatherResult, GenerationResult, IdeaEvidence, IdeaOutcome, ProjectIdea, SeedPair } from './types.js'
 
 /** Built ideas now carry their real outcome (see types.ts / gather.ts). The
@@ -56,6 +56,13 @@ const MIN_SIGNALS = 8
 
 export type SessionFeeling = 'focused' | 'scattered' | 'restless'
 
+/** 'project' — the default: name a project worth working on (may revive /
+ *  extend / coalesce, and carries a commitment past today).
+ *  'hour' — the low-commitment sibling: ONE self-contained thing the user
+ *  can do start to finish inside a single hour. Fast path only; never baked
+ *  into the queue by cron. */
+export type IdeaScope = 'project' | 'hour'
+
 export interface GenerateOptions {
   /** force=true falls back to the permissive prompt — then a no-LLM
    *  template floor — when Read + crossover both return nothing, so the
@@ -79,6 +86,10 @@ export interface GenerateOptions {
    *  Only the fast path uses it today — cron stays on the locked-pair
    *  pipeline so the longitudinal Read mode keeps its full structure. */
   brief?: string | null
+  /** 'hour' switches the fast path to the one-hour, start-to-finish brief.
+   *  Ignored on the cron pipeline (cron only bakes 'project' ideas).
+   *  Defaults to 'project'. */
+  scope?: IdeaScope
 }
 
 export async function generateProjectIdeas(
@@ -115,21 +126,23 @@ export async function generateProjectIdeas(
     // blocked. If counts here are healthy but the LLM still falls back,
     // it's a Flash timeout (see the attempt logs); if counts are thin,
     // it's a gather/RLS data problem.
+    const scope: IdeaScope = opts.scope === 'hour' ? 'hour' : 'project'
+    const mode: 'crossover' | 'hour' = scope === 'hour' ? 'hour' : 'crossover'
     const corpus = `mem=${gathered.memories.length} list=${gathered.list_items.length} dorm=${gathered.dormant_projects.length} act=${gathered.active_projects.length} read=${gathered.reading.length} hl=${gathered.highlights.length} blocked=${gathered.blocked_project_ids.length}`
-    console.log(`[project-ideas] fast path: single full-corpus Flash${opts.feeling ? ` (feeling=${opts.feeling})` : ''}${opts.brief ? ' (custom brief)' : ''}; ${corpus}`)
+    console.log(`[project-ideas] fast path (scope=${scope}): single full-corpus Flash${opts.feeling ? ` (feeling=${opts.feeling})` : ''}${opts.brief && scope === 'project' ? ' (custom brief)' : ''}; ${corpus}`)
     const tFast = Date.now()
-    const fastIdea = await runFastSingle(gathered, opts.feeling ?? null, opts.brief ?? null)
+    const fastIdea = await runFastSingle(gathered, opts.feeling ?? null, opts.brief ?? null, scope)
     if (fastIdea) {
       console.log(`[project-ideas] fast path: LLM idea in ${Date.now() - tFast}ms — "${fastIdea.title}"`)
-      return { ideas: [{ ...fastIdea, mode: 'crossover' }], attempts: 1 }
+      return { ideas: [{ ...fastIdea, mode }], attempts: 1 }
     }
     // Flash misbehaved on both attempts (or budget ran out). The template
     // never returns null — the button is guaranteed to come back with
     // something. The WARN + corpus line makes a recurring fallback
     // obvious in the logs without needing to repro.
     console.warn(`[project-ideas] fast path: LLM produced nothing after ${Date.now() - tFast}ms — serving template fallback; ${corpus}`)
-    const synth = synthesiseFallbackIdea(gathered)
-    return { ideas: [{ ...synth, mode: 'crossover' }], attempts: 2, fallback: true }
+    const synth = scope === 'hour' ? synthesiseHourFallback(gathered) : synthesiseFallbackIdea(gathered)
+    return { ideas: [{ ...synth, mode }], attempts: 2, fallback: true }
   }
 
   // Read and crossover run in parallel — the wow shape and the convergence
@@ -302,6 +315,7 @@ async function runFastSingle(
   gathered: GatherResult,
   feeling: SessionFeeling | null,
   brief: string | null,
+  scope: IdeaScope = 'project',
 ): Promise<ProjectIdea | null> {
   const blocked = new Set(gathered.blocked_project_ids)
   let dormant = gathered.dormant_projects.filter(p => !blocked.has(p.id))
@@ -312,7 +326,7 @@ async function runFastSingle(
   }
   const started = Date.now()
   const firstTimeout = Math.min(FAST_STAGE_TIMEOUT_MS, FAST_TOTAL_BUDGET_MS)
-  const first = await runFastSingleAttempt(gathered, dormant, allDormantSeen, feeling, brief, { attempt: 1, temperature: 0.9, timeoutMs: firstTimeout })
+  const first = await runFastSingleAttempt(gathered, dormant, allDormantSeen, feeling, brief, scope, { attempt: 1, temperature: 0.9, timeoutMs: firstTimeout })
   if (first) return first
   // Only retry if there's real budget left under the client's 40s cap. A
   // 25s retry after a 25s timeout would land past it and the user just
@@ -324,7 +338,7 @@ async function runFastSingle(
     return null
   }
   // Hotter retry so attempt 2 doesn't reproduce attempt 1's parse-fail.
-  const second = await runFastSingleAttempt(gathered, dormant, allDormantSeen, feeling, brief, { attempt: 2, temperature: 1.0, timeoutMs: Math.min(FAST_STAGE_TIMEOUT_MS, remaining) })
+  const second = await runFastSingleAttempt(gathered, dormant, allDormantSeen, feeling, brief, scope, { attempt: 2, temperature: 1.0, timeoutMs: Math.min(FAST_STAGE_TIMEOUT_MS, remaining) })
   return second
 }
 
@@ -334,10 +348,13 @@ async function runFastSingleAttempt(
   allDormantSeen: boolean,
   feeling: SessionFeeling | null,
   brief: string | null,
+  scope: IdeaScope,
   opts: { attempt: number; temperature: number; timeoutMs: number },
 ): Promise<ProjectIdea | null> {
-  const prompt = buildFastSinglePrompt(gathered, dormant, allDormantSeen, feeling, brief)
-  console.log(`[project-ideas] fast/single prompt: ${prompt.length} chars; attempt=${opts.attempt}; dormant=${dormant.length}${allDormantSeen ? ' (all seen — relaxed)' : ''}; timeout=${opts.timeoutMs}ms`)
+  const prompt = scope === 'hour'
+    ? buildFastHourPrompt(gathered, feeling)
+    : buildFastSinglePrompt(gathered, dormant, allDormantSeen, feeling, brief)
+  console.log(`[project-ideas] fast/single prompt (scope=${scope}): ${prompt.length} chars; attempt=${opts.attempt}; dormant=${dormant.length}${allDormantSeen ? ' (all seen — relaxed)' : ''}; timeout=${opts.timeoutMs}ms`)
   const t0 = Date.now()
   let raw: string
   try {
@@ -512,6 +529,101 @@ ${ideaBrief}
 }
 
 revive = restart a dormant project (optionally reshaped for who they are NOW — see THE ARC). extend = a specific NEW direction/output for a dormant OR active project. name = a brand-new project the captures point at (centre_id null). Use ALL of it — every project (dormant and active), every voice note, every list item, reading and highlights — not just one section. Decide the move from where the strongest real energy is, not from a fixed preference order. If the brief and the data don't line up cleanly, follow the brief.`
+}
+
+/** The one-hour, start-to-finish prompt. Same JSON contract as the project
+ *  prompt (so parseFastIdea handles both), but the frame is inverted: no
+ *  reviving dormant projects, no commitment past tonight — just ONE small
+ *  thing they can finish in a single hour, grounded in who they are. Uses
+ *  the fixed HOUR_IDEA_BRIEF (not the user's editable project brief). */
+function buildFastHourPrompt(g: GatherResult, feeling: SessionFeeling | null): string {
+  const feelingBlock = feeling ? `\n═══════ HOW THEY'RE FEELING RIGHT NOW ═══════\n${FEELING_GUIDANCE[feeling]}\n` : ''
+
+  // Recent voice notes — their own words, freshest first. The hour thing
+  // is often hiding in something they said this week.
+  const memBlock = g.memories.slice(0, 200).map(m =>
+    `  memory#${m.id} (${isoDate(m.created_at)}) — "${truncate(m.body, 320)}"`
+  ).join('\n')
+
+  // Lists lead with "want to make" then "sparked" — those reactions are the
+  // strongest hint at something they'd actually enjoy doing tonight.
+  const reactionWeight = (r: 'sparked' | 'off' | 'make' | null): number =>
+    r === 'make' ? 3 : r === 'sparked' ? 2 : r === 'off' ? -1 : 1
+  const listsByType = groupBy(
+    g.list_items
+      .filter(li => li.reaction !== 'off')
+      .sort((a, b) => reactionWeight(b.reaction) - reactionWeight(a.reaction)),
+    li => li.list_type,
+  )
+  const listBlock = Array.from(listsByType.entries()).map(([type, items]) =>
+    `  ${type}: ${items.slice(0, 50).map(li => {
+      const tag = li.reaction === 'make' ? ' [WANT TO MAKE]' : li.reaction === 'sparked' ? ' [SPARKED]' : ''
+      return `${truncate(li.content, 80)}${tag}`
+    }).join('; ')}`
+  ).join('\n')
+
+  const readingBlock = g.reading.slice(0, 80).map(r =>
+    `  "${r.title ?? '(untitled)'}"${r.excerpt ? ` — ${truncate(r.excerpt, 140)}` : ''}`
+  ).join('\n')
+  const highlightBlock = g.highlights.slice(0, 80).map(h =>
+    `  "${truncate(h.quote, 180)}"${h.article_title ? ` — ${h.article_title}` : ''}`
+  ).join('\n')
+
+  // Active + dormant projects as CONTEXT ONLY — a theme to borrow, never a
+  // thing to revive. The brief forbids handing back a project to restart.
+  const projectBlock = [...g.active_projects, ...g.dormant_projects].slice(0, 60).map(p =>
+    `  "${p.title}"${p.description ? ` — ${truncate(p.description, 140)}` : ''}`
+  ).join('\n')
+
+  // Don't re-hand the same hour thing two presses running. recent_titles
+  // covers what we just showed; recently_mined names the wells to rotate off.
+  const seenBlock = [
+    ...g.recent_titles.map(t => `  • just shown: "${t.title}"`),
+    ...g.recently_mined.map(m => `  • recent: "${m.title}"`),
+  ].join('\n') || '  (nothing yet)'
+
+  return `You are a friend who's been paying attention. They just tapped "give me a self-contained hour" — they have willpower tonight but no appetite for a big commitment. Write ONE thing they can do start to finish in a single hour, grounded in who they are below.
+
+═══════ VOICE RULES (non-negotiable) ═══════
+
+${PLAIN_ENGLISH_RULES}
+${feelingBlock}
+═══════ WHO THEY ARE ═══════
+
+${deriveTasteLine(g)}
+
+═══════ RECENT VOICE NOTES (their own words) ═══════
+${memBlock || '  (none)'}
+
+═══════ LISTS — films / books / places / etc. (what they're drawn to) ═══════
+${listBlock || '  (none)'}
+
+═══════ READING ═══════
+${readingBlock || '  (none)'}
+
+═══════ HIGHLIGHTS (sentences they flagged) ═══════
+${highlightBlock || '  (none)'}
+
+═══════ THEIR PROJECTS — CONTEXT ONLY (borrow a theme; do NOT hand one back to revive) ═══════
+${projectBlock || '  (none)'}
+
+═══════ DON'T REPEAT — already shown recently ═══════
+${seenBlock}
+
+═══════ THE BRIEF ═══════
+
+${HOUR_IDEA_BRIEF}
+
+═══════ OUTPUT (strict JSON, no markdown fences, no extra fields) ═══════
+{
+  "centre_id": null,
+  "title": "≤6 words. The finished thing or the act.",
+  "pitch": "2 sentences. Sentence 1 = what they'll make or do in the hour. Sentence 2 = what done looks like at the 60-minute mark, in one observable thing.",
+  "why_now": "ONE sentence. A real reason tonight is the night for this specific thing.",
+  "next_step": "ONE physical move to START the hour, doable right now with what they own. Pour, cut, open, dial, press record, pick up. NOT 'research,' 'plan,' 'gather,' 'decide.'"
+}
+
+Finish-in-an-hour is the whole point — if it can't be done by the 60-minute mark it's the wrong pick. Use their real material so it feels chosen for them, not generic.`
 }
 
 /** Parses the single-call Flash response. Resolves the model's centre_id
@@ -784,6 +896,85 @@ export function synthesiseFallbackIdea(g: GatherResult): ProjectIdea {
     pitch: 'There\'s nothing on the record yet to point at a specific project. The next move is to feed the harness — record the half-formed thought you came in with so the next idea has somewhere to land.',
     why_now: 'Nothing captured yet. Today\'s job is to put a thought on the record, not to ship something.',
     next_step: 'Open the recorder. Talk for two minutes about whatever you came here thinking about. Don\'t edit, don\'t polish — just leave a trace.',
+    evidence: [],
+  }
+}
+
+/** Last-resort template for the HOUR scope. No LLM call. Same guarantee as
+ *  synthesiseFallbackIdea (never returns null) but never revives a dormant
+ *  project — reviving is a commitment, and the whole point of an hour is
+ *  that it ends tonight. Tiers, ordered by quality:
+ *    1. A "want to make" list reaction — their own past self handing over a brief.
+ *    2. A recent voice note to make the smallest real version of.
+ *    3. A "sparked" / any live list item, reading, or highlight.
+ *    4. Universal — pick anything small and finishable. */
+export function synthesiseHourFallback(g: GatherResult): ProjectIdea {
+  const finish = 'When the hour is up, you have a finished thing you can point at — and you owe it nothing more.'
+
+  const wantsToMake = g.list_items.find(li => li.reaction === 'make')
+  if (wantsToMake) {
+    console.warn('[project-ideas] hour fallback tier=list-make')
+    return {
+      rank: 1,
+      title: truncate(wantsToMake.content, 60),
+      pitch: `You marked this "want to make." Give it one hour tonight — the small, real version, start to finish. ${finish}`,
+      why_now: 'You already said yes to this. Tonight it fits in the hour you have.',
+      next_step: 'Set a 60-minute timer and make the first real version now with what you own. Stop when it rings.',
+      evidence: [],
+    }
+  }
+
+  const memory = g.memories[0]
+  if (memory) {
+    console.warn('[project-ideas] hour fallback tier=voice')
+    const excerpt = truncate(memory.body.replace(/\s+/g, ' ').trim(), 220)
+    const days = daysAgo(memory.created_at)
+    return {
+      rank: 1,
+      title: 'Make the small version tonight',
+      pitch: `"${excerpt}" — that was you, ${describeRecency(days)}. Spend one hour making the smallest real version of it. ${finish}`,
+      why_now: `${describeRecency(days, { capitalise: true })} you put this on the record. It hasn't cooled — one hour is enough to make something of it.`,
+      next_step: 'Set a 60-minute timer. Make the roughest real version — a page, a clip, a sketch. Stop at the timer.',
+      evidence: synthesiseEvidence(g),
+    }
+  }
+
+  const sparked = g.list_items.find(li => li.reaction === 'sparked')
+  const anyListItem = sparked ?? g.list_items.find(li => li.reaction !== 'off')
+  if (anyListItem) {
+    console.warn(`[project-ideas] hour fallback tier=list-${sparked ? 'sparked' : 'any'}`)
+    return {
+      rank: 1,
+      title: truncate(anyListItem.content, 60),
+      pitch: `This is on your ${anyListItem.list_type} list${sparked ? ' and you said it sparked you' : ''}. Give it one hour tonight — make the smallest thing it points at. ${finish}`,
+      why_now: 'You put this on a list yourself. Tonight is the hour to act on it.',
+      next_step: 'Set a 60-minute timer and make one rough thing this pulls out of you. Stop at the timer.',
+      evidence: [],
+    }
+  }
+
+  const article = g.reading[0]
+  const highlight = g.highlights[0]
+  if (article || highlight) {
+    console.warn(`[project-ideas] hour fallback tier=${highlight ? 'highlight' : 'reading'}`)
+    const source = highlight ? `"${truncate(highlight.quote, 140)}"` : `"${truncate(article!.title ?? 'something you saved', 80)}"`
+    return {
+      rank: 1,
+      title: 'One hour from this',
+      pitch: `${source} — you flagged this while reading. Turn the one idea you can't stop thinking about into something small and real, in an hour. ${finish}`,
+      why_now: 'You highlighted this for a reason. One hour turns a reader into a maker.',
+      next_step: 'Re-read it once, then set a 60-minute timer and make the first rough thing it makes you want to build.',
+      evidence: [],
+    }
+  }
+
+  console.warn('[project-ideas] hour fallback tier=universal — account looks empty')
+  return {
+    rank: 1,
+    title: 'One honest hour',
+    pitch: `Nothing captured yet to point at something specific — so make the thing you came in wanting to make. One hour, start to finish. ${finish}`,
+    why_now: 'You have the hour now. That\'s the only reason you need.',
+    next_step: 'Pick the smallest real thing you can finish in an hour, set a 60-minute timer, and start it now.',
     evidence: [],
   }
 }

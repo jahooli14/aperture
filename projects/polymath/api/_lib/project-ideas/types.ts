@@ -38,7 +38,11 @@ export interface SeedPair {
   arrival_id: string
 }
 
-export type IdeaMode = 'crossover' | 'read'
+/** 'crossover' — locked-pairs / permissive / fast-path output (the default).
+ *  'read'      — the longitudinal pattern reader (cron-only).
+ *  'hour'      — a self-contained one-hour thing, complete start to finish.
+ *                Generated on-demand only; never baked into the queue. */
+export type IdeaMode = 'crossover' | 'read' | 'hour'
 
 /** Read mode self-tags which of CLAUDE.md's four Moment shapes the
  *  pattern fired in. Lets the surface render different eyebrows /

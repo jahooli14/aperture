@@ -1592,11 +1592,22 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
 
     const supabase = getSupabaseClient()
 
+    // Scope of the request. 'hour' is the low-commitment sibling of the
+    // "suggest a project" button: ONE self-contained thing done start to
+    // finish in a single hour. It's always generated fresh (no queue
+    // short-circuit), stored 'superseded' so it displays once and never
+    // gets re-served to a later "suggest a project" press, and it doesn't
+    // touch the baked project queue. Cron never uses it.
+    const rawScope = typeof req.body === 'object' && req.body && typeof (req.body as any).scope === 'string' ? (req.body as any).scope : null
+    const scope: 'project' | 'hour' = rawScope === 'hour' ? 'hour' : 'project'
+
     // User-triggered short-circuit: if there's already a pending idea
     // sitting in the queue (cron-baked or otherwise), return it instantly
     // and skip the LLM call entirely. This is the new on-demand flow —
-    // most user clicks should hit this path and feel instant.
-    if (!viaCron) {
+    // most user clicks should hit this path and feel instant. The hour
+    // scope never short-circuits — the user asked for a fresh hour thing,
+    // not whatever project happens to be queued.
+    if (!viaCron && scope !== 'hour') {
       const { data: queued } = await supabase
         .from('project_ideas')
         .select('id, batch_id, rank, title, pitch, why_now, next_step, evidence, mode, pattern, confidence, shape, seed_pair, status, user_feedback, generated_at, acted_on_at')
@@ -1715,6 +1726,7 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
       fast: !viaCron,
       feeling,
       brief,
+      scope,
     })
     console.log(`[generate-project-ideas] generation finished in ${Date.now() - tLlmStart}ms: ${result.ideas.length} ideas, reason=${result.reason ?? 'ok'}`)
 
@@ -1731,12 +1743,15 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
     // Mark every prior pending idea from earlier batches as 'superseded'
     // — distinct from 'rejected' so the next prompt doesn't see a never-
     // -seen idea as "the user hated this." Saved / built ideas are left
-    // intact.
-    await supabase
-      .from('project_ideas')
-      .update({ status: 'superseded' })
-      .eq('user_id', userId)
-      .eq('status', 'pending')
+    // intact. The hour scope skips this: an hour thing is a one-off and
+    // must not wipe the baked project queue the user hasn't seen yet.
+    if (scope !== 'hour') {
+      await supabase
+        .from('project_ideas')
+        .update({ status: 'superseded' })
+        .eq('user_id', userId)
+        .eq('status', 'pending')
+    }
 
     const batchId = randomUuid()
     const generated_at = new Date().toISOString()
@@ -1771,7 +1786,10 @@ async function handleGenerateProjectIdeas(req: VercelRequest, res: VercelRespons
       // on every press and the button would look permanently broken. As
       // 'superseded' it still displays now (returned below) but the next
       // press regenerates a fresh idea instead of returning this one.
-      status: (result.fallback ? 'superseded' : 'pending') as 'pending' | 'superseded',
+      // Hour ideas are ALWAYS 'superseded' — they're one-off, ephemeral,
+      // and must never sit in the pending queue where a "suggest a project"
+      // press would short-circuit onto them.
+      status: (scope === 'hour' || result.fallback ? 'superseded' : 'pending') as 'pending' | 'superseded',
       generated_at,
     }))
 

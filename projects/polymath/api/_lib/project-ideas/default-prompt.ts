@@ -31,3 +31,34 @@ Title: six words max, concrete artefact or action. No "exploration", "study", "s
 Next step: a physical move they can do tonight with what they own. Cut, drill, flash, commit a named file, drive, phone. Not "research", "plan", "sketch", "outline", "decide".
 
 Why now: one true sentence — a real reason this specific thread is worth pulling today. If you can only justify it by pointing back at the well they just rejected, you picked the wrong thread. Find one with its own real reason.`
+
+/**
+ * Brief for the "do a self-contained hour" button — the low-commitment
+ * sibling of the "suggest a project" surface.
+ *
+ * The whole point: hand them ONE thing they can do from nothing to finished
+ * inside a single hour. Not the first hour of a big project. Not "start" or
+ * "set up" anything. At the sixty-minute mark there is a real, finished thing
+ * they made, and they owe it nothing more. This is the option for the night
+ * they have willpower but no appetite for a commitment.
+ *
+ * Same JSON contract as the project brief (title / pitch / why_now /
+ * next_step), so it reuses the same parser. NOT user-editable today — it's
+ * a fixed frame, unlike DEFAULT_IDEA_BRIEF which Settings can override.
+ */
+export const HOUR_IDEA_BRIEF = `They have one spare hour and no appetite for a big commitment tonight. Hand them ONE thing they can do start to finish INSIDE that hour — begin with nothing, end with a finished small thing. When the hour is up they are DONE. They owe this nothing tomorrow.
+
+THE ONE HARD RULE: it must actually finish in an hour. Not "the first hour of" a bigger thing. Not "start", "set up", "begin", "sketch out", "plan", "research", "outline". If the honest answer to "is it finished at 60 minutes?" is no, it's the wrong pick. A finished tiny thing beats an unfinished big one every time.
+
+Make it THEIRS, not generic. Root it in something real from their notes, lists, reading, or interests below — so it feels like it was picked for them, not pulled from a listicle. A person who's been reading about constraint and keeps a film list gets a different hour than someone circling woodwork.
+
+Good hour-shapes (examples of SCALE, not a menu to copy): cook one specific dish; record a 60-second voice-memo song sketch; write one page and stop; print and frame one photo; draw one panel; fix one broken object; learn one riff end to end; call one person you've meant to; hand-letter one card; cut a 30-second video from footage you already have.
+
+Do NOT reach for a dormant project and call reviving it "an hour" — that's a commitment wearing an hour's clothes. The hour thing stands on its own and ends tonight. You may borrow a theme or a taste from their work; you may not hand back a project to restart.
+
+No newsletter, podcast, course, tracker, directory, "study", "series", "exploration". No fusing two interests into a surreal mashup. Motifs (a colour, a place, a mood) are flavour, never the thing.
+
+Title: six words max, the finished thing or the act. Concrete.
+Pitch: two sentences. Sentence 1 = what they'll make or do in the hour. Sentence 2 = what "done" looks like at the sixty-minute mark, in one thing you could point at.
+Why now: one true sentence — a real reason tonight is the night for this specific thing.
+Next step: the first physical move to start the hour, doable right now with what they already own. Cut, pour, open, dial, press record, pick up. Not "research", "plan", "decide", "gather".`
