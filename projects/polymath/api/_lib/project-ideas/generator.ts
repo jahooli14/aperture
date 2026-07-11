@@ -378,7 +378,7 @@ async function runFastSingleAttempt(
     return null
   }
   console.log(`[project-ideas] fast/single attempt ${opts.attempt} responded in ${Date.now() - t0}ms (${raw.length} chars)`)
-  return parseFastIdea(raw, gathered, dormant)
+  return parseFastIdea(raw, gathered, dormant, scope)
 }
 
 function buildFastSinglePrompt(
@@ -637,6 +637,7 @@ function parseFastIdea(
   raw: string,
   gathered: GatherResult,
   allowedDormant: GatherResult['dormant_projects'],
+  scope: IdeaScope = 'project',
 ): ProjectIdea | null {
   const payload = robustJsonParse(raw)
   if (!payload || typeof payload !== 'object') {
@@ -658,10 +659,16 @@ function parseFastIdea(
   // active projects (EXTEND is now allowed on active projects — a sharp
   // NEW direction, never "finish X"). Anything unresolvable is treated as
   // a "name" idea rather than a hard fail.
+  //
+  // Hour ideas are deliberately CENTRE-LESS: they stand on their own and end
+  // tonight, so they must never attach a project centre or a seed_pair. If
+  // they did, an hour thing that merely borrowed a project's theme would
+  // block that project from the (separate) project generator for weeks via
+  // the seed-pair cooldown. Resolving to null keeps the two surfaces clean.
   const rawCentre = typeof item.centre_id === 'string' ? item.centre_id : ''
   const bareCentre = rawCentre.includes('#') ? rawCentre.slice(rawCentre.indexOf('#') + 1).trim() : rawCentre.trim()
   const resolve = <T extends { id: string }>(rows: T[]): T | null =>
-    !bareCentre ? null
+    scope === 'hour' || !bareCentre ? null
       : (rows.find(r => r.id === bareCentre)
         ?? (bareCentre.length >= 6 ? rows.find(r => r.id.startsWith(bareCentre)) ?? null : null))
   const centreDormant = resolve(allowedDormant)
@@ -935,7 +942,15 @@ export function synthesiseHourFallback(g: GatherResult): ProjectIdea {
       pitch: `"${excerpt}" — that was you, ${describeRecency(days)}. Spend one hour making the smallest real version of it. ${finish}`,
       why_now: `${describeRecency(days, { capitalise: true })} you put this on the record. It hasn't cooled — one hour is enough to make something of it.`,
       next_step: 'Set a 60-minute timer. Make the roughest real version — a page, a clip, a sketch. Stop at the timer.',
-      evidence: synthesiseEvidence(g),
+      // Cite the voice note only — never synthesiseEvidence(), which leads
+      // with a dormant project. An hour thing isn't about reviving a project.
+      evidence: [{
+        kind: 'memory',
+        source_id: memory.id,
+        label: 'voice note',
+        date: isoDate(memory.created_at),
+        excerpt: truncate(memory.body, 220),
+      }],
     }
   }
 

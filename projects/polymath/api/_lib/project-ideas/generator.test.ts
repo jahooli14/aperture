@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { synthesiseFallbackIdea } from './generator'
+import { synthesiseFallbackIdea, synthesiseHourFallback } from './generator'
 import type { GatherResult } from './types'
 
 const NOW = Date.now()
@@ -212,5 +212,49 @@ describe('synthesiseFallbackIdea — universal tier never goes empty', () => {
     // The universal-tier next_step shouldn't say "open the project" —
     // there's no project to open.
     expect(idea.next_step.toLowerCase()).not.toContain('open the project')
+  })
+})
+
+describe('synthesiseHourFallback — a self-contained hour, never a project revival', () => {
+  // The whole point of the hour scope is that it ends tonight. The template
+  // must never hand back a dormant project to revive, and never cite one as
+  // evidence — even when a dormant project is the only rich signal present.
+  it('does NOT revive or cite a dormant project, even when one exists', () => {
+    const g = emptyGather({
+      dormant_projects: [
+        { id: 'p1', title: 'Smashed glass colours', description: 'Smash some glass and let colours bleed through it', status: 'dormant', updated_at: isoDaysAgo(40) },
+      ],
+      memories: [
+        { id: 'm1', title: null, body: 'i keep thinking about a one-page comic where the panels are all the same window', themes: ['comics'], memory_type: 'reflection', created_at: isoDaysAgo(2) },
+      ],
+    })
+    const idea = synthesiseHourFallback(g)
+    // Grounds in the voice note, not the dormant project.
+    expect(idea.pitch).toContain('one-page comic')
+    // Evidence never points at a project.
+    for (const e of idea.evidence) {
+      expect(e.kind).not.toBe('project')
+      expect(e.kind).not.toBe('project_dormant')
+    }
+  })
+
+  it('prefers a "want to make" list reaction and frames it as one hour', () => {
+    const g = emptyGather({
+      list_items: [
+        { id: 'l1', content: 'sourdough focaccia', list_type: 'food', list_title: 'Cook', status: 'active', created_at: isoDaysAgo(5), reaction: 'make', user_rating: null },
+      ],
+    })
+    const idea = synthesiseHourFallback(g)
+    expect(idea.title.toLowerCase()).toContain('focaccia')
+    // The hour framing is the promise the surface makes.
+    expect(idea.pitch.toLowerCase()).toContain('hour')
+  })
+
+  it('never goes empty, and the empty-account next_step is time-boxed', () => {
+    const idea = synthesiseHourFallback(emptyGather())
+    expect(idea.title.length).toBeGreaterThan(0)
+    expect(idea.next_step.length).toBeGreaterThan(0)
+    // The universal tier must still name a finishable, timed move.
+    expect(idea.next_step.toLowerCase()).toMatch(/timer|hour|minute/)
   })
 })
