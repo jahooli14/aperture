@@ -44,8 +44,9 @@ interface ProjectIdea {
   generated_at: string
   /** 'crossover' for the locked-pairs / permissive paths (the default).
    *  'read' for the longitudinal pattern reader — the row also carries a
-   *  non-empty `pattern` and the card leads with it as the hero block. */
-  mode?: 'crossover' | 'read'
+   *  non-empty `pattern` and the card leads with it as the hero block.
+   *  'hour' for a self-contained one-hour thing, complete start to finish. */
+  mode?: 'crossover' | 'read' | 'hour'
   pattern?: string | null
   /** Read-only: model's honest 0–100 self-score on the pattern. The home
    *  auto-surfaces the prominent teaser only when this is >= 70; below
@@ -75,13 +76,14 @@ interface GenerateResponse {
   message?: string
 }
 
-type IdeaMode = 'read' | 'new_idea' | 'forgotten' | 'reshape' | 'extend'
+type IdeaMode = 'read' | 'new_idea' | 'forgotten' | 'reshape' | 'extend' | 'hour'
 
-// Derive the visual mode. The DB-backed `mode='read'` always wins — Read
-// is the longitudinal pattern reader and gets its own treatment regardless
-// of evidence shape. Falling through to evidence-based derivation gives
-// crossover its mode-specific glyph as before.
+// Derive the visual mode. The DB-backed `mode` wins for 'read' and 'hour' —
+// both are distinct kinds of correspondence that get their own treatment
+// regardless of evidence shape. Falling through to evidence-based derivation
+// gives crossover its mode-specific glyph as before.
 function deriveMode(idea: ProjectIdea): IdeaMode {
+  if (idea.mode === 'hour') return 'hour'
   if (idea.mode === 'read') return 'read'
   const kinds = (idea.evidence ?? []).map(e => e.kind)
   if (kinds.includes('project_dormant')) {
@@ -125,6 +127,7 @@ const MODE_VISUAL: Record<IdeaMode, { glyph: string; accentRgb: string; eyebrow:
   forgotten: { glyph: '❋', accentRgb: '148, 163, 184', eyebrow: 'you set this down' },           // slate
   reshape:   { glyph: '◈', accentRgb: '167, 139, 250', eyebrow: 'a new angle' },                 // violet
   extend:    { glyph: '→', accentRgb: '56, 189, 248',  eyebrow: 'pick this up' },                // cyan
+  hour:      { glyph: '◷', accentRgb: '52, 211, 153',  eyebrow: 'one hour, start to finish' },   // emerald
 }
 
 const KIND_LABEL: Record<string, string> = {
@@ -226,7 +229,7 @@ export function ProjectIdeasHome() {
   // Close the reason picker when the user flips to another stacked idea.
   useEffect(() => { setReasonFor(null) }, [activeIndex])
 
-  const generate = useCallback(async () => {
+  const generate = useCallback(async (scope: 'project' | 'hour' = 'project') => {
     if (generating) return
     setGenerating(true)
     setError(null)
@@ -234,14 +237,15 @@ export function ProjectIdeasHome() {
     try {
       // Server short-circuits to the queue when one exists (instant); only
       // hits the LLM when the queue is empty. Fast path is ~10s; allow 40s
-      // so a slightly slow tail doesn't abort.
+      // so a slightly slow tail doesn't abort. The hour scope never
+      // short-circuits — it always generates a fresh one-hour thing.
       // Pass the session feeling (focused / scattered / restless) when
       // the user has picked one — the backend folds it into the generator
       // prompt so the on-demand re-roll calibrates to right-now state.
       const feeling = useSessionContextStore.getState().feeling
       const res = await api.post(
         'utilities?resource=generate-project-ideas',
-        feeling ? { feeling } : {},
+        { ...(feeling ? { feeling } : {}), ...(scope === 'hour' ? { scope } : {}) },
         // Full-history corpus on a thinking model is genuinely slow on a
         // cold press; the server budget is ~66s. Paid once — the next
         // press is instant from the pending queue.
@@ -350,6 +354,9 @@ export function ProjectIdeasHome() {
           from_idea: idea.id,
           end_goal: deriveFinishLine(idea),
           project_mode: 'completion',
+          // Mark one-hour things so they're distinguishable from full
+          // projects (a tonight-sized commitment, not an open-ended one).
+          ...(idea.mode === 'hour' ? { scope: 'hour' } : {}),
         },
       })
 
@@ -415,6 +422,14 @@ export function ProjectIdeasHome() {
     await generate()
   }, [generating, ideas.length, generate, resurrectionIndex])
 
+  // The hour door. Unlike reveal(), it never opens the queued deck — the
+  // user asked for a fresh one-hour thing, so it always generates one
+  // (the server skips the queue short-circuit for scope='hour').
+  const revealHour = useCallback(async () => {
+    if (generating) return
+    await generate('hour')
+  }, [generating, generate])
+
   return (
     <section className="relative">
       {/* Container collapses tight when the user hasn't asked for an idea
@@ -477,6 +492,18 @@ export function ProjectIdeasHome() {
               <span className="text-[11.5px] tracking-wide">
                 suggest a project
               </span>
+            </button>
+            {/* The low-commitment door. Some nights a suggested project is
+                too big an ask — this hands back ONE thing done start to
+                finish in a single hour, nothing owed tomorrow. */}
+            <button
+              type="button"
+              onClick={revealHour}
+              className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-full transition-opacity opacity-70 hover:opacity-100"
+              style={{ color: 'rgb(52, 211, 153)' }}
+            >
+              <span aria-hidden className="text-[11px] leading-none">◷</span>
+              <span className="text-[11px] tracking-wide">or do a self-contained hour</span>
             </button>
             {insufficientSignals !== null ? (
               <p className="text-[11px] italic opacity-70" style={{ color: 'var(--brand-text-secondary)' }}>
@@ -586,7 +613,7 @@ export function ProjectIdeasHome() {
                   >
                     {visual.eyebrow}
                   </span>
-                  {active.status !== 'pending' && (
+                  {(active.status === 'saved' || active.status === 'rejected' || active.status === 'built') && (
                     <span
                       className="text-[9px] tracking-[0.28em] uppercase font-medium px-2 py-1 rounded-full flex-shrink-0"
                       style={{

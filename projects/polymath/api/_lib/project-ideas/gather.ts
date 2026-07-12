@@ -370,6 +370,12 @@ export async function gatherForIdeas(supabase: Supabase, userId: string): Promis
     mode: string | null
     shape: GatherResult['prior_ideas']['built'][number]['shape']
   }>) {
+    // Hour ideas are a separate, ephemeral surface. Their saves / rejections
+    // must NOT shape the project generator's editorial decisions — a rejected
+    // "cook one dish" hour thing shouldn't teach the project reader to avoid
+    // cooking, and a blocked centre from an hour idea shouldn't hide a real
+    // project. Skip them entirely here.
+    if (row.mode === 'hour') continue
     const entry = { title: row.title, feedback: row.user_feedback }
     if (row.status === 'saved' && prior_ideas.saved.length < PER_BUCKET) prior_ideas.saved.push(entry)
     else if (row.status === 'rejected' && prior_ideas.rejected.length < PER_BUCKET) prior_ideas.rejected.push(entry)
