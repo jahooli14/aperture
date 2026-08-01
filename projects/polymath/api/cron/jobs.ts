@@ -413,22 +413,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      // 10. Evolution: Generate evolution events for active projects (daily)
-      if (userId) {
-        try {
-          console.log('[cron/jobs/daily] Generating evolution events...')
-          const { evolveProjectsForUser } = await import('../_lib/metabolism.js')
-          const evolveResult = await evolveProjectsForUser(supabase, userId)
-          results.tasks.evolve = { success: true, ...evolveResult }
-          console.log(`[cron/jobs/daily] Evolution: ${evolveResult.evolved} projects evolved`)
-        } catch (error) {
-          console.error('[cron/jobs/daily] Evolution failed:', error)
-          results.tasks.evolve = {
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error'
-          }
-        }
-      }
+      // Evolution events (evolution_events table) are generated once daily
+      // by the GitHub Actions cron at 08:00 UTC via POST
+      // /api/projects?resource=evolve — not here. This job used to also call
+      // evolveProjectsForUser() with an identical prompt against the same
+      // active/upcoming projects, so every project got evolved twice a day
+      // for no benefit (double the Gemini calls, near-duplicate rows). See
+      // git history for the removed duplicate.
 
       return res.status(200).json(results)
 
