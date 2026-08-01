@@ -91,6 +91,9 @@ jobs:
           # API so old drafts remain visible if you ever come back.
           if [ "$SCHEDULE" = "0 * * * *" ] || [ "$FORCE" = "true" ]; then
             hit "/api/idea-engine?action=generate" &
+            # Daily voice-note reminder push — checked hourly so it can fire
+            # at each user's configured local hour (see api/cron/jobs.ts).
+            hit "/api/cron/jobs?job=voice-reminder" &
           fi
 
           # ── Every 6h: Polymath heat recompute ────────────────────────
