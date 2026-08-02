@@ -17,7 +17,7 @@ name: Cron
 
 on:
   schedule:
-    - cron: '0 * * * *'      # hourly: generator + fix-queue runner
+    - cron: '0 */2 * * *'    # every 2h: generator + fix-queue runner
     - cron: '0 */6 * * *'    # every 6h: fix-queue drafter + polymath heat recompute
     - cron: '0 8 * * *'      # 08:00 UTC daily: polymath evolve
     - cron: '0 9 * * *'      # 09:00 UTC daily: idea-engine review + email digest
@@ -83,13 +83,15 @@ jobs:
 
           echo "Triggered by: ${SCHEDULE:-workflow_dispatch}"
 
-          # ── Hourly ────────────────────────────────────────────────────
-          # Idea Engine generator fires once an hour (was every 30 min;
-          # halved to cut the Gemini call baseline).
+          # ── Every 2h ──────────────────────────────────────────────────
+          # Idea Engine generator (was every 30 min, then hourly; cut again
+          # because the daily review step only ever processes 10 pending
+          # ideas/day — hourly was generating up to 24/day, more than double
+          # what review could consume. 12/day still comfortably covers it.
           # Fix Queue runner: disabled — feature is dormant (owner doesn't
           # use it; CLAUDE.md flags it as needs-review). Kept the route +
           # API so old drafts remain visible if you ever come back.
-          if [ "$SCHEDULE" = "0 * * * *" ] || [ "$FORCE" = "true" ]; then
+          if [ "$SCHEDULE" = "0 */2 * * *" ] || [ "$FORCE" = "true" ]; then
             hit "/api/idea-engine?action=generate" &
           fi
 

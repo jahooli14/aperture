@@ -428,59 +428,8 @@ Return JSON only:
   return { warmed: warmed.length, evolutions: evolutions.length }
 }
 
-/**
- * Generate evolution events for a user's active/upcoming projects. Calls Gemini
- * to produce a fresh insight per project and stores results in `evolution_events`.
- * Called by the daily cron.
- */
-export async function evolveProjectsForUser(
-  supabase: SupabaseClient,
-  userId: string
-): Promise<{ evolved: number; project_ids: string[] }> {
-  const { data: projects } = await supabase
-    .from('projects')
-    .select('id, title, description, metadata')
-    .eq('user_id', userId)
-    .in('status', ['active', 'upcoming'])
-
-  if (!projects || projects.length === 0) return { evolved: 0, project_ids: [] }
-
-  const evolved: string[] = []
-  for (const project of projects.slice(0, 10)) {
-    try {
-      const prompt = `You're a friend looking at one of my projects and naming a single specific direction it could take — a new angle, a missing intersection, or a reshape. Just one. Real, not decorative.
-
-Project: ${project.title}
-Description: ${project.description || 'No description'}
-Current notes: ${JSON.stringify((project.metadata as any)?.tasks?.slice(0, 3) || [])}
-
-${PLAIN_ENGLISH_RULES}
-Never invent hyphenated phrases in scare-quotes ("friction-over-function," "blind-edit"). If a term needs scare-quotes, rewrite it.
-No coach voice ("you are shifting from X to Y"). Talk to me, not at me.
-
-Bad: "Your reliance on the trial deadline acted as a forcing function for creative momentum."
-Good: "The Logic Pro trial ran out — that's the deadline this song needs."
-
-If nothing real is there, pick "reflection" and just name what the project actually is in one sentence. Don't pad.
-
-Respond with JSON: { "event_type": "intersection"|"reshape"|"reflection", "description": "one specific angle or reshape, max 2 sentences" }`
-
-      const response = await generateText(prompt, { responseFormat: 'json', temperature: 0.8 })
-      const insight = JSON.parse(response)
-
-      if (insight.description) {
-        await supabase.from('evolution_events').insert({
-          user_id: userId,
-          project_id: project.id,
-          event_type: insight.event_type || 'reshape',
-          highlight: evolved.length === 0,
-          description: insight.description,
-          created_at: new Date().toISOString(),
-        })
-        evolved.push(project.id)
-      }
-    } catch { /* skip failed projects */ }
-  }
-
-  return { evolved: evolved.length, project_ids: evolved }
-}
+// Evolution-event generation for active/upcoming projects lives in
+// api/projects.ts (resource=evolve), run once daily by the GitHub Actions
+// cron. A near-identical copy used to live here too, called a second time
+// by the Vercel daily cron — same prompt, same projects, same table —
+// which meant every project got evolved twice a day for no benefit. Removed.

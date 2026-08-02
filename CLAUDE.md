@@ -19,7 +19,7 @@ This file is the **single source of truth** for working on this repo. If somethi
 | **Pupils** | `projects/wizard-of-oz/` | Production | Baby photo alignment & milestone tracking |
 | **Polymath** | `projects/polymath/` | Production | Creative harness — captures thoughts and directs your creative willpower toward the right project |
 | **Analogue** | `projects/analogue/` | Active | Book publishing / manuscript editing IDE |
-| **Idea Engine** | `projects/idea-engine/` | Active | Standalone evolutionary ideation system — emails a curated daily digest of frontier-of-human-knowledge ideas. **Not part of Polymath.** Don't conflate when working on Polymath's homepage surfaces. |
+| **Idea Engine** | `projects/polymath/api/_lib/idea-engine-v2/` (live) / `projects/idea-engine/` (dead) | Active | Evolutionary ideation system — emails a curated daily digest of frontier-of-human-knowledge ideas. Not part of Polymath's product surface (don't conflate with Polymath's home feed), but the live code is TypeScript inside the polymath API, not the standalone Python project — see Cron section below. |
 | **Golf Masters** | `projects/golf-masters/` | Active | Masters pool tracker with live ESPN scores |
 | **Heart Recovery** | `projects/heart-recovery/` | Active | Day-by-day post-heart-attack (stent/PCI) recovery guide — single user, no backend, localStorage only |
 | **Fix Queue** | `projects/polymath/` (feature) | **Needs review** — owner doesn't actively use this; code may still be running. Don't extend without checking. |
@@ -79,7 +79,7 @@ Cron bakes a deep queue overnight (full pipeline, Read enabled). The on-demand b
 ### What's NOT in the user's mental model
 
 - **Todos / Fix Queue / AudioPen** — historical or unused. Fix Queue route + API still exist so old drafts stay visible, but cron is disabled and it isn't surfaced on home. Don't extend without checking.
-- **Idea Engine emails** — separate Python project, lives in this repo for hosting cost only.
+- **Idea Engine emails** — not a Polymath surface, but the live code runs from inside the polymath API (`api/_lib/idea-engine-v2/`), not the standalone Python project. See Cron section.
 - **Context Engine sidebar** (`src/components/context/ContextSidebar.tsx`) — surfaces an "AI Analysis" panel from many pages. Prompts in `api/connections.ts` (`analyze` + the `ai-action` types) are plain-English and voice-gated via `findVoiceViolations`. Still owner-unloved — confirm it's wanted before extending. If you add a new `ai-action` prompt, include a concrete BAD/GOOD anti-example like the existing ones.
 
 ### Project = creative goal with a defined output
@@ -119,7 +119,7 @@ npm run lint                 # polymath (eslint src/ api/), analogue (eslint .)
 npm run type-check           # polymath only (tsc --noEmit)
 ```
 
-`projects/idea-engine/` is Python (pyproject.toml, requires 3.11+) — no `npm` here. Tests via `pytest`, format/lint via `black` + `ruff`.
+`projects/idea-engine/` is Python (pyproject.toml, requires 3.11+) — no `npm` here. Tests via `pytest`, format/lint via `black` + `ruff`. **Not deployed** (no `vercel.json`, nothing else references it) — the live Idea Engine logic is `projects/polymath/api/_lib/idea-engine-v2/` (TypeScript). Confirm before spending time here.
 
 `projects/polymath/` also wraps as an Android app via Capacitor — see `build-android.sh`.
 
@@ -180,15 +180,19 @@ One workflow dispatches every Vercel cron endpoint. Branches on `github.event.sc
 
 | Schedule | Endpoints |
 |----------|-----------|
-| `*/30 * * * *` | `idea-engine?action=generate` |
+| `0 */2 * * *` | `idea-engine?action=generate` |
 | `0 */6 * * *` | `projects?resource=recompute-heat` |
-| `0 8 * * *` | `projects?resource=evolve`, `utilities?resource=generate-project-ideas` |
+| `0 8 * * *` | `projects?resource=evolve`, `utilities?resource=generate-project-ideas`, `utilities?resource=portrait-reckon` |
 | `0 9 * * *` | `idea-engine?action=review` then `idea-engine?action=send-digest` (sequential) |
 | `0 8 * * 0` | `projects?resource=generate-digest` |
 
-> The `idea-engine?action=*` rows belong to the standalone Idea Engine project (separate from Polymath; lives in this repo to keep hosting costs down). The `projects?resource=*` rows and `utilities?resource=generate-project-ideas` are part of Polymath proper. **Fix Queue cron is disabled** — the route and API remain so existing drafts stay visible, but no new drafts are generated or executed.
+> **Correction:** the `idea-engine?action=*` endpoints are NOT the standalone Python project at `projects/idea-engine/` — that project has no `vercel.json` and isn't deployed anywhere; it's dead code. The live idea generation/review/digest logic is TypeScript, living in `projects/polymath/api/idea-engine.ts` + `api/_lib/idea-engine-v2/`, deployed as part of the polymath Vercel app. `idea-engine?action=generate` runs every 2 hours (was hourly, was `*/30 * * * *` before that) — cut because `action=review` only ever processes 10 pending ideas/day, so hourly generation (up to 24/day) was more than double what review could use.
+>
+> **Fix Queue cron is disabled** — the route and API remain so existing drafts stay visible, but no new drafts are generated or executed.
 
-Background sync calls (DataSynchronizer): `/api/memories?action=evolution`, `/api/projects?resource=bedtime`, `/api/reading?resource=rss` — these are triggered from the client on internal timers, not by cron, so they are not in the table above.
+Besides the GitHub Actions table above, Vercel's own cron (`projects/polymath/vercel.json`, Hobby-tier limit of 1 cron) fires `/api/cron/jobs?job=daily` once a day at 21:30 UTC. That single request bundles several more Gemini-calling tasks: stuck-memory reprocessing, weekly intersections, bedtime prompts, Power Hour plan, rotting-project detection, embedding maintenance, and (Sundays) capability extraction + drawer digest. It used to also re-run project evolution (same prompt/table as the 08:00 UTC `projects?resource=evolve` above) — removed, since it meant every active project got evolved twice a day.
+
+Background sync calls (DataSynchronizer): `/api/memories?action=evolution`, `/api/projects?resource=bedtime`, `/api/reading?resource=rss` — these are triggered from the client on internal timers, not by cron, so they are not in the table above. Of those, only `bedtime` can call Gemini, and only if the Vercel daily cron hasn't already generated today's prompts.
 
 ## Fix Queue (Polymath feature)
 
