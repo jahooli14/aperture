@@ -788,6 +788,20 @@ export function ProjectDetailPage() {
 
       {/* Content */}
       <div className="max-w-2xl mx-auto px-5 sm:px-6 space-y-8">
+              {/* Guide — primary surface. This is what a project's mid-life
+                  view is for: keep the chat that scopes/frames/edits front
+                  and center, not just at project creation. */}
+              {project && (
+                <InlineGuide
+                  project={project}
+                  recentCompletions={recentCompletions}
+                  onAddTask={handleChatAddTask}
+                  onUpdateTasks={handleChatUpdateTasks}
+                  onUpdateGoal={handleChatUpdateGoal}
+                  onAppendNote={handleChatAppendNote}
+                />
+              )}
+
               {/* Power Hour Focus Mode */}
               {powerHourTask && (
                 <div className="p-6 rounded-2xl relative overflow-hidden group" style={{ background: 'rgba(var(--brand-primary-rgb),0.06)', border: '1px solid rgba(var(--brand-primary-rgb),0.12)' }}>
@@ -892,18 +906,6 @@ export function ProjectDetailPage() {
                       metadata: { ...project.metadata, blocker: text || undefined }
                     })
                   }}
-                />
-              )}
-
-              {/* Guide */}
-              {project && (
-                <InlineGuide
-                  project={project}
-                  recentCompletions={recentCompletions}
-                  onAddTask={handleChatAddTask}
-                  onUpdateTasks={handleChatUpdateTasks}
-                  onUpdateGoal={handleChatUpdateGoal}
-                  onAppendNote={handleChatAppendNote}
                 />
               )}
 

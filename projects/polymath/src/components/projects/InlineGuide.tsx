@@ -508,10 +508,10 @@ export function InlineGuide({
   }
 
   return (
-    <div>
+    <div className="glass-card-strong rounded-2xl p-5 sm:p-6">
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--brand-text-secondary)]">
+        <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'rgb(var(--brand-primary-rgb))', opacity: 0.75 }}>
           Guide
         </span>
         <div className="h-px flex-grow" style={{ background: 'rgba(255,255,255,0.1)' }} />
