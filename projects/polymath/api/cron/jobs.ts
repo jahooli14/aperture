@@ -63,7 +63,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const isVercelCron = !!req.headers['x-vercel-cron']
   const isManualTrigger = req.method === 'POST' && !isVercelCron
 
-  if (!isVercelCron && cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  // The GitHub Actions dispatcher (.github/workflows/cron.yml) only knows
+  // IDEA_ENGINE_SECRET — same token every other cron-triggered resource in
+  // this app (api/idea-engine.ts, api/projects.ts, api/utilities.ts) accepts.
+  // voice-reminder is dispatched hourly from there, so it needs to accept
+  // that token too, not just CRON_SECRET (which only Vercel's native cron —
+  // job=daily — sends).
+  const ideaEngineSecret = process.env.IDEA_ENGINE_SECRET
+  const isIdeaEngineAuthed = !!ideaEngineSecret && authHeader === `Bearer ${ideaEngineSecret}`
+
+  if (!isVercelCron && !isIdeaEngineAuthed && cronSecret && authHeader !== `Bearer ${cronSecret}`) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
