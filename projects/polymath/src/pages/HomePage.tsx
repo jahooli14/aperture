@@ -21,11 +21,12 @@
  * removed wordmark/eyebrow.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useProjectStore, usePriorityProject, useMostRecentNonPriorityProject, useRecentNonPriorityProjects, useUpNextMiniProjects } from '../stores/useProjectStore'
 import { useMemoryStore } from '../stores/useMemoryStore'
+import { computeVoiceStreak } from '../lib/streak'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { useJourneyStore } from '../stores/useJourneyStore'
 import { useAuthContext } from '../contexts/AuthContext'
@@ -39,7 +40,7 @@ import { ConsumingWidget } from '../components/home/ConsumingWidget'
 import { DeferMount } from '../components/DeferMount'
 import { UnauthHome } from '../components/onboarding/UnauthHome'
 import { ease, stagger } from '../lib/motion'
-import { AlertCircle, Search, Moon, Settings, Aperture } from 'lucide-react'
+import { AlertCircle, Search, Moon, Settings, Aperture, Flame } from 'lucide-react'
 
 export function HomePage() {
   const { isAuthenticated } = useAuthContext()
@@ -47,6 +48,8 @@ export function HomePage() {
   const fetchProjects = useProjectStore(s => s.fetchProjects)
   const projects = useProjectStore(s => s.projects)
   const fetchMemories = useMemoryStore(s => s.fetchMemories)
+  const memories = useMemoryStore(s => s.memories)
+  const voiceStreak = useMemo(() => computeVoiceStreak(memories), [memories])
   const setContext = useContextEngineStore(s => s.setContext)
   const onboardingCompletedAt = useJourneyStore(s => s.onboardingCompletedAt)
   const startSession = useJourneyStore(s => s.startSession)
@@ -176,8 +179,23 @@ export function HomePage() {
               so the page reads as one editorial stack. */}
           <motion.div {...stackTransition(0)}>
             <header className="page-masthead">
-              <div className="page-masthead-text">
+              <div className="page-masthead-text" style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
                 <h1 className="page-hero">Aperture.</h1>
+                {voiceStreak > 0 && (
+                  <span
+                    title={`${voiceStreak} day${voiceStreak === 1 ? '' : 's'} of capturing a thought`}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '13px',
+                      color: 'var(--brand-text-muted)',
+                    }}
+                  >
+                    <Flame className="h-3.5 w-3.5" style={{ color: 'var(--brand-primary)' }} />
+                    {voiceStreak}
+                  </span>
+                )}
               </div>
               <div className="page-masthead-actions">
                 {isAfterBedtime && (

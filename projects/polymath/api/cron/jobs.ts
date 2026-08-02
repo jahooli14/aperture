@@ -63,7 +63,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const isVercelCron = !!req.headers['x-vercel-cron']
   const isManualTrigger = req.method === 'POST' && !isVercelCron
 
-  if (!isVercelCron && cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  // The GitHub Actions dispatcher (.github/workflows/cron.yml) only knows
+  // IDEA_ENGINE_SECRET — same token every other cron-triggered resource in
+  // this app (api/idea-engine.ts, api/projects.ts, api/utilities.ts) accepts.
+  // voice-reminder is dispatched hourly from there, so it needs to accept
+  // that token too, not just CRON_SECRET (which only Vercel's native cron —
+  // job=daily — sends).
+  const ideaEngineSecret = process.env.IDEA_ENGINE_SECRET
+  const isIdeaEngineAuthed = !!ideaEngineSecret && authHeader === `Bearer ${ideaEngineSecret}`
+
+  if (!isVercelCron && !isIdeaEngineAuthed && cronSecret && authHeader !== `Bearer ${cronSecret}`) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
@@ -582,6 +591,106 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         timestamp: new Date().toISOString()
       })
 
+    } else if (job === 'voice-reminder') {
+      // Daily "record a voice note" push reminder. Runs hourly (see
+      // .github/workflows/cron.yml) and fires for each user whose stored
+      // local hour matches the current hour, skipping anyone who's already
+      // captured a memory today or already got today's reminder.
+      console.log('[cron/jobs/voice-reminder] Checking voice reminder schedules...')
+
+      const results: any = {
+        success: true,
+        job: 'voice-reminder',
+        timestamp: new Date().toISOString(),
+        sent: 0,
+        skipped_already_captured: 0,
+        skipped_hour_mismatch: 0,
+      }
+
+      if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+        results.success = false
+        results.error = 'VAPID keys not configured'
+        return res.status(200).json(results)
+      }
+
+      const { data: schedules, error: schedulesError } = await supabase
+        .from('voice_reminder_settings')
+        .select('user_id, hour, minute, timezone, last_sent_date')
+        .eq('enabled', true)
+
+      if (schedulesError) throw schedulesError
+
+      for (const schedule of schedules || []) {
+        const localHour = getUserLocalHour(now, schedule.timezone || 'UTC')
+        if (localHour !== schedule.hour) {
+          results.skipped_hour_mismatch++
+          continue
+        }
+
+        const localDate = getUserLocalDate(now, schedule.timezone || 'UTC')
+        if (schedule.last_sent_date === localDate) continue // already sent today
+
+        const dayStart = new Date(`${localDate}T00:00:00`)
+        const { data: todaysMemories, error: memError } = await supabase
+          .from('memories')
+          .select('id')
+          .eq('user_id', schedule.user_id)
+          .gte('created_at', dayStart.toISOString())
+          .limit(1)
+
+        if (memError) {
+          console.error(`[cron/jobs/voice-reminder] Failed to check memories for ${schedule.user_id}:`, memError)
+          continue
+        }
+
+        if (todaysMemories && todaysMemories.length > 0) {
+          results.skipped_already_captured++
+          // Mark as sent for today so we don't re-check every hour once
+          // they've already captured something.
+          await supabase.from('voice_reminder_settings').update({ last_sent_date: localDate }).eq('user_id', schedule.user_id)
+          continue
+        }
+
+        const { data: subscriptions, error: subError } = await supabase
+          .from('push_subscriptions')
+          .select('*')
+          .eq('user_id', schedule.user_id)
+
+        if (subError) {
+          console.error(`[cron/jobs/voice-reminder] Failed to fetch subscriptions for ${schedule.user_id}:`, subError)
+          continue
+        }
+
+        if (!subscriptions || subscriptions.length === 0) continue
+
+        let anySent = false
+        for (const sub of subscriptions) {
+          try {
+            await webpush.sendNotification({
+              endpoint: sub.endpoint,
+              keys: { p256dh: sub.p256dh, auth: sub.auth },
+            }, JSON.stringify({
+              title: 'What\'s on your mind today?',
+              body: 'Tap to record a voice note.',
+              url: '/',
+            }))
+            anySent = true
+            results.sent++
+          } catch (pushError: any) {
+            console.error(`[cron/jobs/voice-reminder] Push failed for ${schedule.user_id}:`, pushError)
+            if (pushError.statusCode === 410 || pushError.statusCode === 404) {
+              await supabase.from('push_subscriptions').delete().eq('id', sub.id)
+            }
+          }
+        }
+
+        if (anySent) {
+          await supabase.from('voice_reminder_settings').update({ last_sent_date: localDate }).eq('user_id', schedule.user_id)
+        }
+      }
+
+      return res.status(200).json(results)
+
     } else if (job === 'send-reminders') {
       // Pupils daily reminders
       console.log('[cron/jobs/send-reminders] Starting Pupils reminder job...')
@@ -698,7 +807,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })
 
     } else {
-      return res.status(400).json({ error: `Unknown job: ${job}. Use ?job=daily, ?job=link-all, ?job=synthesis, ?job=strengthen, ?job=process_stuck, ?job=process-memories, or ?job=send-reminders` })
+      return res.status(400).json({ error: `Unknown job: ${job}. Use ?job=daily, ?job=link-all, ?job=synthesis, ?job=strengthen, ?job=process_stuck, ?job=process-memories, ?job=voice-reminder, or ?job=send-reminders` })
     }
 
   } catch (error) {
@@ -721,6 +830,17 @@ function getUserLocalDate(date: Date, timezone: string): string {
     day: '2-digit',
   })
   return formatter.format(date)
+}
+
+// Helper for voice-reminder job: current hour (0-23) in the user's timezone.
+function getUserLocalHour(date: Date, timezone: string): number {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    hour: 'numeric',
+    hour12: false,
+  })
+  // en-US with hour12: false can format midnight as "24" instead of "0".
+  return Number(formatter.format(date)) % 24
 }
 
 function generateEmailHTML(userId: string): string {

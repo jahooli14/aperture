@@ -225,6 +225,39 @@ self.addEventListener('fetch', (event) => {
   // API requests fall through to network (not in NavigationRoute allowlist).
 })
 
+// --- Web Push (bedtime + daily voice-note reminder) ---
+
+self.addEventListener('push', (event: PushEvent) => {
+  let data: { title?: string; body?: string; url?: string } = {}
+  try {
+    data = event.data?.json() ?? {}
+  } catch {
+    data = { body: event.data?.text() }
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Aperture', {
+      body: data.body || '',
+      icon: '/icon.png',
+      badge: '/icon.png',
+      data: { url: data.url || '/' },
+    })
+  )
+})
+
+self.addEventListener('notificationclick', (event: NotificationEvent) => {
+  event.notification.close()
+  const url = (event.notification.data as { url?: string })?.url || '/'
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      const existing = clients.find((c) => new URL(c.url).pathname === url)
+      if (existing) return existing.focus()
+      return self.clients.openWindow(url)
+    })
+  )
+})
+
 // Background sync for offline voice notes
 self.addEventListener('sync', (event: Event) => {
   const syncEvent = event as SyncEvent

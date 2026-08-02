@@ -136,8 +136,10 @@ export function SettingsPage() {
   const {
     bedtimeEnabled, bedtimeHour, bedtimeMinute,
     morningEnabled, morningHour, morningMinute,
+    voiceNoteEnabled, voiceNoteHour, voiceNoteMinute, voiceNoteError,
     toggleBedtime, updateBedtime,
     toggleMorning, updateMorning,
+    toggleVoiceNote, updateVoiceNoteTime,
   } = useNotificationSettings()
 
   const handleSignOut = async () => {
@@ -579,6 +581,58 @@ export function SettingsPage() {
                         </option>
                       ))}
                     </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Daily voice note */}
+              <div className="rounded-xl" style={{ background: 'var(--premium-surface-1)', border: '1px solid var(--glass-surface-hover)' }}>
+                <div className="flex items-center justify-between px-4 py-3.5">
+                  <div>
+                    <p className="text-[15px]" style={{ color: "var(--brand-text-secondary)" }}>Daily voice note</p>
+                    <p className="text-[12px]" style={{ color: "var(--brand-text-muted)" }}>A push reminder to record a thought — skipped once you've captured one that day</p>
+                  </div>
+                  <button
+                    onClick={() => toggleVoiceNote(!voiceNoteEnabled)}
+                    className="relative h-7 w-12 rounded-full transition-all flex-shrink-0"
+                    style={{ background: voiceNoteEnabled ? 'rgba(var(--brand-primary-rgb), 0.65)' : 'var(--glass-surface-hover)' }}
+                  >
+                    <div className="absolute top-1 h-5 w-5 rounded-full bg-white transition-all" style={{ left: voiceNoteEnabled ? '26px' : '4px' }} />
+                  </button>
+                </div>
+                {voiceNoteEnabled && (
+                  <div className="px-4 pb-3.5 flex items-center gap-3 border-t border-[var(--glass-surface)] pt-3">
+                    <span className="text-[12px]" style={{ color: "var(--brand-text-muted)" }}>Time</span>
+                    <select
+                      value={voiceNoteHour}
+                      onChange={e => updateVoiceNoteTime(Number(e.target.value), voiceNoteMinute)}
+                      className="rounded-lg px-2 py-1 text-[13px] outline-none"
+                      style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
+                    >
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <option key={i} value={i} style={{ background: 'var(--brand-bg)' }}>
+                          {String(i).padStart(2, '0')}
+                        </option>
+                      ))}
+                    </select>
+                    <span style={{ color: "var(--brand-text-muted)" }}>:</span>
+                    <select
+                      value={voiceNoteMinute}
+                      onChange={e => updateVoiceNoteTime(voiceNoteHour, Number(e.target.value))}
+                      className="rounded-lg px-2 py-1 text-[13px] outline-none"
+                      style={{ background: 'var(--glass-surface)', color: "var(--brand-text-secondary)" }}
+                    >
+                      {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => (
+                        <option key={m} value={m} style={{ background: 'var(--brand-bg)' }}>
+                          {String(m).padStart(2, '0')}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {voiceNoteError && (
+                  <div className="px-4 pb-3.5">
+                    <p className="text-[12px]" style={{ color: "rgba(var(--color-error-rgb), 1)" }}>{voiceNoteError}</p>
                   </div>
                 )}
               </div>
