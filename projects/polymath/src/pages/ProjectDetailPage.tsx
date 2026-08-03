@@ -751,7 +751,7 @@ export function ProjectDetailPage() {
         {/* Meta row — status + type as inline chips */}
         <div className="flex flex-wrap items-center gap-2 mb-8 relative">
           {project.is_priority && (
-            <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-amber-400" style={{ background: 'rgba(251,191,36,0.08)' }}>
+            <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold" style={{ color: 'rgb(var(--brand-primary-rgb))', background: 'rgba(var(--brand-primary-rgb),0.08)' }}>
               <Star className="h-3 w-3 fill-current" /> Priority
             </span>
           )}

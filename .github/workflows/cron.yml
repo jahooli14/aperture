@@ -93,8 +93,8 @@ jobs:
           # API so old drafts remain visible if you ever come back.
           if [ "$SCHEDULE" = "0 */2 * * *" ] || [ "$FORCE" = "true" ]; then
             hit "/api/idea-engine?action=generate" &
-            # Daily voice-note reminder push — checked hourly so it can fire
-            # at each user's configured local hour (see api/cron/jobs.ts).
+            # Daily voice-note reminder push — checked every 2h; fires once
+            # local time reaches the user's configured hour (see api/cron/jobs.ts).
             hit "/api/cron/jobs?job=voice-reminder" &
           fi
 
