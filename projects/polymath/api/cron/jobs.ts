@@ -457,10 +457,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })
 
     } else if (job === 'voice-reminder') {
-      // Daily "record a voice note" push reminder. Runs hourly (see
-      // .github/workflows/cron.yml) and fires for each user whose stored
-      // local hour matches the current hour, skipping anyone who's already
-      // captured a memory today or already got today's reminder.
+      // Daily "record a voice note" push reminder. Runs every 2h (see
+      // .github/workflows/cron.yml), so this can't wait for an exact local-hour
+      // match — half of all (timezone, hour) combos would never line up with an
+      // even UTC hour and would never fire. Instead it fires once local time has
+      // reached the target hour, gated by last_sent_date so it still only sends
+      // once per day. Skips anyone who's already captured a memory today or
+      // already got today's reminder.
       console.log('[cron/jobs/voice-reminder] Checking voice reminder schedules...')
 
       const results: any = {
@@ -487,7 +490,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       for (const schedule of schedules || []) {
         const localHour = getUserLocalHour(now, schedule.timezone || 'UTC')
-        if (localHour !== schedule.hour) {
+        if (localHour < schedule.hour) {
           results.skipped_hour_mismatch++
           continue
         }

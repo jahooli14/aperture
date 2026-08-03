@@ -357,9 +357,9 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
                     onClick={handleTogglePriority}
                     className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all text-left"
                     style={{
-                      background: project.is_priority ? 'rgba(245,158,11,0.12)' : 'var(--glass-surface)',
-                      border: project.is_priority ? '1.5px solid rgba(245,158,11,0.3)' : '1.5px solid rgba(255,255,255,0.06)',
-                      color: project.is_priority ? 'rgb(245,158,11)' : 'var(--brand-text-primary)'
+                      background: project.is_priority ? 'rgba(var(--brand-primary-rgb),0.12)' : 'var(--glass-surface)',
+                      border: project.is_priority ? '1.5px solid rgba(var(--brand-primary-rgb),0.3)' : '1.5px solid rgba(255,255,255,0.06)',
+                      color: project.is_priority ? 'rgb(var(--brand-primary-rgb))' : 'var(--brand-text-primary)'
                     }}
                   >
                     <Star className={`h-5 w-5 flex-shrink-0 ${project.is_priority ? 'fill-current' : ''}`} />
