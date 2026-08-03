@@ -65,7 +65,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const ideaEngineSecret = process.env.IDEA_ENGINE_SECRET
   const isIdeaEngineAuthed = !!ideaEngineSecret && authHeader === `Bearer ${ideaEngineSecret}`
 
-  if (!isVercelCron && !isIdeaEngineAuthed && cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  // Fail closed: if CRON_SECRET isn't configured, isCronSecretAuthed stays
+  // false rather than skipping the check, so an unset secret can't be used
+  // to bypass auth entirely.
+  const isCronSecretAuthed = !!cronSecret && authHeader === `Bearer ${cronSecret}`
+  if (!isVercelCron && !isIdeaEngineAuthed && !isCronSecretAuthed) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 

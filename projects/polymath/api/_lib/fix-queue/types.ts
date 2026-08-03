@@ -58,6 +58,9 @@ export interface FixRequirement {
   env_var: string          // e.g. 'HOME_ASSISTANT_URL'
   label: string            // e.g. 'Home Assistant URL'
   description: string      // e.g. 'Publicly accessible Home Assistant instance (e.g. via Nabu Casa)'
+  // Overrides the default `!!process.env[env_var]` check, for requirements
+  // satisfiable more than one way (e.g. Sonos via Home Assistant OR a direct bridge).
+  isSatisfied?: () => boolean
 }
 
 /** Map of action types to their requirements */
@@ -70,8 +73,14 @@ export const ACTION_REQUIREMENTS: Record<string, FixRequirement[]> = {
     { env_var: 'HOME_ASSISTANT_TOKEN', label: 'HA Long-Lived Token', description: 'Settings → Long-Lived Access Tokens' },
   ],
   'smart_home:sonos': [
-    { env_var: 'HOME_ASSISTANT_URL', label: 'Home Assistant', description: 'HA instance reachable from internet (Nabu Casa or tunnel)' },
-    { env_var: 'HOME_ASSISTANT_TOKEN', label: 'HA Long-Lived Token', description: 'Settings → Long-Lived Access Tokens' },
+    {
+      env_var: 'HOME_ASSISTANT_URL / SONOS_HTTP_API_URL',
+      label: 'Home Assistant or Sonos bridge',
+      description: 'Either Home Assistant (HOME_ASSISTANT_URL + HOME_ASSISTANT_TOKEN) or a direct node-sonos-http-api bridge (SONOS_HTTP_API_URL)',
+      isSatisfied: () =>
+        !!(process.env.HOME_ASSISTANT_URL && process.env.HOME_ASSISTANT_TOKEN) ||
+        !!process.env.SONOS_HTTP_API_URL,
+    },
   ],
   'smart_home:bird_cam': [
     { env_var: 'BIRD_CAM_URL', label: 'Bird cam URL', description: 'HTTP endpoint for bird cam snapshots' },
@@ -94,7 +103,7 @@ export function getRequirementsForDraft(draft: FixDraft): FixRequirement[] {
 }
 
 export function getMissingRequirements(draft: FixDraft): FixRequirement[] {
-  return getRequirementsForDraft(draft).filter(r => !process.env[r.env_var])
+  return getRequirementsForDraft(draft).filter(r => (r.isSatisfied ? !r.isSatisfied() : !process.env[r.env_var]))
 }
 
 export interface FixDraft {

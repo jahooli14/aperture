@@ -244,7 +244,7 @@ async function calculateSurpriseFactor(
   frontierMode: string
 ): Promise<number> {
   // Get approval rates for this domain pair and mode
-  const [a, b] = domainPair.sort();
+  const [a, b] = [...domainPair].sort();
 
   const { data: pairData } = await supabase
     .from('ie_domain_pairs')

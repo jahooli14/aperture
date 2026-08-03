@@ -58,7 +58,7 @@ export const HEAT_TUNING = {
 } as const
 
 export interface HeatInputs {
-  recentMemories: Array<{ id: string; content: string; embedding?: number[] | null; created_at: string }>
+  recentMemories: Array<{ id: string; body: string; embedding?: number[] | null; created_at: string }>
   recentArticles: Array<{ id: string; title: string; embedding?: number[] | null; created_at: string }>
   recentRetros: Array<{ project_id: string; answers: unknown; created_at: string }>
 }
@@ -104,7 +104,7 @@ export function scoreProjectHeat(project: ScoringProject, inputs: HeatInputs): H
       score += Math.min(sim * T.MEMORY_MULTIPLIER, T.MEMORY_WEIGHT_MAX)
       if (sim > bestStrength && sim > T.MEMORY_SIM_REASON) {
         bestStrength = sim
-        bestReason = `you mentioned this recently — "${truncate(mem.content, 60)}"`
+        bestReason = `you mentioned this recently — "${truncate(mem.body, 60)}"`
         bestEvidenceRef = `memory:${mem.id}`
       }
     }
@@ -130,7 +130,7 @@ export function scoreProjectHeat(project: ScoringProject, inputs: HeatInputs): H
       const needle = cat.text.toLowerCase().trim()
       if (needle.length < T.CATALYST_MIN_NEEDLE) continue
       for (const mem of inputs.recentMemories.slice(0, T.CATALYST_SCAN_WINDOW)) {
-        if ((mem.content || '').toLowerCase().includes(needle)) {
+        if ((mem.body || '').toLowerCase().includes(needle)) {
           score += T.CATALYST_BONUS
           cat.matched = true
           cat.matched_at = new Date().toISOString()
@@ -190,7 +190,7 @@ export async function recomputeHeatForUser(
   const [memRes, artRes, retroRes] = await Promise.all([
     supabase
       .from('memories')
-      .select('id, content, embedding, created_at')
+      .select('id, body, embedding, created_at')
       .eq('user_id', userId)
       .gte('created_at', since)
       .order('created_at', { ascending: false })

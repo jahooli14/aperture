@@ -21,7 +21,7 @@ describe('scoreProjectHeat', () => {
   it('accumulates (capped) and sets a reason for a highly-similar memory', () => {
     const r = scoreProjectHeat(project(), {
       ...emptyInputs,
-      recentMemories: [{ id: 'm1', content: 'a thought about bread', embedding: SAME, created_at: iso() }],
+      recentMemories: [{ id: 'm1', body: 'a thought about bread', embedding: SAME, created_at: iso() }],
     })
     // sim 1.0 → min(1*10, cap 8) = 8; reason set because 1.0 > MEMORY_SIM_REASON
     expect(r.score).toBe(HEAT_TUNING.MEMORY_WEIGHT_MAX)
@@ -32,7 +32,7 @@ describe('scoreProjectHeat', () => {
   it('ignores a dissimilar memory below the accumulate threshold', () => {
     const r = scoreProjectHeat(project(), {
       ...emptyInputs,
-      recentMemories: [{ id: 'm1', content: 'unrelated', embedding: ORTHO, created_at: iso() }],
+      recentMemories: [{ id: 'm1', body: 'unrelated', embedding: ORTHO, created_at: iso() }],
     })
     expect(r.score).toBe(0)
     expect(r.reason).toBeNull()
@@ -42,7 +42,7 @@ describe('scoreProjectHeat', () => {
     const r = scoreProjectHeat(project({ catalysts: [{ text: 'logic pro' }] }), {
       ...emptyInputs,
       // orthogonal embedding so only the catalyst keyword match contributes
-      recentMemories: [{ id: 'm9', content: 'my Logic Pro trial finally expired', embedding: ORTHO, created_at: iso() }],
+      recentMemories: [{ id: 'm9', body: 'my Logic Pro trial finally expired', embedding: ORTHO, created_at: iso() }],
     })
     expect(r.score).toBe(HEAT_TUNING.CATALYST_BONUS)
     expect(r.catalysts?.[0].matched).toBe(true)
@@ -54,7 +54,7 @@ describe('scoreProjectHeat', () => {
     const cats = [{ text: 'logic pro' }]
     scoreProjectHeat(project({ catalysts: cats }), {
       ...emptyInputs,
-      recentMemories: [{ id: 'm9', content: 'logic pro showed up', embedding: ORTHO, created_at: iso() }],
+      recentMemories: [{ id: 'm9', body: 'logic pro showed up', embedding: ORTHO, created_at: iso() }],
     })
     expect((cats[0] as any).matched).toBeUndefined() // original untouched
   })

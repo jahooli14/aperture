@@ -238,7 +238,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         req.body = JSON.parse(Buffer.concat(chunks).toString())
       }
       const memoryId = req.body?.id || id
-      return await handleReview(memoryId as string, res, supabase)
+      return await handleReview(memoryId as string, res, supabase, userId)
     }
 
     // PATCH: Update memory (content/metadata)
@@ -251,7 +251,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const memoryId = req.body?.id || id
-      return await handleUpdate(memoryId as string, req, res, supabase)
+      return await handleUpdate(memoryId as string, req, res, supabase, userId)
     }
 
     // GET: Similar memory search (by memory ID)
@@ -273,7 +273,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // GET: Theme clusters
     if (req.method === 'GET' && themes === 'true') {
-      return await handleThemes(res, supabase)
+      return await handleThemes(res, supabase, userId)
     }
 
     // GET: Voice seeds — contextual thinking prompts before capture
@@ -283,14 +283,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // GET: Bridges for memory
     if (req.method === 'GET' && bridges === 'true') {
-      return await handleBridges(id as string | undefined, res, supabase)
+      return await handleBridges(id as string | undefined, res, supabase, userId)
     }
 
     // GET: Resurfacing queue
     if (req.method === 'GET' && resurfacing === 'true') {
       const parsedLimit = Number(req.query.limit)
       const limitNum = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 100) : 5
-      return await handleResurfacing(res, supabase, limitNum)
+      return await handleResurfacing(res, supabase, userId, limitNum)
     }
 
     // GET: Insight (merged from insight.ts)
@@ -403,7 +403,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // DELETE: Delete memory
     if (req.method === 'DELETE') {
       const memoryId = req.body?.id || id
-      return await handleDelete(memoryId as string, res, supabase)
+      return await handleDelete(memoryId as string, res, supabase, userId)
     }
 
     return res.status(405).json({ error: 'Method not allowed' })
@@ -425,6 +425,7 @@ async function handleInsight(req: VercelRequest, res: VercelResponse, supabase: 
     const { count: connectionCount } = await supabase
       .from('connections')
       .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
       .or(`source_id.eq.${id},target_id.eq.${id}`)
 
     if (connectionCount && connectionCount > 0) {
@@ -436,6 +437,7 @@ async function handleInsight(req: VercelRequest, res: VercelResponse, supabase: 
         .from('todos')
         .select('text, done')
         .eq('source_memory_id', id as string)
+        .eq('user_id', userId)
         .is('deleted_at', null)
         .limit(3)
 
@@ -454,6 +456,7 @@ async function handleInsight(req: VercelRequest, res: VercelResponse, supabase: 
         .from('memories')
         .select('themes, created_at')
         .eq('id', id as string)
+        .eq('user_id', userId)
         .single()
 
       if (memory?.themes && memory.themes.length > 0) {
@@ -472,6 +475,7 @@ async function handleInsight(req: VercelRequest, res: VercelResponse, supabase: 
       const { data: relatedProjects } = await supabase
         .from('connections')
         .select('target_id, target_type, source_id, source_type')
+        .eq('user_id', userId)
         .or(`source_id.eq.${id},target_id.eq.${id}`)
         .in('source_type', ['project'])
         .limit(1)
@@ -479,6 +483,7 @@ async function handleInsight(req: VercelRequest, res: VercelResponse, supabase: 
       const { data: reverseProjects } = await supabase
         .from('connections')
         .select('target_id, source_id, target_type, source_type')
+        .eq('user_id', userId)
         .or(`source_id.eq.${id},target_id.eq.${id}`)
         .in('target_type', ['project'])
         .limit(1)
@@ -490,6 +495,7 @@ async function handleInsight(req: VercelRequest, res: VercelResponse, supabase: 
           .from('projects')
           .select('title')
           .eq('id', projectId)
+          .eq('user_id', userId)
           .single()
 
         if (project) {
@@ -1008,7 +1014,7 @@ Remember: BE CREATIVE. SUMMARIZE. DO NOT COPY THE BEGINNING OF THE TEXT.`
 /**
  * Mark memory as reviewed
  */
-async function handleReview(memoryId: string, res: VercelResponse, supabase: any) {
+async function handleReview(memoryId: string, res: VercelResponse, supabase: any, userId: string) {
   if (!memoryId) {
     return res.status(400).json({ error: 'Memory ID required' })
   }
@@ -1019,6 +1025,7 @@ async function handleReview(memoryId: string, res: VercelResponse, supabase: any
       .from('memories')
       .select('review_count')
       .eq('id', memoryId)
+      .eq('user_id', userId)
       .single()
 
     // Update review metadata
@@ -1029,6 +1036,7 @@ async function handleReview(memoryId: string, res: VercelResponse, supabase: any
         review_count: (existing?.review_count || 0) + 1
       })
       .eq('id', memoryId)
+      .eq('user_id', userId)
       .select()
       .single()
 
@@ -1048,13 +1056,27 @@ async function handleReview(memoryId: string, res: VercelResponse, supabase: any
 /**
  * Delete memory and its related data
  */
-async function handleDelete(memoryId: string, res: VercelResponse, supabase: any) {
+async function handleDelete(memoryId: string, res: VercelResponse, supabase: any, userId: string) {
   if (!memoryId) {
     return res.status(400).json({ error: 'Memory ID required' })
   }
 
   try {
     console.log('[memories] Deleting memory:', memoryId)
+
+    // Ownership check first — the memory row itself is the only one of these
+    // tables with a user_id column, so confirm it belongs to this user before
+    // touching anything.
+    const { data: owned, error: ownedError } = await supabase
+      .from('memories')
+      .select('id')
+      .eq('id', memoryId)
+      .eq('user_id', userId)
+      .single()
+
+    if (ownedError || !owned) {
+      return res.status(404).json({ error: 'Memory not found' })
+    }
 
     // 1. Delete bridges
     const { error: bridgeError } = await supabase
@@ -1077,6 +1099,7 @@ async function handleDelete(memoryId: string, res: VercelResponse, supabase: any
       .from('memories')
       .delete({ count: 'exact' })
       .eq('id', memoryId)
+      .eq('user_id', userId)
 
     if (error) throw error
 
@@ -1097,16 +1120,28 @@ async function handleDelete(memoryId: string, res: VercelResponse, supabase: any
 /**
  * Get bridges for memory
  */
-async function handleBridges(memoryId: string | undefined, res: VercelResponse, supabase: any) {
+async function handleBridges(memoryId: string | undefined, res: VercelResponse, supabase: any, userId: string) {
   try {
     if (memoryId) {
+      // Confirm the requested memory belongs to this user before revealing its bridges
+      const { data: owned } = await supabase
+        .from('memories')
+        .select('id')
+        .eq('id', memoryId)
+        .eq('user_id', userId)
+        .single()
+
+      if (!owned) {
+        return res.status(404).json({ error: 'Memory not found' })
+      }
+
       // Get bridges for specific memory
       const { data: bridges, error } = await supabase
         .from('bridges')
         .select(`
           *,
-          memory_a:memories!bridges_memory_a_fkey(id, title, created_at),
-          memory_b:memories!bridges_memory_b_fkey(id, title, created_at)
+          memory_a:memories!bridges_memory_a_fkey(id, title, created_at, user_id),
+          memory_b:memories!bridges_memory_b_fkey(id, title, created_at, user_id)
         `)
         .or(`memory_a.eq.${memoryId},memory_b.eq.${memoryId}`)
         .order('strength', { ascending: false })
@@ -1115,16 +1150,20 @@ async function handleBridges(memoryId: string | undefined, res: VercelResponse, 
         return res.status(500).json({ error: 'Failed to fetch bridges' })
       }
 
-      return res.status(200).json({ bridges })
+      const ownedBridges = (bridges || []).filter(
+        (b: any) => b.memory_a?.user_id === userId && b.memory_b?.user_id === userId
+      )
+
+      return res.status(200).json({ bridges: ownedBridges })
     }
 
-    // Get all bridges
+    // Get all bridges, then keep only ones connecting two of this user's own memories
     const { data: bridges, error } = await supabase
       .from('bridges')
       .select(`
         *,
-        memory_a:memories!bridges_memory_a_fkey(id, title, created_at),
-        memory_b:memories!bridges_memory_b_fkey(id, title, created_at)
+        memory_a:memories!bridges_memory_a_fkey(id, title, created_at, user_id),
+        memory_b:memories!bridges_memory_b_fkey(id, title, created_at, user_id)
       `)
       .order('strength', { ascending: false })
       .limit(100)
@@ -1133,7 +1172,11 @@ async function handleBridges(memoryId: string | undefined, res: VercelResponse, 
       return res.status(500).json({ error: 'Failed to fetch bridges' })
     }
 
-    return res.status(200).json({ bridges })
+    const ownedBridges = (bridges || []).filter(
+      (b: any) => b.memory_a?.user_id === userId && b.memory_b?.user_id === userId
+    )
+
+    return res.status(200).json({ bridges: ownedBridges })
   } catch (error) {
     return res.status(500).json({ error: 'Internal server error' })
   }
@@ -1142,7 +1185,7 @@ async function handleBridges(memoryId: string | undefined, res: VercelResponse, 
 /**
  * Resurfacing algorithm: Spaced repetition
  */
-async function handleResurfacing(res: VercelResponse, supabase: any, limit = 5) {
+async function handleResurfacing(res: VercelResponse, supabase: any, userId: string, limit = 5) {
   try {
     // Get all memories with metadata
     const { data: memories, error } = await supabase
@@ -1151,6 +1194,7 @@ async function handleResurfacing(res: VercelResponse, supabase: any, limit = 5) 
         *,
         entities:entities(count)
       `)
+      .eq('user_id', userId)
       .eq('processed', true)
       .order('created_at', { ascending: false })
 
@@ -1207,11 +1251,12 @@ async function handleResurfacing(res: VercelResponse, supabase: any, limit = 5) 
 /**
  * Theme clustering: Group memories by AI-extracted themes
  */
-async function handleThemes(res: VercelResponse, supabase: any) {
+async function handleThemes(res: VercelResponse, supabase: any, userId: string) {
   try {
     const { data: memories, error: memoriesError } = await supabase
       .from('memories')
       .select('*')
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
 
     if (memoriesError) throw memoriesError
@@ -1725,6 +1770,7 @@ async function handleSimilarSearch(memoryId: string, supabase: any, userId: stri
       .from('memories')
       .select('id, title, embedding')
       .eq('id', memoryId)
+      .eq('user_id', userId)
       .single()
 
     if (sourceError || !source) {
@@ -1951,6 +1997,7 @@ async function searchMemories(query: string, supabase: any, userId: string, embe
     const { data, error } = await supabase
       .from('memories')
       .select('*')
+      .eq('user_id', userId)
       .or(`title.ilike.%${query}%,body.ilike.%${query}%`)
       .limit(20)
 
@@ -2002,6 +2049,7 @@ async function searchProjects(query: string, supabase: any, userId: string, embe
     const { data, error } = await supabase
       .from('projects')
       .select('*')
+      .eq('user_id', userId)
       .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
       .limit(20)
 
@@ -2052,6 +2100,7 @@ async function searchArticles(query: string, supabase: any, userId: string, embe
     const { data, error } = await supabase
       .from('reading_queue')
       .select('*')
+      .eq('user_id', userId)
       .or(`title.ilike.%${query}%,excerpt.ilike.%${query}%`)
       .limit(20)
 
@@ -2157,7 +2206,7 @@ async function handleProcess(req: VercelRequest, res: VercelResponse) {
 /**
  * Update memory content and metadata
  */
-async function handleUpdate(memoryId: string, req: VercelRequest, res: VercelResponse, supabase: any) {
+async function handleUpdate(memoryId: string, req: VercelRequest, res: VercelResponse, supabase: any, userId: string) {
   if (!memoryId) {
     return res.status(400).json({ error: 'Memory ID required' })
   }
@@ -2171,6 +2220,7 @@ async function handleUpdate(memoryId: string, req: VercelRequest, res: VercelRes
         .from('memories')
         .update({ is_pinned })
         .eq('id', memoryId)
+        .eq('user_id', userId)
         .select()
         .single()
 
@@ -2188,6 +2238,7 @@ async function handleUpdate(memoryId: string, req: VercelRequest, res: VercelRes
         .from('memories')
         .update({ checklist_items })
         .eq('id', memoryId)
+        .eq('user_id', userId)
         .select()
         .single()
 
@@ -2216,6 +2267,7 @@ async function handleUpdate(memoryId: string, req: VercelRequest, res: VercelRes
       .from('memories')
       .update(updateData)
       .eq('id', memoryId)
+      .eq('user_id', userId)
       .select()
       .single()
 

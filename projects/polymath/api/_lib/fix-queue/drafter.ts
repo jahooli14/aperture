@@ -86,7 +86,13 @@ Return only valid JSON.`
   const jsonMatch = response.match(/\{[\s\S]*\}/)
   if (!jsonMatch) return null
 
-  const parsed = JSON.parse(jsonMatch[0])
+  let parsed: any
+  try {
+    parsed = JSON.parse(jsonMatch[0])
+  } catch (err) {
+    console.error('[draftFix] Failed to parse Gemini JSON response:', err)
+    return null
+  }
   // "not automatable" signal from the prompt
   if (parsed?.name == null) return null
 

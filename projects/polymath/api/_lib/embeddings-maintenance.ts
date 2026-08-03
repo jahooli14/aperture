@@ -141,7 +141,7 @@ async function findAndCreateConnections(supabase: any, sourceType: string, sourc
       const similarity = cosineSimilarity(embedding, candidate.embedding)
       if (similarity > threshold) {
         // Create connection
-        await createConnection(supabase, sourceType, sourceId, type, candidate.id, similarity)
+        await createConnection(supabase, userId, sourceType, sourceId, type, candidate.id, similarity)
         count++
       }
     }
@@ -155,16 +155,18 @@ async function findAndCreateConnections(supabase: any, sourceType: string, sourc
   return count
 }
 
-async function createConnection(supabase: any, sourceType: string, sourceId: string, targetType: string, targetId: string, similarity: number) {
+async function createConnection(supabase: any, userId: string, sourceType: string, sourceId: string, targetType: string, targetId: string, similarity: number) {
   // Check existence
   const { data: existing } = await supabase
     .from('connections')
     .select('id')
+    .eq('user_id', userId)
     .or(`and(source_type.eq.${sourceType},source_id.eq.${sourceId},target_type.eq.${targetType},target_id.eq.${targetId}),and(source_type.eq.${targetType},source_id.eq.${targetId},target_type.eq.${sourceType},target_id.eq.${sourceId})`)
     .maybeSingle()
 
   if (!existing) {
     await supabase.from('connections').insert({
+      user_id: userId,
       source_type: sourceType,
       source_id: sourceId,
       target_type: targetType,
